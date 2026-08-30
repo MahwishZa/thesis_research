@@ -107,10 +107,18 @@ are printed and the process exits non-zero.
 
 ## Tests
 
-`test_fetch_pubmed.py` covers the pipeline offline — query-file parsing, XML
-parsing (journal articles, records with no abstract/DOI/PMCID, `MedlineDate`
-values, book chapters), date normalisation, deduplication with provenance,
-backup behaviour, CSV/JSON generation, and the verification checks themselves:
+Two suites cover the pipeline offline, with no network access required:
+
+- `test_fetch_pubmed.py` — query-file parsing, XML parsing (journal articles,
+  records with no abstract/DOI/PMCID, `MedlineDate` values, book chapters), date
+  normalisation, deduplication with provenance, backup behaviour, CSV/JSON
+  generation, and the verification checks themselves.
+- `test_pipeline_integration.py` — whole-run behaviour against a fake
+  E-utilities server: date-window splitting past the UID ceiling (and that the
+  sub-windows neither overlap nor escape the approved range), EFetch batching
+  and bisection around an unparseable record, cache reuse, provenance across
+  overlapping queries, a failing query that must not stop the run, and the
+  retry/backoff rules.
 
 ```bash
 python3 -m unittest discover -s pubmed -v
