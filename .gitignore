@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / credentials
+.env
+*.env
+
+# PubMed backup files
+pubmed/pubmed_results_backup_*.csv
+pubmed/pubmed_results_backup_*.json
+pubmed/search_log_backup_*.csv
+
+# Temporary files
+*.tmp
+*.temp
