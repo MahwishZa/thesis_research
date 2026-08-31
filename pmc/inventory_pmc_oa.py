@@ -90,6 +90,36 @@ INVENTORY_FIELDS = [
 
 FAILURE_FIELDS = ["pmcid", "pmid", "stage", "error", "checked_at_utc"]
 
+# Python's csv module refuses any single field longer than 131,072 characters,
+# and PubMed abstracts are long, so we raise that ceiling before reading.
+#
+# It must NOT be raised with sys.maxsize. csv.field_size_limit() hands its
+# argument to C as a "long". On Linux and macOS a long is 64-bit so sys.maxsize
+# fits, but on Windows a long is 32-bit even in 64-bit Python, so the largest
+# accepted value is 2,147,483,647 and sys.maxsize raises OverflowError.
+#
+# 64 MB is far more than any PubMed field needs -- the longest field in our
+# dataset is a ~15,000-character abstract -- and fits in a 32-bit long.
+CSV_FIELD_LIMIT = 64 * 1024 * 1024
+
+
+def widen_csv_field_limit(target: int = CSV_FIELD_LIMIT) -> int:
+    """Raise the csv field-size ceiling as far as this platform allows.
+
+    Asks for `target`; if the platform rejects it, halves the request and tries
+    again. Never lowers the limit below whatever is already in effect. Returns
+    the limit actually in force.
+    """
+    current = csv.field_size_limit()
+    limit = target
+    while limit > current:
+        try:
+            csv.field_size_limit(limit)
+            return limit
+        except OverflowError:
+            limit //= 2
+    return current
+
 
 # ---------------------------------------------------------------------------
 # Step 1: read the PMCIDs out of our PubMed results (read-only).
@@ -120,8 +150,8 @@ def read_pmcids(path: Path) -> list[tuple[str, str]]:
             "Fix it with:  git lfs install && git lfs pull"
         )
 
-    # Abstracts are long, so lift the CSV field-size limit before reading.
-    csv.field_size_limit(sys.maxsize)
+    # Abstracts are long, so lift the CSV field-size ceiling before reading.
+    widen_csv_field_limit()
 
     pairs: list[tuple[str, str]] = []
     with path.open(encoding="utf-8", newline="") as handle:
@@ -261,7 +291,7 @@ def already_done(path: Path) -> set[str]:
     """PMCIDs already present in the output file from an earlier run."""
     if not path.exists():
         return set()
-    csv.field_size_limit(sys.maxsize)
+    widen_csv_field_limit()
     done: set[str] = set()
     with path.open(encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
