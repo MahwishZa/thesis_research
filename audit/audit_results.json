@@ -1,0 +1,738 @@
+{
+  "verdict": "MOSTLY VERIFIED",
+  "counts": {
+    "PASS": 31,
+    "PARTIAL": 5,
+    "APPROXIMATION": 2,
+    "UNKNOWN": 3,
+    "MANUAL": 1
+  },
+  "results": [
+    {
+      "check_id": "FLT-01",
+      "component": "filter input",
+      "status": "PASS",
+      "summary": "template reconstructs all 5 released records byte-for-byte",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "records_checked": 5,
+        "head": "Given the following evidence, determine whether it helps answer the provided question."
+      }
+    },
+    {
+      "check_id": "FLT-02",
+      "component": "filter input",
+      "status": "PASS",
+      "summary": "filter input carries the initial question and the snippet",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "rendered_prefix": "Given the following evidence, determine whether it helps answer the provided que"
+      }
+    },
+    {
+      "check_id": "FLT-03",
+      "component": "leakage",
+      "status": "PASS",
+      "summary": "only Evidence.text reaches the filter; 7 provenance fields all absent",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "fields_checked": 7
+      }
+    },
+    {
+      "check_id": "FLT-04",
+      "component": "filter scoring",
+      "status": "PASS",
+      "summary": "softmax-over-two-logits + threshold 0.5 matches np.argmax including the tie case",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "cases": 4,
+        "tie_goes_to": "[HELPFUL]"
+      }
+    },
+    {
+      "check_id": "FLT-05",
+      "component": "filter scoring",
+      "status": "PASS",
+      "summary": "higher P([HELPFUL]) admits; lower rejects; direction is correct",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "probabilities": [
+          0.99,
+          0.75,
+          0.5,
+          0.49,
+          0.01
+        ],
+        "keeps": [
+          true,
+          true,
+          true,
+          false,
+          false
+        ]
+      }
+    },
+    {
+      "check_id": "FLT-06",
+      "component": "filter scoring",
+      "status": "PASS",
+      "summary": "batched decisions equal one-at-a-time decisions; each pair scored independently",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "decisions": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "distinct_inputs": 8
+      }
+    },
+    {
+      "check_id": "PPL-01",
+      "component": "perplexity",
+      "status": "PASS",
+      "summary": "matches Eq4 on 3 controlled inputs and is length-normalised",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "cases": 3,
+        "length_normalised": true
+      }
+    },
+    {
+      "check_id": "PPL-02",
+      "component": "perplexity",
+      "status": "PASS",
+      "summary": "Delta-PPL = PPL(x) - PPL(x,d); a confidence-raising document yields a positive delta",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "lowered_ppl_delta": 6.0,
+        "raised_ppl_delta": -6.0
+      }
+    },
+    {
+      "check_id": "PPL-03",
+      "component": "perplexity",
+      "status": "PASS",
+      "summary": "identical continuation both sides; the evidence block is the only difference in conditioning",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "continuation": "THE RATIONALE",
+        "n_score_calls": 2
+      }
+    },
+    {
+      "check_id": "PPL-04",
+      "component": "perplexity",
+      "status": "PARTIAL",
+      "summary": "scores the rationale (prose reading); Eq4 as literally written says the query",
+      "paper_says": "Eq4 sums over x (the query). The abstract ('labels of rationales'), P2.1 ('perplexity differences in the rationales') and Fig2's 'Rationale' tag all say the rationale.",
+      "code_does": "scores the rationale; filter_training.ppl_target='query' selects the literal reading",
+      "why_it_matters": "an unresolvable ambiguity in the source. If the authors scored the query, every label differs and the reproduced filter is trained on a different signal.",
+      "how_to_fix": "cannot be resolved from the paper; ask the authors. Both readings are implemented.",
+      "evidence": {
+        "default": "rationale",
+        "alternative": "query"
+      }
+    },
+    {
+      "check_id": "LBL-01",
+      "component": "labeling",
+      "status": "PASS",
+      "summary": "all 8 branches of Figure 2 match, including both [DISCARD] leaves",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "branches": 8
+      }
+    },
+    {
+      "check_id": "LBL-02",
+      "component": "labeling",
+      "status": "PASS",
+      "summary": "tau admits exactly 25/100 on a uniform grid; test is '>=' (inclusive) per Eq3",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "tau": 74.25,
+        "admitted": 25,
+        "operator": ">="
+      }
+    },
+    {
+      "check_id": "LBL-03",
+      "component": "labeling",
+      "status": "PASS",
+      "summary": "non-finite Delta-PPL values are excluded from labeling",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "stats": {
+          "num_observations": 10,
+          "num_non_finite_excluded": 2,
+          "non_finite": [
+            {
+              "qid": "q",
+              "snippet_index": 8,
+              "delta_ppl": "inf"
+            },
+            {
+              "qid": "q",
+              "snippet_index": 9,
+              "delta_ppl": "nan"
+            }
+          ],
+          "tau_scope": "global",
+          "tau_percentile": 25.0,
+          "tau": 5.25,
+          "label_counts": {
+            "[HELPFUL]": 2,
+            "[NOT_HELPFUL]": 0,
+            "[DISCARD]": 6
+          },
+          "num_labeled": 2,
+          "discard_rate": 0.6
+        }
+      }
+    },
+    {
+      "check_id": "LBL-04",
+      "component": "labeling",
+      "status": "PASS",
+      "summary": "four-field release schema; only the two label tokens; provenance kept out of the record",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "records": 6
+      }
+    },
+    {
+      "check_id": "PPL-05",
+      "component": "perplexity",
+      "status": "PASS",
+      "summary": "the scored continuation survives truncation intact in every probe",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "probes": [
+          [
+            150,
+            250,
+            2048
+          ],
+          [
+            2000,
+            300,
+            2048
+          ],
+          [
+            100,
+            2500,
+            2048
+          ],
+          [
+            50,
+            3000,
+            2048
+          ]
+        ],
+        "guarded": true
+      }
+    },
+    {
+      "check_id": "LBL-05",
+      "component": "labeling",
+      "status": "PARTIAL",
+      "summary": "labeling regenerates the rationale instead of reusing the cached stage-1 one",
+      "paper_says": "P3.3: one rationale per question, generated by the base LLM, used as the retrieval query. Fig2 scores 'Rationale' from the same LLM output. The paper describes a single rationale per question, not two.",
+      "code_does": "rag2/filter_training/build_labels.py calls the LLM again with the closed-book prompt and scores that generation ('Summarizing the available information, t'...), discarding CandidateSet.rationale ('CACHED-RATIONALE-FROM-STAGE-1') written by stage 1",
+      "why_it_matters": "the two agree only while decoding is exactly deterministic and the same backbone and prompt are configured for both stages. The paper itself reports residual nondeterminism at temperature 0 (PA3), and nothing checks that the cache's rationale LLM matches the labeling LLM -- so the query that retrieved a passage can silently differ from the rationale whose perplexity judges it. It also doubles the closed-book generation cost of the most expensive stage.",
+      "how_to_fix": "reuse CandidateSet.rationale when present and generate only the correctness signal, or assert the regenerated rationale matches the cached one",
+      "evidence": {
+        "cached": "CACHED-RATIONALE-FROM-STAGE-1",
+        "scored": "Summarizing the available information, the presentation is c",
+        "reused": false,
+        "generate_calls": 2
+      }
+    },
+    {
+      "check_id": "RET-01",
+      "component": "retrieval",
+      "status": "PASS",
+      "summary": "MedCPT query encoder, cross-encoder, 768-dim index and 512-token truncation all match",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "query_encoder": "ncbi/MedCPT-Query-Encoder",
+        "reranker": "ncbi/MedCPT-Cross-Encoder",
+        "article_encoder": "ncbi/MedCPT-Article-Encoder",
+        "embedding_dim": 768,
+        "query_max_length": 512,
+        "rerank_max_length": 512
+      }
+    },
+    {
+      "check_id": "RET-02",
+      "component": "retrieval",
+      "status": "PASS",
+      "summary": "top-k equals brute-force inner product on every probe query",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "faiss_installed": false,
+        "backend": "exact numpy fallback"
+      }
+    },
+    {
+      "check_id": "RET-03",
+      "component": "retrieval",
+      "status": "PASS",
+      "summary": "every corpus contributes exactly 4 candidates to the pool",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "distribution": {
+          "cpg": 4,
+          "pmc": 4,
+          "pubmed": 4,
+          "textbook": 4
+        },
+        "corpora": [
+          "pubmed",
+          "pmc",
+          "cpg",
+          "textbook"
+        ]
+      }
+    },
+    {
+      "check_id": "RET-04",
+      "component": "retrieval",
+      "status": "PASS",
+      "summary": "score-merged shards reproduce the single-index top-k exactly; 'concat' reproduces the release's imbalance (20 candidates instead of 5)",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "identical_to_single_index": true,
+        "concat_width": 20,
+        "release_behaviour_available": true
+      }
+    },
+    {
+      "check_id": "RET-05",
+      "component": "reranking",
+      "status": "PASS",
+      "summary": "descending order, 1-based ranks, tie order matches the release's stable sort",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "ranked": [
+          "s3",
+          "s1",
+          "s4"
+        ],
+        "tie_order": [
+          "s0",
+          "s1",
+          "s2",
+          "s3",
+          "s4"
+        ]
+      }
+    },
+    {
+      "check_id": "RET-06",
+      "component": "reranking",
+      "status": "PARTIAL",
+      "summary": "defaults to the paper's 'initial query'; note the released code disagrees",
+      "paper_says": "Fig1 caption: 'cross-encoding the initial query and each snippet'; P3.4: 'encodes the original query'",
+      "code_does": "defaults to 'initial' (paper). R:retriever/main.py:124 passes the rationale file instead, so the authors' released code reranks with the rationale. configs/ablation_release_retrieval.yaml reproduces the code path.",
+      "why_it_matters": "the paper and the authors' own code disagree, so one of them does not describe the run that produced Table 2. Which was used is unresolvable from the artefacts, and the two give different final top-k orderings.",
+      "how_to_fix": "ask the authors; both behaviours are implemented and switchable",
+      "evidence": {
+        "default": "initial",
+        "release_behaviour": "rationale"
+      }
+    },
+    {
+      "check_id": "RET-07",
+      "component": "retrieval",
+      "status": "APPROXIMATION",
+      "summary": "the four corpus slots are configured, but the corpora themselves are unavailable",
+      "paper_says": "PA3 Table A1: 37.6M docs / 116.7M passages / 564.2GB (Self-BioRAG corpus)",
+      "code_does": "four named slots with no data; the medical corpus is being prepared separately",
+      "why_it_matters": "this is the single largest expected source of divergence from Table 2. Retrieval quality dominates a RAG pipeline's accuracy.",
+      "how_to_fix": "not fixable here; supply the corpus and re-run, then record the delta",
+      "evidence": {
+        "corpora": [
+          "pubmed",
+          "pmc",
+          "cpg",
+          "textbook"
+        ]
+      }
+    },
+    {
+      "check_id": "MOD-01",
+      "component": "models",
+      "status": "PASS",
+      "summary": "default backbone is meta-llama/Meta-Llama-3-8B-Instruct, the one the paper names explicitly",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "revision_pinned": false
+      }
+    },
+    {
+      "check_id": "MOD-02",
+      "component": "models",
+      "status": "UNKNOWN",
+      "summary": "configured as 'dmis-lab/meerkat-7b-v1.0', which the paper never states",
+      "paper_says": "P4.2 cites Kim et al. (2024) and describes the model (Mistral-7B init, GPT-4-rationale instruction tuning, MedQA+MedMCQA fine-tuning) but gives no checkpoint path",
+      "code_does": "llm.model = 'dmis-lab/meerkat-7b-v1.0', inferred from that description",
+      "why_it_matters": "if the inference is wrong, the Meerkat rows are produced by a different model than the paper's and are not comparable",
+      "how_to_fix": "confirm against the Meerkat paper/release before the final run",
+      "evidence": {
+        "configured": "dmis-lab/meerkat-7b-v1.0",
+        "inferred": true
+      }
+    },
+    {
+      "check_id": "MOD-03",
+      "component": "models",
+      "status": "APPROXIMATION",
+      "summary": "correct base model, but the paper's trained checkpoint is unavailable and must be retrained",
+      "paper_says": "P4.2: Flan-T5-large filter trained on perplexity labels",
+      "code_does": "filter.base_model='google/flan-t5-large'; filter.checkpoint is empty and the filter refuses to run without one",
+      "why_it_matters": "the reproduced filter is retrained from reconstructed labels. The authors ran unseeded (R: --seed defaults to None), so an exact checkpoint match is impossible in principle, not merely inconvenient.",
+      "how_to_fix": "train with scripts/03 + scripts/04 and report filter metrics alongside accuracy",
+      "evidence": {
+        "base_model": "google/flan-t5-large",
+        "max_seq_length": 512,
+        "doc_stride": 128
+      }
+    },
+    {
+      "check_id": "MOD-04",
+      "component": "models",
+      "status": "PASS",
+      "summary": "all 11 specified hyperparameters match (lr 3e-5, 40 epochs, batch 16, 512/128)",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "learning_rate": 3e-05,
+        "num_train_epochs": 40,
+        "per_device_train_batch_size": 16,
+        "max_seq_length": 512,
+        "doc_stride": 128,
+        "gradient_accumulation_steps": 1,
+        "weight_decay": 0.0,
+        "lr_scheduler_type": "linear",
+        "num_warmup_steps": 0,
+        "max_answer_length": 30,
+        "checkpointing_steps": "epoch"
+      }
+    },
+    {
+      "check_id": "MOD-05",
+      "component": "models",
+      "status": "MANUAL",
+      "summary": "runtime checkpoint/tokenizer/dtype fidelity needs a GPU run to verify",
+      "paper_says": "MedCPT encoders, Flan-T5-large filter, Llama-3-8B-Instruct backbone",
+      "code_does": "identifiers are verified statically (MOD-01..04). Actual weight loading, tokenizer vocabulary, dtype and device placement are exercised only when torch/transformers are installed",
+      "why_it_matters": "a correct identifier can still load a revision that has since changed upstream",
+      "how_to_fix": "pin llm.revision and run rag2_audit with the models installed; the run manifest records the resolved revision hash",
+      "evidence": {
+        "torch_and_transformers_installed": false
+      }
+    },
+    {
+      "check_id": "GEN-01",
+      "component": "generation",
+      "status": "PASS",
+      "summary": "temperature 0 in config and the HF backend maps it to do_sample=False",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "llm.temperature": 0.0,
+        "generation.temperature": 0.0,
+        "hf_backend_sets_do_sample_false": true
+      }
+    },
+    {
+      "check_id": "GEN-02",
+      "component": "generation",
+      "status": "UNKNOWN",
+      "summary": "the paper never publishes the answer-generation prompt; this one is reconstructed",
+      "paper_says": "Fig1 shows only the structure: prompt = retrieved snippets + initial query. The wording is not given anywhere in the paper or the release.",
+      "code_does": "reuses the paper's chain-of-thought prompt (P3.3, printed verbatim) with an evidence block prepended (reuses_cot_wording=True)",
+      "why_it_matters": "prompt wording materially affects multiple-choice accuracy, and Meerkat was instruction-tuned on a specific prompt. This is the largest single prompt-level assumption in the reproduction and a prime suspect if accuracy misses Table 2.",
+      "how_to_fix": "unresolvable from the artefacts; vary it first when investigating a gap",
+      "evidence": {
+        "reuses_cot_wording": true
+      }
+    },
+    {
+      "check_id": "GEN-03",
+      "component": "generation",
+      "status": "PASS",
+      "summary": "kept passages appear in rank order before the question; empty evidence falls back to closed book",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "positions": [
+          283,
+          297,
+          311
+        ]
+      }
+    },
+    {
+      "check_id": "GEN-04",
+      "component": "generation",
+      "status": "PARTIAL",
+      "summary": "rationale length is governed by llm.max_new_tokens, answer length by generation.max_new_tokens",
+      "paper_says": "the paper states neither length",
+      "code_does": "rag2/rationale.py calls llm.generate(chunk) with no max_new_tokens, so it falls back to LLMConfig.max_new_tokens; rag2/generation.py explicitly passes GenerationConfig.max_new_tokens",
+      "why_it_matters": "two keys with the same name and default silently govern different stages. Setting generation.max_new_tokens to study answer length would leave the rationale -- and therefore the retrieval query and every perplexity label -- unchanged, which is easy to miss.",
+      "how_to_fix": "pass an explicit length from one key, or rename them to name their stage",
+      "evidence": {
+        "rationale_passes_max_new_tokens": false
+      }
+    },
+    {
+      "check_id": "EVA-01",
+      "component": "evaluation",
+      "status": "PASS",
+      "summary": "accuracy in percent over scored examples, matching Table 2's metric",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "num_examples": 4,
+        "num_scored": 4,
+        "num_correct": 3,
+        "accuracy": 75.0,
+        "num_unparsed": 0
+      }
+    },
+    {
+      "check_id": "EVA-02",
+      "component": "evaluation",
+      "status": "UNKNOWN",
+      "summary": "the paper never states how the option is extracted from a free-form generation",
+      "paper_says": "P3.3's prompt asks for 'your explanation and single option ... as the final answer'; Fig4's worked example ends 'Therefore, the answer is (C) Intubation'. No extraction rule is published.",
+      "code_does": "ordered regex list, last match wins, falls back to option-text matching; parses the paper's own Fig4 example correctly (-> 'C'); unparsed counts as incorrect",
+      "why_it_matters": "extraction strictness directly moves reported accuracy, and an unparsed generation scored as incorrect versus abstained is a different number",
+      "how_to_fix": "unresolvable; report num_unparsed alongside accuracy (the code does)",
+      "evidence": {
+        "figure_4_example": "C",
+        "unparsed_as_incorrect": true
+      }
+    },
+    {
+      "check_id": "EVA-03",
+      "component": "evaluation",
+      "status": "PASS",
+      "summary": "Table 1 split sizes are encoded and assertable via dataset.options.assert_size",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "medqa": {
+          "train": 10178,
+          "validation": 1272,
+          "test": 1273
+        },
+        "medmcqa": {
+          "train": 182822,
+          "validation": 4183,
+          "test": 6150
+        },
+        "mmlu_med": {
+          "test": 1089
+        }
+      }
+    },
+    {
+      "check_id": "DET-01",
+      "component": "determinism",
+      "status": "PASS",
+      "summary": "seed 42 is set across 2 RNG(s) and written to the manifest",
+      "paper_says": "R:classifier/run_classifier.py defaults --seed to None: the authors ran unseeded",
+      "code_does": "experiment.seed=42, seeded=['python.random', 'numpy']",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "seed": 42,
+        "seeded": [
+          "python.random",
+          "numpy"
+        ]
+      }
+    },
+    {
+      "check_id": "DET-02",
+      "component": "determinism",
+      "status": "PASS",
+      "summary": "no RNG is seeded from Python's process-randomised hash()",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {}
+    },
+    {
+      "check_id": "DET-03",
+      "component": "determinism",
+      "status": "PASS",
+      "summary": "fingerprint ignores final_top_k (so one cache serves the k sweep) and tracks depth and rerank-query changes; a mismatched replay raises",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "k_insensitive": true,
+        "depth_sensitive": true,
+        "rerank_sensitive": true
+      }
+    },
+    {
+      "check_id": "STR-01",
+      "component": "architecture",
+      "status": "PASS",
+      "summary": "all 15 components present",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "components": [
+          "MIPS index search",
+          "RAG2 filter",
+          "answer generation",
+          "balanced retrieval",
+          "candidate cache",
+          "evaluation",
+          "filter interface",
+          "filter training",
+          "labeling",
+          "orchestration",
+          "perplexity",
+          "query encoding",
+          "rationale generation",
+          "reranking",
+          "retrieval query formulation"
+        ]
+      }
+    },
+    {
+      "check_id": "STR-02",
+      "component": "scope",
+      "status": "PASS",
+      "summary": "no SCAF/recency/entailment/abstention logic in executable baseline code",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {
+        "scanned_root": "rag2/",
+        "note": "docstrings may discuss these; code does not touch them"
+      }
+    },
+    {
+      "check_id": "STR-03",
+      "component": "scope",
+      "status": "PASS",
+      "summary": "retriever/, classifier/ and environment.yml are byte-identical to release commit 86add43",
+      "paper_says": "",
+      "code_does": "",
+      "why_it_matters": "",
+      "how_to_fix": "",
+      "evidence": {}
+    },
+    {
+      "check_id": "STR-04",
+      "component": "configuration",
+      "status": "PARTIAL",
+      "summary": "10 config key(s) declared but never read",
+      "paper_says": "n/a -- these are reproduction-side knobs",
+      "code_does": "ExperimentConfig.notes, CorpusConfig.chunk_size, CorpusConfig.chunk_overlap, RetrievalConfig.article_encoder, RetrievalConfig.shard_size, GenerationConfig.stop, EvaluationConfig.metric, EvaluationConfig.open_ended_metrics, EvaluationConfig.bertscore_model, CacheConfig.enabled",
+      "why_it_matters": "a key that looks like a control but is a no-op invites a silent deviation: setting it changes nothing while appearing to",
+      "how_to_fix": "wire each key, or delete it and keep the value in the manifest only",
+      "evidence": {
+        "dead_keys": [
+          "ExperimentConfig.notes",
+          "CorpusConfig.chunk_size",
+          "CorpusConfig.chunk_overlap",
+          "RetrievalConfig.article_encoder",
+          "RetrievalConfig.shard_size",
+          "GenerationConfig.stop",
+          "EvaluationConfig.metric",
+          "EvaluationConfig.open_ended_metrics",
+          "EvaluationConfig.bertscore_model",
+          "CacheConfig.enabled"
+        ]
+      }
+    }
+  ]
+}

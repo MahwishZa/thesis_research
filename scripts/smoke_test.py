@@ -76,16 +76,26 @@ def build_fixtures(num_questions: int = 6, per_corpus: int = 8, dim: int = 16):
 
 
 class StubEncoder:
-    """Deterministic query encoder standing in for MedCPT."""
+    """Deterministic query encoder standing in for MedCPT.
+
+    Seeded from sha256 of the query text, not Python's ``hash()``: string
+    hashing is randomised per process unless PYTHONHASHSEED is set, which would
+    make the retrieval draw differ on every run of this test.
+    """
 
     def __init__(self, dim: int) -> None:
         self.dim = dim
 
     def encode(self, queries):
+        import hashlib
+
         import numpy as np
 
-        rng = np.random.default_rng(abs(hash(tuple(queries))) % (2 ** 32))
-        return rng.normal(size=(len(queries), self.dim)).astype("float32")
+        rows = []
+        for query in queries:
+            seed = int.from_bytes(hashlib.sha256(query.encode("utf-8")).digest()[:8], "big")
+            rows.append(np.random.default_rng(seed).normal(size=(self.dim,)).astype("float32"))
+        return np.vstack(rows) if rows else np.zeros((0, self.dim), dtype="float32")
 
 
 def keyword_filter_score(rendered_prompt: str, question, evidence) -> float:

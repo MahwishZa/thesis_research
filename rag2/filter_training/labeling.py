@@ -31,6 +31,7 @@ individually -- stated in the paper's Limitations.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -136,12 +137,28 @@ def label_observations(
     that the caller writes into the run manifest.
     """
     prompts = prompts or DEFAULT_PROMPTS
-    taus = compute_tau(observations, top_percent=top_percent, scope=tau_scope)
+    finite = [o for o in observations if math.isfinite(o.delta_ppl)]
+    taus = compute_tau(finite or observations, top_percent=top_percent, scope=tau_scope)
 
     pairs: List[LabeledPair] = []
     counts = {LABEL_HELPFUL: 0, LABEL_NOT_HELPFUL: 0, DISCARD: 0}
+    non_finite: List[Dict[str, Any]] = []
 
     for index, observation in enumerate(observations):
+        # A non-finite Delta-PPL means the perplexity of one or both terms was
+        # undefined -- an empty generation, or a scoring failure. The paper does
+        # not contemplate such a pair, and IEEE comparison semantics would label
+        # it silently (inf >= tau is True, nan >= tau is False), producing a
+        # training example whose label is an artefact rather than evidence
+        # utility. Exclude it and count it so degenerate generations stay visible.
+        if not math.isfinite(observation.delta_ppl):
+            non_finite.append({
+                "qid": observation.qid,
+                "snippet_index": observation.snippet_index,
+                "delta_ppl": repr(observation.delta_ppl),
+            })
+            continue
+
         tau = tau_for(taus, observation.qid)
         lower_perplexity = observation.delta_ppl >= tau  # Equation 3 uses >=
         label = decide_label(
@@ -181,6 +198,8 @@ def label_observations(
     total = len(observations)
     stats = {
         "num_observations": total,
+        "num_non_finite_excluded": len(non_finite),
+        "non_finite": non_finite[:50],
         "tau_scope": tau_scope,
         "tau_percentile": top_percent,
         "tau": taus if tau_scope == "per_question" else taus.get("__global__"),

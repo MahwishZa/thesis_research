@@ -1,0 +1,518 @@
+{
+  "_about": "End-to-end audit trace of one question through the original RAG2 pipeline.",
+  "_paper_references": {
+    "rationale": "P3.3 -- chain-of-thought prompt, printed verbatim in the paper",
+    "retrieval_query": "P3.3 -- 'search ... solely using the rationale, excluding the initial query'",
+    "balanced_retrieval": "P3.4 -- 'an equal number of documents from each corpus'",
+    "rerank": "P3.4 + Fig1 -- cross-encode the INITIAL query with each snippet (code uses the rationale)",
+    "perplexity": "Eq4 -- PPL = exp(-(1/L) sum log P); Eq3 -- Delta-PPL = PPL(x) - PPL(x,d)",
+    "threshold": "P3.2 -- tau = top 25% of perplexity differentials, fixed across all experiments",
+    "labeling": "Fig2 -- decision tree over (correct w/o, correct w/, Delta-PPL >= tau)",
+    "filter": "P3.2 -- Flan-T5 keeps only [HELPFUL] snippets; one snippet at a time (Limitations)",
+    "generation": "Fig1 -- prompt = kept snippets + initial query; PA3 -- greedy, temperature 0"
+  },
+  "_versions": {
+    "rag2": "0.1.0",
+    "config_fingerprint": "23eb2234d08c",
+    "prompt_fingerprint": "fc6db2781ddc"
+  },
+  "_backend": {
+    "name": "stub",
+    "revision": "n/a",
+    "class": "StubLLM",
+    "WARNING": "stub backend - not a real model, results are meaningless"
+  },
+  "01_question": {
+    "qid": "synthetic-1",
+    "stem": "A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step?",
+    "options": {
+      "A": "BiPAP",
+      "B": "Chest tube placement",
+      "C": "Intubation",
+      "D": "Needle decompression"
+    },
+    "gold_answer": "A",
+    "rendered_for_model": "A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step? A) BiPAP B) Chest tube placement C) Intubation D) Needle decompression"
+  },
+  "02_rationale": {
+    "paper": "P3.3 -- chain-of-thought prompt, printed verbatim in the paper",
+    "prompt_sent": "The following are multiple choice questions about medical knowledge. Solve them in a step-by-step fashion, starting by summarizing the available information. Output your explanation and single option from the given options as the final answer.\n\nHere is the question: A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step? A) BiPAP B) Chest tube placement C) Intubation D) Needle decompression",
+    "rationale": "Summarizing the available information, the presentation is consistent with the described condition. Therefore, the answer is (C).",
+    "source": "generated now"
+  },
+  "03_retrieval_query": {
+    "paper": "P3.3 -- 'search ... solely using the rationale, excluding the initial query'",
+    "query_sent_to_retriever": "Summarizing the available information, the presentation is consistent with the described condition. Therefore, the answer is (C).",
+    "is_the_rationale_not_the_question": true,
+    "initial_question_excluded": true
+  },
+  "04_retrieval": {
+    "paper": "P3.4 -- 'an equal number of documents from each corpus'",
+    "candidates_per_corpus_configured": 2,
+    "pool_size": 8,
+    "pool_by_source": {
+      "cpg": 2,
+      "pmc": 2,
+      "pubmed": 2,
+      "textbook": 2
+    },
+    "balanced": true,
+    "passages": [
+      {
+        "rank": 1,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc0",
+        "passage_id": "pubmed-doc0-p0",
+        "retrieval_score_inner_product": 1.1909890174865723,
+        "rerank_score_cross_encoder_logit": 8.0,
+        "text": "[pubmed] Passage 0 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "1998-01-01"
+        }
+      },
+      {
+        "rank": 2,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc1",
+        "passage_id": "pubmed-doc1-p0",
+        "retrieval_score_inner_product": 0.19757197797298431,
+        "rerank_score_cross_encoder_logit": 7.0,
+        "text": "[pubmed] Passage 1 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "1999-01-01"
+        }
+      },
+      {
+        "rank": 3,
+        "source": "pmc",
+        "doc_id": "pmc-doc0",
+        "passage_id": "pmc-doc0-p0",
+        "retrieval_score_inner_product": 0.7426308989524841,
+        "rerank_score_cross_encoder_logit": 6.0,
+        "text": "[pmc] Passage 0 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "1998-01-01"
+        }
+      },
+      {
+        "rank": 4,
+        "source": "pmc",
+        "doc_id": "pmc-doc2",
+        "passage_id": "pmc-doc2-p0",
+        "retrieval_score_inner_product": 0.7236100435256958,
+        "rerank_score_cross_encoder_logit": 5.0,
+        "text": "[pmc] Passage 2 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "2000-01-01"
+        }
+      },
+      {
+        "rank": 5,
+        "source": "cpg",
+        "doc_id": "cpg-doc0",
+        "passage_id": "cpg-doc0-p0",
+        "retrieval_score_inner_product": 1.2564198970794678,
+        "rerank_score_cross_encoder_logit": 4.0,
+        "text": "[cpg] Passage 0 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "1998-01-01"
+        }
+      },
+      {
+        "rank": 6,
+        "source": "cpg",
+        "doc_id": "cpg-doc2",
+        "passage_id": "cpg-doc2-p0",
+        "retrieval_score_inner_product": 1.0047434568405151,
+        "rerank_score_cross_encoder_logit": 3.0,
+        "text": "[cpg] Passage 2 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "2000-01-01"
+        }
+      },
+      {
+        "rank": 7,
+        "source": "textbook",
+        "doc_id": "textbook-doc2",
+        "passage_id": "textbook-doc2-p0",
+        "retrieval_score_inner_product": 1.0184221267700195,
+        "rerank_score_cross_encoder_logit": 2.0,
+        "text": "[textbook] Passage 2 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "2000-01-01"
+        }
+      },
+      {
+        "rank": 8,
+        "source": "textbook",
+        "doc_id": "textbook-doc1",
+        "passage_id": "textbook-doc1-p0",
+        "retrieval_score_inner_product": -0.7329728007316589,
+        "rerank_score_cross_encoder_logit": 1.0,
+        "text": "[textbook] Passage 1 on management of respiratory failure and ventilation.",
+        "metadata_carried_but_never_read_by_baseline": {
+          "publication_date": "1999-01-01"
+        }
+      }
+    ]
+  },
+  "05_reranking": {
+    "paper": "P3.4 + Fig1 -- cross-encode the INITIAL query with each snippet (code uses the rationale)",
+    "rerank_query_setting": "initial",
+    "rerank_query_text": "A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step? A) BiPAP B) Chest tube placement C) Intubation D) Needle decompression",
+    "final_ordering": [
+      {
+        "rank": 1,
+        "source": "pubmed",
+        "rerank_score": 8.0,
+        "text": "[pubmed] Passage 0 on management of respiratory failure and ventilatio"
+      },
+      {
+        "rank": 2,
+        "source": "pubmed",
+        "rerank_score": 7.0,
+        "text": "[pubmed] Passage 1 on management of respiratory failure and ventilatio"
+      },
+      {
+        "rank": 3,
+        "source": "pmc",
+        "rerank_score": 6.0,
+        "text": "[pmc] Passage 0 on management of respiratory failure and ventilation."
+      },
+      {
+        "rank": 4,
+        "source": "pmc",
+        "rerank_score": 5.0,
+        "text": "[pmc] Passage 2 on management of respiratory failure and ventilation."
+      },
+      {
+        "rank": 5,
+        "source": "cpg",
+        "rerank_score": 4.0,
+        "text": "[cpg] Passage 0 on management of respiratory failure and ventilation."
+      },
+      {
+        "rank": 6,
+        "source": "cpg",
+        "rerank_score": 3.0,
+        "text": "[cpg] Passage 2 on management of respiratory failure and ventilation."
+      },
+      {
+        "rank": 7,
+        "source": "textbook",
+        "rerank_score": 2.0,
+        "text": "[textbook] Passage 2 on management of respiratory failure and ventilat"
+      },
+      {
+        "rank": 8,
+        "source": "textbook",
+        "rerank_score": 1.0,
+        "text": "[textbook] Passage 1 on management of respiratory failure and ventilat"
+      }
+    ],
+    "descending": true
+  },
+  "06_top_k_selection": {
+    "paper": "Fig3 -- k swept over {1,2,4,8,16,32}, selected on validation",
+    "final_top_k": 8,
+    "selected": [
+      "[pubmed] Passage 0 on management of respiratory failure and ventilatio",
+      "[pubmed] Passage 1 on management of respiratory failure and ventilatio",
+      "[pmc] Passage 0 on management of respiratory failure and ventilation.",
+      "[pmc] Passage 2 on management of respiratory failure and ventilation.",
+      "[cpg] Passage 0 on management of respiratory failure and ventilation.",
+      "[cpg] Passage 2 on management of respiratory failure and ventilation.",
+      "[textbook] Passage 2 on management of respiratory failure and ventilat",
+      "[textbook] Passage 1 on management of respiratory failure and ventilat"
+    ],
+    "dropped": []
+  },
+  "07_perplexity": {
+    "paper": "Eq4 -- PPL = exp(-(1/L) sum log P); Eq3 -- Delta-PPL = PPL(x) - PPL(x,d)",
+    "scored_text": "the rationale",
+    "scored_text_value": "Summarizing the available information, the presentation is consistent with the described condition. Therefore, the answer is (C).",
+    "conditioning_without": "answer prompt with no evidence block",
+    "conditioning_with": "the same prompt plus this one passage",
+    "rows": [
+      {
+        "index": 0,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc0",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 5.782640179823509,
+        "delta_ppl": 3.5604793131283783,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      },
+      {
+        "index": 1,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc1",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 7.341940231453699,
+        "delta_ppl": 2.001179261498188,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      },
+      {
+        "index": 2,
+        "source": "pmc",
+        "doc_id": "pmc-doc0",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 7.467627654054224,
+        "delta_ppl": 1.8754918388976627,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      },
+      {
+        "index": 3,
+        "source": "pmc",
+        "doc_id": "pmc-doc2",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 10.502363510005031,
+        "delta_ppl": -1.159244017053144,
+        "document_lowered_perplexity": false,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      },
+      {
+        "index": 4,
+        "source": "cpg",
+        "doc_id": "cpg-doc0",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 2.6227301608491427,
+        "delta_ppl": 6.720389332102744,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": true
+      },
+      {
+        "index": 5,
+        "source": "cpg",
+        "doc_id": "cpg-doc2",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 2.5846823115290123,
+        "delta_ppl": 6.758437181422875,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": true
+      },
+      {
+        "index": 6,
+        "source": "textbook",
+        "doc_id": "textbook-doc2",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 6.40317563429347,
+        "delta_ppl": 2.939943858658417,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      },
+      {
+        "index": 7,
+        "source": "textbook",
+        "doc_id": "textbook-doc1",
+        "ppl_without_document_PPL_x": 9.343119492951887,
+        "ppl_with_document_PPL_x_d": 2.8049559155131867,
+        "delta_ppl": 6.5381635774387,
+        "document_lowered_perplexity": true,
+        "scored_tokens": 17,
+        "passes_threshold_delta_ge_tau": false
+      }
+    ]
+  },
+  "08_threshold": {
+    "paper": "P3.2 -- tau = top 25% of perplexity differentials, fixed across all experiments",
+    "tau_percentile": 25.0,
+    "tau_scope": "global",
+    "tau_value_over_this_question_only": 6.583720016104711,
+    "note": "In a real labeling run tau is computed once over the whole split (tau_scope=global), not per question. The per-question value here is illustrative of the mechanism only.",
+    "n_passing": 2
+  },
+  "09_label_demonstration": {
+    "paper": "Fig2 -- decision tree over (correct w/o, correct w/, Delta-PPL >= tau)",
+    "note": "how Figure 2 would label each passage, given correctness both ways",
+    "truth_table_applied": [
+      {
+        "index": 0,
+        "delta_ppl": 3.5604793131283783,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      },
+      {
+        "index": 1,
+        "delta_ppl": 2.001179261498188,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      },
+      {
+        "index": 2,
+        "delta_ppl": 1.8754918388976627,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      },
+      {
+        "index": 3,
+        "delta_ppl": -1.159244017053144,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      },
+      {
+        "index": 4,
+        "delta_ppl": 6.720389332102744,
+        "lower_perplexity": true,
+        "label_if_correct_both_ways": "[HELPFUL]",
+        "label_if_wrong_both_ways": "[NOT_HELPFUL]"
+      },
+      {
+        "index": 5,
+        "delta_ppl": 6.758437181422875,
+        "lower_perplexity": true,
+        "label_if_correct_both_ways": "[HELPFUL]",
+        "label_if_wrong_both_ways": "[NOT_HELPFUL]"
+      },
+      {
+        "index": 6,
+        "delta_ppl": 2.939943858658417,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      },
+      {
+        "index": 7,
+        "delta_ppl": 6.5381635774387,
+        "lower_perplexity": false,
+        "label_if_correct_both_ways": "[DISCARD]",
+        "label_if_wrong_both_ways": "[DISCARD]"
+      }
+    ]
+  },
+  "_filter_substitution": "the configured filter could not be built (filter.checkpoint is empty: the paper's trained filter checkpoint is not distributed (see docs/rag2_reproduction.md section 2). Train one with scripts/04_train_filter.py, or set filter.kind=passthrough to run the 'RAG2 w/o filter' ablation.); this trace uses PassthroughFilter, so the admit/reject column below is NOT the RAG2 filter",
+  "10_filtering": {
+    "paper": "P3.2 -- Flan-T5 keeps only [HELPFUL] snippets; one snippet at a time (Limitations)",
+    "filter": {
+      "name": "passthrough",
+      "class": "PassthroughFilter"
+    },
+    "example_filter_input": "Given the following evidence, determine whether it helps answer the provided question.\n\nEvidence: [pubmed] Passage 0 on management of respiratory failure and ventilation.\n\nQuestion: A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step? A) BiPAP B) Chest tube placement C) Intubation D) Needle decompression",
+    "decisions": [
+      {
+        "index": 0,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc0",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[pubmed] Passage 0 on management of respiratory failure and ventilatio"
+      },
+      {
+        "index": 1,
+        "source": "pubmed",
+        "doc_id": "pubmed-doc1",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[pubmed] Passage 1 on management of respiratory failure and ventilatio"
+      },
+      {
+        "index": 2,
+        "source": "pmc",
+        "doc_id": "pmc-doc0",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[pmc] Passage 0 on management of respiratory failure and ventilation."
+      },
+      {
+        "index": 3,
+        "source": "pmc",
+        "doc_id": "pmc-doc2",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[pmc] Passage 2 on management of respiratory failure and ventilation."
+      },
+      {
+        "index": 4,
+        "source": "cpg",
+        "doc_id": "cpg-doc0",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[cpg] Passage 0 on management of respiratory failure and ventilation."
+      },
+      {
+        "index": 5,
+        "source": "cpg",
+        "doc_id": "cpg-doc2",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[cpg] Passage 2 on management of respiratory failure and ventilation."
+      },
+      {
+        "index": 6,
+        "source": "textbook",
+        "doc_id": "textbook-doc2",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[textbook] Passage 2 on management of respiratory failure and ventilat"
+      },
+      {
+        "index": 7,
+        "source": "textbook",
+        "doc_id": "textbook-doc1",
+        "p_helpful": null,
+        "label": "[HELPFUL]",
+        "admitted": true,
+        "text": "[textbook] Passage 1 on management of respiratory failure and ventilat"
+      }
+    ],
+    "n_admitted": 8,
+    "n_rejected": 0,
+    "on_empty_policy": "no_evidence"
+  },
+  "11_generation": {
+    "paper": "Fig1 -- prompt = kept snippets + initial query; PA3 -- greedy, temperature 0",
+    "context_sent_to_generator": "The following are multiple choice questions about medical knowledge. Solve them in a step-by-step fashion, starting by summarizing the available information. Output your explanation and single option from the given options as the final answer.\n\nHere are the retrieved documents: [1] [pubmed] Passage 0 on management of respiratory failure and ventilation.\n[2] [pubmed] Passage 1 on management of respiratory failure and ventilation.\n[3] [pmc] Passage 0 on management of respiratory failure and ventilation.\n[4] [pmc] Passage 2 on management of respiratory failure and ventilation.\n[5] [cpg] Passage 0 on management of respiratory failure and ventilation.\n[6] [cpg] Passage 2 on management of respiratory failure and ventilation.\n[7] [textbook] Passage 2 on management of respiratory failure and ventilation.\n[8] [textbook] Passage 1 on management of respiratory failure and ventilation.\n\nHere is the question: A 62-year-old man with COPD presents with severe dyspnoea, bilateral wheezes and poor air movement despite bronchodilators. What is the best next step? A) BiPAP B) Chest tube placement C) Intubation D) Needle decompression",
+    "n_passages_in_context": 8,
+    "temperature": 0.0,
+    "generation": "Summarizing the available information, the presentation is consistent with the described condition. Therefore, the answer is (A).",
+    "extracted_prediction": "A",
+    "gold": "A",
+    "correct": true
+  },
+  "12_provenance_isolation": {
+    "check": "publication metadata is carried but must never reach a model input",
+    "dates_carried": [
+      "1998-01-01",
+      "1999-01-01",
+      "1998-01-01",
+      "2000-01-01",
+      "1998-01-01",
+      "2000-01-01",
+      "2000-01-01",
+      "1999-01-01"
+    ],
+    "any_date_in_model_input": false,
+    "doc_ids_carried": [
+      "pubmed-doc0",
+      "pubmed-doc1",
+      "pmc-doc0",
+      "pmc-doc2",
+      "cpg-doc0",
+      "cpg-doc2",
+      "textbook-doc2",
+      "textbook-doc1"
+    ],
+    "any_doc_id_in_model_input": false
+  }
+}

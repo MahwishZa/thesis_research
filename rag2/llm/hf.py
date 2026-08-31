@@ -127,17 +127,28 @@ class HFCausalLM(LLM):
         prompt_ids = self.tokenizer(
             self._wrap(prompt), add_special_tokens=not self.use_chat_template
         )["input_ids"]
-        full_ids = prompt_ids + self.tokenizer(continuation, add_special_tokens=False)["input_ids"]
-        if len(full_ids) <= len(prompt_ids):
+        continuation_ids = self.tokenizer(continuation, add_special_tokens=False)["input_ids"]
+        full_ids = prompt_ids + continuation_ids
+        if not continuation_ids:
             return ScoredSequence(token_logprobs=[], num_tokens=0)
 
         max_len = self.config.max_input_tokens or getattr(self.model.config, "max_position_embeddings", 0)
         if max_len and len(full_ids) > max_len:
-            # Truncate from the left so the continuation, whose tokens are being
-            # scored, always survives intact.
-            cut = len(full_ids) - max_len
+            # Truncate from the left so the continuation survives intact: both
+            # Equation 4 terms must normalise by the same L, or Equation 3's
+            # difference stops being a controlled comparison. The cut is clamped
+            # to the prompt; if the continuation alone will not fit, that is a
+            # configuration error rather than something to paper over silently.
+            cut = min(len(full_ids) - max_len, len(prompt_ids))
+            if len(continuation_ids) > max_len:
+                raise ValueError(
+                    f"cannot score a {len(continuation_ids)}-token continuation within a "
+                    f"{max_len}-token context window: truncating it would make PPL(x) and "
+                    f"PPL(x, d) normalise by different lengths, breaking Equation 3. "
+                    f"Raise llm.max_input_tokens or lower llm.max_new_tokens."
+                )
             full_ids = full_ids[cut:]
-            prompt_ids = prompt_ids[cut:] if cut < len(prompt_ids) else []
+            prompt_ids = prompt_ids[cut:]
 
         input_ids = torch.tensor([full_ids], device=self.device)
         with torch.no_grad():
