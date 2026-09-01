@@ -19,3 +19,9 @@ pubmed/search_log_backup_*.csv
 # Temporary files
 *.tmp
 *.temp
+
+# Downloaded PMC full text (research data, not source code).
+# Reconstructible from pmc/pmc_oa_inventory.csv plus the manifest's MD5s.
+# pmc/fulltext/manifest.csv and failures.csv are deliberately NOT ignored.
+pmc/fulltext/xml/
+pmc/fulltext/**/*.part
