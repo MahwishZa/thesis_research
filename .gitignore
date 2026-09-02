@@ -25,3 +25,8 @@ pubmed/search_log_backup_*.csv
 # pmc/fulltext/manifest.csv and failures.csv are deliberately NOT ignored.
 pmc/fulltext/xml/
 pmc/fulltext/**/*.part
+
+# Parsed article records (derived research data, not source code).
+# Regenerable from the raw XML plus pmc/parse_pmc_xml.py; every record carries
+# the source MD5, so a rebuild can be proven to match.
+pmc/parsed/
