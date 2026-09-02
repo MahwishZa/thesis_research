@@ -338,7 +338,14 @@ def parse_abstracts(article_meta: ET.Element | None) -> tuple[dict[str, Any], li
 
     # The scientific abstract is the one with no abstract-type; a labelled
     # plain-language or web summary must not be concatenated into it.
-    primary = next((n for n in nodes if not n.get("abstract-type")), nodes[0])
+    preferred = next((n for n in nodes if not n.get("abstract-type")), nodes[0])
+    primary = preferred
+    if not flat_text(primary):
+        for node in nodes:
+            if node is not preferred and flat_text(node):
+                primary = node
+                break
+
     others = [
         {"type": n.get("abstract-type") or "untyped", "text": flat_text(n)}
         for n in nodes if n is not primary
@@ -358,22 +365,14 @@ def parse_abstracts(article_meta: ET.Element | None) -> tuple[dict[str, Any], li
     )
 
 
-def parse_licence(article_meta: ET.Element | None) -> dict[str, str]:
-    """Licence as recorded inside the XML.
-
-    The machine-readable value lives in <ali:license_ref>, not in attributes on
-    <license> -- across the inspected sample, <license> carried neither
-    license-type nor xlink:href.
-    """
-    licence = path_child(article_meta, "permissions", "license")
-    if licence is None:
-        return {"license_ref_xml": "", "license_content_type_xml": "",
-                "license_statement_xml": "", "license_code_xml": ""}
-
+def _licence_fields(licence: ET.Element) -> tuple[dict[str, str], bool]:
+    """Parse one <license> element. The bool is True when ali:license_ref yielded a code."""
     ref_url = ""
     content_type = ""
+    found_license_ref = False
     for node in licence.iter():
         if local(node.tag) == "license_ref":
+            found_license_ref = True
             ref_url = (node.text or "").strip()
             content_type = node.get("content-type") or ""
             break
@@ -396,15 +395,49 @@ def parse_licence(article_meta: ET.Element | None) -> dict[str, str]:
         if re.search(pattern, haystack):
             code = name
             break
+    from_license_ref = bool(found_license_ref and code)
     if not code and re.search(r"text\s*mining", statement, re.I):
         code = "TDM"
 
-    return {
-        "license_ref_xml": ref_url,
-        "license_content_type_xml": content_type,
-        "license_statement_xml": statement,
-        "license_code_xml": code,
-    }
+    return (
+        {
+            "license_ref_xml": ref_url,
+            "license_content_type_xml": content_type,
+            "license_statement_xml": statement,
+            "license_code_xml": code,
+        },
+        from_license_ref,
+    )
+
+
+def parse_licence(article_meta: ET.Element | None) -> dict[str, str]:
+    """Licence as recorded inside the XML.
+
+    The machine-readable value lives in <ali:license_ref>, not in attributes on
+    <license> -- across the inspected sample, <license> carried neither
+    license-type nor xlink:href. When several <license> elements are present,
+    prefer one whose ali:license_ref yields a licence code.
+    """
+    empty = {"license_ref_xml": "", "license_content_type_xml": "",
+             "license_statement_xml": "", "license_code_xml": ""}
+    licences = children(child(article_meta, "permissions"), "license")
+    if not licences:
+        return empty
+
+    parsed = [_licence_fields(node) for node in licences]
+    for fields, from_license_ref in parsed:
+        if from_license_ref:
+            return fields
+    return parsed[0][0]
+
+
+def count_references(back: ET.Element | None) -> int:
+    """Unique <ref> elements under any <ref-list> descendant of <back>."""
+    unique: set[int] = set()
+    for ref_list in descendants(back, "ref-list"):
+        for ref in descendants(ref_list, "ref"):
+            unique.add(id(ref))
+    return len(unique)
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +624,7 @@ def parse_article(path: Path, manifest_row: dict[str, str], stub_threshold: int)
     figure_count = len(list(descendants(body, "fig"))) + len(list(descendants(floats, "fig")))
     table_count = (len(list(descendants(body, "table-wrap")))
                    + len(list(descendants(floats, "table-wrap"))))
-    reference_count = len(list(descendants(child(back, "ref-list"), "ref")))
+    reference_count = count_references(back)
 
     # ---- QC ----
     flags: list[str] = []
