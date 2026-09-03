@@ -541,7 +541,8 @@ def ingest_cochrane(currency_dir: Path, *, allow_fetch: bool) -> dict:
         "is_retracted": "no", "is_manuscript": "no", "version": "1",
     }, 250)
     (parsed_dir / f"{COCHRANE_PMCID}.json").write_text(
-        json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8",
+        newline="\n")
 
     provenance = {
         "pmcid": COCHRANE_PMCID, "doi": "10.1002/14651858.CD016297",
@@ -560,7 +561,8 @@ def ingest_cochrane(currency_dir: Path, *, allow_fetch: bool) -> dict:
         "license_code_xml": record["provenance"].get("license_code_xml", ""),
     }
     (currency_dir / f"{COCHRANE_PMCID}.provenance.json").write_text(
-        json.dumps(provenance, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(provenance, ensure_ascii=False, indent=2), encoding="utf-8",
+        newline="\n")
     return {"pmcid": COCHRANE_PMCID, "staged": True, "observed_md5": observed,
             "provenance": provenance, "record": record}
 

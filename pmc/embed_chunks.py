@@ -234,7 +234,8 @@ def build(chunks_path: Path, out_dir: Path, encoder, batch_size: int,
         "cross_encoder": CROSS_ENCODER,
     }
     (out_dir / "index_meta.json").write_text(
-        json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        newline="\n")
     return meta
 
 

@@ -206,7 +206,7 @@ def save_candidates(path: Path, query_id: str, query: str, candidates: list[dict
         "candidates": candidates,
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True,
-                               ensure_ascii=False) + "\n", encoding="utf-8")
+                               ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return payload
 
 

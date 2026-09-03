@@ -395,7 +395,8 @@ def build(articles: Path, cochrane: Path, pubmed_path: Path, meta_dir: Path,
         "policy_records": len(pol_pmcid) + sum(1 for p in pol_pmid if p not in seen_pmids),
     }
     (out_dir / "chunk_stats.json").write_text(
-        json.dumps(stats, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        json.dumps(stats, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        newline="\n")
     return stats
 
 
