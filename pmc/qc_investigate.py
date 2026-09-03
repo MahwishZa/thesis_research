@@ -25,6 +25,7 @@ import csv
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
@@ -126,8 +127,164 @@ SUBSTANTIVE_TYPES = {"research-article", "case-report", "brief-report", "review-
 PREPRINT_JOURNALS = {"biorxiv", "medrxiv", "arxiv", "research square", "ssrn",
                      "preprints.org", "chemrxiv", "authorea"}
 
-ARTICLE_TYPE_RE = re.compile(r'<article[^>]*\barticle-type="([^"]+)"')
 CC_URL_RE = re.compile(r"creativecommons\.org/(licenses|publicdomain)/[a-z0-9\-/.]+", re.I)
+
+# Licence evidence tiers. Only STANDARD can produce a normalized license_code_xml,
+# so only STANDARD is grounds for suspecting a parser extraction defect.
+LICENCE_STANDARD = "A. standardized licence evidence"
+LICENCE_PROSE = "B. licence prose only"
+LICENCE_TDM = "C. text-mining permission only"
+LICENCE_ABSENT = "D. genuinely absent"
+
+# A licence identifier a normalizer can act on: a Creative Commons scheme URL
+# (licenses/*, publicdomain/zero, publicdomain/mark) or a CC content-type token.
+STANDARD_CONTENT_TYPE_RE = re.compile(r"^cc(by|0|zero)[a-z0-9\-]*licen[cs]e$|^cc[-_ ]?(by|0)\b", re.I)
+TDM_PROSE_RE = re.compile(r"text[\s\-]*(and[\s\-]*)?(data[\s\-]*)?min(e|ing)|\bTDM\b", re.I)
+
+# Documents nested inside an article -- peer reviews, author responses. Their
+# metadata belongs to them, not to the article, so no traversal may enter them.
+SUBDOCUMENT_TAGS = {"sub-article", "response"}
+
+
+# ---------------------------------------------------------------------------
+# Structural helpers.
+#
+# Deliberately defined here rather than imported from parse_pmc_xml: if this
+# detector called the parser's own extraction code, it would be validating the
+# parser against itself and a defect would be invisible. These are an
+# independent reading of the same contract.
+#
+# PMC article elements carry no namespace but ali: and xlink: attributes do, so
+# everything matches on the local name.
+# ---------------------------------------------------------------------------
+
+
+def local(tag: Any) -> str:
+    if not isinstance(tag, str):
+        return ""
+    return tag.rsplit("}", 1)[-1]
+
+
+def xchildren(elem: Any, name: str) -> list[Any]:
+    """Direct children with this local name. Never descends."""
+    if elem is None:
+        return []
+    return [c for c in elem if local(c.tag) == name]
+
+
+def xchild(elem: Any, name: str):
+    found = xchildren(elem, name)
+    return found[0] if found else None
+
+
+def xpath_child(root: Any, *names: str):
+    node = root
+    for name in names:
+        node = xchild(node, name)
+        if node is None:
+            return None
+    return node
+
+
+def walk_main(node: Any) -> Iterator[Any]:
+    """Every element of the main article, never entering a sub-document.
+
+    A <sub-article> or <response> carries its own front-stub, body and back.
+    Excluding those subtrees is what separates the article's own references,
+    identifiers and permissions from a peer review's.
+    """
+    yield node
+    for kid in node:
+        if local(kid.tag) in SUBDOCUMENT_TAGS:
+            continue
+        yield from walk_main(kid)
+
+
+def element_text(elem: Any) -> str:
+    """Flattened text of an element, whitespace squashed."""
+    if elem is None:
+        return ""
+    return " ".join("".join(elem.itertext()).split())
+
+
+def article_meta_of(root: Any):
+    return xpath_child(root, "front", "article-meta")
+
+
+def article_identifier(root: Any, kind: str) -> str:
+    """The article's own DOI or PMID.
+
+    Contract: article/front/article-meta/article-id[@pub-id-type=kind], a DIRECT
+    child, with non-empty text. A <pub-id> inside a citation is a different
+    element naming a different work; a sub-article's article-id is a different
+    document. Neither can satisfy this.
+    """
+    for node in xchildren(article_meta_of(root), "article-id"):
+        if (node.get("pub-id-type") or "") == kind and (node.text or "").strip():
+            return node.text.strip()
+    return ""
+
+
+def article_body(root: Any):
+    """The main article's own <body> -- a direct child of <article>."""
+    return xchild(root, "body")
+
+
+def body_offers_sections(root: Any) -> bool:
+    """Does the main article's body hold content the parser should section?
+
+    Direct <sec> children, or direct <p> children the parser recovers into a
+    synthetic section. A <sec> in an abstract, in back matter or in a
+    sub-article is not the article's body content.
+    """
+    body = article_body(root)
+    if body is None:
+        return False
+    return bool(xchildren(body, "sec") or xchildren(body, "p"))
+
+
+def article_reference_count(root: Any) -> int:
+    """<ref> under any <ref-list> belonging to the main article.
+
+    Covers body/sec/ref-list, back/ref-list, back/sec/ref-list and
+    back/app-group/app/ref-list. Deduplicated by identity so a <ref-list> nested
+    in another is not counted twice. Sub-article and response references are
+    excluded: they belong to those documents.
+    """
+    seen: dict[int, Any] = {}
+    for node in walk_main(root):
+        if local(node.tag) != "ref-list":
+            continue
+        for kid in walk_main(node):
+            if kid is not node and local(kid.tag) == "ref":
+                seen[id(kid)] = kid
+    return len(seen)
+
+
+def article_authors_present(root: Any) -> bool:
+    """A contrib typed author in the main article's own contrib-groups."""
+    for group in xchildren(article_meta_of(root), "contrib-group"):
+        for contrib in xchildren(group, "contrib"):
+            if (contrib.get("contrib-type") or "") == "author":
+                return True
+    return False
+
+
+def article_affiliations_present(root: Any) -> bool:
+    """An <aff> anywhere in the main article's front matter."""
+    front = xchild(root, "front")
+    if front is None:
+        return False
+    return any(local(n.tag) == "aff" for n in walk_main(front) if n is not front)
+
+
+def article_permissions(root: Any) -> list[Any]:
+    """The main article's own <permissions> elements.
+
+    Structural lookup, so attributes such as <permissions id="p1"> are handled
+    like any other, and a sub-article's permissions can never be picked up.
+    """
+    return xchildren(article_meta_of(root), "permissions")
 
 
 def widen_csv_field_limit(target: int = 64 * 1024 * 1024) -> None:
@@ -162,110 +319,149 @@ def assert_writable(output: Path) -> None:
             raise SystemExit(f"ERROR: refusing to write inside {part}/")
 
 
-def read_xml_head(pmcid: str, xml_dir: Path | None, size: int = 200_000) -> str:
-    """Front matter is what the checks below need; the whole body is not."""
+def read_xml_document(pmcid: str, xml_dir: Path | None):
+    """Parse one article's XML in full, or return None.
+
+    A truncated prefix cannot be parsed, so the whole file is read. The caller
+    holds one tree at a time and drops it before the next record, which keeps
+    memory flat across a corpus of any size.
+    """
     if xml_dir is None:
-        return ""
+        return None
     path = xml_dir / f"{pmcid}.xml"
     if not path.exists():
+        return None
+    try:
+        return ET.parse(path).getroot()
+    except ET.ParseError as exc:
+        print(f"WARNING: {pmcid}.xml did not parse: {exc}", file=sys.stderr)
+        return None
+
+
+def article_type_of(root: Any) -> str:
+    """article-type from the main <article> element's own attribute."""
+    if root is None:
         return ""
-    with path.open("rb") as handle:
-        return handle.read(size).decode("utf-8", "replace")
+    return root.get("article-type") or ""
 
 
-def article_type_of(xml_head: str) -> str:
-    match = ARTICLE_TYPE_RE.search(xml_head)
-    return match.group(1) if match else ""
+def probe_license_in_xml(root: Any) -> dict[str, Any]:
+    """Classify the main article's licence evidence into one of four tiers.
 
+    The question is not "is there licence-ish text somewhere" but "is there an
+    identifier a normalizer could turn into a licence code". Only tier A can,
+    so only tier A is grounds for suspecting the parser missed something.
+    Publisher reuse boilerplate and text-mining permissions grant no licence and
+    must not be counted as evidence against the parser.
 
-def probe_license_in_xml(xml_head: str) -> dict[str, Any]:
-    """Look for licence information beyond ali:license_ref.
-
-    Answers whether a licence the parser did not derive is nonetheless present
-    in the source, which is the difference between source variability and a
-    recovery-logic defect.
+    Scoped to the main article's front/article-meta/permissions. A sub-article's
+    permissions belong to that document and are never inspected.
     """
-    block = ""
-    match = re.search(r"<permissions>.*?</permissions>", xml_head, re.S)
-    if match:
-        block = match.group(0)
+    blank = {
+        "has_permissions_block": False, "license_ref": "", "content_type": "",
+        "prose": "", "cc_urls": [], "copyright_statement": "",
+        "tier": LICENCE_ABSENT, "standardized": False,
+        "recovery_source": "no permissions block",
+    }
+    if root is None:
+        return blank
+
+    permissions = article_permissions(root)
+    if not permissions:
+        return blank
+
+    licences = [lic for block in permissions for lic in xchildren(block, "license")]
 
     license_ref = ""
-    ref_match = re.search(r"<[^>]*license_ref[^>]*>([^<]*)<", block)
-    if ref_match:
-        license_ref = ref_match.group(1).strip()
     content_type = ""
-    ct_match = re.search(r'license_ref[^>]*content-type="([^"]+)"', block)
-    if ct_match:
-        content_type = ct_match.group(1)
+    cc_urls: list[str] = []
+    for lic in licences:
+        for node in lic.iter():
+            if local(node.tag) == "license_ref":
+                license_ref = license_ref or (node.text or "").strip()
+                content_type = content_type or (node.get("content-type") or "")
+            if local(node.tag) == "ext-link":
+                href = next((v for k, v in node.attrib.items() if local(k) == "href"), "")
+                if CC_URL_RE.search(href):
+                    cc_urls.append(href)
+        cc_urls.extend(m.group(0) for m in CC_URL_RE.finditer(element_text(lic)))
 
-    prose = " ".join(re.sub(r"<[^>]+>", " ", block).split())
-    cc_urls = CC_URL_RE.findall(block)
-    copyright_stmt = ""
-    cs_match = re.search(r"<copyright-statement>(.*?)</copyright-statement>", block, re.S)
-    if cs_match:
-        copyright_stmt = " ".join(re.sub(r"<[^>]+>", " ", cs_match.group(1)).split())
+    if license_ref and CC_URL_RE.search(license_ref):
+        cc_urls.insert(0, license_ref)
 
-    has_tdm_prose = bool(re.search(r"text\s*(and\s*data\s*)?mining", prose, re.I))
-    has_cc_prose = bool(re.search(r"creative\s*commons|\bCC[ -]?BY\b|public domain", prose, re.I))
+    prose = " ".join(filter(None, (
+        " ".join(element_text(p) for p in xchildren(lic, "license-p")) or element_text(lic)
+        for lic in licences))).strip()
+    copyright_stmt = " ".join(
+        element_text(c) for block in permissions
+        for c in xchildren(block, "copyright-statement")).strip()
 
-    if license_ref:
-        recoverable, source = True, "ali:license_ref"
-    elif cc_urls:
-        recoverable, source = True, "creativecommons URL in permissions"
-    elif has_cc_prose:
-        recoverable, source = True, "licence prose"
-    elif has_tdm_prose:
-        recoverable, source = True, "text-mining prose (TDM)"
+    standardized = bool(
+        (license_ref and CC_URL_RE.search(license_ref))
+        or cc_urls
+        or (content_type and STANDARD_CONTENT_TYPE_RE.search(content_type))
+    )
+
+    if standardized:
+        tier, source = LICENCE_STANDARD, "standardized licence identifier"
+    elif licences and TDM_PROSE_RE.search(prose):
+        tier, source = LICENCE_TDM, "text-mining permission prose"
+    elif licences:
+        tier = LICENCE_PROSE
+        source = ("non-standard licence reference" if license_ref
+                  else "licence prose without a standardized identifier")
+    elif TDM_PROSE_RE.search(copyright_stmt):
+        tier, source = LICENCE_TDM, "text-mining permission prose"
     elif copyright_stmt:
-        recoverable, source = False, "copyright statement only"
-    elif block:
-        recoverable, source = False, "permissions block present but uninformative"
+        tier, source = LICENCE_ABSENT, "copyright statement only"
     else:
-        recoverable, source = False, "no permissions block"
+        tier, source = LICENCE_ABSENT, "permissions block present but uninformative"
 
     return {
-        "has_permissions_block": bool(block),
+        "has_permissions_block": True,
         "license_ref": license_ref,
         "content_type": content_type,
         "prose": prose[:400],
         "cc_urls": cc_urls[:3],
         "copyright_statement": copyright_stmt[:200],
-        "recoverable": recoverable,
+        "tier": tier,
+        "standardized": standardized,
         "recovery_source": source,
     }
 
 
-def contradictions(record: dict[str, Any], xml_head: str) -> list[str]:
+def contradictions(record: dict[str, Any], root: Any) -> list[str]:
     """Evidence in the XML that contradicts what the parser recorded.
 
-    Each entry means the source contained something the parser reported as
-    absent. That is the only signal in this tool that points at a parser defect
-    rather than at source variability.
+    Every check follows the main article's structure, matching the contract the
+    parser is meant to honour. An element found in a structure the parser is not
+    supposed to read -- a citation's <pub-id>, a structured abstract's <sec>, a
+    peer review's <ref-list> -- is not evidence of anything, and finding one
+    here would make the tool report phantom defects.
     """
-    if not xml_head:
+    if root is None:
         return []
     found: list[str] = []
     status = record["qc"]["status"]
     flags = set(record["qc"]["flags"])
 
-    if status == "no_abstract" and re.search(r"<abstract[\s>]", xml_head):
+    if status == "no_abstract" and xchildren(article_meta_of(root), "abstract"):
         found.append("XML contains <abstract> but the record has none")
-    if status == "no_body" and re.search(r"<body[\s>]", xml_head):
+    if status == "no_body" and article_body(root) is not None:
         found.append("XML contains <body> but the record has none")
-    if "no_sections" in flags and re.search(r"<sec[\s>]", xml_head):
+    if "no_sections" in flags and body_offers_sections(root):
         found.append("XML contains <sec> but no sections were parsed")
-    if "no_doi" in flags and re.search(r'pub-id-type="doi"', xml_head):
+    if "no_doi" in flags and article_identifier(root, "doi"):
         found.append("XML carries a DOI article-id but the record has none")
-    if "no_pmid" in flags and re.search(r'pub-id-type="pmid"', xml_head):
+    if "no_pmid" in flags and article_identifier(root, "pmid"):
         found.append("XML carries a PMID article-id but the record has none")
-    if "no_authors" in flags and re.search(r'contrib-type="author"', xml_head):
+    if "no_authors" in flags and article_authors_present(root):
         found.append("XML contains an author contrib but no authors were parsed")
-    if "no_affiliations" in flags and re.search(r"<aff[\s>]", xml_head):
+    if "no_affiliations" in flags and article_affiliations_present(root):
         found.append("XML contains <aff> but no affiliations were parsed")
-    if "no_references" in flags and re.search(r"<ref[\s>]", xml_head):
+    if "no_references" in flags and article_reference_count(root):
         found.append("XML contains <ref> but no references were counted")
-    if "license_absent_in_xml" in flags and re.search(r"license_ref", xml_head):
+    if "license_absent_in_xml" in flags and probe_license_in_xml(root)["standardized"]:
         found.append("XML contains ali:license_ref but no licence was derived")
     return found
 
@@ -295,7 +491,8 @@ def categorise(record: dict[str, Any], group: str, clashes: list[str],
         # judgement call; anything softer stays "possible".
         hard = any("article-id" in c or "<abstract>" in c or "<body>" in c for c in clashes)
         return CAT_BUG if hard else CAT_POSSIBLE
-    if group == "license_absent_in_xml" and licence_probe and licence_probe["recoverable"]:
+    if (group == "license_absent_in_xml" and licence_probe
+            and licence_probe.get("standardized")):
         return CAT_POSSIBLE
     if classification == "needs manual review":
         return CAT_REVIEW
@@ -359,9 +556,10 @@ def investigate(jsonl: Path, manifest_path: Path, xml_dir: Path | None) -> dict[
             continue
 
         pmcid = record.get("pmcid", "")
-        xml_head = read_xml_head(pmcid, xml_dir)
-        atype = article_type_of(xml_head) or "(unknown)"
-        clashes = contradictions(record, xml_head)
+        # One tree at a time; it goes out of scope with the loop iteration.
+        root = read_xml_document(pmcid, xml_dir)
+        atype = article_type_of(root) or "(unknown)"
+        clashes = contradictions(record, root)
 
         body_sample = ""
         if status in {"stub", "no_body"}:
@@ -381,7 +579,7 @@ def investigate(jsonl: Path, manifest_path: Path, xml_dir: Path | None) -> dict[
 
         probe: dict[str, Any] | None = None
         if "license_absent_in_xml" in member:
-            probe = probe_license_in_xml(xml_head)
+            probe = probe_license_in_xml(root)
             absent_probes.append({"pmcid": pmcid, **probe})
 
         row = {
@@ -421,7 +619,7 @@ def investigate(jsonl: Path, manifest_path: Path, xml_dir: Path | None) -> dict[
 
         if "license_disagreement" in member:
             prov = record.get("provenance", {})
-            xml_probe = probe or probe_license_in_xml(xml_head)
+            xml_probe = probe or probe_license_in_xml(root)
             manifest_code = prov.get("license_code_manifest") or "(blank)"
             xml_code = prov.get("license_code_xml") or "(none)"
             same_family = (manifest_code.replace(" ", "").upper()
@@ -525,32 +723,39 @@ def build_report(result: dict[str, Any], jsonl: Path, xml_used: bool, max_rows: 
             "article's own `<permissions>` block. No reuse policy is decided here.", "",
         ]
 
-    lines += ["## `license_absent_in_xml` — recoverability probe", ""]
+    lines += ["## `license_absent_in_xml` — licence evidence tiers", ""]
     probes = result["absent_probes"]
     if not probes:
         lines += ["_No records in this group._", ""]
     else:
-        recoverable = [p for p in probes if p["recoverable"]]
-        lines += [f"Records probed: **{len(probes):,}**  ",
-                  f"Licence information recoverable from the XML: **{len(recoverable):,}**  ",
-                  f"Genuinely absent: **{len(probes) - len(recoverable):,}**", "",
-                  "**Recovery-logic verdict.** " + (
-                      f"{len(recoverable):,} record(s) carry licence information the parser did "
-                      "not derive — the recovery logic is not catching every form."
-                      if recoverable else
-                      "No record carries recoverable licence information the parser missed; "
-                      "the recovery logic is working."), ""]
+        tiers = Counter(p["tier"] for p in probes)
+        standard = [p for p in probes if p["standardized"]]
+        lines += [f"Records probed: **{len(probes):,}**", "",
+                  "Evidence is graded by whether an identifier exists that a normalizer "
+                  "could act on. Only tier A can produce a `license_code_xml`, so only "
+                  "tier A is grounds for suspecting the parser missed something. "
+                  "Publisher reuse boilerplate and text-mining permissions grant no "
+                  "licence and are not evidence against the parser.", ""]
+        lines += md_table([{"tier": k, "count": f"{v:,}"} for k, v in sorted(tiers.items())],
+                          ["tier", "count"], 10**9)
+        lines += ["**Extraction verdict.** " + (
+            f"{len(standard):,} record(s) carry a standardized licence identifier the "
+            "parser did not normalise — a genuine extraction or normalisation gap."
+            if standard else
+            "No record carries a standardized licence identifier the parser missed; "
+            "extraction is working. The rest are prose, text-mining permissions or "
+            "genuinely absent licences, none of which yield a normalized code."), ""]
         lines += md_table([{"pmcid": p["pmcid"],
                             "permissions_block": "yes" if p["has_permissions_block"] else "no",
                             "license_ref": p["license_ref"] or "-",
                             "content_type": p["content_type"] or "-",
                             "cc_urls": ", ".join(p["cc_urls"]) or "-",
                             "copyright": p["copyright_statement"] or "-",
-                            "recoverable": "YES" if p["recoverable"] else "no",
+                            "tier": p["tier"],
                             "source": p["recovery_source"],
                             "prose": p["prose"][:150] or "-"} for p in probes],
                           ["pmcid", "permissions_block", "license_ref", "content_type",
-                           "cc_urls", "copyright", "recoverable", "source", "prose"], max_rows)
+                           "cc_urls", "copyright", "tier", "source", "prose"], max_rows)
 
     lines += ["## Licence recovery from XML", "",
               f"`license_recovered_from_xml`: **{result['flags'].get('license_recovered_from_xml', 0):,}** "
@@ -610,7 +815,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Licence disagreements: {len(result['licence_details'])}")
     probes = result["absent_probes"]
     print(f"license_absent_in_xml: {len(probes)} probed, "
-          f"{sum(1 for p in probes if p['recoverable'])} recoverable")
+          f"{sum(1 for p in probes if p['standardized'])} with standardized evidence")
     print(f"license_recovered    : {result['flags'].get('license_recovered_from_xml', 0)}")
     clashes = result["contradictions"]
     print(f"Parser contradictions: {len(clashes)}"
