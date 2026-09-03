@@ -205,6 +205,28 @@ class Abstracts(unittest.TestCase):
         self.assertFalse(record["abstract"]["is_structured"])
         self.assertEqual(record["abstract"]["sections"], [])
 
+    def test_empty_preferred_abstract_falls_through_to_one_with_text(self):
+        front = IDS + TITLE + (
+            "<abstract></abstract>"
+            '<abstract abstract-type="plain-language-summary"><p>Lay summary.</p></abstract>'
+        )
+        record = parse(article(front, long_body()))
+        self.assertEqual(record["abstract"]["text"], "Lay summary.")
+        self.assertEqual(record["qc"]["status"], "ok")
+        self.assertEqual(record["abstract_other"][0]["type"], "untyped")
+        self.assertEqual(record["abstract_other"][0]["text"], "")
+        self.assertIn("multiple_abstracts", record["qc"]["flags"])
+
+    def test_textless_abstracts_remain_no_abstract(self):
+        front = IDS + TITLE + (
+            "<abstract></abstract>"
+            '<abstract abstract-type="graphical"><fig/></abstract>'
+        )
+        record = parse(article(front, long_body()))
+        self.assertEqual(record["abstract"]["text"], "")
+        self.assertEqual(record["qc"]["status"], "no_abstract")
+        self.assertIn("multiple_abstracts", record["qc"]["flags"])
+
 
 class Dates(unittest.TestCase):
     def test_epub_beats_ppub_and_precision_recorded(self):
@@ -295,6 +317,27 @@ class Licences(unittest.TestCase):
         record = parse(article(front, long_body()), {"license_code": ""})
         self.assertIn("license_recovered_from_xml", record["qc"]["flags"])
 
+    def test_later_license_with_ali_ref_is_preferred_over_unusable_first(self):
+        front = IDS + TITLE + ABSTRACT + (
+            "<permissions>"
+            "<license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">'
+            "http://www.springer.com/gb/open-access/authors-rights/aam-terms-v1"
+            "</ali:license_ref>"
+            "<license-p>Author accepted manuscript terms.</license-p>"
+            "</license>"
+            "<license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/'
+            "</ali:license_ref>"
+            "</license>"
+            "</permissions>"
+        )
+        prov = parse(article(front, long_body()), {"license_code": "CC BY"})["provenance"]
+        self.assertEqual(prov["license_code_xml"], "CC BY")
+        self.assertEqual(prov["license_content_type_xml"], "ccbylicense")
+        self.assertIn("creativecommons.org", prov["license_ref_xml"])
+
 
 class FiguresTablesAndFloats(unittest.TestCase):
     def test_floats_group_figures_and_tables_are_counted(self):
@@ -312,6 +355,29 @@ class FiguresTablesAndFloats(unittest.TestCase):
 
     def test_references_counted_from_back(self):
         back = "<ref-list><ref id='r1'/><ref id='r2'/><ref id='r3'/></ref-list>"
+        record = parse(article(IDS + TITLE + ABSTRACT, long_body(), back=back))
+        self.assertEqual(record["reference_count"], 3)
+        self.assertNotIn("no_references", record["qc"]["flags"])
+
+    def test_references_counted_from_all_ref_lists_under_back(self):
+        back = (
+            "<ref-list><title>Notes</title></ref-list>"
+            "<app-group><app><ref-list>"
+            "<ref id='r1'/><ref id='r2'/>"
+            "</ref-list></app></app-group>"
+            "<ref-list><ref id='r3'/></ref-list>"
+        )
+        record = parse(article(IDS + TITLE + ABSTRACT, long_body(), back=back))
+        self.assertEqual(record["reference_count"], 3)
+        self.assertNotIn("no_references", record["qc"]["flags"])
+
+    def test_nested_ref_lists_are_not_double_counted(self):
+        back = (
+            "<ref-list>"
+            "<ref id='r1'/>"
+            "<ref-list><ref id='r2'/><ref id='r3'/></ref-list>"
+            "</ref-list>"
+        )
         record = parse(article(IDS + TITLE + ABSTRACT, long_body(), back=back))
         self.assertEqual(record["reference_count"], 3)
         self.assertNotIn("no_references", record["qc"]["flags"])
