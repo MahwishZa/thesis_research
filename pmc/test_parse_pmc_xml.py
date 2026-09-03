@@ -18,7 +18,8 @@ from pathlib import Path
 import parse_pmc_xml as pp
 
 
-def article(front: str = "", body: str = "", back: str = "", floats: str = "") -> str:
+def article(front: str = "", body: str = "", back: str = "", floats: str = "",
+            extra: str = "") -> str:
     return (
         '<article article-type="research-article" dtd-version="1.4">'
         f"<front><journal-meta><journal-title-group><journal-title>Test Journal"
@@ -27,7 +28,7 @@ def article(front: str = "", body: str = "", back: str = "", floats: str = "") -
         f"<body>{body}</body>"
         + (f"<back>{back}</back>" if back else "")
         + (f"<floats-group>{floats}</floats-group>" if floats else "")
-        + "</article>"
+        + extra + "</article>"
     )
 
 
@@ -456,3 +457,188 @@ class OutputSafety(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# ---------------------------------------------------------------------------
+# Reference lists nested in article content, and nested documents excluded
+# ---------------------------------------------------------------------------
+
+
+SUB_ARTICLE_WITH_REFS = (
+    "<sub-article article-type='peer-review'><front-stub>"
+    "<title-group><article-title>Reviewer report</article-title></title-group>"
+    "</front-stub><body><sec><title>Review</title><p>Review text.</p></sec></body>"
+    "<back><ref-list><ref id='sr1'/><ref id='sr2'/><ref id='sr3'/></ref-list></back>"
+    "</sub-article>"
+)
+RESPONSE_WITH_REFS = (
+    "<response response-type='reply'><front-stub>"
+    "<title-group><article-title>Author reply</article-title></title-group>"
+    "</front-stub>"
+    "<back><ref-list><ref id='pr1'/><ref id='pr2'/></ref-list></back></response>"
+)
+
+
+class ReferenceListLocation(unittest.TestCase):
+    """Where the bibliography sits varies by publisher; all of it is the article's."""
+
+    def count(self, body: str = "", back: str = "", extra: str = "") -> int:
+        record = parse(article(IDS + TITLE + ABSTRACT,
+                               body or long_body(), back=back, extra=extra))
+        return record["reference_count"]
+
+    def test_back_ref_list(self):
+        self.assertEqual(self.count(back="<ref-list><ref id='r1'/><ref id='r2'/></ref-list>"), 2)
+
+    def test_back_sec_ref_list(self):
+        self.assertEqual(
+            self.count(back="<sec><title>References</title>"
+                            "<ref-list><ref id='r1'/><ref id='r2'/></ref-list></sec>"), 2)
+
+    def test_back_app_group_app_ref_list(self):
+        self.assertEqual(
+            self.count(back="<app-group><app id='a1'><title>Appendix</title>"
+                            "<ref-list><ref id='r1'/><ref id='r2'/><ref id='r3'/>"
+                            "</ref-list></app></app-group>"), 3)
+
+    def test_body_ref_list(self):
+        self.assertEqual(
+            self.count(body=long_body() + "<ref-list><ref id='r1'/><ref id='r2'/></ref-list>"), 2)
+
+    def test_body_sec_ref_list(self):
+        """PMC9545113: the bibliography lives inside a body section."""
+        body = ("<sec><title>Introduction</title><p>%s</p>"
+                "<ref-list><ref id='r1'/><ref id='r2'/><ref id='r3'/></ref-list></sec>"
+                % " ".join(["word"] * 400))
+        self.assertEqual(self.count(body=body), 3)
+
+    def test_body_and_back_ref_lists_are_summed(self):
+        body = long_body() + "<ref-list><ref id='b1'/></ref-list>"
+        self.assertEqual(
+            self.count(body=body, back="<ref-list><ref id='r1'/><ref id='r2'/></ref-list>"), 3)
+
+    def test_body_ref_list_clears_the_no_references_flag(self):
+        body = ("<sec><title>Introduction</title><p>%s</p>"
+                "<ref-list><ref id='r1'/></ref-list></sec>" % " ".join(["word"] * 400))
+        record = parse(article(IDS + TITLE + ABSTRACT, body))
+        self.assertEqual(record["reference_count"], 1)
+        self.assertNotIn("no_references", record["qc"]["flags"])
+
+
+class NestedDocumentReferencesExcluded(unittest.TestCase):
+    """A peer review's or reply's citations are not the article's."""
+
+    def count(self, body: str = "", back: str = "", extra: str = "") -> int:
+        record = parse(article(IDS + TITLE + ABSTRACT,
+                               body or long_body(), back=back, extra=extra))
+        return record["reference_count"]
+
+    def test_sub_article_references_are_excluded(self):
+        """PMC11064958: refs exist only inside a peer-review sub-article."""
+        self.assertEqual(self.count(extra=SUB_ARTICLE_WITH_REFS), 0)
+
+    def test_response_references_are_excluded(self):
+        self.assertEqual(self.count(extra=RESPONSE_WITH_REFS), 0)
+
+    def test_sub_article_refs_leave_the_no_references_flag_set(self):
+        record = parse(article(IDS + TITLE + ABSTRACT, long_body(),
+                               extra=SUB_ARTICLE_WITH_REFS))
+        self.assertEqual(record["reference_count"], 0)
+        self.assertIn("no_references", record["qc"]["flags"])
+
+    def test_mixed_article_and_sub_article_refs_count_only_the_article(self):
+        self.assertEqual(
+            self.count(back="<ref-list><ref id='a1'/><ref id='a2'/></ref-list>",
+                       extra=SUB_ARTICLE_WITH_REFS), 2)
+
+    def test_mixed_body_refs_and_response_refs_count_only_the_article(self):
+        body = ("<sec><title>Introduction</title><p>%s</p>"
+                "<ref-list><ref id='a1'/></ref-list></sec>" % " ".join(["word"] * 400))
+        self.assertEqual(self.count(body=body, extra=RESPONSE_WITH_REFS), 1)
+
+    def test_sub_article_body_does_not_become_article_sections(self):
+        """The exclusion must not disturb section parsing."""
+        record = parse(article(IDS + TITLE + ABSTRACT, long_body(),
+                               extra=SUB_ARTICLE_WITH_REFS))
+        self.assertEqual([s["title_raw"] for s in record["sections"]], ["Introduction"])
+
+
+class Cc0LicenceNormalisation(unittest.TestCase):
+    def licence_of(self, permissions: str) -> str:
+        record = parse(article(IDS + TITLE + ABSTRACT + permissions, long_body()),
+                       {"license_code": "CC0"})
+        return record["provenance"]["license_code_xml"]
+
+    def test_publicdomain_mark_url_is_normalised(self):
+        """PMC11135165: Public Domain Mark with a cc0license content-type."""
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="cc0license">https://creativecommons.org/publicdomain/mark/1.0/'
+            "</ali:license_ref></license></permissions>"), "CC0")
+
+    def test_publicdomain_mark_agrees_with_the_manifest_code(self):
+        """The code must match PMC's own, or the comparison manufactures a defect.
+
+        license_code_xml is compared for string equality against the manifest's
+        license_code, and PMC records PMC11135165 as CC0. A separate PDM value
+        would fail that comparison and raise a false license_disagreement, so
+        this pins the contract rather than the implementation. The exact URL
+        stays available in license_ref_xml for anyone who needs the distinction.
+        """
+        permissions = (
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="cc0license">https://creativecommons.org/publicdomain/mark/1.0/'
+            "</ali:license_ref></license></permissions>"
+        )
+        record = parse(article(IDS + TITLE + ABSTRACT + permissions, long_body()),
+                       {"license_code": "CC0"})
+        self.assertEqual(record["provenance"]["license_code_xml"], "CC0")
+        self.assertNotIn("license_disagreement", record["qc"]["flags"])
+        self.assertNotIn("license_absent_in_xml", record["qc"]["flags"])
+        self.assertEqual(record["provenance"]["license_ref_xml"],
+                         "https://creativecommons.org/publicdomain/mark/1.0/")
+
+    def test_cc0license_content_type_alone_is_recognised(self):
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="cc0license">https://example.org/terms</ali:license_ref>'
+            "</license></permissions>"), "CC0")
+
+    def test_publicdomain_zero_still_normalises(self):
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">'
+            "https://creativecommons.org/publicdomain/zero/1.0/</ali:license_ref>"
+            "</license></permissions>"), "CC0")
+
+    def test_cc_by_normalisation_is_unaffected(self):
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/'
+            "</ali:license_ref></license></permissions>"), "CC BY")
+
+    def test_cc_by_nc_nd_normalisation_is_unaffected(self):
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="ccbyncndlicense">https://creativecommons.org/licenses/by-nc-nd/4.0/'
+            "</ali:license_ref></license></permissions>"), "CC BY-NC-ND")
+
+    def test_public_domain_prose_alone_is_not_normalised(self):
+        """Prose is never part of the haystack; only identifiers are."""
+        self.assertEqual(self.licence_of(
+            "<permissions><license><license-p>All material appearing in this journal "
+            "is in the public domain and may be reproduced without permission."
+            "</license-p></license></permissions>"), "")
+
+    def test_unrelated_publisher_reference_is_not_normalised(self):
+        self.assertEqual(self.licence_of(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">'
+            "http://www.springer.com/gb/open-access/authors-rights/aam-terms-v1"
+            "</ali:license_ref><license-p>Terms of use and reuse: academic research "
+            "for non-commercial purposes.</license-p></license></permissions>"), "")

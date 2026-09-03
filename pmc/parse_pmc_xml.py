@@ -105,9 +105,18 @@ LICENCE_PATTERNS: list[tuple[str, str]] = [
     ("CC BY-NC", r"by[-_ ]?nc(?![-_ ]?(nd|sa))"),
     ("CC BY-SA", r"by[-_ ]?sa"),
     ("CC BY-ND", r"by[-_ ]?nd"),
-    ("CC0", r"publicdomain/zero|\bcc0\b|zerolicense"),
+    # publicdomain/mark and the content-type token "cc0license" both appear in
+    # PMC. \bcc0\b cannot match "cc0license" -- there is no word boundary
+    # between "0" and "l" -- so the token is spelled out. Public Domain Mark is
+    # not literally CC0, but PMC labels it cc0license, and this field records
+    # what the source declares.
+    ("CC0", r"publicdomain/(zero|mark)|\bcc0\b|cc0[-_ ]?licen[cs]e|zerolicense"),
     ("CC BY", r"by(?![-_ ]?(nc|nd|sa))"),
 ]
+
+# Documents nested inside an article: a peer review, an author response. Their
+# content is their own, so article-level traversals must not descend into them.
+NESTED_DOCUMENT_TAGS = {"sub-article", "response"}
 
 # Which pub-date wins. "preprint" is deliberately last: PMC9277667 carries a
 # preprint date four years before its actual publication date.
@@ -431,12 +440,41 @@ def parse_licence(article_meta: ET.Element | None) -> dict[str, str]:
     return parsed[0][0]
 
 
-def count_references(back: ET.Element | None) -> int:
-    """Unique <ref> elements under any <ref-list> descendant of <back>."""
+def main_article_elements(node: ET.Element | None) -> Iterator[ET.Element]:
+    """Every element of the main article, never entering a nested document.
+
+    A <sub-article> (peer review) or <response> (author reply) carries its own
+    front-stub, body and back. Its content belongs to that document, so no
+    traversal of the article may descend into one.
+    """
+    if node is None:
+        return
+    yield node
+    for kid in node:
+        if local(kid.tag) in NESTED_DOCUMENT_TAGS:
+            continue
+        yield from main_article_elements(kid)
+
+
+def count_references(root: ET.Element | None) -> int:
+    """Unique <ref> elements under any <ref-list> belonging to the main article.
+
+    Publishers place the bibliography in several positions: directly under
+    <back>, inside a <back><sec>, inside an appendix, repeated as siblings, and
+    -- unusually but legally -- inside the <body> itself. All of those are the
+    article's own references and all are counted.
+
+    A sub-article's or response's references are not: they cite a different
+    document. That distinction is why this walks the article rather than
+    searching the whole tree.
+    """
     unique: set[int] = set()
-    for ref_list in descendants(back, "ref-list"):
-        for ref in descendants(ref_list, "ref"):
-            unique.add(id(ref))
+    for node in main_article_elements(root):
+        if local(node.tag) != "ref-list":
+            continue
+        for ref in main_article_elements(node):
+            if ref is not node and local(ref.tag) == "ref":
+                unique.add(id(ref))
     return len(unique)
 
 
@@ -624,7 +662,7 @@ def parse_article(path: Path, manifest_row: dict[str, str], stub_threshold: int)
     figure_count = len(list(descendants(body, "fig"))) + len(list(descendants(floats, "fig")))
     table_count = (len(list(descendants(body, "table-wrap")))
                    + len(list(descendants(floats, "table-wrap"))))
-    reference_count = count_references(back)
+    reference_count = count_references(root)
 
     # ---- QC ----
     flags: list[str] = []
