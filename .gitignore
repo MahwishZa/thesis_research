@@ -41,3 +41,9 @@ pmc/parsed/
 # overlays via pmc/build_chunks.py. chunk_stats.json is deliberately NOT ignored:
 # it is the committed evidence of the run.
 pmc/chunks/chunks.jsonl
+
+# Embedding index and retrieved candidate sets (derived, large, machine-specific).
+# Rebuilt with pmc/embed_chunks.py on the machine that holds the model weights.
+# A stub index must never be committed: it is not valid for thesis results.
+pmc/index/
+pmc/candidates/
