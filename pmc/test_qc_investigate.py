@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import qc_investigate as qc
@@ -86,6 +87,30 @@ PERMISSIONS_COPYRIGHT_ONLY = (
     "<permissions><copyright-statement>(c) 2024 The Publisher</copyright-statement>"
     "</permissions>"
 )
+PERMISSIONS_CC0_MARK = (          # PMC11135165 shape
+    "<permissions><license>"
+    '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+    ' content-type="cc0license">https://creativecommons.org/publicdomain/mark/1.0/'
+    "</ali:license_ref><license-p>Material is in the public domain.</license-p>"
+    "</license></permissions>"
+)
+PERMISSIONS_SPRINGER_AAM = (     # PMC8260619 shape: a reference, but not a CC scheme
+    "<permissions><license>"
+    '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">'
+    "http://www.springer.com/gb/open-access/authors-rights/aam-terms-v1</ali:license_ref>"
+    "<license-p>Terms of use and reuse: academic research for non-commercial purposes."
+    "</license-p></license></permissions>"
+)
+PERMISSIONS_IEEE = (             # publisher reuse boilerplate, grants no licence
+    "<permissions><license><license-p>Personal use is permitted, but "
+    "republication/redistribution requires IEEE permission. This file is available "
+    "for text mining.</license-p></license></permissions>"
+)
+
+
+def root_of(xml: str):
+    """Parse a fixture string the way the detector parses a file."""
+    return ET.fromstring(xml)
 
 
 class Corpus:
@@ -262,44 +287,105 @@ class LicenceComparison(CorpusCase):
         self.assertEqual(corpus.run()["licence_details"], [])
 
 
-class LicenceRecoveryProbe(CorpusCase):
-    def test_ali_license_ref_is_found_in_permissions(self):
-        probe = qc.probe_license_in_xml(
-            XML_TEMPLATE.format(atype="research-article", permissions=PERMISSIONS_CC, body=""))
-        self.assertTrue(probe["recoverable"])
-        self.assertEqual(probe["recovery_source"], "ali:license_ref")
+class LicenceEvidenceTiers(CorpusCase):
+    """Only a standardized identifier is evidence the parser missed something."""
+
+    def probe(self, permissions: str, atype: str = "research-article"):
+        return qc.probe_license_in_xml(
+            root_of(XML_TEMPLATE.format(atype=atype, permissions=permissions, body="")))
+
+    def test_creative_commons_licence_url_is_standardized(self):
+        probe = self.probe(PERMISSIONS_CC)
+        self.assertEqual(probe["tier"], qc.LICENCE_STANDARD)
+        self.assertTrue(probe["standardized"])
         self.assertEqual(probe["content_type"], "ccbylicense")
         self.assertEqual(probe["copyright_statement"], "(c) 2024 Author")
 
-    def test_text_mining_prose_is_recoverable_as_tdm(self):
-        probe = qc.probe_license_in_xml(
-            XML_TEMPLATE.format(atype="research-article", permissions=PERMISSIONS_TDM, body=""))
-        self.assertTrue(probe["recoverable"])
-        self.assertEqual(probe["recovery_source"], "text-mining prose (TDM)")
+    def test_cc0_publicdomain_mark_is_standardized(self):
+        probe = self.probe(PERMISSIONS_CC0_MARK)
+        self.assertEqual(probe["tier"], qc.LICENCE_STANDARD)
+        self.assertTrue(probe["standardized"])
+        self.assertIn("publicdomain/mark", probe["license_ref"])
 
-    def test_copyright_statement_alone_is_not_recoverable(self):
-        probe = qc.probe_license_in_xml(XML_TEMPLATE.format(
-            atype="research-article", permissions=PERMISSIONS_COPYRIGHT_ONLY, body=""))
-        self.assertFalse(probe["recoverable"])
+    def test_cc0license_content_type_is_recognised(self):
+        probe = self.probe(
+            "<permissions><license>"
+            '<ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/"'
+            ' content-type="cc0license">https://example.org/terms</ali:license_ref>'
+            "</license></permissions>")
+        self.assertEqual(probe["tier"], qc.LICENCE_STANDARD)
+
+    def test_springer_aam_reference_is_prose_not_standardized(self):
+        probe = self.probe(PERMISSIONS_SPRINGER_AAM)
+        self.assertEqual(probe["tier"], qc.LICENCE_PROSE)
+        self.assertFalse(probe["standardized"])
+        self.assertIn("springer.com", probe["license_ref"])
+
+    def test_text_mining_prose_alone_is_not_standardized_evidence(self):
+        probe = self.probe(PERMISSIONS_TDM)
+        self.assertEqual(probe["tier"], qc.LICENCE_TDM)
+        self.assertFalse(probe["standardized"])
+
+    def test_publisher_reuse_boilerplate_is_not_standardized_evidence(self):
+        probe = self.probe(PERMISSIONS_IEEE)
+        self.assertEqual(probe["tier"], qc.LICENCE_TDM)
+        self.assertFalse(probe["standardized"])
+
+    def test_copyright_statement_alone_is_not_licence_evidence(self):
+        probe = self.probe(PERMISSIONS_COPYRIGHT_ONLY)
+        self.assertEqual(probe["tier"], qc.LICENCE_ABSENT)
+        self.assertFalse(probe["standardized"])
         self.assertEqual(probe["recovery_source"], "copyright statement only")
 
     def test_absent_permissions_block_reported(self):
-        probe = qc.probe_license_in_xml(
-            XML_TEMPLATE.format(atype="research-article", permissions="", body=""))
-        self.assertFalse(probe["recoverable"])
+        probe = self.probe("")
+        self.assertEqual(probe["tier"], qc.LICENCE_ABSENT)
         self.assertFalse(probe["has_permissions_block"])
 
-    def test_recovery_probe_runs_for_every_flagged_record(self):
+    def test_permissions_with_attributes_are_found(self):
+        probe = self.probe(PERMISSIONS_CC.replace("<permissions>", '<permissions id="p1">'))
+        self.assertTrue(probe["has_permissions_block"])
+        self.assertEqual(probe["tier"], qc.LICENCE_STANDARD)
+
+    def test_sub_article_permissions_are_ignored(self):
+        xml = (
+            '<article article-type="research-article"><front><article-meta>'
+            "</article-meta></front><body/>"
+            "<sub-article article-type='peer-review'><front-stub>"
+            + PERMISSIONS_CC +
+            "</front-stub></sub-article></article>")
+        probe = qc.probe_license_in_xml(root_of(xml))
+        self.assertEqual(probe["tier"], qc.LICENCE_ABSENT)
+        self.assertFalse(probe["standardized"])
+
+    def test_probe_runs_for_every_flagged_record(self):
         corpus = self.make(
             [record("PMC1", flags=["license_absent_in_xml"]),
              record("PMC2", flags=["license_absent_in_xml"])],
             xml={"PMC1": XML_TEMPLATE.format(atype="research-article",
-                                             permissions=PERMISSIONS_TDM, body=""),
+                                             permissions=PERMISSIONS_CC0_MARK, body=""),
                  "PMC2": XML_TEMPLATE.format(atype="research-article",
                                              permissions=PERMISSIONS_COPYRIGHT_ONLY, body="")})
         probes = corpus.run()["absent_probes"]
         self.assertEqual(len(probes), 2)
-        self.assertEqual(sum(1 for p in probes if p["recoverable"]), 1)
+        self.assertEqual(sum(1 for p in probes if p["standardized"]), 1)
+
+    def test_standardized_evidence_raises_a_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", flags=["license_absent_in_xml"])],
+            xml={"PMC1": XML_TEMPLATE.format(atype="research-article",
+                                             permissions=PERMISSIONS_CC0_MARK, body="")})
+        self.assertEqual(len(corpus.run()["contradictions"]), 1)
+
+    def test_prose_and_tdm_evidence_raise_no_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", flags=["license_absent_in_xml"]),
+             record("PMC2", flags=["license_absent_in_xml"])],
+            xml={"PMC1": XML_TEMPLATE.format(atype="research-article",
+                                             permissions=PERMISSIONS_SPRINGER_AAM, body=""),
+                 "PMC2": XML_TEMPLATE.format(atype="research-article",
+                                             permissions=PERMISSIONS_IEEE, body="")})
+        self.assertEqual(corpus.run()["contradictions"], [])
 
     def test_license_recovered_from_xml_flag_is_counted(self):
         corpus = self.make([record("PMC1", flags=["license_recovered_from_xml"]),
@@ -411,7 +497,7 @@ class ReportGeneration(CorpusCase):
         for heading in ["# PMC corpus QC investigation", "## QC status counts",
                         "## QC flag counts", "## Parser-defect check",
                         "## Group: `stub`", "## Licence disagreements — detail",
-                        "## `license_absent_in_xml` — recoverability probe",
+                        "## `license_absent_in_xml` — licence evidence tiers",
                         "## Licence recovery from XML", "## Aggregates"]:
             self.assertIn(heading, text)
 
@@ -582,3 +668,226 @@ class MalformedAndMissingMetadata(CorpusCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# ---------------------------------------------------------------------------
+# Structural scoping: the corrections that removed 46 phantom contradictions
+# ---------------------------------------------------------------------------
+
+
+ARTICLE_META_DOI = '<article-id pub-id-type="doi">10.1/article</article-id>'
+ARTICLE_META_PMID = '<article-id pub-id-type="pmid">12345678</article-id>'
+CITATION_WITH_IDS = (
+    "<back><ref-list><ref id='r1'><element-citation publication-type='journal'>"
+    '<pub-id pub-id-type="doi">10.9/cited</pub-id>'
+    '<pub-id pub-id-type="pmid">99999999</pub-id>'
+    "</element-citation></ref></ref-list></back>"
+)
+SUB_ARTICLE_FULL = (
+    "<sub-article article-type='peer-review'><front-stub>"
+    '<article-id pub-id-type="doi">10.9/review</article-id>'
+    '<article-id pub-id-type="pmid">88888888</article-id>'
+    "<abstract><p>Reviewer summary.</p></abstract>"
+    "<aff id='rev1'>Review Institute</aff>"
+    "<contrib-group><contrib contrib-type='author'><name><surname>Rev</surname>"
+    "</name></contrib></contrib-group></front-stub>"
+    "<body><sec><title>Review</title><p>Review text.</p></sec></body>"
+    "<back><ref-list><ref id='sr1'/><ref id='sr2'/></ref-list></back></sub-article>"
+)
+
+
+def build(front: str = "", body: str | None = "", back: str = "", extra: str = "") -> str:
+    """A JATS article with precise control over where each element sits."""
+    return (
+        '<article article-type="research-article" dtd-version="1.4">'
+        f"<front><article-meta>{front}</article-meta></front>"
+        + ("" if body is None else f"<body>{body}</body>")
+        + (f"<back>{back}</back>" if back else "")
+        + extra + "</article>"
+    )
+
+
+class StructuralIdentifierDetection(unittest.TestCase):
+    def test_doi_in_article_meta_is_detected(self):
+        self.assertEqual(
+            qc.article_identifier(root_of(build(front=ARTICLE_META_DOI)), "doi"), "10.1/article")
+
+    def test_doi_only_inside_a_reference_is_not_the_article_doi(self):
+        root = root_of(build(back=CITATION_WITH_IDS.replace("<back>", "").replace("</back>", "")))
+        self.assertEqual(qc.article_identifier(root, "doi"), "")
+
+    def test_doi_only_inside_a_sub_article_is_not_the_article_doi(self):
+        root = root_of(build(extra=SUB_ARTICLE_FULL))
+        self.assertEqual(qc.article_identifier(root, "doi"), "")
+
+    def test_empty_article_id_is_not_a_doi(self):
+        root = root_of(build(front='<article-id pub-id-type="doi"></article-id>'))
+        self.assertEqual(qc.article_identifier(root, "doi"), "")
+
+    def test_pmid_in_article_meta_is_detected(self):
+        self.assertEqual(
+            qc.article_identifier(root_of(build(front=ARTICLE_META_PMID)), "pmid"), "12345678")
+
+    def test_pmid_only_inside_a_reference_is_not_the_article_pmid(self):
+        root = root_of(build(back=CITATION_WITH_IDS.replace("<back>", "").replace("</back>", "")))
+        self.assertEqual(qc.article_identifier(root, "pmid"), "")
+
+
+class StructuralDoiContradiction(CorpusCase):
+    def test_article_meta_doi_missing_from_record_is_a_contradiction(self):
+        corpus = self.make([record("PMC1", doi="", flags=["no_doi"])],
+                           xml={"PMC1": build(front=ARTICLE_META_DOI, body="<p>x</p>")})
+        self.assertEqual(len(corpus.run()["contradictions"]), 1)
+
+    def test_citation_doi_alone_raises_no_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", doi="", flags=["no_doi"])],
+            xml={"PMC1": '<article article-type="research-article"><front><article-meta>'
+                         "</article-meta></front><body><p>x</p></body>" + CITATION_WITH_IDS
+                         + "</article>"})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+    def test_sub_article_doi_alone_raises_no_contradiction(self):
+        corpus = self.make([record("PMC1", doi="", flags=["no_doi"])],
+                           xml={"PMC1": build(body="<p>x</p>", extra=SUB_ARTICLE_FULL)})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+
+class StructuralSectionDetection(CorpusCase):
+    def test_sec_under_article_body_is_detected(self):
+        root = root_of(build(body="<sec><title>I</title><p>x</p></sec>"))
+        self.assertTrue(qc.body_offers_sections(root))
+
+    def test_direct_p_under_body_counts_as_recoverable_content(self):
+        self.assertTrue(qc.body_offers_sections(root_of(build(body="<p>loose</p>"))))
+
+    def test_sec_only_in_structured_abstract_is_ignored(self):
+        root = root_of(build(
+            front="<abstract><sec><title>Background</title><p>bg</p></sec></abstract>",
+            body="<fig id='f1'/>"))
+        self.assertFalse(qc.body_offers_sections(root))
+
+    def test_sec_only_in_back_matter_is_ignored(self):
+        root = root_of(build(body="<fig id='f1'/>",
+                             back="<sec><title>Appendix</title><p>a</p></sec>"))
+        self.assertFalse(qc.body_offers_sections(root))
+
+    def test_sec_only_in_sub_article_is_ignored(self):
+        root = root_of(build(body="<fig id='f1'/>", extra=SUB_ARTICLE_FULL))
+        self.assertFalse(qc.body_offers_sections(root))
+
+    def test_no_body_when_only_the_sub_article_has_one(self):
+        root = root_of(build(body=None, extra=SUB_ARTICLE_FULL))
+        self.assertIsNone(qc.article_body(root))
+
+    def test_no_body_contradiction_only_when_the_article_has_a_body(self):
+        corpus = self.make(
+            [record("PMC1", status="no_body", words=0, sections=0),
+             record("PMC2", status="no_body", words=0, sections=0)],
+            xml={"PMC1": build(body=None, extra=SUB_ARTICLE_FULL),      # sub-article body only
+                 "PMC2": build(body="<sec><p>real</p></sec>")})          # article's own body
+        clashes = corpus.run()["contradictions"]
+        self.assertEqual([c[0] for c in clashes], ["PMC2"])
+
+    def test_structured_abstract_sec_raises_no_no_sections_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", status="no_body", sections=0, flags=["no_sections"])],
+            xml={"PMC1": build(
+                front="<abstract><sec><title>Background</title><p>bg</p></sec></abstract>",
+                body=None)})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+
+class StructuralReferenceDetection(unittest.TestCase):
+    def count(self, back="", body="", extra=""):
+        return qc.article_reference_count(root_of(build(body=body, back=back, extra=extra)))
+
+    def test_body_sec_ref_list_is_counted(self):        # PMC9545113 shape
+        self.assertEqual(
+            self.count(body="<sec><title>I</title><ref-list><ref id='r1'/>"
+                            "<ref id='r2'/></ref-list></sec>"), 2)
+
+    def test_back_ref_list_is_counted(self):
+        self.assertEqual(self.count(back="<ref-list><ref id='r1'/></ref-list>"), 1)
+
+    def test_back_sec_ref_list_is_counted(self):
+        self.assertEqual(
+            self.count(back="<sec><title>References</title><ref-list><ref id='r1'/>"
+                            "<ref id='r2'/></ref-list></sec>"), 2)
+
+    def test_back_app_group_app_ref_list_is_counted(self):
+        self.assertEqual(
+            self.count(back="<app-group><app><ref-list><ref id='r1'/><ref id='r2'/>"
+                            "<ref id='r3'/></ref-list></app></app-group>"), 3)
+
+    def test_sub_article_ref_list_is_ignored(self):     # PMC11064958 shape
+        self.assertEqual(self.count(extra=SUB_ARTICLE_FULL), 0)
+
+    def test_response_ref_list_is_ignored(self):
+        self.assertEqual(
+            self.count(extra="<response><back><ref-list><ref id='x1'/></ref-list>"
+                             "</back></response>"), 0)
+
+    def test_mixed_article_and_sub_article_refs_count_only_the_article(self):
+        self.assertEqual(
+            self.count(back="<ref-list><ref id='a1'/><ref id='a2'/></ref-list>",
+                       extra=SUB_ARTICLE_FULL), 2)
+
+    def test_nested_ref_list_is_not_double_counted(self):
+        self.assertEqual(
+            self.count(back="<ref-list><ref id='r1'/><ref-list><ref id='r2'/>"
+                            "</ref-list></ref-list>"), 2)
+
+    def test_no_back_and_no_ref_list_yields_zero(self):
+        self.assertEqual(self.count(), 0)
+
+
+class StructuralReferenceContradiction(CorpusCase):
+    def test_body_ref_list_remains_a_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", refs=0, flags=["no_references"])],
+            xml={"PMC1": build(body="<sec><ref-list><ref id='r1'/></ref-list></sec>")})
+        self.assertEqual(len(corpus.run()["contradictions"]), 1)
+
+    def test_sub_article_refs_raise_no_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", refs=0, flags=["no_references"])],
+            xml={"PMC1": build(body="<p>x</p>", extra=SUB_ARTICLE_FULL)})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+
+class StructuralAuthorAndAffiliation(CorpusCase):
+    def test_sub_article_author_raises_no_contradiction(self):
+        corpus = self.make(
+            [record("PMC1", flags=["no_authors", "no_affiliations"])],
+            xml={"PMC1": build(body="<p>x</p>", extra=SUB_ARTICLE_FULL)})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+    def test_article_author_and_aff_are_detected(self):
+        front = ("<contrib-group><contrib contrib-type='author'><name>"
+                 "<surname>Real</surname></name></contrib></contrib-group>"
+                 "<aff id='a1'>Real Institute</aff>")
+        corpus = self.make(
+            [record("PMC1", flags=["no_authors", "no_affiliations"])],
+            xml={"PMC1": build(front=front, body="<p>x</p>")})
+        self.assertEqual(len(corpus.run()["contradictions"]), 2)
+
+
+class WholeFileParsing(CorpusCase):
+    def test_detector_parses_the_complete_document(self):
+        """Evidence past the old 200 KB window must still be seen."""
+        padding = "<p>%s</p>" % (" ".join(["word"] * 40_000))
+        xml = build(body=padding, back="<ref-list><ref id='r1'/></ref-list>")
+        self.assertGreater(len(xml), 200_000)
+        corpus = self.make([record("PMC1", refs=0, flags=["no_references"])],
+                           xml={"PMC1": xml})
+        self.assertEqual(len(corpus.run()["contradictions"]), 1)
+
+    def test_unparsable_xml_yields_no_contradictions(self):
+        corpus = self.make([record("PMC1", doi="", flags=["no_doi"])],
+                           xml={"PMC1": "<article><front>unclosed"})
+        self.assertEqual(corpus.run()["contradictions"], [])
+
+    def test_missing_xml_file_yields_no_contradictions(self):
+        corpus = self.make([record("PMC1", doi="", flags=["no_doi"])])
+        self.assertEqual(corpus.run()["contradictions"], [])
