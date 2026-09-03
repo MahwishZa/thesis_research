@@ -17,6 +17,7 @@ retrieval system, embeddings, or thesis experiments.
 | 4. XML parsing | `pmc/parsed/` | One structured JSON record per article |
 | 5. Quality control | `pmc/` (reports) | Full-corpus QC reports |
 | 6. Corpus policy metadata (M1–M4) | `pmc/metadata/`, `pmc/currency_pack/` | Dates, eligibility, CPG layer, currency pack |
+| 7. Retrieval-ready chunks | `pmc/chunks/` | Deterministic chunks with full provenance |
 
 ## Layout
 
@@ -40,7 +41,51 @@ pmc/                       PMC acquisition, parsing, QC, corpus policy
   parsed/                    parsed records (gitignored, regenerable)
   metadata/                  M1-M4 overlays + registries  (see its README)
   currency_pack/             externally ingested currency-pack documents
+  build_chunks.py            retrieval-ready chunk layer
+  validate_chunks.py         chunk/provenance integrity gate
+  chunks/                    chunk_stats.json committed; chunks.jsonl gitignored
 ```
+
+## Chunking (stage 7)
+
+Strategy is taken from the thesis proposal (§5.1), not invented: **256-token
+sliding windows with 32-token overlap**, sized against the article encoder's
+512-token limit with headroom for a prepended title and section header, plus
+exact content-hash deduplication.
+
+Two implementation decisions follow from that text:
+
+- **Windows never cross a section boundary.** The proposal requires that a
+  recommendation is never separated from its qualifying conditions; windowing
+  inside sections also keeps section provenance exact for every chunk.
+- **Windows are measured in whitespace words** — deterministic and dependency
+  free (this repository is standard-library only). A 256-word window is always
+  fewer than 512 sub-word tokens, so it stays inside the encoder limit with
+  headroom. `--window/--overlap` can later be set in sub-word tokens without
+  changing any other logic.
+
+Title and section heading are stored as separate fields, not baked into the
+text; `build_chunks.compose_embed_text()` is the single shared rule for
+composing what the encoder sees.
+
+Frozen policy is enforced, never re-decided: records whose M4
+`eligibility_status` is `excluded` are not chunked; everything else carries its
+frozen status through so retrieval can filter. Exact-duplicate text is
+**flagged** via `duplicate_of`, never deleted — distinct versions and source
+types must survive, because recency is an experimental variable.
+
+```bash
+python3 pmc/build_chunks.py        # writes pmc/chunks/{chunks.jsonl,chunk_stats.json}
+python3 pmc/validate_chunks.py     # integrity gate; exits non-zero on failure
+```
+
+Both are deterministic: the same frozen inputs produce byte-identical output.
+`validate_chunks.py` prints a content digest for cross-run comparison.
+
+**Not yet built (next phase):** embeddings, FAISS/vector index, retrieval and
+reranking. Chunk and provenance validation comes first, and the retrieval stack
+must be frozen and replayed byte-identically across experimental arms — that
+belongs to the retrieval phase, not corpus preparation.
 
 ## Running the tests
 

@@ -35,3 +35,9 @@ pmc/parsed/
 # of the corpus and never committed; retry71.csv is regenerable from the snippet
 # in pmc/pmc_xml_retry_2026-09-02_outcome.md.
 /retry71.csv
+
+# Retrieval-ready chunks (derived research data, not source code).
+# Regenerable deterministically from the parsed corpus plus the frozen M1-M4
+# overlays via pmc/build_chunks.py. chunk_stats.json is deliberately NOT ignored:
+# it is the committed evidence of the run.
+pmc/chunks/chunks.jsonl
