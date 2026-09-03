@@ -30,3 +30,8 @@ pmc/fulltext/**/*.part
 # Regenerable from the raw XML plus pmc/parse_pmc_xml.py; every record carries
 # the source MD5, so a rebuild can be proven to match.
 pmc/parsed/
+
+# Scratch inventories produced while investigating acquisition failures. Not part
+# of the corpus and never committed; retry71.csv is regenerable from the snippet
+# in pmc/pmc_xml_retry_2026-09-02_outcome.md.
+/retry71.csv

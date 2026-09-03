@@ -1,0 +1,15 @@
+{
+  "pmcid": "PMC13082890",
+  "doi": "10.1002/14651858.CD016297",
+  "source_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13082890.1/PMC13082890.1.xml",
+  "acquisition": "manual-oa-fetch",
+  "observed_md5": "dcb1ac4eaa24b75ab3202f2315c6b2e4",
+  "fetched_at_utc": "pre-staged",
+  "inventory_expected_md5_stale": "b20dcfe941aba9ea27b37557ffd485f8",
+  "note": "Object is revised in place; distinct MD5s observed across attempts (inventory expected, reconciled, and this fetch all differ). Pinned by observed MD5. Licence CC BY-NC: local text-mining permitted, redistribution non-commercial.",
+  "parsed_ok": true,
+  "body_word_count": 12281,
+  "reference_count": 174,
+  "canonical_date": "2026-04-16",
+  "license_code_xml": "CC BY-NC"
+}
