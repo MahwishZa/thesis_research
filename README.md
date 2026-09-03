@@ -82,10 +82,46 @@ python3 pmc/validate_chunks.py     # integrity gate; exits non-zero on failure
 Both are deterministic: the same frozen inputs produce byte-identical output.
 `validate_chunks.py` prints a content digest for cross-run comparison.
 
-**Not yet built (next phase):** embeddings, FAISS/vector index, retrieval and
-reranking. Chunk and provenance validation comes first, and the retrieval stack
-must be frozen and replayed byte-identically across experimental arms — that
-belongs to the retrieval phase, not corpus preparation.
+## Retrieval infrastructure (stage 8)
+
+Models are fixed by the base paper and the proposal (§5.3), not chosen for
+convenience — the retriever is deliberately frozen, and that is the thesis's
+central internal-validity guarantee:
+
+| Role | Model |
+| --- | --- |
+| Document encoder | `ncbi/MedCPT-Article-Encoder` |
+| Query encoder | `ncbi/MedCPT-Query-Encoder` |
+| Reranker | `ncbi/MedCPT-Cross-Encoder` |
+
+**Exact flat search, not ANN.** Validity control V3 requires the candidate set
+to be replayed byte-identically to every experimental arm; an approximate index
+introduces run-to-run variation. Search is an exact inner-product scan over
+unit-normalized vectors, and ties break on `chunk_id` so ordering is total.
+FAISS/numpy are used when present purely for speed and give identical results.
+
+**Balanced retrieval** draws an equal quota per `source_category` before
+merging (base paper §3.4). Without it a PubMed-trained dense retriever drowns
+the small but decisive CPG and currency-pack corpora.
+
+**Candidate-set replay (V3).** `save_candidates()` serialises the candidate list
+with a digest over identity *and order*; `replay_candidates()` reloads and
+verifies it; `verify_replay()` proves a later arm scored the same population.
+
+```bash
+pip install torch transformers            # + faiss-cpu / numpy optional, for speed
+python3 pmc/embed_chunks.py               # MedCPT index -> pmc/index/
+python3 pmc/retrieve.py --query "..." --query-id q1
+python3 pmc/retrieve.py --replay pmc/candidates/q1.json
+```
+
+A deterministic stub encoder exists for offline testing only. It refuses to
+write an index without `--allow-stub` and stamps `production=false`, so a stub
+index can never be mistaken for a real one.
+
+**Not yet built (next phase):** the rationale-based query formulation, the
+perplexity/entailment filters, the generator, and the recency-bias experiments
+themselves. The retrieval stack must be reliable and reproducible first.
 
 ## Running the tests
 
