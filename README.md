@@ -129,12 +129,54 @@ the small but decisive CPG and currency-pack corpora.
 with a digest over identity *and order*; `replay_candidates()` reloads and
 verifies it; `verify_replay()` proves a later arm scored the same population.
 
+### Installing torch with CUDA
+
+**`pip install torch` gives you the CPU-only build on Windows.** That build makes
+`torch.cuda.is_available()` return `False`, and the embedding run then executes
+on the CPU — for ~780k chunks that is the difference between hours and days. The
+GPU build must be installed from the PyTorch CUDA index explicitly:
+
 ```bash
-pip install torch transformers            # + faiss-cpu / numpy optional, for speed
-python3 pmc/embed_chunks.py               # MedCPT index -> pmc/index/
+pip uninstall -y torch
+pip install torch==2.4.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+pip install transformers                  # unchanged; numpy optional, for speed
+
+python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+The CUDA runtime ships inside the wheel — no system CUDA toolkit is needed. Pick
+the `cuXXX` suffix your driver supports; a driver new enough for CUDA 12.1 or
+later runs the `cu121` build, and newer drivers stay backward compatible.
+
+### Building the index
+
+```bash
+python3 pmc/embed_chunks.py --device cuda --batch-size 8   # -> pmc/index/
+python3 pmc/verify_index.py                                # integrity gate
 python3 pmc/retrieve.py --query "..." --query-id q1
 python3 pmc/retrieve.py --replay pmc/candidates/q1.json
 ```
+
+Three properties matter for a run this long:
+
+- **`--device cuda` is a requirement, not a preference.** It fails with an
+  actionable message rather than silently falling back to the CPU. `--device
+  auto` keeps the old fallback but says which device it chose.
+- **The run resumes by default.** Output is flushed every batch, and a restart
+  picks up at the last complete row — a partial vector or half-written manifest
+  line is trimmed first. A resumed index is byte-identical to an uninterrupted
+  one, `content_digest` included. `--restart` starts over.
+- **CUDA OOM halves the batch and continues**, and stays reduced. It never falls
+  back to the CPU mid-run, which would make the index internally inconsistent.
+
+`--batch-size 8` is sized for a 4 GB card at 512 tokens; raise it on a larger
+GPU. `--limit N` embeds only the first N chunks for a smoke test and stamps the
+result `partial_index_limit` so it cannot be mistaken for the production index.
+
+`verify_index.py` is the gate to run before anything retrieves: it checks row
+count against the chunk layer, dimension, row-for-row alignment, absence of
+NaN/Inf, L2 normalisation, and that `content_digest` recomputes to the recorded
+value.
 
 A deterministic stub encoder exists for offline testing only. It refuses to
 write an index without `--allow-stub` and stamps `production=false`, so a stub
@@ -222,13 +264,13 @@ Tests import their module by name, so run them from inside the package directory
 cd pmc    && python3 -m unittest test_parse_pmc_xml test_qc_investigate \
                                  test_download_pmc_xml test_inventory_pmc_oa \
                                  test_build_corpus_metadata test_build_chunks \
-                                 test_retrieval
+                                 test_retrieval test_verify_index
 cd pubmed && python3 -m unittest test_fetch_pubmed test_pipeline_integration
 cd rag2   && python3 -m pytest
 ```
 
 All suites are offline — no network, no corpus files, no model weights required.
-Last measured: **311 passed** (`pmc/`), **51 passed** (`pubmed/`),
+Last measured: **355 passed** (`pmc/`), **51 passed** (`pubmed/`),
 **194 passed, 2 skipped** (`rag2/`; both skips are torch-gated modules).
 
 ## Regenerating derived data
@@ -255,7 +297,11 @@ Outstanding, in order:
 1. Full-corpus canonical-date regeneration (above), on the machine with the complete
    parsed corpus. `pmc/chunks/chunk_stats.json` should be refreshed from that run — the
    committed copy records a partial container run, not the production one.
-2. Build the MedCPT index (`pmc/embed_chunks.py`). Running separately.
+2. Build the MedCPT index on the GPU machine:
+   `python pmc\embed_chunks.py --device cuda --batch-size 8`, then
+   `python pmc\verify_index.py`. Resumable — re-run the same command after any
+   interruption. Install the CUDA torch build first (see stage 8); a `+cpu`
+   build silently runs this on the CPU.
 3. Train the RAG² filter, then run the baseline and record results in
    `rag2/docs/reproduction_results.md`. **No accuracy has been measured yet.**
 4. Only then: the recency-bias probe.
