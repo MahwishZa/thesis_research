@@ -17,6 +17,7 @@ retrieval system, embeddings, or thesis experiments.
 | 4. XML parsing | `pmc/parsed/` | One structured JSON record per article |
 | 5. Quality control | `pmc/` (reports) | Full-corpus QC reports |
 | 6. Corpus policy metadata (M1–M4) | `pmc/metadata/`, `pmc/currency_pack/` | Dates, eligibility, CPG layer, currency pack |
+| 7. Retrieval-ready chunks | `pmc/chunks/` | Deterministic chunks with full provenance |
 
 ## Layout
 
@@ -40,7 +41,87 @@ pmc/                       PMC acquisition, parsing, QC, corpus policy
   parsed/                    parsed records (gitignored, regenerable)
   metadata/                  M1-M4 overlays + registries  (see its README)
   currency_pack/             externally ingested currency-pack documents
+  build_chunks.py            retrieval-ready chunk layer
+  validate_chunks.py         chunk/provenance integrity gate
+  chunks/                    chunk_stats.json committed; chunks.jsonl gitignored
 ```
+
+## Chunking (stage 7)
+
+Strategy is taken from the thesis proposal (§5.1), not invented: **256-token
+sliding windows with 32-token overlap**, sized against the article encoder's
+512-token limit with headroom for a prepended title and section header, plus
+exact content-hash deduplication.
+
+Two implementation decisions follow from that text:
+
+- **Windows never cross a section boundary.** The proposal requires that a
+  recommendation is never separated from its qualifying conditions; windowing
+  inside sections also keeps section provenance exact for every chunk.
+- **Windows are measured in whitespace words** — deterministic and dependency
+  free (this repository is standard-library only). A 256-word window is always
+  fewer than 512 sub-word tokens, so it stays inside the encoder limit with
+  headroom. `--window/--overlap` can later be set in sub-word tokens without
+  changing any other logic.
+
+Title and section heading are stored as separate fields, not baked into the
+text; `build_chunks.compose_embed_text()` is the single shared rule for
+composing what the encoder sees.
+
+Frozen policy is enforced, never re-decided: records whose M4
+`eligibility_status` is `excluded` are not chunked; everything else carries its
+frozen status through so retrieval can filter. Exact-duplicate text is
+**flagged** via `duplicate_of`, never deleted — distinct versions and source
+types must survive, because recency is an experimental variable.
+
+```bash
+python3 pmc/build_chunks.py        # writes pmc/chunks/{chunks.jsonl,chunk_stats.json}
+python3 pmc/validate_chunks.py     # integrity gate; exits non-zero on failure
+```
+
+Both are deterministic: the same frozen inputs produce byte-identical output.
+`validate_chunks.py` prints a content digest for cross-run comparison.
+
+## Retrieval infrastructure (stage 8)
+
+Models are fixed by the base paper and the proposal (§5.3), not chosen for
+convenience — the retriever is deliberately frozen, and that is the thesis's
+central internal-validity guarantee:
+
+| Role | Model |
+| --- | --- |
+| Document encoder | `ncbi/MedCPT-Article-Encoder` |
+| Query encoder | `ncbi/MedCPT-Query-Encoder` |
+| Reranker | `ncbi/MedCPT-Cross-Encoder` |
+
+**Exact flat search, not ANN.** Validity control V3 requires the candidate set
+to be replayed byte-identically to every experimental arm; an approximate index
+introduces run-to-run variation. Search is an exact inner-product scan over
+unit-normalized vectors, and ties break on `chunk_id` so ordering is total.
+FAISS/numpy are used when present purely for speed and give identical results.
+
+**Balanced retrieval** draws an equal quota per `source_category` before
+merging (base paper §3.4). Without it a PubMed-trained dense retriever drowns
+the small but decisive CPG and currency-pack corpora.
+
+**Candidate-set replay (V3).** `save_candidates()` serialises the candidate list
+with a digest over identity *and order*; `replay_candidates()` reloads and
+verifies it; `verify_replay()` proves a later arm scored the same population.
+
+```bash
+pip install torch transformers            # + faiss-cpu / numpy optional, for speed
+python3 pmc/embed_chunks.py               # MedCPT index -> pmc/index/
+python3 pmc/retrieve.py --query "..." --query-id q1
+python3 pmc/retrieve.py --replay pmc/candidates/q1.json
+```
+
+A deterministic stub encoder exists for offline testing only. It refuses to
+write an index without `--allow-stub` and stamps `production=false`, so a stub
+index can never be mistaken for a real one.
+
+**Not yet built (next phase):** the rationale-based query formulation, the
+perplexity/entailment filters, the generator, and the recency-bias experiments
+themselves. The retrieval stack must be reliable and reproducible first.
 
 ## Running the tests
 
