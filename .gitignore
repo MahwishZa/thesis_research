@@ -68,3 +68,10 @@ rag2/retriever/output/*.json
 
 # RAG2 baseline: trained filter checkpoints. Model weights, never source.
 rag2/data/
+
+# Hugging Face / MedCPT model weights, if a cache is ever pointed inside the repo.
+# Model files are hundreds of MB and are re-downloadable from the model id.
+.cache/
+huggingface/
+models--*/
+*.safetensors
