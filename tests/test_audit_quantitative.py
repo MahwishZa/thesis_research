@@ -242,3 +242,32 @@ def test_empty_candidate_list_is_safe_everywhere():
 def test_zero_perplexity_tokens_gives_infinite_perplexity_not_a_crash():
     assert perplexity_from_scores(ScoredSequence([], 0)) == float("inf")
     assert math.isnan(PerplexityPair(float("inf"), float("inf")).delta)
+
+
+# --- generation.stop, wired by the audit's STR-04 finding -------------------
+def test_stop_sequences_truncate_at_the_earliest_marker():
+    from rag2.generation import apply_stop_sequences
+
+    assert apply_stop_sequences("answer is A\nQuestion: next", ["\nQuestion:"]) == "answer is A"
+    assert apply_stop_sequences("one|two#three", ["#", "|"]) == "one"
+    assert apply_stop_sequences("no marker here", ["###"]) == "no marker here"
+
+
+def test_empty_stop_list_is_a_no_op():
+    from rag2.generation import apply_stop_sequences
+
+    assert apply_stop_sequences("unchanged text", []) == "unchanged text"
+
+
+def test_generation_stop_is_applied_end_to_end():
+    from rag2.config import GenerationConfig
+    from rag2.generation import generate_answers
+    from rag2.llm.stub import StubLLM
+
+    questions = [Question("q0", "Stem?", {"A": "a", "B": "b", "C": "c", "D": "d"}, "A")]
+    plain = generate_answers(StubLLM(), questions, [[]], config=GenerationConfig())
+    stopped = generate_answers(StubLLM(), questions, [[]],
+                               config=GenerationConfig(stop=["Therefore"]))
+    assert "Therefore" in plain[0]
+    assert "Therefore" not in stopped[0]
+    assert len(stopped[0]) < len(plain[0])

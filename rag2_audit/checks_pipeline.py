@@ -495,10 +495,16 @@ def check_context_construction() -> Result:
 @check("GEN-04", "generation", "Rationale and answer lengths are governed consistently")
 def check_generation_length_keys() -> Result:
     rationale_src = open(os.path.join(REPO, "rag2", "rationale.py"), "r", encoding="utf-8").read()
-    passes_max_new = "max_new_tokens" in rationale_src
-    if passes_max_new:
-        return Result("GEN-04", "generation", Status.PASS,
-                      "rationale generation passes an explicit max_new_tokens")
+    pipeline_src = open(os.path.join(REPO, "rag2", "pipeline.py"), "r", encoding="utf-8").read()
+    accepts = "max_new_tokens" in rationale_src and "temperature" in rationale_src
+    wired = "max_new_tokens=config.llm.max_new_tokens" in pipeline_src
+    if accepts and wired:
+        return Result(
+            "GEN-04", "generation", Status.PASS,
+            "rationale decoding settings are passed explicitly from llm.*, not left implicit",
+            evidence={"rationale_accepts_explicit_settings": accepts,
+                      "pipeline_wires_llm_max_new_tokens": wired},
+        )
     return Result(
         "GEN-04", "generation", Status.PARTIAL,
         "rationale length is governed by llm.max_new_tokens, answer length by generation.max_new_tokens",
@@ -515,7 +521,7 @@ def check_generation_length_keys() -> Result:
             "unchanged, which is easy to miss."
         ),
         how_to_fix="pass an explicit length from one key, or rename them to name their stage",
-        evidence={"rationale_passes_max_new_tokens": passes_max_new},
+        evidence={"rationale_accepts_explicit_settings": accepts, "pipeline_wires_it": wired},
     )
 
 

@@ -89,7 +89,6 @@ class RetrievalConfig:
     # [D] sharding PubMed and concatenating per-shard top-k breaks balance;
     #     "score" merges shards and keeps exactly candidates_per_corpus.
     shard_merge: str = "score"  # "score" | "concat"
-    shard_size: int = 0  # 0 = single index per corpus (no sharding)
     # [A] SciSpacy [SEP] insertion is off in the release
     use_scispacy_sep: bool = False
     scispacy_model: str = "en_core_sci_scibert"
@@ -146,6 +145,10 @@ class FilterTrainingConfig:
     tau_scope: str = "global"  # [A] "global" | "per_question"
     ppl_target: str = "rationale"  # [A] prose says rationale; Eq. 4 literally says query
     ppl_rationale: str = "no_retrieval"  # [A] score the same string in both terms
+    # [S] P3.3/Fig2 describe ONE rationale per question: the retrieval query is
+    #     the string whose perplexity is scored. "cached" reuses it; "regenerate"
+    #     reproduces the earlier behaviour of generating a second one.
+    rationale_source: str = "cached"
     label_top_k: int = 10  # [A] snippets per question sent through labeling
     drop_undecided: bool = True  # [S] Figure 2 has explicit [Discard] leaves
     # -- training (paper appendix A.3 + run/run_large_train_xl_000.sh) --
@@ -173,7 +176,6 @@ class GenerationConfig:
 
 @dataclass
 class EvaluationConfig:
-    metric: str = "accuracy"  # [S] Table 2
     # [A] answer extraction is never specified; patterns are ordered, last match wins
     extraction_patterns: List[str] = field(default_factory=list)
     unparsed_as_incorrect: bool = True  # [A]
@@ -184,7 +186,6 @@ class EvaluationConfig:
 @dataclass
 class CacheConfig:
     dir: str = "cache/candidates"
-    enabled: bool = True
     allow_config_mismatch: bool = False
 
 
@@ -199,6 +200,20 @@ class PromptConfig:
     evidence_item: str = ""
     evidence_join: str = ""
     option_format: str = ""
+
+
+#: Config fields that are deliberately recorded-only: they are written into the
+#: run manifest for provenance but no code reads them, because the value they
+#: document is either supplied out-of-band (the corpus's own chunking, the
+#: article encoder used to build the embeddings offline) or is free text. Listing
+#: them here is what keeps rag2_audit's dead-key check honest -- anything NOT on
+#: this list that is never read is a silent no-op and fails the audit.
+MANIFEST_ONLY_FIELDS = frozenset({
+    "ExperimentConfig.notes",
+    "RetrievalConfig.article_encoder",
+    "CorpusConfig.chunk_size",
+    "CorpusConfig.chunk_overlap",
+})
 
 
 @dataclass

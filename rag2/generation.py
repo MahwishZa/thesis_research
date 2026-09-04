@@ -56,4 +56,21 @@ def generate_answers(
         )
         if progress:
             progress(min(start + step, len(rendered)), len(rendered))
-    return [o.strip() for o in outputs]
+    return [apply_stop_sequences(o, config.stop).strip() for o in outputs]
+
+
+def apply_stop_sequences(text: str, stop: Sequence[str]) -> str:
+    """Truncate at the earliest stop sequence.
+
+    Applied after generation rather than passed to the backend, so the setting
+    behaves identically across HF, vLLM and API backends. The paper specifies no
+    stop sequences, so ``generation.stop`` is empty by default and this is a
+    no-op; it exists so the key is a real control rather than a silent no-op.
+    """
+    if not stop:
+        return text
+    cut = min(
+        (text.index(marker) for marker in stop if marker and marker in text),
+        default=None,
+    )
+    return text if cut is None else text[:cut]

@@ -40,6 +40,8 @@ def main() -> int:
         questions,
         prompts=config.prompt_set(),
         batch_size=config.llm.batch_size,
+        max_new_tokens=config.llm.max_new_tokens,
+        temperature=config.llm.temperature,
         progress=progress_printer("rationale"),
     )
 

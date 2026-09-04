@@ -67,6 +67,16 @@ def main() -> int:
     parser.add_argument("--paper", default="", help=f"paper row to compare against: {sorted(PAPER_RESULTS)}")
     parser.add_argument("--by", default="", help="report accuracy grouped by a metadata key")
     parser.add_argument("--out", default="", help="where to write the report JSON")
+    parser.add_argument(
+        "--references",
+        default="",
+        help=(
+            "JSON mapping qid -> reference answer text. Switches on the open-ended "
+            "metrics of appendix A.4.1 (ROUGE-L, BERTScore) for the ClinicalQA25-style "
+            "setting; which metrics run is set by evaluation.open_ended_metrics."
+        ),
+    )
+    parser.add_argument("-c", "--config", default="", help="config supplying the evaluation section")
     args = parser.parse_args()
 
     results = load_results(args.predictions)
@@ -77,6 +87,28 @@ def main() -> int:
     }
     if args.by:
         report["accuracy_by"] = {args.by: accuracy_by(results, args.by)}
+
+    if args.references:
+        from rag2.config import EvaluationConfig, load_config
+        from rag2.evaluation import open_ended_metrics
+
+        evaluation = load_config(args.config).evaluation if args.config else EvaluationConfig()
+        metrics = evaluation.open_ended_metrics or ["rouge_l"]
+        with open(args.references, "r", encoding="utf-8") as handle:
+            references = json.load(handle)
+        paired = [(r.generation, references[r.qid]) for r in results if r.qid in references]
+        if not paired:
+            print(f"no qid in {args.references} matches the predictions", file=sys.stderr)
+            return 2
+        report["open_ended"] = {
+            "n_scored": len(paired),
+            "metrics_requested": list(metrics),
+            **open_ended_metrics(
+                [c for c, _ in paired], [r for _, r in paired],
+                metrics=metrics, bertscore_model=evaluation.bertscore_model,
+            ),
+        }
+        print(f"open-ended ({len(paired)} pairs): {report['open_ended']}")
 
     observed = report["accuracy"]["accuracy"]
     print(f"accuracy: {observed:.1f}% ({report['accuracy']['num_correct']}/{report['accuracy']['num_scored']})")

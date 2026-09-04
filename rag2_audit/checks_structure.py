@@ -168,11 +168,17 @@ def check_dead_config_keys() -> Result:
         cfg.LLMConfig, cfg.FilterConfig, cfg.FilterTrainingConfig, cfg.GenerationConfig,
         cfg.EvaluationConfig, cfg.CacheConfig,
     ]
+    # Fields on this allowlist are provenance-only: recorded in the run manifest,
+    # never read. Anything else that is never read is a control that does nothing.
+    allowed = getattr(cfg, "MANIFEST_ONLY_FIELDS", frozenset())
     dead: List[str] = []
     for section in sections:
         for field in dataclasses.fields(section):
+            qualified = f"{section.__name__}.{field.name}"
+            if qualified in allowed:
+                continue
             if not re.search(rf"\.{re.escape(field.name)}\b", source):
-                dead.append(f"{section.__name__}.{field.name}")
+                dead.append(qualified)
     if dead:
         return Result(
             "STR-04", "configuration", Status.PARTIAL,
@@ -186,4 +192,8 @@ def check_dead_config_keys() -> Result:
             how_to_fix="wire each key, or delete it and keep the value in the manifest only",
             evidence={"dead_keys": dead},
         )
-    return Result("STR-04", "configuration", Status.PASS, "every config key is read somewhere")
+    return Result(
+        "STR-04", "configuration", Status.PASS,
+        f"every config key is read somewhere, except {len(allowed)} declared manifest-only field(s)",
+        evidence={"manifest_only": sorted(allowed)},
+    )

@@ -35,7 +35,6 @@ retrieval:
   final_top_k: 8                # [S] swept over {1,2,4,8,16,32}, selected on validation
   rerank_query: initial         # [D] paper says initial query; retriever/main.py uses the rationale
   shard_merge: score            # [D] "concat" reproduces the release's unbalanced PubMed sharding
-  shard_size: 0
   use_scispacy_sep: false       # [S] off in the release (--use_spacy False)
   scispacy_model: en_core_sci_scibert
   encode_batch_size: 32
@@ -96,15 +95,13 @@ generation:
   stop: []
 
 evaluation:
-  metric: accuracy              # [S] Table 2
   extraction_patterns: []       # [A] empty = rag2.evaluation.DEFAULT_EXTRACTION_PATTERNS
   unparsed_as_incorrect: true   # [A]
-  open_ended_metrics: []        # [S] appendix A.4.1 uses rouge_l + bertscore
+  open_ended_metrics: []        # [S] appendix A.4.1 (ClinicalQA25): rouge_l, bertscore
   bertscore_model: roberta-large  # [A] paper does not state the backbone
 
 cache:
   dir: cache/candidates
-  enabled: true
   allow_config_mismatch: false
 
 prompts: {}                     # empty = the constants in rag2/prompts.py

@@ -66,7 +66,15 @@ def run_retrieval(
         if llm is None:
             raise ValueError("run_retrieval needs an LLM (or precomputed rationales)")
         rationales = generate_rationales(
-            llm, questions, prompts=prompts, batch_size=config.llm.batch_size, progress=progress
+            llm,
+            questions,
+            prompts=prompts,
+            batch_size=config.llm.batch_size,
+            # Rationale length is an LLM-level setting: the rationale is this
+            # model's own output, not an answer. generation.* governs the answer.
+            max_new_tokens=config.llm.max_new_tokens,
+            temperature=config.llm.temperature,
+            progress=progress,
         )
     queries = [retrieval_query(rationales.get(q.qid, ""), q) for q in questions]
 

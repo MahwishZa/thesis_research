@@ -8,7 +8,7 @@ using the rationale, excluding the initial query."
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 from .llm.base import LLM
 from .prompts import DEFAULT_PROMPTS, PromptSet
@@ -20,15 +20,28 @@ def generate_rationales(
     questions: Sequence[Question],
     prompts: Optional[PromptSet] = None,
     batch_size: int = 8,
+    max_new_tokens: Optional[int] = None,
+    temperature: Optional[float] = None,
     progress: Optional[callable] = None,
 ) -> Dict[str, str]:
-    """Return ``{qid: rationale}`` for every question."""
+    """Return ``{qid: rationale}`` for every question.
+
+    ``max_new_tokens``/``temperature`` are passed explicitly rather than left to
+    the backend's own defaults, so the rationale's decoding settings are visible
+    at the call site instead of being implied by whichever config the LLM object
+    happened to be built with.
+    """
     prompts = prompts or DEFAULT_PROMPTS
     rendered = [prompts.render_rationale_prompt(q) for q in questions]
+    generate_kwargs: Dict[str, Any] = {}
+    if max_new_tokens is not None:
+        generate_kwargs["max_new_tokens"] = max_new_tokens
+    if temperature is not None:
+        generate_kwargs["temperature"] = temperature
     out: Dict[str, str] = {}
     for start in range(0, len(rendered), max(batch_size, 1)):
         chunk = rendered[start : start + max(batch_size, 1)]
-        completions = llm.generate(chunk)
+        completions = llm.generate(chunk, **generate_kwargs)
         for question, completion in zip(questions[start : start + len(chunk)], completions):
             out[question.qid] = completion.strip()
         if progress:

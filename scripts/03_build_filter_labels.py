@@ -71,6 +71,7 @@ def main() -> int:
         tau_scope=training.tau_scope,
         ppl_target=training.ppl_target,
         ppl_rationale=training.ppl_rationale,
+        rationale_source=training.rationale_source,
         drop_undecided=training.drop_undecided,
         progress=progress_printer("labeling"),
     )

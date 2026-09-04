@@ -180,3 +180,76 @@ def test_eval_command_uses_the_release_eval_mode():
     text = " ".join(build_eval_command("ckpt", "val.json", "out", FilterTrainingConfig()))
     assert "--do_eval" in text
     assert "--per_device_eval_batch_size 16" in text
+
+
+# --- rationale reuse (audit finding LBL-05) --------------------------------
+def test_labeling_scores_the_cached_stage_1_rationale():
+    """The paper has ONE rationale per question: the retrieval query is the
+    string whose perplexity is scored (P3.3 + Fig2)."""
+    questions = [Question("q0", "Vignette?", {"A": "a", "B": "b", "C": "c", "D": "d"}, "A")]
+    cached = "CACHED RATIONALE FROM STAGE 1. Therefore, the answer is (A)."
+    candidates = {"q0": CandidateSet(qid="q0", rationale=cached,
+                                     candidates=[Evidence(text="snippet", source="cpg")])}
+    llm = StubLLM()
+    _, diagnostics = build_observations(llm, questions, candidates, top_k=1)
+
+    assert diagnostics["q0"]["closed_book_generation"] == cached
+    assert diagnostics["q0"]["rationale_origin"] == "cached from stage 1"
+    # Correctness is read off that same rationale, so no second closed-book call.
+    assert diagnostics["q0"]["closed_book_prediction"] == "A"
+    assert diagnostics["q0"]["correct_without_retrieval"] is True
+
+
+def test_reusing_the_rationale_saves_one_generation_per_question():
+    questions = [Question(f"q{i}", "V?", {"A": "a", "B": "b"}, "A") for i in range(4)]
+    candidates = {
+        q.qid: CandidateSet(qid=q.qid, rationale="R. Therefore, the answer is (A).",
+                            candidates=[Evidence(text="s")])
+        for q in questions
+    }
+    cached_llm, regen_llm = StubLLM(), StubLLM()
+    build_observations(cached_llm, questions, candidates, top_k=1)
+    build_observations(regen_llm, questions, candidates, top_k=1, rationale_source="regenerate")
+    # one call per snippet either way; regeneration adds one closed-book call per question
+    assert len(cached_llm.generate_calls) == 4
+    assert len(regen_llm.generate_calls) == 8
+
+
+def test_falls_back_to_regeneration_when_no_rationale_is_cached():
+    questions = [Question("q0", "V?", {"A": "a", "B": "b"}, "A")]
+    candidates = {"q0": CandidateSet(qid="q0", rationale="", candidates=[Evidence(text="s")])}
+    _, diagnostics = build_observations(StubLLM(), questions, candidates, top_k=1)
+    assert "no cached rationale" in diagnostics["q0"]["rationale_origin"]
+    assert diagnostics["q0"]["closed_book_generation"]
+
+
+def test_falls_back_when_the_closed_book_prompt_is_not_the_rationale_prompt():
+    """A cached rationale is a completion of the rationale prompt. If the
+    closed-book answer prompt has been overridden, reusing it would condition one
+    prompt's completion on a different prompt."""
+    from rag2.prompts import PromptSet
+
+    questions = [Question("q0", "V?", {"A": "a", "B": "b"}, "A")]
+    candidates = {"q0": CandidateSet(qid="q0", rationale="CACHED", candidates=[Evidence(text="s")])}
+    prompts = PromptSet(answer_no_evidence="A DIFFERENT PROMPT: {question}")
+    _, diagnostics = build_observations(StubLLM(), questions, candidates, prompts=prompts, top_k=1)
+    assert "differs from the rationale prompt" in diagnostics["q0"]["rationale_origin"]
+    assert diagnostics["q0"]["closed_book_generation"] != "CACHED"
+
+
+def test_unknown_rationale_source_is_rejected():
+    questions = [Question("q0", "V?", {"A": "a", "B": "b"}, "A")]
+    candidates = {"q0": CandidateSet(qid="q0", rationale="R", candidates=[Evidence(text="s")])}
+    with pytest.raises(ValueError, match="unknown rationale_source"):
+        build_observations(StubLLM(), questions, candidates, top_k=1, rationale_source="nope")
+
+
+def test_the_scored_rationale_is_the_retrieval_query():
+    """The invariant the fix exists to guarantee: the passage a rationale
+    retrieved is judged by that same rationale."""
+    questions = [Question("q0", "V?", {"A": "a", "B": "b"}, "A")]
+    rationale = "THE QUERY THAT RETRIEVED THIS. Therefore, the answer is (A)."
+    candidates = {"q0": CandidateSet(qid="q0", rationale=rationale, retrieval_query=rationale,
+                                     candidates=[Evidence(text="s")])}
+    _, diagnostics = build_observations(StubLLM(), questions, candidates, top_k=1)
+    assert diagnostics["q0"]["closed_book_generation"] == candidates["q0"].retrieval_query
