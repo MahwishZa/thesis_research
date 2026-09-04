@@ -47,3 +47,24 @@ pmc/chunks/chunks.jsonl
 # A stub index must never be committed: it is not valid for thesis results.
 pmc/index/
 pmc/candidates/
+
+# Pytest cache
+.pytest_cache/
+
+# RAG2 baseline: run outputs and replayed candidate sets. Large, machine-specific
+# and regenerable; every number that matters is traced by its run manifest instead.
+runs/
+cache/
+rag2/runs/
+rag2/cache/
+
+# RAG2 baseline: corpus artifacts the user supplies (see rag2/retriever/README.md).
+# The RAG2 authors do not redistribute the four biomedical corpora; these paths are
+# where a local copy goes. This repository's own corpus lives under pmc/.
+rag2/retriever/embeddings/**/*.npy
+rag2/retriever/articles/**/*.json
+rag2/retriever/input/*.json
+rag2/retriever/output/*.json
+
+# RAG2 baseline: trained filter checkpoints. Model weights, never source.
+rag2/data/
