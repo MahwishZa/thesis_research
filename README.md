@@ -4,8 +4,9 @@ Data-preparation repository for an MS thesis on **recency bias in confidence-der
 evidence-utility signals for retrieval-augmented Alzheimer's clinical reasoning**,
 extending the RAG² framework (Sohn et al., NAACL 2025).
 
-This repository builds and documents the **retrieval corpus**. It does not contain the
-retrieval system, embeddings, or thesis experiments.
+It holds two things, kept deliberately apart: the **retrieval corpus** (`pmc/`,
+`pubmed/`) and the **reproduced original RAG² baseline** (`rag2/`). The thesis
+experiments themselves (`experiments/`) are not written yet.
 
 ## Pipeline stages
 
@@ -18,6 +19,8 @@ retrieval system, embeddings, or thesis experiments.
 | 5. Quality control | `pmc/` (reports) | Full-corpus QC reports |
 | 6. Corpus policy metadata (M1–M4) | `pmc/metadata/`, `pmc/currency_pack/` | Dates, eligibility, CPG layer, currency pack |
 | 7. Retrieval-ready chunks | `pmc/chunks/` | Deterministic chunks with full provenance |
+| 8. MedCPT index + retrieval | `pmc/index/` | Exact inner-product search, candidate replay |
+| 9. Original RAG² baseline | `rag2/` | Rationale → balanced retrieval → filter → answer |
 
 ## Layout
 
@@ -44,6 +47,24 @@ pmc/                       PMC acquisition, parsing, QC, corpus policy
   build_chunks.py            retrieval-ready chunk layer
   validate_chunks.py         chunk/provenance integrity gate
   chunks/                    chunk_stats.json committed; chunks.jsonl gitignored
+  embed_chunks.py            MedCPT index builder  (pmc/index/ is gitignored)
+  retrieve.py                exact search + candidate replay
+
+rag2/                      reproduced ORIGINAL RAG2 baseline  (see below)
+  rag2/                      the reproduction package
+  configs/                   experiment configs, incl. thesis_corpus.yaml
+  scripts/                   one CLI per stage + smoke test
+  tests/                     baseline test suite
+  docs/                      the reproduction's own specification + results
+  retriever/, classifier/    the RAG2 authors' released code, UNMODIFIED
+
+experiments/               the three-layer separation  (see experiments/README.md)
+  baseline/                  original RAG2 runs
+  recency_bias/              thesis probe        (not started)
+  scaf/                      SCAF extension      (not started)
+
+docs/
+  rag2_reproduction_audit.md  what was reproduced, verified, and left unverified
 ```
 
 ## Chunking (stage 7)
@@ -119,9 +140,79 @@ A deterministic stub encoder exists for offline testing only. It refuses to
 write an index without `--allow-stub` and stamps `production=false`, so a stub
 index can never be mistaken for a real one.
 
-**Not yet built (next phase):** the rationale-based query formulation, the
-perplexity/entailment filters, the generator, and the recency-bias experiments
-themselves. The retrieval stack must be reliable and reproducible first.
+## Original RAG² baseline (stage 9)
+
+`rag2/` holds a reproduction of the **original** RAG² system — the thesis
+baseline, not a thesis contribution. Read
+**[`docs/rag2_reproduction_audit.md`](docs/rag2_reproduction_audit.md)** first:
+it records, component by component, what was reproduced, how it was verified,
+and what remains unverified. The reproduction's own specification (every
+assumption, every place the paper and the authors' code disagree) is
+[`rag2/docs/rag2_reproduction.md`](rag2/docs/rag2_reproduction.md).
+
+Inside `rag2/`, two things are kept apart on purpose:
+
+| Path | What it is |
+| --- | --- |
+| `rag2/retriever/`, `rag2/classifier/` | the RAG² authors' released code, **unmodified** |
+| `rag2/rag2/`, `configs/`, `scripts/`, `tests/` | the reproduction |
+
+**Models required** (none are downloaded by the tests or the smoke test):
+
+| Role | Model | Needed for |
+| --- | --- | --- |
+| Query encoder | `ncbi/MedCPT-Query-Encoder` | retrieval |
+| Article encoder | `ncbi/MedCPT-Article-Encoder` | building `pmc/index/` |
+| Reranker | `ncbi/MedCPT-Cross-Encoder` | reranking |
+| Filter | `google/flan-t5-large` + a trained checkpoint | filtering |
+| Backbone LLM | `meta-llama/Meta-Llama-3-8B-Instruct` | rationales, answers |
+
+The paper's trained filter checkpoint **is not distributed by its authors** and
+must be retrained (`rag2/scripts/03_build_filter_labels.py`, then `04_train_filter.py`).
+
+### Running it
+
+```bash
+cd rag2
+pip install -r requirements.txt
+python3 scripts/smoke_test.py     # offline wiring check: no GPU, no downloads, ~2s
+python3 -m pytest                 # baseline test suite
+```
+
+Configure it against this repository's corpus with
+`rag2/configs/thesis_corpus.yaml`, which points the baseline at `pmc/index/` and
+`pmc/chunks/chunks.jsonl` through the `thesis_chunks` corpus loader. Run the
+stage scripts from the repository root so those relative paths resolve. Stage
+commands are in [`experiments/baseline/README.md`](experiments/baseline/README.md).
+
+### What is verified, and what is not
+
+**Verified here:** all stages wired end to end (the smoke test executes
+question → rationale → balanced retrieval → rerank → cache → ΔPPL labeling →
+filter → answer → evaluation); the filter prompt and option format round-trip
+byte-identically against the authors' released training data; Figure 2's
+labeling tree matches the paper path by path; provenance never reaches a model
+input.
+
+**Not verified:** anything requiring model weights. This container has no torch,
+transformers, faiss or GPU, so MedCPT encoding, Flan-T5 filtering, ΔPPL under a
+real LLM and answer generation were checked by code reading and stub-driven
+execution, not by running a real model. **No accuracy has been measured** —
+`rag2/docs/reproduction_results.md` is deliberately blank. See audit §10.
+
+## Where thesis experiments belong
+
+`experiments/` establishes a one-directional boundary: a layer may call the layer
+below and may not modify it.
+
+1. `experiments/baseline/` — original RAG² runs. Runnable now.
+2. `experiments/recency_bias/` — the thesis probe. **Not started.**
+3. `experiments/scaf/` — the SCAF extension. **Not started.**
+
+Nothing in this repository implements SCAF, recency weighting, authority
+weighting, currency scoring, supersession or abstention. The baseline measures
+the *untouched* original, so `rag2/tests/test_metadata_isolation.py` fails the
+build if any baseline module starts reading publication dates.
 
 ## Running the tests
 
@@ -130,11 +221,15 @@ Tests import their module by name, so run them from inside the package directory
 ```bash
 cd pmc    && python3 -m unittest test_parse_pmc_xml test_qc_investigate \
                                  test_download_pmc_xml test_inventory_pmc_oa \
-                                 test_build_corpus_metadata
+                                 test_build_corpus_metadata test_build_chunks \
+                                 test_retrieval
 cd pubmed && python3 -m unittest test_fetch_pubmed test_pipeline_integration
+cd rag2   && python3 -m pytest
 ```
 
-All suites are offline — no network, no corpus files required.
+All suites are offline — no network, no corpus files, no model weights required.
+Last measured: **311 passed** (`pmc/`), **51 passed** (`pubmed/`),
+**194 passed, 2 skipped** (`rag2/`; both skips are torch-gated modules).
 
 ## Regenerating derived data
 
@@ -152,8 +247,18 @@ from PubMed fallback to JATS-primary for all PMC records. See `pmc/metadata/READ
 
 ## Current status
 
-Acquisition, parsing, QC and corpus-policy metadata (M1–M4) are complete. One step remains
-before the corpus is frozen: the full-corpus canonical-date regeneration above.
+Acquisition, parsing, QC and corpus-policy metadata (M1–M4) are complete. The chunk layer
+and the retrieval stack are built. The original RAG² baseline is integrated and audited.
+
+Outstanding, in order:
+
+1. Full-corpus canonical-date regeneration (above), on the machine with the complete
+   parsed corpus. `pmc/chunks/chunk_stats.json` should be refreshed from that run — the
+   committed copy records a partial container run, not the production one.
+2. Build the MedCPT index (`pmc/embed_chunks.py`). Running separately.
+3. Train the RAG² filter, then run the baseline and record results in
+   `rag2/docs/reproduction_results.md`. **No accuracy has been measured yet.**
+4. Only then: the recency-bias probe.
 
 ## Provenance notes
 
