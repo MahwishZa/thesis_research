@@ -35,3 +35,15 @@ pmc/parsed/
 # of the corpus and never committed; retry71.csv is regenerable from the snippet
 # in pmc/pmc_xml_retry_2026-09-02_outcome.md.
 /retry71.csv
+
+# Retrieval-ready chunks (derived research data, not source code).
+# Regenerable deterministically from the parsed corpus plus the frozen M1-M4
+# overlays via pmc/build_chunks.py. chunk_stats.json is deliberately NOT ignored:
+# it is the committed evidence of the run.
+pmc/chunks/chunks.jsonl
+
+# Embedding index and retrieved candidate sets (derived, large, machine-specific).
+# Rebuilt with pmc/embed_chunks.py on the machine that holds the model weights.
+# A stub index must never be committed: it is not valid for thesis results.
+pmc/index/
+pmc/candidates/
