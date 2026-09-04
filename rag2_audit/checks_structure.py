@@ -7,10 +7,10 @@ import importlib
 import io
 import os
 import re
-import subprocess
 import tokenize
 from typing import List
 
+from . import paper
 from .registry import Result, Status, check
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -123,30 +123,44 @@ def _docstring_spans(source: str):
 
 @check("STR-03", "scope", "The authors' released code is unmodified")
 def check_release_untouched() -> Result:
-    try:
-        diff = subprocess.check_output(
-            ["git", "diff", "--stat", "86add43", "HEAD", "--", "retriever/", "classifier/", "environment.yml"],
-            cwd=REPO, text=True, stderr=subprocess.DEVNULL,
-        ).strip()
-    except Exception as error:
-        return Result(
-            "STR-03", "scope", Status.UNKNOWN,
-            f"could not diff against the release commit: {error}",
-            how_to_fix="run inside a git checkout containing commit 86add43",
-        )
-    if diff:
+    """Verify the release by content hash, not by ``git diff``.
+
+    Hashing works from an extracted archive as well as a checkout, so the
+    guarantee travels with the code rather than with the repository.
+    """
+    import hashlib
+
+    missing: List[str] = []
+    modified: List[str] = []
+    for relative, expected in sorted(paper.RELEASE_FILE_DIGESTS.items()):
+        path = os.path.join(REPO, relative)
+        if not os.path.exists(path):
+            missing.append(relative)
+            continue
+        with open(path, "rb") as handle:
+            actual = hashlib.sha256(handle.read()).hexdigest()[:16]
+        if actual != expected:
+            modified.append(f"{relative} ({actual} != {expected})")
+
+    if missing or modified:
         return Result(
             "STR-03", "scope", Status.PARTIAL,
-            "the authors' released files have been modified",
-            paper_says="the release is the reference implementation",
-            code_does=diff,
-            why_it_matters="modifying the release makes it non-citable as the authors' code",
-            how_to_fix="revert retriever/ and classifier/ and put changes in rag2/",
-            evidence={"diff": diff},
+            f"{len(modified)} released file(s) modified, {len(missing)} missing",
+            paper_says=f"the authors' release at commit {paper.RELEASE_COMMIT[:7]} is the reference implementation",
+            code_does="; ".join((modified + missing)[:5]),
+            why_it_matters=(
+                "modifying the release makes it non-citable as the authors' code, and any "
+                "audit result that compares against it becomes unreliable"
+            ),
+            how_to_fix="restore retriever/ and classifier/ from the release; put changes in rag2/",
+            evidence={"modified": modified, "missing": missing},
         )
     return Result(
         "STR-03", "scope", Status.PASS,
-        "retriever/, classifier/ and environment.yml are byte-identical to release commit 86add43",
+        f"all {len(paper.RELEASE_FILE_DIGESTS)} released files byte-identical to commit "
+        f"{paper.RELEASE_COMMIT[:7]} (verified by content hash)",
+        evidence={"files_verified": len(paper.RELEASE_FILE_DIGESTS),
+                  "release_commit": paper.RELEASE_COMMIT},
     )
 
 

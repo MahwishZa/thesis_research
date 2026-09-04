@@ -119,3 +119,36 @@ UNSPECIFIED = {
     "five_percent_artifact": "R:classifier/data/.../5%-train.json filename undocumented vs tau=25%",
     "preprocess_py": "R:classifier/data/preprocess.py is an empty file (labeling code unreleased)",
 }
+
+
+# --- integrity of the authors' released files ------------------------------
+# sha256 (first 16 hex chars) of every file under retriever/ and classifier/,
+# plus environment.yml, as published at release commit 86add43. Hashed rather
+# than diffed against git, so the check still works from an extracted archive
+# with no repository attached.
+RELEASE_COMMIT = "86add432eb52b666e32b0c57b8774ead1c0ff4e8"
+RELEASE_FILE_DIGESTS: Dict[str, str] = {
+    "classifier/README.md": "e7fc7814c1413ed5",
+    "classifier/data/medqa/llama3_cot/5%-train.json": "f80dcbc9be38569c",
+    "classifier/data/preprocess.py": "e3b0c44298fc1c14",
+    "classifier/model/token_add.ipynb": "25a6510980c59001",
+    "classifier/run/run_large_train_xl_000.sh": "9e66fbdee94ea355",
+    "classifier/run_classifier.py": "93ca4f14ad603c34",
+    "classifier/utils.py": "4d968acb48d2a568",
+    "environment.yml": "bb01b4b8d17c67a9",
+    "retriever/README.md": "d210bd6089455d49",
+    "retriever/articles/cpg/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/articles/pmc/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/articles/pubmed/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/articles/textbook/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/embeddings/cpg/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/embeddings/pmc/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/embeddings/pubmed/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/embeddings/textbook/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/input/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/main.py": "8696186622e46bb5",
+    "retriever/output/.gitkeep": "e3b0c44298fc1c14",
+    "retriever/query_encode.py": "bcd73cf5abe7313a",
+    "retriever/rerank.py": "a475b38e2ce81212",
+    "retriever/retrieve.py": "6d551f9397b47d78",
+}

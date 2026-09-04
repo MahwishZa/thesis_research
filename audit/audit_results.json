@@ -701,12 +701,15 @@
       "check_id": "STR-03",
       "component": "scope",
       "status": "PASS",
-      "summary": "retriever/, classifier/ and environment.yml are byte-identical to release commit 86add43",
+      "summary": "all 23 released files byte-identical to commit 86add43 (verified by content hash)",
       "paper_says": "",
       "code_does": "",
       "why_it_matters": "",
       "how_to_fix": "",
-      "evidence": {}
+      "evidence": {
+        "files_verified": 23,
+        "release_commit": "86add432eb52b666e32b0c57b8774ead1c0ff4e8"
+      }
     },
     {
       "check_id": "STR-04",

@@ -14,6 +14,20 @@ from rag2_audit.registry import CHECKS, Status, run_all  # noqa: E402
 from rag2_audit.run import verdict  # noqa: E402
 
 
+#: Directories the shipped archive omits, anchored at the repository root.
+#: Anchoring matters: a bare "data" pattern would also drop classifier/data/,
+#: which is part of the authors' release.
+_TOP_LEVEL_EXCLUDED = {"runs", "cache", "data"}
+_ANYWHERE_EXCLUDED = {".git", "__pycache__", ".pytest_cache", ".ruff_cache"}
+
+
+def _archive_ignore(directory, names):
+    ignored = {n for n in names if n in _ANYWHERE_EXCLUDED}
+    if os.path.abspath(directory) == os.path.abspath(REPO):
+        ignored |= {n for n in names if n in _TOP_LEVEL_EXCLUDED}
+    return ignored
+
+
 def test_every_check_runs_and_returns_a_result():
     results = run_all()
     assert len(results) == len(CHECKS)
@@ -167,3 +181,49 @@ def test_trace_script_produces_every_required_section(tmp_path):
     # perplexity rows must carry both terms and their difference
     row = trace["07_perplexity"]["rows"][0]
     assert {"ppl_without_document_PPL_x", "ppl_with_document_PPL_x_d", "delta_ppl"} <= set(row)
+
+
+def test_release_integrity_is_verified_without_git(tmp_path):
+    """The audit must give the same answer from an extracted archive as from a
+    checkout: STR-03 hashes file contents rather than shelling out to git."""
+    import shutil
+
+    from rag2_audit import paper
+
+    # Copy the tree without .git, exactly as an extracted ZIP would look.
+    staged = tmp_path / "RAG2"
+    shutil.copytree(REPO, staged, ignore=_archive_ignore)
+    assert not (staged / ".git").exists()
+
+    result = subprocess.run(
+        [sys.executable, "-m", "rag2_audit.run", "--quiet", "--json", str(tmp_path / "a.json")],
+        cwd=str(staged), capture_output=True, text=True, timeout=300,
+    )
+    assert "VERDICT:" in result.stdout, result.stderr
+    payload = json.loads((tmp_path / "a.json").read_text())
+    by_id = {r["check_id"]: r for r in payload["results"]}
+
+    # The release-integrity check must PASS, not degrade to UNKNOWN.
+    assert by_id["STR-03"]["status"] == "PASS", by_id["STR-03"]
+    assert by_id["STR-03"]["evidence"]["files_verified"] == len(paper.RELEASE_FILE_DIGESTS)
+    # And no check may become UNKNOWN merely because git is absent.
+    assert payload["counts"].get("FAIL", 0) == 0
+
+
+def test_release_integrity_check_detects_a_modified_release_file(tmp_path):
+    """STR-03 is only worth having if tampering turns it non-PASS."""
+    import shutil
+
+    staged = tmp_path / "RAG2"
+    shutil.copytree(REPO, staged, ignore=_archive_ignore)
+    target = staged / "classifier" / "utils.py"
+    target.write_text(target.read_text() + "\n# tampered\n", encoding="utf-8")
+
+    subprocess.run(
+        [sys.executable, "-m", "rag2_audit.run", "--quiet", "--json", str(tmp_path / "a.json")],
+        cwd=str(staged), capture_output=True, text=True, timeout=300,
+    )
+    payload = json.loads((tmp_path / "a.json").read_text())
+    entry = {r["check_id"]: r for r in payload["results"]}["STR-03"]
+    assert entry["status"] == "PARTIAL"
+    assert any("classifier/utils.py" in m for m in entry["evidence"]["modified"])
