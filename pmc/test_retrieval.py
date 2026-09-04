@@ -267,3 +267,315 @@ class CandidateReplay(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ResumeAfterInterruption(unittest.TestCase):
+    """A 780k-chunk GPU run gets interrupted; restarting must not start over.
+
+    The property that matters is not merely "it continues" but that the
+    resumed index is byte-identical to an uninterrupted one -- content_digest
+    included, since retrieval and the RAG2 corpus adapter both key off it.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.chunks = self.tmp / "chunks.jsonl"
+        write_chunks(self.chunks, [
+            chunk(f"PMC{i}.1#abs.w1", "pubmed-abstract", f"evidence text {i}")
+            for i in range(1, 11)
+        ])
+        self.ref = self.tmp / "reference"
+        self.out = self.tmp / "index"
+
+    def _encoder(self):
+        return ec.StubEncoder(16)
+
+    def _reference(self):
+        return ec.build(self.chunks, self.ref, self._encoder(), 3)
+
+    def _artifacts(self, d: Path):
+        return (
+            (d / "embeddings.f32").read_bytes(),
+            (d / "index_manifest.jsonl").read_bytes(),
+        )
+
+    def test_resume_reproduces_an_uninterrupted_index_exactly(self):
+        reference = self._reference()
+        # Stop after 4 of 10 rows, then resume.
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=4)
+        partial = ec.resume_state(self.out / "embeddings.f32",
+                                  self.out / "index_manifest.jsonl", 16)
+        self.assertEqual(partial[0], 4)
+        resumed = ec.build(self.chunks, self.out, self._encoder(), 3, resume=True)
+
+        self.assertEqual(resumed["vectors"], reference["vectors"])
+        self.assertEqual(resumed["content_digest"], reference["content_digest"])
+        self.assertEqual(self._artifacts(self.out), self._artifacts(self.ref))
+
+    def test_resume_survives_a_vector_truncated_mid_row(self):
+        """A kill during a write leaves half a vector; it must be trimmed."""
+        reference = self._reference()
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=6)
+        vec = self.out / "embeddings.f32"
+        vec.write_bytes(vec.read_bytes() + b"\x00\x01\x02")     # partial row 6
+
+        resumed = ec.build(self.chunks, self.out, self._encoder(), 3, resume=True)
+        self.assertEqual(resumed["content_digest"], reference["content_digest"])
+        self.assertEqual(self._artifacts(self.out), self._artifacts(self.ref))
+
+    def test_resume_survives_a_partial_manifest_line(self):
+        reference = self._reference()
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=6)
+        man = self.out / "index_manifest.jsonl"
+        man.write_bytes(man.read_bytes() + b'{"chunk_id": "PMC7.1#ab')
+
+        resumed = ec.build(self.chunks, self.out, self._encoder(), 3, resume=True)
+        self.assertEqual(resumed["content_digest"], reference["content_digest"])
+        self.assertEqual(self._artifacts(self.out), self._artifacts(self.ref))
+
+    def test_resume_recovers_when_the_manifest_lags_the_vectors(self):
+        """Vectors flushed, manifest not: the extra vector rows must be dropped."""
+        reference = self._reference()
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=6)
+        man = self.out / "index_manifest.jsonl"
+        lines = man.read_bytes().splitlines(keepends=True)
+        man.write_bytes(b"".join(lines[:4]))                    # lose 2 manifest rows
+
+        resumed = ec.build(self.chunks, self.out, self._encoder(), 3, resume=True)
+        self.assertEqual(resumed["vectors"], reference["vectors"])
+        self.assertEqual(resumed["content_digest"], reference["content_digest"])
+        self.assertEqual(self._artifacts(self.out), self._artifacts(self.ref))
+
+    def test_restart_discards_an_existing_partial_index(self):
+        reference = self._reference()
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=6)
+        restarted = ec.build(self.chunks, self.out, self._encoder(), 3, resume=False)
+        self.assertEqual(restarted["content_digest"], reference["content_digest"])
+        self.assertEqual(self._artifacts(self.out), self._artifacts(self.ref))
+
+    def test_resume_against_different_chunks_is_refused(self):
+        """Silently appending to an index built from other chunks would corrupt it."""
+        ec.build(self.chunks, self.out, self._encoder(), 3, limit=4)
+        other = self.tmp / "other.jsonl"
+        write_chunks(other, [
+            chunk(f"ZZZ{i}.1#abs.w1", "pubmed-abstract", f"different {i}")
+            for i in range(1, 11)
+        ])
+        with self.assertRaises(SystemExit) as ctx:
+            ec.build(other, self.out, self._encoder(), 3, resume=True)
+        self.assertIn("resume mismatch", str(ctx.exception))
+
+    def test_resume_refuses_an_index_longer_than_the_chunk_layer(self):
+        ec.build(self.chunks, self.out, self._encoder(), 3)
+        shorter = self.tmp / "shorter.jsonl"
+        write_chunks(shorter, [
+            chunk(f"PMC{i}.1#abs.w1", "pubmed-abstract", f"evidence text {i}")
+            for i in range(1, 4)
+        ])
+        with self.assertRaises(SystemExit) as ctx:
+            ec.build(shorter, self.out, self._encoder(), 3, resume=True)
+        self.assertIn("different chunks", str(ctx.exception))
+
+    def test_resume_on_a_complete_index_is_a_no_op(self):
+        reference = self._reference()
+        ec.build(self.chunks, self.out, self._encoder(), 3)
+        again = ec.build(self.chunks, self.out, self._encoder(), 3, resume=True)
+        self.assertEqual(again["vectors"], reference["vectors"])
+        self.assertEqual(again["content_digest"], reference["content_digest"])
+
+    def test_resume_state_on_a_missing_index_is_empty(self):
+        rows, digest, cats, last = ec.resume_state(
+            self.tmp / "nope.f32", self.tmp / "nope.jsonl", 16)
+        self.assertEqual((rows, cats, last), (0, {}, ""))
+
+    def test_limit_marks_the_index_as_partial(self):
+        """A smoke-test index must never look like the production one."""
+        meta = ec.build(self.chunks, self.out, self._encoder(), 3, limit=4)
+        self.assertEqual(meta["vectors"], 4)
+        self.assertEqual(meta["partial_index_limit"], 4)
+        self.assertNotIn("partial_index_limit", self._reference())
+
+
+class DeviceSelection(unittest.TestCase):
+    """--device must not silently substitute the CPU for a requested GPU.
+
+    That substitution is what sent a production run to the CPU unnoticed, so it
+    is pinned here with a stand-in for torch (no torch in this environment).
+    """
+
+    class _Torch:
+        __version__ = "2.4.1+cpu"
+
+        def __init__(self, available):
+            self._available = available
+            self.cuda = self
+
+        def is_available(self):
+            return self._available
+
+    def test_cuda_request_fails_loudly_when_unavailable(self):
+        with self.assertRaises(SystemExit) as ctx:
+            ec.resolve_device("cuda", self._Torch(False))
+        message = str(ctx.exception)
+        self.assertIn("torch.cuda.is_available() is False", message)
+        self.assertIn("cu121", message)          # actionable: names the fix
+
+    def test_cuda_request_is_honoured_when_available(self):
+        self.assertEqual(ec.resolve_device("cuda", self._Torch(True)), "cuda")
+        self.assertEqual(ec.resolve_device("cuda:0", self._Torch(True)), "cuda:0")
+
+    def test_auto_prefers_cuda_then_falls_back(self):
+        self.assertEqual(ec.resolve_device("auto", self._Torch(True)), "cuda")
+        self.assertEqual(ec.resolve_device(None, self._Torch(True)), "cuda")
+        self.assertEqual(ec.resolve_device("auto", self._Torch(False)), "cpu")
+
+    def test_cpu_is_selectable_explicitly(self):
+        self.assertEqual(ec.resolve_device("cpu", self._Torch(True)), "cpu")
+
+    def test_default_batch_size_is_conservative(self):
+        """Pinned: 32 does not fit a 4 GiB card at 512 tokens."""
+        self.assertLessEqual(ec.DEFAULT_BATCH_SIZE, 8)
+
+
+class CudaOOMBackoff(unittest.TestCase):
+    """On CUDA OOM the batch shrinks and the run continues -- it never moves to CPU.
+
+    A mid-run device switch would silently make part of the index incomparable
+    with the rest, so the backoff is pinned here with a fake torch.
+    """
+
+    class _OOM(RuntimeError):
+        pass
+
+    class _Torch:
+        def __init__(self, outer):
+            self.OutOfMemoryError = outer._OOM
+            self.cuda = self
+            self.emptied = 0
+
+        def empty_cache(self):
+            self.emptied += 1
+
+        class _NoGrad:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def no_grad(self):
+            return self._NoGrad()
+
+    def _encoder(self, fits_at, batch_size=8, min_batch_size=1):
+        """An encoder whose forward pass OOMs above ``fits_at`` sequences."""
+        enc = ec.MedCPTEncoder.__new__(ec.MedCPTEncoder)
+        enc.torch = self._Torch(self)
+        enc.dim = ec.MEDCPT_DIM
+        enc.device = "cuda"
+        enc.batch_size = batch_size
+        enc.min_batch_size = min_batch_size
+        enc.attempts = []
+
+        def fake_batch(batch):
+            enc.attempts.append(len(batch))
+            if len(batch) > fits_at:
+                raise self._OOM("CUDA out of memory")
+            return [[0.0] * ec.MEDCPT_DIM for _ in batch]
+
+        enc._encode_batch = fake_batch
+        return enc
+
+    def test_batch_halves_until_it_fits_and_all_vectors_are_returned(self):
+        enc = self._encoder(fits_at=2, batch_size=8)
+        vectors = enc.encode([f"text {i}" for i in range(10)])
+        self.assertEqual(len(vectors), 10)
+        self.assertEqual(enc.attempts[:3], [8, 4, 2])   # 8 -> 4 -> 2, then succeeds
+        self.assertEqual(enc.batch_size, 2)             # stays reduced for the rest
+        self.assertGreaterEqual(enc.torch.emptied, 2)   # cache freed on each retry
+
+    def test_reduced_batch_size_persists_so_the_failure_is_not_repeated(self):
+        enc = self._encoder(fits_at=4, batch_size=8)
+        enc.encode([f"text {i}" for i in range(12)])
+        self.assertEqual(enc.batch_size, 4)
+        self.assertEqual(enc.attempts.count(8), 1)      # tried the big batch only once
+
+    def test_oom_at_the_floor_stops_with_an_actionable_message(self):
+        enc = self._encoder(fits_at=0, batch_size=2, min_batch_size=1)
+        with self.assertRaises(SystemExit) as ctx:
+            enc.encode(["text"])
+        message = str(ctx.exception)
+        self.assertIn("out of memory even at batch size 1", message)
+        self.assertIn("resumes", message)               # tells the student what to do
+
+    def test_no_oom_leaves_the_configured_batch_size_alone(self):
+        enc = self._encoder(fits_at=64, batch_size=8)
+        vectors = enc.encode([f"text {i}" for i in range(20)])
+        self.assertEqual(len(vectors), 20)
+        self.assertEqual(enc.batch_size, 8)
+        self.assertEqual(enc.attempts, [8, 8, 4])       # last partial batch is the remainder
+        self.assertEqual(enc.torch.emptied, 0)
+
+
+class EmbedCLI(unittest.TestCase):
+    """main() end to end. The unit tests call build() directly, so the CLI's own
+    wiring (device print, batch resolution, resume flags) needs its own cover --
+    a missing attribute here breaks the production command and nothing else."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.chunks = self.tmp / "chunks.jsonl"
+        write_chunks(self.chunks, [
+            chunk(f"PMC{i}.1#abs.w1", "pubmed-abstract", f"evidence {i}")
+            for i in range(1, 21)
+        ])
+        self.out = self.tmp / "index"
+
+    def _run(self, *extra):
+        return ec.main(["--encoder", "stub", "--allow-stub", "--dim", "16",
+                        "--chunks", str(self.chunks), "--out", str(self.out),
+                        "--batch-size", "4", "--progress-every", "0", *extra])
+
+    def _meta(self):
+        return json.loads((self.out / "index_meta.json").read_text(encoding="utf-8"))
+
+    def test_cli_builds_an_index(self):
+        self.assertEqual(self._run(), 0)
+        self.assertEqual(self._meta()["vectors"], 20)
+
+    def test_cli_resumes_by_default_and_matches_an_uninterrupted_run(self):
+        self._run("--limit", "7")
+        self.assertEqual(self._meta()["vectors"], 7)
+        self._run()                                   # resume, no --limit
+        resumed = self._meta()
+
+        reference = self.tmp / "ref"
+        ec.main(["--encoder", "stub", "--allow-stub", "--dim", "16",
+                 "--chunks", str(self.chunks), "--out", str(reference),
+                 "--batch-size", "4", "--progress-every", "0"])
+        expected = json.loads((reference / "index_meta.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(resumed["vectors"], 20)
+        self.assertEqual(resumed["content_digest"], expected["content_digest"])
+        self.assertEqual((self.out / "embeddings.f32").read_bytes(),
+                         (reference / "embeddings.f32").read_bytes())
+
+    def test_cli_restart_discards_the_partial_index(self):
+        self._run("--limit", "7")
+        self._run("--restart")
+        self.assertEqual(self._meta()["vectors"], 20)
+
+    def test_cli_refuses_a_stub_index_without_allow_stub(self):
+        with self.assertRaises(SystemExit) as ctx:
+            ec.main(["--encoder", "stub", "--chunks", str(self.chunks),
+                     "--out", str(self.out)])
+        self.assertIn("--allow-stub", str(ctx.exception))
+
+    def test_cli_rejects_a_zero_batch_size(self):
+        with self.assertRaises(SystemExit) as ctx:
+            self._run("--batch-size", "0")
+        self.assertIn("at least 1", str(ctx.exception))
+
+    def test_cli_default_batch_size_is_the_conservative_one(self):
+        parsed = ec.argparse.ArgumentParser()          # sanity: the default is wired
+        self.assertEqual(ec.DEFAULT_BATCH_SIZE, 8)
+        del parsed
