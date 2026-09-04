@@ -4,9 +4,15 @@ Data-preparation repository for an MS thesis on **recency bias in confidence-der
 evidence-utility signals for retrieval-augmented Alzheimer's clinical reasoning**,
 extending the RAG² framework (Sohn et al., NAACL 2025).
 
-It holds two things, kept deliberately apart: the **retrieval corpus** (`pmc/`,
-`pubmed/`) and the **reproduced original RAG² baseline** (`rag2/`). The thesis
-experiments themselves (`experiments/`) are not written yet.
+It holds three things, kept deliberately apart: the **retrieval corpus** (`pmc/`,
+`pubmed/`), the **reproduced original RAG² baseline** (`rag2/`), and the
+**research architecture** (`thesis/`) that composes them into one runnable
+pipeline. The thesis experiments themselves (`experiments/`) are not written yet.
+
+Start with [`docs/architecture.md`](docs/architecture.md): it states which
+components are implemented and validated, which are baselines, which are declared
+interfaces awaiting a method, and which are future work. No experiment has been
+run and no result exists.
 
 ## Pipeline stages
 
@@ -21,6 +27,7 @@ experiments themselves (`experiments/`) are not written yet.
 | 7. Retrieval-ready chunks | `pmc/chunks/` | Deterministic chunks with full provenance |
 | 8. MedCPT index + retrieval | `pmc/index/` | Exact inner-product search, candidate replay |
 | 9. Original RAG² baseline | `rag2/` | Rationale → balanced retrieval → filter → answer |
+| 10. Research architecture | `thesis/` | Query → retrieval → condition → result + provenance |
 
 ## Layout
 
