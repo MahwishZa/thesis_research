@@ -1,0 +1,135 @@
+# Alzheimer's corpus source pools.
+#
+# One entry per source pool: how it is retrieved, what may be redistributed, and
+# which tier it belongs to. Source tiers and the licensing policy live HERE
+# rather than in corpus_config.yaml because both are properties of the sources;
+# corpus_config.yaml holds the processing pipeline (relevance, chunking, dates).
+version: "0.1.0"
+updated: "2026-09-11"
+
+# ---------------------------------------------------------------------------
+# Source tiers. Deliberately UNORDERED and analytically neutral: evidence
+# quality is claim-dependent, and authority ordering is a TESTED variable in the
+# thesis (ablation A12). Encoding a rank here would prejudge that ablation.
+# Consumers must not infer an order from list position.
+# ---------------------------------------------------------------------------
+source_tiers:
+  ordering: null
+  ordering_note: >
+    No ordering is defined and none may be inferred. Any ranking used in an
+    experiment must be declared by that experiment, not by this file.
+  values:
+    - clinical_guideline
+    - consensus_statement
+    - systematic_review
+    - peer_reviewed_primary
+    - clinical_trial
+    - review
+    - preprint
+    - textbook
+    - currency_pack
+
+# ---------------------------------------------------------------------------
+# Licensing policy. FAILS CLOSED: unknown licence means not redistributable.
+# ---------------------------------------------------------------------------
+licensing:
+  default_redistribution_allowed: false
+  default_note: >
+    A record whose licence cannot be positively determined is treated as NOT
+    redistributable, and its text is never committed. Metadata may be retained.
+  required_fields:
+    [source, source_id, title, source_url, license, license_url,
+     reuse_status, redistribution_allowed, retrieval_date]
+  distributable_licenses:
+    [CC0, CC-BY, CC-BY-SA, CC-BY-NC, CC-BY-NC-SA, CC-BY-ND,
+     public-domain, us-government-work]
+  metadata_only_if_restricted: true
+
+# ---------------------------------------------------------------------------
+# Source pools.
+# ---------------------------------------------------------------------------
+sources:
+
+  pubmed:
+    name: "PubMed"
+    source_type: bibliographic_abstracts
+    retrieval_method: "NCBI E-utilities (esearch/efetch). Never HTML scraping."
+    query_dir: "queries/pubmed"
+    raw_dir: "data/raw/pubmed"
+    enabled: true
+    expected_availability: "Public. Requires permitted network egress to eutils.ncbi.nlm.nih.gov."
+    source_tier: peer_reviewed_primary
+    tier_note: "Per-record; reviews and trials are retagged from publication types."
+    reuse_requirements: >
+      PubMed metadata and abstracts carry publisher-dependent rights. Abstract
+      text is recorded per record with its own licence field; absence of a
+      determinable licence means the abstract text is not redistributed.
+    redistribution_policy: metadata_always_text_if_licensed
+    notes: >
+      BLOCKED in the build environment: organisation egress policy returns 403
+      for eutils.ncbi.nlm.nih.gov:443. See MANUAL_STEPS.md M0.
+
+  pmc:
+    name: "PubMed Central Open Access subset"
+    source_type: full_text
+    retrieval_method: "PMC OA service / OA file list. Never HTML scraping."
+    query_dir: "queries/pmc"
+    raw_dir: "data/raw/pmc"
+    enabled: true
+    expected_availability: "Open Access subset only."
+    source_tier: peer_reviewed_primary
+    reuse_requirements: >
+      Open Access subset only. The per-article ali:license_ref is authoritative
+      and is recorded verbatim; NC terms permit local text mining but restrict
+      redistribution.
+    redistribution_policy: text_if_open_license
+    notes: "Depends on the same blocked NCBI egress as PubMed."
+
+  guidelines:
+    name: "Clinical practice guidelines and consensus statements"
+    source_type: guidance
+    retrieval_method: "Official publisher route, per document. Manual where required."
+    query_dir: "queries/guidelines"
+    raw_dir: "data/raw/guidelines"
+    enabled: true
+    expected_availability: "Mixed. Free to read does not imply free to redistribute."
+    source_tier: clinical_guideline
+    reuse_requirements: >
+      Verified PER DOCUMENT, never per organisation. Recorded in
+      metadata/guideline_registry.csv.
+    redistribution_policy: per_document_verified
+    notes: "Non-redistributable guidance: metadata only. See MANUAL_STEPS.md M3."
+
+  textbooks:
+    name: "Medical textbooks"
+    source_type: reference_text
+    retrieval_method: "None automated. Legitimately licensed copies only."
+    raw_dir: "data/raw/textbooks"
+    enabled: false
+    enabled_note: "Disabled by default - no lawful automated acquisition route exists."
+    expected_availability: "Copyrighted."
+    source_tier: textbook
+    reuse_requirements: "Redistribution prohibited."
+    redistribution_policy: metadata_only
+    notes: >
+      Bibliographic metadata only in metadata/textbook_registry.csv. Content is
+      never committed. See MANUAL_STEPS.md M4.
+
+  currency_pack:
+    name: "Currency pack"
+    source_type: recent_high_impact_evidence
+    retrieval_method: "Manual ingestion, pinned by observed content hash."
+    raw_dir: "data/raw/currency_pack"
+    enabled: true
+    expected_availability: "Document-dependent."
+    source_tier: currency_pack
+    reuse_requirements: "Verified per document before any text is committed."
+    redistribution_policy: per_document_verified
+    notes: >
+      Recent/high-impact Alzheimer's evidence: the 2024 revised diagnostic
+      criteria, current usage recommendations for the two disease-modifying
+      drugs relevant to the study period, ARIA monitoring guidance, and the 2026
+      Cochrane review. Document identities are NOT guessed - they are verified
+      and recorded in metadata/currency_pack_registry.csv (MANUAL_STEPS.md M5).
+      A verified 7-document layer already exists at pmc/metadata/currency_pack.csv;
+      reconcile rather than duplicate.

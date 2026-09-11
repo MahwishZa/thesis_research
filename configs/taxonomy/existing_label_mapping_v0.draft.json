@@ -1,0 +1,159 @@
+{
+  "mapping_version": "v0-DRAFT",
+  "source": "M1 measurement, 21 observed strings on 20 documents",
+  "resolution_counts": {
+    "GROUP": 9,
+    "LEAF": 6,
+    "OUT": 5,
+    "ERROR": 1
+  },
+  "rows": [
+    {
+      "existing_label": "pharmacotherapy",
+      "docs": 9,
+      "canonical_target": "AD-PHARM",
+      "resolution": "GROUP",
+      "note": "Too coarse: contest fires per agent/decision, not per drug class"
+    },
+    {
+      "existing_label": "differential-diagnosis",
+      "docs": 9,
+      "canonical_target": "AD-DDX",
+      "resolution": "GROUP",
+      "note": "Too coarse: must resolve to the specific alternative diagnosis"
+    },
+    {
+      "existing_label": "aria",
+      "docs": 8,
+      "canonical_target": "AD-ARIA",
+      "resolution": "GROUP",
+      "note": "Too coarse: definition / monitoring / risk / management are distinct decisions"
+    },
+    {
+      "existing_label": "amyloid-imaging",
+      "docs": 7,
+      "canonical_target": "AD-BIOM-05",
+      "resolution": "LEAF",
+      "note": "Maps to amyloid-pet; tau PET separately AD-BIOM-06"
+    },
+    {
+      "existing_label": "diagnosis",
+      "docs": 7,
+      "canonical_target": null,
+      "resolution": "OUT",
+      "note": "Not one of the 11 named topics; too broad to be a claim class"
+    },
+    {
+      "existing_label": "biomarkers",
+      "docs": 4,
+      "canonical_target": "AD-BIOM",
+      "resolution": "GROUP",
+      "note": "Too coarse"
+    },
+    {
+      "existing_label": "eligibility",
+      "docs": 4,
+      "canonical_target": "AD-ELIG",
+      "resolution": "GROUP",
+      "note": "Too coarse"
+    },
+    {
+      "existing_label": "criteria",
+      "docs": 2,
+      "canonical_target": "AD-CRIT-01",
+      "resolution": "LEAF",
+      "note": "Synonym of diagnostic-criteria (see below)"
+    },
+    {
+      "existing_label": "tau",
+      "docs": 2,
+      "canonical_target": "AD-BIOM-06",
+      "resolution": "LEAF",
+      "note": "Ambiguous: tau PET vs CSF/plasma tau. Assigned to tau-PET pending rules"
+    },
+    {
+      "existing_label": "plasma",
+      "docs": 2,
+      "canonical_target": "AD-BIOM",
+      "resolution": "GROUP",
+      "note": "Ambiguous: p-tau217 vs Abeta42/40 vs NfL/GFAP"
+    },
+    {
+      "existing_label": "apoe",
+      "docs": 2,
+      "canonical_target": "AD-APOE",
+      "resolution": "GROUP",
+      "note": "Too coarse: indication / risk / biology differ in time-sensitivity"
+    },
+    {
+      "existing_label": "care",
+      "docs": 2,
+      "canonical_target": null,
+      "resolution": "OUT",
+      "note": "No parent among the named topics; scope decision"
+    },
+    {
+      "existing_label": "amyloid",
+      "docs": 1,
+      "canonical_target": "AD-BIOM",
+      "resolution": "GROUP",
+      "note": "Ambiguous: imaging vs fluid vs therapy target"
+    },
+    {
+      "existing_label": "staging",
+      "docs": 1,
+      "canonical_target": "AD-CRIT-04",
+      "resolution": "LEAF",
+      "note": "Maps to numeric-disease-staging"
+    },
+    {
+      "existing_label": "vascular",
+      "docs": 1,
+      "canonical_target": "AD-DDX-02",
+      "resolution": "LEAF",
+      "note": "Maps to vascular-cognitive-impairment"
+    },
+    {
+      "existing_label": "management",
+      "docs": 1,
+      "canonical_target": null,
+      "resolution": "OUT",
+      "note": "Ambiguous: behavioural management vs general care"
+    },
+    {
+      "existing_label": "prevention",
+      "docs": 1,
+      "canonical_target": null,
+      "resolution": "OUT",
+      "note": "No parent among the named topics; scope decision"
+    },
+    {
+      "existing_label": "comorbidity",
+      "docs": 1,
+      "canonical_target": null,
+      "resolution": "OUT",
+      "note": "No parent among the named topics; scope decision"
+    },
+    {
+      "existing_label": "diagnostic-criteria",
+      "docs": 1,
+      "canonical_target": "AD-CRIT-01",
+      "resolution": "LEAF",
+      "note": "DUPLICATE of 'criteria' - same concept, two strings"
+    },
+    {
+      "existing_label": "contested",
+      "docs": 1,
+      "canonical_target": null,
+      "resolution": "ERROR",
+      "note": "NOT a claim class. 'Contested' is an output STATE computed by 4.4 over a class, not a property of evidence"
+    },
+    {
+      "existing_label": "plasma-biomarkers",
+      "docs": 1,
+      "canonical_target": "AD-BIOM",
+      "resolution": "GROUP",
+      "note": "DUPLICATE of 'plasma' - same concept, two strings"
+    }
+  ]
+}

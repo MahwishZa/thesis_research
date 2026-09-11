@@ -1,0 +1,5 @@
+cpg_id,organization,document_type,claim_classes,status,note
+EXTERNAL-1,American Academy of Neurology (AAN),clinical practice guideline / practice parameter,diagnosis;MCI;differential-diagnosis,manual-acquisition-required,0 AD guideline records found in the OA corpus; acquire from AAN; verify licence.
+EXTERNAL-2,NICE (UK),national clinical guideline (e.g. dementia NG-series),diagnosis;management;pharmacotherapy,manual-acquisition-required,0 records in the OA corpus; NICE reuse terms must be verified before ingestion.
+EXTERNAL-3,International Working Group (IWG),diagnostic criteria (alternative framework),criteria;biomarkers,manual-acquisition-required,IWG criteria not confirmed present in the OA corpus; acquire from source; verify version.
+EXTERNAL-4,European Academy of Neurology (EAN) / EU consortia (AD-specific),guideline / consensus statement,diagnosis;biomarkers;imaging,manual-acquisition-required,Only a non-AD-central EAN joint guideline found; AD-specific EAN guidance to acquire.

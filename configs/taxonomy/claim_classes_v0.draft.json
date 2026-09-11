@@ -1,0 +1,803 @@
+{
+  "taxonomy_id": "AD-CLAIM-CLASS",
+  "version": "v0-DRAFT-NOT-APPROVED",
+  "status": "PROPOSED - requires human approval before any assignment mechanism is built",
+  "derived_from": "MS_Thesis_Proposal.pdf 5.1 (11 named topics); granularity rule from 4.4 contested test and 4.3 gamma",
+  "named_topics_in_source": [
+    "biomarker criteria",
+    "staging",
+    "plasma biomarkers",
+    "amyloid imaging",
+    "eligibility",
+    "ARIA monitoring",
+    "APOE",
+    "pharmacotherapy",
+    "behavioural management",
+    "deprescribing",
+    "differential diagnosis"
+  ],
+  "granularity_rule": "A class must be fine enough that two passages sharing it make claims about the SAME clinical decision, and coarse enough that an update and the thing it updates share one class.",
+  "counts": {
+    "groups": 9,
+    "classes": 50,
+    "REQUIRED": 40,
+    "DESIRABLE": 10
+  },
+  "open_decisions": [
+    "granularity level",
+    "whether 40-80 is binding",
+    "multi-label vs single-label",
+    "psi(q) time-invariance flag per class",
+    "scope of prevention/comorbidity/care"
+  ],
+  "explicitly_not_defined": [
+    "source tier / authority ordering - would prejudge ablation A12"
+  ],
+  "classes": [
+    {
+      "class_id": "AD-CRIT-01",
+      "group_id": "AD-CRIT",
+      "group_name": "Diagnostic criteria and staging",
+      "canonical_name": "diagnostic-criteria-framework",
+      "definition": "Which named framework defines AD and how (NIA-AA, IWG, NINCDS-ADRDA, DSM/ICD).",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "biomarker criteria",
+        "staging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-CRIT-02",
+      "group_id": "AD-CRIT",
+      "group_name": "Diagnostic criteria and staging",
+      "canonical_name": "biological-vs-clinical-definition",
+      "definition": "Whether AD is defined biologically (biomarker) or clinico-pathologically.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "biomarker criteria",
+        "staging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-CRIT-03",
+      "group_id": "AD-CRIT",
+      "group_name": "Diagnostic criteria and staging",
+      "canonical_name": "core1-core2-biomarker-categories",
+      "definition": "The Core 1 / Core 2 biomarker category scheme and what belongs in each.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "biomarker criteria",
+        "staging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-CRIT-04",
+      "group_id": "AD-CRIT",
+      "group_name": "Diagnostic criteria and staging",
+      "canonical_name": "numeric-disease-staging",
+      "definition": "Numeric/clinical stage assignment and stage boundaries.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "biomarker criteria",
+        "staging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-CRIT-05",
+      "group_id": "AD-CRIT",
+      "group_name": "Diagnostic criteria and staging",
+      "canonical_name": "preclinical-mci-prodromal-definition",
+      "definition": "Definitions of preclinical AD, MCI and prodromal AD.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "biomarker criteria",
+        "staging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-01",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "plasma-ptau217",
+      "definition": "p-tau217 assay performance, use and interpretation.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-02",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "plasma-abeta42-40",
+      "definition": "Plasma Abeta42/40 ratio performance and use.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-03",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "plasma-nfl-gfap",
+      "definition": "Plasma NfL / GFAP as AD-relevant markers.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-04",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "csf-biomarkers",
+      "definition": "CSF Abeta/p-tau/t-tau assays and interpretation.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-05",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "amyloid-pet",
+      "definition": "Amyloid PET acquisition, reading and indication.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-06",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "tau-pet",
+      "definition": "Tau PET acquisition, reading and indication.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-07",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "fdg-pet",
+      "definition": "FDG-PET hypometabolism patterns for AD.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-08",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "structural-mri-atrophy",
+      "definition": "MTA/hippocampal volumetry as diagnostic evidence.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-09",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "biomarker-diagnostic-sufficiency",
+      "definition": "Whether a given biomarker alone suffices to establish the diagnosis.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BIOM-10",
+      "group_id": "AD-BIOM",
+      "group_name": "Biomarkers and imaging",
+      "canonical_name": "biomarker-cutoffs-thresholds",
+      "definition": "Numeric cutoffs, thresholds and two-cutpoint schemes.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "plasma biomarkers",
+        "amyloid imaging"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-APOE-01",
+      "group_id": "AD-APOE",
+      "group_name": "APOE",
+      "canonical_name": "apoe-genotyping-indication",
+      "definition": "When APOE genotyping is indicated or mandated.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "APOE"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-APOE-02",
+      "group_id": "AD-APOE",
+      "group_name": "APOE",
+      "canonical_name": "apoe-risk-stratification",
+      "definition": "APOE-stratified risk estimates used for counselling.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "APOE"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-APOE-03",
+      "group_id": "AD-APOE",
+      "group_name": "APOE",
+      "canonical_name": "apoe-biology",
+      "definition": "APOE isoform biology and mechanism.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "APOE"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-01",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "lecanemab-efficacy",
+      "definition": "Lecanemab clinical efficacy claims.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-02",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "donanemab-efficacy",
+      "definition": "Donanemab clinical efficacy claims.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-03",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "anti-amyloid-class-efficacy",
+      "definition": "Class-level efficacy of anti-amyloid monoclonal antibodies.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-04",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "anti-amyloid-benefit-harm-balance",
+      "definition": "Whether benefit outweighs harm for the class or an agent.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-05",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "cholinesterase-inhibitors",
+      "definition": "Donepezil/rivastigmine/galantamine efficacy and use.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-06",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "memantine",
+      "definition": "Memantine efficacy and use.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-PHARM-07",
+      "group_id": "AD-PHARM",
+      "group_name": "Pharmacotherapy",
+      "canonical_name": "other-symptomatic-pharmacotherapy",
+      "definition": "Other symptomatic agents.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "pharmacotherapy"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ELIG-01",
+      "group_id": "AD-ELIG",
+      "group_name": "Treatment eligibility",
+      "canonical_name": "anti-amyloid-eligibility-criteria",
+      "definition": "Who may receive anti-amyloid therapy.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "eligibility"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ELIG-02",
+      "group_id": "AD-ELIG",
+      "group_name": "Treatment eligibility",
+      "canonical_name": "anticoagulation-contraindication",
+      "definition": "Anticoagulation and bleeding-risk contraindications.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "eligibility"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ELIG-03",
+      "group_id": "AD-ELIG",
+      "group_name": "Treatment eligibility",
+      "canonical_name": "apoe-based-eligibility",
+      "definition": "APOE genotype as an eligibility or counselling gate.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "eligibility"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ELIG-04",
+      "group_id": "AD-ELIG",
+      "group_name": "Treatment eligibility",
+      "canonical_name": "stage-based-eligibility",
+      "definition": "Disease stage as an eligibility boundary.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "eligibility"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ARIA-01",
+      "group_id": "AD-ARIA",
+      "group_name": "ARIA",
+      "canonical_name": "aria-definition-classification",
+      "definition": "ARIA-E / ARIA-H definition, grading and radiological criteria.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "ARIA monitoring"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ARIA-02",
+      "group_id": "AD-ARIA",
+      "group_name": "ARIA",
+      "canonical_name": "aria-mri-monitoring-schedule",
+      "definition": "Required MRI cadence before and during treatment.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "ARIA monitoring"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ARIA-03",
+      "group_id": "AD-ARIA",
+      "group_name": "ARIA",
+      "canonical_name": "aria-risk-by-apoe",
+      "definition": "ARIA incidence and risk stratified by APOE.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "ARIA monitoring"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-ARIA-04",
+      "group_id": "AD-ARIA",
+      "group_name": "ARIA",
+      "canonical_name": "aria-management-discontinuation",
+      "definition": "Management, dose interruption and discontinuation on ARIA.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "ARIA monitoring"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BEHAV-01",
+      "group_id": "AD-BEHAV",
+      "group_name": "Behavioural management",
+      "canonical_name": "bpsd-nonpharmacological",
+      "definition": "Non-drug management of behavioural/psychological symptoms.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "behavioural management"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BEHAV-02",
+      "group_id": "AD-BEHAV",
+      "group_name": "Behavioural management",
+      "canonical_name": "bpsd-antipsychotics",
+      "definition": "Antipsychotic use in dementia, incl. harm warnings.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "behavioural management"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BEHAV-03",
+      "group_id": "AD-BEHAV",
+      "group_name": "Behavioural management",
+      "canonical_name": "agitation-specific-management",
+      "definition": "Agitation-specific treatment.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "behavioural management"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BEHAV-04",
+      "group_id": "AD-BEHAV",
+      "group_name": "Behavioural management",
+      "canonical_name": "sleep-disturbance-management",
+      "definition": "Sleep disturbance in dementia.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "behavioural management"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-BEHAV-05",
+      "group_id": "AD-BEHAV",
+      "group_name": "Behavioural management",
+      "canonical_name": "caregiver-support-interventions",
+      "definition": "Caregiver-directed interventions.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "behavioural management"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DEPR-01",
+      "group_id": "AD-DEPR",
+      "group_name": "Deprescribing",
+      "canonical_name": "deprescribing-cholinesterase-memantine",
+      "definition": "When to stop cholinesterase inhibitors or memantine.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "deprescribing"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DEPR-02",
+      "group_id": "AD-DEPR",
+      "group_name": "Deprescribing",
+      "canonical_name": "deprescribing-antipsychotics",
+      "definition": "Withdrawal of antipsychotics.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "deprescribing"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DEPR-03",
+      "group_id": "AD-DEPR",
+      "group_name": "Deprescribing",
+      "canonical_name": "anticholinergic-burden",
+      "definition": "Anticholinergic burden reduction.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "deprescribing"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DEPR-04",
+      "group_id": "AD-DEPR",
+      "group_name": "Deprescribing",
+      "canonical_name": "end-of-life-medication-review",
+      "definition": "Medication review in advanced/end-stage disease.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "deprescribing"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-01",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "dementia-with-lewy-bodies",
+      "definition": "AD vs DLB.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-02",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "vascular-cognitive-impairment",
+      "definition": "AD vs vascular cognitive impairment.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-03",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "frontotemporal-dementia",
+      "definition": "AD vs FTD/FTLD.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-04",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "late-tdp43",
+      "definition": "AD vs LATE / TDP-43 pathology.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-05",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "normal-pressure-hydrocephalus",
+      "definition": "AD vs NPH.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-06",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "depression-pseudodementia",
+      "definition": "AD vs late-life depression.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-07",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "mixed-and-copathology",
+      "definition": "Mixed pathology and co-pathology.",
+      "status": "REQUIRED",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    },
+    {
+      "class_id": "AD-DDX-08",
+      "group_id": "AD-DDX",
+      "group_name": "Differential diagnosis",
+      "canonical_name": "reversible-causes",
+      "definition": "Reversible/secondary causes of cognitive impairment.",
+      "status": "DESIRABLE",
+      "derives_from_named_topic": [
+        "differential diagnosis"
+      ],
+      "time_sensitivity_psi": "REQUIRES_HUMAN_DECISION",
+      "synonyms": [],
+      "inclusion_rules": [],
+      "exclusion_rules": []
+    }
+  ]
+}

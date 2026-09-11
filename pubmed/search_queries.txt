@@ -1,0 +1,477 @@
+# PubMed search queries
+# Database: PubMed
+# Date: 2026-08-30
+# Notes:
+# Focus: clinical reasoning and diagnosis of Alzheimer disease (AD).
+# Each block is copy-paste ready. Combine building-block sets with AND,
+# and AND Q12.3 (last 5 years) onto any block that does not already include it.
+# [Mesh] = MeSH (explodes); [Mesh:NoExp] = heading only; [tiab] = title/abstract;
+# [ot] = other terms; [sb] = subset. Record hit count and run date after each query.
+# "Every possible query" is unbounded; this bank covers the main MeSH, synonyms,
+# reasoning constructs, criteria, tests, biomarkers, mimics, settings, and errors.
+# Narrow with: Humans[Mesh] AND English[lang]
+# Optional review filter: AND (systematic review[pt] OR meta-analysis[pt] OR review[pt])
+#
+# Date window (last 5 years from this file date, 2026-08-30):
+#   2021-08-30 through 2026-08-30 (publication date).
+# AND this filter onto every search (already included on Q0 and Q13):
+#   ("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+# Equivalent short form: 2021/08/30:2026/08/30[dp]
+# Calendar-year alternative (if you prefer full years 2021–2026): 2021:2026[dp]
+
+# =============================================================================
+# 0. HIGH-RECALL vs HIGH-PRECISION (paste as one search)
+# =============================================================================
+
+# Q0.1 High-recall (clinical reasoning OR diagnosis of AD / related dementia)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "AD dementia"[tiab] OR "dementia of the Alzheimer type"[tiab] OR "senile dementia"[tiab])
+AND
+("Clinical Decision-Making"[Mesh] OR "Decision Making"[Mesh] OR "Decision Support Systems, Clinical"[Mesh] OR "Diagnosis, Differential"[Mesh] OR "Diagnostic Errors"[Mesh] OR "Delayed Diagnosis"[Mesh] OR "Early Diagnosis"[Mesh] OR "diagnosis"[Subheading] OR "clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab] OR "clinical judgement"[tiab] OR "clinical judgment"[tiab] OR "diagnostic process"[tiab] OR "diagnostic accuracy"[tiab] OR misdiagnos*[tiab] OR "differential diagnosis"[tiab] OR "clinical diagnosis"[tiab])
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q0.2 High-precision (reasoning/decision-making constructs AND AD)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab] OR "hypothetico-deductive"[tiab] OR "dual process"[tiab] OR "illness script"[tiab] OR "case-based reasoning"[tiab] OR "problem representation"[tiab])
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q0.3 High-precision (clinical diagnosis / diagnostic criteria of AD)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("clinical diagnosis"[tiab] OR "diagnostic criteria"[tiab] OR "NIA-AA"[tiab] OR "NINCDS-ADRDA"[tiab] OR McKhann[tiab] OR "IWG"[tiab] OR "International Working Group"[tiab] OR "ATN"[tiab] OR "AT(N)"[tiab] OR DETeCD[tiab])
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# =============================================================================
+# 1. BUILDING BLOCKS — DISEASE
+# =============================================================================
+
+# Q1.1 AD MeSH
+# Hits: ____  Date: ____
+"Alzheimer Disease"[Mesh]
+
+# Q1.2 AD keywords (tiab)
+# Hits: ____  Date: ____
+(Alzheimer*[tiab] OR "AD dementia"[tiab] OR "Alzheimer-type"[tiab] OR "Alzheimer type"[tiab] OR "dementia of the Alzheimer type"[tiab] OR DAT[tiab] OR "senile dementia of the Alzheimer type"[tiab] OR SDAT[tiab])
+
+# Q1.3 AD MeSH OR keywords
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "AD dementia"[tiab] OR "dementia of the Alzheimer type"[tiab] OR "Alzheimer-type dementia"[tiab] OR "Alzheimer type dementia"[tiab] OR "senile dementia of the Alzheimer type"[tiab])
+
+# Q1.4 Broader dementia / cognitive impairment (use when AD papers are indexed only as dementia)
+# Hits: ____  Date: ____
+("Dementia"[Mesh] OR dementia[tiab] OR "major neurocognitive disorder"[tiab] OR "neurocognitive disorder"[tiab] OR "Cognitive Dysfunction"[Mesh] OR "mild cognitive impairment"[tiab] OR MCI[tiab] OR "prodromal Alzheimer"[tiab] OR "preclinical Alzheimer"[tiab] OR "subjective cognitive decline"[tiab] OR SCD[tiab])
+
+# Q1.5 AD and related disorders (ADRD)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR ADRD[tiab] OR "Alzheimer's disease and related dementias"[tiab] OR "Alzheimer disease and related disorders"[tiab])
+
+# Q1.6 Typical vs atypical AD phenotypes
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+(atypical[tiab] OR "posterior cortical atrophy"[tiab] OR PCA[tiab] OR "logopenic"[tiab] OR lvPPA[tiab] OR "primary progressive aphasia"[tiab] OR "frontal variant"[tiab] OR "behavioral variant"[tiab] OR "corticobasal"[tiab] OR "amnestic syndrome"[tiab] OR "hippocampal type"[tiab])
+
+# =============================================================================
+# 2. BUILDING BLOCKS — CLINICAL REASONING
+# =============================================================================
+
+# Q2.1 MeSH decision-making / CDS
+# Hits: ____  Date: ____
+("Clinical Decision-Making"[Mesh] OR "Decision Making"[Mesh] OR "Decision Support Systems, Clinical"[Mesh] OR "Decision Support Techniques"[Mesh] OR "Judgment"[Mesh])
+
+# Q2.2 Reasoning / judgment keywords
+# Hits: ____  Date: ____
+("clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab] OR "medical reasoning"[tiab] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab] OR "diagnostic decision-making"[tiab] OR "diagnostic decision making"[tiab] OR "clinical judgement"[tiab] OR "clinical judgment"[tiab] OR "medical judgement"[tiab] OR "medical judgment"[tiab] OR "clinical cognition"[tiab] OR "physician reasoning"[tiab] OR "clinician reasoning"[tiab])
+
+# Q2.3 Cognitive models of diagnosis
+# Hits: ____  Date: ____
+("hypothetico-deductive"[tiab] OR "hypotheticodeductive"[tiab] OR "dual process"[tiab] OR "dual-process"[tiab] OR System-1[tiab] OR System-2[tiab] OR "analytic reasoning"[tiab] OR "non-analytic"[tiab] OR "pattern recognition"[tiab] OR "illness script"[tiab] OR "illness scripts"[tiab] OR "schema induction"[tiab] OR "forward reasoning"[tiab] OR "backward reasoning"[tiab] OR "abductive"[tiab] OR "case-based reasoning"[tiab] OR CBR[tiab] OR "problem representation"[tiab] OR "semantic qualifier"[tiab] OR "encapsulated knowledge"[tiab])
+
+# Q2.4 Diagnostic process / workup language
+# Hits: ____  Date: ____
+("diagnostic process"[tiab] OR "diagnostic pathway"[tiab] OR "diagnostic workup"[tiab] OR "diagnostic work-up"[tiab] OR "diagnostic evaluation"[tiab] OR "diagnostic approach"[tiab] OR "diagnostic strategy"[tiab] OR "diagnostic algorithm"[tiab] OR "diagnostic formulation"[tiab] OR "etiologic diagnosis"[tiab] OR "aetiologic diagnosis"[tiab] OR "syndromic diagnosis"[tiab] OR "clinical-biological"[tiab] OR "clinicobiological"[tiab])
+
+# Q2.5 Combined reasoning block (MeSH OR keywords OR models)
+# Hits: ____  Date: ____
+("Clinical Decision-Making"[Mesh] OR "Decision Making"[Mesh] OR "Decision Support Systems, Clinical"[Mesh] OR "clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab] OR "clinical judgement"[tiab] OR "clinical judgment"[tiab] OR "hypothetico-deductive"[tiab] OR "dual process"[tiab] OR "illness script"[tiab] OR "case-based reasoning"[tiab] OR "problem representation"[tiab] OR "diagnostic process"[tiab] OR "diagnostic pathway"[tiab] OR "diagnostic workup"[tiab] OR "diagnostic evaluation"[tiab])
+
+# =============================================================================
+# 3. BUILDING BLOCKS — DIAGNOSIS
+# =============================================================================
+
+# Q3.1 Diagnosis MeSH / subheading
+# Hits: ____  Date: ____
+("Diagnosis"[Mesh] OR "diagnosis"[Subheading] OR "Diagnosis, Differential"[Mesh] OR "Early Diagnosis"[Mesh] OR "Delayed Diagnosis"[Mesh])
+
+# Q3.2 Clinical diagnosis keywords
+# Hits: ____  Date: ____
+("clinical diagnosis"[tiab] OR "clinically diagnosed"[tiab] OR "diagnostic criteria"[tiab] OR "diagnostic accuracy"[tiab] OR "diagnostic performance"[tiab] OR "case ascertainment"[tiab] OR "detecting Alzheimer"[tiab] OR "identifying Alzheimer"[tiab] OR diagnosed[tiab] OR diagnosing[tiab])
+
+# Q3.3 Differential diagnosis MeSH + keywords
+# Hits: ____  Date: ____
+("Diagnosis, Differential"[Mesh] OR "differential diagnosis"[tiab] OR "differential diagnoses"[tiab] OR mimicker*[tiab] OR mimic*[tiab] OR "rule out"[tiab] OR "ruling out"[tiab] OR "competing diagnosis"[tiab] OR "alternative diagnosis"[tiab])
+
+# Q3.4 Diagnostic error / delay / misclassification
+# Hits: ____  Date: ____
+("Diagnostic Errors"[Mesh] OR "Delayed Diagnosis"[Mesh] OR "diagnostic error"[tiab] OR "diagnostic errors"[tiab] OR misdiagnos*[tiab] OR "missed diagnosis"[tiab] OR underdiagnos*[tiab] OR overdiagnos*[tiab] OR "diagnostic delay"[tiab] OR "delayed diagnosis"[tiab] OR "late diagnosis"[tiab] OR "undiagnosed"[tiab] OR "incorrect diagnosis"[tiab] OR "inaccurate diagnosis"[tiab] OR "diagnostic uncertainty"[tiab] OR "diagnostic discordance"[tiab] OR "clinicopathologic correlation"[tiab] OR "clinicopathological"[tiab] OR autopsy[tiab] OR "post-mortem"[tiab] OR postmortem[tiab])
+
+# Q3.5 Sensitivity / specificity / predictive value
+# Hits: ____  Date: ____
+("Sensitivity and Specificity"[Mesh] OR "Predictive Value of Tests"[Mesh] OR "ROC Curve"[Mesh] OR sensitivity[tiab] OR specificity[tiab] OR "positive predictive value"[tiab] OR "negative predictive value"[tiab] OR "likelihood ratio"[tiab] OR AUC[tiab] OR "receiver operating"[tiab])
+
+# =============================================================================
+# 4. AD + CLINICAL REASONING (core thesis combinations)
+# =============================================================================
+
+# Q4.1 AD AND clinical reasoning (tiab)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab])
+
+# Q4.2 AD AND clinical decision-making
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Clinical Decision-Making"[Mesh] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab] OR "diagnostic decision making"[tiab] OR "diagnostic decision-making"[tiab])
+
+# Q4.3 AD AND clinical judgment
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Judgment"[Mesh] OR "clinical judgement"[tiab] OR "clinical judgment"[tiab] OR "clinician judgment"[tiab] OR "physician judgment"[tiab] OR "expert judgment"[tiab])
+
+# Q4.4 AD AND dual-process / hypothetico-deductive / illness scripts
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("hypothetico-deductive"[tiab] OR "dual process"[tiab] OR "dual-process"[tiab] OR "illness script"[tiab] OR "pattern recognition"[tiab] OR "case-based reasoning"[tiab] OR "problem representation"[tiab])
+
+# Q4.5 Dementia (broader) AND clinical reasoning (catches papers not tagged AD)
+# Hits: ____  Date: ____
+("Dementia"[Mesh] OR dementia[tiab] OR "Cognitive Dysfunction"[Mesh] OR "mild cognitive impairment"[tiab])
+AND
+("clinical reasoning"[tiab] OR "diagnostic reasoning"[tiab] OR "Clinical Decision-Making"[Mesh] OR "clinical decision-making"[tiab] OR "clinical decision making"[tiab])
+
+# Q4.6 AD AND diagnostic process / workup / pathway
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("diagnostic process"[tiab] OR "diagnostic pathway"[tiab] OR "diagnostic workup"[tiab] OR "diagnostic work-up"[tiab] OR "diagnostic evaluation"[tiab] OR "diagnostic approach"[tiab] OR "how to diagnose"[tiab] OR "approach to diagnosis"[tiab])
+
+# =============================================================================
+# 5. AD + CLINICAL / DIFFERENTIAL DIAGNOSIS
+# =============================================================================
+
+# Q5.1 AD/diagnosis MeSH explosion (very large)
+# Hits: ____  Date: ____
+"Alzheimer Disease/diagnosis"[Mesh]
+
+# Q5.2 AD AND clinical diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("clinical diagnosis"[tiab] OR "clinically diagnosed"[tiab] OR "probable Alzheimer"[tiab] OR "possible Alzheimer"[tiab] OR "established Alzheimer"[tiab])
+
+# Q5.3 AD AND differential diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Diagnosis, Differential"[Mesh] OR "differential diagnosis"[tiab])
+
+# Q5.4 AD vs other dementias (etiologic differentiation)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Lewy Body Disease"[Mesh] OR "Dementia, Vascular"[Mesh] OR "Frontotemporal Lobar Degeneration"[Mesh] OR "Frontotemporal Dementia"[Mesh] OR "Pick Disease of the Brain"[Mesh] OR "Hydrocephalus, Normal Pressure"[Mesh] OR "Depression"[Mesh] OR "Lewy body"[tiab] OR DLB[tiab] OR "vascular dementia"[tiab] OR VaD[tiab] OR "vascular cognitive impairment"[tiab] OR FTD[tiab] OR FTLD[tiab] OR "frontotemporal"[tiab] OR "normal pressure hydrocephalus"[tiab] OR NPH[tiab] OR "pseudodementia"[tiab] OR "late-life depression"[tiab] OR LATE[tiab] OR "limbic-predominant"[tiab] OR TDP-43[tiab] OR "mixed dementia"[tiab] OR "mixed pathology"[tiab] OR copatholog*[tiab])
+AND
+(diagnos*[tiab] OR differentiat*[tiab] OR distinguish*[tiab] OR discriminant*[tiab] OR "versus"[tiab] OR vs[tiab])
+
+# Q5.5 MCI to AD diagnostic conversion / prodromal
+# Hits: ____  Date: ____
+("Cognitive Dysfunction"[Mesh] OR "mild cognitive impairment"[tiab] OR MCI[tiab] OR "prodromal"[tiab] OR "preclinical"[tiab] OR "subjective cognitive decline"[tiab])
+AND
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+(diagnos*[tiab] OR criteria[tiab] OR conversion[tiab] OR progress*[tiab] OR predict*[tiab])
+
+# Q5.6 Early / timely / delayed AD diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Early Diagnosis"[Mesh] OR "Delayed Diagnosis"[Mesh] OR "early diagnosis"[tiab] OR "timely diagnosis"[tiab] OR "delayed diagnosis"[tiab] OR "diagnostic delay"[tiab] OR "late presentation"[tiab] OR "under-recognition"[tiab] OR "under recognition"[tiab])
+
+# Q5.7 Diagnostic error / autopsy discordance in AD
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Diagnostic Errors"[Mesh] OR misdiagnos*[tiab] OR "missed diagnosis"[tiab] OR "diagnostic accuracy"[tiab] OR "clinicopathologic"[tiab] OR "clinicopathological"[tiab] OR "autopsy-confirmed"[tiab] OR "neuropathologic confirmation"[tiab] OR "neuropathologically confirmed"[tiab])
+
+# =============================================================================
+# 6. DIAGNOSTIC CRITERIA AND GUIDELINES
+# =============================================================================
+
+# Q6.1 Named criteria / frameworks
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("NINCDS-ADRDA"[tiab] OR McKhann[tiab] OR "NIA-AA"[tiab] OR "National Institute on Aging"[tiab] OR "Alzheimer's Association"[tiab] OR "IWG"[tiab] OR "International Working Group"[tiab] OR Dubois[tiab] OR "DSM-5"[tiab] OR "DSM-IV"[tiab] OR "DSM-III"[tiab] OR "ICD-10"[tiab] OR "ICD-11"[tiab] OR "ATN"[tiab] OR "AT(N)"[tiab] OR "Jack criteria"[tiab] OR "IWG-2"[tiab] OR "IWG-AA"[tiab] OR DETeCD[tiab] OR "DETeCD-ADRD"[tiab] OR "clinical practice guideline"[tiab])
+
+# Q6.2 Practice guidelines MeSH
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Practice Guidelines as Topic"[Mesh] OR "Guideline"[Publication Type] OR "consensus"[tiab] OR "practice guideline"[tiab] OR "clinical practice guideline"[tiab] OR recommendation*[tiab])
+AND
+(diagnos*[tiab] OR evaluat*[tiab] OR workup[tiab] OR "work-up"[tiab])
+
+# Q6.3 Clinical-biological / biomarker-supported diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("clinical-biological"[tiab] OR "clinicobiological"[tiab] OR "biomarker-supported"[tiab] OR "biomarker confirmed"[tiab] OR "biomarker-confirmed"[tiab] OR "amyloid-positive"[tiab] OR "tau-positive"[tiab] OR "A+T+"[tiab] OR "phenotype positive"[tiab])
+
+# =============================================================================
+# 7. CLINICAL ASSESSMENT TOOLS (history, exam, cognitive tests)
+# =============================================================================
+
+# Q7.1 History, informant, examination
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab] OR "mild cognitive impairment"[tiab])
+AND
+("Medical History Taking"[Mesh] OR "Physical Examination"[Mesh] OR "history taking"[tiab] OR "clinical interview"[tiab] OR informant[tiab] OR caregiver[tiab] OR "collateral history"[tiab] OR "neurological examination"[tiab] OR "mental status"[tiab])
+AND
+(diagnos*[tiab] OR detect*[tiab] OR screen*[tiab] OR assess*[tiab])
+
+# Q7.2 Cognitive / dementia tests MeSH
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "Cognitive Dysfunction"[Mesh])
+AND
+("Neuropsychological Tests"[Mesh] OR "Mental Status and Dementia Tests"[Mesh] OR "Psychiatric Status Rating Scales"[Mesh])
+
+# Q7.3 Named screening / staging instruments
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab] OR MCI[tiab] OR "mild cognitive impairment"[tiab])
+AND
+(MMSE[tiab] OR "Mini-Mental"[tiab] OR MoCA[tiab] OR "Montreal Cognitive Assessment"[tiab] OR "Clock Drawing"[tiab] OR CDT[tiab] OR Mini-Cog[tiab] OR "Addenbrooke"[tiab] OR ACE-III[tiab] OR ACE-R[tiab] OR "Clinical Dementia Rating"[tiab] OR CDR[tiab] OR "CDR-SB"[tiab] OR ADAS-Cog[tiab] OR "ADAS Cog"[tiab] OR "IQCODE"[tiab] OR "GPCOG"[tiab] OR MIS[tiab] OR "Memory Impairment Screen"[tiab] OR SLUMS[tiab] OR "Rowland Universal"[tiab] OR RUDAS[tiab] OR "7-minute"[tiab] OR "five-word"[tiab] OR FCSRT[tiab] OR "Free and Cued"[tiab] OR "logical memory"[tiab] OR "Boston Naming"[tiab] OR "verbal fluency"[tiab] OR "trail making"[tiab] OR "NPI"[tiab] OR "FAQ"[tiab] OR "functional activities"[tiab] OR "IADL"[tiab])
+AND
+(diagnos*[tiab] OR screen*[tiab] OR detect*[tiab] OR validat*[tiab] OR sensitiv*[tiab] OR specific*[tiab] OR cutoff[tiab] OR "cut-off"[tiab])
+
+# Q7.4 Primary care case-finding vs specialist diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Primary Health Care"[Mesh] OR "General Practice"[Mesh] OR "General Practitioners"[Mesh] OR "primary care"[tiab] OR "general practice"[tiab] OR GP[tiab] OR "family medicine"[tiab] OR "memory clinic"[tiab] OR "memory center"[tiab] OR "cognitive clinic"[tiab] OR neurologist*[tiab] OR geriatrician*[tiab] OR "old age psychiatry"[tiab])
+AND
+(diagnos*[tiab] OR detect*[tiab] OR screen*[tiab] OR recognition[tiab] OR referral[tiab])
+
+# =============================================================================
+# 8. BIOMARKERS AND IMAGING AS DIAGNOSTIC EVIDENCE
+# =============================================================================
+
+# Q8.1 Biomarkers MeSH + AD diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Biomarkers"[Mesh] OR biomarker*[tiab] OR "fluid biomarker"[tiab] OR "blood-based"[tiab] OR "plasma biomarker"[tiab])
+AND
+(diagnos*[tiab] OR "clinical decision"[tiab] OR workup[tiab] OR "work-up"[tiab] OR "diagnostic use"[tiab])
+
+# Q8.2 CSF amyloid / tau
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Cerebrospinal Fluid"[Mesh] OR CSF[tiab] OR "cerebrospinal fluid"[tiab])
+AND
+("Amyloid beta-Peptides"[Mesh] OR "tau Proteins"[Mesh] OR amyloid[tiab] OR Abeta[tiab] OR "Aβ"[tiab] OR "A-beta"[tiab] OR "p-tau"[tiab] OR ptau[tiab] OR "phosphorylated tau"[tiab] OR "total tau"[tiab])
+AND
+(diagnos*[tiab] OR discrimin*[tiab] OR differentiat*[tiab])
+
+# Q8.3 Blood biomarkers (p-tau217, Aβ42/40, NfL, GFAP)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+(plasma[tiab] OR serum[tiab] OR blood[tiab] OR "blood-based"[tiab])
+AND
+("p-tau217"[tiab] OR ptau217[tiab] OR "p-tau181"[tiab] OR ptau181[tiab] OR "p-tau231"[tiab] OR "Abeta42"[tiab] OR "Aβ42"[tiab] OR "Aβ40"[tiab] OR NfL[tiab] OR "neurofilament"[tiab] OR GFAP[tiab] OR "glial fibrillary"[tiab])
+AND
+(diagnos*[tiab] OR triage[tiab] OR "clinical use"[tiab] OR "decision"[tiab])
+
+# Q8.4 Structural MRI
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Magnetic Resonance Imaging"[Mesh] OR MRI[tiab] OR "hippocampal atrophy"[tiab] OR "medial temporal"[tiab] OR "Scheltens"[tiab] OR "MTA scale"[tiab] OR volumetr*[tiab])
+AND
+(diagnos*[tiab] OR differentiat*[tiab] OR "clinical diagnosis"[tiab])
+
+# Q8.5 PET (amyloid, tau, FDG)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Positron-Emission Tomography"[Mesh] OR PET[tiab] OR "amyloid PET"[tiab] OR "tau PET"[tiab] OR FDG-PET[tiab] OR "fluorodeoxyglucose"[tiab] OR PiB[tiab] OR florbetapir[tiab] OR florbetaben[tiab] OR flutemetamol[tiab])
+AND
+(diagnos*[tiab] OR "clinical decision"[tiab] OR "appropriate use"[tiab] OR "diagnostic utility"[tiab])
+
+# Q8.6 Other imaging / DaTscan for differential
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "Lewy Body Disease"[Mesh] OR "Dementia, Vascular"[Mesh])
+AND
+("Dopamine Plasma Membrane Transport Proteins"[Mesh] OR DaTscan[tiab] OR "DAT scan"[tiab] OR SPECT[tiab] OR "FP-CIT"[tiab] OR "diffusion tensor"[tiab] OR DTI[tiab])
+AND
+(diagnos*[tiab] OR differentiat*[tiab])
+
+# =============================================================================
+# 9. CLINICAL DECISION SUPPORT, AI, AND COMPUTATIONAL DIAGNOSIS
+# =============================================================================
+
+# Q9.1 CDS for AD / dementia diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab] OR "mild cognitive impairment"[tiab])
+AND
+("Decision Support Systems, Clinical"[Mesh] OR "clinical decision support"[tiab] OR CDSS[tiab] OR CDS[tiab] OR "computer-aided diagnosis"[tiab] OR "computer assisted diagnosis"[tiab] OR "Decision Support Techniques"[Mesh])
+
+# Q9.2 AI / ML differential diagnosis of dementia etiologies
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Artificial Intelligence"[Mesh] OR "Machine Learning"[Mesh] OR "Deep Learning"[Mesh] OR "Neural Networks, Computer"[Mesh] OR "artificial intelligence"[tiab] OR "machine learning"[tiab] OR "deep learning"[tiab] OR "natural language processing"[tiab] OR NLP[tiab])
+AND
+(diagnos*[tiab] OR classif*[tiab] OR differentiat*[tiab] OR "decision support"[tiab])
+
+# Q9.3 Expert systems / knowledge-based diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Expert Systems"[Mesh] OR "expert system"[tiab] OR "knowledge-based"[tiab] OR "rule-based"[tiab] OR ontology[tiab] OR "Bayesian network"[tiab] OR "diagnostic expert"[tiab])
+
+# =============================================================================
+# 10. EDUCATION, EXPERTISE, AND HOW CLINICIANS REASON
+# =============================================================================
+
+# Q10.1 Medical education / expertise in dementia diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Education, Medical"[Mesh] OR "Clinical Competence"[Mesh] OR "clinical competence"[tiab] OR expertise[tiab] OR "novice"[tiab] OR "think-aloud"[tiab] OR "think aloud"[tiab] OR "cognitive task analysis"[tiab])
+AND
+(diagnos*[tiab] OR reasoning[tiab] OR "decision making"[tiab] OR "decision-making"[tiab])
+
+# Q10.2 Disclosure / communicating diagnosis (adjacent to diagnostic process)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Truth Disclosure"[Mesh] OR disclos*[tiab] OR "breaking bad news"[tiab] OR "telling the diagnosis"[tiab] OR "diagnostic disclosure"[tiab])
+
+# =============================================================================
+# 11. SETTINGS, POPULATIONS, AND EQUITY (optional filters AND-ed to a core query)
+# =============================================================================
+
+# Q11.1 Age / sex / APOE as diagnostic context
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+(diagnos*[tiab])
+AND
+("Aged"[Mesh] OR "Aged, 80 and over"[Mesh] OR "Apolipoprotein E4"[Mesh] OR APOE[tiab] OR "young onset"[tiab] OR "early-onset"[tiab] OR EOAD[tiab] OR LOAD[tiab] OR "sex differences"[tiab] OR "gender differences"[tiab])
+
+# Q11.2 Health disparities in diagnosis
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Healthcare Disparities"[Mesh] OR disparit*[tiab] OR inequit*[tiab] OR "health literacy"[tiab] OR "rural"[tiab] OR "race"[tiab] OR ethnic*[tiab] OR "socioeconomic"[tiab])
+AND
+(diagnos*[tiab] OR underdiagnos*[tiab] OR detection[tiab] OR recognition[tiab])
+
+# =============================================================================
+# 12. EXCLUSION / NOISE CONTROL (append with NOT when screening is flooded)
+# =============================================================================
+
+# Q12.1 Typical noise for a clinical-reasoning thesis (use carefully)
+# Append to a core query:
+# NOT ("Mice"[Mesh] OR "Rats"[Mesh] OR "Cell Line"[Mesh] OR "In Vitro Techniques"[Mesh])
+# NOT (treatment[ti] OR therapy[ti] OR therapeutic[ti] OR drug[ti])  # only if you truly want diagnosis-only titles
+
+# Q12.2 Humans + English (append)
+# AND Humans[Mesh] AND English[lang]
+
+# Q12.3 Last 5 years — publication date 2021-08-30 to 2026-08-30 (append to every building-block search)
+# Hits: ____  Date: ____
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# =============================================================================
+# 13. READY-MADE FULL STRINGS (recommended starting points)
+# =============================================================================
+
+# Q13.1 Thesis core: reasoning + AD diagnosis (balanced)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "AD dementia"[tiab])
+AND
+(
+  "Clinical Decision-Making"[Mesh]
+  OR "Decision Support Systems, Clinical"[Mesh]
+  OR "Diagnosis, Differential"[Mesh]
+  OR "Diagnostic Errors"[Mesh]
+  OR "clinical reasoning"[tiab]
+  OR "diagnostic reasoning"[tiab]
+  OR "clinical decision-making"[tiab]
+  OR "clinical decision making"[tiab]
+  OR "clinical judgement"[tiab]
+  OR "clinical judgment"[tiab]
+  OR "diagnostic process"[tiab]
+  OR "diagnostic workup"[tiab]
+  OR "diagnostic work-up"[tiab]
+  OR "clinical diagnosis"[tiab]
+  OR "differential diagnosis"[tiab]
+  OR misdiagnos*[tiab]
+  OR "diagnostic criteria"[tiab]
+)
+AND Humans[Mesh]
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q13.2 Clinical diagnosis and criteria (less "reasoning" language, more diagnostic literature)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Alzheimer Disease/diagnosis"[Mesh] OR "clinical diagnosis"[tiab] OR "diagnostic criteria"[tiab] OR "NIA-AA"[tiab] OR "NINCDS-ADRDA"[tiab] OR "International Working Group"[tiab] OR "IWG"[tiab] OR DETeCD[tiab])
+AND Humans[Mesh]
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q13.3 Differential diagnosis of AD vs other causes
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab])
+AND
+("Diagnosis, Differential"[Mesh] OR "differential diagnosis"[tiab] OR differentiat*[tiab] OR distinguish*[tiab])
+AND
+("Dementia, Vascular"[Mesh] OR "Lewy Body Disease"[Mesh] OR "Frontotemporal Dementia"[Mesh] OR depression[tiab] OR "normal pressure hydrocephalus"[tiab] OR "mixed dementia"[tiab] OR LATE[tiab])
+AND Humans[Mesh]
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q13.4 How clinicians evaluate suspected AD (history, tests, imaging, biomarkers)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR "mild cognitive impairment"[tiab])
+AND
+("diagnostic evaluation"[tiab] OR "diagnostic workup"[tiab] OR "diagnostic work-up"[tiab] OR "approach to"[tiab] OR "clinical assessment"[tiab] OR "stepwise"[tiab] OR "tiered"[tiab] OR guideline*[tiab])
+AND Humans[Mesh]
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])
+
+# Q13.5 CDS / AI for AD diagnosis (if the thesis includes computational support)
+# Hits: ____  Date: ____
+("Alzheimer Disease"[Mesh] OR Alzheimer*[tiab] OR dementia[tiab])
+AND
+("Decision Support Systems, Clinical"[Mesh] OR "clinical decision support"[tiab] OR "Artificial Intelligence"[Mesh] OR "Machine Learning"[Mesh] OR "machine learning"[tiab] OR "deep learning"[tiab] OR "artificial intelligence"[tiab])
+AND
+(diagnos*[tiab] OR differentiat*[tiab] OR classif*[tiab])
+AND Humans[Mesh]
+AND
+("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])

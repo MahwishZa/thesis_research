@@ -1,0 +1,8 @@
+{
+  "commit": "36635a8776731340419addd34a0dae1d93e33f70",
+  "executed_utc": "2026-09-11T15:28:48.479058+00:00",
+  "measurement": "M3_token_truncation",
+  "reason": "pmc/chunks/chunks.jsonl absent (gitignored derived artifact)",
+  "remedy": "run pmc/build_chunks.py on the machine holding the corpus",
+  "status": "NOT_RUN"
+}

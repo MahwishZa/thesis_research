@@ -1,0 +1,26 @@
+{
+  "blockers": [
+    {
+      "blocker": "NO_INDEX",
+      "detail": "pmc/index/ absent or empty (gitignored, machine-specific)",
+      "kind": "ENVIRONMENT",
+      "remedy": "python3 pmc/embed_chunks.py --device cuda && python3 pmc/verify_index.py"
+    },
+    {
+      "blocker": "NO_DECISIVE_EVIDENCE_SET",
+      "detail": "no (query, expected-evidence) probe set exists. Which evidence counts as decisive, and the queries used to reach it, determine the measured reachability - this is a research decision, not an engineering default.",
+      "kind": "REQUIRES_HUMAN_DECISION",
+      "remedy": "student/supervisor define and approve docs/stage1_measurements/decisive_evidence_probes.json"
+    }
+  ],
+  "commit": "36635a8776731340419addd34a0dae1d93e33f70",
+  "executed_utc": "2026-09-11T15:29:17.212955+00:00",
+  "k_values": [
+    5,
+    10,
+    20,
+    50
+  ],
+  "measurement": "M2_retrieval_reachability",
+  "status": "NOT_RUN"
+}
