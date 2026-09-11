@@ -76,15 +76,20 @@ huggingface/
 models--*/
 *.safetensors
 
-# Alzheimer's corpus: raw and processed research data. Never committed - the
-# corpus is reproducible from the versioned queries, configs and manifests.
-# Registries, reports and manifests ARE tracked: they are the provenance record.
-alzheimer_corpus/data/raw/**
-alzheimer_corpus/data/processed/**
-!alzheimer_corpus/data/manifests/
-!alzheimer_corpus/data/**/.gitkeep
+# Alzheimer's corpus: research data never enters git. The corpus is reproducible
+# from the versioned queries, configs and manifests. Registries, reports and
+# .gitkeep markers ARE tracked: they are the provenance record and the architecture.
+alzheimers_corpus/data/**
+!alzheimers_corpus/data/**/
+!alzheimers_corpus/data/**/.gitkeep
 
-# Restricted-licence material staged for local-only processing (guidelines that
-# may be read but not redistributed, and any licensed textbook derivatives).
-alzheimer_corpus/data/raw/guidelines/**
-alzheimer_corpus/data/restricted/**
+# Restricted-licence material staged for local-only processing: guidelines that
+# may be read but not redistributed, and any licensed textbook derivatives.
+alzheimers_corpus/data/raw/guidelines/**
+alzheimers_corpus/data/raw/textbooks/**
+!alzheimers_corpus/data/raw/guidelines/.gitkeep
+!alzheimers_corpus/data/raw/textbooks/.gitkeep
+
+# Corpus logs: transient, can be large.
+alzheimers_corpus/logs/**
+!alzheimers_corpus/logs/.gitkeep
