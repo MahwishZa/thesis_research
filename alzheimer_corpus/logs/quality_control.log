@@ -1,0 +1,13 @@
+2026-09-11 23:04:56,462Z INFO    04_normalize stage 04 | normalized=10 | ad_relevant=6 | excluded=4
+2026-09-11 23:04:56,463Z INFO    04_normalize preserved verbatim: Aβ42
+2026-09-11 23:04:56,463Z INFO    04_normalize preserved verbatim: Aβ40
+2026-09-11 23:04:56,463Z INFO    04_normalize preserved verbatim: Aβ
+2026-09-11 23:04:56,593Z WARNING 06_chunk using WHITESPACE tokenizer - NOT the specified MedCPT tokenizer; 256 words is ~340-400 MedCPT tokens
+2026-09-11 23:04:56,594Z INFO    06_chunk stage 06 | chunks=18 | tokenizer=whitespace | 256/32/224
+2026-09-11 23:04:56,678Z INFO    07_claim_classification taxonomy | 50 classes in 9 groups | 50 have no keywords yet
+2026-09-11 23:04:56,678Z WARNING 07_claim_classification 50/50 classes have empty keyword lists - stage 1 falls back to class-name tokens at reduced confidence. Populate keywords before treating these labels as reliable.
+2026-09-11 23:04:56,690Z INFO    07_claim_classification stage 07 | chunks=18 | tagged classes=29 | validation sample=18 (stratified, seed=42)
+2026-09-11 23:05:55,243Z INFO    04_normalize stage 04 | normalized=10 | ad_relevant=6 | excluded=4
+2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ42
+2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ40
+2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ

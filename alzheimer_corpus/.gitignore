@@ -1,0 +1,20 @@
+# Research data is never committed. The corpus is reproducible from the
+# versioned queries, configs and manifests; registries, reports, logs and
+# .gitkeep markers ARE tracked, because they are the provenance record.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Synthetic offline demo fixture. Ten records with FIXTURE-* ids - never real
+# PMIDs, never presented as corpus statistics. Committed so a fresh clone can
+# run stages 04-07 with no network.
+!data/raw/pubmed/records.example.jsonl
+
+# Restricted-licence material staged for local-only processing.
+data/raw/guidelines/**
+data/raw/textbooks/**
+!data/raw/guidelines/.gitkeep
+!data/raw/textbooks/.gitkeep
+
+__pycache__/
+*.py[cod]

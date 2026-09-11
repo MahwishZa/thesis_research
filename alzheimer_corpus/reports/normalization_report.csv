@@ -1,0 +1,11 @@
+document_id,ad_relevant,score,rules,exclusion_reason
+FIXTURE-001,True,1.0,R1_mesh_anchor;R2_title_anchor;R3_abstract_anchor,
+FIXTURE-002,True,1.0,R1_mesh_anchor;R2_title_anchor,
+FIXTURE-003,False,0.0,,comparator_disease_no_ad_anchor
+FIXTURE-004,False,0.0,,generic_dementia_no_ad_anchor
+FIXTURE-005,False,0.0,,ambiguous_abbreviation_only
+FIXTURE-006,True,1.0,R1_mesh_anchor;R2_title_anchor;R5_differential_with_anchor,
+FIXTURE-007,False,0.0,,no_ad_evidence
+FIXTURE-008,True,1.0,R1_mesh_anchor;R3_abstract_anchor,
+FIXTURE-009,True,1.0,R1_mesh_anchor;R2_title_anchor,
+FIXTURE-010,True,1.0,R1_mesh_anchor;R2_title_anchor,

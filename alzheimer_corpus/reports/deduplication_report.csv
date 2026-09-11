@@ -1,0 +1,2 @@
+canonical_document_id,duplicate_document_id,duplicate_reason,similarity_method,similarity_score,decision
+FIXTURE-002,FIXTURE-010,title_year,exact_key,1.0,recorded_not_deleted

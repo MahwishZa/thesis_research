@@ -1,0 +1,155 @@
+# Alzheimer's PubMed search strategy.
+#
+# Seven query families. Every family AND-s the Alzheimer's anchor block, so no
+# family can retrieve on a supporting concept alone.
+#
+# PROVENANCE: the anchor block, the concept blocks and the publication window
+# are taken from the executed search strategy recorded in
+# MahwishZa/temporary_thesis_research (data/corpora/pubmed/search_queries.txt,
+# md5 542591b9e11023a5b73fd1d9edef3dd2), whose search_log.csv records 42
+# executed queries yielding 43,409 unique PMIDs. They are not newly invented.
+version: "1.0.0"
+updated: "2026-09-11"
+
+retrieval:
+  database: pubmed
+  method: "NCBI E-utilities (esearch/efetch). HTML scraping is never used."
+  rate_limit_per_second: 3        # 10 with an API key
+  batch_size: 200
+  count_only_first: true          # always dry-run before bulk retrieval
+
+# ---------------------------------------------------------------------------
+# Publication window.
+# ---------------------------------------------------------------------------
+# REQUIRES HUMAN DECISION. The executed strategy used a five-year window. The
+# thesis proposal states NO date restriction. Measured consequence, from the
+# reference repository's own analysis: over 2021-2026 at a five-year half-life
+# the currency term gamma never falls below 0.536, i.e. minimal dynamic range
+# for the temporal mechanism this thesis exists to study.
+# Widening the window is the single highest-impact corpus decision.
+publication_window:
+  start: "2021/08/30"
+  end: "2026/08/30"
+  status: INHERITED_FROM_EXECUTED_STRATEGY
+  filter: '("2021/08/30"[Date - Publication] : "2026/08/30"[Date - Publication])'
+
+filters:
+  humans: 'Humans[Mesh]'
+  english: 'English[lang]'
+
+# ---------------------------------------------------------------------------
+# The anchor block - AND-ed into every family, without exception.
+# ---------------------------------------------------------------------------
+anchor_block:
+  mesh:
+    - '"Alzheimer Disease"[Mesh]'
+  tiab:
+    - '"Alzheimer disease"'
+    - '"Alzheimer''s disease"'
+    - '"Alzheimer dementia"'
+    - '"Alzheimer''s dementia"'
+    - '"AD dementia"'
+    - '"Alzheimer-type dementia"'
+    - '"dementia of the Alzheimer type"'
+    - '"senile dementia of the Alzheimer type"'
+
+# ---------------------------------------------------------------------------
+# Query families.
+# ---------------------------------------------------------------------------
+families:
+
+  Q01_alzheimer_core:
+    label: "Alzheimer core"
+    concept_block: null              # anchor only - the broadest family
+    note: "Highest recall. All other families are subsets by construction."
+
+  Q02_alzheimer_clinical:
+    label: "Alzheimer clinical / staging"
+    concept_block:
+      - '"preclinical Alzheimer''s disease"'
+      - '"subjective cognitive decline"'
+      - '"mild cognitive impairment"'
+      - '"MCI due to Alzheimer''s disease"'
+      - '"prodromal Alzheimer''s disease"'
+      - '"mild Alzheimer''s dementia"'
+      - '"moderate Alzheimer''s dementia"'
+      - '"severe Alzheimer''s dementia"'
+      - '"clinical staging"'
+
+  Q03_alzheimer_biomarkers:
+    label: "Alzheimer biomarkers"
+    concept_block:
+      - '"CSF biomarkers"'
+      - '"plasma biomarkers"'
+      - '"blood biomarkers"'
+      - '"blood-based biomarkers"'
+      - '"neurofilament light"'
+      - 'NfL'
+      - 'GFAP'
+      - '"amyloid PET"'
+      - '"tau PET"'
+      - '"FDG-PET"'
+      - '"biomarker-supported diagnosis"'
+
+  Q04_alzheimer_amyloid_tau:
+    label: "Alzheimer amyloid / tau"
+    concept_block:
+      - '"amyloid beta"'
+      - 'Abeta42'
+      - 'Abeta40'
+      - '"amyloid plaques"'
+      - '"phosphorylated tau"'
+      - '"p-tau"'
+      - '"p-tau181"'
+      - '"p-tau217"'
+      - '"p-tau231"'
+      - '"neurofibrillary tangles"'
+    mesh_block:
+      - '"Amyloid beta-Peptides"[Mesh]'
+      - '"tau Proteins"[Mesh]'
+
+  Q05_alzheimer_diagnosis:
+    label: "Alzheimer diagnosis"
+    concept_block:
+      - '"diagnostic criteria"'
+      - '"clinical diagnosis"'
+      - '"cognitive assessment"'
+      - '"neuropsychological testing"'
+      - '"diagnostic accuracy"'
+      - '"NIA-AA"'
+      - '"NINCDS-ADRDA"'
+      - '"International Working Group"'
+      - 'DETeCD'
+    mesh_block:
+      - '"Alzheimer Disease/diagnosis"[Mesh]'
+
+  Q06_alzheimer_treatment:
+    label: "Alzheimer treatment"
+    concept_block:
+      - '"cholinesterase inhibitors"'
+      - 'donepezil'
+      - 'rivastigmine'
+      - 'galantamine'
+      - 'memantine'
+      - '"anti-amyloid therapy"'
+      - '"disease-modifying therapy"'
+      - '"monoclonal antibody"'
+      - 'lecanemab'
+      - 'donanemab'
+      - 'ARIA'
+      - '"amyloid-related imaging abnormalities"'
+
+  Q07_alzheimer_differential:
+    label: "Alzheimer differential diagnosis"
+    concept_block:
+      - '"differential diagnosis"'
+      - '"vascular cognitive impairment"'
+      - '"dementia with Lewy bodies"'
+      - '"frontotemporal dementia"'
+      - '"normal pressure hydrocephalus"'
+      - '"mixed pathology"'
+      - 'LATE'
+    mesh_block:
+      - '"Lewy Body Disease"[Mesh]'
+      - '"Frontotemporal Dementia"[Mesh]'
+      - '"Diagnosis, Differential"[Mesh]'

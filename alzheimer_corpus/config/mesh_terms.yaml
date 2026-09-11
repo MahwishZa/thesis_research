@@ -1,0 +1,67 @@
+# Alzheimer's disease MeSH scope.
+# Alzheimer Disease is the CENTRAL retrieval concept. Every other tier is a
+# SUPPORTING concept that must co-occur with an anchor - terms are never simply
+# OR-ed together, because that is how an Alzheimer's corpus silently becomes a
+# generic dementia corpus.
+version: "1.0.0"
+updated: "2026-09-11"
+source_authority: "MS Thesis Proposal section 5.1 (MeSH scoping rule)"
+
+tiers:
+  primary:
+    role: anchor
+    requires_co_occurrence: false      # sufficient on its own
+    terms:
+      - descriptor: "Alzheimer Disease"
+        tree_numbers: ["C10.228.140.380.100", "F03.615.400.100"]
+        explode: true
+
+  clinical_context:
+    role: supporting
+    requires_co_occurrence: true       # NEVER sufficient alone
+    terms:
+      - descriptor: "Dementia"
+        tree_numbers: ["C10.228.140.380", "F03.615.400"]
+        explode: true
+        note: "Broad. Admitted only alongside an Alzheimer's anchor."
+      - descriptor: "Cognitive Dysfunction"
+        tree_numbers: ["F03.615.250"]
+        explode: true
+        note: "Covers MCI. Admitted only alongside an Alzheimer's anchor."
+
+  pathology:
+    role: supporting
+    requires_co_occurrence: true
+    terms:
+      - descriptor: "Amyloid beta-Peptides"
+        tree_numbers: ["D12.776.049.750.075"]
+        explode: true
+        note: "Amyloid research outside AD is out of scope."
+      - descriptor: "tau Proteins"
+        tree_numbers: ["D12.776.631.892"]
+        explode: true
+
+  differential:
+    role: comparator
+    requires_co_occurrence: true
+    terms:
+      - descriptor: "Lewy Body Disease"
+        tree_numbers: ["C10.574.928"]
+        explode: true
+      - descriptor: "Frontotemporal Dementia"
+        tree_numbers: ["C10.228.140.380.266.299"]
+        explode: true
+        note: "In scope only where the work bears on AD differential diagnosis."
+
+hierarchy: |
+  Primary
+  └── Alzheimer Disease                (anchor; sufficient alone)
+  Clinical context
+  ├── Dementia                         (supporting; needs anchor)
+  └── Cognitive Dysfunction            (supporting; needs anchor)
+  Alzheimer pathology
+  ├── Amyloid beta-Peptides            (supporting; needs anchor)
+  └── tau Proteins                     (supporting; needs anchor)
+  Differential/comparator
+  ├── Lewy Body Disease                (comparator; needs anchor)
+  └── Frontotemporal Dementia          (comparator; needs anchor)

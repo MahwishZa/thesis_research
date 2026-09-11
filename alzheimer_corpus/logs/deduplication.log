@@ -1,0 +1,2 @@
+2026-09-11 23:04:56,526Z INFO    05_deduplicate duplicate FIXTURE-010 of FIXTURE-002 via title_year
+2026-09-11 23:04:56,527Z INFO    05_deduplicate stage 05 | unique=9 | duplicates recorded=1
