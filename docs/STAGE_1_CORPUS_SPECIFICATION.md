@@ -1,7 +1,18 @@
 # Stage 1 — Alzheimer's Corpus Specification (AD-CORPUS-v1)
 
-**Status: DRAFT — NOT FROZEN.** Phase 1 of Stage 1. Companion:
-[`STAGE_1_SPECIFICATION_RECONCILIATION.md`](STAGE_1_SPECIFICATION_RECONCILIATION.md).
+**Status: DRAFT — NOT FROZEN.** Stage 1, Phases 1 and 1A. Companions:
+[`STAGE_1_ARCHITECTURE_TO_CORPUS_REQUIREMENTS.md`](STAGE_1_ARCHITECTURE_TO_CORPUS_REQUIREMENTS.md)
+(Phase 1A — requirements derived backwards from the architecture; **this is the governing
+document**) and
+[`STAGE_1_SPECIFICATION_RECONCILIATION.md`](STAGE_1_SPECIFICATION_RECONCILIATION.md)
+(Phase 1 — proposal-vs-implementation reconciliation, now superseded in framing).
+
+> **Revision after Phase 1A.** The Phase 1 reconciliation compared the proposal's prose against
+> the implementation and found ten "contradictions". Re-deriving requirements from the
+> architecture dissolved several of them (C2, C3, and the framing of C1, C4, C10) and hardened
+> others (C6, C7). It also surfaced requirements no prose comparison could have found — chiefly
+> that **SCAF is a filter over an already-retrieved candidate set and therefore cannot correct
+> evidence retrieval never returns.** The decision register in §13 reflects the revised view.
 
 Primary authority: `MS_Thesis_Proposal.pdf` (MD5 `f8de7826…`), with Sohn et al. (NAACL 2025)
 authoritative for the frozen RAG² baseline only.
@@ -325,24 +336,52 @@ ones. Nothing silently discarded; every exclusion carries a recorded reason.
 
 ---
 
-## 13. Decision register
+## 13. Decision register (revised after Phase 1A)
 
-| ID | Decision | Label |
+Derived from architecture requirements R-A…R-N, not from prose comparison. Full reasoning in
+`STAGE_1_ARCHITECTURE_TO_CORPUS_REQUIREMENTS.md`.
+
+### Resolved by the architecture analysis — no longer open
+
+| ID | Prior framing | Revised status |
 |---|---|---|
-| C1 | Topical scope: proposal MeSH-only vs implemented reasoning-restricted | **REQUIRES HUMAN DECISION** |
-| C2 | Temporal window: none vs 2021–2026 | **REQUIRES HUMAN DECISION** |
-| C3 | CPG-AD size: ~10³ vs 19 | **REQUIRES HUMAN DECISION** |
-| C4 | Currency-pack size: 20–40 vs 7 | **REQUIRES HUMAN DECISION** |
-| C5 | Textbooks: 18 volumes vs absent | **REQUIRES HUMAN DECISION** |
-| C6 | Chunk unit: tokens vs whitespace words | **REQUIRES HUMAN DECISION** |
-| C7 | Near-duplicate policy: MinHash+retain vs exact+flag | **REQUIRES HUMAN DECISION** |
-| C10 | Audit sampling: random (specified) vs stratified | **REQUIRES HUMAN DECISION** |
-| — | Pre-training cutoff and knowledge-boundary procedure | **NOT YET DETERMINED** |
-| — | Source-tier values | **NOT YET DETERMINED** |
-| — | Supersession-pointer format | **NOT YET DETERMINED** |
-| — | Currency-pack retrieval quota | **NOT YET DETERMINED** |
-| — | Stage-1 retrieval-reachability audit | **NOT YET DETERMINED** (recommended addition) |
+| C2 | Temporal window: none vs 2021–2026 | **Largely dissolved.** R-I (counterfactual index) is satisfied: 18,707 pre / 22,789 post June 2024. Residual issue folded into C4′ |
+| C3 | CPG-AD size ~10³ vs 19 | **Largely dissolved.** The proposal's figure is tagged `[OPEN]`; the architecture needs version relations and claim-class coverage (R-C, R-L), not count. Conditional on the coverage measurement in A2 |
+| — | Matched old/new pairs inside this corpus | **NOT REQUIRED.** Matched pairs are external by design (§5.2 provenance firewall); building them here would breach it |
+| — | Corpus volume for statistical power | **NOT REQUIRED of this corpus.** The primary claim (H1–H3) uses MedChangeQA, not this corpus |
 
-**Gate:** this specification is **NOT FROZEN**. Large-scale acquisition must not resume until
-the eight REQUIRES HUMAN DECISION items are resolved and the four NOT YET DETERMINED items are
-either resolved or explicitly deferred with recorded consequences.
+### Genuinely open — REQUIRES HUMAN DECISION
+
+| ID | Decision | Why it is material |
+|---|---|---|
+| **C1′** | Whether corpus scope must be widened to populate under-covered claim classes (pharmacotherapy, ARIA, eligibility, deprescribing) | R-L: an unpopulated class is a dead γ branch. **Decide after measuring A2, not before** |
+| **C4′** | Currency-pack and historical-anchor composition — judged by **claim-class coverage and dispute completeness**, not document count | R-E, R-L. Supersedes the old "7 vs 20–40" framing |
+| **C5** | Whether time-invariant content (R-D) is satisfied by textbooks, by time-invariant PubMed content, or is unnecessary | H7 non-inferiority depends on R-D |
+| **C6** | Chunk unit: MedCPT subword tokens (specified) vs whitespace words (implemented) | Changes what the frozen retriever sees, systematically and for every arm |
+| **C7** | Near-duplicate policy: implement the specified MinHash rule, or keep exact-hash-and-flag | §5.1 states the exact failure mode: a preprint-to-journal duplicate lets an old claim survive under a new date — direct corruption of the dependent variable |
+| **C10′** | Audit sampling: random (as specified) vs stratified by claim class | γ's error is **per-class**, which is an architectural argument for stratification the prose comparison missed. Still a change to a specified method |
+| **A3** | Contest-window length, and whether rebuttal documents are ingested | Determines whether the contested state can fire at all. RQ5 and CONTESTED-AD rest on it |
+
+### NOT YET DETERMINED — missing from the source material
+
+| Item | Note |
+|---|---|
+| Pre-training cutoff and knowledge-boundary procedure | No cutoff or procedure appears anywhere in the proposal. **Must not be invented** |
+| Source-tier values | Field required by §5.1; values never enumerated. Ordering must not be encoded (A12) |
+| Supersession-pointer format | Required by R-C; only free-text notes exist |
+| Currency-pack retrieval quota | Not addressed by the proposal; a quota modifies the frozen upstream stage |
+| **How H7 non-inferiority retrieves** over MedQA/MedMCQA/MMLU-Med given an AD-only corpus | Bears directly on whether the corpus needs non-AD content at all (A7) |
+
+### Measurements that convert opinion into evidence
+
+These are **not** decisions. Each replaces a guess with a number, and all need the machine
+holding the corpus:
+
+1. **Per-claim-class passage counts** → resolves C1′ and informs C4′
+2. **Retrieval reachability** of currency-pack and decisive evidence → resolves A1
+3. **MedCPT token-length distribution and truncation rate** over built chunks → resolves C6
+4. **Contested-pair check**: do two opposing, same-class, in-window, above-tier passages exist? → resolves A3
+
+**Gate:** this specification is **NOT FROZEN**. The four measurements should run before the
+seven REQUIRES HUMAN DECISION items are settled, because each measurement removes guesswork
+from the decision it feeds.
