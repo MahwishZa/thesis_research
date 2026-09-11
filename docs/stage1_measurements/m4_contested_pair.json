@@ -1,0 +1,69 @@
+{
+  "anchor": {
+    "claim_classes": [
+      "contested",
+      "pharmacotherapy"
+    ],
+    "date": "2026-04-16",
+    "pmcid": "PMC13082890",
+    "precision": "day",
+    "title": "Amyloid\u2010beta\u2010targeting monoclonal antibodies for people with mild cognitive impairment or "
+  },
+  "candidate_counterparties": [
+    {
+      "date": "2025-05",
+      "gap_note": "exact",
+      "months_from_anchor": 11,
+      "pmcid": "PMC12180672",
+      "precision": "month",
+      "shared_claim_classes": [
+        "pharmacotherapy"
+      ],
+      "title": "Donanemab: Appropriate use recommendations"
+    },
+    {
+      "date": "2023",
+      "gap_note": "year-precision only; +/-12 months uncertainty",
+      "months_from_anchor": 36,
+      "pmcid": "PMC10313141",
+      "precision": "year",
+      "shared_claim_classes": [
+        "pharmacotherapy"
+      ],
+      "title": "Lecanemab: Appropriate Use Recommendations"
+    }
+  ],
+  "commit": "36635a8776731340419addd34a0dae1d93e33f70",
+  "executed_utc": "2026-09-11T15:28:18.530302+00:00",
+  "inputs": {
+    "cpg_registry.csv": {
+      "sha256_16": "9e4bd44342ed8f69"
+    },
+    "currency_pack.csv": {
+      "sha256_16": "26a8bc8af6e62479"
+    }
+  },
+  "measurement": "M4_contested_pair_existence",
+  "preconditions": {
+    "above_minimum_source_tier": {
+      "reason": "source-tier values are undefined in the proposal; authority ordering is a tested variable (ablation A12)",
+      "status": "UNDECIDABLE"
+    },
+    "opposing_conclusions_verified": {
+      "note": "requires manual research judgement; not asserted here",
+      "status": "NOT_MACHINE_CHECKABLE"
+    },
+    "retrievable": {
+      "reason": "no MedCPT index present (pmc/index absent)",
+      "status": "NOT_RUN"
+    },
+    "same_claim_class_counterparty_exists": true,
+    "within_contest_window": {
+      "closest_counterparty_months": 11,
+      "furthest_counterparty_months": 36,
+      "reason": "contest window length is [OPEN] in proposal 4.4",
+      "status": "UNDECIDABLE"
+    }
+  },
+  "verdict": "STRUCTURAL_CANDIDATE_EXISTS_DECISION_BLOCKED"
+}
