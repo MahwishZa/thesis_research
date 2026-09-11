@@ -75,3 +75,16 @@ rag2/data/
 huggingface/
 models--*/
 *.safetensors
+
+# Alzheimer's corpus: raw and processed research data. Never committed - the
+# corpus is reproducible from the versioned queries, configs and manifests.
+# Registries, reports and manifests ARE tracked: they are the provenance record.
+alzheimer_corpus/data/raw/**
+alzheimer_corpus/data/processed/**
+!alzheimer_corpus/data/manifests/
+!alzheimer_corpus/data/**/.gitkeep
+
+# Restricted-licence material staged for local-only processing (guidelines that
+# may be read but not redistributed, and any licensed textbook derivatives).
+alzheimer_corpus/data/raw/guidelines/**
+alzheimer_corpus/data/restricted/**
