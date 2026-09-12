@@ -1,67 +1,581 @@
-# Alzheimer's disease MeSH scope.
-# Alzheimer Disease is the CENTRAL retrieval concept. Every other tier is a
-# SUPPORTING concept that must co-occur with an anchor - terms are never simply
-# OR-ed together, because that is how an Alzheimer's corpus silently becomes a
-# generic dementia corpus.
-version: "1.0.0"
-updated: "2026-09-11"
-source_authority: "MS Thesis Proposal section 5.1 (MeSH scoping rule)"
+# ============================================================
+# Alzheimer Corpus — MeSH Vocabulary Configuration
+# ============================================================
+#
+# Purpose:
+#   Define the controlled MeSH vocabulary used to scope,
+#   classify, audit, and report the Alzheimer-focused corpus.
+#
+# This file does NOT contain complete PubMed queries.
+# Query construction belongs in:
+#
+#   config/search_queries.yaml
+#
+# The thesis corpus is Alzheimer-focused, while retaining
+# related dementias and disease mechanisms where they provide
+# evidence relevant to Alzheimer disease, differential diagnosis,
+# biomarkers, treatment, safety, or temporal change.
+#
+# ============================================================
 
-tiers:
-  primary:
-    role: anchor
-    requires_co_occurrence: false      # sufficient on its own
-    terms:
-      - descriptor: "Alzheimer Disease"
-        tree_numbers: ["C10.228.140.380.100", "F03.615.400.100"]
-        explode: true
+schema_version: "1.0"
 
-  clinical_context:
-    role: supporting
-    requires_co_occurrence: true       # NEVER sufficient alone
-    terms:
-      - descriptor: "Dementia"
-        tree_numbers: ["C10.228.140.380", "F03.615.400"]
-        explode: true
-        note: "Broad. Admitted only alongside an Alzheimer's anchor."
-      - descriptor: "Cognitive Dysfunction"
-        tree_numbers: ["F03.615.250"]
-        explode: true
-        note: "Covers MCI. Admitted only alongside an Alzheimer's anchor."
+corpus:
+  name: "Alzheimer Disease and Related Dementias"
+  short_name: "PubMed-AD"
+  database: "PubMed"
+
+  language:
+    include:
+      - "English"
+
+  scope:
+    primary:
+      - "Alzheimer disease"
+
+    related:
+      - "dementia"
+      - "cognitive dysfunction"
+      - "amyloid beta pathology"
+      - "tau pathology"
+      - "Lewy body disease"
+      - "frontotemporal dementia"
+
+  design_principle: >
+    MeSH terms define retrieval concepts and provenance categories.
+    They must not be interpreted as equally specific evidence of
+    Alzheimer disease. Alzheimer Disease is the primary disease
+    anchor; other descriptors provide associated, mechanistic,
+    biomarker, differential-diagnosis, or related-dementia coverage.
+
+
+# ============================================================
+# 1. PRIMARY DISEASE ANCHOR
+# ============================================================
+
+primary_disease:
+
+  - id: "alzheimer_disease"
+    mesh_heading: "Alzheimer Disease"
+    mesh_id: "D000544"
+
+    role: "primary_anchor"
+
+    description: >
+      Core MeSH disease descriptor for Alzheimer disease.
+
+    inclusion_priority: "highest"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "Alzheimer Disease"
+        - "Alzheimer's disease"
+        - "Alzheimer disease"
+        - "Alzheimer dementia"
+
+    use_for:
+      - "core_corpus_scope"
+      - "diagnosis"
+      - "staging"
+      - "prognosis"
+      - "biomarkers"
+      - "pathology"
+      - "pharmacotherapy"
+      - "clinical_management"
+      - "guidelines"
+      - "temporal_change"
+      - "negative_controls"
+
+    notes: >
+      This is the principal disease anchor. It should normally be
+      present when constructing high-precision Alzheimer-specific
+      MeSH combinations.
+
+
+# ============================================================
+# 2. ASSOCIATED CLINICAL / PHENOTYPIC CONCEPTS
+# ============================================================
+
+clinical_concepts:
+
+  - id: "dementia"
+    mesh_heading: "Dementia"
+    mesh_id: "D003704"
+
+    role: "associated_clinical_concept"
+
+    inclusion_priority: "high"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "dementia"
+        - "major neurocognitive disorder"
+
+    use_for:
+      - "differential_diagnosis"
+      - "clinical_phenotype"
+      - "diagnostic_reasoning"
+      - "staging"
+      - "prognosis"
+      - "related_dementias"
+
+    caution: >
+      Dementia alone is broader than Alzheimer disease and must not
+      be treated as an Alzheimer-specific inclusion criterion.
+      Prefer combinations with Alzheimer Disease for high-precision
+      Alzheimer retrieval.
+
+
+  - id: "cognitive_dysfunction"
+    mesh_heading: "Cognitive Dysfunction"
+    mesh_id: "D060825"
+
+    role: "associated_clinical_concept"
+
+    inclusion_priority: "medium"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "cognitive dysfunction"
+        - "cognitive impairment"
+        - "cognitive decline"
+
+    use_for:
+      - "early_disease"
+      - "mild_cognitive_impairment"
+      - "diagnosis"
+      - "staging"
+      - "progression"
+      - "clinical_phenotype"
+
+    caution: >
+      Cognitive dysfunction is not specific to Alzheimer disease.
+      Use primarily in combination with the Alzheimer disease anchor
+      or within explicitly defined related-dementia retrieval.
+
+
+# ============================================================
+# 3. ALZHEIMER-RELEVANT PATHOLOGY / BIOMARKER CONCEPTS
+# ============================================================
+
+pathology_biomarkers:
+
+  - id: "amyloid_beta_peptides"
+    mesh_heading: "Amyloid beta-Peptides"
+    mesh_id: "D000071032"
+
+    role: "disease_mechanism_and_biomarker"
+
+    inclusion_priority: "high"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "amyloid beta"
+        - "amyloid-beta"
+        - "Aβ"
+        - "amyloid beta-peptide"
+
+    use_for:
+      - "amyloid_pathology"
+      - "amyloid_biomarkers"
+      - "amyloid_imaging"
+      - "CSF_biomarkers"
+      - "plasma_biomarkers"
+      - "anti_amyloid_therapy"
+      - "therapeutic_response"
+      - "clinical_trials"
+
+    caution: >
+      Amyloid beta is highly relevant to Alzheimer disease but is
+      not itself an Alzheimer-specific disease descriptor. Combine
+      with Alzheimer Disease for high-precision corpus retrieval.
+
+
+  - id: "tau_proteins"
+    mesh_heading: "tau Proteins"
+    mesh_id: "D035683"
+
+    role: "disease_mechanism_and_biomarker"
+
+    inclusion_priority: "high"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "tau protein"
+        - "tau proteins"
+        - "phosphorylated tau"
+        - "p-tau"
+        - "total tau"
+
+    use_for:
+      - "tau_pathology"
+      - "CSF_biomarkers"
+      - "plasma_biomarkers"
+      - "neurodegeneration"
+      - "disease_staging"
+      - "disease_progression"
+
+    caution: >
+      Tau biology is relevant to multiple neurodegenerative diseases.
+      Alzheimer Disease should normally be used as the disease anchor
+      when constructing Alzheimer-specific retrieval queries.
+
+
+# ============================================================
+# 4. RELATED / DIFFERENTIAL DEMENTIAS
+# ============================================================
+
+related_dementias:
+
+  - id: "lewy_body_disease"
+    mesh_heading: "Lewy Body Disease"
+    mesh_id: "D020961"
+
+    role: "related_dementia_and_differential"
+
+    inclusion_priority: "medium"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "Lewy body disease"
+        - "Lewy body dementia"
+        - "dementia with Lewy bodies"
+
+    use_for:
+      - "differential_diagnosis"
+      - "mixed_pathology"
+      - "clinical_phenotype"
+      - "related_dementias"
+
+    corpus_policy:
+      standalone: "include_in_related_dementia_pool"
+      core_ad: false
+
+    caution: >
+      Lewy Body Disease is a distinct disease entity rather than
+      an Alzheimer Disease synonym. It is retained because the
+      thesis scope includes Alzheimer disease and related dementias
+      and because differential diagnosis and mixed pathology are
+      relevant to clinical reasoning.
+
+
+  - id: "frontotemporal_lobar_degeneration"
+    mesh_heading: "Frontotemporal Lobar Degeneration"
+    mesh_id: "D057174"
+
+    role: "related_dementia_and_differential"
+
+    inclusion_priority: "medium"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+      fallback_text:
+        - "frontotemporal lobar degeneration"
+        - "frontotemporal dementia"
+        - "FTD"
+        - "FTLD"
+
+    use_for:
+      - "differential_diagnosis"
+      - "related_dementias"
+      - "clinical_phenotype"
+      - "tau_pathology"
+      - "disease_subtyping"
+
+    corpus_policy:
+      standalone: "include_in_related_dementia_pool"
+      core_ad: false
+
+    terminology_note: >
+      The official MeSH descriptor is Frontotemporal Lobar Degeneration.
+      Frontotemporal Dementia is a narrower concept under that descriptor.
+      Therefore the configuration should use the official descriptor
+      rather than treating Frontotemporal Dementia as the top-level
+      MeSH heading.
+
+
+# ============================================================
+# 5. TERM ROLES
+# ============================================================
+
+term_roles:
+
+  primary_anchor:
+    - "alzheimer_disease"
+
+  associated_clinical:
+    - "dementia"
+    - "cognitive_dysfunction"
+
+  pathology_biomarker:
+    - "amyloid_beta_peptides"
+    - "tau_proteins"
+
+  related_dementia:
+    - "lewy_body_disease"
+    - "frontotemporal_lobar_degeneration"
+
+
+# ============================================================
+# 6. RETRIEVAL COMBINATION POLICY
+# ============================================================
+
+combination_policy:
+
+  high_precision:
+    description: >
+      Alzheimer Disease should be combined with associated,
+      pathological, biomarker, treatment, or clinical concepts
+      when the objective is Alzheimer-specific retrieval.
+
+    examples:
+
+      - id: "ad_dementia"
+        expression:
+          - "Alzheimer Disease"
+          - "Dementia"
+
+      - id: "ad_cognitive_dysfunction"
+        expression:
+          - "Alzheimer Disease"
+          - "Cognitive Dysfunction"
+
+      - id: "ad_amyloid"
+        expression:
+          - "Alzheimer Disease"
+          - "Amyloid beta-Peptides"
+
+      - id: "ad_tau"
+        expression:
+          - "Alzheimer Disease"
+          - "tau Proteins"
+
+
+  related_dementia:
+    description: >
+      Related dementias are retrieved separately so that they can
+      be identified and audited rather than silently mixed into the
+      Alzheimer-specific core.
+
+    examples:
+
+      - id: "lewy_body"
+        expression:
+          - "Lewy Body Disease"
+
+      - id: "frontotemporal"
+        expression:
+          - "Frontotemporal Lobar Degeneration"
+
+
+  broad_recall:
+    description: >
+      Broad text-word queries may be used as a recall-oriented
+      supplementary lane. They must remain separately tagged from
+      high-precision MeSH retrieval.
+
+    rule: >
+      Do not silently merge broad text-only retrieval with
+      Alzheimer-specific MeSH retrieval without recording the
+      retrieval source and query identifier.
+
+
+# ============================================================
+# 7. MECHANISM / TOPIC EXTENSIONS
+# ============================================================
+#
+# These are NOT additional disease-scope anchors.
+# They are topic concepts that may be used in search_queries.yaml.
+# Keeping them here allows the query generator to use one vocabulary
+# registry while preserving the distinction between disease scope
+# and topic scope.
+# ============================================================
+
+topic_extensions:
+
+  biomarkers:
+    - "amyloid_beta_peptides"
+    - "tau_proteins"
+
+  diagnosis:
+    - "alzheimer_disease"
+    - "dementia"
+    - "cognitive_dysfunction"
+
+  differential_diagnosis:
+    - "dementia"
+    - "lewy_body_disease"
+    - "frontotemporal_lobar_degeneration"
+
+  disease_progression:
+    - "alzheimer_disease"
+    - "cognitive_dysfunction"
+    - "tau_proteins"
 
   pathology:
-    role: supporting
-    requires_co_occurrence: true
-    terms:
-      - descriptor: "Amyloid beta-Peptides"
-        tree_numbers: ["D12.776.049.750.075"]
-        explode: true
-        note: "Amyloid research outside AD is out of scope."
-      - descriptor: "tau Proteins"
-        tree_numbers: ["D12.776.631.892"]
-        explode: true
+    - "amyloid_beta_peptides"
+    - "tau_proteins"
 
-  differential:
-    role: comparator
-    requires_co_occurrence: true
-    terms:
-      - descriptor: "Lewy Body Disease"
-        tree_numbers: ["C10.574.928"]
-        explode: true
-      - descriptor: "Frontotemporal Dementia"
-        tree_numbers: ["C10.228.140.380.266.299"]
-        explode: true
-        note: "In scope only where the work bears on AD differential diagnosis."
+  related_dementias:
+    - "lewy_body_disease"
+    - "frontotemporal_lobar_degeneration"
 
-hierarchy: |
-  Primary
-  └── Alzheimer Disease                (anchor; sufficient alone)
-  Clinical context
-  ├── Dementia                         (supporting; needs anchor)
-  └── Cognitive Dysfunction            (supporting; needs anchor)
-  Alzheimer pathology
-  ├── Amyloid beta-Peptides            (supporting; needs anchor)
-  └── tau Proteins                     (supporting; needs anchor)
-  Differential/comparator
-  ├── Lewy Body Disease                (comparator; needs anchor)
-  └── Frontotemporal Dementia          (comparator; needs anchor)
+
+# ============================================================
+# 8. EXCLUSION / SAFETY RULES
+# ============================================================
+
+exclusion_rules:
+
+  never_treat_as_synonym:
+    - "Dementia"
+    - "Cognitive Dysfunction"
+    - "Amyloid beta-Peptides"
+    - "tau Proteins"
+    - "Lewy Body Disease"
+    - "Frontotemporal Lobar Degeneration"
+
+  reason: >
+    These descriptors are broader, mechanistic, biomarker-related,
+    or disease-differential concepts. They are not interchangeable
+    with Alzheimer Disease.
+
+  do_not_use:
+    - rule: "global_last_5_year_filter"
+      reason: >
+        The thesis explicitly studies evidence age, historical
+        evidence, supersession, and negative controls.
+
+    - rule: "global_diagnosis_only_filter"
+      reason: >
+        The corpus must cover biomarkers, therapeutics, safety,
+        guidelines, pathology, prognosis, and other evidence classes.
+
+    - rule: "global_not_treatment_filter"
+      reason: >
+        Therapeutic evidence is central to the thesis, particularly
+        lecanemab, donanemab, ARIA, eligibility, and changing
+        treatment recommendations.
+
+    - rule: "exclude_related_dementias_globally"
+      reason: >
+        Related dementias are needed for differential-diagnosis and
+        Alzheimer-related clinical reasoning coverage.
+
+
+# ============================================================
+# 9. PROVENANCE REQUIREMENTS
+# ============================================================
+
+provenance:
+
+  every_record_should_store:
+
+    - "mesh_terms"
+    - "mesh_term_ids"
+    - "matched_term_role"
+    - "retrieval_query_id"
+    - "retrieval_lane"
+
+  retrieval_lanes:
+
+    - "primary_anchor"
+    - "associated_clinical"
+    - "pathology_biomarker"
+    - "related_dementia"
+    - "broad_recall"
+
+  purpose: >
+    Preserve the reason each PubMed record entered the corpus.
+    This permits later audit of corpus composition, precision,
+    recall, and unintended contamination by broad terms.
+
+
+# ============================================================
+# 10. AUDIT REQUIREMENTS
+# ============================================================
+
+audit:
+
+  required_checks:
+
+    - "number_of_records_per_mesh_term"
+    - "number_of_records_per_retrieval_lane"
+    - "overlap_between_mesh_queries"
+    - "records_retrieved_only_by_broad_recall"
+    - "records_retrieved_only_by_related_dementia_terms"
+    - "publication_date_distribution"
+    - "pre_2020_record_fraction"
+    - "2020_2023_record_fraction"
+    - "2024_2026_record_fraction"
+    - "records_with_missing_publication_date"
+
+  warning_conditions:
+
+    - id: "broad_term_dominance"
+      description: >
+        A large fraction of records enters solely through broad
+        Dementia or Cognitive Dysfunction retrieval.
+
+    - id: "related_dementia_dominance"
+      description: >
+        Related-dementia records substantially exceed
+        Alzheimer-specific records.
+
+    - id: "temporal_truncation"
+      description: >
+        Historical records are unexpectedly absent, which may
+        indicate an accidental publication-date filter.
+
+    - id: "single_query_dependency"
+      description: >
+        Corpus coverage depends disproportionately on one retrieval
+        query or term.
+
+
+# ============================================================
+# 11. IMPLEMENTATION NOTE
+# ============================================================
+
+implementation:
+
+  query_generation_file: "config/search_queries.yaml"
+
+  downloader:
+    script: "scripts/01_pubmed_download.py"
+
+  metadata_output:
+    file: "metadata/pubmed.csv"
+
+  raw_output:
+    directory: "data/raw/pubmed/"
+
+  required_provenance_fields:
+    - "pmid"
+    - "query_id"
+    - "retrieval_lane"
+    - "mesh_terms"
+    - "mesh_term_ids"
+    - "publication_date"
+    - "title"
+    - "journal"
+    - "doi"
+    - "language"
+
+  principle: >
+    Retrieval is the union of independently executed query lanes.
+    Deduplication occurs after retrieval, not by replacing the
+    query architecture with one monolithic query.

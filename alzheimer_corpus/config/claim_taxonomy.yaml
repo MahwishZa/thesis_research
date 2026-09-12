@@ -1,418 +1,904 @@
-# Alzheimer's claim taxonomy.
-# `keywords` are intentionally EMPTY: populating them is assignment-mechanism work
-# and is gated on the open decisions listed below.
-version: 1.0.0
-updated: '2026-09-11'
-taxonomy_id: AD-CLAIM-CLASS
-derived_from: The eleven topics the thesis proposal names in section 5.1, subdivided by the granularity
-  rule below. Not derived from any pre-existing label set.
-granularity_rule: A class must be fine enough that two passages sharing it make claims about the SAME
-  clinical decision, and coarse enough that an update and the thing it updates share one class. This follows
-  from the contested test, which fires on same-class opposition, and from gamma, which supersedes per
-  class.
-multi_label: true
-multi_label_note: A passage may carry several classes. Single- vs multi-label is an open decision.
-classification_is_not_a_delete_filter: true
-classification_note: 'Claim class drives retrieval ranking, down-weighting and review. It MUST NOT delete
-  documents: gamma down-weights rather than deletes precisely because tagging precision is unverified.'
-open_decisions:
-- granularity level (group vs leaf) - determines whether the contested state can fire
-- multi-label vs single-label
-- psi(q) time-invariance flag per class
-- whether keywords are hand-written or learned
-explicitly_not_defined:
-- source tier / authority ordering - authority is a tested variable (ablation A12)
-counts:
-  groups: 9
-  classes: 50
-  REQUIRED: 40
-  DESIRABLE: 10
-groups:
-  AD-CRIT:
-    group_name: Diagnostic criteria and staging
-    classes:
-    - id: AD-CRIT-01
-      name: diagnostic-criteria-framework
-      definition: Which named framework defines AD and how (NIA-AA, IWG, NINCDS-ADRDA, DSM/ICD).
-      status: REQUIRED
-      derives_from: &id001
-      - biomarker criteria
-      - staging
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-CRIT-02
-      name: biological-vs-clinical-definition
-      definition: Whether AD is defined biologically or clinico-pathologically.
-      status: REQUIRED
-      derives_from: *id001
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-CRIT-03
-      name: core1-core2-biomarker-categories
-      definition: The Core 1 / Core 2 biomarker scheme and what belongs in each.
-      status: REQUIRED
-      derives_from: *id001
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-CRIT-04
-      name: numeric-disease-staging
-      definition: Numeric/clinical stage assignment and stage boundaries.
-      status: REQUIRED
-      derives_from: *id001
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-CRIT-05
-      name: preclinical-mci-prodromal-definition
-      definition: Definitions of preclinical AD, MCI and prodromal AD.
-      status: REQUIRED
-      derives_from: *id001
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-BIOM:
-    group_name: Biomarkers and imaging
-    classes:
-    - id: AD-BIOM-01
-      name: plasma-ptau217
-      definition: p-tau217 assay performance, use and interpretation.
-      status: REQUIRED
-      derives_from: &id002
-      - plasma biomarkers
-      - amyloid imaging
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-02
-      name: plasma-abeta42-40
-      definition: Plasma Abeta42/40 ratio performance and use.
-      status: REQUIRED
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-03
-      name: plasma-nfl-gfap
-      definition: Plasma NfL / GFAP as AD-relevant markers.
-      status: DESIRABLE
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-04
-      name: csf-biomarkers
-      definition: CSF Abeta / p-tau / t-tau assays and interpretation.
-      status: DESIRABLE
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-05
-      name: amyloid-pet
-      definition: Amyloid PET acquisition, reading and indication.
-      status: REQUIRED
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-06
-      name: tau-pet
-      definition: Tau PET acquisition, reading and indication.
-      status: REQUIRED
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-07
-      name: fdg-pet
-      definition: FDG-PET hypometabolism patterns for AD.
-      status: DESIRABLE
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-08
-      name: structural-mri-atrophy
-      definition: MTA / hippocampal volumetry as diagnostic evidence.
-      status: DESIRABLE
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-09
-      name: biomarker-diagnostic-sufficiency
-      definition: Whether a biomarker alone suffices to establish the diagnosis.
-      status: REQUIRED
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BIOM-10
-      name: biomarker-cutoffs-thresholds
-      definition: Numeric cutoffs, thresholds and two-cutpoint schemes.
-      status: REQUIRED
-      derives_from: *id002
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-APOE:
-    group_name: APOE
-    classes:
-    - id: AD-APOE-01
-      name: apoe-genotyping-indication
-      definition: When APOE genotyping is indicated or mandated.
-      status: REQUIRED
-      derives_from: &id003
-      - APOE
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-APOE-02
-      name: apoe-risk-stratification
-      definition: APOE-stratified risk estimates used for counselling.
-      status: REQUIRED
-      derives_from: *id003
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-APOE-03
-      name: apoe-biology
-      definition: APOE isoform biology and mechanism.
-      status: REQUIRED
-      derives_from: *id003
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-PHARM:
-    group_name: Pharmacotherapy
-    classes:
-    - id: AD-PHARM-01
-      name: lecanemab-efficacy
-      definition: Lecanemab clinical efficacy claims.
-      status: REQUIRED
-      derives_from: &id004
-      - pharmacotherapy
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-02
-      name: donanemab-efficacy
-      definition: Donanemab clinical efficacy claims.
-      status: REQUIRED
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-03
-      name: anti-amyloid-class-efficacy
-      definition: Class-level efficacy of anti-amyloid monoclonal antibodies.
-      status: REQUIRED
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-04
-      name: anti-amyloid-benefit-harm-balance
-      definition: Whether benefit outweighs harm for the class or an agent.
-      status: REQUIRED
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-05
-      name: cholinesterase-inhibitors
-      definition: Donepezil / rivastigmine / galantamine efficacy and use.
-      status: REQUIRED
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-06
-      name: memantine
-      definition: Memantine efficacy and use.
-      status: REQUIRED
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-PHARM-07
-      name: other-symptomatic-pharmacotherapy
-      definition: Other symptomatic agents.
-      status: DESIRABLE
-      derives_from: *id004
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-ELIG:
-    group_name: Treatment eligibility
-    classes:
-    - id: AD-ELIG-01
-      name: anti-amyloid-eligibility-criteria
-      definition: Who may receive anti-amyloid therapy.
-      status: REQUIRED
-      derives_from: &id005
-      - eligibility
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ELIG-02
-      name: anticoagulation-contraindication
-      definition: Anticoagulation and bleeding-risk contraindications.
-      status: REQUIRED
-      derives_from: *id005
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ELIG-03
-      name: apoe-based-eligibility
-      definition: APOE genotype as an eligibility or counselling gate.
-      status: REQUIRED
-      derives_from: *id005
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ELIG-04
-      name: stage-based-eligibility
-      definition: Disease stage as an eligibility boundary.
-      status: REQUIRED
-      derives_from: *id005
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-ARIA:
-    group_name: ARIA
-    classes:
-    - id: AD-ARIA-01
-      name: aria-definition-classification
-      definition: ARIA-E / ARIA-H definition, grading and radiological criteria.
-      status: REQUIRED
-      derives_from: &id006
-      - ARIA monitoring
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ARIA-02
-      name: aria-mri-monitoring-schedule
-      definition: Required MRI cadence before and during treatment.
-      status: REQUIRED
-      derives_from: *id006
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ARIA-03
-      name: aria-risk-by-apoe
-      definition: ARIA incidence and risk stratified by APOE.
-      status: REQUIRED
-      derives_from: *id006
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-ARIA-04
-      name: aria-management-discontinuation
-      definition: Management, dose interruption and discontinuation on ARIA.
-      status: REQUIRED
-      derives_from: *id006
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-BEHAV:
-    group_name: Behavioural management
-    classes:
-    - id: AD-BEHAV-01
-      name: bpsd-nonpharmacological
-      definition: Non-drug management of behavioural/psychological symptoms.
-      status: REQUIRED
-      derives_from: &id007
-      - behavioural management
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BEHAV-02
-      name: bpsd-antipsychotics
-      definition: Antipsychotic use in dementia, including harm warnings.
-      status: REQUIRED
-      derives_from: *id007
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BEHAV-03
-      name: agitation-specific-management
-      definition: Agitation-specific treatment.
-      status: REQUIRED
-      derives_from: *id007
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BEHAV-04
-      name: sleep-disturbance-management
-      definition: Sleep disturbance in dementia.
-      status: DESIRABLE
-      derives_from: *id007
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-BEHAV-05
-      name: caregiver-support-interventions
-      definition: Caregiver-directed interventions.
-      status: DESIRABLE
-      derives_from: *id007
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-DEPR:
-    group_name: Deprescribing
-    classes:
-    - id: AD-DEPR-01
-      name: deprescribing-cholinesterase-memantine
-      definition: When to stop cholinesterase inhibitors or memantine.
-      status: REQUIRED
-      derives_from: &id008
-      - deprescribing
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DEPR-02
-      name: deprescribing-antipsychotics
-      definition: Withdrawal of antipsychotics.
-      status: REQUIRED
-      derives_from: *id008
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DEPR-03
-      name: anticholinergic-burden
-      definition: Anticholinergic burden reduction.
-      status: REQUIRED
-      derives_from: *id008
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DEPR-04
-      name: end-of-life-medication-review
-      definition: Medication review in advanced / end-stage disease.
-      status: DESIRABLE
-      derives_from: *id008
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-  AD-DDX:
-    group_name: Differential diagnosis
-    classes:
-    - id: AD-DDX-01
-      name: dementia-with-lewy-bodies
-      definition: AD vs DLB.
-      status: REQUIRED
-      derives_from: &id009
-      - differential diagnosis
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-02
-      name: vascular-cognitive-impairment
-      definition: AD vs vascular cognitive impairment.
-      status: REQUIRED
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-03
-      name: frontotemporal-dementia
-      definition: AD vs FTD / FTLD.
-      status: REQUIRED
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-04
-      name: late-tdp43
-      definition: AD vs LATE / TDP-43 pathology.
-      status: REQUIRED
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-05
-      name: normal-pressure-hydrocephalus
-      definition: AD vs NPH.
-      status: DESIRABLE
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-06
-      name: depression-pseudodementia
-      definition: AD vs late-life depression.
-      status: REQUIRED
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-07
-      name: mixed-and-copathology
-      definition: Mixed pathology and co-pathology.
-      status: REQUIRED
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
-    - id: AD-DDX-08
-      name: reversible-causes
-      definition: Reversible / secondary causes of cognitive impairment.
-      status: DESIRABLE
-      derives_from: *id009
-      time_sensitivity_psi: REQUIRES_HUMAN_DECISION
-      keywords: []
+# ============================================================
+# Alzheimer Corpus — Claim Taxonomy
+# ============================================================
+#
+# Purpose:
+#   Controlled taxonomy for classifying claims/passages in the
+#   Alzheimer disease and related dementias evidence corpus.
+#
+# This file is intentionally separate from:
+#
+#   mesh_terms.yaml
+#       Defines disease/concept vocabulary and retrieval roles.
+#
+#   search_queries.yaml
+#       Defines PubMed retrieval expressions.
+#
+# Claim taxonomy answers:
+#
+#   "What kind of evidence or claim does this passage contain?"
+#
+# The taxonomy is used for:
+#   - passage metadata
+#   - corpus auditing
+#   - claim-level analysis
+#   - temporal/supersession analysis
+#   - FRB pair construction support
+#   - SCAF admission analysis
+#   - error analysis
+#
+# ============================================================
+
+schema_version: "1.0"
+
+taxonomy:
+  name: "Alzheimer Evidence Claim Taxonomy"
+  short_name: "AD-CLAIM"
+  status: "initial_specification"
+
+  target_class_count:
+    minimum: 40
+    maximum: 80
+    current_design_target: 60
+
+  classification_unit: "passage"
+
+  multi_label: true
+
+  primary_principle: >
+    A passage may contain more than one claim type. Classification
+    describes the evidential function of the passage rather than
+    deciding whether the claim is true, current, authoritative,
+    clinically appropriate, or supported.
+
+  important_distinction: >
+    Claim class is independent of temporal status, source authority,
+    evidence quality, entailment, and truth. These properties must
+    be stored as separate metadata fields.
+
+
+# ============================================================
+# 1. DIAGNOSTIC / DISEASE DEFINITION
+# ============================================================
+
+classes:
+
+  diagnostic_definition:
+
+    - id: "DIAG_DEFINITION"
+      label: "Disease definition"
+      description: >
+        Claims defining Alzheimer disease, its biological or clinical
+        identity, or the conceptual boundary of the disease.
+
+    - id: "DIAG_DIAGNOSTIC_CRITERIA"
+      label: "Diagnostic criteria"
+      description: >
+        Formal criteria or requirements used to establish an
+        Alzheimer disease diagnosis.
+
+    - id: "DIAG_BIOLOGICAL_DEFINITION"
+      label: "Biological definition"
+      description: >
+        Claims concerning the biological definition of Alzheimer
+        disease and biomarker-defined disease status.
+
+    - id: "DIAG_CLINICAL_PRESENTATION"
+      label: "Clinical presentation"
+      description: >
+        Typical or atypical symptoms, signs, cognitive profiles,
+        and clinical presentations.
+
+    - id: "DIAG_DIFFERENTIAL"
+      label: "Differential diagnosis"
+      description: >
+        Claims distinguishing Alzheimer disease from other causes
+        of cognitive impairment or dementia.
+
+    - id: "DIAG_MIXED_PATHOLOGY"
+      label: "Mixed pathology"
+      description: >
+        Claims concerning coexisting Alzheimer pathology and other
+        neurodegenerative or cerebrovascular pathology.
+
+
+# ============================================================
+# 2. DISEASE STAGE / PROGRESSION
+# ============================================================
+
+  staging_progression:
+
+    - id: "STAGE_MCI"
+      label: "Mild cognitive impairment"
+      description: >
+        Claims concerning MCI, particularly where relevant to
+        Alzheimer disease progression or diagnosis.
+
+    - id: "STAGE_PRECLINICAL"
+      label: "Preclinical disease"
+      description: >
+        Claims concerning biologically defined or preclinical
+        Alzheimer disease before overt clinical impairment.
+
+    - id: "STAGE_DISEASE_STAGING"
+      label: "Disease staging"
+      description: >
+        Claims assigning or defining Alzheimer disease stages.
+
+    - id: "STAGE_PROGRESSION"
+      label: "Disease progression"
+      description: >
+        Claims concerning progression from one disease state or
+        stage to another.
+
+    - id: "STAGE_PROGNOSIS"
+      label: "Prognosis"
+      description: >
+        Claims concerning expected disease course, outcomes,
+        progression, or prognosis.
+
+
+# ============================================================
+# 3. COGNITIVE / FUNCTIONAL ASSESSMENT
+# ============================================================
+
+  cognitive_function:
+
+    - id: "COG_MEMORY"
+      label: "Memory impairment"
+      description: >
+        Claims concerning memory deficits or memory trajectories.
+
+    - id: "COG_EXECUTIVE"
+      label: "Executive dysfunction"
+      description: >
+        Claims concerning executive or higher-order cognitive
+        dysfunction.
+
+    - id: "COG_LANGUAGE"
+      label: "Language impairment"
+      description: >
+        Claims concerning language or communication impairment.
+
+    - id: "COG_VISUOSPATIAL"
+      label: "Visuospatial impairment"
+      description: >
+        Claims concerning visuospatial or perceptual impairment.
+
+    - id: "COG_FUNCTIONAL"
+      label: "Functional impairment"
+      description: >
+        Claims concerning activities of daily living, functional
+        independence, or functional decline.
+
+    - id: "COG_NEUROPSYCH"
+      label: "Neuropsychological assessment"
+      description: >
+        Claims concerning cognitive testing or neuropsychological
+        assessment.
+
+
+# ============================================================
+# 4. BIOMARKERS
+# ============================================================
+
+  biomarkers:
+
+    - id: "BIO_AMYLOID"
+      label: "Amyloid biomarker"
+      description: >
+        Claims concerning amyloid pathology or biomarkers.
+
+    - id: "BIO_TAU"
+      label: "Tau biomarker"
+      description: >
+        Claims concerning tau or phosphorylated tau biomarkers.
+
+    - id: "BIO_NEURODEGENERATION"
+      label: "Neurodegeneration biomarker"
+      description: >
+        Claims concerning biomarkers of neurodegeneration.
+
+    - id: "BIO_CSF"
+      label: "CSF biomarker"
+      description: >
+        Claims concerning cerebrospinal-fluid biomarkers.
+
+    - id: "BIO_PLASMA"
+      label: "Plasma biomarker"
+      description: >
+        Claims concerning blood/plasma biomarkers.
+
+    - id: "BIO_BLOOD"
+      label: "Blood biomarker"
+      description: >
+        Claims concerning blood-based biomarkers not otherwise
+        restricted to a specific analyte.
+
+    - id: "BIO_BIOMARKER_VALIDATION"
+      label: "Biomarker validation"
+      description: >
+        Claims concerning analytical or clinical validation of
+        Alzheimer biomarkers.
+
+    - id: "BIO_BIOMARKER_PERFORMANCE"
+      label: "Biomarker performance"
+      description: >
+        Claims concerning sensitivity, specificity, accuracy,
+        predictive value, or diagnostic performance of biomarkers.
+
+    - id: "BIO_BIOMARKER_INTERPRETATION"
+      label: "Biomarker interpretation"
+      description: >
+        Claims concerning interpretation of biomarker results.
+
+
+# ============================================================
+# 5. AMYLOID IMAGING / NEUROIMAGING
+# ============================================================
+
+  imaging:
+
+    - id: "IMG_AMYLOID_PET"
+      label: "Amyloid PET"
+      description: >
+        Claims concerning amyloid PET imaging.
+
+    - id: "IMG_TAU_PET"
+      label: "Tau PET"
+      description: >
+        Claims concerning tau PET imaging.
+
+    - id: "IMG_MRI"
+      label: "MRI"
+      description: >
+        Claims concerning structural MRI or MRI-derived findings.
+
+    - id: "IMG_FDG_PET"
+      label: "FDG-PET"
+      description: >
+        Claims concerning FDG-PET or metabolic imaging.
+
+    - id: "IMG_IMAGING_DIAGNOSIS"
+      label: "Imaging for diagnosis"
+      description: >
+        Claims concerning diagnostic use or interpretation of
+        neuroimaging.
+
+
+# ============================================================
+# 6. GENETICS / RISK
+# ============================================================
+
+  genetics_risk:
+
+    - id: "GEN_APOE"
+      label: "APOE"
+      description: >
+        Claims concerning APOE genotype, particularly APOE
+        ε4-related risk or treatment implications.
+
+    - id: "GEN_GENETIC_RISK"
+      label: "Genetic risk"
+      description: >
+        Claims concerning inherited or genetic risk factors.
+
+    - id: "GEN_RISK_STRATIFICATION"
+      label: "Risk stratification"
+      description: >
+        Claims assigning or modifying patient risk based on
+        genetic, biomarker, clinical, or demographic factors.
+
+
+# ============================================================
+# 7. PHARMACOTHERAPY
+# ============================================================
+
+  pharmacotherapy:
+
+    - id: "TX_CHOLINESTERASE"
+      label: "Cholinesterase inhibitors"
+      description: >
+        Claims concerning cholinesterase inhibitor therapy.
+
+    - id: "TX_MEMANTINE"
+      label: "Memantine"
+      description: >
+        Claims concerning memantine therapy.
+
+    - id: "TX_ANTI_AMYLOID"
+      label: "Anti-amyloid therapy"
+      description: >
+        Claims concerning monoclonal antibody therapies targeting
+        amyloid pathology.
+
+    - id: "TX_LECANEMAB"
+      label: "Lecanemab"
+      description: >
+        Claims specifically concerning lecanemab.
+
+    - id: "TX_DONANEMAB"
+      label: "Donanemab"
+      description: >
+        Claims specifically concerning donanemab.
+
+    - id: "TX_OTHER"
+      label: "Other pharmacotherapy"
+      description: >
+        Pharmacological interventions not covered by the specific
+        therapy classes above.
+
+    - id: "TX_EFFICACY"
+      label: "Treatment efficacy"
+      description: >
+        Claims concerning therapeutic efficacy or clinical benefit.
+
+    - id: "TX_TREATMENT_OUTCOME"
+      label: "Treatment outcomes"
+      description: >
+        Claims concerning clinical, cognitive, functional, or
+        biomarker outcomes following treatment.
+
+
+# ============================================================
+# 8. TREATMENT ELIGIBILITY / USE
+# ============================================================
+
+  treatment_use:
+
+    - id: "TX_ELIGIBILITY"
+      label: "Treatment eligibility"
+      description: >
+        Claims defining who should or should not receive a therapy.
+
+    - id: "TX_INDICATION"
+      label: "Treatment indication"
+      description: >
+        Claims concerning indications for treatment.
+
+    - id: "TX_CONTRAINDICATION"
+      label: "Treatment contraindication"
+      description: >
+        Claims concerning contraindications or exclusion criteria.
+
+    - id: "TX_DOSING"
+      label: "Treatment dosing"
+      description: >
+        Claims concerning dose, schedule, administration, or
+        treatment duration.
+
+    - id: "TX_TREATMENT_MONITORING"
+      label: "Treatment monitoring"
+      description: >
+        Claims concerning monitoring during pharmacological therapy.
+
+
+# ============================================================
+# 9. ARIA / SAFETY
+# ============================================================
+
+  safety:
+
+    - id: "SAFE_ARIA"
+      label: "ARIA"
+      description: >
+        Claims concerning amyloid-related imaging abnormalities.
+
+    - id: "SAFE_ARIA_EDEMA"
+      label: "ARIA-E"
+      description: >
+        Claims specifically concerning edema-related ARIA.
+
+    - id: "SAFE_ARIA_HEMORRHAGE"
+      label: "ARIA-H"
+      description: >
+        Claims specifically concerning hemorrhagic ARIA.
+
+    - id: "SAFE_ARIA_MONITORING"
+      label: "ARIA monitoring"
+      description: >
+        Claims concerning MRI surveillance, monitoring schedules,
+        or ARIA detection.
+
+    - id: "SAFE_ARIA_MANAGEMENT"
+      label: "ARIA management"
+      description: >
+        Claims concerning management or treatment decisions after
+        ARIA is detected.
+
+    - id: "SAFE_ADVERSE_EVENTS"
+      label: "Adverse events"
+      description: >
+        Claims concerning adverse events associated with treatment.
+
+    - id: "SAFE_SAFETY_RISK"
+      label: "Safety risk"
+      description: >
+        Claims concerning patient-specific or treatment-specific
+        safety risks.
+
+    - id: "SAFE_ANTITHROMBOTICS"
+      label: "Antithrombotic considerations"
+      description: >
+        Claims concerning anticoagulants, antiplatelets, or related
+        treatment considerations.
+
+
+# ============================================================
+# 10. NON-PHARMACOLOGICAL MANAGEMENT
+# ============================================================
+
+  management:
+
+    - id: "MGMT_BEHAVIOURAL"
+      label: "Behavioural management"
+      description: >
+        Claims concerning behavioural or non-pharmacological
+        management.
+
+    - id: "MGMT_LIFESTYLE"
+      label: "Lifestyle management"
+      description: >
+        Claims concerning lifestyle, exercise, diet, sleep, or
+        related interventions.
+
+    - id: "MGMT_CAREGIVER"
+      label: "Caregiver management"
+      description: >
+        Claims concerning caregiver support or management.
+
+    - id: "MGMT_PSYCHOSOCIAL"
+      label: "Psychosocial intervention"
+      description: >
+        Claims concerning psychosocial or supportive interventions.
+
+    - id: "MGMT_DEPRESCRIBING"
+      label: "Deprescribing"
+      description: >
+        Claims concerning discontinuation, reduction, or withdrawal
+        of medications.
+
+
+# ============================================================
+# 11. CLINICAL MANAGEMENT / DECISION MAKING
+# ============================================================
+
+  clinical_management:
+
+    - id: "CLIN_WORKUP"
+      label: "Diagnostic workup"
+      description: >
+        Claims concerning recommended diagnostic investigations.
+
+    - id: "CLIN_REFERRAL"
+      label: "Referral"
+      description: >
+        Claims concerning referral to specialists or services.
+
+    - id: "CLIN_SHARED_DECISION"
+      label: "Shared decision-making"
+      description: >
+        Claims concerning patient preferences, counselling, or
+        shared treatment decisions.
+
+    - id: "CLIN_FOLLOWUP"
+      label: "Follow-up"
+      description: >
+        Claims concerning clinical follow-up and reassessment.
+
+    - id: "CLIN_CARE_PATHWAY"
+      label: "Care pathway"
+      description: >
+        Claims concerning sequencing or organisation of clinical care.
+
+
+# ============================================================
+# 12. RELATED DEMENTIAS / DIFFERENTIAL CONDITIONS
+# ============================================================
+
+  related_dementias:
+
+    - id: "REL_LEWY_BODY"
+      label: "Lewy body disease"
+      description: >
+        Claims concerning Lewy body disease or dementia with Lewy
+        bodies.
+
+    - id: "REL_FRONTOTEMPORAL"
+      label: "Frontotemporal dementia"
+      description: >
+        Claims concerning frontotemporal dementia or frontotemporal
+        lobar degeneration.
+
+    - id: "REL_VASCULAR"
+      label: "Vascular cognitive impairment"
+      description: >
+        Claims concerning vascular cognitive impairment or dementia.
+
+    - id: "REL_PARKINSON"
+      label: "Parkinson-related dementia"
+      description: >
+        Claims concerning Parkinson disease dementia.
+
+    - id: "REL_OTHER_DEMENTIA"
+      label: "Other dementia"
+      description: >
+        Claims concerning other dementia syndromes relevant to
+        Alzheimer differential diagnosis.
+
+
+# ============================================================
+# 13. PATHOLOGY / MECHANISM
+# ============================================================
+
+  pathology:
+
+    - id: "PATH_AMYLOID"
+      label: "Amyloid pathology"
+      description: >
+        Claims concerning amyloid deposition, plaques, or amyloid
+        pathological mechanisms.
+
+    - id: "PATH_TAU"
+      label: "Tau pathology"
+      description: >
+        Claims concerning tau aggregation, neurofibrillary pathology,
+        or tau propagation.
+
+    - id: "PATH_NEUROINFLAMMATION"
+      label: "Neuroinflammation"
+      description: >
+        Claims concerning inflammatory mechanisms.
+
+    - id: "PATH_NEURODEGENERATION"
+      label: "Neurodegeneration"
+      description: >
+        Claims concerning neuronal loss or neurodegenerative
+        mechanisms.
+
+    - id: "PATH_CEREBROVASCULAR"
+      label: "Cerebrovascular pathology"
+      description: >
+        Claims concerning vascular or cerebrovascular pathology
+        relevant to cognitive impairment.
+
+
+# ============================================================
+# 14. EVIDENCE / GUIDANCE / RECOMMENDATIONS
+# ============================================================
+
+  evidence_guidance:
+
+    - id: "EVID_GUIDELINE"
+      label: "Guideline recommendation"
+      description: >
+        A recommendation issued by a clinical guideline or formal
+        guidance document.
+
+    - id: "EVID_CONSENSUS"
+      label: "Consensus recommendation"
+      description: >
+        A consensus statement or expert recommendation.
+
+    - id: "EVID_SYSTEMATIC_REVIEW"
+      label: "Systematic review finding"
+      description: >
+        A finding derived from systematic evidence synthesis.
+
+    - id: "EVID_META_ANALYSIS"
+      label: "Meta-analysis finding"
+      description: >
+        A quantitative or qualitative finding from a meta-analysis.
+
+    - id: "EVID_TRIAL_RESULT"
+      label: "Clinical trial result"
+      description: >
+        Claims reporting results of an intervention trial.
+
+    - id: "EVID_OBSERVATIONAL"
+      label: "Observational finding"
+      description: >
+        Claims derived from observational evidence.
+
+    - id: "EVID_DIAGNOSTIC_STUDY"
+      label: "Diagnostic study finding"
+      description: >
+        Claims derived from diagnostic accuracy or validation
+        studies.
+
+
+# ============================================================
+# 15. TEMPORAL / CHANGE-RELATED CLAIMS
+# ============================================================
+
+  temporal:
+
+    - id: "TEMP_NEW_RECOMMENDATION"
+      label: "New recommendation"
+      description: >
+        A recommendation newly introduced during the evidence
+        timeline.
+
+    - id: "TEMP_REVISED_RECOMMENDATION"
+      label: "Revised recommendation"
+      description: >
+        A previously existing recommendation that has been changed.
+
+    - id: "TEMP_SUPERSEDED"
+      label: "Superseded claim"
+      description: >
+        A claim that has been explicitly replaced or superseded by
+        later evidence or guidance.
+
+    - id: "TEMP_CONTRADICTORY"
+      label: "Contradictory evidence"
+      description: >
+        Evidence that reaches a materially opposing conclusion
+        relative to another evidence position.
+
+    - id: "TEMP_CONTESTED"
+      label: "Contested evidence"
+      description: >
+        A live evidence state in which credible sources support
+        materially different conclusions.
+
+    - id: "TEMP_STABLE"
+      label: "Time-invariant claim"
+      description: >
+        A claim expected to remain stable across the study window.
+
+    - id: "TEMP_UPDATE"
+      label: "Evidence update"
+      description: >
+        Claims describing a meaningful change in evidence,
+        recommendation, or clinical understanding.
+
+
+# ============================================================
+# 16. EVIDENCE LIMITATION / UNCERTAINTY
+# ============================================================
+
+  uncertainty:
+
+    - id: "UNCERTAINTY"
+      label: "Evidence uncertainty"
+      description: >
+        Claims explicitly describing uncertainty, limited evidence,
+        or unresolved conclusions.
+
+    - id: "EVIDENCE_CONFLICT"
+      label: "Evidence conflict"
+      description: >
+        Claims documenting disagreement between studies or evidence
+        sources.
+
+    - id: "EVIDENCE_LIMITATION"
+      label: "Evidence limitation"
+      description: >
+        Claims concerning methodological or evidential limitations.
+
+    - id: "EVIDENCE_INSUFFICIENT"
+      label: "Insufficient evidence"
+      description: >
+        Claims stating that available evidence is insufficient to
+        support a conclusion or recommendation.
+
+
+# ============================================================
+# 17. TAXONOMIC RELATIONSHIPS
+# ============================================================
+
+relationships:
+
+  mutually_exclusive: []
+
+  can_cooccur:
+
+    - ["DIAG_DIAGNOSTIC_CRITERIA", "BIO_PLASMA"]
+    - ["DIAG_DIAGNOSTIC_CRITERIA", "BIO_CSF"]
+    - ["DIAG_DIAGNOSTIC_CRITERIA", "IMG_AMYLOID_PET"]
+    - ["TX_LECANEMAB", "TX_ELIGIBILITY"]
+    - ["TX_LECANEMAB", "SAFE_ARIA"]
+    - ["TX_LECANEMAB", "SAFE_ARIA_MONITORING"]
+    - ["TX_DONANEMAB", "TX_ELIGIBILITY"]
+    - ["TX_DONANEMAB", "SAFE_ARIA"]
+    - ["TX_DONANEMAB", "SAFE_ARIA_MONITORING"]
+    - ["GEN_APOE", "SAFE_ARIA"]
+    - ["EVID_GUIDELINE", "TX_ELIGIBILITY"]
+    - ["EVID_GUIDELINE", "TX_CONTRAINDICATION"]
+    - ["TEMP_SUPERSEDED", "EVID_GUIDELINE"]
+    - ["TEMP_CONTESTED", "EVID_SYSTEMATIC_REVIEW"]
+    - ["TEMP_CONTESTED", "EVID_CONFLICT"]
+
+
+# ============================================================
+# 18. TEMPORAL STATUS IS NOT CLAIM CLASS
+# ============================================================
+#
+# This section explicitly prevents a common implementation error:
+# "superseded" and "contested" are temporal/evidential states,
+# not disease/topic categories.
+# ============================================================
+
+temporal_status:
+
+  values:
+
+    - id: "CURRENT"
+      label: "Current"
+      description: >
+        No known supersession or temporal conflict within the
+        defined corpus window.
+
+    - id: "SUPERSEDED"
+      label: "Superseded"
+      description: >
+        Evidence or recommendation has been replaced by later
+        evidence or guidance.
+
+    - id: "CONTESTED"
+      label: "Contested"
+      description: >
+        Credible evidence sources currently support materially
+        different conclusions.
+
+    - id: "HISTORICAL"
+      label: "Historical"
+      description: >
+        Older evidence retained for temporal analysis but not
+        necessarily considered current.
+
+    - id: "UNKNOWN"
+      label: "Unknown"
+      description: >
+        Temporal status cannot currently be determined.
+
+
+# ============================================================
+# 19. CLASSIFICATION OUTPUT SCHEMA
+# ============================================================
+
+classification_output:
+
+  required_fields:
+
+    - "claim_class_ids"
+    - "classification_method"
+    - "classification_confidence"
+
+  optional_fields:
+
+    - "secondary_claim_class_ids"
+    - "classification_evidence"
+    - "manual_review_status"
+
+  methods:
+
+    - "keyword_rule"
+    - "embedding_match"
+    - "hybrid"
+    - "manual_verification"
+
+  manual_review_status_values:
+
+    - "not_reviewed"
+    - "reviewed"
+    - "corrected"
+    - "uncertain"
+
+
+# ============================================================
+# 20. CLASSIFICATION POLICY
+# ============================================================
+
+classification_policy:
+
+  rules:
+
+    - id: "RULE_01"
+      statement: >
+        Assign a claim class based on what the passage asserts or
+        describes, not merely on words appearing in the passage.
+
+    - id: "RULE_02"
+      statement: >
+        Multiple claim classes may be assigned when a passage
+        genuinely contains multiple evidence functions.
+
+    - id: "RULE_03"
+      statement: >
+        Do not infer truth, currency, or authority from claim class.
+
+    - id: "RULE_04"
+      statement: >
+        Temporal status must be stored separately from claim class.
+
+    - id: "RULE_05"
+      statement: >
+        Source tier must be stored separately from claim class.
+
+    - id: "RULE_06"
+      statement: >
+        Claim classification must not delete passages from the corpus.
+
+    - id: "RULE_07"
+      statement: >
+        Uncertain classification should be retained and flagged
+        for review rather than forced into an arbitrary class.
+
+    - id: "RULE_08"
+      statement: >
+        Classification errors affect downstream weighting or analysis
+        but must not silently change corpus membership.
+
+
+# ============================================================
+# 21. VALIDATION PLAN
+# ============================================================
+
+validation:
+
+  target_manual_sample_size: 300
+
+  sampling:
+    method: "random"
+
+    stratify_by:
+
+      - "source_tier"
+      - "claim_class"
+      - "publication_period"
+
+  metrics:
+
+    - "precision"
+    - "recall"
+    - "F1"
+
+  reporting:
+
+    - "overall_precision"
+    - "overall_recall"
+    - "overall_F1"
+    - "per_class_precision"
+    - "per_class_recall"
+    - "per_class_F1"
+    - "class_frequency"
+    - "unclassified_rate"
+    - "multi_label_rate"
+
+  policy: >
+    Classification is a weak link in the pipeline. It is therefore
+    used for down-weighting and analysis rather than hard corpus
+    deletion.
+
+
+# ============================================================
+# 22. REQUIRED METADATA IN FINAL PASSAGE STORE
+# ============================================================
+
+passage_metadata:
+
+  required:
+
+    - "passage_id"
+    - "document_id"
+    - "source_tier"
+    - "publication_date"
+    - "claim_class_ids"
+    - "temporal_status"
+
+  recommended:
+
+    - "section_header"
+    - "journal"
+    - "persistent_identifier"
+    - "guideline_family"
+    - "guideline_version"
+    - "supersession_pointer"
+    - "retraction_flag"
+    - "withdrawal_flag"
+    - "character_start"
+    - "character_end"
+    - "classification_method"
+    - "classification_confidence"
