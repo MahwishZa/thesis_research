@@ -1,0 +1,93 @@
+{
+  "attrition": {
+    "candidates": 40,
+    "eligible": 0,
+    "excluded": 40,
+    "pairs_with_reason": {
+      "ambiguous_temporal_order": 7,
+      "duplicate_evidence": 7,
+      "insufficient_contradiction": 40,
+      "insufficient_provenance": 40,
+      "missing_question_date": 40,
+      "missing_reference_answer": 40,
+      "unverified_claim_equivalence": 40
+    },
+    "sole_reason": {},
+    "yield_rate": 0.0
+  },
+  "candidates_enumerated": 57,
+  "check_a": [
+    {
+      "cutoff": "2023-12",
+      "model": "llama-3-8b",
+      "pairs_dated": 40,
+      "pairs_total": 40,
+      "post_cutoff": 34,
+      "post_cutoff_share": 0.85,
+      "pre_cutoff": 6,
+      "undated_change_point": 0
+    },
+    {
+      "cutoff": "2023-01",
+      "model": "mistral-7b",
+      "pairs_dated": 40,
+      "pairs_total": 40,
+      "post_cutoff": 34,
+      "post_cutoff_share": 0.85,
+      "pre_cutoff": 6,
+      "undated_change_point": 0
+    }
+  ],
+  "check_a_explicit_change_points": 0,
+  "check_a_interpretable": false,
+  "eligibility_config": {
+    "exclude_retracted": true,
+    "max_length_ratio": null,
+    "min_separation_days": null,
+    "require_persistent_id": false,
+    "require_same_source_tier": false
+  },
+  "eligibility_rules_enforced": [
+    "usable_dates",
+    "unambiguous_temporal_order",
+    "question_date",
+    "exclude_retracted"
+  ],
+  "extraction_date": "2026-09-15",
+  "input_path": "alzheimer_corpus/data/chunks/chunks.jsonl",
+  "outputs": {
+    "attrition": "experiments/outputs/stage2_pilot/secondary_curated_attrition.csv",
+    "pairs": "experiments/outputs/stage2_pilot/secondary_curated_pilot.jsonl"
+  },
+  "pilot_seed": "stage2-pilot-2026-09",
+  "pilot_size_actual": 40,
+  "pilot_size_requested": 40,
+  "pool": "secondary_curated",
+  "separation_summary": {
+    "n": 0
+  },
+  "split_config": {
+    "dev": 0.2,
+    "seed": "stage2-split-2026-09",
+    "test": 0.6,
+    "val": 0.2
+  },
+  "split_summary": {
+    "dev": {
+      "eligible_pairs": 0,
+      "pairs": 17,
+      "questions": 2
+    },
+    "test": {
+      "eligible_pairs": 0,
+      "pairs": 20,
+      "questions": 9
+    },
+    "val": {
+      "eligible_pairs": 0,
+      "pairs": 3,
+      "questions": 3
+    }
+  },
+  "stage": 2
+}

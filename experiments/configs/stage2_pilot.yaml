@@ -1,0 +1,76 @@
+# Stage-2 pilot configuration.
+#
+# Every value that affects which pairs enter the evaluation set lives here
+# rather than in code, so a run can be reproduced from this file plus the
+# corpus snapshot it names (specification section 50).
+#
+# Values left `null` are NOT enforced. That is deliberate: the pilot exists
+# to produce the evidence from which they are chosen, and a guessed value
+# applied beforehand would discard exactly that evidence. Each run records
+# which rules were actually enforced, so a result can never be read as though
+# an unset rule had been applied.
+
+version: "1.0"
+
+# Identifier of the frozen corpus snapshot the evidence references point into.
+# Replace with the real snapshot id once Stage 1 completes; it is copied into
+# every pair's provenance.
+corpus_snapshot: "alzheimer_corpus@fixture-10doc"
+
+# Name and version of the externally-authored evaluation dataset used for the
+# primary pool. UNSPECIFIED until the dataset is actually obtained - the
+# builder will not invent one.
+external_dataset: "UNSPECIFIED"
+
+pilot:
+  # ~40 candidates is enough to expose a dominant bottleneck without spending
+  # manual validation effort on a set that may be redesigned. Raise it only
+  # after the first attrition table is understood.
+  size: 40
+  seed: "stage2-pilot-2026-09"
+
+eligibility:
+  # Minimum days between the two publication dates.
+  # UNSET: the pilot reports the separation distribution; choose the
+  # threshold from that histogram and record it here before the final set.
+  min_separation_days: null
+
+  # Corpus chunks do not currently carry PMID/PMCID/DOI, so enforcing this
+  # now would exclude everything for a fixable metadata reason. Turn on once
+  # Stage 1 propagates identifiers to the chunk level.
+  require_persistent_id: false
+
+  # Specification 10.1 matching constraint. Off during the pilot so the
+  # tier composition can be measured before it is constrained.
+  require_same_source_tier: false
+
+  # Specification 10.1 asks for a length "tolerance band" but does not give
+  # one. UNSET until the observed length-ratio distribution is known.
+  max_length_ratio: null
+
+  # A retracted passage cannot represent a defensible position in an
+  # evaluation item. This is a Stage-2 sampling rule; it is separate from
+  # SCAF's runtime hard-exclusion rule and does not constrain it.
+  exclude_retracted: true
+
+split:
+  # Partition assignment is a pure function of question id and this seed.
+  # Changing the seed reshuffles the final test set and must not happen after
+  # tuning begins (specification 33.6).
+  seed: "stage2-split-2026-09"
+  # Test gets the largest share because it carries the confirmatory claim and
+  # cannot be reused; dev and val only have to support threshold and weight
+  # selection. Proportions are approximate at small n by design - hash-based
+  # assignment is stable under added questions, which matters more here than
+  # hitting the ratio exactly. Realised counts are reported per run.
+  dev: 0.2
+  val: 0.2
+  test: 0.6
+
+# Check A: pre-training cutoffs of the candidate label-generating models.
+# Dates are the commonly cited approximate cutoffs for these model families
+# and are recorded as approximate; confirm against each model card before the
+# result is reported in the thesis.
+label_model_cutoffs:
+  llama-3-8b: "2023-12"
+  mistral-7b: "2023-01"

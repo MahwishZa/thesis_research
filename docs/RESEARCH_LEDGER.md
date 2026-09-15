@@ -3,7 +3,7 @@
 Living record for the thesis *Does the Filter Prefer the Past?* — updated whenever new
 information changes a decision. Companion to `RESEARCH_UNDERSTANDING_REPORT.md`.
 
-**Last updated:** 2026-09-15 · **Current pipeline stage:** Stage 1 (Build Alzheimer's Corpus) · **Status:** Not Ready
+**Last updated:** 2026-09-15 · **Current pipeline stage:** Stage 1 (Build Alzheimer's Corpus), Stage 2 prepared · **Status:** Not Ready
 
 Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]` reported by published research ·
 `[INF]` methodological inference · `[STU]` student assumption · `[REC]` recommendation by the assistant
@@ -52,6 +52,11 @@ Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]` reporte
 | D-12 | Rank-based rather than min-max normalisation of ρ(s) | Makes a global θ_admit well defined across queries | **Endorsed** |
 | D-13 | Both filters trained on general medical QA, applied zero-shot to AD items | Removes suspicion that domain gains come from domain-specific fine-tuning | **Endorsed** |
 | D-14 | Contested evidence is capped by the common context budget, never exempted from it. When contested evidence exceeds the budget it is retained first, by A(s) descending with `evidence_id` as tie-break, up to the budget; preserved and dropped contested positions are recorded in the run metadata | §16 makes the context budget invariant across arms; §29 requires both positions of a contested claim to survive. The two conflict only when contested evidence exceeds the budget. Exempting contested evidence would give SCAF more context than the baseline, so any Stage-5 difference would be confounded by context volume rather than by admission policy. Capping keeps the arms comparable and makes the cost visible instead of silent | **Fixed implementation policy** — not a supervisor-dependent scientific parameter |
+| D-15 | Claim equivalence in the primary pool is inherited from the external item, not judged by the thesis: both passages are evidence for the same externally-authored question | Specification 10.2 leaves the "same claim" criterion `[TO BE SPECIFIED]`. Any thesis-authored equivalence judgement would have to be validated, at a cost the schedule cannot carry, and would weaken the provenance firewall. Inheriting it costs nothing and is auditable | **Adopted for Stage 2** |
+| D-16 | Temporal eligibility is decided by date *intervals*, not point estimates: the older passage qualifies only when its date interval ends before the newer passage's interval begins | A date of `2023` means some day in 2023. Two passages both dated `2023` cannot be ordered, and a point estimate would silently order them anyway. The rule needs no invented tolerance parameter and excludes exactly the pairs that cannot support a recency claim | **Adopted for Stage 2** |
+| D-17 | `question_date` is item-level: taken from the dataset when supplied, otherwise the newer side's publication date; the source is recorded per pair | A single global cutoff across a corpus spanning 1986–2026 would make the older stratum stale by construction, which is the effect being measured | **Adopted for Stage 2** |
+| D-18 | Dev/validation/test assignment is a pure function of `question_id` and a recorded seed, with the question — not the pair — as the unit | Pairs sharing a question share its answer and usually a passage, so splitting on pairs leaks test items into the tuning partition (specification 33.1). Hash assignment is stable when questions are added, so the test partition cannot quietly change composition between pilot and final set | **Adopted for Stage 2**; proportions (0.2/0.2/0.6) remain configurable |
+| D-19 | Automatic claim-class labels are recorded with `claim_class_source` and are never used as a matching criterion in the primary pool | The corpus's current labels come from a keyword-from-classname heuristic at confidence 0.0–0.4 (ledger A8). Treating them as ground truth would put unvalidated labels inside the inclusion rule for the primary evaluation set | **Adopted for Stage 2** |
 
 ### Recommended by this assistant (pending student/supervisor acceptance)
 
@@ -118,6 +123,22 @@ judge-validation sample size · power analysis · institutional review requireme
 
 ---
 
+**Stage-2 readiness audit (2026-09-15), measured on the repository as it stands.**
+
+| # | Finding | Evidence |
+|---|---|---|
+| G-S2-1 | **No corpus exists yet.** The corpus tree contains a 10-document fixture set producing 18 chunks. Every metadata CSV (`pubmed`, `pmc`, `guidelines`, `textbooks`) is header-only | `alzheimer_corpus/data/chunks/chunks.jsonl`; `alzheimer_corpus/metadata/*.csv` |
+| G-S2-2 | **The external evaluation dataset is absent and unobtainable from this environment.** `huggingface.co` and `eutils.ncbi.nlm.nih.gov` are blocked by organisational egress; `api.github.com` responds, so the block is host-specific | Egress probe, 2026-09-15 |
+| G-S2-3 | **No supersession relationships exist.** Zero records, in any file. Chronological difference is not supersession and none were inferred | `alzheimer_corpus/metadata/*.csv` |
+| G-S2-4 | **Claim classes are an unvalidated heuristic.** 15 of 18 fixture chunks carry labels from `keyword-from-classname` at confidence 0.0–0.4 | `alzheimer_corpus/data/chunks/chunks.jsonl` |
+| G-S2-5 | **Chunks carry no persistent identifier.** PMID/PMCID/DOI are present in the document-level metadata schema but do not reach the chunk level, so pair-level provenance cannot currently cite one | `alzheimer_corpus/data/chunks/chunks.jsonl` |
+| G-S2-6 | **Corpus-only material yields zero valid test pairs**, as expected. A 40-candidate pilot over the fixture chunks lost 100% to five simultaneous causes: no question date, no reference answer, unverified contradiction, unverified claim equivalence, insufficient provenance. No single fix recovers any pair (`sole_reason` is empty throughout) | `experiments/outputs/stage2_pilot/secondary_curated_attrition.csv` |
+| G-S2-7 | **Check A cannot be evaluated.** It needs change points from the external dataset. The pilot reports `check_a_interpretable: false` rather than a number, because corpus publication dates are not evidence-change dates | `experiments/outputs/stage2_pilot/secondary_curated_manifest.json` |
+| G-S2-8 | **Currency-pack retrievability (A4) cannot be evaluated.** It requires a built index and a held-out AD question set; neither exists. `alzheimer_corpus/data/raw/currency_pack/` is empty | Repository inspection |
+| G-S2-9 | **Power analysis has no inputs.** It needs the discordant rate and the older-favouring share, both of which are Stage-3 measurements. The sizing function refuses to run without them rather than assuming an effect size | `experiments/test_pairs/scripts/power.py` |
+
+---
+
 ## 6. Risks
 
 | # | Risk | Stage | Severity | Mitigation |
@@ -176,5 +197,6 @@ None of these is necessary to answer RQ1–RQ6. Recorded so they do not distract
 
 | Date | Change |
 |---|---|
+| 2026-09-15 | Stage-2 readiness audit run against the actual repository. Verdict: **not ready for pair generation**; findings G-S2-1 to G-S2-9 recorded. Minimal Stage-2 infrastructure added under `experiments/test_pairs/` (schema, eligibility, attrition, split, Check-A stratification, sizing) with 72 tests. Decisions D-15 to D-19 adopted. No test pairs were generated: the external evaluation dataset is the binding dependency. |
 | 2026-09-15 | D-14 recorded: `contested_budget_policy = "cap"` fixed as implementation policy. The `"exempt"` alternative removed from `systems/proposed/admission.py`, so no supported path can exceed the context budget. The numerical budget itself (`max_admitted_passages`) remains an unset experimental parameter and is recorded per run as `context_budget.budget_configured`. |
 | 2026-09-11 | Ledger created. Initial research understanding built from D1 (proposal) and D2 (RAG², NAACL 2025). Fifteen established facts recorded; thirteen student decisions endorsed; ten recommendations raised; thirteen assumptions and fifteen risks registered. Stage 1 assessed **Not Ready** pending the Checks A–D feasibility audit. |

@@ -17,4 +17,12 @@ dependencies = ["PyYAML>=6.0"]
 models = ["torch>=2.0", "transformers>=4.40"]
 
 [tool.setuptools]
-packages = ["systems", "systems.interfaces", "systems.baseline", "systems.proposed"]
+packages = [
+    "systems",
+    "systems.interfaces",
+    "systems.baseline",
+    "systems.proposed",
+    "experiments",
+    "experiments.test_pairs",
+    "experiments.test_pairs.scripts",
+]

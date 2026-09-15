@@ -1,0 +1,8 @@
+exclusion_reason,pairs_with_reason,sole_reason,share_of_candidates
+missing_question_date,40,0,1.0
+missing_reference_answer,40,0,1.0
+ambiguous_temporal_order,7,0,0.175
+insufficient_contradiction,40,0,1.0
+unverified_claim_equivalence,40,0,1.0
+duplicate_evidence,7,0,0.175
+insufficient_provenance,40,0,1.0
