@@ -1,8 +1,21 @@
 """Shared helpers for the Alzheimer's corpus pipeline.
 
-One module rather than seven copies of config loading, logging and the
-Alzheimer's relevance gate. Every stage script imports from here.
+This module provides:
+- project paths
+- configuration loading
+- logging
+- UTC timestamps
+- CSV reporting
+- JSONL I/O
+- licensing checks
+- downstream Alzheimer's relevance assessment
+
+Important pipeline principle:
+Stage 01 PubMed retrieval is query-driven. The Alzheimer's relevance
+gate is NOT used to decide PubMed retrieval membership. It is available
+for later validation/filtering stages only.
 """
+
 from __future__ import annotations
 
 import csv
@@ -10,6 +23,7 @@ import json
 import logging
 import re
 import unicodedata
+
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +31,13 @@ from typing import Any, Iterable
 
 import yaml
 
-BASE = Path(__file__).resolve().parents[1]          # alzheimer_corpus/
+
+# ==========================================================================
+# Project paths
+# ==========================================================================
+
+BASE = Path(__file__).resolve().parents[1]
+
 CONFIG = BASE / "config"
 DATA = BASE / "data"
 LOGS = BASE / "logs"
@@ -25,198 +45,656 @@ METADATA = BASE / "metadata"
 REPORTS = BASE / "reports"
 
 
-# --------------------------------------------------------------------------
-# config + logging
-# --------------------------------------------------------------------------
-def load_config(name: str) -> dict[str, Any]:
-    return yaml.safe_load((CONFIG / name).read_text(encoding="utf-8"))
+# ==========================================================================
+# Configuration
+# ==========================================================================
+
+def load_config(name_or_path: str | Path) -> dict[str, Any]:
+    """Load a YAML configuration file.
+
+    Accepts either:
+    - a filename relative to config/, e.g. 'search_queries.yaml'
+    - an explicit Path, e.g. CONFIG / 'search_queries.yaml'
+    """
+    path = Path(name_or_path)
+
+    if not path.is_absolute():
+        path = CONFIG / path
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Configuration file not found: {path}"
+        )
+
+    with path.open("r", encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+
+    if data is None:
+        return {}
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Configuration file must contain a top-level mapping: {path}"
+        )
+
+    return data
 
 
-def get_logger(stage: str, logfile: str) -> logging.Logger:
-    """Append-only stage logger. Never truncates: logs are provenance."""
+# ==========================================================================
+# Logging
+# ==========================================================================
+
+def get_logger(
+    stage: str,
+    logfile: str | Path | None = None,
+) -> logging.Logger:
+    """Create or return an append-only stage logger.
+
+    If logfile is omitted, '<stage>.log' is used.
+
+    Logs are treated as provenance and are therefore never truncated.
+    """
     LOGS.mkdir(parents=True, exist_ok=True)
+
     log = logging.getLogger(stage)
+
+    # Prevent duplicate handlers if get_logger() is called repeatedly.
     if log.handlers:
         return log
+
     log.setLevel(logging.INFO)
-    fmt = logging.Formatter("%(asctime)sZ %(levelname)-7s %(name)s %(message)s")
-    fmt.converter = lambda *a: datetime.now(timezone.utc).timetuple()
-    fh = logging.FileHandler(LOGS / logfile, encoding="utf-8")
-    fh.setFormatter(fmt)
-    sh = logging.StreamHandler()
-    sh.setFormatter(fmt)
-    log.addHandler(fh)
-    log.addHandler(sh)
+    log.propagate = False
+
+    formatter = logging.Formatter(
+        "%(asctime)sZ %(levelname)-7s %(name)s %(message)s"
+    )
+
+    # Ensure timestamps are UTC.
+    formatter.converter = (
+        lambda *args: datetime.now(timezone.utc).timetuple()
+    )
+
+    if logfile is None:
+        logfile = f"{stage}.log"
+
+    logfile = Path(logfile)
+
+    if not logfile.is_absolute():
+        logfile = LOGS / logfile
+
+    logfile.parent.mkdir(parents=True, exist_ok=True)
+
+    file_handler = logging.FileHandler(
+        logfile,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    log.addHandler(file_handler)
+    log.addHandler(stream_handler)
+
     return log
 
 
+# ==========================================================================
+# Time
+# ==========================================================================
+
 def utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    """Return current UTC timestamp in ISO-8601 format."""
+    return datetime.now(timezone.utc).isoformat(
+        timespec="seconds"
+    )
 
 
-def write_report(name: str, rows: list[dict[str, Any]], fieldnames: list[str]) -> Path:
+# ==========================================================================
+# CSV reporting
+# ==========================================================================
+
+def write_report(
+    name_or_path: str | Path,
+    rows: list[dict[str, Any]],
+    fieldnames: list[str] | None = None,
+) -> Path:
+    """Write a CSV report.
+
+    Supports either:
+        write_report("retrieval_report.csv", rows, fieldnames)
+
+    or:
+        write_report(REPORTS / "retrieval_report.csv", rows, fieldnames)
+
+    If fieldnames are omitted, they are inferred from the first row.
+    """
     REPORTS.mkdir(parents=True, exist_ok=True)
-    p = REPORTS / name
-    with open(p, "w", encoding="utf-8", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
-        w.writeheader()
-        w.writerows(rows)
-    return p
+
+    path = Path(name_or_path)
+
+    if not path.is_absolute():
+        path = REPORTS / path
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if fieldnames is None:
+        if rows:
+            fieldnames = list(rows[0].keys())
+        else:
+            fieldnames = []
+
+    with path.open(
+        "w",
+        encoding="utf-8",
+        newline="",
+    ) as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
+
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return path
 
 
-def read_jsonl(p: Path) -> Iterable[dict[str, Any]]:
-    if not p.exists():
+# ==========================================================================
+# JSONL
+# ==========================================================================
+
+def read_jsonl(
+    path: Path,
+) -> Iterable[dict[str, Any]]:
+    """Read newline-delimited JSON records."""
+    if not path.exists():
         return
-    with open(p, encoding="utf-8") as fh:
+
+    with path.open(
+        "r",
+        encoding="utf-8",
+    ) as fh:
         for line in fh:
             line = line.strip()
+
             if line:
                 yield json.loads(line)
 
 
-def write_jsonl(p: Path, rows: Iterable[dict[str, Any]]) -> int:
-    p.parent.mkdir(parents=True, exist_ok=True)
-    n = 0
-    with open(p, "w", encoding="utf-8", newline="\n") as fh:
-        for r in rows:
-            fh.write(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n")
-            n += 1
-    return n
+def write_jsonl(
+    path: Path,
+    rows: Iterable[dict[str, Any]],
+) -> int:
+    """Write records as newline-delimited JSON."""
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    count = 0
+
+    with path.open(
+        "w",
+        encoding="utf-8",
+        newline="\n",
+    ) as fh:
+        for row in rows:
+            fh.write(
+                json.dumps(
+                    row,
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+            count += 1
+
+    return count
 
 
-# --------------------------------------------------------------------------
-# licensing: fails closed
-# --------------------------------------------------------------------------
-DISTRIBUTABLE = {"CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC", "CC-BY-NC-SA",
-                 "CC-BY-ND", "public-domain", "us-government-work"}
+# ==========================================================================
+# Licensing
+# ==========================================================================
+
+DISTRIBUTABLE = {
+    "CC0",
+    "CC-BY",
+    "CC-BY-SA",
+    "CC-BY-NC",
+    "CC-BY-NC-SA",
+    "CC-BY-ND",
+    "public-domain",
+    "us-government-work",
+}
 
 
-def redistribution_allowed(license_code: str | None) -> bool:
-    """Unknown licence => NOT redistributable. Never assume permission."""
+def redistribution_allowed(
+    license_code: str | None,
+) -> bool:
+    """Return whether a known licence permits redistribution.
+
+    Unknown or missing licences fail closed.
+    """
     if not license_code:
         return False
-    return str(license_code).strip().upper() in {d.upper() for d in DISTRIBUTABLE}
+
+    normalized = str(license_code).strip().upper()
+
+    return normalized in {
+        code.upper()
+        for code in DISTRIBUTABLE
+    }
 
 
-# --------------------------------------------------------------------------
-# Alzheimer's relevance gate
-# --------------------------------------------------------------------------
-# Surface forms preserved verbatim in stored text; folding is for MATCHING ONLY.
-PRESERVE_VERBATIM = ("Aβ42", "Aβ40", "Aβ", "p-tau181", "p-tau217", "p-tau231",
-                     "ARIA-E", "ARIA-H", "APOE ε4")
+# ==========================================================================
+# Alzheimer's relevance assessment
+# ==========================================================================
+#
+# IMPORTANT:
+#
+# This section is NOT part of Stage 01 PubMed retrieval.
+#
+# Stage 01 membership is determined by the independently executed queries
+# in config/search_queries.yaml.
+#
+# This relevance gate can be used later when validating retrieved records,
+# resolving ambiguous records, or auditing corpus quality.
+#
+# Supporting concepts such as dementia, amyloid, tau, and comparator
+# diseases NEVER qualify a record by themselves.
+# ==========================================================================
 
-AD_TERMS = ("Alzheimer disease", "Alzheimer's disease", "Alzheimer’s disease",
-            "Alzheimer dementia", "Alzheimer's dementia", "AD dementia",
-            "Alzheimer-type dementia", "dementia of the Alzheimer type",
-            "senile dementia of the Alzheimer type", "Alzheimers disease")
-PATHOLOGY = ("amyloid beta", "abeta", "amyloid plaques", "tau", "p-tau",
-             "phosphorylated tau", "neurofibrillary tangles")
-COMPARATOR = ("vascular dementia", "vascular cognitive impairment", "lewy body",
-              "dementia with lewy bodies", "frontotemporal dementia",
-              "frontotemporal lobar degeneration", "normal pressure hydrocephalus",
-              "progressive supranuclear palsy", "corticobasal")
-GENERIC = ("dementia", "cognitive impairment", "cognitive dysfunction",
-           "cognitive decline", "memory impairment", "neurodegeneration",
-           "neurocognitive disorder")
+
+# Surface forms are preserved verbatim in stored text.
+# Unicode folding is used ONLY for matching.
+
+PRESERVE_VERBATIM = (
+    "Aβ42",
+    "Aβ40",
+    "Aβ",
+    "p-tau181",
+    "p-tau217",
+    "p-tau231",
+    "ARIA-E",
+    "ARIA-H",
+    "APOE ε4",
+)
+
+
+AD_TERMS = (
+    "Alzheimer disease",
+    "Alzheimer's disease",
+    "Alzheimer’s disease",
+    "Alzheimer dementia",
+    "Alzheimer's dementia",
+    "Alzheimer’s dementia",
+    "AD dementia",
+    "Alzheimer-type dementia",
+    "dementia of the Alzheimer type",
+    "senile dementia of the Alzheimer type",
+    "Alzheimers disease",
+)
+
+
+PATHOLOGY = (
+    "amyloid beta",
+    "abeta",
+    "amyloid plaques",
+    "tau",
+    "p-tau",
+    "phosphorylated tau",
+    "neurofibrillary tangles",
+)
+
+
+COMPARATOR = (
+    "vascular dementia",
+    "vascular cognitive impairment",
+    "lewy body",
+    "dementia with lewy bodies",
+    "frontotemporal dementia",
+    "frontotemporal lobar degeneration",
+    "normal pressure hydrocephalus",
+    "progressive supranuclear palsy",
+    "corticobasal",
+)
+
+
+GENERIC = (
+    "dementia",
+    "cognitive impairment",
+    "cognitive dysfunction",
+    "cognitive decline",
+    "memory impairment",
+    "neurodegeneration",
+    "neurocognitive disorder",
+)
 
 
 def fold(text: str) -> str:
-    """Casefold + strip accents FOR MATCHING ONLY. Never written back to text."""
+    """Normalize text for matching only.
+
+    Stored source text must never be replaced by folded text.
+    """
     if not text:
         return ""
-    t = unicodedata.normalize("NFKD", text)
-    t = "".join(c for c in t if not unicodedata.combining(c))
-    return t.casefold()
+
+    normalized = unicodedata.normalize(
+        "NFKD",
+        text,
+    )
+
+    normalized = "".join(
+        char
+        for char in normalized
+        if not unicodedata.combining(char)
+    )
+
+    return normalized.casefold()
 
 
 def _rx(term: str) -> re.Pattern[str]:
-    return re.compile(r"(?<!\w)" + re.escape(fold(term)) + r"(?!\w)")
+    """Compile a word-bounded matching regex."""
+    return re.compile(
+        r"(?<!\w)"
+        + re.escape(fold(term))
+        + r"(?!\w)"
+    )
 
 
-_AD_RX = [(t, _rx(t)) for t in AD_TERMS]
-_PATH_RX = [(t, _rx(t)) for t in PATHOLOGY]
-_COMP_RX = [(t, _rx(t)) for t in COMPARATOR]
-_GEN_RX = [(t, _rx(t)) for t in GENERIC]
-# "AD" is ambiguous (atopic dermatitis, autosomal dominant): case-sensitive,
-# word-bounded, and only counted when a long form appears in the same record.
-_ABBREV_RX = re.compile(r"(?<!\w)AD(?!\w)")
+_AD_RX = [
+    (term, _rx(term))
+    for term in AD_TERMS
+]
+
+_PATH_RX = [
+    (term, _rx(term))
+    for term in PATHOLOGY
+]
+
+_COMP_RX = [
+    (term, _rx(term))
+    for term in COMPARATOR
+]
+
+_GEN_RX = [
+    (term, _rx(term))
+    for term in GENERIC
+]
+
+
+# "AD" is ambiguous.
+#
+# It is deliberately not sufficient by itself to establish Alzheimer's
+# relevance. A long-form Alzheimer's anchor must also appear.
+
+_ABBREV_RX = re.compile(
+    r"(?<!\w)AD(?!\w)"
+)
 
 
 @dataclass
 class Relevance:
-    """Full decision trace. No verdict is left implicit."""
+    """Complete relevance decision trace."""
+
     document_id: str
+
     ad_relevant: bool
+
     score: float
-    rules_fired: list[str] = field(default_factory=list)
+
+    rules_fired: list[str] = field(
+        default_factory=list
+    )
+
     exclusion_reason: str | None = None
-    anchor_evidence: list[str] = field(default_factory=list)
-    supporting_evidence: list[str] = field(default_factory=list)
-    comparator_evidence: list[str] = field(default_factory=list)
+
+    anchor_evidence: list[str] = field(
+        default_factory=list
+    )
+
+    supporting_evidence: list[str] = field(
+        default_factory=list
+    )
+
+    comparator_evidence: list[str] = field(
+        default_factory=list
+    )
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert decision trace to a dictionary."""
         return asdict(self)
 
 
-def _hits(text: str, pairs) -> list[str]:
-    f = fold(text)
-    return [t for t, rx in pairs if rx.search(f)]
+def _hits(
+    text: str,
+    pairs: list[tuple[str, re.Pattern[str]]],
+) -> list[str]:
+    """Return matched source terms."""
+    folded = fold(text)
+
+    return [
+        term
+        for term, regex in pairs
+        if regex.search(folded)
+    ]
 
 
-def assess_ad_relevance(record: dict[str, Any], mesh_anchors: set[str] | None = None) -> Relevance:
-    """Does this record materially support Alzheimer's disease research?
+def assess_ad_relevance(
+    record: dict[str, Any],
+    mesh_anchors: set[str] | None = None,
+) -> Relevance:
+    """Assess whether a record contains Alzheimer's evidence.
 
-    Supporting concepts (dementia, cognitive dysfunction, amyloid/tau,
-    comparator diseases) qualify a record ONLY alongside an Alzheimer's anchor.
-    They never qualify one alone - that is what keeps this an Alzheimer's corpus.
+    This is a downstream validation/classification helper.
+
+    Supporting concepts such as:
+    - dementia
+    - cognitive dysfunction
+    - amyloid
+    - tau
+    - comparator diseases
+
+    qualify a record ONLY when an Alzheimer's anchor is also present.
+
+    They never qualify a record on their own.
     """
-    mesh_anchors = mesh_anchors or {"alzheimer disease"}
-    doc_id = str(record.get("document_id") or record.get("pmid") or "")
-    title = str(record.get("title") or "")
-    abstract = str(record.get("abstract") or "")
+    if mesh_anchors is None:
+        mesh_anchors = {"alzheimer disease"}
+
+    # Normalize supplied MeSH anchors so comparisons are robust.
+    normalized_mesh_anchors = {
+        fold(str(anchor))
+        for anchor in mesh_anchors
+    }
+
+    document_id = str(
+        record.get("document_id")
+        or record.get("pmid")
+        or ""
+    )
+
+    title = str(
+        record.get("title")
+        or ""
+    )
+
+    abstract = str(
+        record.get("abstract")
+        or ""
+    )
+
     whole = f"{title}\n{abstract}"
 
-    d = Relevance(document_id=doc_id, ad_relevant=False, score=0.0)
+    decision = Relevance(
+        document_id=document_id,
+        ad_relevant=False,
+        score=0.0,
+    )
 
-    mesh_hits = [m for m in (record.get("mesh_terms") or [])
-                 if fold(str(m).split("/")[0].lstrip("*").strip()) in mesh_anchors]
-    title_hits = _hits(title, _AD_RX)
-    abs_hits = _hits(abstract, _AD_RX)
-    longform = bool(mesh_hits or title_hits or abs_hits)
-    abbrev = bool(_ABBREV_RX.search(whole))
+    # ------------------------------------------------------------------
+    # MeSH Alzheimer's anchor
+    # ------------------------------------------------------------------
 
-    d.anchor_evidence = ([f"mesh:{m}" for m in mesh_hits]
-                         + [f"title:{t}" for t in title_hits]
-                         + [f"abstract:{t}" for t in abs_hits])
-    path_hits = _hits(whole, _PATH_RX)
-    comp_hits = _hits(whole, _COMP_RX)
-    gen_hits = _hits(whole, _GEN_RX)
-    d.supporting_evidence = [f"pathology:{p}" for p in path_hits]
-    d.comparator_evidence = [f"comparator:{c}" for c in comp_hits]
+    mesh_hits = []
 
-    if not longform:
-        if abbrev:
-            d.exclusion_reason = "ambiguous_abbreviation_only"
-        elif comp_hits:
-            d.exclusion_reason = "comparator_disease_no_ad_anchor"
-        elif gen_hits:
-            d.exclusion_reason = "generic_dementia_no_ad_anchor"
+    for mesh_term in (
+        record.get("mesh_terms")
+        or []
+    ):
+        # Support values such as:
+        #   Alzheimer Disease
+        #   *Alzheimer Disease
+        #   Alzheimer Disease/diagnosis
+        base_term = (
+            str(mesh_term)
+            .split("/", 1)[0]
+            .lstrip("*")
+            .strip()
+        )
+
+        if fold(base_term) in normalized_mesh_anchors:
+            mesh_hits.append(
+                str(mesh_term)
+            )
+
+    # ------------------------------------------------------------------
+    # Text Alzheimer's anchors
+    # ------------------------------------------------------------------
+
+    title_hits = _hits(
+        title,
+        _AD_RX,
+    )
+
+    abstract_hits = _hits(
+        abstract,
+        _AD_RX,
+    )
+
+    longform_anchor = bool(
+        mesh_hits
+        or title_hits
+        or abstract_hits
+    )
+
+    # ------------------------------------------------------------------
+    # Ambiguous abbreviation
+    # ------------------------------------------------------------------
+
+    abbreviation_present = bool(
+        _ABBREV_RX.search(whole)
+    )
+
+    decision.anchor_evidence = (
+        [f"mesh:{term}" for term in mesh_hits]
+        + [f"title:{term}" for term in title_hits]
+        + [f"abstract:{term}" for term in abstract_hits]
+    )
+
+    # ------------------------------------------------------------------
+    # Supporting concepts
+    # ------------------------------------------------------------------
+
+    pathology_hits = _hits(
+        whole,
+        _PATH_RX,
+    )
+
+    comparator_hits = _hits(
+        whole,
+        _COMP_RX,
+    )
+
+    generic_hits = _hits(
+        whole,
+        _GEN_RX,
+    )
+
+    decision.supporting_evidence = [
+        f"pathology:{term}"
+        for term in pathology_hits
+    ]
+
+    decision.comparator_evidence = [
+        f"comparator:{term}"
+        for term in comparator_hits
+    ]
+
+    # ------------------------------------------------------------------
+    # No Alzheimer's anchor
+    # ------------------------------------------------------------------
+
+    if not longform_anchor:
+
+        if abbreviation_present:
+            decision.exclusion_reason = (
+                "ambiguous_abbreviation_only"
+            )
+
+        elif comparator_hits:
+            decision.exclusion_reason = (
+                "comparator_disease_no_ad_anchor"
+            )
+
+        elif generic_hits:
+            decision.exclusion_reason = (
+                "generic_dementia_no_ad_anchor"
+            )
+
         else:
-            d.exclusion_reason = "no_ad_evidence"
-        return d
+            decision.exclusion_reason = (
+                "no_ad_evidence"
+            )
+
+        return decision
+
+    # ------------------------------------------------------------------
+    # Alzheimer's anchor exists
+    # ------------------------------------------------------------------
 
     score = 0.0
-    if mesh_hits:
-        d.rules_fired.append("R1_mesh_anchor"); score = max(score, 1.0)
-    if title_hits:
-        d.rules_fired.append("R2_title_anchor"); score = max(score, 1.0)
-    if abs_hits:
-        d.rules_fired.append("R3_abstract_anchor"); score = max(score, 0.8)
-    if path_hits:
-        d.rules_fired.append("R4_pathology_with_anchor"); score = max(score, 0.7)
-    if comp_hits:
-        d.rules_fired.append("R5_differential_with_anchor"); score = max(score, 0.7)
 
-    d.score = round(score, 3)
-    d.ad_relevant = d.score >= 0.7
-    return d
+    if mesh_hits:
+        decision.rules_fired.append(
+            "R1_mesh_anchor"
+        )
+        score = max(score, 1.0)
+
+    if title_hits:
+        decision.rules_fired.append(
+            "R2_title_anchor"
+        )
+        score = max(score, 1.0)
+
+    if abstract_hits:
+        decision.rules_fired.append(
+            "R3_abstract_anchor"
+        )
+        score = max(score, 0.8)
+
+    if pathology_hits:
+        decision.rules_fired.append(
+            "R4_pathology_with_anchor"
+        )
+        score = max(score, 0.7)
+
+    if comparator_hits:
+        decision.rules_fired.append(
+            "R5_differential_with_anchor"
+        )
+        score = max(score, 0.7)
+
+    decision.score = round(
+        score,
+        3,
+    )
+
+    decision.ad_relevant = (
+        decision.score >= 0.7
+    )
+
+    return decision
