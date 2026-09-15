@@ -121,7 +121,6 @@ EXCLUSION_REASONS = (
     "non_comparable_context",
     "retracted_or_withdrawn",
     "insufficient_provenance",
-    "question_date_not_independent",
     "other",
 )
 

@@ -58,6 +58,7 @@
     "corpus": 80
   },
   "extraction_date": "2026-09-15",
+  "extraction_date_source": "run_date",
   "input_path": "alzheimer_corpus/data/chunks/chunks.jsonl",
   "outputs": {
     "attrition": "experiments/outputs/stage2_pilot/secondary_curated_attrition.csv",
@@ -67,6 +68,7 @@
   "pilot_seed": "stage2-pilot-2026-09",
   "pilot_size_actual": 40,
   "pilot_size_requested": 40,
+  "pilot_truncated": true,
   "pool": "secondary_curated",
   "question_date_sources": {
     "unavailable": 40

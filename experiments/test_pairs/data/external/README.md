@@ -32,6 +32,44 @@ Acquiring it is therefore a manual step, from a network that permits it:
 Do not commit the dataset itself unless its licence permits redistribution.
 Unknown licence means not redistributable.
 
+## Acquisition and conversion procedure
+
+```bash
+# 1. Convert the downloaded dataset to the JSONL contract below, by hand or
+#    with a short throwaway script, and save it here as pairs_input.jsonl.
+
+# 2. Check it BEFORE building anything. This records the file's SHA-256 and
+#    reports, per field, what is present and what each gap will cost.
+python -m experiments.test_pairs.scripts.validate_external \
+    --input experiments/test_pairs/data/external/pairs_input.jsonl \
+    --dataset "MedChangeQA v<version>" \
+    --output experiments/outputs/stage2_pilot/acquisition.json
+
+# 3. Record the dataset name and version in experiments/configs/stage2_pilot.yaml
+#    (`external_dataset`), and set `extraction_date` when freezing.
+
+# 4. Build the pairs. The full pool is used; nothing is sampled.
+python -m experiments.test_pairs.scripts.build_pairs \
+    --pool primary_external \
+    --input experiments/test_pairs/data/external/pairs_input.jsonl \
+    --output-dir experiments/outputs/stage2_pilot
+```
+
+**When fields are missing**, two different things happen, and the difference
+is deliberate:
+
+* a missing **required** field means the record does not identify an
+  evaluation item. The validator marks the file unusable and exits non-zero;
+  the builder refuses it. Neither fills the gap.
+* a missing **optional** field costs that item, visibly. The validator says
+  so in advance (`anticipated_exclusions`) and the builder records the
+  exclusion so it appears in the attrition table.
+
+No converter for MedChangeQA's own distribution format is shipped. Nobody
+here has seen that format, and a converter written against a guessed schema
+would either fail on the real files or, worse, silently mis-assign which side
+is the newer verdict. The validator is what makes the manual step verifiable.
+
 ## Why no corpus mapping step exists
 
 An earlier reading of the specification suggested each external item's
@@ -58,10 +96,19 @@ with the understanding report's own observation that "the Stage-1 corpus is
 not on the critical path for FRB-PAIRS if its passages come from external
 MedChangeQA provenance".
 
-**If the distributed files contain questions and verdicts but not the review
-abstracts**, recover them by PMID with a single deterministic E-utilities
-fetch per identifier. That stays in the deterministic-identifier tier: no
-lexical matching, no embeddings, no semantic retrieval.
+**One caveat worth stating plainly.** That the items ship with both review
+records is an inference from how MedRevQA is built, not something anyone here
+has verified — the dataset could not be reached from the development
+environment. The understanding report says as much: MedChangeQA "does not
+obviously supply *matched passage pairs*".
+
+If the files turn out to carry questions and verdicts but not the abstracts,
+nothing about the design changes: recover the abstracts by PMID with one
+deterministic E-utilities fetch per identifier. That is still tier-1
+identifier mapping — no lexical matching, no embeddings, no semantic
+retrieval. The pipeline fails loudly in the meantime rather than guessing:
+every item would carry `missing_evidence_text`, and the attrition table would
+show it at 100%.
 
 ## Input contract
 

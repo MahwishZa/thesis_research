@@ -331,11 +331,11 @@ The annotation or verification procedure for establishing claim equivalence is:
 
 Each pair must have an externally defensible change point:
 
-**Change-point source:** `[TO BE SPECIFIED]`
+**Change-point source:** MedChangeQA (Vladika et al., Findings of EMNLP 2025) — 512 changed-verdict items derived from MedRevQA, itself built from systematic-review abstracts indexed in PubMed 2000–January 2024. This records the dataset the proposal already names; it is stated here because this section previously left the primary instrument's source unspecified.
 
-**Change-point definition:** `[TO BE SPECIFIED]`
+**Change-point definition:** the transition between the superseded verdict and the current verdict on the same review question, as established by the dataset. The thesis does not judge which verdict is correct, and a change point the dataset does not supply is left absent rather than substituted with a publication date.
 
-**Required temporal separation:** `[TO BE SPECIFIED]`
+**Required temporal separation:** `[TO BE SPECIFIED AFTER PILOT]` — to be read off the observed separation distribution rather than assumed. Until it is set, the rule is recorded as not enforced.
 
 ---
 

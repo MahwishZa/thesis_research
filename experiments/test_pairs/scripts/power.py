@@ -12,10 +12,14 @@ size follows from two quantities the pilot must supply:
   (0.5 is exactly no bias).
 
 Both are estimates, and nothing here invents them: :func:`required_pairs`
-raises unless they are measured. A normal approximation is used rather than
-an exact binomial design; at the accuracies a pilot of this size can supply,
-the exact method's extra precision is not meaningful, and the approximation
-is transparent enough to check by hand.
+raises unless they are measured.
+
+Sizing is **exact**, by enumerating the binomial distribution, because the
+analysis it sizes for is exact. The discordant count here is at most a few
+hundred, so enumeration costs nothing, and matching the two matters: a normal
+approximation sized for 80% power delivers roughly 77% against the exact
+two-sided binomial test at these counts, which would leave the thesis
+quietly under-powered.
 
 The result is a *floor*, not a target: it counts usable pairs after
 attrition, so the number of candidates to construct is this figure divided by
@@ -29,10 +33,61 @@ from dataclasses import dataclass
 from typing import Optional, Sequence
 
 
-#: Two-sided normal quantiles. Only the conventional levels are provided;
-#: an unusual alpha or power should be justified, not silently supported.
-_Z_ALPHA = {0.05: 1.959963985, 0.01: 2.575829304}
-_Z_BETA = {0.80: 0.841621234, 0.90: 1.281551566, 0.95: 1.644853627}
+#: Conventional levels only; an unusual alpha or power should be justified,
+#: not silently supported.
+_ALPHAS = (0.05, 0.01)
+_POWERS = (0.80, 0.90, 0.95)
+
+#: Enumeration ceiling. Larger pools are not refused, but the search for a
+#: required sample size stops here rather than running away.
+_MAX_DISCORDANT = 100_000
+
+
+def _critical_value(discordant: int, alpha: float) -> Optional[int]:
+    """Largest k whose two-sided exact binomial p-value is at most alpha.
+
+    Under the null the discordant pairs split evenly, so the test statistic
+    is Binomial(discordant, 0.5) and the rejection region is the pair of
+    tails {k <= c} and {k >= discordant - c}. Returns None when no rejection
+    region of size alpha exists, which happens for very small counts.
+    """
+
+    total = 2.0 ** discordant
+
+    cumulative = 0.0
+    critical: Optional[int] = None
+
+    for k in range(discordant // 2 + 1):
+        cumulative += math.comb(discordant, k) / total
+        if 2.0 * cumulative <= alpha:
+            critical = k
+        else:
+            break
+
+    return critical
+
+
+def exact_power(discordant: int, share: float, alpha: float) -> float:
+    """Power of the two-sided exact binomial test at the given share."""
+
+    if discordant <= 0:
+        return 0.0
+
+    critical = _critical_value(discordant, alpha)
+
+    if critical is None:
+        return 0.0
+
+    lower = sum(
+        math.comb(discordant, k) * share ** k * (1.0 - share) ** (discordant - k)
+        for k in range(critical + 1)
+    )
+    upper = sum(
+        math.comb(discordant, k) * share ** k * (1.0 - share) ** (discordant - k)
+        for k in range(discordant - critical, discordant + 1)
+    )
+
+    return lower + upper
 
 
 @dataclass(frozen=True)
@@ -100,20 +155,26 @@ def required_pairs(
             "confidence interval instead."
         )
 
-    if alpha not in _Z_ALPHA:
-        raise ValueError(f"alpha must be one of {sorted(_Z_ALPHA)}.")
+    if alpha not in _ALPHAS:
+        raise ValueError(f"alpha must be one of {sorted(_ALPHAS)}.")
 
-    if power not in _Z_BETA:
-        raise ValueError(f"power must be one of {sorted(_Z_BETA)}.")
+    if power not in _POWERS:
+        raise ValueError(f"power must be one of {sorted(_POWERS)}.")
 
-    z_alpha = _Z_ALPHA[alpha]
-    z_beta = _Z_BETA[power]
+    # Smallest discordant count whose exact power reaches the target. Power
+    # is not perfectly monotone in the count (the critical value moves in
+    # steps), so the first crossing is confirmed to hold rather than assumed.
+    discordant_needed = None
+    for candidate in range(1, _MAX_DISCORDANT + 1):
+        if exact_power(candidate, older_share, alpha) >= power:
+            discordant_needed = candidate
+            break
 
-    # Normal approximation to the binomial test that the discordant pairs
-    # split evenly: n_discordant = ((z_a/2 + z_b*sqrt(p(1-p))) / (p - 0.5))^2
-    p = older_share
-    numerator = z_alpha * 0.5 + z_beta * math.sqrt(p * (1.0 - p))
-    discordant_needed = math.ceil((numerator / (p - 0.5)) ** 2)
+    if discordant_needed is None:
+        raise ValueError(
+            f"no discordant count below {_MAX_DISCORDANT} reaches "
+            f"{power:.0%} power at older_share={older_share}."
+        )
 
     total_needed = math.ceil(discordant_needed / discordant_rate)
 
@@ -157,30 +218,29 @@ def detectable_effect(
         raise ValueError("total_pairs must be positive.")
     if not 0.0 < discordant_rate <= 1.0:
         raise ValueError("discordant_rate must be in (0, 1].")
+    if alpha not in _ALPHAS:
+        raise ValueError(f"alpha must be one of {sorted(_ALPHAS)}.")
+    if power not in _POWERS:
+        raise ValueError(f"power must be one of {sorted(_POWERS)}.")
 
-    available = total_pairs * discordant_rate
+    available = int(total_pairs * discordant_rate)
 
-    z_alpha = _Z_ALPHA[alpha]
-    z_beta = _Z_BETA[power]
-
-    def needed(share: float) -> float:
-        numerator = z_alpha * 0.5 + z_beta * math.sqrt(share * (1.0 - share))
-        return (numerator / (share - 0.5)) ** 2
-
-    if needed(1.0 - 1e-9) > available:
+    if available <= 0 or exact_power(available, 1.0 - 1e-9, alpha) < power:
         return None
 
-    low, high = 0.5 + 1e-9, 1.0 - 1e-9
-    for _ in range(200):
+    # Exact power rises with the share, so bisect and then round the answer
+    # UP to a value that genuinely clears the target.
+    low, high = 0.5, 1.0
+    for _ in range(60):
         mid = (low + high) / 2.0
-        if needed(mid) > available:
+        if exact_power(available, mid, alpha) < power:
             low = mid
         else:
             high = mid
 
-    # Rounded up, so the value returned is genuinely detectable with the
-    # given pool rather than a shade under it.
-    return math.ceil(high * 10000.0) / 10000.0
+    share = math.ceil(high * 10000.0) / 10000.0
+
+    return share if exact_power(available, share, alpha) >= power else None
 
 
 def sensitivity_curve(
