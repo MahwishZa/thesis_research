@@ -39,6 +39,7 @@ corpus:
       - "amyloid beta pathology"
       - "tau pathology"
       - "Lewy body disease"
+      - "frontotemporal lobar degeneration"
       - "frontotemporal dementia"
 
   design_principle: >
@@ -58,7 +59,6 @@ primary_disease:
   - id: "alzheimer_disease"
     mesh_heading: "Alzheimer Disease"
     mesh_id: "D000544"
-
     role: "primary_anchor"
 
     description: >
@@ -69,6 +69,7 @@ primary_disease:
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "Alzheimer Disease"
         - "Alzheimer's disease"
@@ -103,14 +104,13 @@ clinical_concepts:
   - id: "dementia"
     mesh_heading: "Dementia"
     mesh_id: "D003704"
-
     role: "associated_clinical_concept"
-
     inclusion_priority: "high"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "dementia"
         - "major neurocognitive disorder"
@@ -133,14 +133,13 @@ clinical_concepts:
   - id: "cognitive_dysfunction"
     mesh_heading: "Cognitive Dysfunction"
     mesh_id: "D060825"
-
     role: "associated_clinical_concept"
-
     inclusion_priority: "medium"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "cognitive dysfunction"
         - "cognitive impairment"
@@ -169,14 +168,13 @@ pathology_biomarkers:
   - id: "amyloid_beta_peptides"
     mesh_heading: "Amyloid beta-Peptides"
     mesh_id: "D000071032"
-
     role: "disease_mechanism_and_biomarker"
-
     inclusion_priority: "high"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "amyloid beta"
         - "amyloid-beta"
@@ -202,14 +200,13 @@ pathology_biomarkers:
   - id: "tau_proteins"
     mesh_heading: "tau Proteins"
     mesh_id: "D035683"
-
     role: "disease_mechanism_and_biomarker"
-
     inclusion_priority: "high"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "tau protein"
         - "tau proteins"
@@ -240,18 +237,18 @@ related_dementias:
   - id: "lewy_body_disease"
     mesh_heading: "Lewy Body Disease"
     mesh_id: "D020961"
-
     role: "related_dementia_and_differential"
-
     inclusion_priority: "medium"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "Lewy body disease"
         - "Lewy body dementia"
         - "dementia with Lewy bodies"
+        - "DLB"
 
     use_for:
       - "differential_diagnosis"
@@ -274,14 +271,13 @@ related_dementias:
   - id: "frontotemporal_lobar_degeneration"
     mesh_heading: "Frontotemporal Lobar Degeneration"
     mesh_id: "D057174"
-
     role: "related_dementia_and_differential"
-
     inclusion_priority: "medium"
 
     retrieval_policy:
       preferred:
         - "exact_mesh"
+
       fallback_text:
         - "frontotemporal lobar degeneration"
         - "frontotemporal dementia"
@@ -300,11 +296,51 @@ related_dementias:
       core_ad: false
 
     terminology_note: >
-      The official MeSH descriptor is Frontotemporal Lobar Degeneration.
-      Frontotemporal Dementia is a narrower concept under that descriptor.
-      Therefore the configuration should use the official descriptor
-      rather than treating Frontotemporal Dementia as the top-level
-      MeSH heading.
+      Frontotemporal Lobar Degeneration is the broader disease-family
+      MeSH descriptor. Frontotemporal Dementia is represented separately
+      below as a narrower clinical concept. The two terms must not be
+      treated as interchangeable synonyms for corpus provenance.
+
+
+  - id: "frontotemporal_dementia"
+    mesh_heading: "Frontotemporal Dementia"
+    mesh_id: "D057180"
+    role: "related_dementia_and_differential"
+    inclusion_priority: "medium"
+
+    parent_concept: "frontotemporal_lobar_degeneration"
+
+    retrieval_policy:
+      preferred:
+        - "exact_mesh"
+
+      fallback_text:
+        - "frontotemporal dementia"
+        - "FTD"
+
+    use_for:
+      - "differential_diagnosis"
+      - "related_dementias"
+      - "clinical_phenotype"
+      - "disease_subtyping"
+      - "frontotemporal_syndrome"
+
+    corpus_policy:
+      standalone: "include_in_related_dementia_pool"
+      core_ad: false
+
+    terminology_note: >
+      Frontotemporal Dementia is a distinct MeSH descriptor and a
+      narrower clinical concept within the broader Frontotemporal
+      Lobar Degeneration disease family. It is retained separately
+      so that retrieval provenance can distinguish clinical FTD
+      from broader FTLD records.
+
+    caution: >
+      Frontotemporal Dementia is not an Alzheimer Disease synonym.
+      Its presence indicates a related or differential neurodegenerative
+      condition and does not independently establish Alzheimer disease
+      relevance.
 
 
 # ============================================================
@@ -327,6 +363,7 @@ term_roles:
   related_dementia:
     - "lewy_body_disease"
     - "frontotemporal_lobar_degeneration"
+    - "frontotemporal_dementia"
 
 
 # ============================================================
@@ -336,6 +373,7 @@ term_roles:
 combination_policy:
 
   high_precision:
+
     description: >
       Alzheimer Disease should be combined with associated,
       pathological, biomarker, treatment, or clinical concepts
@@ -365,6 +403,7 @@ combination_policy:
 
 
   related_dementia:
+
     description: >
       Related dementias are retrieved separately so that they can
       be identified and audited rather than silently mixed into the
@@ -376,12 +415,17 @@ combination_policy:
         expression:
           - "Lewy Body Disease"
 
-      - id: "frontotemporal"
+      - id: "frontotemporal_lobar_degeneration"
         expression:
           - "Frontotemporal Lobar Degeneration"
 
+      - id: "frontotemporal_dementia"
+        expression:
+          - "Frontotemporal Dementia"
+
 
   broad_recall:
+
     description: >
       Broad text-word queries may be used as a recall-oriented
       supplementary lane. They must remain separately tagged from
@@ -419,6 +463,7 @@ topic_extensions:
     - "dementia"
     - "lewy_body_disease"
     - "frontotemporal_lobar_degeneration"
+    - "frontotemporal_dementia"
 
   disease_progression:
     - "alzheimer_disease"
@@ -432,6 +477,7 @@ topic_extensions:
   related_dementias:
     - "lewy_body_disease"
     - "frontotemporal_lobar_degeneration"
+    - "frontotemporal_dementia"
 
 
 # ============================================================
@@ -447,6 +493,7 @@ exclusion_rules:
     - "tau Proteins"
     - "Lewy Body Disease"
     - "Frontotemporal Lobar Degeneration"
+    - "Frontotemporal Dementia"
 
   reason: >
     These descriptors are broader, mechanistic, biomarker-related,
@@ -454,6 +501,7 @@ exclusion_rules:
     with Alzheimer Disease.
 
   do_not_use:
+
     - rule: "global_last_5_year_filter"
       reason: >
         The thesis explicitly studies evidence age, historical
@@ -483,7 +531,6 @@ exclusion_rules:
 provenance:
 
   every_record_should_store:
-
     - "mesh_terms"
     - "mesh_term_ids"
     - "matched_term_role"
@@ -491,7 +538,6 @@ provenance:
     - "retrieval_lane"
 
   retrieval_lanes:
-
     - "primary_anchor"
     - "associated_clinical"
     - "pathology_biomarker"
@@ -511,7 +557,6 @@ provenance:
 audit:
 
   required_checks:
-
     - "number_of_records_per_mesh_term"
     - "number_of_records_per_retrieval_lane"
     - "overlap_between_mesh_queries"

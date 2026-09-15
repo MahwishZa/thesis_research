@@ -66,9 +66,9 @@ database:
 #
 # Alzheimer Disease is the primary disease anchor.
 #
-# Do NOT use all seven supplied MeSH terms as one giant OR query.
-# Dementia, Cognitive Dysfunction, amyloid/tau and the differential
-# dementias have different semantic roles.
+# Do NOT use all supplied MeSH terms as one giant OR query.
+# Dementia, Cognitive Dysfunction, amyloid/tau and the
+# differential dementias have different semantic roles.
 #
 # ============================================================
 
@@ -78,10 +78,8 @@ queries:
     description: >
       Core Alzheimer disease literature using the canonical
       PubMed MeSH disease heading.
-
     query: >
       "Alzheimer Disease"[Mesh]
-
     priority: "P0"
 
 
@@ -90,14 +88,12 @@ queries:
       Alzheimer disease records that may not yet have complete
       MeSH indexing or may be discoverable through title/abstract
       terminology.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
         OR Alzheimer*[tiab]
         OR "Alzheimer disease"[tiab]
       )
-
     priority: "P0"
 
 
@@ -105,7 +101,6 @@ queries:
     description: >
       High-recall Alzheimer disease query combining the MeSH
       anchor with common title/abstract expressions.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -113,7 +108,6 @@ queries:
         OR "Alzheimer's disease"[tiab]
         OR Alzheimer*[tiab]
       )
-
     priority: "P0"
 
 
@@ -125,11 +119,9 @@ queries:
     description: >
       Alzheimer disease literature explicitly associated with
       dementia.
-
     query: >
       "Alzheimer Disease"[Mesh]
       AND "Dementia"[Mesh]
-
     priority: "P1"
 
 
@@ -137,11 +129,9 @@ queries:
     description: >
       Alzheimer disease literature involving cognitive dysfunction,
       impairment and related clinical manifestations.
-
     query: >
       "Alzheimer Disease"[Mesh]
       AND "Cognitive Dysfunction"[Mesh]
-
     priority: "P1"
 
 
@@ -149,7 +139,6 @@ queries:
     description: >
       Alzheimer disease with cognitive impairment/dysfunction
       terminology in title or abstract.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -162,7 +151,6 @@ queries:
         OR "cognitive impairment"[tiab]
         OR "cognitive decline"[tiab]
       )
-
     priority: "P1"
 
 
@@ -173,10 +161,8 @@ queries:
   ad_diagnosis_mesh:
     description: >
       Alzheimer disease records indexed specifically for diagnosis.
-
     query: >
       "Alzheimer Disease/diagnosis"[Mesh]
-
     priority: "P0"
 
 
@@ -184,7 +170,6 @@ queries:
     description: >
       Alzheimer disease diagnosis literature, including records
       not yet represented by the diagnosis MeSH subheading.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -199,14 +184,12 @@ queries:
         OR "diagnostic criteria"[tiab]
         OR "diagnostic evaluation"[tiab]
       )
-
     priority: "P0"
 
 
   ad_diagnostic_criteria:
     description: >
       Diagnostic criteria and disease-definition literature.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -220,7 +203,6 @@ queries:
         OR criteria[tiab]
         OR definition[tiab]
       )
-
     priority: "P0"
 
 
@@ -231,7 +213,6 @@ queries:
   ad_staging:
     description: >
       Alzheimer disease staging, severity and clinical progression.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -246,14 +227,12 @@ queries:
         OR "disease progression"[tiab]
         OR "clinical progression"[tiab]
       )
-
     priority: "P1"
 
 
   ad_prognosis:
     description: >
       Prognosis, natural history and progression of Alzheimer disease.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -267,7 +246,6 @@ queries:
         OR progression[tiab]
         OR conversion[tiab]
       )
-
     priority: "P1"
 
 
@@ -278,18 +256,15 @@ queries:
   ad_amyloid_mesh:
     description: >
       Alzheimer disease and amyloid-beta evidence.
-
     query: >
       "Alzheimer Disease"[Mesh]
       AND "Amyloid beta-Peptides"[Mesh]
-
     priority: "P0"
 
 
   ad_amyloid:
     description: >
       Alzheimer disease amyloid biology, pathology and biomarkers.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -303,7 +278,6 @@ queries:
         OR "amyloid-beta"[tiab]
         OR Aβ[tiab]
       )
-
     priority: "P0"
 
 
@@ -314,18 +288,15 @@ queries:
   ad_tau_mesh:
     description: >
       Alzheimer disease and tau-protein evidence.
-
     query: >
       "Alzheimer Disease"[Mesh]
       AND "tau Proteins"[Mesh]
-
     priority: "P0"
 
 
   ad_tau:
     description: >
       Alzheimer disease tau pathology and tau biomarkers.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -339,7 +310,6 @@ queries:
         OR "phospho-tau"[tiab]
         OR p-tau[tiab]
       )
-
     priority: "P0"
 
 
@@ -350,7 +320,6 @@ queries:
   ad_biomarkers:
     description: >
       Broad Alzheimer disease biomarker literature.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -363,14 +332,12 @@ queries:
         OR "biological marker"[tiab]
         OR "biomarker-based"[tiab]
       )
-
     priority: "P0"
 
 
   ad_fluid_biomarkers:
     description: >
       CSF, plasma and blood-based Alzheimer biomarkers.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -385,7 +352,6 @@ queries:
         OR blood[tiab]
         OR "blood-based biomarker"[tiab]
       )
-
     priority: "P0"
 
 
@@ -393,7 +359,6 @@ queries:
     description: >
       Plasma-based biomarkers, particularly relevant to the
       recent evolution of Alzheimer diagnostic criteria.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -409,7 +374,6 @@ queries:
         OR p-tau[tiab]
         OR "phosphorylated tau"[tiab]
       )
-
     priority: "P0"
 
 
@@ -420,7 +384,6 @@ queries:
   ad_imaging:
     description: >
       Alzheimer disease neuroimaging and diagnostic imaging.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -437,7 +400,6 @@ queries:
         OR "amyloid PET"[tiab]
         OR "tau PET"[tiab]
       )
-
     priority: "P0"
 
 
@@ -448,7 +410,6 @@ queries:
   ad_genetics:
     description: >
       Genetic factors associated with Alzheimer disease.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -460,9 +421,8 @@ queries:
         OR genetics[tiab]
         OR genetic[tiab]
         OR genotype[tiab]
-        OR genotype*[tiab]
+        OR genotypes[tiab]
       )
-
     priority: "P1"
 
 
@@ -470,7 +430,6 @@ queries:
     description: >
       APOE and Alzheimer disease, including genotype-related
       evidence.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -481,11 +440,10 @@ queries:
         APOE[tiab]
         OR "APOE genotype"[tiab]
         OR "APOE genotyping"[tiab]
-        OR apolipoprotein E[tiab]
+        OR "apolipoprotein E"[tiab]
         OR "epsilon 4"[tiab]
         OR "ε4"[tiab]
       )
-
     priority: "P0"
 
 
@@ -493,18 +451,18 @@ queries:
 # 10. DIFFERENTIAL / RELATED DEMENTIAS
 # ============================================================
 #
-# Lewy Body Disease and Frontotemporal Dementia are NOT treated
-# as alternative definitions of Alzheimer disease.
+# Alzheimer disease remains the anchor for these queries.
 #
-# They are retrieved through an explicit Alzheimer +
-# differential-diagnosis relationship.
+# Frontotemporal Lobar Degeneration (FTLD) and Frontotemporal
+# Dementia (FTD) are represented separately because they are
+# distinct MeSH concepts with different levels of specificity.
+#
 # ============================================================
 
   ad_differential_dementia:
     description: >
       Alzheimer disease literature involving differential diagnosis
       with other major neurodegenerative dementias.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -514,19 +472,21 @@ queries:
       (
         "Lewy Body Disease"[Mesh]
         OR "Frontotemporal Dementia"[Mesh]
+        OR "Frontotemporal Lobar Degeneration"[Mesh]
+        OR "Lewy body disease"[tiab]
         OR "Lewy body dementia"[tiab]
         OR "dementia with Lewy bodies"[tiab]
         OR "frontotemporal dementia"[tiab]
+        OR "frontotemporal lobar degeneration"[tiab]
         OR FTD[tiab]
+        OR FTLD[tiab]
       )
-
     priority: "P0"
 
 
   ad_lbd:
     description: >
       Alzheimer disease and Lewy body disease differential evidence.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -535,18 +495,18 @@ queries:
       AND
       (
         "Lewy Body Disease"[Mesh]
+        OR "Lewy body disease"[tiab]
         OR "Lewy body dementia"[tiab]
         OR "dementia with Lewy bodies"[tiab]
+        OR DLB[tiab]
       )
-
     priority: "P1"
 
 
   ad_ftd:
     description: >
       Alzheimer disease and frontotemporal dementia differential
-      evidence.
-
+      evidence, focused on the clinical FTD concept.
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -558,7 +518,24 @@ queries:
         OR "frontotemporal dementia"[tiab]
         OR FTD[tiab]
       )
+    priority: "P1"
 
+
+  ad_ftld:
+    description: >
+      Alzheimer disease and the broader frontotemporal lobar
+      degeneration disease concept.
+    query: >
+      (
+        "Alzheimer Disease"[Mesh]
+        OR Alzheimer*[tiab]
+      )
+      AND
+      (
+        "Frontotemporal Lobar Degeneration"[Mesh]
+        OR "frontotemporal lobar degeneration"[tiab]
+        OR FTLD[tiab]
+      )
     priority: "P1"
 
 
@@ -569,7 +546,6 @@ queries:
   ad_pharmacotherapy:
     description: >
       Alzheimer disease pharmacotherapy and drug treatment.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -585,7 +561,6 @@ queries:
         OR drug*[tiab]
         OR medication*[tiab]
       )
-
     priority: "P0"
 
 
@@ -593,7 +568,6 @@ queries:
     description: >
       Established symptomatic pharmacotherapy, including
       cholinesterase inhibitors.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -601,13 +575,13 @@ queries:
       )
       AND
       (
-        cholinesterase inhibitor*[tiab]
+        "cholinesterase inhibitor"[tiab]
+        OR "cholinesterase inhibitors"[tiab]
         OR donepezil[tiab]
         OR rivastigmine[tiab]
         OR galantamine[tiab]
         OR memantine[tiab]
       )
-
     priority: "P1"
 
 
@@ -618,7 +592,6 @@ queries:
   ad_anti_amyloid:
     description: >
       Alzheimer disease anti-amyloid monoclonal antibody therapies.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -630,9 +603,9 @@ queries:
         OR "anti amyloid"[tiab]
         OR "amyloid-targeting"[tiab]
         OR "amyloid targeting"[tiab]
-        OR monoclonal antibod*[tiab]
+        OR "monoclonal antibody"[tiab]
+        OR "monoclonal antibodies"[tiab]
       )
-
     priority: "P0"
 
 
@@ -640,7 +613,6 @@ queries:
     description: >
       Lecanemab evidence, including efficacy, eligibility,
       safety, monitoring and clinical use.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -651,7 +623,6 @@ queries:
         lecanemab[tiab]
         OR "lecanemab-irmb"[tiab]
       )
-
     priority: "P0"
 
 
@@ -659,7 +630,6 @@ queries:
     description: >
       Donanemab evidence, including efficacy, eligibility,
       safety, monitoring and clinical use.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -670,7 +640,6 @@ queries:
         donanemab[tiab]
         OR "donanemab-azbt"[tiab]
       )
-
     priority: "P0"
 
 
@@ -682,7 +651,6 @@ queries:
     description: >
       Amyloid-related imaging abnormalities associated with
       Alzheimer disease and anti-amyloid therapy.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -696,7 +664,6 @@ queries:
         OR "ARIA-E"[tiab]
         OR "ARIA-H"[tiab]
       )
-
     priority: "P0"
 
 
@@ -704,7 +671,6 @@ queries:
     description: >
       ARIA monitoring, MRI surveillance, management and
       risk assessment.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -726,7 +692,6 @@ queries:
         OR safety[tiab]
         OR risk[tiab]
       )
-
     priority: "P0"
 
 
@@ -738,7 +703,6 @@ queries:
     description: >
       Eligibility, contraindications, safety and treatment
       selection for anti-amyloid therapies.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -760,7 +724,6 @@ queries:
         OR "appropriate use"[tiab]
         OR monitoring[tiab]
       )
-
     priority: "P0"
 
 
@@ -772,7 +735,6 @@ queries:
     description: >
       PubMed-indexed Alzheimer clinical practice guidelines,
       recommendations and consensus statements.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -787,14 +749,12 @@ queries:
         OR "appropriate use"[tiab]
         OR "appropriate use recommendations"[tiab]
       )
-
     priority: "P0"
 
 
   ad_consensus:
     description: >
       Alzheimer disease consensus and expert recommendations.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -808,7 +768,6 @@ queries:
         OR "clinical recommendation"[tiab]
         OR "clinical recommendations"[tiab]
       )
-
     priority: "P1"
 
 
@@ -820,7 +779,6 @@ queries:
     description: >
       Systematic reviews and meta-analyses relevant to
       Alzheimer evidence synthesis.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -834,7 +792,6 @@ queries:
         OR "meta-analysis"[tiab]
         OR "meta analyses"[tiab]
       )
-
     priority: "P0"
 
 
@@ -844,26 +801,34 @@ queries:
 #
 # This is deliberately NOT the main Alzheimer corpus query.
 # It provides controlled coverage of the "Alzheimer disease and
-# related dementias" scope stated in the proposal.
+# related dementias" scope stated in the thesis.
 #
 # These records should be tagged separately so that they cannot
 # silently become indistinguishable from AD-specific evidence.
+#
 # ============================================================
 
   related_dementias:
     description: >
       Broader related-dementia literature for the ADRD component.
-      Must receive an explicit disease_scope metadata label.
-
+      Includes general dementia, Lewy body disease and both the
+      broader FTLD and clinical FTD concepts.
     query: >
       (
         "Dementia"[Mesh]
         OR "Lewy Body Disease"[Mesh]
+        OR "Frontotemporal Lobar Degeneration"[Mesh]
         OR "Frontotemporal Dementia"[Mesh]
+        OR dementia[tiab]
+        OR "Lewy body disease"[tiab]
+        OR "Lewy body dementia"[tiab]
+        OR "dementia with Lewy bodies"[tiab]
+        OR "frontotemporal dementia"[tiab]
+        OR "frontotemporal lobar degeneration"[tiab]
+        OR FTD[tiab]
+        OR FTLD[tiab]
       )
-
     priority: "P2"
-
     metadata:
       disease_scope: "related_dementia"
 
@@ -874,13 +839,13 @@ queries:
 #
 # This is useful as a recall-oriented benchmark query.
 # It should NOT automatically replace the domain-specific queries.
+#
 # ============================================================
 
   ad_high_recall:
     description: >
       Broad Alzheimer disease evidence retrieval combining the
       canonical disease heading with common disease terminology.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -888,7 +853,6 @@ queries:
         OR "Alzheimer's disease"[tiab]
         OR Alzheimer*[tiab]
       )
-
     priority: "P0"
 
 
@@ -903,13 +867,13 @@ queries:
 # globally.
 #
 # These queries are for the recent-evidence/currency component.
+#
 # ============================================================
 
   currency_ad_recent:
     description: >
       Recent Alzheimer evidence for the currency pack / current
       evidence layer. Historical records remain in the main corpus.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -931,9 +895,7 @@ queries:
       )
       AND
       ("2024/01/01"[Date - Publication] : "3000"[Date - Publication])
-
     priority: "P0"
-
     use_for:
       - "currency_pack_discovery"
       - "recent_evidence_audit"
@@ -946,17 +908,12 @@ queries:
 # Retraction/withdrawal status is a metadata property, not a
 # reason to silently omit historical records from retrieval.
 #
-# The thesis proposal explicitly treats retraction/withdrawal
-# differently from supersession: these are objective controls,
-# whereas supersession should be represented rather than blindly
-# deleting evidence.
 # ============================================================
 
   ad_retracted_records:
     description: >
       Identify retracted Alzheimer records so that their metadata
       can be retained and downstream admission can hard-reject them.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -965,10 +922,9 @@ queries:
       AND
       (
         "Retracted Publication"[pt]
-        OR retracted publication[tiab]
+        OR "retracted publication"[tiab]
         OR retraction[tiab]
       )
-
     priority: "P1"
 
 
@@ -980,6 +936,7 @@ queries:
 #
 # They identify time-invariant evidence needed for the thesis
 # negative-control set.
+#
 # ============================================================
 
   ad_time_invariant_candidates:
@@ -987,7 +944,6 @@ queries:
       Candidate Alzheimer evidence concerning relatively stable
       biological or pharmacological facts. Final designation as
       time-invariant must be manually validated.
-
     query: >
       (
         "Alzheimer Disease"[Mesh]
@@ -1003,12 +959,11 @@ queries:
         OR acetylcholinesterase[tiab]
         OR memantine[tiab]
       )
-
     priority: "P2"
 
 
 # ============================================================
-# RETRIEVAL POLICY
+# 22. RETRIEVAL POLICY
 # ============================================================
 
 retrieval_policy:
@@ -1063,6 +1018,7 @@ retrieval_policy:
 
     differential:
       - "Lewy Body Disease"
+      - "Frontotemporal Lobar Degeneration"
       - "Frontotemporal Dementia"
 
     rule: >
@@ -1072,7 +1028,7 @@ retrieval_policy:
 
 
 # ============================================================
-# QUERY EXECUTION STRATEGY
+# 23. QUERY EXECUTION STRATEGY
 # ============================================================
 
 execution:
@@ -1114,6 +1070,7 @@ execution:
     - "related_dementias"
     - "ad_lbd"
     - "ad_ftd"
+    - "ad_ftld"
     - "ad_time_invariant_candidates"
 
   currency_queries:
@@ -1124,7 +1081,7 @@ execution:
 
 
 # ============================================================
-# EXPECTED DOWNSTREAM METADATA
+# 24. EXPECTED DOWNSTREAM METADATA
 # ============================================================
 
 metadata_requirements:
@@ -1171,7 +1128,7 @@ metadata_requirements:
 
 
 # ============================================================
-# REPORTING
+# 25. REPORTING
 # ============================================================
 
 reporting:
