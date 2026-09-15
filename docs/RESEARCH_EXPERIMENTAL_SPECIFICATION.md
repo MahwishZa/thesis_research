@@ -879,6 +879,8 @@ The contested state is evaluated before supersession.
 
 When a contested condition is triggered, the system shall preserve representative evidence for both positions and identify the disagreement in the output.
 
+Preservation operates within the common context budget of section 16, which is never exceeded. Where contested evidence exceeds that budget, contested evidence is retained ahead of uncontested evidence, in descending A(s) with `evidence_id` as tie-break, up to the budget; the contested positions preserved and those dropped are recorded in the run metadata. This clarification resolves the conflict between this section and section 16 and does not alter either requirement in the non-exceeding case.
+
 ---
 
 # 30. Non-Comparability and Contradiction

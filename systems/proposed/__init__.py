@@ -1,6 +1,7 @@
 """SCAF proposed-system implementation."""
 
 from .admission import (
+    CONTESTED_BUDGET_POLICY,
     SCAFAdmissionPolicy,
     SCAFConfig,
     SCAFDecision,
@@ -28,6 +29,7 @@ from .verifier import (
 )
 
 __all__ = [
+    "CONTESTED_BUDGET_POLICY",
     "SCAFAdmissionPolicy",
     "SCAFConfig",
     "SCAFDecision",
@@ -38,7 +40,6 @@ __all__ = [
     "CurrencyPolicy",
     "CurrencyResult",
     "CurrencyState",
-    "CurrencyResult",
     "SCAFScore",
     "SCAFScorer",
     "SCAFWeights",

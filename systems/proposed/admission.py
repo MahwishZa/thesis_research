@@ -32,6 +32,13 @@ from .scorer import SCAFScore, SCAFScorer
 from .verifier import ClaimVerifier
 
 
+#: Fixed implementation policy resolving the section 16 / section 29 conflict.
+#: The common context budget is never exceeded; contested evidence is retained
+#: first, up to the budget, and dropped positions are recorded. This is not a
+#: supervisor-dependent scientific parameter.
+CONTESTED_BUDGET_POLICY = "cap"
+
+
 class SCAFState(str, Enum):
     """SCAF output states (specification section 31).
 
@@ -66,19 +73,17 @@ class SCAFConfig:
 
     # Sections 16 and 29 can conflict: section 16 makes the context budget
     # INVARIANT across arms, while section 29 requires both positions of a
-    # contested claim to be preserved. The research documents do not say
-    # which wins, so the resolution is explicit here rather than silent.
+    # contested claim to be preserved. This conflict is resolved by a FIXED
+    # IMPLEMENTATION POLICY, not by a configurable scientific parameter:
     #
-    #   "cap"    - the budget is never exceeded. Contested passages are
-    #              prioritised within it, and any position that still had to
-    #              be dropped is recorded. Arm comparability is preserved.
-    #   "exempt" - both positions are always kept, so the budget may be
-    #              exceeded. This BREAKS the section 16 invariant and must be
-    #              declared in the write-up; the overrun is recorded.
+    #   "cap" - the context budget is never exceeded. Contested evidence is
+    #           retained first, by the deterministic ranking and tie-break
+    #           below, up to the budget; positions that still had to be
+    #           dropped are recorded in the result metadata.
     #
-    # Default is "cap" because silently breaking an invariant that Stage 5
-    # comparability rests on is the worse failure.
-    contested_budget_policy: str = "cap"
+    # The field exists only so the policy in force is recorded in the run
+    # metadata. No alternative value is accepted.
+    contested_budget_policy: str = CONTESTED_BUDGET_POLICY
 
     def validate(self) -> None:
 
@@ -101,10 +106,12 @@ class SCAFConfig:
                     "max_admitted_passages must be positive."
                 )
 
-        if self.contested_budget_policy not in ("cap", "exempt"):
+        if self.contested_budget_policy != CONTESTED_BUDGET_POLICY:
             raise ValueError(
-                "contested_budget_policy must be 'cap' or 'exempt'; got "
-                f"{self.contested_budget_policy!r}."
+                "contested_budget_policy is a fixed implementation policy "
+                f"and must be {CONTESTED_BUDGET_POLICY!r}; got "
+                f"{self.contested_budget_policy!r}. SCAF must never exceed "
+                "the common context budget."
             )
 
 
@@ -268,9 +275,9 @@ class SCAFAdmissionPolicy:
         # --- 5. matched context budget ------------------------------------
         # Specification section 16 makes the context budget invariant across
         # arms; section 29 requires both positions of a contested claim to
-        # survive. Under "cap" the invariant wins and contested passages are
-        # merely prioritised inside the budget; under "exempt" section 29
-        # wins and the overrun is recorded. Neither is chosen silently.
+        # survive. The fixed policy is "cap": the budget wins, contested
+        # evidence is retained first inside it, and any contested position
+        # that still had to be dropped is recorded rather than lost silently.
         #
         # Ordering is A(s) descending with evidence_id as a deterministic
         # tie-break, so two runs over identical inputs select identically.
@@ -300,26 +307,14 @@ class SCAFAdmissionPolicy:
                 key=by_score,
             )
 
-            if self.config.contested_budget_policy == "exempt":
-                # Every contested position survives; the budget may be
-                # exceeded, and that overrun is visible in the result.
-                keep = {
-                    d.candidate.evidence.evidence_id
-                    for d in contested_admitted
-                }
-                for decision in other_admitted:
-                    if len(keep) >= limit:
-                        break
-                    keep.add(decision.candidate.evidence.evidence_id)
-            else:
-                # "cap": contested passages are taken first so that
-                # representation survives as far as the budget allows, but
-                # the budget is never exceeded.
-                keep = set()
-                for decision in contested_admitted + other_admitted:
-                    if len(keep) >= limit:
-                        break
-                    keep.add(decision.candidate.evidence.evidence_id)
+            # Contested evidence is taken first so that representation
+            # survives as far as the budget allows; the budget itself is
+            # never exceeded.
+            keep: set[str] = set()
+            for decision in contested_admitted + other_admitted:
+                if len(keep) >= limit:
+                    break
+                keep.add(decision.candidate.evidence.evidence_id)
 
             decisions = [
                 (
@@ -463,6 +458,10 @@ class SCAFSystem(System):
             # comparison can verify it held rather than assume it.
             "context_budget": {
                 "limit": limit,
+                # False means no numerical budget has been set yet. The
+                # budget is an experimental parameter and is not invented
+                # here; an unset budget means this run is NOT arm-comparable.
+                "budget_configured": limit is not None,
                 "admitted": len(admitted),
                 "policy": (
                     self.admission_policy.config.contested_budget_policy

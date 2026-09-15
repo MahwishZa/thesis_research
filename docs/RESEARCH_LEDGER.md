@@ -3,7 +3,7 @@
 Living record for the thesis *Does the Filter Prefer the Past?* — updated whenever new
 information changes a decision. Companion to `RESEARCH_UNDERSTANDING_REPORT.md`.
 
-**Last updated:** 2026-09-11 · **Current pipeline stage:** Stage 1 (Build Alzheimer's Corpus) · **Status:** Not Ready
+**Last updated:** 2026-09-15 · **Current pipeline stage:** Stage 1 (Build Alzheimer's Corpus) · **Status:** Not Ready
 
 Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]` reported by published research ·
 `[INF]` methodological inference · `[STU]` student assumption · `[REC]` recommendation by the assistant
@@ -51,6 +51,7 @@ Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]` reporte
 | D-11 | Phase 4 (probe) precedes Phase 5 (SCAF) | Discover a failed primary claim in month five, not month nine | **Endorsed** — extend the same logic one stage earlier (see R-1) |
 | D-12 | Rank-based rather than min-max normalisation of ρ(s) | Makes a global θ_admit well defined across queries | **Endorsed** |
 | D-13 | Both filters trained on general medical QA, applied zero-shot to AD items | Removes suspicion that domain gains come from domain-specific fine-tuning | **Endorsed** |
+| D-14 | Contested evidence is capped by the common context budget, never exempted from it. When contested evidence exceeds the budget it is retained first, by A(s) descending with `evidence_id` as tie-break, up to the budget; preserved and dropped contested positions are recorded in the run metadata | §16 makes the context budget invariant across arms; §29 requires both positions of a contested claim to survive. The two conflict only when contested evidence exceeds the budget. Exempting contested evidence would give SCAF more context than the baseline, so any Stage-5 difference would be confounded by context volume rather than by admission policy. Capping keeps the arms comparable and makes the cost visible instead of silent | **Fixed implementation policy** — not a supervisor-dependent scientific parameter |
 
 ### Recommended by this assistant (pending student/supervisor acceptance)
 
@@ -175,4 +176,5 @@ None of these is necessary to answer RQ1–RQ6. Recorded so they do not distract
 
 | Date | Change |
 |---|---|
+| 2026-09-15 | D-14 recorded: `contested_budget_policy = "cap"` fixed as implementation policy. The `"exempt"` alternative removed from `systems/proposed/admission.py`, so no supported path can exceed the context budget. The numerical budget itself (`max_admitted_passages`) remains an unset experimental parameter and is recorded per run as `context_budget.budget_configured`. |
 | 2026-09-11 | Ledger created. Initial research understanding built from D1 (proposal) and D2 (RAG², NAACL 2025). Fifteen established facts recorded; thirteen student decisions endorsed; ten recommendations raised; thirteen assumptions and fifteen risks registered. Stage 1 assessed **Not Ready** pending the Checks A–D feasibility audit. |
