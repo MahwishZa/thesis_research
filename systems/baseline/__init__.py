@@ -1,6 +1,9 @@
 """RAG² baseline implementation."""
 
 from .admission import (
+    HELPFUL,
+    NOT_HELPFUL,
+    RAG2_FILTER_TEMPLATE,
     AdmissionDecision,
     AdmissionFilter,
     FlanT5RAG2Filter,
@@ -12,6 +15,9 @@ from .rag2 import (
 )
 
 __all__ = [
+    "HELPFUL",
+    "NOT_HELPFUL",
+    "RAG2_FILTER_TEMPLATE",
     "AdmissionDecision",
     "AdmissionFilter",
     "FlanT5RAG2Filter",

@@ -1,8 +1,24 @@
-"""SCAF admission policy and proposed system."""
+"""SCAF admission policy and proposed system.
+
+Order of operations, which follows the experimental specification and is not
+interchangeable:
+
+    1. detect contested claim classes over the FULL candidate set
+    2. score each candidate, passing its contested status into gamma
+       (specification section 29: contested is evaluated BEFORE supersession)
+    3. apply the admission threshold
+    4. preserve representative evidence for both sides of any contested claim
+    5. apply the matched context budget by score rank
+    6. derive the system output state
+
+Step 1 must see every candidate, not only admitted ones: a contested claim
+whose opposing side was already discarded cannot be represented, and
+specification section 29 requires both positions to survive.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from enum import Enum
 from typing import Callable, Optional, Sequence
@@ -17,7 +33,13 @@ from .verifier import ClaimVerifier
 
 
 class SCAFState(str, Enum):
-    """SCAF output states."""
+    """SCAF output states (specification section 31).
+
+    These are SYSTEM output states describing the answer as a whole. They are
+    not per-passage labels: a rejected candidate carries ``state=None``, not
+    ABSTAIN, because ABSTAIN means "the available evidence is insufficient for
+    a supported answer" and is a property of the item, not of one passage.
+    """
 
     GROUNDED = "GROUNDED"
     FLAGGED = "FLAGGED"
@@ -27,22 +49,34 @@ class SCAFState(str, Enum):
 
 @dataclass(frozen=True)
 class SCAFConfig:
-    """Configuration explicitly supplied by the experiment."""
+    """Configuration explicitly supplied by the experiment.
+
+    Every value the specification leaves ``[TO BE SPECIFIED]`` defaults to
+    ``None`` and raises rather than taking an invented value.
+    """
 
     admit_threshold: Optional[float] = None
     question_date: Optional[date] = None
     max_admitted_passages: Optional[int] = None
 
+    # Specification section 29: when a contested claim is detected, both
+    # positions must survive admission. Leaving this False would let the
+    # threshold silence one side of a dispute the system exists to surface.
+    preserve_contested_positions: bool = True
+
     def validate(self) -> None:
 
         if self.admit_threshold is None:
             raise ValueError(
-                "SCAF admit_threshold is unresolved."
+                "SCAF admit_threshold is unresolved. It is "
+                "[TO BE SPECIFIED] in the experimental specification and "
+                "must be set on validation data before any test run."
             )
 
         if self.question_date is None:
             raise ValueError(
-                "SCAF question_date is required."
+                "SCAF question_date (t_q) is required: gamma is undefined "
+                "without an as-of date."
             )
 
         if self.max_admitted_passages is not None:
@@ -60,17 +94,20 @@ class SCAFDecision:
     score: SCAFScore
 
     admitted: bool
-    state: SCAFState
+
+    # None for rejected candidates - see SCAFState.
+    state: Optional[SCAFState]
 
     currency_state: str
+
+    # True when this passage was retained to represent one side of a
+    # contested claim despite scoring below the admission threshold.
+    preserved_for_contest: bool = False
 
     conflicts: tuple[ClaimConflict, ...] = ()
 
 
-StateFunction = Callable[
-    [SCAFScore, Candidate],
-    SCAFState,
-]
+StateFunction = Callable[[SCAFScore, Candidate], SCAFState]
 
 
 class SCAFAdmissionPolicy:
@@ -82,14 +119,8 @@ class SCAFAdmissionPolicy:
         scorer: SCAFScorer,
         currency: CurrencyPolicy,
         contested: ContestedDetector,
-        support_fn: Callable[
-            [str, Candidate],
-            float,
-        ],
-        authority_fn: Callable[
-            [Candidate],
-            float,
-        ],
+        support_fn: Callable[[str, Candidate], float],
+        authority_fn: Callable[[Candidate], float],
         state_fn: StateFunction,
         config: SCAFConfig,
     ) -> None:
@@ -117,26 +148,39 @@ class SCAFAdmissionPolicy:
 
         question_date = self.config.question_date
 
-        assert question_date is not None
+        if question_date is None:
+            # Defensive: validate() already enforces this. Not an assert,
+            # because assertions are stripped under `python -O`.
+            raise ValueError("SCAF question_date is required.")
 
+        # --- 1. contested detection, over the FULL candidate set ----------
+        conflicts = self.contested.find_conflicts(candidates)
+        contested_classes = self.contested.contested_claim_classes(conflicts)
+
+        conflict_ids: set[str] = set()
+        for conflict in conflicts:
+            conflict_ids.add(conflict.evidence_a)
+            conflict_ids.add(conflict.evidence_b)
+
+        # --- 2. score, with contested status feeding gamma ----------------
         decisions: list[SCAFDecision] = []
 
         for candidate in candidates:
+
+            is_contested = bool(
+                contested_classes
+                & set(candidate.evidence.claim_classes)
+            )
 
             currency_result = self.currency.score(
                 candidate.evidence,
                 question=question,
                 question_date=question_date,
+                contested=is_contested,
             )
 
-            support = self.support_fn(
-                question,
-                candidate,
-            )
-
-            authority = self.authority_fn(
-                candidate,
-            )
+            support = self.support_fn(question, candidate)
+            authority = self.authority_fn(candidate)
 
             score = self.scorer.score(
                 candidate,
@@ -146,19 +190,19 @@ class SCAFAdmissionPolicy:
                 candidate_count=len(candidates),
             )
 
+            # --- 3. threshold -------------------------------------------
             admitted = (
-                score.total
-                >= self.config.admit_threshold
+                score.total >= self.config.admit_threshold
                 and not candidate.evidence.is_hard_invalid()
             )
 
-            if admitted:
-                state = self.state_fn(
-                    score,
-                    candidate,
-                )
+            state: Optional[SCAFState]
+            if not admitted:
+                state = None
+            elif candidate.evidence.evidence_id in conflict_ids:
+                state = SCAFState.CONTESTED
             else:
-                state = SCAFState.ABSTAIN
+                state = self.state_fn(score, candidate)
 
             decisions.append(
                 SCAFDecision(
@@ -166,85 +210,73 @@ class SCAFAdmissionPolicy:
                     score=score,
                     admitted=admitted,
                     state=state,
-                    currency_state=(
-                        currency_result.state.value
-                    ),
+                    currency_state=currency_result.state.value,
+                    conflicts=conflicts,
                 )
             )
 
-        admitted_candidates = tuple(
-            decision.candidate
-            for decision in decisions
-            if decision.admitted
-        )
-
-        conflicts = self.contested.find_conflicts(
-            admitted_candidates
-        )
-
-        if conflicts:
-
-            conflict_ids = {
-                conflict.evidence_a
-                for conflict in conflicts
-            }
-
-            conflict_ids.update(
-                conflict.evidence_b
-                for conflict in conflicts
-            )
-
+        # --- 4. preserve both sides of any contested claim ----------------
+        # Retraction and withdrawal remain the only hard exclusions, so a
+        # retracted passage is never resurrected to represent a position.
+        if conflicts and self.config.preserve_contested_positions:
             decisions = [
-                SCAFDecision(
-                    candidate=decision.candidate,
-                    score=decision.score,
-                    admitted=decision.admitted,
-                    state=(
-                        SCAFState.CONTESTED
-                        if (
-                            decision.candidate.evidence.evidence_id
-                            in conflict_ids
-                        )
-                        else decision.state
-                    ),
-                    currency_state=decision.currency_state,
-                    conflicts=conflicts,
+                (
+                    replace(
+                        decision,
+                        admitted=True,
+                        state=SCAFState.CONTESTED,
+                        preserved_for_contest=True,
+                    )
+                    if (
+                        not decision.admitted
+                        and decision.candidate.evidence.evidence_id
+                        in conflict_ids
+                        and not decision.candidate.evidence.is_hard_invalid()
+                    )
+                    else decision
                 )
                 for decision in decisions
             ]
 
-        if self.config.max_admitted_passages is not None:
+        # --- 5. matched context budget, by score rank ---------------------
+        # Ranked by A(s) descending with evidence_id as a deterministic
+        # tie-break, so two runs over identical inputs select identically.
+        # Passages preserved for a contest are exempt: dropping one would
+        # re-introduce the one-sided view step 4 exists to prevent.
+        limit = self.config.max_admitted_passages
 
-            limited: list[SCAFDecision] = []
-            admitted_count = 0
+        if limit is not None:
 
-            for decision in decisions:
+            ranked = sorted(
+                (d for d in decisions if d.admitted),
+                key=lambda d: (
+                    -d.score.total,
+                    d.candidate.evidence.evidence_id,
+                ),
+            )
 
-                if not decision.admitted:
-                    limited.append(decision)
-                    continue
+            keep: set[str] = {
+                d.candidate.evidence.evidence_id
+                for d in ranked
+                if d.preserved_for_contest
+            }
 
-                if (
-                    admitted_count
-                    >= self.config.max_admitted_passages
-                ):
-                    limited.append(
-                        SCAFDecision(
-                            candidate=decision.candidate,
-                            score=decision.score,
-                            admitted=False,
-                            state=SCAFState.ABSTAIN,
-                            currency_state=(
-                                decision.currency_state
-                            ),
-                            conflicts=decision.conflicts,
-                        )
+            for decision in ranked:
+                if len(keep) >= limit:
+                    break
+                keep.add(decision.candidate.evidence.evidence_id)
+
+            decisions = [
+                (
+                    decision
+                    if (
+                        not decision.admitted
+                        or decision.candidate.evidence.evidence_id in keep
                     )
-                else:
-                    limited.append(decision)
-                    admitted_count += 1
-
-            decisions = limited
+                    else replace(decision, admitted=False, state=None)
+                )
+                for decision in decisions
+            ]
 
         return tuple(decisions)
 
@@ -260,22 +292,29 @@ class SCAFSystem(System):
         answer_generator: Generator,
         admission_policy: SCAFAdmissionPolicy,
         verifier: Optional[ClaimVerifier] = None,
+        context_prompt: Optional[str] = None,
     ) -> None:
+        """
+        Args:
+            context_prompt: answer-prompt template with ``{question}`` and
+                ``{context}`` fields. Specification section 16 requires
+                prompt parity across arms, so the experiment runner should
+                pass the SAME template here and to the baseline.
+        """
 
         self.answer_generator = answer_generator
         self.admission_policy = admission_policy
         self.verifier = verifier
+        self.context_prompt = context_prompt
 
-    @staticmethod
     def build_prompt(
+        self,
         question: str,
         decisions: Sequence[SCAFDecision],
     ) -> str:
 
         admitted = [
-            decision
-            for decision in decisions
-            if decision.admitted
+            decision for decision in decisions if decision.admitted
         ]
 
         context = "\n\n".join(
@@ -286,8 +325,14 @@ class SCAFSystem(System):
             for decision in admitted
         )
 
+        if self.context_prompt is not None:
+            return self.context_prompt.format(
+                question=question,
+                context=context,
+            )
+
         return (
-            "Answer the question using the selected evidence.\n\n"
+            "Answer the question using the provided evidence.\n\n"
             f"Question: {question}\n\n"
             f"Evidence:\n{context}"
         )
@@ -299,94 +344,13 @@ class SCAFSystem(System):
         experiment_id: str,
         question: str,
         candidates: Sequence[Candidate],
+        rationale: Optional[str] = None,
     ) -> ExperimentResult:
 
-        decisions = self.admission_policy.decide(
-            question,
-            candidates,
-        )
+        decisions = self.admission_policy.decide(question, candidates)
 
-        admitted = tuple(
-            decision
-            for decision in decisions
-            if decision.admitted
-        )
-
-        rejected = tuple(
-            decision
-            for decision in decisions
-            if not decision.admitted
-        )
-
-        if not admitted:
-
-            return ExperimentResult(
-                sample_id=sample_id,
-                experiment_id=experiment_id,
-                variant=self.name,
-                prediction=None,
-                output_state=SCAFState.ABSTAIN.value,
-                admitted_evidence_ids=(),
-                rejected_evidence_ids=tuple(
-                    decision.candidate.evidence.evidence_id
-                    for decision in rejected
-                ),
-                candidate_count=len(candidates),
-                metadata={
-                    "system": "SCAF",
-                    "reason": "no_admitted_evidence",
-                },
-            )
-
-        evidence = tuple(
-            decision.candidate.evidence
-            for decision in admitted
-        )
-
-        prompt = self.build_prompt(
-            question,
-            decisions,
-        )
-
-        answer = self.answer_generator.generate(
-            question,
-            evidence,
-            prompt=prompt,
-        )
-
-        states = {
-            decision.state
-            for decision in admitted
-        }
-
-        if SCAFState.CONTESTED in states:
-            output_state = SCAFState.CONTESTED
-
-        elif SCAFState.FLAGGED in states:
-            output_state = SCAFState.FLAGGED
-
-        else:
-            output_state = SCAFState.GROUNDED
-
-        verification_metadata = None
-
-        if self.verifier is not None:
-
-            verification = self.verifier.verify(
-                answer.text,
-                evidence,
-            )
-
-            verification_metadata = {
-                "supported": verification.supported,
-                "confidence": verification.confidence,
-                "claims_checked": (
-                    verification.claims_checked
-                ),
-                "metadata": dict(
-                    verification.metadata
-                ),
-            }
+        admitted = tuple(d for d in decisions if d.admitted)
+        rejected = tuple(d for d in decisions if not d.admitted)
 
         score_metadata = {
             decision.candidate.evidence.evidence_id: {
@@ -395,13 +359,87 @@ class SCAFSystem(System):
                 "currency": decision.score.currency,
                 "rerank": decision.score.rerank,
                 "authority": decision.score.authority,
-                "currency_state": (
-                    decision.currency_state
+                "currency_state": decision.currency_state,
+                "state": (
+                    decision.state.value
+                    if decision.state is not None
+                    else None
                 ),
-                "state": decision.state.value,
+                "admitted": decision.admitted,
+                "preserved_for_contest": decision.preserved_for_contest,
             }
             for decision in decisions
         }
+
+        conflicts = decisions[0].conflicts if decisions else ()
+
+        base_metadata = {
+            "system": "SCAF",
+            "scores": score_metadata,
+            "conflicts": [
+                {
+                    "evidence_a": c.evidence_a,
+                    "evidence_b": c.evidence_b,
+                    "claim_class": c.claim_class,
+                    "separation_days": c.separation_days,
+                }
+                for c in conflicts
+            ],
+            # Records which specification conditions were actually applied,
+            # so a contested result is never read as though an unresolved
+            # condition had been checked.
+            "contested_conditions_enforced": list(
+                self.admission_policy.contested.enforced_conditions
+            ),
+        }
+
+        if not admitted:
+            return ExperimentResult(
+                sample_id=sample_id,
+                experiment_id=experiment_id,
+                variant=self.name,
+                prediction=None,
+                output_state=SCAFState.ABSTAIN.value,
+                admitted_evidence_ids=(),
+                rejected_evidence_ids=tuple(
+                    d.candidate.evidence.evidence_id for d in rejected
+                ),
+                candidate_count=len(candidates),
+                rationale=rationale,
+                metadata={
+                    **base_metadata,
+                    "reason": "no_admitted_evidence",
+                },
+            )
+
+        evidence = tuple(d.candidate.evidence for d in admitted)
+        prompt = self.build_prompt(question, decisions)
+
+        answer = self.answer_generator.generate(
+            question,
+            evidence,
+            prompt=prompt,
+        )
+
+        states = {d.state for d in admitted}
+
+        if SCAFState.CONTESTED in states:
+            output_state = SCAFState.CONTESTED
+        elif SCAFState.FLAGGED in states:
+            output_state = SCAFState.FLAGGED
+        else:
+            output_state = SCAFState.GROUNDED
+
+        verification_metadata = None
+
+        if self.verifier is not None:
+            verification = self.verifier.verify(answer.text, evidence)
+            verification_metadata = {
+                "supported": verification.supported,
+                "confidence": verification.confidence,
+                "claims_checked": verification.claims_checked,
+                "metadata": dict(verification.metadata),
+            }
 
         return ExperimentResult(
             sample_id=sample_id,
@@ -410,19 +448,17 @@ class SCAFSystem(System):
             prediction=answer.text,
             output_state=output_state.value,
             admitted_evidence_ids=tuple(
-                decision.candidate.evidence.evidence_id
-                for decision in admitted
+                d.candidate.evidence.evidence_id for d in admitted
             ),
             rejected_evidence_ids=tuple(
-                decision.candidate.evidence.evidence_id
-                for decision in rejected
+                d.candidate.evidence.evidence_id for d in rejected
             ),
             candidate_count=len(candidates),
+            rationale=rationale,
             generated_text=answer.text,
             confidence=answer.confidence,
             metadata={
-                "system": "SCAF",
-                "scores": score_metadata,
+                **base_metadata,
                 "verification": verification_metadata,
             },
         )

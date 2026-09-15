@@ -1,0 +1,20 @@
+# Minimal packaging metadata. The file existed but was empty (0 bytes), which
+# is not valid TOML and made `pip install -e .` fail.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thesis-research"
+version = "0.1.0"
+description = "RAG2 baseline and SCAF proposed admission policy for the MS thesis on recency bias in retrieval-augmented Alzheimer's clinical reasoning."
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6.0"]
+
+# Model backends are optional: the systems package runs, and is testable,
+# without them. Install when a real checkpoint is available.
+[project.optional-dependencies]
+models = ["torch>=2.0", "transformers>=4.40"]
+
+[tool.setuptools]
+packages = ["systems", "systems.interfaces", "systems.baseline", "systems.proposed"]

@@ -38,6 +38,7 @@ __all__ = [
     "CurrencyPolicy",
     "CurrencyResult",
     "CurrencyState",
+    "CurrencyResult",
     "SCAFScore",
     "SCAFScorer",
     "SCAFWeights",
