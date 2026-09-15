@@ -11,7 +11,9 @@ from .schema import (
     TestPair,
     ValidationStatus,
     assert_firewall,
+    content_hash,
     read_pairs,
+    verify_frozen,
     write_pairs,
 )
 
@@ -26,6 +28,8 @@ __all__ = [
     "TestPair",
     "ValidationStatus",
     "assert_firewall",
+    "content_hash",
     "read_pairs",
+    "verify_frozen",
     "write_pairs",
 ]

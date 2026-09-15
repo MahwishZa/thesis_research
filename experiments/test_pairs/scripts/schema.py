@@ -30,6 +30,7 @@ produce byte-identical files.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import asdict, dataclass, replace
 from datetime import date
@@ -43,6 +44,28 @@ POOL_PRIMARY_EXTERNAL = "primary_external"
 POOL_SECONDARY_CURATED = "secondary_curated"
 
 POOLS = (POOL_PRIMARY_EXTERNAL, POOL_SECONDARY_CURATED)
+
+
+#: Where a passage's text comes from. ``external_item`` passages travel with
+#: the evaluation item itself (the two systematic-review records the external
+#: dataset is built from) and are injected into the Stage-3 candidate set.
+#: ``corpus`` passages are references into the frozen Alzheimer's corpus.
+#: Both carry stable ids; the distinction is recorded so a reviewer can see
+#: which passages the retriever had to find and which were placed there.
+ORIGIN_EXTERNAL_ITEM = "external_item"
+ORIGIN_CORPUS = "corpus"
+
+EVIDENCE_ORIGINS = (ORIGIN_EXTERNAL_ITEM, ORIGIN_CORPUS)
+
+
+#: ``question_date`` values derived from the pair's own evidence are barred:
+#: setting t_q to the newer passage's publication date gives that passage
+#: gamma = 1 by construction, inflating the currency contrast SCAF is being
+#: measured on. See ledger decision D-21.
+FORBIDDEN_QUESTION_DATE_SOURCES = (
+    "derived:newer_publication_date",
+    "derived:older_publication_date",
+)
 
 
 class PairCategory(str, Enum):
@@ -85,6 +108,7 @@ EXCLUSION_REASONS = (
     "missing_question_date",
     "missing_reference_answer",
     "missing_publication_date",
+    "missing_evidence_text",
     "ambiguous_temporal_order",
     "insufficient_temporal_separation",
     "insufficient_contradiction",
@@ -97,6 +121,7 @@ EXCLUSION_REASONS = (
     "non_comparable_context",
     "retracted_or_withdrawn",
     "insufficient_provenance",
+    "question_date_not_independent",
     "other",
 )
 
@@ -169,11 +194,23 @@ class EvidenceRef:
     retracted: bool = False
     withdrawn: bool = False
 
+    #: Passage text. Required for ``external_item`` passages, which do not
+    #: exist anywhere else and would otherwise be unrecoverable; omitted for
+    #: ``corpus`` passages, whose text lives in the frozen corpus.
+    text: Optional[str] = None
+
+    origin: str = ORIGIN_CORPUS
+
     def __post_init__(self) -> None:
         if not self.evidence_id:
             raise SchemaError("evidence_id is required.")
         if not self.document_id:
             raise SchemaError("document_id is required.")
+        if self.origin not in EVIDENCE_ORIGINS:
+            raise SchemaError(
+                f"origin must be one of {EVIDENCE_ORIGINS}; "
+                f"got {self.origin!r}."
+            )
 
     @property
     def date_interval(self) -> tuple[Optional[date], Optional[date]]:
@@ -280,6 +317,15 @@ class TestPair:
             raise SchemaError(
                 f"{self.pair_id}: marked temporally eligible while carrying "
                 f"exclusion reasons {list(self.exclusion_reasons)}."
+            )
+
+        if self.question_date_source in FORBIDDEN_QUESTION_DATE_SOURCES:
+            raise SchemaError(
+                f"{self.pair_id}: question_date_source "
+                f"{self.question_date_source!r} derives t_q from the evidence "
+                "under test, which makes that passage maximally current by "
+                "construction (ledger D-21). Use the dataset's own date or "
+                "the experiment-wide evaluation_as_of_date."
             )
 
         for name, enum_type in (
@@ -389,6 +435,32 @@ def write_pairs(pairs: Iterable[TestPair], path: Path) -> int:
             handle.write("\n")
 
     return len(ordered)
+
+
+def content_hash(path: Path) -> str:
+    """SHA-256 of a serialised pair file.
+
+    Recorded in the Stage-2 manifest and asserted by Stage 3, so a pair file
+    edited after the evaluation set was frozen cannot be used without the
+    mismatch being visible (specification 33.6). Writing is deterministic, so
+    the hash is stable across regenerations of identical content.
+    """
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def verify_frozen(path: Path, expected_sha256: str) -> None:
+    """Raise unless ``path`` still matches the hash recorded at freeze time."""
+
+    actual = content_hash(path)
+
+    if actual != expected_sha256:
+        raise SchemaError(
+            f"{path} has changed since it was frozen (expected "
+            f"{expected_sha256[:12]}..., found {actual[:12]}...). Stage 3 "
+            "must run against the frozen evaluation set; a pair file edited "
+            "after Stage 3 results were seen invalidates the experiment."
+        )
 
 
 def read_pairs(path: Path) -> list[TestPair]:

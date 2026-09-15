@@ -5,10 +5,20 @@ different claims (specification 33.2, ledger D-2):
 
 ``--pool primary_external``
     Reads an externally-authored evaluation file whose questions, reference
-    answers and change points were not produced by this thesis. The field
-    contract is documented in :data:`EXTERNAL_FIELDS` and validated on load.
-    If the file is absent the command fails and names the dependency; it
-    never falls back to thesis-created questions.
+    answers, evidence passages and change points were not produced by this
+    thesis. The field contract is documented in :data:`EXTERNAL_FIELDS` and
+    validated on load. If the file is absent the command fails and names the
+    dependency; it never falls back to thesis-created questions.
+
+    **The pair's two passages travel with the item; they are not mapped back
+    onto corpus chunks** (ledger D-20). MedChangeQA-style items are built
+    from two systematic-review records - an earlier verdict and a later one -
+    each carrying its own identifier and date, so the passages are already
+    determined and no matching step is needed. Specification 15.2 defines the
+    admission effect as what happens "when the same candidate set is
+    available", so Stage 3 places both passages into one cached candidate set
+    and replays it across arms; whether frozen retrieval would have found
+    them is a retrieval effect (15.1) and a separate, secondary measurement.
 
 ``--pool secondary_curated``
     Reads the Alzheimer's corpus chunk file and enumerates candidate pairs
@@ -38,6 +48,8 @@ from . import attrition as attrition_module
 from . import check_a, split as split_module
 from .eligibility import EligibilityConfig, evaluate as evaluate_eligibility
 from .schema import (
+    ORIGIN_CORPUS,
+    ORIGIN_EXTERNAL_ITEM,
     POOL_PRIMARY_EXTERNAL,
     POOL_SECONDARY_CURATED,
     ContradictionStatus,
@@ -47,6 +59,7 @@ from .schema import (
     SchemaError,
     TestPair,
     ValidationStatus,
+    content_hash,
     write_pairs,
 )
 
@@ -56,30 +69,37 @@ except ImportError:  # pragma: no cover - PyYAML is a declared dependency
     yaml = None
 
 
-#: Required fields of an external evaluation file, one JSON object per line.
-#: Documented here so the file can be prepared before the dataset arrives.
+#: Fields without which a record is not an evaluation item at all. Their
+#: absence is a malformed input file, not an excludable candidate, so the
+#: loader refuses the file rather than counting the loss.
 EXTERNAL_FIELDS = (
     "question_id",
     "question_text",
     "reference_answer",
-    "older_evidence_id",
     "older_document_id",
-    "newer_evidence_id",
     "newer_document_id",
 )
 
-#: Optional fields. Absence is recorded, never filled in.
+#: Everything else is optional at load time. Absence is never filled in; it
+#: becomes a recorded exclusion reason so the attrition table can show what
+#: the dataset costs. Publication dates and passage texts belong here rather
+#: than above: "the dataset has no date for this item" is exactly the kind of
+#: loss the pilot exists to measure.
 EXTERNAL_OPTIONAL_FIELDS = (
     "question_date",
+    "older_evidence_id",
+    "newer_evidence_id",
+    "older_text",
+    "newer_text",
+    "older_publication_date",
+    "newer_publication_date",
     "change_point_date",
     "claim_class",
     "pair_category",
     "contradiction_status",
-    "older_publication_date",
     "older_source_tier",
     "older_persistent_id",
     "older_length_tokens",
-    "newer_publication_date",
     "newer_source_tier",
     "newer_persistent_id",
     "newer_length_tokens",
@@ -127,8 +147,16 @@ def build_external_pairs(
     dataset_name: str,
     evidence_source: str,
     extraction_date: str,
+    evaluation_as_of_date: Optional[str] = None,
 ) -> list[TestPair]:
-    """Convert external evaluation records into candidate pairs."""
+    """Convert external evaluation records into candidate pairs.
+
+    Args:
+        evaluation_as_of_date: the experiment-wide information state t_q,
+            used when the dataset supplies no date of its own. It is one
+            value for every item and every arm, and is never taken from a
+            passage under test (ledger D-21).
+    """
 
     pairs: list[TestPair] = []
 
@@ -138,21 +166,34 @@ def build_external_pairs(
         if missing:
             raise SchemaError(
                 f"external record {index}: missing required field(s) "
-                f"{missing}. The loader does not supply defaults, because a "
-                "silently defaulted question date or reference answer would "
-                "be indistinguishable from a real one."
+                f"{missing}. Without these the record does not identify an "
+                "evaluation item, and the loader supplies no defaults: a "
+                "silently defaulted reference answer would be "
+                "indistinguishable from a real one."
             )
 
         reasons: list[str] = []
 
+        # t_q, the information state the admission decision is evaluated
+        # against. Taken from the dataset when it supplies one, otherwise the
+        # single configured evaluation date. Deriving it from the newer
+        # passage would set that passage's gamma to 1 by construction and
+        # inflate the very currency contrast under measurement (D-21).
         question_date = record.get("question_date")
         if question_date:
             question_date_source = f"{dataset_name}:question_date"
+        elif evaluation_as_of_date:
+            question_date = evaluation_as_of_date
+            question_date_source = "config:evaluation_as_of_date"
         else:
-            # Item-level fallback: the question is posed as of the date the
-            # newer evidence appeared. Never a single global cutoff.
-            question_date = record.get("newer_publication_date")
-            question_date_source = "derived:newer_publication_date"
+            question_date = None
+            question_date_source = "unavailable"
+            reasons.append("missing_question_date")
+
+        for side in ("older", "newer"):
+            if not str(record.get(f"{side}_text", "")).strip():
+                reasons.append("missing_evidence_text")
+                break
 
         contradiction = record.get(
             "contradiction_status",
@@ -163,22 +204,30 @@ def build_external_pairs(
 
         claim_class = record.get("claim_class")
 
-        older = EvidenceRef(
-            evidence_id=str(record["older_evidence_id"]),
-            document_id=str(record["older_document_id"]),
-            publication_date=record.get("older_publication_date"),
-            source_tier=record.get("older_source_tier"),
-            persistent_id=record.get("older_persistent_id"),
-            length_tokens=record.get("older_length_tokens"),
-        )
-        newer = EvidenceRef(
-            evidence_id=str(record["newer_evidence_id"]),
-            document_id=str(record["newer_document_id"]),
-            publication_date=record.get("newer_publication_date"),
-            source_tier=record.get("newer_source_tier"),
-            persistent_id=record.get("newer_persistent_id"),
-            length_tokens=record.get("newer_length_tokens"),
-        )
+        def side_ref(side: str) -> EvidenceRef:
+            text = str(record.get(f"{side}_text") or "")
+            # Evidence ids are minted from the dataset and item identity when
+            # the dataset supplies none, so Stage 3 can address the passage
+            # without the pair definition being rebuilt.
+            evidence_id = record.get(f"{side}_evidence_id") or (
+                f"EXT:{dataset_name}:{record['question_id']}:{side}"
+            )
+            return EvidenceRef(
+                evidence_id=str(evidence_id),
+                document_id=str(record[f"{side}_document_id"]),
+                publication_date=record.get(f"{side}_publication_date"),
+                source_tier=record.get(f"{side}_source_tier"),
+                persistent_id=record.get(f"{side}_persistent_id"),
+                length_tokens=(
+                    record.get(f"{side}_length_tokens")
+                    or (len(text.split()) or None)
+                ),
+                text=text or None,
+                origin=ORIGIN_EXTERNAL_ITEM,
+            )
+
+        older = side_ref("older")
+        newer = side_ref("newer")
 
         # Identity is derived from content, never from the input line index:
         # a pair id that changed when the source file was reordered would
@@ -187,8 +236,8 @@ def build_external_pairs(
             "|".join(
                 (
                     str(record["question_id"]),
-                    str(record["older_evidence_id"]),
-                    str(record["newer_evidence_id"]),
+                    older.evidence_id,
+                    newer.evidence_id,
                 )
             ).encode("utf-8")
         ).hexdigest()[:10]
@@ -202,11 +251,15 @@ def build_external_pairs(
                 question_date_source=question_date_source,
                 reference_answer=str(record["reference_answer"]),
                 reference_answer_source=f"{dataset_name}:reference_answer",
+                # A change point that the dataset does not supply is left
+                # absent, not synthesised from a publication date: Check A
+                # counts strata of evidence-change dates, and a fabricated
+                # one would be indistinguishable from a real one.
                 change_point_date=record.get("change_point_date"),
                 change_point_source=(
                     f"{dataset_name}:change_point"
                     if record.get("change_point_date")
-                    else "derived:newer_publication_date"
+                    else "unavailable"
                 ),
                 claim_class=claim_class,
                 claim_class_source="external" if claim_class else "unknown",
@@ -248,6 +301,7 @@ def _chunk_ref(chunk: dict[str, Any]) -> EvidenceRef:
         length_tokens=len(text.split()) or None,
         retracted=bool(chunk.get("retracted")),
         withdrawn=bool(chunk.get("withdrawn")),
+        origin=ORIGIN_CORPUS,
     )
 
 
@@ -430,8 +484,9 @@ def run(
         candidates = build_external_pairs(
             records,
             dataset_name=str(config.get("external_dataset", "UNSPECIFIED")),
-            evidence_source=str(config.get("corpus_snapshot", "UNSPECIFIED")),
+            evidence_source=str(config.get("external_dataset", "UNSPECIFIED")),
             extraction_date=extraction_date,
+            evaluation_as_of_date=config.get("evaluation_as_of_date"),
         )
     elif pool == POOL_SECONDARY_CURATED:
         candidates = build_curated_candidates(
@@ -469,6 +524,7 @@ def run(
     output_dir.mkdir(parents=True, exist_ok=True)
     pairs_path = output_dir / f"{pool}_pilot.jsonl"
     write_pairs(assessed, pairs_path)
+    pairs_sha256 = content_hash(pairs_path)
     report.write_csv(output_dir / f"{pool}_attrition.csv")
 
     manifest = {
@@ -496,6 +552,33 @@ def run(
         "check_a_interpretable": bool(assessed) and explicit_change_points == len(assessed),
         "check_a_explicit_change_points": explicit_change_points,
         "split_summary": split_module.summarise(partitions),
+        # Stage 3 asserts this before running, so the evaluation set cannot
+        # be edited after outcomes are seen (specification 33.6).
+        "pairs_sha256": pairs_sha256,
+        "evaluation_as_of_date": config.get("evaluation_as_of_date"),
+        "question_date_sources": {
+            source: sum(
+                1 for pair in assessed if pair.question_date_source == source
+            )
+            for source in sorted(
+                {pair.question_date_source for pair in assessed}
+            )
+        },
+        "evidence_origins": {
+            origin: sum(
+                1
+                for pair in assessed
+                for ref in (pair.older, pair.newer)
+                if ref.origin == origin
+            )
+            for origin in sorted(
+                {
+                    ref.origin
+                    for pair in assessed
+                    for ref in (pair.older, pair.newer)
+                }
+            )
+        },
         "outputs": {
             "pairs": str(pairs_path),
             "attrition": str(output_dir / f"{pool}_attrition.csv"),

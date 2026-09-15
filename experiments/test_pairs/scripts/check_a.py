@@ -58,19 +58,19 @@ class CutoffStratum:
 
 
 def _change_point(pair: TestPair) -> Optional[date]:
-    """The pair's change point, falling back to the newer publication date.
+    """The pair's change point, or None when the dataset supplied none.
 
-    The fallback is recorded by the builder in ``change_point_source``; it is
-    used here only so a pair with an explicit change point and one without
-    are counted consistently.
+    There is deliberately no fallback to the newer publication date. A
+    publication date says when a paper appeared; a change point says when the
+    clinical verdict moved. Substituting one for the other would turn a
+    missing value into a stratum count that looks like a Check A result.
+    Pairs without a change point are counted separately instead.
     """
 
     if pair.change_point_date:
-        resolved = _parse_partial_date(pair.change_point_date)[0]
-        if resolved is not None:
-            return resolved
+        return _parse_partial_date(pair.change_point_date)[0]
 
-    return pair.newer.date_interval[0]
+    return None
 
 
 def stratify(

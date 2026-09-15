@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.test_pairs.scripts import build_pairs
+from experiments.test_pairs.scripts import build_pairs, schema
 from experiments.test_pairs.scripts.schema import (
     POOL_PRIMARY_EXTERNAL,
     POOL_SECONDARY_CURATED,
@@ -17,6 +17,7 @@ from experiments.test_pairs.scripts.schema import (
 CONFIG = {
     "corpus_snapshot": "corpus@test",
     "external_dataset": "ExternalQA v1",
+    "evaluation_as_of_date": "2026-09",
     "pilot": {"size": 40, "seed": "test-pilot"},
     "eligibility": {"min_separation_days": None, "exclude_retracted": True},
     "split": {"seed": "test-split", "dev": 0.2, "val": 0.2, "test": 0.6},
@@ -31,8 +32,10 @@ EXTERNAL_RECORDS = [
         "reference_answer": "No",
         "older_evidence_id": "E-1a", "older_document_id": "D-1",
         "older_publication_date": "2018-04", "older_source_tier": "journal",
+        "older_text": "The 2018 review found a benefit.",
         "newer_evidence_id": "E-1b", "newer_document_id": "D-2",
         "newer_publication_date": "2024-09", "newer_source_tier": "journal",
+        "newer_text": "The 2024 update found no benefit.",
         "change_point_date": "2024-09",
     },
     {
@@ -40,9 +43,10 @@ EXTERNAL_RECORDS = [
         "question_id": "Q-2",
         "question_text": "Is biomarker Z sufficient for diagnosis?",
         "reference_answer": "Yes",
-        "older_evidence_id": "E-2a", "older_document_id": "D-3",
-        "newer_evidence_id": "E-2b", "newer_document_id": "D-4",
-        "newer_publication_date": "2025-01",
+        "older_document_id": "D-3", "older_publication_date": "",
+        "older_text": "Earlier review text.",
+        "newer_document_id": "D-4", "newer_publication_date": "2025-01",
+        "newer_text": "Later review text.",
     },
 ]
 
@@ -101,17 +105,95 @@ class ExternalPoolTests(unittest.TestCase):
             self.assertIn("missing_publication_date",
                           pairs["Q-2"].exclusion_reasons)
 
-    def test_question_date_falls_back_per_item_not_globally(self):
+    def test_question_date_is_never_taken_from_the_evidence_under_test(self):
+        # D-21: t_q must not come from the newer passage, which would give it
+        # gamma = 1 by construction.
         with TemporaryDirectory() as tmp:
             _, out = self.run_pilot(tmp)
             pairs = {p.question_id: p
                      for p in read_pairs(out / "primary_external_pilot.jsonl")}
 
-            self.assertEqual(pairs["Q-1"].question_date, "2024-09")
-            self.assertEqual(pairs["Q-2"].question_date, "2025-01")
             for item in pairs.values():
+                self.assertEqual(item.question_date, "2026-09")
                 self.assertEqual(item.question_date_source,
-                                 "derived:newer_publication_date")
+                                 "config:evaluation_as_of_date")
+                self.assertNotEqual(item.question_date,
+                                    item.newer.publication_date)
+
+    def test_dataset_question_date_takes_precedence(self):
+        record = dict(EXTERNAL_RECORDS[0])
+        record["question_date"] = "2023-06"
+        with TemporaryDirectory() as tmp:
+            _, out = self.run_pilot(tmp, [record])
+            pair = read_pairs(out / "primary_external_pilot.jsonl")[0]
+            self.assertEqual(pair.question_date, "2023-06")
+            self.assertEqual(pair.question_date_source,
+                             "ExternalQA v1:question_date")
+
+    def test_without_any_date_the_item_is_excluded_not_dated(self):
+        config = dict(CONFIG)
+        config.pop("evaluation_as_of_date")
+        with TemporaryDirectory() as tmp:
+            source = write_jsonl(Path(tmp) / "e.jsonl", EXTERNAL_RECORDS)
+            build_pairs.run(pool=POOL_PRIMARY_EXTERNAL, input_path=source,
+                            output_dir=Path(tmp) / "out", config=config)
+            for pair in read_pairs(
+                Path(tmp) / "out" / "primary_external_pilot.jsonl"
+            ):
+                self.assertIsNone(pair.question_date)
+                self.assertIn("missing_question_date", pair.exclusion_reasons)
+
+    def test_evidence_travels_with_the_item(self):
+        # D-20: the pair's passages are the external item's own records; no
+        # retrospective mapping onto corpus chunks happens here.
+        with TemporaryDirectory() as tmp:
+            _, out = self.run_pilot(tmp)
+            for pair in read_pairs(out / "primary_external_pilot.jsonl"):
+                for ref in (pair.older, pair.newer):
+                    self.assertEqual(ref.origin, "external_item")
+                    self.assertTrue(ref.text)
+
+    def test_evidence_ids_are_minted_when_absent(self):
+        record = dict(EXTERNAL_RECORDS[1])
+        with TemporaryDirectory() as tmp:
+            _, out = self.run_pilot(tmp, [record])
+            pair = read_pairs(out / "primary_external_pilot.jsonl")[0]
+            self.assertEqual(pair.older.evidence_id,
+                             "EXT:ExternalQA v1:Q-2:older")
+            self.assertEqual(pair.newer.evidence_id,
+                             "EXT:ExternalQA v1:Q-2:newer")
+
+    def test_missing_evidence_text_excludes_rather_than_crashes(self):
+        # A dataset gap is a counted loss, not a malformed file.
+        record = dict(EXTERNAL_RECORDS[0])
+        record["older_text"] = "   "
+        with TemporaryDirectory() as tmp:
+            manifest, out = self.run_pilot(tmp, [record])
+            pair = read_pairs(out / "primary_external_pilot.jsonl")[0]
+            self.assertIn("missing_evidence_text", pair.exclusion_reasons)
+            self.assertEqual(
+                manifest["attrition"]["sole_reason"]["missing_evidence_text"],
+                1,
+            )
+
+    def test_absent_change_point_is_not_synthesised(self):
+        with TemporaryDirectory() as tmp:
+            _, out = self.run_pilot(tmp)
+            pairs = {p.question_id: p
+                     for p in read_pairs(out / "primary_external_pilot.jsonl")}
+            self.assertIsNone(pairs["Q-2"].change_point_date)
+            self.assertEqual(pairs["Q-2"].change_point_source, "unavailable")
+
+    def test_manifest_records_freeze_hash_matching_the_file(self):
+        with TemporaryDirectory() as tmp:
+            manifest, out = self.run_pilot(tmp)
+            pairs_path = out / "primary_external_pilot.jsonl"
+
+            schema.verify_frozen(pairs_path, manifest["pairs_sha256"])
+
+            pairs_path.write_text(pairs_path.read_text() + "\n")
+            with self.assertRaises(SchemaError):
+                schema.verify_frozen(pairs_path, manifest["pairs_sha256"])
 
     def test_missing_required_field_is_refused(self):
         broken = [dict(EXTERNAL_RECORDS[0])]
@@ -138,7 +220,8 @@ class ExternalPoolTests(unittest.TestCase):
 
             self.assertEqual(manifest["attrition"]["candidates"], 2)
             self.assertEqual(manifest["attrition"]["eligible"], 1)
-            self.assertEqual(manifest["check_a"][0]["post_cutoff"], 2)
+            self.assertEqual(manifest["check_a"][0]["post_cutoff"], 1)
+            self.assertEqual(manifest["check_a"][0]["undated_change_point"], 1)
             self.assertEqual(manifest["separation_summary"]["n"], 1)
 
     def test_manifest_records_which_rules_were_enforced(self):

@@ -22,6 +22,22 @@ corpus_snapshot: "alzheimer_corpus@fixture-10doc"
 # builder will not invent one.
 external_dataset: "UNSPECIFIED"
 
+# t_q: the information state every admission decision is evaluated against.
+# ONE date for every item and every arm. It is deliberately NOT derived from
+# the evidence under test: setting t_q to the newer passage's publication date
+# would give that passage gamma = 1 by construction and inflate the currency
+# contrast SCAF is being measured on (ledger D-21, replacing D-17).
+#
+# The dataset's own question/verdict date takes precedence per item when it
+# supplies one; this is the fallback, and the pair records which was used.
+#
+# Set it to the corpus snapshot date, so no evidence in the experiment
+# post-dates the moment the question is posed. Because it is later than every
+# passage, all gamma values are compressed - which understates SCAF's currency
+# contrast rather than flattering it. That is the conservative direction and
+# is the reason this is defensible as well as simple.
+evaluation_as_of_date: "2026-09"
+
 pilot:
   # ~40 candidates is enough to expose a dominant bottleneck without spending
   # manual validation effort on a set that may be redesigned. Raise it only

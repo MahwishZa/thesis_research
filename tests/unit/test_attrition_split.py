@@ -164,10 +164,13 @@ class CheckATests(unittest.TestCase):
         self.assertEqual(stratum.pre_cutoff, 1)
         self.assertAlmostEqual(stratum.post_cutoff_share, 2 / 3)
 
-    def test_falls_back_to_newer_publication_date(self):
+    def test_publication_date_is_not_used_as_a_change_point(self):
+        # A paper's appearance date is not the date a verdict moved; counting
+        # it as one would turn a missing value into a Check A stratum.
         pairs = [pair("P-1", change_point=None, newer_date="2025-02")]
         stratum = check_a.stratify(pairs, model="m", cutoff="2023-12")
-        self.assertEqual(stratum.post_cutoff, 1)
+        self.assertEqual(stratum.post_cutoff, 0)
+        self.assertEqual(stratum.undated_change_point, 1)
 
     def test_undated_change_point_counted_separately(self):
         pairs = [pair("P-1", change_point=None, newer_date=None)]
@@ -214,6 +217,28 @@ class PowerTests(unittest.TestCase):
         newer = power.required_pairs(discordant_rate=0.3, older_share=0.3)
         self.assertEqual(older.discordant_pairs_needed,
                          newer.discordant_pairs_needed)
+
+    def test_detectable_effect_shrinks_as_the_pool_grows(self):
+        small = power.detectable_effect(total_pairs=50, discordant_rate=0.3)
+        large = power.detectable_effect(total_pairs=500, discordant_rate=0.3)
+        self.assertLess(large, small)
+
+    def test_detectable_effect_is_none_when_pool_is_hopeless(self):
+        self.assertIsNone(
+            power.detectable_effect(total_pairs=2, discordant_rate=0.1)
+        )
+
+    def test_detectable_effect_inverts_required_pairs(self):
+        share = power.detectable_effect(total_pairs=400, discordant_rate=0.3)
+        needed = power.required_pairs(discordant_rate=0.3, older_share=share)
+        self.assertLessEqual(needed.total_pairs_needed, 400)
+
+    def test_sensitivity_curve_covers_each_rate(self):
+        rows = power.sensitivity_curve(total_pairs=300,
+                                       discordant_rates=(0.2, 0.4))
+        self.assertEqual([r["discordant_rate"] for r in rows], [0.2, 0.4])
+        self.assertLess(rows[1]["min_detectable_older_share"],
+                        rows[0]["min_detectable_older_share"])
 
     def test_unsupported_levels_rejected(self):
         with self.assertRaises(ValueError):

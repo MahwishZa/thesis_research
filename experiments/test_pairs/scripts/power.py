@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence
 
 
 #: Two-sided normal quantiles. Only the conventional levels are provided;
@@ -132,3 +132,81 @@ def required_pairs(
         total_pairs_needed=total_needed,
         candidates_needed=candidates,
     )
+
+
+def detectable_effect(
+    *,
+    total_pairs: int,
+    discordant_rate: float,
+    alpha: float = 0.05,
+    power: float = 0.80,
+) -> Optional[float]:
+    """Smallest older-favouring share detectable with ``total_pairs``.
+
+    The inverse of :func:`required_pairs`, for the situation this thesis is
+    actually in: the pool is fixed by the external dataset rather than chosen,
+    so the honest question is not "how many pairs do we need?" but "what could
+    this many pairs detect?". Returns None when no share in (0.5, 1] suffices.
+
+    Solved by bisection on the monotone relationship between the share and
+    the discordant pairs required; a closed form exists but is less legible
+    and no more accurate here.
+    """
+
+    if total_pairs <= 0:
+        raise ValueError("total_pairs must be positive.")
+    if not 0.0 < discordant_rate <= 1.0:
+        raise ValueError("discordant_rate must be in (0, 1].")
+
+    available = total_pairs * discordant_rate
+
+    z_alpha = _Z_ALPHA[alpha]
+    z_beta = _Z_BETA[power]
+
+    def needed(share: float) -> float:
+        numerator = z_alpha * 0.5 + z_beta * math.sqrt(share * (1.0 - share))
+        return (numerator / (share - 0.5)) ** 2
+
+    if needed(1.0 - 1e-9) > available:
+        return None
+
+    low, high = 0.5 + 1e-9, 1.0 - 1e-9
+    for _ in range(200):
+        mid = (low + high) / 2.0
+        if needed(mid) > available:
+            low = mid
+        else:
+            high = mid
+
+    # Rounded up, so the value returned is genuinely detectable with the
+    # given pool rather than a shade under it.
+    return math.ceil(high * 10000.0) / 10000.0
+
+
+def sensitivity_curve(
+    *,
+    total_pairs: int,
+    discordant_rates: Sequence[float] = (0.1, 0.2, 0.3, 0.4, 0.5),
+    alpha: float = 0.05,
+    power: float = 0.80,
+) -> list[dict[str, object]]:
+    """What a fixed pool could detect across plausible discordant rates.
+
+    Reported as a curve rather than a point because the discordant rate is a
+    Stage-3 measurement. Assuming one value and quoting a single sample size
+    would be the fabricated effect size this module exists to refuse.
+    """
+
+    return [
+        {
+            "discordant_rate": rate,
+            "expected_discordant_pairs": round(total_pairs * rate, 1),
+            "min_detectable_older_share": detectable_effect(
+                total_pairs=total_pairs,
+                discordant_rate=rate,
+                alpha=alpha,
+                power=power,
+            ),
+        }
+        for rate in discordant_rates
+    ]
