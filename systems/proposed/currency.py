@@ -68,19 +68,42 @@ class CurrencyPolicy:
             superseded_factor: delta. Unresolved; must be set before use.
             is_time_invariant: psi(q). Returns True when the question is not
                 temporally sensitive.
-            unknown_date_score: score for evidence carrying no usable
-                publication date. ``None`` means the caller has not decided,
-                and such evidence is scored 0.0 and reported as UNKNOWN_DATE
-                so it is visible in the decision record rather than silently
-                treated as current. This is a REQUIRES-DECISION parameter:
+            unknown_date_score: gamma for evidence carrying no usable
+                publication date. REQUIRED - there is no defensible default.
+                The research documents do not specify how undated evidence is
+                treated, and the value materially affects the temporal result:
                 the Alzheimer's corpus contains records whose date could not
-                be resolved, and how they are treated affects the temporal
-                result.
+                be resolved, and scoring them 0.0 approaches the hard
+                exclusion that specification section 25 restricts to
+                retraction and withdrawal. Passing a value is therefore an
+                explicit, recorded research decision rather than something
+                this module chooses.
+
+        Raises:
+            ValueError: if ``unknown_date_score`` is not supplied. The check
+                is at construction time so the run fails deterministically
+                before any evidence is processed, never part-way through.
         """
+        if unknown_date_score is None:
+            raise ValueError(
+                "unknown_date_score is a required research decision and has "
+                "no default. It sets gamma for evidence with no usable "
+                "publication date, which the Alzheimer's corpus contains. "
+                "Scoring such evidence 0.0 approaches the hard exclusion "
+                "that specification section 25 restricts to retraction and "
+                "withdrawal, so the value must be chosen and recorded "
+                "explicitly (supervisor decision)."
+            )
+
+        if not 0.0 <= float(unknown_date_score) <= 1.0:
+            raise ValueError(
+                "unknown_date_score must be in [0, 1]."
+            )
+
         self.half_life_days = half_life_days
         self.superseded_factor = superseded_factor
         self.is_time_invariant = is_time_invariant
-        self.unknown_date_score = unknown_date_score
+        self.unknown_date_score = float(unknown_date_score)
 
     def score(
         self,
@@ -118,11 +141,7 @@ class CurrencyPolicy:
         # impossible to complete.
         if evidence.publication_date is None:
             return CurrencyResult(
-                score=(
-                    0.0
-                    if self.unknown_date_score is None
-                    else float(self.unknown_date_score)
-                ),
+                score=self.unknown_date_score,
                 state=CurrencyState.UNKNOWN_DATE,
             )
 
