@@ -34,7 +34,8 @@ class RAG2Config:
 
     # Answer-prompt template with {question} and {context} fields.
     # Specification section 16 requires prompt parity, so the runner should
-    # pass the SAME template to this system and to SCAF.
+    # pass the SAME template to this system, the no-filter control and the
+    # recency-aware policy.
     context_prompt: Optional[str] = None
 
 
@@ -158,7 +159,7 @@ class RAG2System(System):
             experiment_id=experiment_id,
             variant=self.name,
             prediction=answer.text,
-            # RAG² has no output-state policy; only SCAF does.
+            # RAG² has no output-state policy; only the proposed policy does.
             output_state=None,
             admitted_evidence_ids=tuple(
                 candidate.evidence.evidence_id for candidate in admitted

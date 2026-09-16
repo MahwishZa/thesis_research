@@ -23,6 +23,63 @@
 
 ---
 
+# 0. Scope Amendment (2026-09-16) — read this first
+
+This specification was written for a larger design than the thesis now
+executes. The reduced scope below **governs wherever the body of this document
+disagrees with it**; the body is retained because its definitions, controls and
+reproducibility requirements remain correct for the parts still in scope.
+
+## 0.1 The primary experiment
+
+Three arms over one frozen candidate set: a **no-filter control**, the **RAG²
+baseline**, and the proposed **recency-aware admission policy**.
+
+The proposed policy is:
+
+    A(s) = (1 - lambda) * rho(s) + lambda * R(s, q, t_q),  admit if A(s) >= theta
+
+where `rho` is the rank-normalised reranker score (section 28) and `R` is the
+recency score — plain exponential decay in the age of the passage relative to
+`t_q`. `lambda`, `theta` and the half-life `H` are the only tunable
+quantities and are fitted on the validation split.
+
+## 0.2 Removed from the primary scope
+
+The following are no longer primary components. Sections 20-24, 27, 29, 30 and
+46 describe them and are retained as secondary or future work:
+
+* entailment-derived support, sigma (sections 20-22, 24);
+* source authority, tau (section 27);
+* contested-evidence handling (sections 29, 30);
+* supersession discounting (section 25, secondary branch);
+* answer verification (section 31 verifier);
+* the clinician rating study (section 46);
+* comparison against an additional state-of-the-art filtering system.
+
+Code for contested detection and verification remains in `systems/proposed/`,
+marked SECONDARY and disabled by default.
+
+## 0.3 Terminology
+
+| Old | Current | Why |
+|---|---|---|
+| currency score, gamma | **recency score, R** | Two of the three "currency" states are out of scope, and "currency" reads as money |
+| SCAF | **recency-aware admission** | The acronym named components that no longer exist; no replacement acronym is introduced |
+| framework | **admission policy** | It is a deterministic scoring rule plus a threshold |
+
+Output states reduce to **GROUNDED** and **ABSTAIN**; CONTESTED is produced
+only when the secondary contested detector is explicitly enabled.
+
+## 0.4 What is unchanged
+
+The research question, the provenance firewall, the frozen-candidate-set
+control (section 16), the temporal definitions (sections 9, 10), the
+leakage rules (section 33), dual reporting (section 42) and the
+reproducibility requirements (section 50) all stand as written.
+
+---
+
 # 1. Purpose
 
 This document defines the research and experimental specification governing Steps 2–5 of the thesis research pipeline.

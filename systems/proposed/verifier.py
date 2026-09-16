@@ -1,4 +1,10 @@
-"""Post-hoc claim verification interface for SCAF."""
+"""SECONDARY - not part of the primary experiment.
+
+Answer-claim verification. The reduced scope evaluates answer quality with
+the existing automatic metrics under mandatory dual reporting; a separate
+verification model is future work, and only ``NoOpVerifier`` is wired up.
+
+Post-hoc claim verification interface for the recency-aware admission policy."""
 
 from __future__ import annotations
 

@@ -1,4 +1,13 @@
-"""Contested-evidence detection for SCAF.
+"""SECONDARY - not part of the primary experiment.
+
+Contested-evidence detection needs claim classes (which exist in the corpus
+only as an unvalidated keyword heuristic, ledger A8/D-22), a contest window
+and a source-tier gate (neither resolved), and it is not required by the
+central hypothesis about recency asymmetry. The admission policy takes
+``contested=None`` by default; enabling it changes which passages are
+admitted, so such a run is a secondary analysis and must say so.
+
+Contested-evidence detection for the recency-aware admission policy.
 
 Specification section 29 defines a claim as contested when ALL FOUR of the
 following hold:
@@ -180,5 +189,5 @@ class ContestedDetector:
         self,
         conflicts: Sequence[ClaimConflict],
     ) -> frozenset[str]:
-        """Claim classes under dispute, for the currency policy."""
+        """Claim classes under dispute, for the recency policy."""
         return frozenset(conflict.claim_class for conflict in conflicts)

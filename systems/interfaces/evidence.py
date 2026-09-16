@@ -1,7 +1,8 @@
 """Shared evidence and experiment data structures.
 
 These classes define the interface between the upstream corpus/retrieval
-pipeline and downstream experimental systems such as RAG² and SCAF.
+pipeline and the three experimental arms (no-filter, RAG², recency-aware
+ admission).
 """
 
 from __future__ import annotations
