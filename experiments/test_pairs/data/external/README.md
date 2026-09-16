@@ -1,7 +1,8 @@
 # External evaluation material (primary pool)
 
 This directory holds the **externally-authored** evaluation items that the
-primary test-pair pool is built from. It is empty on purpose.
+primary test-pair pool is built from. It is empty on purpose: the dataset is
+fetched at build time and is not redistributed from here.
 
 Ledger decision D-2 and specification section 33.2 put the thesis's primary
 claim on material this thesis did not author. Nothing in this repository
@@ -9,46 +10,79 @@ generates that material, and `build_pairs.py --pool primary_external` fails
 with a message naming the dependency rather than falling back to
 thesis-written questions.
 
-## Outstanding dependency
+## Dependency — structure verified 2026-09-16 (D-34)
 
-**MedChangeQA** (Vladika et al., Findings of EMNLP 2025) — 512 changed-verdict
-items, identified in the understanding report (section 20, Check A) as the
-source of the temporal-counterfactual pairs.
+**MedChangeQA** (Vladika, Dhaini & Matthes, *Facts Fade Fast: Evaluating
+Memorization of Outdated Medical Knowledge in Large Language Models*,
+Findings of EMNLP 2025). Source of record:
+<https://github.com/jvladika/MedChange>.
 
-It could not be retrieved from the session environment: outbound requests to
-`huggingface.co` and `eutils.ncbi.nlm.nih.gov` are blocked by the
-organisational egress policy (both return no response; `api.github.com`
-returns 200, so the block is host-specific rather than a general network
-failure).
+The released files have now been **inspected directly**. Everything below is
+verified against them; nothing here is inferred from the paper's prose.
 
-Acquiring it is therefore a manual step, from a network that permits it:
+Reachability: `raw.githubusercontent.com` is permitted by the session egress
+policy. `huggingface.co` and `eutils.ncbi.nlm.nih.gov` remain blocked, so any
+step needing PubMed E-utilities must run elsewhere. No E-utilities call is
+required for the primary pool — see the join below.
 
-1. Download the dataset from the source named in the paper.
-2. Record its exact version or commit, and the download date.
-3. Convert it to the JSONL contract below and save it here.
-4. Set `external_dataset` in `experiments/configs/stage2_pilot.yaml` to the
-   dataset name and version — it is copied into every pair's provenance.
+**Licensing: no `LICENSE` file is published.** Absent an explicit licence the
+default is all-rights-reserved, and the underlying text is Cochrane Library
+abstract content (Wiley copyright). Therefore **do not commit the dataset**.
+Fetch it at build time, record the commit SHA and the file SHA-256, and cite
+the paper.
 
-Do not commit the dataset itself unless its licence permits redistribution.
-Unknown licence means not redistributable.
+## What the three released files actually contain
 
-## Acquisition and conversion procedure
+| File | Rows | Columns |
+|---|---|---|
+| `Datasets/MedChangeQA.csv` | 512 | `Question`, `Newest Label`, `Outdated Label` |
+| `Datasets/MedRevQA.csv` | 16,501 | `background`, `objectives`, `conclusions`, `Question`, `Label`, `DOI_Date`, `Author`, `PMID` |
+| `Datasets/AllStudyGroups.csv` | 4,379 | `Group_ID`, `Study_ID`, `Label` |
+
+Three facts govern the build, and each one was checked:
+
+1. **`MedChangeQA.csv` alone is not sufficient.** It carries a question and two
+   verdict labels. It has **no PMIDs, no dates and no evidence text**. The
+   older/newer passages this thesis needs are not in that file.
+2. **`AllStudyGroups.csv` is the version linkage.** `Group_ID` is *sparse*
+   (written once per group, blank on continuation rows) and must be
+   forward-filled. It yields 1,535 groups of sizes 2–9. `Study_ID` is a
+   **0-based row index into `MedRevQA.csv`** — verified by label agreement on
+   4,379/4,379 rows (100%).
+3. **The 512 are reconstructible exactly.** Groups holding more than one
+   distinct `Label` number **512**, matching the published count, and in file
+   order they align 1:1 with `MedChangeQA.csv` — verified by `Newest Label`
+   agreement on 512/512 rows (100%).
+
+`MedRevQA.csv` is a complete Cochrane census: 16,501/16,501 rows cite
+*Cochrane Database of Systematic Reviews*, spanning 2000–2024.
+
+## Acquisition and build procedure
 
 ```bash
-# 1. Convert the downloaded dataset to the JSONL contract below, by hand or
-#    with a short throwaway script, and save it here as pairs_input.jsonl.
+# 1. Fetch the three files (record the commit SHA you fetched at).
+BASE=https://raw.githubusercontent.com/jvladika/MedChange/main/Datasets
+for f in MedChangeQA.csv MedRevQA.csv AllStudyGroups.csv; do
+  curl -fsS -o "experiments/test_pairs/data/external/$f" "$BASE/$f"
+done
 
-# 2. Check it BEFORE building anything. This records the file's SHA-256 and
-#    reports, per field, what is present and what each gap will cost.
+# 2. Convert to the JSONL contract below via the documented join:
+#      forward-fill Group_ID -> group rows -> Study_ID indexes MedRevQA
+#      -> keep groups with >1 distinct Label -> order-align to MedChangeQA
+#    Per side: evidence text = `conclusions`, document id = `PMID`,
+#    publication date = year parsed from `DOI_Date`.
+#    Oldest version = older side; newest version = newer side.
+
+# 3. Check the result BEFORE building anything.
 python -m experiments.test_pairs.scripts.validate_external \
     --input experiments/test_pairs/data/external/pairs_input.jsonl \
-    --dataset "MedChangeQA v<version>" \
+    --dataset "MedChangeQA @ <commit-sha>" \
     --output experiments/outputs/stage2_pilot/acquisition.json
 
-# 3. Record the dataset name and version in experiments/configs/stage2_pilot.yaml
+# 4. Record the dataset name and commit in experiments/configs/stage2_pilot.yaml
 #    (`external_dataset`), and set `extraction_date` when freezing.
 
-# 4. Build the pairs. The full pool is used; nothing is sampled.
+# 5. Build the pairs. The full pool is used; nothing is sampled.
 python -m experiments.test_pairs.scripts.build_pairs \
     --pool primary_external \
     --input experiments/test_pairs/data/external/pairs_input.jsonl \
@@ -65,10 +99,30 @@ is deliberate:
   so in advance (`anticipated_exclusions`) and the builder records the
   exclusion so it appears in the attrition table.
 
-No converter for MedChangeQA's own distribution format is shipped. Nobody
-here has seen that format, and a converter written against a guessed schema
-would either fail on the real files or, worse, silently mis-assign which side
-is the newer verdict. The validator is what makes the manual step verifiable.
+The join above is deterministic: an integer row index and a published group
+table. It involves **no lexical matching, no embeddings and no semantic
+retrieval**, so it stays inside the tier-1 identifier-mapping rule.
+
+Do **not** attempt to recover the two sides by matching `MedChangeQA.Question`
+against `MedRevQA.Question`. That was tried and it fails: 320 of the 512
+questions match exactly one review row, eleven match 366 rows each, and only 6
+of 512 recover both labels. The `AllStudyGroups` index is the only correct
+route.
+
+## Measured properties of the 512 (recorded so they are not re-derived)
+
+* **Temporal separation**, oldest to newest version: min 1 y, Q1 8 y,
+  median **12 y**, Q3 16 y, max 23 y. This is the distribution
+  specification 10.3 defers `min_separation_days` to; it can now be set from
+  evidence rather than assumed.
+* **Change points** (year of the newest version): range 2004–2024, peaking
+  2013–2015. Only **1 of 512** falls after the Llama-3-8B pre-training cutoff
+  (Dec 2023); 16 fall in 2023 or later. See ledger A1, which this retires as a
+  blocking assumption for the reduced design.
+* **Alzheimer's-domain items: 9 of 512** under a deliberately generous text
+  criterion (`alzheimer|dementia|cognitive impairment|cognitive decline|mild
+  cognitive`), of which only 2 name Alzheimer's disease. See ledger D-35 for
+  why this rules out an AD-restricted primary pool.
 
 ## Why no corpus mapping step exists
 
@@ -76,10 +130,10 @@ An earlier reading of the specification suggested each external item's
 evidence would have to be matched back onto Alzheimer's-corpus chunks. It does
 not, and that step has been deliberately removed (ledger D-20).
 
-MedChangeQA-style items are derived from **pairs of systematic-review
-records** — an earlier review reaching one verdict and a later review reaching
-the opposite one. The two passages are therefore already determined by the
-item, each with its own identifier and date. Nothing needs to be matched.
+MedChangeQA items are derived from **successive versions of the same Cochrane
+review** — an earlier version reaching one verdict and a later version
+reaching a different one. Both passages are therefore already determined by
+the item, each with its own PMID and date. Nothing needs to be matched.
 
 Specification 15.2 defines the admission effect as what happens *"when the
 same candidate set is available"*. So Stage 3 places both passages into one
@@ -96,19 +150,10 @@ with the understanding report's own observation that "the Stage-1 corpus is
 not on the critical path for FRB-PAIRS if its passages come from external
 MedChangeQA provenance".
 
-**One caveat worth stating plainly.** That the items ship with both review
-records is an inference from how MedRevQA is built, not something anyone here
-has verified — the dataset could not be reached from the development
-environment. The understanding report says as much: MedChangeQA "does not
-obviously supply *matched passage pairs*".
-
-If the files turn out to carry questions and verdicts but not the abstracts,
-nothing about the design changes: recover the abstracts by PMID with one
-deterministic E-utilities fetch per identifier. That is still tier-1
-identifier mapping — no lexical matching, no embeddings, no semantic
-retrieval. The pipeline fails loudly in the meantime rather than guessing:
-every item would carry `missing_evidence_text`, and the attrition table would
-show it at 100%.
+**The caveat that used to sit here is discharged.** D-20 rested on an
+unverified premise — that each item ships both review records (ledger E15).
+It does, through `AllStudyGroups.csv`, and the route is a deterministic index
+join. The E-utilities fallback described previously is no longer needed.
 
 ## Input contract
 
@@ -118,27 +163,26 @@ from a real one.
 
 ### Required
 
-| Field | Meaning |
-|---|---|
-| `question_id` | Stable id; the partition unit, so all pairs for one question stay together |
-| `question_text` | The clinical question, as authored externally |
-| `reference_answer` | The correct answer as of the question date |
-| `older_document_id` | Source record id (PMID) for the pre-change review |
-| `newer_document_id` | Source record id (PMID) for the post-change review |
+| Field | Meaning | Source in MedChange |
+|---|---|---|
+| `question_id` | Stable id; the partition unit, so all pairs for one question stay together | group index |
+| `question_text` | The clinical question, as authored externally | `MedChangeQA.Question` |
+| `reference_answer` | The correct answer as of the question date | `MedChangeQA.Newest Label` |
+| `older_document_id` | Source record id (PMID) for the pre-change review | `MedRevQA.PMID` of oldest version |
+| `newer_document_id` | Source record id (PMID) for the post-change review | `MedRevQA.PMID` of newest version |
 
 Only these five are required: without them the record does not identify an
 evaluation item. **Everything else is optional at load time** and its absence
-becomes a counted exclusion rather than a load failure — "the dataset has no
-date for this item" is exactly the loss the pilot exists to measure.
+becomes a counted exclusion rather than a load failure.
 
 ### Optional — absence is recorded and counted, never filled in
 
-`older_text`, `newer_text` (the passage text; absent ⇒ `missing_evidence_text`),
-`older_publication_date`, `newer_publication_date` (absent ⇒
-`missing_publication_date`), `question_date`, `change_point_date`,
-`older_evidence_id`, `newer_evidence_id`, `claim_class`, `pair_category`,
-`contradiction_status`, and per-side `*_source_tier`, `*_persistent_id`,
-`*_length_tokens`.
+`older_text`, `newer_text` (from each version's `conclusions`; absent ⇒
+`missing_evidence_text`), `older_publication_date`, `newer_publication_date`
+(from `DOI_Date`; absent ⇒ `missing_publication_date`), `question_date`,
+`change_point_date`, `older_evidence_id`, `newer_evidence_id`, `claim_class`,
+`pair_category`, `contradiction_status`, and per-side `*_source_tier`,
+`*_persistent_id`, `*_length_tokens`.
 
 `evidence_id` is minted as `EXT:<dataset>:<question_id>:<side>` when the
 dataset supplies none, so Stage 3 can address the passage without rebuilding
@@ -156,12 +200,15 @@ Keep these apart; the schema does.
 | `label_model_cutoffs` (config) | Pre-training cutoffs of the label-generating models |
 
 `question_date` is taken from the dataset when it supplies one, otherwise from
-the single configured `evaluation_as_of_date`. It is **never** derived from a
+the single configured `evaluation_as_of_date`. MedChangeQA supplies none, so
+the configured fallback applies to every item. It is **never** derived from a
 passage in the pair: setting t_q to the newer passage's publication date gives
-that passage γ = 1 by construction and inflates the currency contrast SCAF is
-being measured on (ledger D-21). The schema rejects such a value outright.
+that passage R = 1 by construction and inflates the recency contrast the
+proposed method is being measured on (ledger D-21). The schema rejects such a
+value outright.
 
 A `change_point_date` the dataset does not supply is left absent, not
 synthesised from a publication date. Check A reports
 `check_a_interpretable: false` rather than a stratum count built on
-substituted values.
+substituted values. For MedChangeQA the newest version's publication year is
+the closest available proxy and is **not** substituted silently.
