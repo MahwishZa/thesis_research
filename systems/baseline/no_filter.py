@@ -59,17 +59,32 @@ class NoFilterSystem(System):
         self,
         candidates: Sequence[Candidate],
     ) -> tuple[Candidate, ...]:
-        """Best-ranked candidates up to the budget, deterministically."""
+        """Best-ranked candidates up to the budget, deterministically.
+
+        Rank decides WHICH passages survive the budget; the returned tuple is
+        in candidate-list order, not rank order. That distinction is a
+        fairness control, not a detail: the generator sees passages in the
+        order this tuple gives, position in the context window measurably
+        affects what a model attends to, and the other two arms emit
+        candidate-list order. Sorting here would have given the control arm a
+        differently-ordered context whenever the cached candidate list was
+        not already in rank order - which is exactly what Stage 3 produces
+        when it injects the evaluation pair into a retrieved candidate set.
+        """
 
         ordered = sorted(
             candidates,
             key=lambda c: (c.rerank_rank, c.evidence.evidence_id),
         )
 
-        if self.max_admitted_passages is None:
-            return tuple(ordered)
+        if self.max_admitted_passages is not None:
+            ordered = ordered[: self.max_admitted_passages]
 
-        return tuple(ordered[: self.max_admitted_passages])
+        keep = {c.evidence.evidence_id for c in ordered}
+
+        return tuple(
+            c for c in candidates if c.evidence.evidence_id in keep
+        )
 
     def build_prompt(
         self,

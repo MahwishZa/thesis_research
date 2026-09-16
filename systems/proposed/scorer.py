@@ -78,6 +78,20 @@ class AdmissionScorer:
 
         Rank-based rather than min-max over raw reranker scores, so that one
         threshold is comparable across queries whose score ranges differ.
+
+        Two requirements follow from this, and Stage 3 must satisfy both when
+        it builds the cached candidate set:
+
+        * **Ranks are 1..N contiguous.** Injecting the evaluation pair into a
+          retrieved set means the whole set has to be re-ranked afterwards,
+          not given the pair's original ranks. A gap or a duplicate raises
+          here rather than silently distorting rho.
+        * **N is the same for every item.** rho is a within-set rank, so the
+          best passage always scores 1.0 and the worst 0.0 regardless of how
+          relevant either actually is. theta is therefore only comparable
+          across items when the candidate-set size is fixed - which
+          specification section 16 already requires across arms, and which
+          must also hold across items.
         """
 
         if candidate_count <= 0:

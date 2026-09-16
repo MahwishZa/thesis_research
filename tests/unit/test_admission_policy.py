@@ -347,6 +347,55 @@ class ThreeArmFairnessTests(unittest.TestCase):
             self.assertEqual(question, "q", name)
             self.assertNotIn("answer", prompt.lower(), name)
 
+    def test_context_order_is_identical_across_arms(self):
+        """Every arm presents surviving passages in candidate-list order.
+
+        Regression test. The control arm used to emit rank-sorted context
+        while the other two emitted candidate order, so the arms diverged
+        whenever the cached candidate list was not already rank-ordered -
+        which is what Stage 3 produces when it injects the evaluation pair
+        into a retrieved set. Position in the context window affects the
+        generator, so that is an admission-unrelated difference between arms.
+        """
+        # Candidate list deliberately NOT in rank order.
+        shuffled = [
+            candidate("e-c", 3), candidate("e-a", 1), candidate("e-d", 4),
+            candidate("e-b", 2),
+        ]
+        expected = ["e-c", "e-a", "e-b"]  # candidate order, best 3 by rank
+
+        generators, systems = self.arms()
+        self.candidates = shuffled
+
+        no_filter = NoFilterSystem(answer_generator=EchoGenerator(),
+                                   max_admitted_passages=3)
+        self.assertEqual(
+            [c.evidence.evidence_id for c in no_filter.select(shuffled)],
+            expected,
+        )
+
+        rag2 = RAG2System(
+            answer_generator=EchoGenerator(),
+            admission_filter=MockRAG2Filter(
+                {c.evidence.evidence_id: HELPFUL for c in shuffled}),
+            config=RAG2Config(max_admitted_passages=3),
+        )
+        self.assertEqual(
+            list(rag2.run(sample_id="s", experiment_id="e", question="q",
+                          candidates=shuffled).admitted_evidence_ids),
+            expected,
+        )
+
+        recency = RecencyAwareSystem(
+            answer_generator=EchoGenerator(),
+            admission_policy=policy(threshold=0.0, limit=3, weight=0.0),
+        )
+        self.assertEqual(
+            list(recency.run(sample_id="s", experiment_id="e", question="q",
+                             candidates=shuffled).admitted_evidence_ids),
+            expected,
+        )
+
     def test_no_filter_admits_everything_within_budget(self):
         generators, systems = self.arms()
         result = systems[0].run(sample_id="s", experiment_id="e", question="q",

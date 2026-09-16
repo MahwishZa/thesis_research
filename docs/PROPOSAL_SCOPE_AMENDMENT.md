@@ -111,6 +111,22 @@ clinician review of the Alzheimer's case-study items may remain if feasible.
 Three-state output (GROUNDED / FLAGGED / CONTESTED) reduces to GROUNDED /
 ABSTAIN, with CONTESTED produced only under the secondary contested analysis.
 
+### 10. Validity controls (§4.6) and ablations (§6)
+
+Replace **V1 Permutation control** with the unchanged-claim negative control
+(the proposal's own V5). The permutation control cannot discriminate here:
+neither filter under test receives a publication date, so permuting dates
+changes no filter output and drives Δ to zero by construction rather than by
+evidence. Keep it only for the date-annotated prompting condition, where dates
+genuinely enter the input.
+
+State that **`λ = 0` is an ablation of the proposed method, not an
+experimental arm** — the experiment has three arms, and `λ = 0` is reported as
+a sensitivity analysis alongside them.
+
+**V2 Backbone replication** becomes optional robustness rather than a
+requirement, with RQ2/H3 conditional on it being run (see §4 above).
+
 ## What must NOT change
 
 * **The research question and title.** The reduced design answers the original

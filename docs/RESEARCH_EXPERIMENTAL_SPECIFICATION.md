@@ -25,6 +25,9 @@
 
 # 0. Scope Amendment (2026-09-16) — read this first
 
+> The canonical, frozen statement of scope is `docs/FROZEN_SCOPE.md`.
+> This section summarises it; where the two differ, that file governs.
+
 This specification was written for a larger design than the thesis now
 executes. The reduced scope below **governs wherever the body of this document
 disagrees with it**; the body is retained because its definitions, controls and
