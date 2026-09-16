@@ -66,11 +66,17 @@ and were cut to fit one student's compute and time budget. `contested.py` and
 may support a qualitative analysis or future work. **None of them is required
 for the primary result.** See ledger decisions D-25 and D-26.
 
+## Canonical scope
+
+`docs/FROZEN_SCOPE.md` states exactly what is primary, what is secondary, and
+what Stage 3 must satisfy. Where any other document disagrees with it about
+what is primary, it governs.
+
 ## Layout
 
 ```
-docs/                RESEARCH_LEDGER (decisions), _SPECIFICATION (method),
-                     _UNDERSTANDING_REPORT (audit of the proposal + base paper)
+docs/                FROZEN_SCOPE (canonical scope), RESEARCH_LEDGER (decisions),
+                     _SPECIFICATION (method), _UNDERSTANDING_REPORT (audit)
 alzheimer_corpus/    Stage 1 — retrieval corpus (in progress)
 systems/             the three arms
 experiments/         Stage 2 — test-pair construction
