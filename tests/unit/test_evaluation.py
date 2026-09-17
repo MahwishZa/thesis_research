@@ -91,8 +91,17 @@ class DuplicateTests(unittest.TestCase):
 
     def test_review_export_has_blank_decision_columns(self):
         row = qs.review_export([question()])[0]
-        self.assertEqual(row["reviewer_decision"], "")
-        self.assertIn("automatic_failures", row)
+        self.assertEqual(row["review_decision"], "")
+        self.assertEqual(row["reviewer_id"], "")
+        self.assertEqual(row["review_date"], "")
+
+    def test_review_export_withholds_internal_classifications(self):
+        row = qs.review_export([
+            question(temporal_candidate=True, ambiguity_candidate=True)
+        ])[0]
+        for field in qs.WITHHELD_FROM_REVIEW:
+            self.assertNotIn(field, row)
+        self.assertEqual(set(row), set(qs.REVIEW_COLUMNS))
 
 
 def candidates(n=3):

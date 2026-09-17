@@ -20,9 +20,10 @@ from dataclasses import replace as _replace
 from typing import Any, Optional, Sequence
 
 from ..evaluation.questions import (
-    EvaluationQuestion, find_duplicates, looks_indeterminate, review_export,
-    summarise_pool, validate, validation_failures,
+    REVIEW_COLUMNS, EvaluationQuestion, find_duplicates, looks_indeterminate,
+    review_export, summarise_pool, validate, validation_failures,
 )
+from .export_review import assert_neutral
 from . import cochrane, nih_medquad
 
 DEFAULT_OUT = Path("experiments/question_sources/pool")
@@ -112,18 +113,15 @@ def write_pool(pool: Sequence[EvaluationQuestion], out_dir: Path) -> dict[str, s
             handle.write(json.dumps(question.to_dict(), sort_keys=True,
                                     ensure_ascii=False) + "\n")
 
-    reviewable = [q for q in pool if q.status != "rejected"]
+    reviewable = [q for q in pool if q.status == "validated"]
     rows = review_export(reviewable)
-    columns = [
-        "question_id", "question", "reference_answer", "reference_source",
-        "reference_locator", "reference_date", "topic", "subtopic",
-        "temporal_candidate", "ambiguity_candidate", "automatic_failures",
-        "reviewer_decision", "reviewer_note",
-    ]
+    # Same neutrality gate the standalone exporter applies: the reviewer file
+    # must not carry a classification this pipeline assigned.
+    assert_neutral(rows)
+
     review = out_dir / "review.csv"
     with open(review, "w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns,
-                                extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=list(REVIEW_COLUMNS))
         writer.writeheader()
         writer.writerows(rows)
 

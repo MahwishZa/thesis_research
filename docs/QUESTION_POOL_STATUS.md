@@ -75,6 +75,31 @@ guideline source rather than rebalance this one.
 
 ## Human review
 
+**Materials:** `pool/review.csv` (123 rows) and
+`pool/HUMAN_REVIEW_INFORMATION.md`.
+
+**The review file is deliberately neutral.** It carries the question, the
+reference answer and everything needed to trace that answer to a source — and
+none of the classifications this pipeline assigned. Internal flags
+(`temporal_candidate`, `ambiguity_candidate`, the source verdict label,
+automatic validation outcomes) stay in `candidates.jsonl` for later analysis
+and are withheld from the reviewer, because a column saying a candidate looked
+weak invites confirmation rather than assessment — and the automated judgement
+is precisely what needs independent checking.
+
+`export_review.py` enforces this: it emits exactly `REVIEW_COLUMNS` and raises
+rather than write a file carrying any withheld field. Two candidates differing
+only in internal flags export to identical rows, which is asserted in the tests.
+
+**Outcomes:** `ACCEPT` · `REVISE` (proposition stands, wording or extract needs
+correcting) · `REJECT` · `HOLD` (source verification needed first). No numeric
+score. The reviewer fills `review_decision`, `reviewer_note`, `reviewer_id` and
+`review_date`, and edits nothing else; a reference-answer change is described
+in the note and applied afterwards, so the original wording and its provenance
+stay recoverable.
+
+### Earlier note on the review file
+
 `pool/review.csv` carries the 123 validated candidates with
 blank `reviewer_decision` and `reviewer_note` columns. The reviewer may accept,
 reject, revise or flag for source verification. A revision must keep its

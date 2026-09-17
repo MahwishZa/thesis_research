@@ -215,19 +215,78 @@ def find_duplicates(
     return tuple(found)
 
 
-def review_export(questions: Iterable[EvaluationQuestion]) -> list[dict[str, Any]]:
-    """Rows for human review, with the decision columns left blank.
+#: The reviewer-facing columns, in order. Deliberately excludes every
+#: internally-assigned classification.
+REVIEW_COLUMNS = (
+    "question_id",
+    "question",
+    "reference_answer",
+    "reference_source",
+    "reference_source_type",
+    "reference_date",
+    "source_locator",
+    "topic",
+    "subtopic",
+    "AD_anchor",
+    "review_decision",
+    "reviewer_note",
+    "reviewer_id",
+    "review_date",
+)
 
-    The reviewer fills ``reviewer_decision`` and ``reviewer_note``; nothing
-    else in the row should change.
+#: Fields that must never reach a reviewer. Each one is a judgement this
+#: pipeline already made about the candidate, and showing it would invite the
+#: reviewer to confirm that judgement instead of reading the evidence.
+WITHHELD_FROM_REVIEW = (
+    "temporal_candidate",
+    "ambiguity_candidate",
+    "automatic_failures",
+    "status",
+    "rejection_reason",
+    "determinate",
+    "corpus_support_expected",
+    "source_verdict_label",
+    "verification_required",
+    "reference_answer_provenance",
+)
+
+REVIEW_DECISIONS = ("ACCEPT", "REVISE", "REJECT", "HOLD")
+
+
+def review_export(questions: Iterable[EvaluationQuestion]) -> list[dict[str, Any]]:
+    """Neutral rows for human review.
+
+    Carries the question, its reference answer and everything needed to trace
+    that answer to a source - and nothing this pipeline concluded about the
+    candidate. The internal flags stay in ``candidates.jsonl`` for later
+    analysis; surfacing them here would turn an independent assessment into a
+    confirmation of an automated one, and would quietly bias which candidates
+    survive.
+
+    ``reference_source_type`` is lifted out of metadata because it is source
+    provenance, which the reviewer needs; the rest of metadata is withheld.
     """
     rows = []
     for q in questions:
-        row = q.to_dict()
-        row["automatic_failures"] = "; ".join(validation_failures(q))
-        row["reviewer_decision"] = ""
-        row["reviewer_note"] = ""
-        rows.append(row)
+        rows.append({
+            "question_id": q.question_id,
+            "question": q.question,
+            "reference_answer": q.reference_answer,
+            "reference_source": q.reference_source,
+            "reference_source_type": str(
+                q.metadata.get("reference_source_type", "")
+            ),
+            "reference_date": q.reference_date,
+            "source_locator": q.reference_locator or "",
+            "topic": q.topic,
+            "subtopic": q.subtopic or "",
+            "AD_anchor": q.AD_anchor,
+            # Filled in by the reviewer.
+            "review_decision": "",
+            "reviewer_note": "",
+            "reviewer_id": "",
+            "review_date": "",
+        })
     return rows
 
 

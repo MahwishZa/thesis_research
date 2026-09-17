@@ -232,8 +232,8 @@ class PoolTests(unittest.TestCase):
             rows = list(csv.DictReader(open(paths["review"], encoding="utf-8")))
         self.assertTrue(rows)
         for r in rows:
-            self.assertEqual(r["reviewer_decision"], "")
-            self.assertTrue(r["reference_locator"])
+            self.assertEqual(r["review_decision"], "")
+            self.assertTrue(r["source_locator"])
 
     def test_pool_jsonl_round_trips(self):
         import json
