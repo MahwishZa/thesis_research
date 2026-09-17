@@ -1,48 +1,59 @@
-# Frozen Scope — canonical reference for Stage 3 onward
+# Frozen Scope — canonical reference
 
-Frozen 2026-09-16 at the close of the design review. Where any other document
-disagrees with this one about what is *primary*, this one governs. Stage 3
-begins from here; it does not reopen the architecture.
+**Rewritten 2026-09-17** to state the current research question. Where any
+other document disagrees with this one about what is *primary*, this one
+governs. The design it replaces is recorded in §7 as superseded history, for
+provenance only — it is not an alternative active scope and no part of it is a
+thesis outcome.
 
 ---
 
-## Primary research question
+## 1. Primary research question
 
-> Does a confidence-derived evidence admission mechanism exhibit recency
-> asymmetry, and does explicitly incorporating evidence recency reduce that
-> asymmetry without simply degrading answer quality?
+> **Does the proposed solution/system reduce the rate of hallucinated answers
+> in Alzheimer's disease question answering, relative to the baseline system,
+> under identical question and evidence conditions, while maintaining
+> comparable QA accuracy?**
 
-## Primary measurement (C1)
+## 2. The two evaluation objectives
 
-Admission asymmetry over matched temporal-counterfactual pairs:
-
-```
-Δ = P(admit | older passage) − P(admit | newer passage)
-```
-
-measured per arm, with the matched pair as the unit of analysis. Δ > 0 means
-older evidence is preferentially admitted.
-
-The RAG² filter receives only `(question, passage text)` at inference — no
-dates, no ranks, no metadata. Any Δ it shows must therefore come from content
-correlates of era, which is what makes the measurement meaningful and what
-insulates the primary claim from rank and ordering artifacts.
-
-## Three primary arms
-
-One candidate set per item, built once, frozen, replayed byte-identically.
-
-| Arm | Admission rule | Sees dates? |
+| | Outcome | Definition |
 |---|---|---|
-| `B1_NO_FILTER` | Admit everything, up to the budget | no |
-| `B2_RAG2` | Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` | no |
-| `P_RECENCY` | `A(s) ≥ θ` | **yes** |
+| **PRIMARY** | Hallucination rate (HAR) | An answer scores 1 if it contains at least one claim unsupported by, or contradicted by, the evidence actually supplied to the generator; 0 otherwise. HAR = hallucinated answers ÷ evaluated answers. |
+| **SECONDARY** | QA accuracy | Whether the answer is correct against the question's reference answer. |
 
-What differs between arms is the admission rule and nothing else. Identical
-across all three: question, candidate set and its order, reranker scores,
-context budget, prompt template, generator and decoding settings.
+Primary comparison, paired by question:
 
-## Primary proposed method
+```
+ΔHAR = HAR_proposed − HAR_baseline
+```
+
+**There is no third objective, and no diagnostic objective.** Specifically
+excluded as thesis outcomes: hallucination subtype analysis, error taxonomy,
+retrieval-quality measurement, temporal analysis, ambiguity analysis,
+admission asymmetry, and ROUGE / BLEU / BERTScore. Fields serving these may
+exist inside the implementation where the code needs them; none is reported
+as a research finding.
+
+## 3. The comparison
+
+| Arm | Admission rule | Role |
+|---|---|---|
+| `B2_RAG2` | Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` | **The baseline.** One half of the primary comparison. |
+| `P_RECENCY` | `A(s) ≥ θ` | **The proposed solution/system.** The other half. |
+| `B1_NO_FILTER` | Admit everything, up to the budget | Optional reference control. Not required for the primary result and not a research objective; it bounds what filtering does at all. |
+
+What differs between arms is the **admission rule and nothing else**.
+Identical across arms and enforced in code: question, candidate evidence set
+and its order, reranker scores, context budget, prompt template, generator
+instance and decoding settings (`experiments/evaluation/runner.py`:
+`assert_prompt_parity`, `assert_budget_parity`, `assert_generator_parity`,
+`assert_same_candidate_sets`).
+
+## 4. The proposed method
+
+Unchanged by this rewrite — the scoring mechanism is the thesis's method and
+is not reopened:
 
 ```
 A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)        admit if A(s) ≥ θ
@@ -56,68 +67,88 @@ A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)        admit if A(s) ≥ θ
 * `θ ∈ [0, 1]` — admission threshold, on the same scale as `A`.
 
 Three tunable quantities: **λ, θ, H**. All fitted on the validation split,
-never on test. `λ = 0` is an **internal ablation**, not a fourth arm.
+never on test. `λ = 0` is an internal ablation, not a fourth arm.
 
-## Secondary / future components
+### Why this could affect the primary outcome
+
+The causal pathway the thesis tests: admission decides which passages reach
+the generator; a generator given superseded evidence can produce a
+well-formed claim that the current evidence contradicts; weighting recency at
+admission changes *which* evidence is present to be contradicted. The
+mechanism acts on the evidence supplied, and HAR is defined against exactly
+that evidence.
+
+## 5. Secondary / future components
 
 Present in the repository, off by default, never part of a primary result:
 contested-evidence detection, supersession discounting, retraction exclusion,
-time-invariance (ψ), answer verification, entailment-derived support,
-source authority. Enabling any of them is a secondary analysis and must be
-declared as such; each run records which were active.
+time-invariance (ψ), answer verification, entailment-derived support, source
+authority. Enabling any of them is a secondary analysis and must be declared
+as such; each run records which were active.
 
-## Explicitly outside primary scope
+## 6. Explicitly outside scope
 
 Clinician rating study · comparison against a further state-of-the-art filter ·
-agentic reference arm · the supersession table · claim-class-dependent
-inclusion rules · retrieval-quality optimisation.
+agentic reference arm · supersession table · claim-class-dependent inclusion
+rules · retrieval-quality optimisation · a second filter backbone · any
+additional research objective.
 
 ---
 
-## Interface requirements Stage 3 must satisfy
+## 7. Superseded design — provenance only
 
-1. **Ranks are 1..N contiguous after injection.** The evaluation pair is
-   injected into the retrieved set, so the combined set must be re-ranked;
-   the pair does not keep ranks from elsewhere. `normalize_rank` raises
-   otherwise.
+An earlier design made **admission asymmetry** the primary question:
+
+> *(superseded, not current)* Does a confidence-derived evidence admission
+> mechanism exhibit recency asymmetry, and does explicitly incorporating
+> evidence recency reduce that asymmetry without simply degrading answer
+> quality?
+
+with primary measurement `Δ = P(admit | older) − P(admit | newer)` over
+matched temporal-counterfactual pairs.
+
+**This is no longer the research question and Δ is no longer an outcome.**
+It is recorded here so the repository's history is traceable and so the
+Stage-2 artifacts under `experiments/test_pairs/` are explicable.
+
+The pivot narrowed the thesis from "measure a bias, then correct it" to
+"does the correction reduce hallucination". What survives is the proposed
+method itself, which is unchanged: the same `A(s)` scoring rule serves both
+framings. What does not survive is the asymmetry measurement, the matched-pair
+construction as a *primary* instrument, the negative control built for Δ, and
+the multi-backbone replication question.
+
+`experiments/test_pairs/` and `docs/research_experimental_specification.md`
+belong to that superseded design. The code is retained rather than deleted —
+deleting it would destroy provenance and it breaks nothing — but **nothing in
+it produces a thesis outcome**, and it is not run as part of the 12-step
+pipeline.
+
+## 8. Interface requirements the experiment must satisfy
+
+1. **Candidate sets are frozen once and replayed byte-identically** to both
+   arms. Neither arm retrieves for itself during the primary comparison.
 2. **N is identical for every item.** `ρ` is a within-set rank, so `θ` is only
    comparable across items at fixed candidate-set size.
-3. **Candidate sets contain only dated passages.** Applied identically to all
-   three arms at construction. This keeps the undated branch of the recency
-   score from ever firing, so `undated_score` is not a primary parameter and
-   the tunable count stays at three. Every run reports its count of `UNDATED`
-   passages; in a valid primary run that count is zero.
-4. **Context order is candidate-list order in all three arms.** Rank decides
+3. **Candidate sets contain only dated passages.** Applied identically to both
+   arms at construction, so the undated branch of the recency score never
+   fires and `undated_score` is not a tunable. Every run reports its count of
+   `UNDATED` passages; in a valid run that count is zero.
+4. **Context order is candidate-list order in both arms.** Rank decides
    *which* passages survive the budget; it does not reorder what the generator
    sees.
-5. **The frozen pair file's SHA-256 is asserted before the run**
-   (`verify_frozen`), so the evaluation set cannot change after outcomes are
-   seen.
+5. **The frozen manifest's hash is asserted before the run**, so the
+   evaluation set cannot change after outcomes are seen.
+6. **λ, θ and H are fitted on the validation split and frozen before any test
+   run.** `AdmissionConfig.validate()` raises rather than supply a default.
 
-## Controls
+## 9. Reporting requirements
 
-* **Negative control (blocking):** the unchanged-claim set. Same construction,
-  same matching, but the claim did not change across the window. Δ ≈ 0 there
-  alongside Δ > 0 on changed-claim pairs is what separates claim recency from
-  prose-era style. The permutation control it replaces is invalid here: no
-  filter under test receives a date, so permuting dates changes no output and
-  drives Δ to zero by construction rather than by evidence.
-* **Ablation (λ = 0):** pure relevance at the same θ, isolating what the
-  recency signal contributes over thresholding relevance alone.
-* **Rank-balance diagnostic (free):** report the rerank-rank distribution of
-  older vs. newer passages. Bears on the recency-aware arm and on budget
-  competition; the RAG² measurement is rank-blind by construction.
-* **Dual reporting:** every rate reported both conditional on answering and
-  with abstentions counted as failures.
-
-## Backbones
-
-**One filter backbone is the primary experiment.** A second is an *optional*
-robustness check. The central question is whether this confidence-derived
-signal shows recency asymmetry; one faithful reproduction answers it. A second
-backbone would upgrade the claim from "this filter, as trained here" to "the
-signal family", which is a generalisation, not the thesis. The RAG²
-checkpoint is not distributed, so each backbone costs a full filter training.
-
-If only one is run, the claim is narrowed explicitly and the single-backbone
-limitation stated — not quietly dropped.
+* Every rate is reported both conditional on answering and with abstentions
+  counted, alongside answer coverage.
+* The baseline cannot abstain, so the proposed system answers always by
+  default (`AbstentionPolicy.ANSWER_ALWAYS`); see
+  `docs/experimental_parity_audit.md` §2.
+* Statistical comparison: exact McNemar on the paired discordant answers,
+  paired bootstrap CI resampling questions, Holm correction across the two
+  outcomes.

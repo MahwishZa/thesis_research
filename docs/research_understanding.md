@@ -1,6 +1,23 @@
 # Research Understanding Report
 
-**Thesis:** *Does the Filter Prefer the Past? Measuring and Correcting Recency Bias in
+> ## ⚠ PARTLY SUPERSEDED — read for RAG² facts, not for current scope
+>
+> This report was written against the earlier admission-asymmetry design. Its
+> analysis of the **RAG² paper and repository remains accurate and useful**
+> (the established-facts table E1–E9 in particular). Its statements about
+> *what this thesis measures* are superseded.
+>
+> Current research question — `docs/frozen_scope.md` governs:
+>
+> > Does the proposed solution/system reduce the rate of hallucinated answers
+> > in Alzheimer's disease question answering, relative to the baseline
+> > system, under identical question and evidence conditions, while
+> > maintaining comparable QA accuracy?
+>
+> Primary outcome: hallucination rate. Secondary: QA accuracy. Admission
+> asymmetry (Δ) is not an outcome.
+
+**Thesis title (superseded):** *Does the Filter Prefer the Past? Measuring and Correcting Recency Bias in
 Confidence-Derived Evidence Utility Signals for Retrieval-Augmented Alzheimer's Clinical Reasoning*
 
 **Documents analysed**

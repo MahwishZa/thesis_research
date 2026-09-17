@@ -1,5 +1,14 @@
 # Proposal Scope Amendment
 
+> ## ⚠ SUPERSEDED by a later, larger change
+>
+> This note described trimming the proposal down to the admission-asymmetry
+> design. The research question has since changed again, to hallucination
+> rate (primary) and QA accuracy (secondary) — see `docs/frozen_scope.md`,
+> which governs. The reductions listed below still happened and the method
+> they describe is still the method; the *research question and title* text
+> in §"What must not change" is no longer accurate.
+
 The approved proposal (`MS Thesis Research Proposal · Measuring Recency Bias in
 Evidence Utility Signals`) describes a larger design than the thesis now
 executes. This note lists exactly what must change in it, and what must not.

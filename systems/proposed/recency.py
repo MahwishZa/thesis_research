@@ -13,9 +13,9 @@ rank-normalised relevance score without further scaling.
 **Why "recency" and not "currency".** The earlier design called this the
 currency score, after a three-state currency model (current / superseded /
 contested). Two of those states are no longer part of the primary experiment,
-and "currency" reads as money on first encounter. The phenomenon under study
-is recency asymmetry, so the signal is the recency score. One word, one
-meaning, used everywhere.
+and "currency" reads as money on first encounter. The signal this policy adds
+is recency, so it is the recency score. One word, one meaning, used
+everywhere.
 
 **Secondary rules are off by default.** Retraction handling, the supersession
 discount and time-invariance (psi) belong to the wider design and are

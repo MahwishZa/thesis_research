@@ -14,24 +14,22 @@ points there rather than duplicating it.
 
 ## Research question and pipeline
 
-> Does the proposed solution reduce the rate of hallucinated answers,
-> relative to the baseline system, on paired Alzheimer's disease questions
-> answered from the same frozen evidence — while maintaining comparable QA
-> accuracy?
+> Does the proposed solution/system reduce the rate of hallucinated answers
+> in Alzheimer's disease question answering, relative to the baseline system,
+> under identical question and evidence conditions, while maintaining
+> comparable QA accuracy?
 
 Primary outcome: hallucinated answer rate (HAR). Secondary outcome: QA
-accuracy. The twelve-step pipeline (`README.md`) runs corpus → questions →
-freeze → baseline → proposed → collect → annotate → HAR → accuracy →
-statistics → error analysis → write-up.
+accuracy. **There is no third outcome and no diagnostic objective.** The
+twelve-step pipeline (`README.md`) runs corpus → questions → freeze →
+baseline → proposed → collect → annotate → HAR → accuracy → statistics →
+error analysis → write-up.
 
-**A documentation note, not a methodology change:** `docs/frozen_scope.md`
-predates this pipeline and states an earlier primary research question
-(admission-rate asymmetry, Δ). That design's infrastructure survives as the
-mechanism-diagnostic layer (`experiments/test_pairs/`), but it is no longer
-the primary outcome — HAR is, per every later planning document
-(`docs/next_steps.md`, `docs/experimental_parity_audit.md`) and per this
-task's own constraints. `frozen_scope.md` has not been rewritten to say so
-explicitly; this page is the accurate current statement.
+`docs/frozen_scope.md` is the canonical scope statement and now states this
+same question. An earlier design made admission-rate asymmetry (Δ) primary;
+it is superseded, recorded in `frozen_scope.md` §7 for provenance, and
+produces no thesis outcome. Its infrastructure survives unrun under
+`experiments/test_pairs/`.
 
 ## Corpus methodology
 

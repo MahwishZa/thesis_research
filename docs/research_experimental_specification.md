@@ -1,5 +1,29 @@
 # Research and Experimental Specification
 
+> ## ⚠ SUPERSEDED — historical record, not current scope
+>
+> **This document describes the earlier admission-asymmetry design and is
+> retained for provenance only.** Its research questions (RQ1–RQ6), its
+> primary measurement `Δ = P(admit | older) − P(admit | newer)`, its
+> multi-backbone replication question and its contribution structure are **no
+> longer the thesis**, and nothing in it is a thesis outcome.
+>
+> The current research question is stated in `docs/frozen_scope.md`, which
+> governs:
+>
+> > Does the proposed solution/system reduce the rate of hallucinated answers
+> > in Alzheimer's disease question answering, relative to the baseline
+> > system, under identical question and evidence conditions, while
+> > maintaining comparable QA accuracy?
+>
+> Primary outcome: hallucination rate. Secondary outcome: QA accuracy. There
+> is no diagnostic objective.
+>
+> What survived the pivot is the proposed method itself — the `A(s)` scoring
+> rule in §4 below is unchanged and is still the thesis's method. Read this
+> file for how that method was derived and for RAG² fidelity detail; do not
+> read it for what is being measured.
+
 ## MS Thesis Research Project
 
 **Thesis Title:** `[TITLE TO BE SPECIFIED]`
