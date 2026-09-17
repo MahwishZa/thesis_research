@@ -1,112 +1,112 @@
 # Next Actions
 
-**Updated:** 2026-09-17 · 282 tests passing.
+**Updated:** 2026-09-17 · 389 tests passing · **Nothing has been executed.**
+
+Status vocabulary, used strictly: **IMPLEMENTED** (code exists) · **TESTED**
+(tested on fixtures) · **VALIDATED** (whole pathway exercised end to end) ·
+**READY FOR REAL EXECUTION** (only inputs missing) · **EXECUTED** (actually
+run). Nothing in this repository is EXECUTED.
 
 ---
 
-## DONE
+## Research question
 
-* **Local environment verified.** RTX 2050 4 GB, driver 592.82, PyTorch
-  2.4.1+cu121, `torch.cuda.is_available() == True`. The driver-reported CUDA
-  13.1 versus PyTorch's 12.1 is **not a fault** — drivers are backward
-  compatible and CUDA initialises. No reinstall.
-* **Repository consolidated** to one top-level `experiments/`; `evaluation/`
-  moved to `experiments/evaluation/` with `git mv`. No stale references.
-* **Question-source protocol established** *before* sourcing
-  (`docs/question_sources.md`).
-* **Candidate pool built from two inspected sources** — 170 sourced, 150 after
-  id-collision removal, **123 auto-validated, currently under review by one
-  medically trained reviewer**, 27 auto-rejected as near-duplicates. Every
-  record carries a concrete locator (PMID/DOI/CD, or MedQuAD id + CUI + URL)
-  and a date.
-* **Flan-T5 base-size ambiguity resolved as far as the repository allows:**
-  `classifier/model/token_add.ipynb` has *empty* `from_pretrained("")` strings,
-  so the released code pins no base model. Only the paper is authoritative;
-  ledger E1 records Flan-T5-large (770 M) read from it.
-* **Abstention policy** resolved and configurable.
-* **Steps 3–12 infrastructure complete and tested on synthetic fixtures**
-  (`docs/methodology.md`, `docs/repository_structure.md`'s "Steps 3–12"
-  section): evidence freezing with corpus-version tracking, a real
-  baseline+proposed system run together end to end, the full results/
-  annotation/QA-accuracy/statistics/error-analysis pipeline. See the summary
-  table below for exactly what remains blocked within each step.
-* Nothing downloaded; corpus untouched; no final or result-generating run
-  performed.
+> Does the proposed solution/system reduce the rate of hallucinated answers in
+> Alzheimer's disease question answering, relative to the baseline system,
+> under identical question and evidence conditions, while maintaining
+> comparable QA accuracy?
 
-## IN PROGRESS
+Primary: hallucination rate. Secondary: QA accuracy. No third objective.
+`docs/frozen_scope.md` governs.
 
-* **Step 1 — corpus download**, running on the laptop.
-* **Step 2 — question pool.** 123 candidates under review by one medically
-  trained reviewer.
+---
 
-## Steps 3–12: what's ready vs. what's blocked
+## Decisions taken (so the student does not have to)
 
-| Step | Infrastructure | Blocked on |
+| # | Decision | Where |
 |---|---|---|
-| 3. Freeze evidence | `freezing.py` — hashing, parity gate, firewall, `from_question()`, `corpus_snapshot` tracking. Tested on fixtures. | Real candidate evidence (needs corpus + retrieval) |
-| 4/5. Run baseline / proposed | Real `RAG2System` + `RecencyAwareSystem` run together via `run_experiment()`, tested end to end (`tests/integration/test_baseline_and_proposed.py`). | A concrete generator (venue decision, below); retrieval/reranking to produce real candidates |
-| 6. Collect results | Full JSONL schema; `read_results()` / `group_by_system()` for question-by-question comparison. | Same as 4/5 |
-| 7. Annotation | Schema, blinding, `read_annotations()`, `unblind_annotations()`. Tested on fixtures. | Generated answers to annotate |
-| 8. HAR | `har()`, `coverage()`, `compare_systems()`, `hallucination_outcomes()` glue. Tested with known expected values. | Real annotations |
-| 9. QA accuracy | `accuracy.py` (`QAJudgment`), `qa_accuracy()`. Tested. Correctness is judged, not auto-scored — see `docs/methodology.md`. | A correctness-judging protocol (human or rule) applied to real answers |
-| 10. Statistics | `mcnemar()`, `paired_bootstrap_ci()`, `holm()` — same functions serve both HAR and accuracy. Tested with known expected values. | Real paired outcomes |
-| 11. Error analysis | `outcome_crosstab()`, `error_analysis()`. Tested. | Real outcomes to analyse |
-| 12. Thesis prep | `docs/methodology.md` — methods skeleton, cross-referenced, no results. | Results themselves |
+| D-36 | Research question is HAR + QA accuracy; admission asymmetry superseded | `frozen_scope.md` |
+| D-37 | MedCPT retrieval + reranking over a flat **exact** index (not FAISS approximate — determinism) | `experiments/retrieval/` |
+| D-38 | Generator stays **Llama-3-8B-Instruct**, 4-bit NF4, on a free remote T4. Local GPU is ruled out at every precision | `generator_contract.md` |
+| D-39 | Filter trained by us: **Flan-T5-large**, paper's recipe, effective batch preserved by accumulation | `filter_training.md` |
+| D-40 | Training set is a subsample; the label *function* stays exact, the weaker filter is a stated limitation | `filter_training.md` |
+| — | Context budget 5, candidate-set size 20, retrieval depth 50 | `system_specification.md` §8 |
 
-## BLOCKED
+λ, θ and H remain **deliberately unfitted** — `validate()` raises rather than
+default them. They are fitted on the validation split, never on test.
 
-| Blocked on | What it blocks | Note |
+## Step status
+
+| Step | Status | Waiting on |
 |---|---|---|
-| **Generator venue decision** | Steps 4–6 | Llama-3-8B: BF16 needs ≈16 GB; 4-bit ≈4.5–5 GB before KV cache, against 4 GB VRAM. CPU/offload may work; **runtime unmeasured** |
-| **Filter training venue** | the baseline arm | ≈12.4 GB before activations; a free 16 GB session suffices. Inference stays local |
-| **Corpus completion** | corpus-support check, Step 3 onward | |
-| **Retrieval + reranking** | Step 3 | not implemented; `retrieval_external: True` |
-| **Human review** | the final ~100 questions | 123 candidates under review in `experiments/questions/review.csv` |
-| **Identifier verification** | question approval | PubMed/doi.org blocked in the build environment; PMIDs transcribed, not resolved |
+| 1. Corpus | IN PROGRESS | student's build |
+| 2. Questions | IN PROGRESS | human review of 123 candidates |
+| 3. Freeze evidence | READY FOR REAL EXECUTION | corpus + approved questions |
+| 3a. Retrieval/rerank | IMPLEMENTED, TESTED | corpus; `torch` on the run machine |
+| 4. Baseline | READY, except the filter checkpoint | filter training |
+| 5. Proposed | READY | λ/θ/H fitting (needs validation split) |
+| 6. Collect results | READY | steps 4–5 |
+| 7. Annotation | IMPLEMENTED, TESTED | generated answers |
+| 8. HAR | IMPLEMENTED, TESTED | annotations |
+| 9. QA accuracy | IMPLEMENTED, TESTED | a correctness-judging protocol applied to real answers |
+| 10. Statistics | IMPLEMENTED, TESTED | real paired outcomes |
+| 11. Error analysis | IMPLEMENTED, TESTED | real outcomes |
+| 12. Write-up | methods skeleton only, no results | results |
+
+**The whole pathway is VALIDATED end to end on synthetic fixtures**
+(`tests/integration/test_controlled_validation.py`): corpus → index →
+retrieval → rerank → freeze → both arms → runner → JSONL, with all thirteen
+control properties asserted. That is software validation, not a pilot, and it
+produces no number that could be read as a result.
+
+## Blockers
+
+| Blocked on | Blocks | Note |
+|---|---|---|
+| **Corpus completion** | 3 onward | student's machine |
+| **Human review** | the final ~100 questions | 123 candidates in `experiments/questions/review.csv` |
+| **Filter training** | the baseline arm | strategy decided; needs one free-tier GPU session |
+| **Llama-3 licence** | generation | a click-through on Hugging Face, then a read token |
+| **Generation speed** | run planning | **unmeasured**; the timing check produces it |
+| **Identifier verification** | question approval | PMIDs transcribed, not resolved |
 
 ## NEXT — in order
 
-**1. Keep the corpus downloading.** Do not restart it.
+**1. Finish the corpus.** Do not restart it. When it completes, update
+`alzheimer_corpus/` and say so — the retrieval stage then indexes it.
 
-**2. Let review of the candidate pool finish.** `experiments/questions/
-review.csv` (123 rows), decisions ACCEPT / REVISE / REJECT / HOLD per
-`docs/question_review.md`. Spot-check a sample of PMIDs first — they were
-transcribed, not resolved. Target ~100 accepted, not a fixed count.
+**2. Finish question review.** ACCEPT / REVISE / REJECT / HOLD per
+`docs/question_review.md`. Spot-check a sample of PMIDs first. Target ~100
+accepted, not a fixed count.
 
-**3. Decide the generator venue.** The question is not "can Llama-3-8B run"
-but "can it run reproducibly, twice, in a sensible time". Either measure a
-short local generation, or commit to a remote GPU. **Download nothing until
-this is decided** — 30.07 GB free with the corpus still growing.
+**3. Accept the Llama-3 licence** on Hugging Face and create a read token.
 
-**4. Decide the filter training venue** and base size — see
-`rag2_classifier_feasibility.md` §2D.
+Steps 4 onward are assistant work once 1–3 land:
 
-**5. Only then download** the models the decision actually requires.
-
-**6. When the corpus finishes**, run the corpus-support check against the
-approved questions. `corpus_support_expected` is currently an *expectation*;
-this is where it becomes a finding.
-
-**7. Freeze evidence** — `from_question()` builds each `FrozenItem` from an
-approved question plus its retrieved candidates and the corpus snapshot id;
-`write_manifest()` hashes and gates cross-arm equality.
-
-**8. Run baseline, then the proposed solution/system**, same frozen manifest,
-via `run_experiment()` (already proven end to end on fixtures).
-
-**9. Blind annotation → HAR → QA accuracy → paired comparison → error
-analysis.** Every step in this chain already has tested code; what's missing
-is real data to run it on.
+4. Build the index (`python -m experiments.retrieval.build_index`), recording
+   the corpus snapshot id.
+5. Timing check on the remote GPU — the first real measurement.
+6. Generate filter labels on a subsample; check the label distribution; train
+   Flan-T5-large; record validation accuracy in a `CheckpointRecord`.
+7. Freeze evidence for the approved questions.
+8. Fit λ, θ, H on the **validation split only**, then freeze them.
+9. Run both arms over the frozen test manifest with one shared generator.
+10. Blind annotation → HAR → QA accuracy → paired statistics → error analysis.
 
 Do not add a pilot study, extra metrics, or extra baselines.
 
 ## Standing limitations for the thesis
 
-1. The baseline is an **adaptation** of RAG², not a reproduction.
-2. ~100 questions is a **practical budget, not a powered sample size**.
-3. Question sources are ~85% Cochrane; a guideline source would strengthen it.
-4. Identifiers were transcribed from an inspected dataset, not resolved.
-5. Execution hardware differs from the paper's — a resource limitation, not a
+1. The baseline is an **adaptation** of RAG², not a reproduction — the
+   checkpoint is not distributed and the released training file is a 5-example
+   format sample.
+2. The filter is trained on a **subsample**, so it is weaker than the paper's.
+   The no-filter control is the floor that keeps this visible.
+3. The generator runs **4-bit quantised**, identically for both arms.
+4. ~100 questions is a **practical budget, not a powered sample size**.
+5. Question sources are ~85% Cochrane; a guideline source would strengthen it.
+6. Identifiers were transcribed from an inspected dataset, not resolved.
+7. Execution hardware differs from the paper's — a resource limitation, not a
    methodological one.
-6. QA accuracy correctness is judged (human or a named rule), not computed by
-   an automatic scorer — see `docs/methodology.md`.
+8. QA accuracy correctness is judged (human or a named rule), not computed by
+   an automatic scorer.

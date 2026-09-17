@@ -37,7 +37,9 @@ thesis_research/
 │   │   └── sources/                adapters over inspected external sources
 │   │       ├── cochrane.py         Cochrane reviews via MedRevQA
 │   │       └── nih_medquad.py      NIH pages via MedQuAD (CC BY 4.0)
-│   └── test_pairs/                Stage 2 matched-pair infrastructure
+│   ├── retrieval/                MedCPT retrieval + reranking (upstream, shared)
+│   ├── filter_training/          RAG² filter labels and training config
+│   └── test_pairs/               superseded design's infrastructure, unrun
 └── tests/                         unit and integration tests
 ```
 
@@ -48,10 +50,13 @@ Every Markdown document except the root `README.md`, named
 
 | File | Contents |
 |---|---|
-| `research_understanding.md` | the original research-understanding report |
+| `research_understanding.md` | **partly superseded** — RAG² facts remain accurate; its scope statements do not |
 | `research_ledger.md` | living decision log |
-| `research_experimental_specification.md` | the frozen experimental spec |
-| `frozen_scope.md` | canonical statement of what is primary vs. secondary |
+| `research_experimental_specification.md` | **superseded** — the earlier admission-asymmetry spec, kept for provenance |
+| `frozen_scope.md` | **canonical scope** — the current research question, the two outcomes, and the superseded design |
+| `system_specification.md` | what each arm does, what differs, what is held constant |
+| `generator_contract.md` | the pinned generator execution contract (D-38) |
+| `filter_training.md` | how the RAG² filter gets trained, since the checkpoint is not released (D-39/40) |
 | `proposal_scope_amendment.md` | edits required in the thesis proposal |
 | `feasibility_and_alignment_audit.md` | read-only audit: RAG² alignment, dataset feasibility |
 | `experimental_parity_audit.md` | baseline vs. proposed parity, the abstention decision |
