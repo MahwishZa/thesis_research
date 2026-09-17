@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "thesis-research"
 version = "0.1.0"
-description = "RAG2 baseline and SCAF proposed admission policy for the MS thesis on recency bias in retrieval-augmented Alzheimer's clinical reasoning."
+description = "Baseline system and the proposed solution/system for the MS thesis on hallucination in retrieval-augmented Alzheimer's question answering."
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6.0"]
 
@@ -19,6 +19,7 @@ models = ["torch>=2.0", "transformers>=4.40"]
 [tool.setuptools]
 packages = [
     "systems",
+    "evaluation",
     "systems.interfaces",
     "systems.baseline",
     "systems.proposed",
