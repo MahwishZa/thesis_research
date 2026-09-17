@@ -50,7 +50,34 @@ class OutputState(str, Enum):
 
     GROUNDED = "GROUNDED"
     ABSTAIN = "ABSTAIN"
+    #: Answered with an empty evidence block, under ANSWER_ALWAYS. Not
+    #: GROUNDED - there was nothing to ground on - and not ABSTAIN, because
+    #: an answer was produced and must be annotated like any other.
+    UNGROUNDED = "UNGROUNDED"
     CONTESTED = "CONTESTED"
+
+
+class AbstentionPolicy(str, Enum):
+    """What the proposed system does when no passage clears theta.
+
+    The baseline does NOT abstain: when its filter admits nothing it still
+    generates, from an empty evidence block. If this arm abstains in the same
+    situation, the two arms behave differently for a reason that has nothing
+    to do with the intervention, and the hallucination rate stops being
+    comparable - an abstention makes no claims, so it can never be labelled
+    hallucinated.
+
+    ``ANSWER_ALWAYS`` is the default because it restores parity by
+    construction: both arms generate from whatever they admitted, including
+    nothing. ``ABSTAIN_WHEN_EMPTY`` preserves the earlier behaviour and stays
+    available as a declared secondary condition, never as the primary
+    comparison.
+    """
+
+    #: Generate from the admitted evidence, even when that set is empty.
+    ANSWER_ALWAYS = "answer_always"
+    #: Decline to answer when nothing clears theta.
+    ABSTAIN_WHEN_EMPTY = "abstain_when_empty"
 
 
 @dataclass(frozen=True)
@@ -67,6 +94,10 @@ class AdmissionConfig:
     #: The shared context budget. Must be identical across all three arms,
     #: or an admission difference is confounded with context volume.
     max_admitted_passages: Optional[int] = None
+
+    #: What to do when no passage clears theta. Defaults to answering, which
+    #: is what the baseline does in the same situation.
+    abstention_policy: AbstentionPolicy = AbstentionPolicy.ANSWER_ALWAYS
 
     def validate(self) -> None:
 
@@ -323,6 +354,7 @@ class RecencyAwareSystem(System):
             },
             "recency_weight": self.admission_policy.scorer.recency_weight,
             "admit_threshold": config.admit_threshold,
+            "abstention_policy": config.abstention_policy.value,
             "half_life_days": self.admission_policy.recency.half_life_days,
             "question_date": config.question_date.isoformat(),
             # Empty in the primary experiment. Recorded so a result is never
@@ -346,7 +378,11 @@ class RecencyAwareSystem(System):
             },
         }
 
-        if not admitted:
+        abstains = (
+            config.abstention_policy
+            is AbstentionPolicy.ABSTAIN_WHEN_EMPTY
+        )
+        if not admitted and abstains:
             return ExperimentResult(
                 sample_id=sample_id,
                 experiment_id=experiment_id,
@@ -369,11 +405,12 @@ class RecencyAwareSystem(System):
             prompt=self.build_prompt(question, decisions),
         )
 
-        output_state = (
-            OutputState.CONTESTED
-            if any(d.state is OutputState.CONTESTED for d in admitted)
-            else OutputState.GROUNDED
-        )
+        if not admitted:
+            output_state = OutputState.UNGROUNDED
+        elif any(d.state is OutputState.CONTESTED for d in admitted):
+            output_state = OutputState.CONTESTED
+        else:
+            output_state = OutputState.GROUNDED
 
         return ExperimentResult(
             sample_id=sample_id,

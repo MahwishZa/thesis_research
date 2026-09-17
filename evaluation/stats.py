@@ -206,3 +206,119 @@ def holm(p_values: Mapping[str, float]) -> dict[str, float]:
         running = max(running, min(1.0, (m - i) * p))
         adjusted[name] = round(running, 6)
     return adjusted
+
+
+@dataclass(frozen=True)
+class Coverage:
+    """Answer accounting for one system, kept separate from any rate.
+
+    HAR alone is not interpretable: a system that answers nothing has no
+    hallucinated answers. Every HAR must be read next to these counts, which
+    is why they travel together rather than being computed on demand.
+    """
+
+    total_questions: int
+    answered: int
+    abstained: int
+    hallucinated: int
+    non_hallucinated: int
+
+    @property
+    def answer_coverage(self) -> float:
+        return self.answered / self.total_questions if self.total_questions else 0.0
+
+    @property
+    def is_degenerate(self) -> bool:
+        """True when the system answered nothing, so no rate is meaningful."""
+        return self.answered == 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_questions": self.total_questions,
+            "answered": self.answered,
+            "abstained": self.abstained,
+            "hallucinated": self.hallucinated,
+            "non_hallucinated": self.non_hallucinated,
+            "answer_coverage": round(self.answer_coverage, 6),
+            "is_degenerate": self.is_degenerate,
+        }
+
+
+def coverage(
+    hallucinated: Mapping[str, int],
+    abstained: Mapping[str, int],
+) -> Coverage:
+    """Count answered, abstained and hallucinated outcomes for one system."""
+    if set(hallucinated) != set(abstained):
+        raise StatsError(
+            "hallucination and abstention records cover different questions"
+        )
+    total = len(hallucinated)
+    answered_keys = [k for k in hallucinated if not abstained[k]]
+    for k in hallucinated:
+        if abstained[k] and hallucinated[k]:
+            raise StatsError(
+                f"{k}: an abstention cannot also be hallucinated"
+            )
+    h = sum(hallucinated[k] for k in answered_keys)
+    return Coverage(
+        total_questions=total,
+        answered=len(answered_keys),
+        abstained=total - len(answered_keys),
+        hallucinated=h,
+        non_hallucinated=len(answered_keys) - h,
+    )
+
+
+def compare_systems(
+    baseline_hallucinated: Mapping[str, int],
+    baseline_abstained: Mapping[str, int],
+    proposed_hallucinated: Mapping[str, int],
+    proposed_abstained: Mapping[str, int],
+    *,
+    seed: str = "har",
+    iterations: int = 10000,
+) -> dict[str, Any]:
+    """The primary comparison, with the accounting that makes it readable.
+
+    Refuses to emit a headline difference when either system answered
+    nothing, because a rate over zero answers is not a rate. The refusal is a
+    recorded field rather than an exception: a degenerate run is a result the
+    thesis should report, not a crash.
+    """
+    base_cov = coverage(baseline_hallucinated, baseline_abstained)
+    prop_cov = coverage(proposed_hallucinated, proposed_abstained)
+
+    base_har = har(baseline_hallucinated, baseline_abstained)
+    prop_har = har(proposed_hallucinated, proposed_abstained)
+
+    degenerate = base_cov.is_degenerate or prop_cov.is_degenerate
+
+    report: dict[str, Any] = {
+        "baseline": {"coverage": base_cov.to_dict(), "har": base_har},
+        "proposed": {"coverage": prop_cov.to_dict(), "har": prop_har},
+        "coverage_difference": round(
+            prop_cov.answer_coverage - base_cov.answer_coverage, 6
+        ),
+        "interpretable": not degenerate,
+    }
+
+    if degenerate:
+        report["warning"] = (
+            "at least one system answered no questions; a hallucination rate "
+            "over zero answers is undefined and this comparison must not be "
+            "reported as hallucination reduction"
+        )
+        return report
+
+    # Abstentions count as non-hallucinated here, which is the denominator a
+    # coverage-losing system cannot game: it is reported beside the coverage.
+    report["mcnemar_all_items"] = mcnemar(
+        baseline_hallucinated, proposed_hallucinated
+    ).to_dict()
+    report["delta_har_all_items"] = paired_bootstrap_ci(
+        {k: float(v) for k, v in baseline_hallucinated.items()},
+        {k: float(v) for k, v in proposed_hallucinated.items()},
+        seed=seed, iterations=iterations,
+    )
+    return report

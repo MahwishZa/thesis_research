@@ -250,13 +250,17 @@ class AdmissionBehaviourTests(unittest.TestCase):
         decisions = policy(threshold=1.1).decide("q", [candidate("a", 1)])
         self.assertTrue(all(d.state is None for d in decisions))
 
-    def test_no_admitted_evidence_abstains(self):
+    def test_no_admitted_evidence_answers_ungrounded_by_default(self):
         system = RecencyAwareSystem(answer_generator=EchoGenerator(),
                                     admission_policy=policy(threshold=1.1))
         result = system.run(sample_id="s", experiment_id="e", question="q",
                             candidates=[candidate("a", 1)])
-        self.assertEqual(result.output_state, OutputState.ABSTAIN.value)
-        self.assertIsNone(result.prediction)
+        # Default policy is ANSWER_ALWAYS: the baseline generates from an
+        # empty evidence block in this situation, so this arm must too, or
+        # the hallucination rates are not comparable.
+        self.assertEqual(result.output_state, OutputState.UNGROUNDED.value)
+        self.assertIsNotNone(result.prediction)
+        self.assertEqual(result.admitted_evidence_ids, ())
 
     def test_empty_candidate_set(self):
         self.assertEqual(policy().decide("q", []), ())

@@ -90,6 +90,11 @@ class EvaluationQuestion:
     determinate: bool = False
     corpus_support_expected: bool = True
     temporal_candidate: bool = False
+    #: Flagged as potentially ambiguous. Ambiguity is a cause of
+    #: hallucination, so these are kept and tagged rather than discarded -
+    #: dropping them would remove the cases most likely to expose the
+    #: behaviour under study.
+    ambiguity_candidate: bool = False
 
     status: str = "candidate"
 
@@ -143,6 +148,7 @@ class EvaluationQuestion:
             "determinate": self.determinate,
             "corpus_support_expected": self.corpus_support_expected,
             "temporal_candidate": self.temporal_candidate,
+            "ambiguity_candidate": self.ambiguity_candidate,
             "status": self.status,
             "rejection_reason": self.rejection_reason,
             "metadata": dict(self.metadata),
@@ -166,6 +172,10 @@ def validation_failures(question: EvaluationQuestion) -> tuple[str, ...]:
     if question.reference_source.strip().lower().startswith("http") and \
             len(question.reference_source.strip()) < 12:
         failures.append("reference_source_not_identifiable")
+    if len(token_set(question.reference_answer)) < 2:
+        failures.append("reference_answer_too_thin")
+    if not question.corpus_support_expected:
+        failures.append("no_corpus_support_expected")
     return tuple(failures)
 
 
@@ -219,3 +229,50 @@ def review_export(questions: Iterable[EvaluationQuestion]) -> list[dict[str, Any
         row["reviewer_note"] = ""
         rows.append(row)
     return rows
+
+
+#: Wording that usually signals a question with no determinate answer.
+_INDETERMINATE = (
+    "what do you think", "in your opinion", "how do you feel",
+    "should i", "what would you", "is it better",
+)
+
+
+def looks_indeterminate(text: str) -> bool:
+    """Cheap answerability screen, for triage only.
+
+    A hit means a reviewer should look, not that the question is unusable. It
+    is deliberately a keyword list rather than a model: a reviewer confirms
+    every flag, and a classifier here would make the evaluation set depend on
+    an unreproducible judgement.
+    """
+    lowered = " " + normalise(text) + " "
+    return any(f" {p} " in lowered for p in (normalise(x) for x in _INDETERMINATE))
+
+
+def summarise_pool(questions: Sequence[EvaluationQuestion]) -> dict[str, Any]:
+    """Counts a reviewer needs before deciding the pool is large enough.
+
+    Reports what is there; it does not decide a sample size. The ~100-question
+    target is a practical budget, not a powered calculation, and the thesis
+    should say so.
+    """
+    by_status: dict[str, int] = {}
+    by_topic: dict[str, int] = {}
+    for q in questions:
+        by_status[q.status] = by_status.get(q.status, 0) + 1
+        by_topic[q.topic] = by_topic.get(q.topic, 0) + 1
+    usable = [q for q in questions if q.is_usable]
+    return {
+        "total": len(questions),
+        "by_status": dict(sorted(by_status.items())),
+        "by_topic": dict(sorted(by_topic.items(), key=lambda kv: -kv[1])),
+        "usable": len(usable),
+        "ad_anchored": sum(1 for q in questions if q.AD_anchor),
+        "determinate": sum(1 for q in questions if q.determinate),
+        "temporal_candidates": sum(1 for q in questions if q.temporal_candidate),
+        "ambiguity_candidates": sum(1 for q in questions
+                                    if q.ambiguity_candidate),
+        "duplicate_pairs": len(find_duplicates(questions)),
+        "distinct_sources": len({q.reference_source for q in questions}),
+    }

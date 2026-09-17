@@ -339,3 +339,136 @@ class StatsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AbstentionAccountingTests(unittest.TestCase):
+    """Abstention must never be a route to a low hallucination rate."""
+
+    def setUp(self):
+        self.q = [f"Q{i}" for i in range(10)]
+
+    def test_abstention_is_counted_separately(self):
+        h = {k: 0 for k in self.q}
+        a = {k: 1 if i < 3 else 0 for i, k in enumerate(self.q)}
+        cov = st.coverage(h, a)
+        self.assertEqual(cov.abstained, 3)
+        self.assertEqual(cov.answered, 7)
+        self.assertAlmostEqual(cov.answer_coverage, 0.7)
+
+    def test_abstention_cannot_also_be_hallucinated(self):
+        with self.assertRaises(st.StatsError):
+            st.coverage({"Q0": 1}, {"Q0": 1})
+
+    def test_mismatched_records_refused(self):
+        with self.assertRaises(st.StatsError):
+            st.coverage({"Q0": 0}, {"Q1": 0})
+
+    def test_har_denominators_are_explicit_and_differ(self):
+        h = {k: 1 if i < 2 else 0 for i, k in enumerate(self.q)}
+        a = {k: 1 if i >= 6 else 0 for i, k in enumerate(self.q)}
+        r = st.har(h, a)
+        self.assertEqual(r["n_answered"], 6)
+        self.assertEqual(r["n_abstained"], 4)
+        self.assertAlmostEqual(r["har_conditional"], 2 / 6, places=5)
+        self.assertAlmostEqual(r["har_all_items"], 2 / 10)
+        self.assertNotEqual(r["har_conditional"], r["har_all_items"])
+
+    def test_abstaining_on_everything_is_not_interpretable(self):
+        baseline_h = {k: 1 if i < 4 else 0 for i, k in enumerate(self.q)}
+        baseline_a = {k: 0 for k in self.q}
+        proposed_h = {k: 0 for k in self.q}
+        proposed_a = {k: 1 for k in self.q}
+
+        report = st.compare_systems(baseline_h, baseline_a,
+                                    proposed_h, proposed_a)
+        self.assertFalse(report["interpretable"])
+        self.assertIn("warning", report)
+        self.assertNotIn("delta_har_all_items", report)
+        self.assertEqual(report["proposed"]["coverage"]["answer_coverage"], 0.0)
+        self.assertTrue(report["proposed"]["coverage"]["is_degenerate"])
+
+    def test_coverage_loss_is_always_visible_beside_the_rate(self):
+        baseline_h = {k: 1 if i < 5 else 0 for i, k in enumerate(self.q)}
+        baseline_a = {k: 0 for k in self.q}
+        # Proposed abstains on the hard half and hallucinates on none.
+        proposed_h = {k: 0 for k in self.q}
+        proposed_a = {k: 1 if i < 5 else 0 for i, k in enumerate(self.q)}
+
+        report = st.compare_systems(baseline_h, baseline_a,
+                                    proposed_h, proposed_a, iterations=500)
+        self.assertTrue(report["interpretable"])
+        self.assertEqual(report["coverage_difference"], -0.5)
+        self.assertEqual(report["proposed"]["coverage"]["abstained"], 5)
+
+    def test_full_coverage_comparison_reports_effect_and_test(self):
+        baseline_h = {k: 1 if i < 6 else 0 for i, k in enumerate(self.q)}
+        proposed_h = {k: 1 if i < 2 else 0 for i, k in enumerate(self.q)}
+        none_abstain = {k: 0 for k in self.q}
+        report = st.compare_systems(baseline_h, none_abstain,
+                                    proposed_h, none_abstain, iterations=500)
+        self.assertTrue(report["interpretable"])
+        self.assertEqual(report["coverage_difference"], 0.0)
+        self.assertLess(report["delta_har_all_items"]["difference"], 0)
+        self.assertIn("p_value", report["mcnemar_all_items"])
+
+
+class AbstentionPolicyConfigTests(unittest.TestCase):
+    """The policy is configurable and its default preserves cross-arm parity."""
+
+    def test_default_is_answer_always(self):
+        from systems.proposed.admission import AbstentionPolicy, AdmissionConfig
+        import datetime
+        cfg = AdmissionConfig(admit_threshold=0.5,
+                              question_date=datetime.date(2024, 1, 1))
+        self.assertIs(cfg.abstention_policy, AbstentionPolicy.ANSWER_ALWAYS)
+
+    def test_abstention_remains_available_as_a_declared_condition(self):
+        from systems.proposed.admission import AbstentionPolicy, AdmissionConfig
+        import datetime
+        cfg = AdmissionConfig(
+            admit_threshold=0.5,
+            question_date=datetime.date(2024, 1, 1),
+            abstention_policy=AbstentionPolicy.ABSTAIN_WHEN_EMPTY,
+        )
+        self.assertIs(cfg.abstention_policy,
+                      AbstentionPolicy.ABSTAIN_WHEN_EMPTY)
+
+    def test_policy_is_recorded_in_run_metadata(self):
+        from systems.proposed.admission import AbstentionPolicy
+        self.assertEqual(AbstentionPolicy.ANSWER_ALWAYS.value, "answer_always")
+        self.assertEqual(AbstentionPolicy.ABSTAIN_WHEN_EMPTY.value,
+                         "abstain_when_empty")
+
+
+class QuestionPoolTests(unittest.TestCase):
+
+    def test_ambiguity_flag_is_recorded(self):
+        q = question(ambiguity_candidate=True)
+        self.assertTrue(q.to_dict()["ambiguity_candidate"])
+        self.assertFalse(question().to_dict()["ambiguity_candidate"])
+
+    def test_thin_reference_answer_is_flagged(self):
+        self.assertIn("reference_answer_too_thin",
+                      qs.validation_failures(question(reference_answer="Yes")))
+
+    def test_no_expected_corpus_support_is_flagged(self):
+        self.assertIn("no_corpus_support_expected",
+                      qs.validation_failures(
+                          question(corpus_support_expected=False)))
+
+    def test_answerability_screen_flags_opinion_questions(self):
+        self.assertTrue(qs.looks_indeterminate(
+            "In your opinion should I prescribe donepezil?"))
+        self.assertFalse(qs.looks_indeterminate(question().question))
+
+    def test_pool_summary_counts_without_deciding_sample_size(self):
+        pool = [question(), question(temporal_candidate=True,
+                                     reference_source="Guideline 2024",
+                                     ambiguity_candidate=True)]
+        s = qs.summarise_pool(pool)
+        self.assertEqual(s["total"], 2)
+        self.assertEqual(s["ad_anchored"], 2)
+        self.assertEqual(s["temporal_candidates"], 1)
+        self.assertEqual(s["ambiguity_candidates"], 1)
+        self.assertEqual(s["distinct_sources"], 2)
+        self.assertEqual(s["usable"], 0)  # nothing approved yet
