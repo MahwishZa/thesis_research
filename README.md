@@ -1,4 +1,4 @@
-# Measuring Recency Bias in Evidence Admission
+# Reducing Hallucination by Recency-Aware Evidence Admission
 
 MS thesis implementation. **Research code, not a clinical system** — nothing
 here is validated for, or usable in, patient care.
@@ -8,32 +8,36 @@ here is validated for, or usable in, patient care.
 Retrieval-augmented pipelines filter retrieved passages before answering.
 RAG² ([Sohn et al., NAACL 2025](https://github.com/dmis-lab/RAG2)) trains that
 filter on labels derived from *how much a passage raises the model's
-confidence*. Confidence gain is not the same thing as evidential support, and
-it may be asymmetric with respect to evidence age: a passage agreeing with the
-model's pre-training-era priors raises confidence, while newer, dissonant
-guidance lowers it.
+confidence*, and it represents time nowhere — not in the corpus, the index,
+the retriever, the reranker or the filter. In a domain where guidance changes,
+the evidence that reaches the generator may therefore be superseded, and an
+answer built on superseded evidence can be fluent, confident and wrong.
 
-> **Does a confidence-derived evidence admission mechanism exhibit recency
-> asymmetry, and does explicitly incorporating evidence recency reduce that
-> asymmetry without simply degrading answer quality?**
+> **Does the proposed solution/system reduce the rate of hallucinated answers
+> in Alzheimer's disease question answering, relative to the baseline system,
+> under identical question and evidence conditions, while maintaining
+> comparable QA accuracy?**
 
-The filter never sees a publication date — at inference it receives only the
-question and the passage text. So any age asymmetry it shows must come from
-*content* correlates of era, which is what makes the measurement interesting.
+Two outcomes, and only two:
+
+| | Outcome |
+|---|---|
+| **Primary** | Hallucination rate (HAR) — an answer scores 1 if any claim is unsupported by, or contradicted by, the evidence actually supplied to the generator |
+| **Secondary** | QA accuracy against the question's reference answer |
 
 ## The experiment
 
-Three arms, one shared candidate set:
-
 | Arm | What it does | Code |
 |---|---|---|
-| **No-filter control** | Admits everything, up to the context budget | `systems/baseline/no_filter.py` |
-| **RAG²** | The reproduced baseline: a Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` filter | `systems/baseline/` |
-| **Recency-aware admission** | The proposed method | `systems/proposed/` |
+| **Baseline** | RAG²-style adaptation: a Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` filter | `systems/baseline/` |
+| **Proposed solution/system** | Recency-aware admission | `systems/proposed/` |
+| *No-filter control* | Admits everything, up to the budget — a reference point, not an outcome | `systems/baseline/no_filter.py` |
 
-Retrieval and reranking run **once per item** and are replayed byte-identically
-to all three arms, so a difference in the answer is attributable to the
-admission step and not to what was retrieved.
+Retrieval and reranking run **once per item**, are frozen, and are replayed
+byte-identically to every arm, so a difference in the answer is attributable
+to the admission step and not to what was retrieved. Prompt, context budget,
+generator instance and decoding settings are identical and checked in code
+before a run starts.
 
 ## The proposed method
 
@@ -56,40 +60,54 @@ The smallness is the point. With one added signal and one weight, an observed
 difference is attributable to the temporal component. With four weighted
 components it would not be.
 
-## What is deliberately *not* in the primary experiment
+## What is deliberately *not* in the experiment
 
 Entailment-derived support, source authority, contested-evidence handling,
 supersession, answer verification, clinician rating, and comparison against a
-further state-of-the-art filter. These were part of an earlier, larger design
-and were cut to fit one student's compute and time budget. `contested.py` and
-`verifier.py` remain in the repository, marked SECONDARY, off by default; they
-may support a qualitative analysis or future work. **None of them is required
-for the primary result.** See ledger decisions D-25 and D-26.
+further state-of-the-art filter. `contested.py` and `verifier.py` remain in the
+repository, marked SECONDARY, off by default. **None is required for the
+result.**
+
+No additional research objective is reported — no hallucination subtype
+analysis, error taxonomy, retrieval-quality ranking, temporal or ambiguity
+analysis, and no ROUGE / BLEU / BERTScore.
+
+An earlier design made *admission asymmetry* the primary question. It is
+superseded; see `docs/frozen_scope.md` §7 for what that was and what survived
+of it. `experiments/test_pairs/` is its infrastructure, retained for
+provenance and not part of the pipeline below.
+
+## The pipeline
+
+```
+1 corpus → 2 questions → 3 freeze evidence → 4 baseline → 5 proposed
+→ 6 collect → 7 annotate → 8 HAR → 9 accuracy → 10 statistics
+→ 11 analyse → 12 write up
+```
 
 ## Canonical scope
 
 `docs/frozen_scope.md` states exactly what is primary, what is secondary, and
-what Stage 3 must satisfy. Where any other document disagrees with it about
-what is primary, it governs.
+what the experiment must satisfy. Where any other document disagrees with it
+about what is primary, it governs.
 
 ## Layout
 
 ```
-docs/                frozen_scope (canonical scope), research_ledger (decisions),
-                     research_experimental_specification (method),
-                     research_understanding (audit) — see docs/repository_structure.md
-                     for the full index
-alzheimer_corpus/    Stage 1 — retrieval corpus (in progress)
-systems/             the three arms
-experiments/         Stage 2 test-pairs, question pool, evaluation infrastructure
+docs/                frozen_scope (canonical scope), system_specification
+                     (what each arm does), research_ledger (decisions) —
+                     see docs/repository_structure.md for the full index
+alzheimer_corpus/    Step 1 — retrieval corpus (in progress, do not modify)
+systems/             the arms
+experiments/         retrieval, question pool, evaluation infrastructure
 tests/               unit + integration
 ```
 
 ## Status
 
-Stage 1 (corpus) in progress. Stage 2 (test pairs) built and frozen, waiting
-on one external dependency: the evaluation dataset must be acquired manually
-(see `docs/external_evaluation_data.md`). Stage 3 not started.
+Step 1 (corpus) in progress. Step 2 (questions) in human review. Steps 3–12
+have tested infrastructure and are waiting on real data; nothing has been
+executed and no result exists. See `docs/next_steps.md`.
 
 ```bash
 python -m unittest discover -s tests -t .
