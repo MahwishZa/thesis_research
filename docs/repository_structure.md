@@ -97,7 +97,7 @@ one is worth a second look.
 Updated with the renames: every internal doc-to-doc cross-reference, the
 `pyproject.toml` package list (`experiments.questions`,
 `experiments.questions.sources` added — `experiments.question_sources` had
-never been registered), imports in `tests/unit/test_question_sources.py` and
+never been registered), imports in `tests/unit/test_questions.py` and
 `tests/unit/test_review_export.py`, and the root `README.md`'s two doc
 pointers. A repository-wide search for the old uppercase filenames and for
 `question_sources` returns nothing outside historical prose in
