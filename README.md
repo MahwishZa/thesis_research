@@ -68,18 +68,20 @@ for the primary result.** See ledger decisions D-25 and D-26.
 
 ## Canonical scope
 
-`docs/FROZEN_SCOPE.md` states exactly what is primary, what is secondary, and
+`docs/frozen_scope.md` states exactly what is primary, what is secondary, and
 what Stage 3 must satisfy. Where any other document disagrees with it about
 what is primary, it governs.
 
 ## Layout
 
 ```
-docs/                FROZEN_SCOPE (canonical scope), RESEARCH_LEDGER (decisions),
-                     _SPECIFICATION (method), _UNDERSTANDING_REPORT (audit)
+docs/                frozen_scope (canonical scope), research_ledger (decisions),
+                     research_experimental_specification (method),
+                     research_understanding (audit) — see docs/repository_structure.md
+                     for the full index
 alzheimer_corpus/    Stage 1 — retrieval corpus (in progress)
 systems/             the three arms
-experiments/         Stage 2 — test-pair construction
+experiments/         Stage 2 test-pairs, question pool, evaluation infrastructure
 tests/               unit + integration
 ```
 
@@ -87,7 +89,7 @@ tests/               unit + integration
 
 Stage 1 (corpus) in progress. Stage 2 (test pairs) built and frozen, waiting
 on one external dependency: the evaluation dataset must be acquired manually
-(see `experiments/test_pairs/data/external/README.md`). Stage 3 not started.
+(see `docs/external_evaluation_data.md`). Stage 3 not started.
 
 ```bash
 python -m unittest discover -s tests -t .
