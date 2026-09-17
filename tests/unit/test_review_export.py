@@ -15,9 +15,9 @@ from tempfile import TemporaryDirectory
 from experiments.evaluation.questions import (
     REVIEW_COLUMNS, WITHHELD_FROM_REVIEW, REVIEW_DECISIONS,
 )
-from experiments.question_sources import export_review as ex
+from experiments.questions import export_review as ex
 
-POOL = Path("experiments/question_sources/pool")
+POOL = Path("experiments/questions")
 
 
 def record(**kw):

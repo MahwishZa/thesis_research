@@ -9,7 +9,7 @@ The export is neutral by construction: it emits exactly
 reach the file. The point is that a reviewer should judge each candidate from
 its source, not re-confirm a classification this pipeline already assigned.
 
-    python -m experiments.question_sources.export_review
+    python -m experiments.questions.export_review
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from ..evaluation.questions import (
     REVIEW_COLUMNS, WITHHELD_FROM_REVIEW, EvaluationQuestion, review_export,
 )
 
-DEFAULT_POOL = Path("experiments/question_sources/pool")
+DEFAULT_POOL = Path("experiments/questions")
 
 #: Only candidates in this state go to review. Rejected candidates stay in the
 #: pool with their reason, but are not put in front of a reviewer.

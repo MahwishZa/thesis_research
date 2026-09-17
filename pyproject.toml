@@ -19,11 +19,13 @@ models = ["torch>=2.0", "transformers>=4.40"]
 [tool.setuptools]
 packages = [
     "systems",
-    "experiments.evaluation",
     "systems.interfaces",
     "systems.baseline",
     "systems.proposed",
     "experiments",
+    "experiments.evaluation",
+    "experiments.questions",
+    "experiments.questions.sources",
     "experiments.test_pairs",
     "experiments.test_pairs.scripts",
 ]

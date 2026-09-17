@@ -502,7 +502,7 @@ def run(
             + (
                 "The primary evaluation pool requires an externally-authored "
                 "dataset. It is not generated here and no substitute is "
-                "created: see docs/RESEARCH_LEDGER.md for the outstanding "
+                "created: see docs/research_ledger.md for the outstanding "
                 "dependency."
                 if pool == POOL_PRIMARY_EXTERNAL
                 else "Run the Stage-1 chunking script first."

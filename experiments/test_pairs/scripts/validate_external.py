@@ -9,7 +9,7 @@ It deliberately does **not** convert MedChangeQA's own distribution format.
 Nobody here has seen that format, and a converter written against a guessed
 schema would fail silently on the real thing or, worse, quietly mis-assign
 which side is newer. Preparing the JSONL is a small manual step, documented
-in ``experiments/test_pairs/data/external/README.md``; this validator is what
+in ``docs/external_evaluation_data.md``; this validator is what
 makes that step verifiable.
 
 It records the raw file's SHA-256 and the dataset name, so the evaluation set
@@ -102,7 +102,7 @@ def run(
         raise FileNotFoundError(
             f"External evaluation file not found: {input_path}\n"
             "It is not generated here. See "
-            "experiments/test_pairs/data/external/README.md for what to "
+            "docs/external_evaluation_data.md for what to "
             "acquire and the JSONL contract to convert it to."
         )
 

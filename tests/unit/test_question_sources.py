@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.question_sources import build_pool, cochrane, nih_medquad
+from experiments.questions import build_pool
+from experiments.questions.sources import cochrane, nih_medquad
 
 CITATION = ("Cochrane Database Syst Rev. 2021 Dec 17;12(12):CD013304. "
             "doi: 10.1002/14651858.CD013304.pub2.")

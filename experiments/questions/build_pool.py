@@ -4,7 +4,7 @@ Deterministic: same inputs, same pool, same ids. Nothing is marked final here
 - every record leaves as ``candidate`` or ``rejected``, and a human decides
 what reaches the evaluation set.
 
-    python -m experiments.question_sources.build_pool \
+    python -m experiments.questions.build_pool \
         --medrevqa path/to/DS_MedRevQA.csv \
         --medquad path/to/MedQuAD \
         --retrieved-on 2026-09
@@ -24,9 +24,9 @@ from ..evaluation.questions import (
     review_export, summarise_pool, validate, validation_failures,
 )
 from .export_review import assert_neutral
-from . import cochrane, nih_medquad
+from .sources import cochrane, nih_medquad
 
-DEFAULT_OUT = Path("experiments/question_sources/pool")
+DEFAULT_OUT = Path("experiments/questions")
 
 
 def collect(

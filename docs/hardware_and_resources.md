@@ -61,7 +61,7 @@ The audit itself ran in a **Linux container with no GPU and no ML stack**
 | **MedCPT query encoder** inference | **FEASIBLE LOCALLY** | ≈109 M params, ≈0.44 GB fp32 (ESTIMATED); fits 4 GB with room, CPU-viable |
 | **MedCPT reranker** inference | **FEASIBLE LOCALLY** | same class; cost scales with candidates per question, not corpus size |
 | **Flan-T5 filter** inference | **FEASIBLE LOCALLY** | ≈1.6 GB fp16 for the large variant (ESTIMATED); fits 4 GB |
-| **Flan-T5 filter** *training* | **REQUIRES REMOTE/CLOUD HARDWARE** | ≈12.4 GB for weights + gradients + AdamW moments before activations (ESTIMATED) — see `RAG2_CLASSIFIER_FEASIBILITY.md` |
+| **Flan-T5 filter** *training* | **REQUIRES REMOTE/CLOUD HARDWARE** | ≈12.4 GB for weights + gradients + AdamW moments before activations (ESTIMATED) — see `rag2_classifier_feasibility.md` |
 | **FAISS retrieval** | **RESOURCE-CONSTRAINED** | faiss installed (VERIFIED). Index RAM and disk scale with the final corpus, whose size is **UNKNOWN**. CPU index is the right choice; 16 GB RAM is the limit to watch |
 | **Alzheimer's corpus processing** | **FEASIBLE LOCALLY, SLOW** | CPU-bound text processing; already running |
 | **Llama-3-8B-Instruct** inference | **NOT PRACTICAL LOCALLY — see §3** | |

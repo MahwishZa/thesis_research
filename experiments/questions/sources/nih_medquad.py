@@ -28,7 +28,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Iterator, Optional
 
-from ..evaluation.questions import EvaluationQuestion
+from ...evaluation.questions import EvaluationQuestion
 from .cochrane import SourceUnavailable, bottom_line
 
 #: UMLS Concept Unique Identifier for Alzheimer's Disease. An ontology code is

@@ -3,14 +3,14 @@
 **Built:** 2026-09-17 · Reproduce with:
 
 ```bash
-python -m experiments.question_sources.build_pool \
+python -m experiments.questions.build_pool \
     --medrevqa <path>/MedRevQA.csv \
     --medquad  <path>/MedQuAD \
     --retrieved-on 2026-09
 ```
 
 Source files are not vendored (see the protocol). Output lives in
-`experiments/question_sources/pool/`.
+`experiments/questions/`.
 
 > **Nothing in this pool is final.** Every record is `candidate` or `rejected`.
 > No question has been human-reviewed, and no question has been checked against
@@ -75,8 +75,8 @@ guideline source rather than rebalance this one.
 
 ## Human review
 
-**Materials:** `pool/review.csv` (123 rows) and
-`pool/HUMAN_REVIEW_INFORMATION.md`.
+**Materials:** `experiments/questions/review.csv` (123 rows) and
+`docs/question_review.md`.
 
 **The review file is deliberately neutral.** It carries the question, the
 reference answer and everything needed to trace that answer to a source — and
@@ -100,7 +100,7 @@ stay recoverable.
 
 ### Earlier note on the review file
 
-`pool/review.csv` carries the 123 validated candidates with
+`experiments/questions/review.csv` carries the 123 validated candidates with
 blank `reviewer_decision` and `reviewer_note` columns. The reviewer may accept,
 reject, revise or flag for source verification. A revision must keep its
 provenance; a revision the citation no longer supports is a rejection.

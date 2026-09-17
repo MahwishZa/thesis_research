@@ -13,7 +13,7 @@
 * **Repository consolidated** to one top-level `experiments/`; `evaluation/`
   moved to `experiments/evaluation/` with `git mv`. No stale references.
 * **Question-source protocol established** *before* sourcing
-  (`docs/QUESTION_SOURCE_AND_PROVENANCE_PROTOCOL.md`).
+  (`docs/question_sources.md`).
 * **Candidate pool built from two inspected sources** — 170 sourced, 150 after
   id-collision removal, **123 auto-validated awaiting human review**, 27
   auto-rejected as near-duplicates. Every record carries a concrete locator
@@ -38,7 +38,7 @@
 | **Filter training venue** | the baseline arm | ≈12.4 GB before activations; a free 16 GB session suffices. Inference stays local |
 | **Corpus completion** | corpus-support check, Step 3 onward | |
 | **Retrieval + reranking** | Step 3 | not implemented; `retrieval_external: True` |
-| **Human review** | the final ~100 questions | 123 candidates ready in `pool/review.csv` |
+| **Human review** | the final ~100 questions | 123 candidates ready in `experiments/questions/review.csv` |
 | **Identifier verification** | question approval | PubMed/doi.org blocked in the build environment; PMIDs transcribed, not resolved |
 
 ## NEXT — in order
@@ -46,7 +46,7 @@
 **1. Keep the corpus downloading.** Do not restart it.
 
 **2. Review the candidate pool.** Open
-`experiments/question_sources/pool/review.csv` (123 rows). For each: confirm
+`experiments/questions/review.csv` (123 rows). For each: confirm
 the reference answer actually answers the question and matches the cited
 record, then set `reviewer_decision` to accept / reject / revise / verify.
 Spot-check a sample of PMIDs first — they were transcribed, not resolved.
@@ -58,7 +58,7 @@ short local generation, or commit to a remote GPU. **Download nothing until
 this is decided** — 30.07 GB free with the corpus still growing.
 
 **4. Decide the filter training venue** and base size — see
-`RAG2_CLASSIFIER_FEASIBILITY.md` §2D.
+`rag2_classifier_feasibility.md` §2D.
 
 **5. Only then download** the models the decision actually requires.
 

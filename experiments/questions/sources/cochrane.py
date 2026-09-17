@@ -30,7 +30,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterator, Optional, Sequence
 
-from ..evaluation.questions import EvaluationQuestion
+from ...evaluation.questions import EvaluationQuestion
 
 #: Applied to the review's own question and objectives, then to the whole
 #: record. Mirrors the corpus rule: related dementias qualify a record only
