@@ -81,6 +81,74 @@ def assert_prompt_parity(systems: Mapping[str, Any]) -> None:
         )
 
 
+def context_budget(system: Any) -> Optional[int]:
+    """Read one arm's shared context budget, wherever it is configured.
+
+    The three arms hold it in three places - directly on the system
+    (no-filter), on ``config`` (the RAG² baseline), and on
+    ``admission_policy.config`` (the proposed policy) - so the lookup walks
+    all three rather than assuming one shape.
+    """
+    for owner in (
+        system,
+        getattr(system, "config", None),
+        getattr(getattr(system, "admission_policy", None), "config", None),
+    ):
+        if owner is None:
+            continue
+        budget = getattr(owner, "max_admitted_passages", None)
+        if budget is not None:
+            return budget
+    return None
+
+
+def assert_budget_parity(systems: Mapping[str, Any]) -> None:
+    """Every arm must be capped at the same number of admitted passages.
+
+    All three arms already document this requirement in their own
+    docstrings, but nothing checked it. An arm allowed more evidence than
+    another answers from more context, so a difference in hallucination rate
+    would be attributable to context volume rather than to the admission
+    policy - the confound the shared budget exists to remove.
+    """
+    budgets = {name: context_budget(system)
+               for name, system in systems.items()}
+    if len(set(budgets.values())) > 1:
+        raise RunnerError(
+            f"context budgets differ between arms: {budgets}. "
+            "The comparison would confound the intervention with how much "
+            "evidence each arm was allowed to admit."
+        )
+
+
+def assert_generator_parity(systems: Mapping[str, Any]) -> None:
+    """Every arm must answer with the same generator instance.
+
+    ``RunConfig`` records one model, one model version and one generation
+    config, and stamps them onto every result record. If the arms actually
+    held different generators, that metadata would silently mislabel which
+    model produced which answer - worse than an unchecked difference, because
+    the output would look correct.
+
+    Object identity is the only thing checkable through the ``Generator``
+    interface, which exposes no model name or decoding parameters. It is also
+    what a real run does: the generator is loaded once and shared. The
+    generator is not part of the intervention here - the admission policy is -
+    so there is no case in this design where the arms should differ.
+    """
+    generators = {name: getattr(system, "answer_generator", None)
+                  for name, system in systems.items()}
+    distinct = {id(g) for g in generators.values()}
+    if len(distinct) > 1:
+        raise RunnerError(
+            "arms do not share one generator instance: "
+            f"{ {name: type(g).__name__ for name, g in generators.items()} }. "
+            "RunConfig records a single model and generation config for the "
+            "whole run, so differing generators would be recorded as if they "
+            "were the same."
+        )
+
+
 @dataclass(frozen=True)
 class RunConfig:
     run_id: str
@@ -110,6 +178,8 @@ def run_experiment(
         )
 
     assert_prompt_parity(systems)
+    assert_budget_parity(systems)
+    assert_generator_parity(systems)
 
     seen_hashes: dict[str, dict[str, str]] = {name: {} for name in systems}
     records: list[dict[str, Any]] = []

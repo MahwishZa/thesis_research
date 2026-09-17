@@ -14,7 +14,8 @@ The only intended difference between arms is the admission rule.
 | Same question ID | **Parity** | `sample_id`, set once per item by the runner |
 | Same frozen candidate evidence | **Parity, enforced** | The runner builds candidates once per item; `assert_same_candidate_sets` raises on any divergence |
 | Same evidence ordering | **Parity** | All three arms select by `(rerank_rank, evidence_id)` then **restore candidate-list order** before building context |
-| Same generator | **Parity** | One `Generator` instance injected into every arm |
+| Same generator | **Parity, now enforced** | One `Generator` instance injected into every arm; `assert_generator_parity` raises before a run if the arms hold different instances |
+| Same context budget | **Parity, now enforced** | `assert_budget_parity` raises before a run if `max_admitted_passages` differs; `context_budget()` finds it wherever each arm stores it |
 | Same prompt template | **Parity, now enforced** | Default templates are byte-identical; `assert_prompt_parity` raises before a run if overrides differ |
 | Same output schema | **Parity** | All arms return `ExperimentResult` |
 | Same generation parameters | **BLOCKER** | No concrete generator exists yet; parameters are unset |
@@ -43,6 +44,40 @@ In `RecencyAwareSystem.run()`: when **no passage cleared θ**, the arm returned
 The baseline does **not** do this. Verified by inspection: `RAG2System.run()`
 has no empty-evidence guard — when its filter admits nothing it builds a prompt
 with an empty evidence block and generates anyway.
+
+### 1.1 Context budget and generator: documented, but previously unchecked
+
+Both controls were declared in the arms' own docstrings and assumed by the
+runner, and neither was verified.
+
+**Context budget.** Each arm caps admitted evidence at `max_admitted_passages`,
+but stores it in a different place: on the system itself (`NoFilterSystem`), on
+`config` (`RAG2System`), and on `admission_policy.config`
+(`RecencyAwareSystem`). Nothing compared them. An arm allowed more passages than
+another answers from more context, so a difference in hallucination rate would
+be attributable to context volume rather than to the admission rule — the exact
+confound the shared budget exists to remove. `context_budget()` resolves the
+value through all three shapes and `assert_budget_parity` raises before any
+answer is written. An arm with no cap reads as `None` rather than as some
+number, so an uncapped arm cannot be mistaken for a capped one.
+
+This was not hypothetical. The repository's own smoke fixture produced its two
+arms by giving them *different budgets* — it obtained "arms that admit different
+subsets" precisely by encoding the confound. The fixture now differs by
+admission rule instead, which is the shape the real comparison has to take.
+
+**Generator.** `RunConfig` records one model, one model version and one
+generation config, and stamps them onto every result record. If the arms held
+different generators, that metadata would silently mislabel which model produced
+which answer — worse than an unchecked difference, because the output would look
+correct. `assert_generator_parity` compares object identity, which is the only
+thing the `Generator` interface exposes (it carries no model name or decoding
+parameters) and is also what a real run does: load once, share. The generator is
+not part of the intervention, so there is no case in this design where the arms
+should differ.
+
+Both gates run in `run_experiment` before the first item, alongside
+`assert_prompt_parity`. Tests: `tests/unit/test_runner_parity.py`.
 
 ### 2.2 Is abstention an intended component?
 

@@ -20,7 +20,9 @@ from experiments.evaluation import stats as st
 from experiments.evaluation.runner import (
     RunConfig, RunnerError, assert_prompt_parity, run_experiment, to_candidates,
 )
+from systems.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
 from systems.baseline.no_filter import NoFilterSystem
+from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
 
 
@@ -55,12 +57,32 @@ def make_items(n=3, k=4):
     return items
 
 
+#: One budget for every arm. The arms must differ by admission *rule*, never
+#: by how much evidence they are allowed to admit - an arm given a bigger
+#: budget answers from more context, which would confound the comparison.
+BUDGET = 3
+
+
 def make_systems():
+    """Two arms: admit-everything, and admit-what-the-filter-labels-helpful.
+
+    Same generator instance, same budget, same prompt; only the admission
+    rule differs. That is the shape the real comparison has to take, so the
+    smoke fixture takes it too.
+    """
     gen = CallableGenerator(fake_generate)
+    helpful = {
+        f"E{i}-{j}": HELPFUL if j % 2 else NOT_HELPFUL
+        for i in range(3) for j in range(1, 5)
+    }
     return {
-        "baseline": NoFilterSystem(answer_generator=gen),
-        "proposed": NoFilterSystem(answer_generator=gen,
-                                   max_admitted_passages=2),
+        "baseline": NoFilterSystem(answer_generator=gen,
+                                   max_admitted_passages=BUDGET),
+        "proposed": RAG2System(
+            answer_generator=gen,
+            admission_filter=MockRAG2Filter(helpful),
+            config=RAG2Config(max_admitted_passages=BUDGET),
+        ),
     }
 
 
@@ -70,7 +92,7 @@ def make_config():
         model="synthetic-fixture-generator",
         model_version="n/a",
         generation_config={"temperature": 0.0},
-        system_config_hash=fz.config_hash({"budget": [None, 2]}),
+        system_config_hash=fz.config_hash({"budget": BUDGET}),
     )
 
 

@@ -70,8 +70,10 @@ by hand at each call site.
 `[NOT_HELPFUL]`. Fidelity to the published RAG² filter, and what could and
 could not be reproduced, is documented in
 `docs/rag2_classifier_feasibility.md` and `docs/experimental_parity_audit.md`.
-Both arms consume a frozen candidate set and a shared prompt template
-(`assert_prompt_parity`), so admission rule is the only thing that differs
+Every arm consumes a frozen candidate set, a shared prompt template
+(`assert_prompt_parity`), a shared context budget (`assert_budget_parity`) and
+one shared generator instance (`assert_generator_parity`), each checked before
+the first answer is generated, so admission rule is the only thing that differs
 between arms by construction.
 
 ## Proposed-system methodology

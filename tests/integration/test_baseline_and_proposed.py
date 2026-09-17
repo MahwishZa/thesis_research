@@ -63,27 +63,40 @@ def make_items(n=3, k=4):
     return items
 
 
-def make_baseline(items, *, prompt):
+#: One budget for both arms. They must differ by admission rule, not by how
+#: much evidence each is allowed to admit.
+BUDGET = 3
+
+
+def make_baseline(items, *, prompt, generator):
     """RAG2System with a hand-labelled mock filter - never the real checkpoint."""
     labels = {}
     for item in items:
         for i, candidate in enumerate(item.candidates):
             labels[candidate.evidence_id] = "[HELPFUL]" if i % 2 == 0 else "[NOT_HELPFUL]"
     return RAG2System(
-        answer_generator=CallableGenerator(fake_generate),
+        answer_generator=generator,
         admission_filter=MockRAG2Filter(labels),
-        config=RAG2Config(context_prompt=prompt),
+        config=RAG2Config(context_prompt=prompt,
+                          max_admitted_passages=BUDGET),
     )
 
 
-def make_proposed(*, prompt):
+def make_proposed(*, prompt, generator):
+    """The proposed policy, sharing the baseline's generator and budget.
+
+    The generator is passed in rather than constructed here: a real run loads
+    one model and gives it to every arm, and the runner now refuses arms that
+    do not share one.
+    """
     policy = RecencyAwareAdmissionPolicy(
         scorer=AdmissionScorer(recency_weight=0.5),
         recency=RecencyPolicy(half_life_days=365.0, undated_score=0.5),
-        config=AdmissionConfig(admit_threshold=0.5, question_date=TQ),
+        config=AdmissionConfig(admit_threshold=0.5, question_date=TQ,
+                               max_admitted_passages=BUDGET),
     )
     return RecencyAwareSystem(
-        answer_generator=CallableGenerator(fake_generate),
+        answer_generator=generator,
         admission_policy=policy,
         context_prompt=prompt,
     )
@@ -94,9 +107,12 @@ class BaselineAndProposedEndToEndTests(unittest.TestCase):
     def setUp(self):
         self.items = make_items()
         self.prompt = "Answer {question} using {context}"
+        self.generator = CallableGenerator(fake_generate)
         self.systems = {
-            "baseline": make_baseline(self.items, prompt=self.prompt),
-            "proposed": make_proposed(prompt=self.prompt),
+            "baseline": make_baseline(self.items, prompt=self.prompt,
+                                      generator=self.generator),
+            "proposed": make_proposed(prompt=self.prompt,
+                                      generator=self.generator),
         }
         self.config = RunConfig(
             run_id="e2e-fixture-001",
@@ -158,28 +174,23 @@ class BaselineAndProposedEndToEndTests(unittest.TestCase):
         def broken_generate(question, evidence, prompt):
             raise RuntimeError("simulated generation failure")
 
+        # Both arms share the failing generator: a real run loads one model and
+        # gives it to every arm, so a generation failure hits both. Giving only
+        # one arm a broken generator would also break generator parity, which
+        # the runner now refuses before anything is written.
+        broken = CallableGenerator(broken_generate)
         systems = {
-            "baseline": make_baseline(self.items, prompt=self.prompt),
-            "proposed": RecencyAwareSystem(
-                answer_generator=CallableGenerator(broken_generate),
-                admission_policy=RecencyAwareAdmissionPolicy(
-                    scorer=AdmissionScorer(recency_weight=0.5),
-                    recency=RecencyPolicy(half_life_days=365.0,
-                                          undated_score=0.5),
-                    config=AdmissionConfig(admit_threshold=0.5,
-                                           question_date=TQ),
-                ),
-                context_prompt=self.prompt,
-            ),
+            "baseline": make_baseline(self.items, prompt=self.prompt,
+                                      generator=broken),
+            "proposed": make_proposed(prompt=self.prompt, generator=broken),
         }
         with TemporaryDirectory() as tmp:
             out = str(Path(tmp) / "results.jsonl")
             summary = run_experiment(self.items, systems, self.config, out)
             records = [json.loads(l) for l in Path(out).read_text().splitlines()]
 
-        self.assertEqual(summary["n_errors"], len(self.items))
-        failed = [r for r in records if r["system"] == "proposed"]
-        for record in failed:
+        self.assertEqual(summary["n_errors"], len(self.items) * 2)
+        for record in records:
             self.assertEqual(record["status"], "error")
             self.assertIn("simulated generation failure", record["error"])
             self.assertIsNone(record["generated_answer"])
@@ -196,14 +207,15 @@ class BaselineAndProposedEndToEndTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             out_a = str(Path(tmp) / "a.jsonl")
             out_b = str(Path(tmp) / "b.jsonl")
-            run_experiment(self.items,
-                           {"baseline": make_baseline(self.items, prompt=self.prompt),
-                            "proposed": make_proposed(prompt=self.prompt)},
-                           self.config, out_a)
-            run_experiment(self.items,
-                           {"baseline": make_baseline(self.items, prompt=self.prompt),
-                            "proposed": make_proposed(prompt=self.prompt)},
-                           self.config, out_b)
+            for out in (out_a, out_b):
+                gen = CallableGenerator(fake_generate)
+                run_experiment(
+                    self.items,
+                    {"baseline": make_baseline(self.items, prompt=self.prompt,
+                                               generator=gen),
+                     "proposed": make_proposed(prompt=self.prompt,
+                                               generator=gen)},
+                    self.config, out)
             a = group_by_system(read_results(out_a))
             b = group_by_system(read_results(out_b))
         for system in ("baseline", "proposed"):
