@@ -1,6 +1,6 @@
 # Repository Structure
 
-**Updated:** 2026-09-17, after simplifying folder and file names.
+**Updated:** 2026-09-17, after completing Steps 3–12 infrastructure.
 
 ```
 thesis_research/
@@ -18,13 +18,17 @@ thesis_research/
 │   ├── configs/                   run configuration
 │   ├── outputs/                   run artefacts (never overwritten)
 │   ├── runners/                   reserved for launch scripts
-│   ├── evaluation/                evaluation infrastructure
+│   ├── evaluation/                evaluation infrastructure (Steps 3–11)
 │   │   ├── questions.py           question schema, validation, dedup, export
 │   │   ├── freezing.py            frozen manifest, hashing, parity gate,
-│   │   │                          provenance firewall
-│   │   ├── annotation.py          annotation schema, blinding, agreement
-│   │   ├── stats.py               HAR, coverage, McNemar, bootstrap, Holm
-│   │   └── runner.py              replays a frozen set through every arm
+│   │   │                          provenance firewall, from_question builder
+│   │   ├── runner.py              replays a frozen set through every arm,
+│   │   │                          read_results, group_by_system
+│   │   ├── annotation.py          annotation schema, blinding, agreement,
+│   │   │                          read_annotations, unblind_annotations
+│   │   ├── accuracy.py            QA correctness judgement schema
+│   │   └── stats.py               HAR, QA accuracy, coverage, McNemar,
+│   │                              bootstrap, error analysis, Holm
 │   ├── questions/                 Step 2: candidate question pool
 │   │   ├── build_pool.py          builds, screens and exports the pool
 │   │   ├── export_review.py       regenerates review.csv from candidates.jsonl
@@ -59,7 +63,58 @@ Every Markdown document except the root `README.md`, named
 | `experiment_outputs.md` | what `experiments/outputs/` contains and why it isn't research data |
 | `external_evaluation_data.md` | what belongs in the (empty) external test-pair data directory |
 | `repository_structure.md` | this file |
+| `methodology.md` | Step 12: methods-chapter skeleton, cross-referencing the rest of `docs/`, no results |
 | `next_steps.md` | ordered action list |
+
+## Steps 3–12 infrastructure (this round)
+
+Everything below is corpus-independent and was built and tested against
+synthetic fixtures while Steps 1–2 continue. No final or result-generating
+run was performed.
+
+`experiments/evaluation/freezing.py` — `FrozenItem` gained a required
+`corpus_snapshot` field (was previously untracked; "corpus version
+identification" is a named Step 3 requirement, and a manifest frozen against
+one corpus build is not comparable to one frozen against another).
+`from_question()` builds a `FrozenItem` directly from an approved
+`EvaluationQuestion`, closing the gap where Step 2's output and Step 3's
+input had no connecting code.
+
+`experiments/evaluation/runner.py` — `read_results()` and `group_by_system()`
+reshape a results JSONL file into `{system: {question_id: record}}`, so
+baseline and proposed answers can be compared question-by-question without
+hand-written glue.
+
+`experiments/evaluation/annotation.py` — `read_annotations()` re-validates a
+completed annotation file on import. `unblind_annotations()` recovers system
+identity after annotation using the key `build_blinded_packet` already kept
+separate from what the annotator saw.
+
+`experiments/evaluation/accuracy.py` (new file) — `QAJudgment` for Step 9. It
+deliberately does not compute correctness itself; automatic string-overlap
+scoring is excluded from the thesis outcomes, so introducing one here to
+"complete" the evaluator would have been adding an undeclared metric.
+Correctness is supplied by whatever the QA protocol decides (human judgement,
+or a named rule for closed-form questions) and only given a validated,
+traceable shape.
+
+`experiments/evaluation/stats.py` — `qa_accuracy()` mirrors `har()`'s
+aggregation. `hallucination_outcomes()` extracts the mappings `har()`,
+`coverage()` and `mcnemar()` expect from a system's unblinded annotations.
+`error_analysis()` breaks each `outcome_crosstab()` cell down by diagnostic
+subtype. No new statistical test was needed for QA accuracy: it is the same
+paired-binary shape as HAR, so `mcnemar()` and `paired_bootstrap_ci()` apply
+unchanged.
+
+`tests/integration/test_baseline_and_proposed.py` (new file) — the first test
+running the real `RAG2System` (with `MockRAG2Filter`, never the real
+checkpoint) and the real `RecencyAwareSystem` together through
+`run_experiment()`, verifying candidate-set identity, distinguishable
+admission behaviour, full result-schema presence, reproducibility, and that a
+generator failure is recorded rather than silently dropped.
+
+`docs/methodology.md` (new file) — Step 12: a methods-chapter skeleton
+cross-referencing the rest of `docs/`, containing no results.
 
 ## This round's renaming
 

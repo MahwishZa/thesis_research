@@ -98,13 +98,6 @@ score. The reviewer fills `review_decision`, `reviewer_note`, `reviewer_id` and
 in the note and applied afterwards, so the original wording and its provenance
 stay recoverable.
 
-### Earlier note on the review file
-
-`experiments/questions/review.csv` carries the 123 validated candidates with
-blank `reviewer_decision` and `reviewer_note` columns. The reviewer may accept,
-reject, revise or flag for source verification. A revision must keep its
-provenance; a revision the citation no longer supports is a rejection.
-
 ## Limitations
 
 1. **Identifiers were transcribed, not resolved.** PubMed E-utilities and

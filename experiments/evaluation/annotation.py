@@ -18,7 +18,7 @@ import hashlib
 import json
 import random
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 SUBTYPES = ("faithfulness", "factuality", "temporal",
             "misinterpretation", "ambiguity", "other")
@@ -194,3 +194,60 @@ def write_jsonl(rows: Iterable[dict[str, Any]], path: str) -> None:
         for row in rows:
             handle.write(json.dumps(row, sort_keys=True,
                                     ensure_ascii=False) + "\n")
+
+
+def read_annotations(path: str) -> tuple[Annotation, ...]:
+    """Read a completed annotation file back into validated records.
+
+    Each row is passed through ``Annotation``'s own validation, so a
+    malformed row - a hallucinated answer with no subtype, an abstention
+    marked hallucinated - is refused here rather than reaching statistics.
+    """
+    annotations = []
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            annotations.append(Annotation(
+                answer_key=row["answer_key"],
+                annotator_id=row["annotator_id"],
+                hallucinated=row["hallucinated"],
+                n_hallucinated_claims=row.get("n_hallucinated_claims", 0),
+                subtype=row.get("subtype"),
+                abstained=row.get("abstained", 0),
+                note=row.get("note"),
+            ))
+    return tuple(annotations)
+
+
+def unblind_annotations(
+    annotations: Sequence[Annotation],
+    key: Mapping[str, Mapping[str, str]],
+) -> dict[str, dict[str, Annotation]]:
+    """Recover ``{system: {question_id: Annotation}}`` after review.
+
+    ``key`` is the unblinding map ``build_blinded_packet`` returned
+    separately from the packet the annotator saw. This is the only place
+    annotation identity and system identity are brought back together, and it
+    happens after annotation is complete - never before, and never inside the
+    file an annotator reads.
+    """
+    grouped: dict[str, dict[str, Annotation]] = {}
+    for annotation in annotations:
+        mapping = key.get(annotation.answer_key)
+        if mapping is None:
+            raise AnnotationError(
+                f"answer_key {annotation.answer_key!r} is not in the "
+                "unblinding key"
+            )
+        system = mapping["system"]
+        question_id = mapping["question_id"]
+        by_question = grouped.setdefault(system, {})
+        if question_id in by_question:
+            raise AnnotationError(
+                f"duplicate annotation for system={system!r} "
+                f"question_id={question_id!r}"
+            )
+        by_question[question_id] = annotation
+    return grouped

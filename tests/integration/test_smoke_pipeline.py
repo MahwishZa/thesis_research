@@ -41,6 +41,7 @@ def make_items(n=3, k=4):
             reference_answer="synthetic reference",
             reference_source="synthetic source",
             reference_date="2024-01",
+            corpus_snapshot="test-corpus@fixture",
             candidates=tuple(
                 fz.FrozenCandidate(
                     evidence_id=f"E{i}-{j}", text=f"passage {i}-{j}",
@@ -153,6 +154,7 @@ class SmokeTest(unittest.TestCase):
         bad = fz.FrozenItem(
             question_id=leaky[0].question_id, question=leaky[0].question,
             reference_answer="r", reference_source="s", reference_date="2024",
+            corpus_snapshot="test-corpus@fixture",
             candidates=leaky[0].candidates,
             reference_evidence_ids=(leaky[0].candidates[0].evidence_id,),
         )

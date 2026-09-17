@@ -176,3 +176,44 @@ def run_experiment(
         "n_records": len(records),
         "n_errors": sum(1 for r in records if r["status"] == "error"),
     }
+
+
+def read_results(path: str) -> list[dict[str, Any]]:
+    """Read a results JSONL file back into records, unchanged.
+
+    The counterpart to ``run_experiment``'s writer. Never modifies the file;
+    the raw output stays exactly as generated.
+    """
+    records = []
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                records.append(json.loads(line))
+    return records
+
+
+def group_by_system(
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Reshape flat result records into ``{system: {question_id: record}}``.
+
+    This is the step that lets baseline and proposed results be compared
+    question-by-question without hand-copying: every downstream comparison
+    (hallucination rate, accuracy, statistics) needs one record per question
+    per system, keyed the same way on both sides. Raises if a system answered
+    the same question twice, since that would silently make one answer
+    invisible to the comparison.
+    """
+    grouped: dict[str, dict[str, dict[str, Any]]] = {}
+    for record in records:
+        system = record["system"]
+        qid = record["question_id"]
+        by_question = grouped.setdefault(system, {})
+        if qid in by_question:
+            raise RunnerError(
+                f"duplicate result for system={system!r} "
+                f"question_id={qid!r}; each system must answer each "
+                "question exactly once"
+            )
+        by_question[qid] = dict(record)
+    return grouped

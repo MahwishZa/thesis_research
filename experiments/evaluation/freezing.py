@@ -19,6 +19,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
+from .questions import EvaluationQuestion
+
 
 class FreezeError(RuntimeError):
     """Raised when a frozen-evidence invariant is violated."""
@@ -104,6 +106,13 @@ class FrozenItem:
     reference_date: str
     candidates: tuple[FrozenCandidate, ...]
 
+    #: Identifies which corpus build these candidates were retrieved from
+    #: (e.g. "alzheimer_corpus@2026-10-03"). Required, not folded into
+    #: ``metadata``: a manifest frozen against one corpus snapshot is not
+    #: comparable to one frozen against another, so the identifier has to be
+    #: present on every item, not an optional afterthought.
+    corpus_snapshot: str
+
     evaluation_timestamp: Optional[str] = None
     configuration_hash: Optional[str] = None
     #: Evidence ids that established the reference answer. Firewalled.
@@ -120,6 +129,12 @@ class FrozenItem:
             duplicated = sorted({i for i in ids if ids.count(i) > 1})
             raise FreezeError(
                 f"{self.question_id}: duplicate evidence ids {duplicated}"
+            )
+        if not self.corpus_snapshot.strip():
+            raise FreezeError(
+                f"{self.question_id}: corpus_snapshot is required - which "
+                "corpus build these candidates came from must be traceable "
+                "before evidence is frozen"
             )
 
     @property
@@ -149,6 +164,7 @@ class FrozenItem:
             "reference_answer": self.reference_answer,
             "reference_source": self.reference_source,
             "reference_date": self.reference_date,
+            "corpus_snapshot": self.corpus_snapshot,
             "candidate_evidence_ids": list(self.candidate_evidence_ids),
             "candidate_evidence": [c.to_dict() for c in self.candidates],
             "candidate_set_hash": self.candidate_set_hash,
@@ -222,6 +238,7 @@ def read_manifest(path: str) -> tuple[FrozenItem, ...]:
                 reference_answer=record["reference_answer"],
                 reference_source=record["reference_source"],
                 reference_date=record["reference_date"],
+                corpus_snapshot=record["corpus_snapshot"],
                 candidates=tuple(
                     FrozenCandidate(**c) for c in record["candidate_evidence"]
                 ),
@@ -245,3 +262,38 @@ def verify_manifest(path: str, expected_digest: str) -> tuple[FrozenItem, ...]:
             f"  expected {expected_digest}\n  actual   {actual}"
         )
     return read_manifest(path)
+
+
+def from_question(
+    question: EvaluationQuestion,
+    candidates: Sequence[FrozenCandidate],
+    *,
+    corpus_snapshot: str,
+    reference_evidence_ids: Sequence[str] = (),
+    evaluation_timestamp: Optional[str] = None,
+    configuration_hash: Optional[str] = None,
+) -> FrozenItem:
+    """Build a ``FrozenItem`` from an approved question plus its evidence.
+
+    This is the one place Step 2's output (an ``EvaluationQuestion``) meets
+    Step 3's input (a ``FrozenItem``). Copying the shared fields by hand at
+    each call site is how they drift - a stale ``reference_date`` surviving a
+    question revision, for instance - so the copy happens once, here, from
+    the question's own fields.
+
+    Only ``question.is_usable`` questions should reach this function; that is
+    a caller-side check (it depends on the review outcome, which this module
+    has no reason to know about), not enforced here.
+    """
+    return FrozenItem(
+        question_id=question.question_id,
+        question=question.question,
+        reference_answer=question.reference_answer,
+        reference_source=question.reference_source,
+        reference_date=question.reference_date,
+        corpus_snapshot=corpus_snapshot,
+        candidates=tuple(candidates),
+        reference_evidence_ids=tuple(reference_evidence_ids),
+        evaluation_timestamp=evaluation_timestamp,
+        configuration_hash=configuration_hash,
+    )

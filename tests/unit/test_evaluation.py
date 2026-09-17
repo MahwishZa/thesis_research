@@ -117,6 +117,7 @@ def frozen_item(**kw):
     base = dict(
         question_id="ADQ-1", question="q?", reference_answer="a",
         reference_source="src", reference_date="2020",
+        corpus_snapshot="test-corpus@fixture",
         candidates=candidates(),
     )
     base.update(kw)
@@ -481,3 +482,220 @@ class QuestionPoolTests(unittest.TestCase):
         self.assertEqual(s["ambiguity_candidates"], 1)
         self.assertEqual(s["distinct_sources"], 2)
         self.assertEqual(s["usable"], 0)  # nothing approved yet
+
+
+class FreezeFromQuestionTests(unittest.TestCase):
+    """Step 3: building a FrozenItem from an approved question."""
+
+    def test_shared_fields_are_copied_from_the_question(self):
+        q = question(status="approved")
+        item = fz.from_question(
+            q, candidates(), corpus_snapshot="alzheimer_corpus@fixture",
+        )
+        self.assertEqual(item.question_id, q.question_id)
+        self.assertEqual(item.question, q.question)
+        self.assertEqual(item.reference_answer, q.reference_answer)
+        self.assertEqual(item.reference_source, q.reference_source)
+        self.assertEqual(item.reference_date, q.reference_date)
+        self.assertEqual(item.corpus_snapshot, "alzheimer_corpus@fixture")
+
+    def test_reference_evidence_ids_pass_through_to_the_firewall(self):
+        q = question(status="approved")
+        item = fz.from_question(
+            q, candidates(), corpus_snapshot="c@v1",
+            reference_evidence_ids=("E1",),
+        )
+        self.assertEqual(item.firewall_violations(), ("E1",))
+
+    def test_corpus_snapshot_is_required(self):
+        with self.assertRaises(fz.FreezeError):
+            fz.FrozenItem(
+                question_id="Q1", question="q?", reference_answer="a",
+                reference_source="s", reference_date="2020",
+                corpus_snapshot="",
+                candidates=candidates(),
+            )
+
+    def test_corpus_snapshot_round_trips_through_the_manifest(self):
+        item = frozen_item()
+        with TemporaryDirectory() as tmp:
+            path = str(Path(tmp) / "m.jsonl")
+            digest = fz.write_manifest([item], path)
+            restored = fz.verify_manifest(path, digest)
+        self.assertEqual(restored[0].corpus_snapshot, item.corpus_snapshot)
+
+
+class RunnerResultsTests(unittest.TestCase):
+    """Step 6: reading results back and reshaping for comparison."""
+
+    def records(self):
+        return [
+            {"run_id": "r1", "question_id": "Q1", "system": "baseline",
+             "generated_answer": "a"},
+            {"run_id": "r1", "question_id": "Q1", "system": "proposed",
+             "generated_answer": "b"},
+            {"run_id": "r1", "question_id": "Q2", "system": "baseline",
+             "generated_answer": "c"},
+        ]
+
+    def test_read_results_round_trips_jsonl(self):
+        from experiments.evaluation.runner import read_results
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "r.jsonl"
+            path.write_text("".join(
+                json.dumps(r) + "\n" for r in self.records()))
+            back = read_results(str(path))
+        self.assertEqual(back, self.records())
+
+    def test_group_by_system_reshapes_for_comparison(self):
+        from experiments.evaluation.runner import group_by_system
+        grouped = group_by_system(self.records())
+        self.assertEqual(set(grouped), {"baseline", "proposed"})
+        self.assertEqual(set(grouped["baseline"]), {"Q1", "Q2"})
+        self.assertEqual(grouped["baseline"]["Q1"]["generated_answer"], "a")
+
+    def test_duplicate_answer_for_one_question_is_refused(self):
+        from experiments.evaluation.runner import RunnerError, group_by_system
+        dup = self.records() + [
+            {"run_id": "r1", "question_id": "Q1", "system": "baseline",
+             "generated_answer": "second"},
+        ]
+        with self.assertRaises(RunnerError):
+            group_by_system(dup)
+
+
+class AnnotationImportTests(unittest.TestCase):
+    """Step 7: reading annotations back and unblinding them."""
+
+    def test_read_annotations_validates_each_row(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "a.jsonl"
+            good = ann.Annotation("K1", "med", 1, 1, "temporal")
+            path.write_text(json.dumps(good.to_dict()) + "\n")
+            [back] = ann.read_annotations(str(path))
+        self.assertEqual(back, good)
+
+    def test_read_annotations_rejects_an_incoherent_row(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "a.jsonl"
+            # hallucinated=1 with no subtype is invalid.
+            path.write_text(json.dumps({
+                "answer_key": "K1", "annotator_id": "med", "hallucinated": 1,
+                "n_hallucinated_claims": 1, "subtype": None, "abstained": 0,
+                "note": None,
+            }) + "\n")
+            with self.assertRaises(ann.AnnotationError):
+                ann.read_annotations(str(path))
+
+    def test_unblind_recovers_system_and_question(self):
+        answers = [
+            {"run_id": "r", "question_id": "Q1", "system": "baseline",
+             "question": "q?", "generated_answer": "A"},
+            {"run_id": "r", "question_id": "Q1", "system": "proposed",
+             "question": "q?", "generated_answer": "B"},
+        ]
+        packet, key = ann.build_blinded_packet(answers, seed="s")
+        annotations = [
+            ann.Annotation(row["answer_key"], "med", 0)
+            for row in packet
+        ]
+        unblinded = ann.unblind_annotations(annotations, key)
+        self.assertEqual(set(unblinded), {"baseline", "proposed"})
+        self.assertIn("Q1", unblinded["baseline"])
+        self.assertIn("Q1", unblinded["proposed"])
+
+    def test_unblind_refuses_an_unknown_answer_key(self):
+        stray = ann.Annotation("ANS-not-in-key", "med", 0)
+        with self.assertRaises(ann.AnnotationError):
+            ann.unblind_annotations([stray], {})
+
+    def test_unblind_refuses_a_duplicate_question(self):
+        key = {
+            "K1": {"system": "baseline", "question_id": "Q1", "run_id": "r"},
+            "K2": {"system": "baseline", "question_id": "Q1", "run_id": "r"},
+        }
+        dup = [ann.Annotation("K1", "med", 0), ann.Annotation("K2", "doc", 0)]
+        with self.assertRaises(ann.AnnotationError):
+            ann.unblind_annotations(dup, key)
+
+
+class HallucinationOutcomesTests(unittest.TestCase):
+    """The glue between Step 7 annotations and Step 8 rate calculation."""
+
+    def test_extracts_hallucinated_and_abstained_from_annotations(self):
+        by_question = {
+            "Q1": ann.Annotation("K1", "med", 1, 1, "temporal"),
+            "Q2": ann.Annotation("K2", "med", 0, abstained=1),
+            "Q3": ann.Annotation("K3", "med", 0),
+        }
+        hallucinated, abstained = st.hallucination_outcomes(by_question)
+        self.assertEqual(hallucinated, {"Q1": 1, "Q2": 0, "Q3": 0})
+        self.assertEqual(abstained, {"Q1": 0, "Q2": 1, "Q3": 0})
+
+    def test_output_feeds_har_directly(self):
+        by_question = {
+            "Q1": ann.Annotation("K1", "med", 1, 1, "temporal"),
+            "Q2": ann.Annotation("K2", "med", 0),
+        }
+        hallucinated, abstained = st.hallucination_outcomes(by_question)
+        rates = st.har(hallucinated, abstained)
+        self.assertEqual(rates["n_hallucinated"], 1)
+        self.assertEqual(rates["har_all_items"], 0.5)
+
+
+class ErrorAnalysisTests(unittest.TestCase):
+
+    def test_subtype_breakdown_per_crosstab_cell(self):
+        crosstab = {
+            "baseline_only": ["Q1", "Q2"],
+            "proposed_only": ["Q3"],
+            "both": [],
+            "neither": ["Q4"],
+        }
+        subtypes = {"Q1": "temporal", "Q2": "temporal", "Q3": "factuality"}
+        report = st.error_analysis(crosstab, subtypes)
+        self.assertEqual(report["baseline_only"], {"temporal": 2})
+        self.assertEqual(report["proposed_only"], {"factuality": 1})
+        self.assertEqual(report["neither"], {})
+
+    def test_manufactures_no_conclusions_only_counts(self):
+        crosstab = {"baseline_only": ["Q1"], "proposed_only": [],
+                    "both": [], "neither": []}
+        report = st.error_analysis(crosstab, {"Q1": "ambiguity"})
+        self.assertEqual(report, {
+            "baseline_only": {"ambiguity": 1},
+            "proposed_only": {}, "both": {}, "neither": {},
+        })
+
+
+class QAAccuracyStatsTests(unittest.TestCase):
+
+    def test_totals_and_accuracy(self):
+        correct = {"Q1": 1, "Q2": 1, "Q3": 0, "Q4": 1}
+        result = st.qa_accuracy(correct)
+        self.assertEqual(result["n_evaluated"], 4)
+        self.assertEqual(result["n_correct"], 3)
+        self.assertEqual(result["n_incorrect"], 1)
+        self.assertEqual(result["accuracy"], 0.75)
+
+    def test_empty_input_refused(self):
+        with self.assertRaises(st.StatsError):
+            st.qa_accuracy({})
+
+    def test_paired_comparison_reuses_mcnemar_and_bootstrap(self):
+        """No new statistical test is needed: accuracy is paired-binary too."""
+        baseline = {f"Q{i}": 1 if i < 5 else 0 for i in range(10)}
+        proposed = {f"Q{i}": 1 if i < 8 else 0 for i in range(10)}
+        result = st.mcnemar(baseline, proposed)
+        self.assertEqual(result.proposed_only, 3)
+        self.assertEqual(result.baseline_only, 0)
+        ci = st.paired_bootstrap_ci(
+            {k: float(v) for k, v in baseline.items()},
+            {k: float(v) for k, v in proposed.items()},
+            iterations=500,
+        )
+        self.assertAlmostEqual(ci["difference"], 0.3, places=6)
+
+
+if __name__ == "__main__":
+    unittest.main()

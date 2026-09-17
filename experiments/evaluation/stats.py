@@ -17,6 +17,8 @@ import random
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
+from .annotation import Annotation
+
 
 class StatsError(ValueError):
     """Raised when an analysis input is malformed."""
@@ -166,6 +168,45 @@ def har(
     }
 
 
+def hallucination_outcomes(
+    by_question: Mapping[str, Annotation],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Extract ``(hallucinated, abstained)`` mappings from one system's
+    annotations, ready for ``har``, ``coverage``, ``mcnemar`` or
+    ``compare_systems``.
+
+    Takes the ``{question_id: Annotation}`` shape ``annotation.
+    unblind_annotations`` produces for one system. This is the glue between
+    Step 7 (annotation) and Step 8 (rate calculation): without it, a caller
+    would hand-write the same dict comprehension at every call site.
+    """
+    hallucinated = {qid: a.hallucinated for qid, a in by_question.items()}
+    abstained = {qid: a.abstained for qid, a in by_question.items()}
+    return hallucinated, abstained
+
+
+def qa_accuracy(correct: Mapping[str, int]) -> dict[str, Any]:
+    """QA accuracy: correct answers over total evaluated.
+
+    ``correct`` is a per-question 0/1 judgement (see
+    ``accuracy.QAJudgment.correct``) supplied by the thesis's QA protocol,
+    not computed here - this function only aggregates. Structurally this is
+    the same paired-binary shape as ``har``, so ``mcnemar`` and
+    ``paired_bootstrap_ci`` already support the baseline-vs-proposed
+    comparison without a separate accuracy-specific test.
+    """
+    n = len(correct)
+    if n == 0:
+        raise StatsError("no answers to score")
+    n_correct = sum(correct.values())
+    return {
+        "n_evaluated": n,
+        "n_correct": n_correct,
+        "n_incorrect": n - n_correct,
+        "accuracy": round(n_correct / n, 6),
+    }
+
+
 def subtype_distribution(
     subtypes: Sequence[Optional[str]],
 ) -> dict[str, int]:
@@ -194,6 +235,29 @@ def outcome_crosstab(
                           if baseline[k] == 0 and proposed[k] == 1],
         "both": [k for k in keys if baseline[k] == 1 and proposed[k] == 1],
         "neither": [k for k in keys if baseline[k] == 0 and proposed[k] == 0],
+    }
+
+
+def error_analysis(
+    crosstab: Mapping[str, Sequence[str]],
+    subtypes: Mapping[str, Optional[str]],
+) -> dict[str, dict[str, int]]:
+    """Subtype breakdown within each ``outcome_crosstab`` cell.
+
+    ``subtypes`` maps question_id to the diagnostic subtype recorded for that
+    answer (``annotation.SUBTYPES``: faithfulness, factuality, temporal,
+    misinterpretation, ambiguity, other), typically taken from whichever
+    system's hallucinations are being explained in that cell. A question
+    absent from ``subtypes`` - a non-hallucinated answer has no subtype - is
+    simply not counted, which is correct: only hallucinated answers carry a
+    subtype at all.
+
+    This only counts what annotation already recorded; it draws no
+    conclusions and manufactures no patterns.
+    """
+    return {
+        cell: subtype_distribution([subtypes.get(qid) for qid in question_ids])
+        for cell, question_ids in crosstab.items()
     }
 
 
