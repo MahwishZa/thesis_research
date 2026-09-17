@@ -5,10 +5,10 @@ import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from evaluation import annotation as ann
-from evaluation import freezing as fz
-from evaluation import questions as qs
-from evaluation import stats as st
+from experiments.evaluation import annotation as ann
+from experiments.evaluation import freezing as fz
+from experiments.evaluation import questions as qs
+from experiments.evaluation import stats as st
 
 
 def question(**kw):

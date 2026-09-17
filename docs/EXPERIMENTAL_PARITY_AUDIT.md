@@ -92,7 +92,7 @@ Concretely:
   recorded as `output_state=UNGROUNDED` — not `GROUNDED`, which would have been
   false, and not `ABSTAIN`, because an answer was produced and must be
   annotated like any other.
-* `evaluation/stats.py` always reports `answered`, `abstained`, `hallucinated`
+* `experiments/evaluation/stats.py` always reports `answered`, `abstained`, `hallucinated`
   and `non_hallucinated` separately, with `answer_coverage` beside every rate.
 * `compare_systems()` sets `interpretable: false` and refuses to emit a headline
   difference when either system answered nothing.

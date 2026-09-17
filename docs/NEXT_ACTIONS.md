@@ -1,103 +1,86 @@
 # Next Actions
 
-**Updated:** 2026-09-17 · Repository at 206 passing tests.
+**Updated:** 2026-09-17 · 229 tests passing.
 
 ---
 
 ## DONE
 
-* **Abstention asymmetry resolved.** `AbstentionPolicy` added and configurable;
-  default `ANSWER_ALWAYS` matches what the baseline already does when its
-  filter admits nothing. New `UNGROUNDED` output state so an answer produced
-  from an empty evidence block is not mislabelled `GROUNDED`. Rationale in
-  `docs/EXPERIMENTAL_PARITY_AUDIT.md` §2.
-* **Abstention accounting.** `evaluation/stats.py` reports answered, abstained,
-  hallucinated and non-hallucinated separately, with `answer_coverage` beside
-  every rate. `compare_systems()` returns `interpretable: false` and emits no
-  headline difference when a system answered nothing.
-* **Prompt parity enforced** before a run starts, not assumed.
-* **RAG² filter recipe recorded from source** (`docs/RAG2_CLASSIFIER_FEASIBILITY.md`):
-  AdamW, lr 3e-5, seq 512, stride 128, batch 16, 40 epochs, checkpoint per epoch.
-* **Hardware status documented** (`docs/HARDWARE_AND_RESOURCE_STATUS.md`),
-  distinguishing the audit container from the laptop.
-* **Question schema extended** with `ambiguity_candidate`, a reference-answer
-  thinness check, a corpus-support check, an answerability screen and a pool
-  summary.
-* **206 tests pass.** 15 added this round.
+* **Local environment verified.** RTX 2050 4 GB, driver 592.82, PyTorch
+  2.4.1+cu121, `torch.cuda.is_available() == True`. The driver-reported CUDA
+  13.1 versus PyTorch's 12.1 is **not a fault** — drivers are backward
+  compatible and CUDA initialises. No reinstall.
+* **Repository consolidated** to one top-level `experiments/`; `evaluation/`
+  moved to `experiments/evaluation/` with `git mv`. No stale references.
+* **Question-source protocol established** *before* sourcing
+  (`docs/QUESTION_SOURCE_AND_PROVENANCE_PROTOCOL.md`).
+* **Candidate pool built from two inspected sources** — 170 sourced, 150 after
+  id-collision removal, **123 auto-validated awaiting human review**, 27
+  auto-rejected as near-duplicates. Every record carries a concrete locator
+  (PMID/DOI/CD, or MedQuAD id + CUI + URL) and a date.
+* **Flan-T5 base-size ambiguity resolved as far as the repository allows:**
+  `classifier/model/token_add.ipynb` has *empty* `from_pretrained("")` strings,
+  so the released code pins no base model. Only the paper is authoritative;
+  ledger E1 records Flan-T5-large (770 M) read from it.
+* **Abstention policy** resolved and configurable (previous round).
+* Nothing downloaded; corpus untouched.
 
 ## IN PROGRESS
 
-* **Step 1 — corpus build**, running on the laptop. Not touched by this work.
-* **Step 2 — question pool.** Infrastructure is ready; no questions sourced yet.
+* **Step 1 — corpus download**, running on the laptop.
+* **Step 2 — question pool.** 123 candidates await human review.
 
 ## BLOCKED
 
-| Blocked on | What it blocks | Why |
+| Blocked on | What it blocks | Note |
 |---|---|---|
-| **Laptop verification** (§6 of the hardware doc) | every VRAM/runtime claim | CUDA, driver and torch build are UNKNOWN; this audit ran on a different machine |
-| **Generator decision** | Steps 4–6, generation parameters, seed | Llama-3-8B does not fit 4 GB VRAM in any configuration, including 4-bit |
-| **Filter training venue** | the baseline arm | Flan-T5-large training needs ≈12 GB before activations; the released checkpoint does not exist |
-| **Corpus completion** | Step 3 onward | Retrieval, candidate sets, evidence freezing |
-| **Retrieval + reranking** | Step 3 | Not implemented; `retrieval_external: True` |
-| **Annotator availability** | Step 7, κ | One annotator is workable; document it if the second is unavailable |
+| **Generator venue decision** | Steps 4–6 | Llama-3-8B: BF16 needs ≈16 GB; 4-bit ≈4.5–5 GB before KV cache, against 4 GB VRAM. CPU/offload may work; **runtime unmeasured** |
+| **Filter training venue** | the baseline arm | ≈12.4 GB before activations; a free 16 GB session suffices. Inference stays local |
+| **Corpus completion** | corpus-support check, Step 3 onward | |
+| **Retrieval + reranking** | Step 3 | not implemented; `retrieval_external: True` |
+| **Human review** | the final ~100 questions | 123 candidates ready in `pool/review.csv` |
+| **Identifier verification** | question approval | PubMed/doi.org blocked in the build environment; PMIDs transcribed, not resolved |
 
 ## NEXT — in order
 
-**1. Verify the laptop (15 minutes, unblocks the most).**
+**1. Keep the corpus downloading.** Do not restart it.
 
-```powershell
-nvidia-smi
-nvcc --version
-python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-python -c "import torch; print(torch.cuda.get_device_name(0), torch.cuda.get_device_properties(0).total_memory/1e9)"
-huggingface-cli whoami
-```
+**2. Review the candidate pool.** Open
+`experiments/question_sources/pool/review.csv` (123 rows). For each: confirm
+the reference answer actually answers the question and matches the cited
+record, then set `reviewer_decision` to accept / reject / revise / verify.
+Spot-check a sample of PMIDs first — they were transcribed, not resolved.
+Target ~100 accepted.
 
-Paste the output into `docs/HARDWARE_AND_RESOURCE_STATUS.md` §6.
+**3. Decide the generator venue.** The question is not "can Llama-3-8B run"
+but "can it run reproducibly, twice, in a sensible time". Either measure a
+short local generation, or commit to a remote GPU. **Download nothing until
+this is decided** — 30.07 GB free with the corpus still growing.
 
-**2. Decide the generator, and write the decision down.** Llama-3-8B will not
-run on this GPU. Three honest routes: run generation on a free cloud GPU and
-keep the base paper's model; use a smaller instruct model locally and document
-the deviation; or CPU inference locally and accept the wall-clock cost. **Do
-not download any model until this is decided** — 31 GB free with a corpus still
-downloading.
+**4. Decide the filter training venue** and base size — see
+`RAG2_CLASSIFIER_FEASIBILITY.md` §2D.
 
-**3. Start sourcing evaluation questions.** Longest-lead item, needs no GPU and
-no corpus. Target ~150–200 candidates, human-reviewed down to ~100. Per
-question: transcribe the reference answer from a named dated source, never
-generate it.
+**5. Only then download** the models the decision actually requires.
 
-```bash
-python -c "from evaluation.questions import EvaluationQuestion, validate; ..."
-```
+**6. When the corpus finishes**, run the corpus-support check against the
+approved questions. `corpus_support_expected` is currently an *expectation*;
+this is where it becomes a finding.
 
-Record `reference_source` and `reference_date` for every item; the firewall
-check will later refuse any question whose reference evidence also appears in
-its candidate set.
+**7. Freeze evidence** — `experiments/evaluation/freezing.py` hashes the
+candidate set and gates cross-arm equality.
 
-**4. Pick the filter training venue** (free T4 session is sufficient) and decide
-base size — see `RAG2_CLASSIFIER_FEASIBILITY.md` §2D.
+**8. Run baseline, then the proposed solution/system**, same frozen manifest.
 
-**5. Implement the concrete generator** once step 2 is decided, behind the
-existing `Generator` interface. Fix greedy decoding (temperature 0) so a single
-run suffices.
+**9. Blind annotation → HAR → QA accuracy → paired comparison → error
+analysis.**
 
-**6. Build retrieval and reranking** to produce frozen candidate sets, once the
-corpus completes.
+Do not add a pilot study, extra metrics, or extra baselines.
 
-**Do not** start a pilot study, add metrics beyond HAR and accuracy, or tune θ
-on anything but the validation split.
+## Standing limitations for the thesis
 
----
-
-## Standing limitations to state in the thesis
-
-1. The baseline is an **adaptation** of RAG², not a reproduction: different
-   corpus, retrained filter, thesis-authored prompt, and balanced multi-corpus
-   retrieval not reproduced.
-2. The ~100-question evaluation set is a **practical budget, not a powered
-   sample size**. Report the detectable effect, do not claim adequate power.
-3. If only one annotator is available, say so and omit κ rather than
-   substituting a number.
-4. Execution hardware differs from the paper's; this is a resource limitation,
-   not a methodological one.
+1. The baseline is an **adaptation** of RAG², not a reproduction.
+2. ~100 questions is a **practical budget, not a powered sample size**.
+3. Question sources are ~85% Cochrane; a guideline source would strengthen it.
+4. Identifiers were transcribed from an inspected dataset, not resolved.
+5. Execution hardware differs from the paper's — a resource limitation, not a
+   methodological one.

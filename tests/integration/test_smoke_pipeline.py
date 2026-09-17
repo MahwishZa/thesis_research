@@ -14,10 +14,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from evaluation import annotation as ann
-from evaluation import freezing as fz
-from evaluation import stats as st
-from evaluation.runner import (
+from experiments.evaluation import annotation as ann
+from experiments.evaluation import freezing as fz
+from experiments.evaluation import stats as st
+from experiments.evaluation.runner import (
     RunConfig, RunnerError, assert_prompt_parity, run_experiment, to_candidates,
 )
 from systems.baseline.no_filter import NoFilterSystem
