@@ -20,3 +20,62 @@
 2026-09-18 10:46:35,827Z INFO    04_normalize preserved verbatim: Aβ40
 2026-09-18 10:46:35,827Z INFO    04_normalize preserved verbatim: Aβ
 2026-09-18 10:57:38,398Z WARNING 06_chunk using WHITESPACE tokenizer - NOT the specified MedCPT tokenizer; 256 words is ~340-400 MedCPT tokens
+2026-09-18 15:24:53,783Z INFO    06_chunk tokenizer ncbi/MedCPT-Article-Encoder loaded | fast=True | class=BertTokenizerFast
+2026-09-18 15:26:32,918Z INFO    06_chunk stage 06 progress | documents=2000 | chunks=62516 | 20.2 docs/sec | elapsed=99s
+2026-09-18 15:28:03,552Z INFO    06_chunk stage 06 progress | documents=4000 | chunks=125514 | 21.1 docs/sec | elapsed=190s
+2026-09-18 15:29:58,118Z INFO    06_chunk stage 06 progress | documents=6000 | chunks=190614 | 19.7 docs/sec | elapsed=304s
+2026-09-18 15:31:41,157Z INFO    06_chunk stage 06 progress | documents=8000 | chunks=254091 | 19.6 docs/sec | elapsed=407s
+2026-09-18 15:33:29,866Z INFO    06_chunk stage 06 progress | documents=10000 | chunks=320122 | 19.4 docs/sec | elapsed=516s
+2026-09-18 15:35:30,276Z INFO    06_chunk stage 06 progress | documents=12000 | chunks=386202 | 18.9 docs/sec | elapsed=636s
+2026-09-18 15:37:17,930Z INFO    06_chunk stage 06 progress | documents=14000 | chunks=452854 | 18.8 docs/sec | elapsed=744s
+2026-09-18 15:39:20,938Z INFO    06_chunk stage 06 progress | documents=16000 | chunks=521826 | 18.5 docs/sec | elapsed=867s
+2026-09-18 15:41:21,903Z INFO    06_chunk stage 06 progress | documents=18000 | chunks=592631 | 18.2 docs/sec | elapsed=988s
+2026-09-18 15:43:16,236Z INFO    06_chunk stage 06 progress | documents=20000 | chunks=659984 | 18.1 docs/sec | elapsed=1102s
+2026-09-18 15:45:20,186Z INFO    06_chunk stage 06 progress | documents=22000 | chunks=731899 | 17.9 docs/sec | elapsed=1226s
+2026-09-18 15:47:17,327Z INFO    06_chunk stage 06 progress | documents=24000 | chunks=805765 | 17.9 docs/sec | elapsed=1344s
+2026-09-18 15:49:33,842Z INFO    06_chunk stage 06 progress | documents=26000 | chunks=880101 | 17.6 docs/sec | elapsed=1480s
+2026-09-18 15:51:37,556Z INFO    06_chunk stage 06 progress | documents=28000 | chunks=953355 | 17.5 docs/sec | elapsed=1604s
+2026-09-18 15:53:41,810Z INFO    06_chunk stage 06 progress | documents=30000 | chunks=1027717 | 17.4 docs/sec | elapsed=1728s
+2026-09-18 15:56:02,745Z INFO    06_chunk stage 06 progress | documents=32000 | chunks=1102871 | 17.1 docs/sec | elapsed=1869s
+2026-09-18 15:58:06,738Z INFO    06_chunk stage 06 progress | documents=34000 | chunks=1177808 | 17.1 docs/sec | elapsed=1993s
+2026-09-18 16:00:06,973Z INFO    06_chunk stage 06 progress | documents=36000 | chunks=1253419 | 17.0 docs/sec | elapsed=2113s
+2026-09-18 16:02:15,131Z INFO    06_chunk stage 06 progress | documents=38000 | chunks=1330821 | 17.0 docs/sec | elapsed=2241s
+2026-09-18 16:04:27,651Z INFO    06_chunk stage 06 progress | documents=40000 | chunks=1409720 | 16.9 docs/sec | elapsed=2374s
+2026-09-18 16:06:49,283Z INFO    06_chunk stage 06 progress | documents=42000 | chunks=1489291 | 16.7 docs/sec | elapsed=2516s
+2026-09-18 16:09:08,820Z INFO    06_chunk stage 06 progress | documents=44000 | chunks=1569398 | 16.6 docs/sec | elapsed=2655s
+2026-09-18 16:11:55,751Z INFO    06_chunk stage 06 progress | documents=46000 | chunks=1648265 | 16.3 docs/sec | elapsed=2822s
+2026-09-18 16:14:14,806Z INFO    06_chunk stage 06 progress | documents=48000 | chunks=1727327 | 16.2 docs/sec | elapsed=2961s
+2026-09-18 16:16:41,853Z INFO    06_chunk stage 06 progress | documents=50000 | chunks=1806659 | 16.1 docs/sec | elapsed=3108s
+2026-09-18 16:19:00,344Z INFO    06_chunk stage 06 progress | documents=52000 | chunks=1885972 | 16.0 docs/sec | elapsed=3247s
+2026-09-18 16:21:31,328Z INFO    06_chunk stage 06 progress | documents=54000 | chunks=1965806 | 15.9 docs/sec | elapsed=3398s
+2026-09-18 16:23:51,409Z INFO    06_chunk stage 06 progress | documents=56000 | chunks=2045383 | 15.8 docs/sec | elapsed=3538s
+2026-09-18 16:26:21,790Z INFO    06_chunk stage 06 progress | documents=58000 | chunks=2126220 | 15.7 docs/sec | elapsed=3688s
+2026-09-18 16:28:38,943Z INFO    06_chunk stage 06 progress | documents=60000 | chunks=2205136 | 15.7 docs/sec | elapsed=3825s
+2026-09-18 16:30:56,420Z INFO    06_chunk stage 06 progress | documents=62000 | chunks=2284321 | 15.6 docs/sec | elapsed=3963s
+2026-09-18 16:33:23,148Z INFO    06_chunk stage 06 progress | documents=64000 | chunks=2362451 | 15.6 docs/sec | elapsed=4109s
+2026-09-18 16:35:44,879Z INFO    06_chunk stage 06 progress | documents=66000 | chunks=2443687 | 15.5 docs/sec | elapsed=4251s
+2026-09-18 16:38:14,798Z INFO    06_chunk stage 06 progress | documents=68000 | chunks=2524496 | 15.5 docs/sec | elapsed=4401s
+2026-09-18 16:40:34,291Z INFO    06_chunk stage 06 progress | documents=70000 | chunks=2604590 | 15.4 docs/sec | elapsed=4541s
+2026-09-18 16:43:14,455Z INFO    06_chunk stage 06 progress | documents=72000 | chunks=2685023 | 15.3 docs/sec | elapsed=4701s
+2026-09-18 16:45:07,507Z INFO    06_chunk stage 06 progress | documents=74000 | chunks=2766162 | 15.4 docs/sec | elapsed=4814s
+2026-09-18 16:48:25,832Z INFO    06_chunk stage 06 progress | documents=76000 | chunks=2849752 | 15.2 docs/sec | elapsed=5012s
+2026-09-18 16:50:47,735Z INFO    06_chunk stage 06 progress | documents=78000 | chunks=2932255 | 15.1 docs/sec | elapsed=5154s
+2026-09-18 16:53:15,370Z INFO    06_chunk stage 06 progress | documents=80000 | chunks=3014207 | 15.1 docs/sec | elapsed=5302s
+2026-09-18 16:55:35,130Z INFO    06_chunk stage 06 progress | documents=82000 | chunks=3096322 | 15.1 docs/sec | elapsed=5441s
+2026-09-18 16:58:05,206Z INFO    06_chunk stage 06 progress | documents=84000 | chunks=3180693 | 15.0 docs/sec | elapsed=5591s
+2026-09-18 17:00:33,978Z INFO    06_chunk stage 06 progress | documents=86000 | chunks=3267566 | 15.0 docs/sec | elapsed=5740s
+2026-09-18 17:03:08,486Z INFO    06_chunk stage 06 progress | documents=88000 | chunks=3352376 | 14.9 docs/sec | elapsed=5895s
+2026-09-18 17:05:36,505Z INFO    06_chunk stage 06 progress | documents=90000 | chunks=3437555 | 14.9 docs/sec | elapsed=6043s
+2026-09-18 17:08:20,694Z INFO    06_chunk stage 06 progress | documents=92000 | chunks=3523460 | 14.8 docs/sec | elapsed=6207s
+2026-09-18 17:11:58,640Z INFO    06_chunk stage 06 progress | documents=94000 | chunks=3608664 | 14.6 docs/sec | elapsed=6425s
+2026-09-18 17:15:48,275Z INFO    06_chunk stage 06 progress | documents=96000 | chunks=3696347 | 14.4 docs/sec | elapsed=6654s
+2026-09-18 17:19:02,864Z INFO    06_chunk stage 06 progress | documents=98000 | chunks=3783451 | 14.3 docs/sec | elapsed=6849s
+2026-09-18 17:21:34,448Z INFO    06_chunk stage 06 progress | documents=100000 | chunks=3870574 | 14.3 docs/sec | elapsed=7001s
+2026-09-18 17:24:08,978Z INFO    06_chunk stage 06 progress | documents=102000 | chunks=3954685 | 14.3 docs/sec | elapsed=7155s
+2026-09-18 17:26:33,752Z INFO    06_chunk stage 06 progress | documents=104000 | chunks=4044744 | 14.2 docs/sec | elapsed=7300s
+2026-09-18 17:29:16,745Z INFO    06_chunk stage 06 progress | documents=106000 | chunks=4134091 | 14.2 docs/sec | elapsed=7463s
+2026-09-18 17:31:54,457Z INFO    06_chunk stage 06 progress | documents=108000 | chunks=4225145 | 14.2 docs/sec | elapsed=7621s
+2026-09-18 17:34:39,705Z INFO    06_chunk stage 06 progress | documents=110000 | chunks=4316199 | 14.1 docs/sec | elapsed=7786s
+2026-09-18 17:36:25,610Z INFO    06_chunk stage 06 | documents=111315 | chunks=4377041 | elapsed=7892s
+2026-09-18 17:37:55,443Z INFO    06_chunk stage 06 | chunks_this_run=4377041 | chunks_total=4377041 | tokenizer=ncbi/MedCPT-Article-Encoder | 256/32/224
+2026-09-18 18:29:49,051Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
