@@ -1,11 +1,14 @@
 # Next Actions
 
-**Updated:** 2026-09-17 · 389 tests passing · **Nothing has been executed.**
+**Updated:** 2026-09-18 · 395 tests passing.
+
+**PMC retrieval is now EXECUTED** — see "PMC finalization" below. Nothing
+else in this repository is EXECUTED.
 
 Status vocabulary, used strictly: **IMPLEMENTED** (code exists) · **TESTED**
 (tested on fixtures) · **VALIDATED** (whole pathway exercised end to end) ·
 **READY FOR REAL EXECUTION** (only inputs missing) · **EXECUTED** (actually
-run). Nothing in this repository is EXECUTED.
+run).
 
 ---
 
@@ -39,7 +42,8 @@ default them. They are fitted on the validation split, never on test.
 
 | Step | Status | Waiting on |
 |---|---|---|
-| 1. Corpus | IN PROGRESS | student's build |
+| 1. Corpus — PMC source | **EXECUTED** (retrieval + finalization) | normalize/dedup/chunk still to run over it |
+| 1. Corpus — other sources, normalize/dedup/chunk | IN PROGRESS | student's build |
 | 2. Questions | IN PROGRESS | human review of 123 candidates |
 | 3. Freeze evidence | READY FOR REAL EXECUTION | corpus + approved questions |
 | 3a. Retrieval/rerank | IMPLEMENTED, TESTED | corpus; `torch` on the run machine |
@@ -59,6 +63,41 @@ retrieval → rerank → freeze → both arms → runner → JSONL, with all thi
 control properties asserted. That is software validation, not a pilot, and it
 produces no number that could be read as a result.
 
+## PMC finalization — EXECUTED 2026-09-18
+
+**Fixed a producer/consumer log-evidence mismatch** (ledger D-41): the
+finalizer's reader required the newest of three message wordings the script
+had used across retrieval runs, so it recovered 0 of 102 legitimately
+unavailable PMCIDs from `retrieval.log` and refused to write a manifest on
+every attempt. The fix widened the reader to match the core statement common
+to all three wordings; no corpus file was touched.
+
+The student re-ran `--finalize` after pulling the fix. Independently verified
+against the committed `metadata/pmc.csv` (114,256 rows) and `logs/retrieval.log`:
+
+| Check | Result |
+|---|---|
+| Row count | 114,256 (predicted from repair evidence before the run) |
+| Duplicate (pmcid, version) pairs | 0 |
+| `already_verified` rows | 114,157 |
+| `unavailable_current_dataset` rows | 99 |
+| Rows missing a required path for their status | 0 |
+| xml_path count | 114,157 — matches the independently-reported local XML file count |
+| json_path count | 114,850 — matches the independently-reported local JSON file count |
+| Reconciliation: 114,859 local dirs − 9 stale − 693 non-OA | 114,157 (exact) |
+
+All three cross-checks — predicted row count, XML file count, JSON file
+count — closed exactly against numbers reported independently of the
+manifest itself. **This is the first EXECUTED artifact in the repository.**
+
+**What this does not mean:** Step 1 as a whole is not complete. PubMed
+(676 records), guidelines (0) and textbooks (0) metadata are unchanged, and
+`data/normalized/`, `data/deduplicated/` and `data/chunks/` still hold only
+the 10-record synthetic fixture — the normalize → deduplicate → chunk stages
+have not run over the real PMC data yet.
+
+---
+
 ## Blockers
 
 | Blocked on | Blocks | Note |
@@ -72,8 +111,10 @@ produces no number that could be read as a result.
 
 ## NEXT — in order
 
-**1. Finish the corpus.** Do not restart it. When it completes, update
-`alzheimer_corpus/` and say so — the retrieval stage then indexes it.
+**1. Finish the corpus.** PMC retrieval is done; PubMed/guidelines/textbooks
+and the normalize → deduplicate → chunk stages remain. Do not restart PMC.
+When the whole corpus completes, say so — the retrieval stage then indexes
+it.
 
 **2. Finish question review.** ACCEPT / REVISE / REJECT / HOLD per
 `docs/question_review.md`. Spot-check a sample of PMIDs first. Target ~100
