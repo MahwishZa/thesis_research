@@ -1,4 +1,4 @@
-# Reducing Hallucination by Recency-Aware Evidence Admission
+# Does Recency-Aware Evidence Admission Improve RAG²?
 
 MS thesis implementation. **Research code, not a clinical system** — nothing
 here is validated for, or usable in, patient care.
@@ -9,35 +9,42 @@ Retrieval-augmented pipelines filter retrieved passages before answering.
 RAG² ([Sohn et al., NAACL 2025](https://github.com/dmis-lab/RAG2)) trains that
 filter on labels derived from *how much a passage raises the model's
 confidence*, and it represents time nowhere — not in the corpus, the index,
-the retriever, the reranker or the filter. In a domain where guidance changes,
-the evidence that reaches the generator may therefore be superseded, and an
-answer built on superseded evidence can be fluent, confident and wrong.
+the retriever, the reranker or the filter. In a domain where guidance
+changes, the evidence that reaches the generator may therefore be superseded.
 
-> **Does the proposed solution/system reduce the rate of hallucinated answers
-> in Alzheimer's disease question answering, relative to the baseline system,
-> under identical question and evidence conditions, while maintaining
-> comparable QA accuracy?**
+> **Does a recency-aware admission policy improve on RAG², determined
+> experimentally rather than assumed?**
 
-Two outcomes, and only two:
+This is the main contribution: not a claim that the proposed system is
+better, but a systematic experiment to find out. See
+`docs/current_objectives.md` for the canonical, current statement of scope —
+where any other document disagrees with it, it governs.
 
-| | Outcome |
-|---|---|
-| **Primary** | Hallucination rate (HAR) — an answer scores 1 if any claim is unsupported by, or contradicted by, the evidence actually supplied to the generator |
-| **Secondary** | QA accuracy against the question's reference answer |
+## The three objectives
+
+1. **Proposed-system validation** — run the proposed system end-to-end,
+   evaluate its performance, and fix genuine implementation/experimental
+   errors.
+2. **Ablation study** — using standard RAG evaluation metrics, determine the
+   contribution of the proposed system's key component (recency weighting,
+   `lambda`) by comparing the full system against the same system with that
+   component removed (`lambda=0`).
+3. **RAG² comparison** — evaluate whether the proposed system improves RAG²
+   under comparable experimental conditions.
 
 ## The experiment
 
 | Arm | What it does | Code |
 |---|---|---|
-| **Baseline** | RAG²-style adaptation: a Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` filter | `systems/baseline/` |
-| **Proposed solution/system** | Recency-aware admission | `systems/proposed/` |
+| **Baseline (RAG²)** | RAG²-style adaptation: a Flan-T5 `[HELPFUL]` / `[NOT_HELPFUL]` filter | `systems/baseline/` |
+| **Proposed system** | Recency-aware admission | `systems/proposed/` |
 | *No-filter control* | Admits everything, up to the budget — a reference point, not an outcome | `systems/baseline/no_filter.py` |
 
 Retrieval and reranking run **once per item**, are frozen, and are replayed
 byte-identically to every arm, so a difference in the answer is attributable
 to the admission step and not to what was retrieved. Prompt, context budget,
 generator instance and decoding settings are identical and checked in code
-before a run starts.
+before a run starts (`experiments/evaluation/runner.py`).
 
 ## The proposed method
 
@@ -50,65 +57,60 @@ A(s) = (1 − λ)·ρ(s)  +  λ·R(s, q, t_q)          admit if A(s) ≥ θ
 - `ρ(s)` — rank-normalised reranker score, **the same signal the baseline gets**
 - `R(s, q, t_q)` — recency: `2^(−age_days / H)`, where age is measured from the
   question's as-of date `t_q`
-- `λ`, `θ`, `H` — the only tunable quantities, all fitted on the validation
-  split, never on the test set
+- `λ`, `θ`, `H` — the only tunable quantities, fitted on the validation split
 
-`λ = 0` recovers pure relevance, which is the built-in ablation isolating what
-the recency signal contributes.
-
-The smallness is the point. With one added signal and one weight, an observed
-difference is attributable to the temporal component. With four weighted
-components it would not be.
-
-## What is deliberately *not* in the experiment
-
-Entailment-derived support, source authority, contested-evidence handling,
-supersession, answer verification, clinician rating, and comparison against a
-further state-of-the-art filter. `contested.py` and `verifier.py` remain in the
-repository, marked SECONDARY, off by default. **None is required for the
-result.**
-
-No additional research objective is reported — no hallucination subtype
-analysis, error taxonomy, retrieval-quality ranking, temporal or ambiguity
-analysis, and no ROUGE / BLEU / BERTScore.
-
-An earlier design made *admission asymmetry* the primary question. It is
-superseded; see `docs/frozen_scope.md` §7 for what that was and what survived
-of it. `experiments/test_pairs/` is its infrastructure, retained for
-provenance and not part of the pipeline below.
+`λ = 0` recovers pure relevance — the ablation study's "component removed"
+condition (objective 2).
 
 ## The pipeline
 
 ```
-1 corpus → 2 questions → 3 freeze evidence → 4 baseline → 5 proposed
-→ 6 collect → 7 annotate → 8 HAR → 9 accuracy → 10 statistics
-→ 11 analyse → 12 write up
+1 Experimental setup → 2 Proposed-system validation
+→ 3 Main evaluation: proposed vs RAG² → 4 Ablation study
+→ 5 Analysis and write-up
 ```
 
-## Canonical scope
+**The single entry point for steps 2-4** is
+`experiments/runners/run_end_to_end.py`. It runs RAG², the no-filter
+control, and the proposed system (swept across `--ablation-lambdas`), scores
+every arm with `experiments/evaluation/rag_metrics.py` (exact match, token
+F1, ROUGE-L, context precision/recall, a groundedness proxy), and reports
+two distinct comparisons: `main_evaluation` (RAG² vs. the full proposed
+system) and `ablation_study` (full vs. component-removed).
 
-`docs/frozen_scope.md` states exactly what is primary, what is secondary, and
-what the experiment must satisfy. Where any other document disagrees with it
-about what is primary, it governs.
+## What is out of the critical path
+
+Not deleted, not required before a main result can be reported: entailment
+support, source authority, contested-evidence handling, supersession,
+answer verification, temporal test-pair studies
+(`experiments/test_pairs/`), clinician rating / human annotation
+(`experiments/evaluation/annotation.py`, `stats.py`), and comparison against
+further backbones or a further state-of-the-art filter. See
+`docs/current_objectives.md`'s "Removed from the primary pipeline" for the
+full list and why each is kept rather than deleted.
 
 ## Layout
 
 ```
-docs/                frozen_scope (canonical scope), system_specification
-                     (what each arm does), research_ledger (decisions) —
-                     see docs/repository_structure.md for the full index
-alzheimer_corpus/    Step 1 — retrieval corpus (in progress, do not modify)
-systems/             the arms
-experiments/         retrieval, question pool, evaluation infrastructure
+docs/                current_objectives.md (canonical scope) — see
+                     docs/repository_structure.md for the full index
+alzheimer_corpus/    Step 1 — the evidence corpus (PMC-based)
+systems/             the arms: baseline (RAG²), proposed, no-filter control
+experiments/         retrieval, question pool, evaluation infrastructure,
+                     runners/run_end_to_end.py (steps 2-4's entry point)
 tests/               unit + integration
 ```
 
 ## Status
 
-Step 1 (corpus): PMC source retrieval executed and verified; other sources
-and normalize/deduplicate/chunk still in progress. Step 2 (questions) in
-human review. Steps 3–12 have tested infrastructure and are waiting on real
-data. No experimental result exists. See `docs/next_steps.md`.
+Corpus (Step 1): PubMed and PMC retrieval, normalize, deduplicate and chunk
+have all run for real against the live corpus (111,315 unique documents →
+4,377,041 chunks, real MedCPT tokenizer). Claim classification has been
+started. Questions (Step 2) are in human review. Steps 2-4 above (proposed
+system validation, main evaluation, ablation) have tested infrastructure
+(`run_end_to_end.py`) but no real run yet — see `docs/current_objectives.md`
+for what's still needed (a real generator, real evaluation data, a fitted
+`lambda`). No experimental result exists yet. See `docs/next_steps.md`.
 
 ```bash
 python -m unittest discover -s tests -t .
