@@ -30,12 +30,16 @@ how many such PMIDs exist rather than silently ignoring them; extending
 Stage 01 with an efetch/esummary call is how that gap would close.
 
 Guidelines and textbooks (metadata/guidelines.csv, metadata/textbooks.csv)
-are wired for inclusion once they carry a documented text-source field, but
-that acquisition path does not exist yet (03_guidelines.py's docstring: a
-manual step by design) and both registries are currently empty, so nothing
-here fabricates a shape for them.
+are included in the real-data path too, for whichever rows Stage 03 has
+downloaded (local_file set) under a licence that permits redistribution -
+via _common.iter_official_documents(). A curated-but-not-yet-downloaded row,
+or a downloaded row under a restricted licence, contributes no text; both
+are counted and logged, never silently absorbed or fabricated.
 
-Input : metadata/pmc.csv + data/raw/pmc/**  (or --input JSONL)
+Input : metadata/pmc.csv + data/raw/pmc/**
+        + metadata/guidelines.csv + data/raw/guidelines/**
+        + metadata/textbooks.csv + data/raw/textbooks/**
+        (or --input JSONL for the offline/fixture path)
 Output: data/normalized/documents.jsonl
 """
 from __future__ import annotations
@@ -43,14 +47,17 @@ import argparse, csv, html, re, sys, unicodedata
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (
-    BASE, DATA, METADATA, CorpusPipelineError, get_logger, iter_pmc_records,
-    read_jsonl, write_jsonl, write_report, assess_ad_relevance,
-    redistribution_allowed, PRESERVE_VERBATIM,
+    BASE, DATA, METADATA, CorpusPipelineError, GUIDELINE_REGISTRY_FIELDS,
+    TEXTBOOK_REGISTRY_FIELDS, get_logger, iter_official_documents,
+    iter_pmc_records, read_jsonl, write_jsonl, write_report,
+    assess_ad_relevance, redistribution_allowed, PRESERVE_VERBATIM,
 )
 
 OUT = DATA / "normalized" / "documents.jsonl"
 PMC_MANIFEST = METADATA / "pmc.csv"
 PUBMED_MANIFEST = METADATA / "pubmed.csv"
+GUIDELINES_MANIFEST = METADATA / "guidelines.csv"
+TEXTBOOKS_MANIFEST = METADATA / "textbooks.csv"
 _WS = re.compile(r"[ \t ]+")
 _NL = re.compile(r"\n{3,}")
 _TAG = re.compile(r"<[^>]{1,200}>")
@@ -117,6 +124,24 @@ def pubmed_only_pmid_count(pmc_pmids: set[str], log) -> int:
     return len(uncovered)
 
 
+def iter_official_document_records(log):
+    """Yield normalize-ready records from whichever guideline/textbook rows
+    Stage 03 has actually downloaded, under a redistributable licence.
+
+    Each registry is optional: a fresh clone or a corpus with no guidelines
+    curated yet has neither file, and that is not an error here - Stage 03
+    already logs the "registry not found" / "registry is empty" cases.
+    """
+    if GUIDELINES_MANIFEST.exists():
+        yield from iter_official_documents(
+            GUIDELINES_MANIFEST, GUIDELINE_REGISTRY_FIELDS, BASE, log,
+            default_source_tier="clinical_guideline")
+    if TEXTBOOKS_MANIFEST.exists():
+        yield from iter_official_documents(
+            TEXTBOOKS_MANIFEST, TEXTBOOK_REGISTRY_FIELDS, BASE, log,
+            default_source_tier="reference_work")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--input", default=None,
@@ -172,6 +197,9 @@ def main(argv=None) -> int:
             log.error(str(exc))
             return 2
         pubmed_only_pmid_count(pmc_pmids, log)
+
+        for rec in iter_official_document_records(log):
+            process(rec)
 
     n = write_jsonl(OUT, kept)
     log.info("stage 04 | normalized=%d | ad_relevant=%d | excluded=%d",

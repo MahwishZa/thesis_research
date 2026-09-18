@@ -53,11 +53,20 @@ spent on duplicates. The fixture run demonstrates it catching a preprint/journal
 - **Source tiers carry no ordering** — authority is a tested variable in the thesis (ablation A12).
 - **Classification is not a delete filter** — it drives ranking, down-weighting and review.
 
+## Dependencies
+
+`pip install PyYAML requests pypdf`. `pypdf` is needed only by
+`03_guidelines.py --download` and by Stage 04 when guideline/textbook rows
+have been downloaded (PDF text extraction); every other script runs without
+it. `--tokenizer` in `06_chunk.py` additionally needs `transformers` unless
+`--tokenizer whitespace` is passed.
+
 ## Run it
 
 Offline, works anywhere:
 ```bash
 python3 alzheimer_corpus/scripts/01_pubmed_download.py --print-queries   # no network
+python3 alzheimer_corpus/scripts/03_guidelines.py                        # validate only
 python3 alzheimer_corpus/scripts/04_normalize.py
 python3 alzheimer_corpus/scripts/05_deduplicate.py
 python3 alzheimer_corpus/scripts/06_chunk.py --tokenizer whitespace
@@ -69,6 +78,16 @@ Where NCBI is reachable — always count-only first:
 python3 alzheimer_corpus/scripts/01_pubmed_download.py --dry-run
 python3 alzheimer_corpus/scripts/01_pubmed_download.py --query Q01_alzheimer_core --limit 100
 ```
+
+Guidelines and textbooks are curated, not scraped: add a row with a real
+`source_url` and a licence verified for that specific document to
+`metadata/guidelines.csv` or `metadata/textbooks.csv`, then:
+```bash
+python3 alzheimer_corpus/scripts/03_guidelines.py --download   # safe to rerun
+```
+Only rows with a licence Stage 04 already treats as redistributable
+(`_common.DISTRIBUTABLE`) contribute text to the corpus; a restricted
+document's row stays as metadata only, exactly as an unlicensed one does.
 
 ## Open decisions
 

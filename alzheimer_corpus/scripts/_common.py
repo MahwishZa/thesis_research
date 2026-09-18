@@ -1007,3 +1007,275 @@ def iter_pmc_records(
         "PMC extraction | verified=%d | parsed=%d | failed=%d",
         len(verified), parsed, failed,
     )
+
+
+# ==========================================================================
+# Official documents: clinical guidelines and textbooks
+# ==========================================================================
+#
+# Guidelines and textbooks are not available through a retrieval API the way
+# PubMed and PMC are (README, Stage 03's own docstring: "never scraped...
+# acquisition of restricted documents is a manual step by design"). A human
+# adds one row per document to metadata/guidelines.csv or
+# metadata/textbooks.csv with a real source_url and a licence verified for
+# THAT document - this module never invents either. What was missing before
+# this section existed was everything downstream of that row: downloading
+# the file, extracting its text, and feeding it into the same normalized
+# shape PMC records already use. That is what these functions do.
+#
+# Scope: PDF only. A guideline or textbook is a specific, deliberately
+# chosen official artifact - not a scraped web page - and PDF is what
+# official guidance is actually published as. Extracting an HTML page's
+# *article* text from its navigation, footers and boilerplate reliably needs
+# either a hand-verified per-site scraper (which does not generalise) or a
+# much heavier dependency than this project uses anywhere else; PDF avoids
+# the problem entirely because pypdf reads exactly the document's own pages.
+
+from io import BytesIO
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+import time as _time
+
+GUIDELINE_REGISTRY_FIELDS = (
+    "document_id", "organization", "title", "version", "publication_date",
+    "last_updated", "retrieval_date", "source_url", "document_type", "topic",
+    "supersedes", "superseded_by", "license", "license_url", "reuse_status",
+    "redistribution_allowed", "local_file", "notes",
+)
+
+TEXTBOOK_REGISTRY_FIELDS = (
+    "document_id", "title", "edition", "authors", "publisher", "year",
+    "isbn", "access_method", "source_url", "local_file", "license",
+    "permission", "processing_status", "notes",
+)
+
+#: document_type / edition values map onto the taxonomy's evidence_levels
+#: vocabulary (config/claim_taxonomy.yaml) so Stage 07's evidence-level
+#: tagging can eventually recognise these without guessing from prose.
+#: Unrecognised values fall back to the registry's own name, not a fabricated
+#: default - see _guess_source_tier.
+_GUIDELINE_TYPE_TIER = {
+    "clinical_guideline": "clinical_guideline",
+    "consensus_statement": "consensus_statement",
+    "regulatory_document": "regulatory_document",
+    "professional_society_statement": "professional_society_statement",
+}
+
+DOWNLOAD_MAX_RETRIES = 5
+DOWNLOAD_RETRY_DELAY = 2.0
+
+
+def _guess_source_tier(row: dict[str, str], *, default: str) -> str:
+    value = (row.get("document_type") or row.get("access_method") or "").strip().lower()
+    return _GUIDELINE_TYPE_TIER.get(value, value or default)
+
+
+def read_document_registry(
+    path: Path,
+    expected_fields: tuple[str, ...],
+) -> list[dict[str, str]]:
+    """Read a guideline/textbook registry, verifying its schema first.
+
+    Same discipline as read_pmc_manifest, generalised: a registry whose
+    header does not match what the caller expects is refused rather than
+    silently read with the wrong columns.
+    """
+    if not path.exists():
+        raise CorpusPipelineError(f"registry not found: {path}")
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        header = tuple(reader.fieldnames or ())
+        if header != expected_fields:
+            raise CorpusPipelineError(
+                f"{path} has header {header}, expected {expected_fields}. "
+                "The registry schema has changed since this reader was "
+                "written; update the field list and the mapping together, "
+                "deliberately."
+            )
+        return list(reader)
+
+
+def write_document_registry(
+    path: Path,
+    expected_fields: tuple[str, ...],
+    rows: list[dict[str, str]],
+) -> None:
+    """Write a guideline/textbook registry back, atomically.
+
+    Same temp-file-then-replace pattern as 02_pmc_download.py's
+    write_manifest: a crash mid-write must never leave a truncated registry
+    in place of a good one.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".part")
+    with temporary.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=expected_fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    temporary.replace(path)
+
+
+def download_document(url: str, destination: Path, log) -> bytes:
+    """Download one document, verifying it is actually a PDF.
+
+    Refuses non-HTTPS URLs and non-PDF content rather than saving whatever
+    came back: a redirect to an HTML login/paywall page must not be silently
+    stored as if it were the document.
+    """
+    if not url.lower().startswith("https://"):
+        raise CorpusPipelineError(f"refusing a non-HTTPS source_url: {url}")
+
+    last_error: Exception | None = None
+    for attempt in range(1, DOWNLOAD_MAX_RETRIES + 1):
+        try:
+            request = Request(url, headers={
+                "User-Agent": "AlzheimerCorpus-MS-Thesis/1.0"})
+            with urlopen(request, timeout=120) as response:
+                data = response.read()
+            break
+        except (HTTPError, URLError, TimeoutError) as exc:
+            last_error = exc
+            if attempt == DOWNLOAD_MAX_RETRIES:
+                raise CorpusPipelineError(
+                    f"could not download {url}: {exc}") from exc
+            _time.sleep(DOWNLOAD_RETRY_DELAY * (2 ** (attempt - 1)))
+    else:  # pragma: no cover - loop always breaks or raises
+        raise CorpusPipelineError(f"could not download {url}: {last_error}")
+
+    if not data.startswith(b"%PDF-"):
+        raise CorpusPipelineError(
+            f"{url} did not return a PDF (no %PDF- signature - likely an "
+            "HTML error, login or paywall page)"
+        )
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".part")
+    temporary.write_bytes(data)
+    temporary.replace(destination)
+    log.info("downloaded %s -> %s (%d bytes)", url, destination, len(data))
+    return data
+
+
+def extract_pdf_text(pdf_bytes: bytes) -> tuple[dict[str, str], ...]:
+    """Extract per-page text from a PDF.
+
+    Raises CorpusPipelineError on an unreadable, corrupt or encrypted PDF -
+    the caller must skip and log, never fabricate content for a document it
+    could not actually read. Page-level granularity, not full
+    structure-aware section detection: PDF carries no reliable heading
+    markup the way JATS XML does, and guessing headings from font size
+    heuristics is exactly the kind of "looks structure-aware, isn't
+    verified" gap this project avoids elsewhere.
+    """
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+    except (PdfReadError, ValueError) as exc:
+        raise CorpusPipelineError(f"unreadable PDF: {exc}") from exc
+
+    if reader.is_encrypted:
+        raise CorpusPipelineError(
+            "PDF is encrypted/password-protected and cannot be read")
+
+    sections = []
+    for index, page in enumerate(reader.pages, start=1):
+        try:
+            text = page.extract_text() or ""
+        except Exception as exc:  # pypdf can raise a range of parser errors
+            raise CorpusPipelineError(
+                f"failed to extract text from page {index}: {exc}") from exc
+        text = re.sub(r"\s+", " ", text).strip()
+        if text:
+            sections.append({"section": f"page {index}", "text": text})
+
+    if not sections:
+        raise CorpusPipelineError(
+            "PDF produced no extractable text (likely a scanned image "
+            "without OCR - not supported)"
+        )
+    return tuple(sections)
+
+
+def iter_official_documents(
+    registry_path: Path,
+    expected_fields: tuple[str, ...],
+    corpus_root: Path,
+    log,
+    *,
+    default_source_tier: str,
+) -> Iterable[dict[str, Any]]:
+    """Yield normalize-ready records from a downloaded guideline/textbook
+    registry.
+
+    Mirrors iter_pmc_records' contract: a row that fails is logged and
+    skipped, never fabricated. Two conditions exclude a row from the
+    corpus without that being a failure - both expected, both counted
+    separately in the log line:
+
+      - no local_file yet (row is curated but not downloaded - run
+        '03_guidelines.py --download' first)
+      - license does not permit redistribution ("Restricted guidance is
+        recorded as metadata only; its text never enters the distributable
+        corpus" - 03_guidelines.py's own docstring)
+    """
+    rows = read_document_registry(registry_path, expected_fields)
+    not_downloaded = restricted = failed = parsed = 0
+
+    for row in rows:
+        local_file = (row.get("local_file") or "").strip()
+        if not local_file:
+            not_downloaded += 1
+            continue
+        if not redistribution_allowed(row.get("license")):
+            restricted += 1
+            log.info(
+                "%s excluded: licence %r does not permit redistribution",
+                row.get("document_id", "?"), row.get("license", ""),
+            )
+            continue
+
+        pdf_path = corpus_root / local_file
+        try:
+            pdf_bytes = pdf_path.read_bytes()
+            sections = extract_pdf_text(pdf_bytes)
+        except (OSError, CorpusPipelineError) as exc:
+            failed += 1
+            log.warning("%s: could not extract %s: %s",
+                       row.get("document_id", "?"), pdf_path, exc)
+            continue
+
+        parsed += 1
+        title = row.get("title", "")
+        publication_date = (row.get("publication_date")
+                            or row.get("year") or "")
+        # assess_ad_relevance() (Stage 04) only ever inspects title and
+        # abstract, never sections - correct for PMC records, which always
+        # carry a real <abstract>. A guideline/textbook has no abstract
+        # field of its own, so leaving this blank would starve the gate of
+        # the document's actual content and let a title using only the
+        # ambiguous "AD" abbreviation (rather than spelling out Alzheimer)
+        # get excluded regardless of what the document is actually about.
+        # The first extracted page stands in for it - the closest thing a
+        # PDF has to an abstract/executive summary.
+        abstract = sections[0]["text"] if sections else ""
+        yield {
+            "document_id": row["document_id"],
+            "pmid": "",
+            "pmcid": "",
+            "doi": "",
+            "title": title,
+            "abstract": abstract,
+            "sections": [{"section": "title", "text": title}, *sections],
+            "mesh_terms": [],
+            "publication_date": str(publication_date),
+            "date_precision": "year" if str(publication_date).strip().isdigit() else "",
+            "license": row.get("license", ""),
+            "source_tier": _guess_source_tier(row, default=default_source_tier),
+            "retracted": False,
+        }
+
+    log.info(
+        "%s | rows=%d | parsed=%d | not_downloaded=%d | restricted=%d | failed=%d",
+        registry_path.name, len(rows), parsed, not_downloaded, restricted, failed,
+    )
