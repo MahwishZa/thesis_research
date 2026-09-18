@@ -59,6 +59,7 @@ Input : data/chunks/chunks.jsonl   Output: in-place claim_classes + reports
 from __future__ import annotations
 import argparse, random, re, sys, time
 from collections import Counter, defaultdict
+from functools import lru_cache
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (DATA, load_config, get_logger, read_jsonl,
@@ -116,6 +117,20 @@ def load_dimension(cfg_section: dict, *, keyed_by_group: bool) -> list[dict]:
     return out
 
 
+@lru_cache(maxsize=None)
+def _term_pattern(term: str) -> re.Pattern:
+    """Compile one keyword's match pattern once, not once per chunk.
+
+    A keyword's folded form and escaped pattern never change between calls -
+    only the chunk text does - so rebuilding the pattern string and
+    recompiling it on every one of 4M+ chunk x class x keyword combinations
+    was pure waste. ``term`` is already folded by the caller so this cache
+    hits on the very small (well under a hundred) set of distinct keywords
+    across every class, regardless of corpus size.
+    """
+    return re.compile(r"(?<!\w)" + re.escape(term) + r"(?!\w)")
+
+
 def keyword_match(text: str, classes: list[dict]) -> list[dict]:
     """Stage 1. Every current class uses the label/subtype-derived fallback
     (module docstring), reported at reduced confidence so the gap between
@@ -127,7 +142,7 @@ def keyword_match(text: str, classes: list[dict]) -> list[dict]:
         terms = c["keywords"]
         if not terms:
             continue
-        matched = [t for t in terms if re.search(r"(?<!\w)" + re.escape(fold(t)) + r"(?!\w)", f)]
+        matched = [t for t in terms if _term_pattern(fold(t)).search(f)]
         if matched:
             confidence = min(1.0, len(matched) / max(1, len(terms)))
             hits.append({"claim_class": c["id"], "confidence": round(
