@@ -8,8 +8,12 @@ functions the real run uses - against the first N documents of your real
 input file, measures elapsed time and documents/sec, and extrapolates to
 the full corpus.
 
+Not a pipeline stage (no number, not read by any other stage) - a
+standalone diagnostic tool, kept out of scripts/ so that directory holds
+only the numbered pipeline (01-07 + _common.py).
+
 Usage:
-    python alzheimer_corpus/scripts/benchmark_06_chunk.py \
+    python alzheimer_corpus/scripts/tools/benchmark_06_chunk.py \
         --input alzheimer_corpus/data/deduplicated/documents.jsonl \
         --sample 500 --batch-size 200
 
@@ -23,12 +27,13 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(SCRIPTS_DIR))
 from _common import DATA, get_logger, read_jsonl  # noqa: E402
 import importlib.util
 
 _spec = importlib.util.spec_from_file_location(
-    "chunk06", Path(__file__).resolve().parent / "06_chunk.py"
+    "chunk06", SCRIPTS_DIR / "06_chunk.py"
 )
 chunk06 = importlib.util.module_from_spec(_spec)
 sys.modules["chunk06"] = chunk06

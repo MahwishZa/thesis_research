@@ -4,9 +4,22 @@ An **Alzheimer's disease** evidence corpus for the MS thesis on recency bias in
 retrieval-augmented clinical reasoning. Config, queries, data, metadata, logs, scripts and
 reports live together so the corpus can be inspected, reproduced and moved as one component.
 
-> **Status: pipeline implemented and tested offline. No live retrieval performed.**
-> NCBI egress is blocked by organisation policy in this environment (`403` on
-> `eutils.ncbi.nlm.nih.gov:443`). Nothing here reports retrieval statistics.
+> **Status (2026-09-18):** PubMed retrieval, PMC retrieval, normalize,
+> deduplicate AND chunk have run for real against the live corpus (676
+> PubMed records; 114,256-row PMC manifest, 114,157 verified; 114,157
+> normalized; 111,315 unique after dedup; 4,377,041 chunks via the real
+> MedCPT tokenizer - see `docs/next_steps.md`'s "Normalize/deduplicate/
+> chunk — EXECUTED" section for the verified evidence). Chunking's first
+> attempt did not complete (the original stuck run); the batched rewrite
+> completed it for real. Claim classification (Stage 07) has been started
+> against that real output - `docs/next_steps.md` also covers a real
+> memory/visibility bug found and fixed in that stage before treating its
+> output as final. Guidelines/textbooks (Stage 03) are implemented and
+> tested but no document has been curated yet (0 rows). This development
+> sandbox itself has no network access (NCBI egress returns `403`) and no
+> transformers/torch, so all real execution above happened on the
+> student's own machine, not here; only the git-tracked logs, reports and
+> registries the real runs produced are visible from this repository.
 
 ## It is an Alzheimer's corpus, not a dementia corpus
 

@@ -13,8 +13,12 @@ detailed status/history, not as the active priority order.
 `docs/current_objectives.md` and the new `experiments/runners/run_end_to_end.py`
 + `experiments/evaluation/rag_metrics.py` for what was added since).
 
-**PMC retrieval is now EXECUTED** — see "PMC finalization" below. Nothing
-else in this repository is EXECUTED.
+**PMC retrieval, normalize, deduplicate AND chunk are now EXECUTED on the
+real corpus** — see "PMC finalization" and "Normalize/deduplicate/chunk —
+EXECUTED" below. Chunking's first attempt did not complete (the original
+stuck run); the batched rewrite completed it for real: 111,315 documents →
+4,377,041 chunks, real MedCPT tokenizer. Claim classification (Stage 07)
+has been started against that real output.
 
 Status vocabulary, used strictly: **IMPLEMENTED** (code exists) · **TESTED**
 (tested on fixtures) · **VALIDATED** (whole pathway exercised end to end) ·
@@ -53,8 +57,12 @@ default them. They are fitted on the validation split, never on test.
 
 | Step | Status | Waiting on |
 |---|---|---|
-| 1. Corpus — PMC source | **EXECUTED** (retrieval + finalization) | normalize/dedup/chunk still to run over it |
-| 1. Corpus — other sources, normalize/dedup/chunk | IN PROGRESS | student's build |
+| 1. Corpus — PMC source | **EXECUTED** (retrieval + finalization) | — |
+| 1. Corpus — normalize (04) | **EXECUTED** on real corpus (114,157 docs) | — |
+| 1. Corpus — deduplicate (05) | **EXECUTED** on real corpus (111,315 unique) | — |
+| 1. Corpus — chunk (06) | **EXECUTED** on real corpus (4,377,041 chunks) | — |
+| 1. Corpus — claim classification (07) | STARTED on real corpus | completion confirmation |
+| 1. Corpus — guidelines/textbooks (03) | IMPLEMENTED, TESTED, zero rows curated | manual curation (optional, not blocking) |
 | 2. Questions | IN PROGRESS | human review of 123 candidates |
 | 3. Freeze evidence | READY FOR REAL EXECUTION | corpus + approved questions |
 | 3a. Retrieval/rerank | IMPLEMENTED, TESTED | corpus; `torch` on the run machine |
@@ -101,11 +109,62 @@ All three cross-checks — predicted row count, XML file count, JSON file
 count — closed exactly against numbers reported independently of the
 manifest itself. **This is the first EXECUTED artifact in the repository.**
 
-**What this does not mean:** Step 1 as a whole is not complete. PubMed
-(676 records), guidelines (0) and textbooks (0) metadata are unchanged, and
-`data/normalized/`, `data/deduplicated/` and `data/chunks/` still hold only
-the 10-record synthetic fixture — the normalize → deduplicate → chunk stages
-have not run over the real PMC data yet.
+**What this did not mean at the time:** the normalize → deduplicate → chunk
+stages had not yet run over the real PMC data. They have since - see below.
+
+---
+
+## Normalize/deduplicate/chunk — EXECUTED; claim classification — STARTED (2026-09-18)
+
+Independently verified from `alzheimer_corpus/logs/quality_control.log` and
+`alzheimer_corpus/logs/deduplication.log` (both git-tracked) cross-checked
+against the git-tracked registries/reports - not assumed:
+
+| Stage | Evidence | Result |
+|---|---|---|
+| 04 normalize | `quality_control.log`: `PMC extraction \| verified=114157 \| parsed=114157 \| failed=0`, then `stage 04 \| normalized=114157 \| ad_relevant=67608 \| excluded=46549` | **EXECUTED**, matches `reports/normalization_report.csv` (114,157 data rows) |
+| 05 deduplicate | `deduplication.log`: `stage 05 \| unique=111315 \| duplicates recorded=2842` | **EXECUTED**, matches `metadata/duplicates.csv` and `reports/deduplication_report.csv` (2,842 data rows, exact match) |
+| 06 chunk | First attempt: `quality_control.log` shows the tokenizer-selection warning with no completion line after it anywhere - the original stuck run (running ~1 hour, no output) that motivated the Stage 06 batching rewrite. Second attempt, with the rewritten `06_chunk.py`: `tokenizer ncbi/MedCPT-Article-Encoder loaded \| fast=True`, then periodic `stage 06 progress \| documents=N \| chunks=M \| ...` lines throughout, ending `stage 06 \| documents=111315 \| chunks=4377041 \| elapsed=7892s` and `chunks_this_run=4377041 \| chunks_total=4377041 \| tokenizer=ncbi/MedCPT-Article-Encoder \| 256/32/224` | **EXECUTED for real.** 111,315 documents (matches Stage 05's exact count) → 4,377,041 chunks, real MedCPT tokenizer, correct 256/32/224 spec, ~7892s (≈2h11m), sustained ~14-20 docs/sec throughout - the batching rewrite works correctly at full real scale. |
+| 07 claim classification | `quality_control.log`: `taxonomy \| claim_types=26 classes \| evidence_levels=17 classes...` (the first line the script logs) - no completion line yet as of the latest evidence | **STARTED.** See below - a real memory/visibility risk was found and fixed in this stage before treating its output as final. |
+
+**guidelines.csv and textbooks.csv are header-only (0 rows)** — confirmed
+directly (`04_normalize`'s own log line: `guidelines.csv \| rows=0 ...`,
+`textbooks.csv \| rows=0 ...`). `03_guidelines.py` is implemented and tested
+but no document has been curated into it yet; this does not block anything
+above (04's real-data path treats both registries as optional).
+
+**The real intermediate JSONL files exist only on the machine that produced
+them** (`alzheimer_corpus/data/**` is gitignored by design - "research data
+is never committed", see `alzheimer_corpus/.gitignore`) — not recoverable
+from git history or a sandbox that only has this repository checked out.
+Only the tracked logs/reports/registries above are visible here.
+
+### Stage 07 had the same architectural flaw Stage 06 had - fixed before completion
+
+`07_claim_classification.py`'s `main()` loaded every chunk into memory as
+one Python list (`chunks = list(read_jsonl(src))`), then wrote nothing back
+until the very end, with zero progress logging in between - the identical
+shape of problem that caused Stage 06's original stuck run, just relocated
+one stage later and at a larger scale (4.3M+ chunks vs. 111k documents).
+Found while auditing the stage the student had just started running for
+real. Rewritten the same way Stage 06 was: streams input to a temp file,
+replaces the original atomically (`.part` + `.replace()`, matching this
+codebase's existing atomic-write convention), logs progress every 100,000
+chunks, and keeps only a lightweight per-chunk projection (8 small fields,
+not the full text) in memory for the stratified validation sample instead
+of every chunk's full record. Same output shape, verified field-for-field
+against the original in-memory algorithm (preserved as a reference in
+`tests/unit/test_corpus_claim_classification.py`) both at unit scale and
+via a real subprocess run; a 30,000-synthetic-chunk smoke test completed in
+~32s with ~57MB peak child-process RSS.
+
+**If Stage 07 is still running the old version when this lands, its
+progress is invisible exactly like the original Stage 06 run was - check
+whether it has produced a completion log line
+(`stage 07 \| chunks=... \| tagged claim_types=...`) before assuming it is
+stuck.** Once it completes (or to re-run it with the fix), the corpus is
+ready for `experiments/runners/run_end_to_end.py` once real evaluation
+data and a real generator are wired in - see `docs/current_objectives.md`.
 
 ---
 
@@ -157,9 +216,12 @@ data (676 PMIDs; the independently-verified 114,256-row PMC manifest) —
 "placeholder logic" does not describe them, and rewriting either would risk
 the real, already-collected data disagreeing with a "corrected" script.
 
-**Next real step:** run `04_normalize.py` → `05_deduplicate.py` →
-`06_chunk.py` → `07_claim_classification.py` in order on the machine holding
-the real corpus.
+**Next real step (updated - 04, 05 and 06 have since run for real, see
+"Normalize/deduplicate/chunk — EXECUTED" above):** confirm
+`07_claim_classification.py` (now fixed for the same memory/visibility
+issue Stage 06 had) completes on the real 4.3M-chunk output, then wire real
+evaluation data and a real generator into
+`experiments/runners/run_end_to_end.py` per `docs/current_objectives.md`.
 
 ---
 
