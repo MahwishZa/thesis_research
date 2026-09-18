@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 07 - claim classification (multi-label).
+"""Stage 07 - automatic chunk-level tagging (multi-label).
 
 Two inspectable stages, never collapsed into one opaque score:
 
@@ -7,13 +7,52 @@ Two inspectable stages, never collapsed into one opaque score:
   Stage 2  similarity to class prototypes -> claim_class, similarity_score, method
 
 Classification is NOT a deletion filter. It drives retrieval ranking,
-down-weighting and manual review. The currency gate down-weights rather than
-deletes precisely because tagging precision is unverified, so a mis-tagged
-passage must remain retrievable.
+down-weighting and manual review. Down-weighting rather than deleting is
+deliberate: tagging precision is unverified, so a mis-tagged passage must
+remain retrievable.
 
-Also emits the stratified sample for the 300-passage human validation: a simple
-random sample would under-represent small claim classes, which is exactly where
-tagging is weakest.
+Reads config/claim_taxonomy.yaml's current schema:
+
+  claim_types      -> the topical dimension this stage tags as claim_class.
+                       Every current entry has no explicit keyword list, so
+                       Stage 1 always falls back to tokens drawn from the
+                       category's label and its subtypes - the same
+                       fallback the original script already used when a
+                       class's keywords were unpopulated, generalised to
+                       the schema this taxonomy actually has today.
+  evidence_levels   -> a second, independent dimension (what kind of source
+                       this passage is drawn from), tagged the same way and
+                       reported separately as claim_evidence_level*.
+  claim_status,
+  temporal_status   -> INTENTIONALLY NOT tagged here. Both require
+                       comparing a claim against other evidence (is it
+                       contradicted? has it been superseded?), which a
+                       single passage's keywords cannot determine. Recency
+                       is the thesis's actual experimental treatment
+                       (systems/proposed/recency.py scores it from
+                       publication date at admission time); pre-baking a
+                       "current vs superseded" label onto the corpus here
+                       would duplicate that treatment with a much weaker
+                       method and risk disagreeing with it. See
+                       docs/frozen_scope.md.
+  disease_relevance -> NOT re-tagged here. Stage 04's assess_ad_relevance()
+                       already makes this decision, with a full rule trace,
+                       for every chunk's source document. This stage
+                       propagates that existing ad_relevant/
+                       ad_relevance_score rather than recomputing a coarser
+                       version of the same judgement, which could disagree
+                       with Stage 04's and would then be an inconsistency
+                       rather than a second opinion.
+  claim_record      -> describes a future, more granular unit (individual
+                       claims within a chunk, with claim_id/evidence_span/
+                       etc.) that this stage does not produce. It tags
+                       *chunks* (~256 tokens), not extracted claims -
+                       extracting individual claims is a separate task this
+                       stage does not attempt.
+
+Also emits the stratified sample for the 300-passage human validation: a
+simple random sample would under-represent small claim classes, which is
+exactly where tagging is weakest.
 
 Input : data/chunks/chunks.jsonl   Output: in-place claim_classes + reports
 """
@@ -22,34 +61,78 @@ import argparse, random, re, sys
 from collections import Counter, defaultdict
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import (DATA, BASE, load_config, get_logger, read_jsonl,
+from _common import (DATA, load_config, get_logger, read_jsonl,
                      write_jsonl, write_report, fold)
 
 SRC = DATA / "chunks" / "chunks.jsonl"
 
+#: Words too common in this domain's prose to serve as a keyword on their
+#: own (they would match almost every chunk). Filtered out of the
+#: label/subtype-derived fallback vocabulary, not out of curated keyword
+#: lists (none exist yet - see module docstring).
+_STOPWORDS = {
+    "and", "the", "for", "with", "from", "that", "this", "its", "are",
+    "was", "were", "has", "have", "not", "disease", "alzheimer",
+}
 
-def load_classes(cfg: dict) -> list[dict]:
+
+def _tokens_from_name(name: str) -> list[str]:
+    """Split a label or snake_case subtype into matchable word tokens."""
+    words = re.split(r"[\s_/-]+", name.lower())
+    return [w for w in words if len(w) > 3 and w not in _STOPWORDS]
+
+
+def load_dimension(cfg_section: dict, *, keyed_by_group: bool) -> list[dict]:
+    """Build a flat list of {id, keywords, has_curated_keywords} entries
+    from one taxonomy dimension.
+
+    Two shapes are supported, because claim_taxonomy.yaml uses both:
+
+      claim_types:        {id: {label, description, subtypes: [...]}}
+      evidence_levels:     {group: [id, id, ...]}
+
+    ``keyed_by_group`` selects which. Neither shape carries an explicit
+    keyword list in the current schema, so every entry's keywords are
+    derived from what the taxonomy does specify - the id, its label
+    (claim_types only) and its subtypes (claim_types only) - never
+    invented vocabulary the taxonomy does not contain.
+    """
     out = []
-    for gid, g in cfg["groups"].items():
-        for c in g["classes"]:
-            out.append({"id": c["id"], "group": gid, "name": c["name"],
-                        "keywords": c.get("keywords") or [],
-                        "definition": c.get("definition", "")})
+    if keyed_by_group:
+        for group, ids in cfg_section.items():
+            for item_id in ids:
+                keywords = _tokens_from_name(item_id)
+                out.append({"id": item_id, "group": group,
+                           "keywords": keywords, "has_curated_keywords": False})
+    else:
+        for item_id, spec in cfg_section.items():
+            keywords = set(_tokens_from_name(item_id))
+            keywords.update(_tokens_from_name(spec.get("label", "")))
+            for subtype in spec.get("subtypes") or []:
+                keywords.update(_tokens_from_name(subtype))
+            out.append({"id": item_id, "group": None,
+                       "keywords": sorted(keywords),
+                       "has_curated_keywords": False})
     return out
 
 
 def keyword_match(text: str, classes: list[dict]) -> list[dict]:
-    """Stage 1. Falls back to the class name's own tokens where keywords are
-    unpopulated, and reports low confidence so the gap is visible, not hidden."""
+    """Stage 1. Every current class uses the label/subtype-derived fallback
+    (module docstring), reported at reduced confidence so the gap between
+    'a curated keyword list' and 'tokens borrowed from the taxonomy's own
+    naming' is visible in the output, not hidden by it."""
     f = fold(text)
     hits = []
     for c in classes:
-        terms = c["keywords"] or [t for t in c["name"].split("-") if len(t) > 3]
+        terms = c["keywords"]
+        if not terms:
+            continue
         matched = [t for t in terms if re.search(r"(?<!\w)" + re.escape(fold(t)) + r"(?!\w)", f)]
         if matched:
+            confidence = min(1.0, len(matched) / max(1, len(terms)))
             hits.append({"claim_class": c["id"], "confidence": round(
-                            min(1.0, len(matched) / max(1, len(terms))) * (1.0 if c["keywords"] else 0.4), 3),
-                         "method": "keyword" if c["keywords"] else "keyword-from-classname",
+                            confidence * (1.0 if c["has_curated_keywords"] else 0.4), 3),
+                         "method": "keyword" if c["has_curated_keywords"] else "keyword-from-taxonomy",
                          "matched_terms": matched})
     return hits
 
@@ -82,14 +165,11 @@ def main(argv=None) -> int:
     log = get_logger("07_claim_classification", "quality_control.log")
 
     cfg = load_config("claim_taxonomy.yaml")
-    classes = load_classes(cfg)
-    unpopulated = sum(1 for c in classes if not c["keywords"])
-    log.info("taxonomy | %d classes in %d groups | %d have no keywords yet",
-             len(classes), len(cfg["groups"]), unpopulated)
-    if unpopulated:
-        log.warning("%d/%d classes have empty keyword lists - stage 1 falls back to "
-                    "class-name tokens at reduced confidence. Populate keywords before "
-                    "treating these labels as reliable.", unpopulated, len(classes))
+    claim_types = load_dimension(cfg["claim_types"], keyed_by_group=False)
+    evidence_levels = load_dimension(cfg["evidence_levels"], keyed_by_group=True)
+    log.info("taxonomy | claim_types=%d classes | evidence_levels=%d classes across %d groups | "
+             "all classes use taxonomy-derived keywords (no curated keyword lists exist yet)",
+             len(claim_types), len(evidence_levels), len(cfg["evidence_levels"]))
 
     src = Path(args.input)
     if not src.exists():
@@ -98,8 +178,9 @@ def main(argv=None) -> int:
 
     chunks = list(read_jsonl(src))
     dist = Counter()
+    evidence_dist = Counter()
     for ch in chunks:
-        hits = keyword_match(ch.get("text", ""), classes)
+        hits = keyword_match(ch.get("text", ""), claim_types)
         ch["claim_classes"] = [h["claim_class"] for h in hits]
         ch["claim_confidence"] = max([h["confidence"] for h in hits], default=0.0)
         ch["claim_method"] = hits[0]["method"] if hits else "none"
@@ -107,23 +188,43 @@ def main(argv=None) -> int:
             dist[h["claim_class"]] += 1
         if not hits:
             dist["<untagged>"] += 1
+
+        ev_hits = keyword_match(ch.get("text", ""), evidence_levels)
+        ch["claim_evidence_levels"] = [h["claim_class"] for h in ev_hits]
+        ch["claim_evidence_confidence"] = max([h["confidence"] for h in ev_hits], default=0.0)
+        for h in ev_hits:
+            evidence_dist[h["claim_class"]] += 1
+        if not ev_hits:
+            evidence_dist["<untagged>"] += 1
     write_jsonl(src, chunks)
 
     write_report("claim_class_distribution.csv",
                  [{"claim_class": k, "chunks": v} for k, v in dist.most_common()],
                  ["claim_class", "chunks"])
+    write_report("evidence_level_distribution.csv",
+                 [{"evidence_level": k, "chunks": v} for k, v in evidence_dist.most_common()],
+                 ["evidence_level", "chunks"])
     sample = stratified_sample(chunks, args.sample, args.seed)
-    ann = BASE / "reports" / "annotation_report.csv"
     write_report("annotation_report.csv",
                  [{"chunk_id": c["chunk_id"], "document_id": c["document_id"],
                    "source_tier": c.get("source_tier", ""),
                    "automatic_labels": ";".join(c.get("claim_classes") or []),
                    "automatic_confidence": c.get("claim_confidence", 0.0),
+                   "automatic_evidence_levels": ";".join(c.get("claim_evidence_levels") or []),
+                   # Propagated from Stage 04's assess_ad_relevance(), not
+                   # recomputed - see module docstring's disease_relevance note.
+                   "ad_relevant": c.get("ad_relevant", ""),
+                   "ad_relevance_score": c.get("ad_relevance_score", ""),
                    "human_labels": "", "annotator_notes": ""} for c in sample],
                  ["chunk_id", "document_id", "source_tier", "automatic_labels",
-                  "automatic_confidence", "human_labels", "annotator_notes"])
-    log.info("stage 07 | chunks=%d | tagged classes=%d | validation sample=%d (stratified, seed=%d)",
-             len(chunks), len([k for k in dist if k != "<untagged>"]), len(sample), args.seed)
+                  "automatic_confidence", "automatic_evidence_levels",
+                  "ad_relevant", "ad_relevance_score",
+                  "human_labels", "annotator_notes"])
+    log.info("stage 07 | chunks=%d | tagged claim_types=%d | tagged evidence_levels=%d | "
+             "validation sample=%d (stratified, seed=%d)",
+             len(chunks), len([k for k in dist if k != "<untagged>"]),
+             len([k for k in evidence_dist if k != "<untagged>"]),
+             len(sample), args.seed)
     return 0
 
 

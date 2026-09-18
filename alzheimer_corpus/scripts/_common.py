@@ -277,11 +277,19 @@ def redistribution_allowed(
     """Return whether a known licence permits redistribution.
 
     Unknown or missing licences fail closed.
+
+    PMC's own ``license_code`` field (read by ``iter_pmc_records``) writes
+    Creative Commons codes space-delimited - "CC BY", "CC BY-NC" - not
+    hyphenated like DISTRIBUTABLE's "CC-BY", "CC-BY-NC". Matching hyphens
+    literally would fail every real PMC record regardless of licence,
+    silently marking fully open content as restricted. Spaces are folded to
+    hyphens before comparison so both spellings of the same licence match;
+    the set of licence families this treats as distributable is unchanged.
     """
     if not license_code:
         return False
 
-    normalized = str(license_code).strip().upper()
+    normalized = str(license_code).strip().upper().replace(" ", "-")
 
     return normalized in {
         code.upper()
@@ -698,3 +706,304 @@ def assess_ad_relevance(
     )
 
     return decision
+
+# ==========================================================================
+# PMC JATS XML extraction
+# ==========================================================================
+#
+# Stage 02 downloads full-text JATS XML and a manifest (metadata/pmc.csv)
+# carrying pmid/pmcid/doi/title/license/retraction status - but no article
+# text. This section is the bridge: it reads the finalized manifest, parses
+# each article's XML, and yields records in the shape Stage 04 normalizes
+# and every later stage consumes.
+#
+# xml.etree.ElementTree (stdlib) is used deliberately rather than lxml or
+# BeautifulSoup: PMC's Open Access XML is well-formed by construction (it is
+# generated, not scraped), a new dependency buys nothing a trusted, already
+# MD5-verified file needs, and the project avoids dependencies it does not
+# need. Namespaces are stripped rather than declared, because PMC JATS files
+# are not consistent about declaring one.
+
+import xml.etree.ElementTree as ET
+
+
+class CorpusPipelineError(RuntimeError):
+    """Raised when pipeline input cannot be processed safely.
+
+    Distinct from a per-record parse failure (logged and skipped so one bad
+    file does not stop a 100000-document batch): this is for conditions that
+    make the whole run untrustworthy, such as a missing manifest.
+    """
+
+
+# Fields the finalized PMC manifest is expected to carry (`02_pmc_download.py
+# --finalize`'s write_manifest fieldnames). Read here, not re-declared, so
+# the two files cannot drift silently the way the log-evidence reader once
+# did (ledger D-41).
+PMC_MANIFEST_FIELDS = (
+    "pmid", "pmcid", "version", "doi", "title", "citation",
+    "is_pmc_openaccess", "is_manuscript", "license_code", "is_retracted",
+    "json_path", "xml_path", "status",
+)
+
+#: PMC's manifest carries no publication-date field (verified against
+#: 02_pmc_download.py: no key named 'date' or similar is ever read from the
+#: article-version JSON). The date has to come from the XML's <pub-date>.
+#: Preference order when more than one <pub-date> is present, most to least
+#: authoritative for "when this version became available":
+PUB_DATE_TYPE_PRIORITY = ("epub", "pub", "ppub", "collection")
+
+
+def _local_tag(element: ET.Element) -> str:
+    """An element's tag without a namespace prefix, if any."""
+    tag = element.tag
+    return tag.split("}", 1)[1] if tag.startswith("{") else tag
+
+
+def _find_local(root: ET.Element, *path: str) -> ET.Element | None:
+    """Walk a path of local (namespace-stripped) tag names from root.
+
+    Only descends through the first matching child at each step - JATS does
+    not repeat structural elements like article-meta, so this is unambiguous
+    for the paths this module uses.
+    """
+    node = root
+    for name in path:
+        found = None
+        for child in node:
+            if _local_tag(child) == name:
+                found = child
+                break
+        if found is None:
+            return None
+        node = found
+    return node
+
+
+def _iter_local(root: ET.Element, name: str):
+    for child in root:
+        if _local_tag(child) == name:
+            yield child
+
+
+def _text_content(element: ET.Element | None) -> str:
+    """All text inside an element, tags stripped, whitespace collapsed.
+
+    JATS marks up inline formatting (<italic>, <sub>, <sup>, cross-refs)
+    inside prose; ``itertext()`` walks past all of it and concatenates the
+    text nodes, which is what normalization needs. Surface forms such as
+    Aβ42 survive because they are Unicode text content, not markup.
+    """
+    if element is None:
+        return ""
+    return re.sub(r"\s+", " ", "".join(element.itertext())).strip()
+
+
+def _paragraph_text(container: ET.Element | None) -> str:
+    """Join every <p> under a container with blank lines between them."""
+    if container is None:
+        return ""
+    paragraphs = [
+        _text_content(p) for p in container.iter()
+        if _local_tag(p) == "p"
+    ]
+    return "\n\n".join(p for p in paragraphs if p)
+
+
+def _parse_pub_date(article_meta: ET.Element) -> tuple[str, str]:
+    """Extract the best available publication date.
+
+    Returns ``(date, precision)`` where date is ``YYYY``, ``YYYY-MM`` or
+    ``YYYY-MM-DD`` and precision is ``"day"``, ``"month"``, ``"year"`` or
+    ``""`` if no date was found. Several <pub-date> elements can be present
+    (epub, print, collection); PUB_DATE_TYPE_PRIORITY picks one deterministically
+    rather than taking "whichever XML lists first".
+    """
+    candidates: dict[str, ET.Element] = {}
+    for pub_date in _iter_local(article_meta, "pub-date"):
+        kind = (
+            pub_date.get("pub-type")
+            or pub_date.get("date-type")
+            or "unspecified"
+        ).lower()
+        candidates.setdefault(kind, pub_date)
+
+    chosen = None
+    for kind in PUB_DATE_TYPE_PRIORITY:
+        if kind in candidates:
+            chosen = candidates[kind]
+            break
+    if chosen is None and candidates:
+        chosen = next(iter(candidates.values()))
+    if chosen is None:
+        return "", ""
+
+    def _num(tag: str) -> str:
+        node = next(
+            (c for c in chosen if _local_tag(c) == tag), None)
+        text = _text_content(node)
+        return text if text.isdigit() else ""
+
+    year, month, day = _num("year"), _num("month"), _num("day")
+    if not year:
+        return "", ""
+    if month and day:
+        return f"{year}-{int(month):02d}-{int(day):02d}", "day"
+    if month:
+        return f"{year}-{int(month):02d}", "month"
+    return year, "year"
+
+
+@dataclass(frozen=True)
+class ParsedArticle:
+    """One article's extracted content, ready to merge with manifest fields."""
+
+    title: str
+    abstract: str
+    sections: tuple[dict[str, str], ...]
+    publication_date: str
+    date_precision: str
+
+
+def parse_jats_xml(xml_bytes: bytes) -> ParsedArticle:
+    """Parse one PMC JATS article into title, abstract and body sections.
+
+    Raises ``CorpusPipelineError`` on structurally invalid XML or a missing
+    ``<article-meta>`` - both mean the file is not the article it claims to
+    be, which the caller must not silently skip past into a claimed record
+    with fabricated content.
+
+    Reference elements (``<back>``) are deliberately excluded: citation
+    lists are not evidence text and chunking them would manufacture passages
+    with no scientific content.
+    """
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as exc:
+        raise CorpusPipelineError(f"invalid XML: {exc}") from exc
+
+    front = _find_local(root, "front")
+    article_meta = _find_local(front, "article-meta") if front is not None else None
+    if article_meta is None:
+        raise CorpusPipelineError(
+            "no <front><article-meta> found - not a recognisable JATS article"
+        )
+
+    title_group = _find_local(article_meta, "title-group")
+    title = _text_content(
+        _find_local(title_group, "article-title") if title_group is not None
+        else None
+    )
+
+    abstract = _paragraph_text(_find_local(article_meta, "abstract"))
+
+    publication_date, date_precision = _parse_pub_date(article_meta)
+
+    sections: list[dict[str, str]] = []
+    body = _find_local(root, "body")
+    if body is not None:
+        for sec in _iter_local(body, "sec"):
+            heading = _text_content(_find_local(sec, "title"))
+            text = _paragraph_text(sec)
+            if text:
+                sections.append({
+                    "section": heading or "body",
+                    "text": text,
+                })
+        if not sections:
+            # No <sec> wrapping (short articles, editorials) - the body's
+            # own paragraphs are the content.
+            direct_text = _paragraph_text(body)
+            if direct_text:
+                sections.append({"section": "body", "text": direct_text})
+
+    return ParsedArticle(
+        title=title,
+        abstract=abstract,
+        sections=tuple(sections),
+        publication_date=publication_date,
+        date_precision=date_precision,
+    )
+
+
+def read_pmc_manifest(manifest_path: Path) -> list[dict[str, str]]:
+    """Read the finalized PMC manifest, verifying its schema first.
+
+    Refuses a manifest whose columns do not match what this module expects
+    to read, rather than silently reading None/empty values from mismatched
+    columns - the exact failure class ledger D-41 diagnosed.
+    """
+    if not manifest_path.exists():
+        raise CorpusPipelineError(
+            f"PMC manifest not found: {manifest_path}. Run "
+            "'02_pmc_download.py --finalize' first."
+        )
+    with manifest_path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        header = tuple(reader.fieldnames or ())
+        if header != PMC_MANIFEST_FIELDS:
+            raise CorpusPipelineError(
+                f"{manifest_path} has header {header}, expected "
+                f"{PMC_MANIFEST_FIELDS}. The manifest schema has changed "
+                "since this reader was written; update PMC_MANIFEST_FIELDS "
+                "and the field mapping together, deliberately."
+            )
+        return list(reader)
+
+
+def iter_pmc_records(
+    manifest_path: Path,
+    corpus_root: Path,
+    log,
+) -> Iterable[dict[str, Any]]:
+    """Yield one normalize-ready record per verified PMC article version.
+
+    A record that fails to parse is logged and skipped, not fabricated and
+    not silently dropped without a trace: the skip count is the caller's to
+    report. ``already_verified`` is the only status read - ``
+    unavailable_current_dataset`` rows carry no local files to parse.
+    """
+    rows = read_pmc_manifest(manifest_path)
+    verified = [r for r in rows if r["status"] == "already_verified"]
+    parsed = failed = 0
+
+    for row in verified:
+        xml_path = corpus_root / row["xml_path"]
+        try:
+            xml_bytes = xml_path.read_bytes()
+            article = parse_jats_xml(xml_bytes)
+        except (OSError, CorpusPipelineError) as exc:
+            failed += 1
+            log.warning(
+                "%s.%s: could not parse %s: %s",
+                row["pmcid"], row["version"], xml_path, exc,
+            )
+            continue
+
+        title = article.title or row["title"]
+        sections = [{"section": "title", "text": title}]
+        if article.abstract:
+            sections.append({"section": "abstract", "text": article.abstract})
+        sections.extend(dict(s) for s in article.sections)
+
+        parsed += 1
+        yield {
+            "document_id": f"{row['pmcid']}.{row['version']}",
+            "pmid": row["pmid"],
+            "pmcid": row["pmcid"],
+            "doi": row["doi"],
+            "title": title,
+            "abstract": article.abstract,
+            "sections": sections,
+            "mesh_terms": [],
+            "publication_date": article.publication_date,
+            "date_precision": article.date_precision,
+            "license": row["license_code"],
+            "source_tier": "peer_reviewed_primary",
+            "retracted": row["is_retracted"].strip().lower() == "true",
+        }
+
+    log.info(
+        "PMC extraction | verified=%d | parsed=%d | failed=%d",
+        len(verified), parsed, failed,
+    )

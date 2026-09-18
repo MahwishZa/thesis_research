@@ -98,6 +98,58 @@ have not run over the real PMC data yet.
 
 ---
 
+## Stages 04–07 — READY FOR REAL EXECUTION, 2026-09-18 (ledger D-43, D-44)
+
+An audit (before this fix) found stages 04–07 could only ever process the
+10-record synthetic fixture: nothing connected Stage 02's real output (a
+manifest plus JATS XML) to what Stage 04 read, and Stage 07 crashed
+immediately (`KeyError: 'groups'`) against the current
+`claim_taxonomy.yaml`, which had been restructured to `claim_types`/
+`evidence_levels` since the last time 07 actually ran.
+
+**Fixed**, all IMPLEMENTED and TESTED against synthetic fixtures (44 new
+tests) — not yet run against the real 114,256-row manifest, which exists
+only on the student's machine:
+
+* `_common.py` gained a PMC-XML bridge (`parse_jats_xml`, `iter_pmc_records`,
+  `read_pmc_manifest`) using stdlib `xml.etree.ElementTree` — no new
+  dependency.
+* `04_normalize.py` reads `metadata/pmc.csv` + XML by default now;
+  `--input <fixture path>` still selects the old offline single-JSONL path
+  unchanged (verified byte-identical to the already-committed fixture
+  output). A missing manifest fails clearly rather than silently falling
+  back to the fixture.
+* `05_deduplicate.py`: `metadata/duplicates.csv` now written through the
+  same safe CSV writer as its report counterpart, not hand-joined strings.
+* `06_chunk.py` now carries `ad_relevant`/`ad_relevance_score` from the
+  normalized document onto every chunk (previously dropped there).
+* `07_claim_classification.py` rewritten against `claim_types` (topical
+  tagging) and `evidence_levels` (a second, independent dimension). Every
+  current class uses taxonomy-derived keywords, not curated ones, and says
+  so in its own output (`method: keyword-from-taxonomy`). `claim_status`,
+  `temporal_status` and `disease_relevance` are deliberately **not**
+  tagged here — see D-44 for why (temporal status duplicates the thesis's
+  own admission-time recency treatment; disease relevance duplicates
+  Stage 04's existing decision).
+* **Real bug found and fixed along the way:** `redistribution_allowed()`
+  only matched hyphenated licence codes (`CC-BY`); PMC's real
+  `license_code` values are space-delimited (`CC BY`), so every real PMC
+  record would have been marked non-redistributable regardless of its
+  actual licence. Fixed; the licence families treated as distributable are
+  unchanged.
+
+**01_pubmed_download.py, 02_pmc_download.py and 03_guidelines.py were left
+untouched.** Both 01 and 02 are mature, already-executed code against real
+data (676 PMIDs; the independently-verified 114,256-row PMC manifest) —
+"placeholder logic" does not describe them, and rewriting either would risk
+the real, already-collected data disagreeing with a "corrected" script.
+
+**Next real step:** run `04_normalize.py` → `05_deduplicate.py` →
+`06_chunk.py` → `07_claim_classification.py` in order on the machine holding
+the real corpus.
+
+---
+
 ## Blockers
 
 | Blocked on | Blocks | Note |

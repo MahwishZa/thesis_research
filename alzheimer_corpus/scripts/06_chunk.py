@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse, json, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import DATA, load_config, get_logger, read_jsonl, write_jsonl
+from _common import DATA, get_logger, read_jsonl, write_jsonl
 
 SRC = DATA / "deduplicated" / "documents.jsonl"
 OUT = DATA / "chunks" / "chunks.jsonl"
@@ -62,7 +62,6 @@ def chunk_units(units: list[str], size: int, stride: int, tok) -> list[tuple[str
 
 
 def main(argv=None) -> int:
-    cfg = load_config("search_queries.yaml")  # keeps config loading uniform
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--input", default=str(SRC))
     ap.add_argument("--tokenizer", default="ncbi/MedCPT-Article-Encoder")
@@ -103,6 +102,12 @@ def main(argv=None) -> int:
                     "publication_date": rec.get("publication_date", ""),
                     "source_tier": tier, "claim_classes": [],
                     "retracted": rec.get("retracted", ""),
+                    # Carried from Stage 04's assess_ad_relevance() so Stage 07
+                    # can propagate the document-level relevance decision onto
+                    # each chunk rather than recomputing a coarser version of
+                    # the same judgement at classification time.
+                    "ad_relevant": rec.get("ad_relevant", ""),
+                    "ad_relevance_score": rec.get("ad_relevance_score", ""),
                     "chunk_size_exception": exception,
                     "chunk_size_exception_reason":
                         "guideline recommendation kept with its qualifying conditions"

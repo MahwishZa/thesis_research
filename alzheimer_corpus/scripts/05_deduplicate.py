@@ -70,16 +70,15 @@ def main(argv=None) -> int:
         kept.append(rec)
 
     n = write_jsonl(OUT, kept)
-    write_report("deduplication_report.csv", dupes,
-                 ["canonical_document_id", "duplicate_document_id", "duplicate_reason",
-                  "similarity_method", "similarity_score", "decision"])
-    (METADATA / "duplicates.csv").write_text(
-        "canonical_document_id,duplicate_document_id,duplicate_reason,similarity_method,"
-        "similarity_score,decision\n" +
-        "".join(f"{d['canonical_document_id']},{d['duplicate_document_id']},"
-                f"{d['duplicate_reason']},{d['similarity_method']},"
-                f"{d['similarity_score']},{d['decision']}\n" for d in dupes),
-        encoding="utf-8", newline="\n")
+    dupe_fields = ["canonical_document_id", "duplicate_document_id", "duplicate_reason",
+                   "similarity_method", "similarity_score", "decision"]
+    write_report("deduplication_report.csv", dupes, dupe_fields)
+    # Same rows, also kept in metadata/ as the registry copy (tracked
+    # provenance, not a run artefact - see alzheimer_corpus/.gitignore).
+    # write_report is used here too rather than hand-joining strings: a
+    # document_id or title-derived key containing a comma would otherwise
+    # silently corrupt this file with no error at write time.
+    write_report(METADATA / "duplicates.csv", dupes, dupe_fields)
     log.info("stage 05 | unique=%d | duplicates recorded=%d", n, len(dupes))
     return 0
 

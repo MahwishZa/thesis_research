@@ -10,17 +10,48 @@ back into stored text.
 Also applies the Alzheimer's relevance gate and records the full decision trace.
 Excluded records keep their metadata and reason - nothing is dropped silently.
 
-Input : data/raw/**            Output: data/normalized/documents.jsonl
+Two input modes:
+
+  Real corpus (default): reads the finalized PMC manifest
+  (metadata/pmc.csv) and each article's JATS XML, via
+  _common.iter_pmc_records(). This is the corpus's actual content source -
+  Stage 01 (PubMed) only ever produces PMIDs, never abstracts, so PMC full
+  text is what this stage normalizes.
+
+  --input PATH: reads one JSONL file directly instead, in the flat
+  {document_id, pmid, title, abstract, mesh_terms, publication_date,
+  license, source_tier} shape. This is the offline/fixture path -
+  data/raw/pubmed/records.example.jsonl exercises it with no network and no
+  real data, and it is what the automated tests use.
+
+PubMed PMIDs that have no PMC full text contribute no content under the
+current pipeline (Stage 01 never fetches an abstract). This stage reports
+how many such PMIDs exist rather than silently ignoring them; extending
+Stage 01 with an efetch/esummary call is how that gap would close.
+
+Guidelines and textbooks (metadata/guidelines.csv, metadata/textbooks.csv)
+are wired for inclusion once they carry a documented text-source field, but
+that acquisition path does not exist yet (03_guidelines.py's docstring: a
+manual step by design) and both registries are currently empty, so nothing
+here fabricates a shape for them.
+
+Input : metadata/pmc.csv + data/raw/pmc/**  (or --input JSONL)
+Output: data/normalized/documents.jsonl
 """
 from __future__ import annotations
-import argparse, html, re, sys, unicodedata
+import argparse, csv, html, re, sys, unicodedata
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _common import (DATA, get_logger, read_jsonl, write_jsonl, write_report,
-                     assess_ad_relevance, redistribution_allowed, PRESERVE_VERBATIM)
+from _common import (
+    BASE, DATA, METADATA, CorpusPipelineError, get_logger, iter_pmc_records,
+    read_jsonl, write_jsonl, write_report, assess_ad_relevance,
+    redistribution_allowed, PRESERVE_VERBATIM,
+)
 
 OUT = DATA / "normalized" / "documents.jsonl"
-_WS = re.compile(r"[ \t ]+")
+PMC_MANIFEST = METADATA / "pmc.csv"
+PUBMED_MANIFEST = METADATA / "pubmed.csv"
+_WS = re.compile(r"[ \t ]+")
 _NL = re.compile(r"\n{3,}")
 _TAG = re.compile(r"<[^>]{1,200}>")
 
@@ -38,36 +69,110 @@ def normalize_text(s: str) -> str:
     return s.strip()
 
 
+def normalize_record(rec: dict) -> dict:
+    """Apply text normalization to a record's title, abstract and sections
+    in place, and return it. Shared by both input modes so a fixture-tested
+    record and a real PMC record go through identical cleaning."""
+    rec["title"] = normalize_text(rec.get("title", ""))
+    rec["abstract"] = normalize_text(rec.get("abstract", ""))
+    if rec.get("sections"):
+        rec["sections"] = [
+            {**sec, "text": normalize_text(sec.get("text", ""))}
+            for sec in rec["sections"]
+        ]
+    return rec
+
+
+def apply_relevance_gate(rec: dict) -> tuple[dict, bool]:
+    """Run the AD-relevance gate and stamp its decision onto the record.
+
+    Returns (record, ad_relevant) so the caller can count exclusions without
+    re-reading the field back out.
+    """
+    rel = assess_ad_relevance(rec)
+    rec["ad_relevant"] = rel.ad_relevant
+    rec["ad_relevance_score"] = rel.score
+    rec["ad_rules_fired"] = ";".join(rel.rules_fired)
+    rec["ad_exclusion_reason"] = rel.exclusion_reason or ""
+    rec["redistribution_allowed"] = redistribution_allowed(rec.get("license"))
+    return rec, rel.ad_relevant
+
+
+def pubmed_only_pmid_count(pmc_pmids: set[str], log) -> int:
+    """How many PubMed PMIDs have no PMC full text and so contribute no
+    content here. Reported, never silently absorbed - see module docstring."""
+    if not PUBMED_MANIFEST.exists():
+        return 0
+    with PUBMED_MANIFEST.open(encoding="utf-8", newline="") as handle:
+        pubmed_pmids = {row["pmid"] for row in csv.DictReader(handle) if row.get("pmid")}
+    uncovered = pubmed_pmids - pmc_pmids
+    if uncovered:
+        log.warning(
+            "%d/%d PubMed PMIDs have no PMC full text and contribute no "
+            "content under the current pipeline (Stage 01 does not fetch "
+            "abstracts). Extend Stage 01 with efetch/esummary if PubMed-only "
+            "content is required.",
+            len(uncovered), len(pubmed_pmids),
+        )
+    return len(uncovered)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--input", default=None, help="JSONL of raw records")
+    ap.add_argument("--input", default=None,
+                    help="JSONL of raw records (offline/fixture path); "
+                         "omit to read the real, finalized PMC manifest")
+    ap.add_argument("--pmc-manifest", default=str(PMC_MANIFEST))
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args(argv)
     log = get_logger("04_normalize", "quality_control.log")
 
-    src = Path(args.input) if args.input else (DATA / "raw" / "pubmed" / "records.example.jsonl")
-    if not src.exists():
-        log.error("no input at %s - run stages 01-03 first", src)
-        return 2
+    kept: list[dict] = []
+    excluded = 0
+    rows = []
 
-    kept, excluded, rows = [], 0, []
-    for i, rec in enumerate(read_jsonl(src)):
-        if args.limit and i >= args.limit:
-            break
-        rec["title"] = normalize_text(rec.get("title", ""))
-        rec["abstract"] = normalize_text(rec.get("abstract", ""))
-        rel = assess_ad_relevance(rec)
-        rec["ad_relevant"] = rel.ad_relevant
-        rec["ad_relevance_score"] = rel.score
-        rec["ad_rules_fired"] = ";".join(rel.rules_fired)
-        rec["ad_exclusion_reason"] = rel.exclusion_reason or ""
-        rec["redistribution_allowed"] = redistribution_allowed(rec.get("license"))
+    def process(rec: dict) -> None:
+        nonlocal excluded
+        rec = normalize_record(rec)
+        rec, ad_relevant = apply_relevance_gate(rec)
         kept.append(rec)
-        if not rel.ad_relevant:
+        if not ad_relevant:
             excluded += 1
-        rows.append({"document_id": rel.document_id, "ad_relevant": rel.ad_relevant,
-                     "score": rel.score, "rules": ";".join(rel.rules_fired),
-                     "exclusion_reason": rel.exclusion_reason or ""})
+        rows.append({
+            "document_id": rec.get("document_id", ""),
+            "ad_relevant": ad_relevant,
+            "score": rec["ad_relevance_score"],
+            "rules": rec["ad_rules_fired"],
+            "exclusion_reason": rec["ad_exclusion_reason"],
+        })
+
+    if args.input:
+        # Offline/fixture path: one flat JSONL file, unchanged from before
+        # the PMC bridge existed. records.example.jsonl exercises this.
+        src = Path(args.input)
+        if not src.exists():
+            log.error("no input at %s - run stages 01-03 first", src)
+            return 2
+        for i, rec in enumerate(read_jsonl(src)):
+            if args.limit and i >= args.limit:
+                break
+            process(rec)
+    else:
+        # Real corpus path: the finalized PMC manifest + its JATS XML.
+        manifest_path = Path(args.pmc_manifest)
+        try:
+            pmc_pmids: set[str] = set()
+            for i, rec in enumerate(iter_pmc_records(manifest_path, BASE, log)):
+                if args.limit and i >= args.limit:
+                    break
+                if rec.get("pmid"):
+                    pmc_pmids.add(rec["pmid"])
+                process(rec)
+        except CorpusPipelineError as exc:
+            log.error(str(exc))
+            return 2
+        pubmed_only_pmid_count(pmc_pmids, log)
+
     n = write_jsonl(OUT, kept)
     log.info("stage 04 | normalized=%d | ad_relevant=%d | excluded=%d",
              n, n - excluded, excluded)
