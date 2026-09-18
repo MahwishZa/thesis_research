@@ -227,8 +227,20 @@ def read_jsonl(
 def write_jsonl(
     path: Path,
     rows: Iterable[dict[str, Any]],
+    *,
+    mode: str = "w",
 ) -> int:
-    """Write records as newline-delimited JSON."""
+    """Write records as newline-delimited JSON.
+
+    ``rows`` is only ever iterated, never materialised here - passing a
+    generator instead of a list keeps this function's own memory bounded to
+    one record at a time regardless of what the caller does upstream.
+
+    ``mode="a"`` appends instead of truncating, for a caller implementing
+    its own resume-after-interruption logic (Stage 06). The default stays
+    "w" so every existing caller's behaviour - always start from a fresh
+    file - is unchanged.
+    """
     path.parent.mkdir(
         parents=True,
         exist_ok=True,
@@ -237,7 +249,7 @@ def write_jsonl(
     count = 0
 
     with path.open(
-        "w",
+        mode,
         encoding="utf-8",
         newline="\n",
     ) as fh:
@@ -251,6 +263,7 @@ def write_jsonl(
                 + "\n"
             )
             count += 1
+            fh.flush()
 
     return count
 
