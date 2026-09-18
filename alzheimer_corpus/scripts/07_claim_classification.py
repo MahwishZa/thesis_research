@@ -57,7 +57,7 @@ exactly where tagging is weakest.
 Input : data/chunks/chunks.jsonl   Output: in-place claim_classes + reports
 """
 from __future__ import annotations
-import argparse, random, re, sys
+import argparse, random, re, sys, time
 from collections import Counter, defaultdict
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -137,11 +137,18 @@ def keyword_match(text: str, classes: list[dict]) -> list[dict]:
     return hits
 
 
-def stratified_sample(chunks: list[dict], n: int, seed: int) -> list[dict]:
-    """Round-robin over (source, claim class) cells so small classes appear."""
+def stratified_sample(records: list[dict], n: int, seed: int) -> list[dict]:
+    """Round-robin over (source, claim class) cells so small classes appear.
+
+    ``records`` only needs to carry the fields a cell key and the final
+    annotation_report.csv row need (see ``_annotation_fields`` in main()) -
+    not a full chunk with its text - so the caller can pass a lightweight
+    projection instead of holding every chunk's full text in memory at once
+    just to sample from it.
+    """
     rng = random.Random(seed)
     cells = defaultdict(list)
-    for c in chunks:
+    for c in records:
         key = (c.get("source_tier", "") or "unknown",
                (c.get("claim_classes") or ["<untagged>"])[0])
         cells[key].append(c)
@@ -154,6 +161,45 @@ def stratified_sample(chunks: list[dict], n: int, seed: int) -> list[dict]:
             if cells[k] and len(out) < n:
                 out.append(cells[k].pop())
     return out
+
+
+#: Reported the same way Stage 06 reports chunking progress: frequent
+#: enough to be useful on a multi-million-chunk corpus, infrequent enough
+#: not to flood the terminal.
+PROGRESS_EVERY = 100_000
+
+#: Fields annotation_report.csv actually reads from a sampled chunk (see
+#: the write_report call below) - the lightweight projection tag_chunks()
+#: keeps for stratified_sample() instead of every chunk's full text.
+_ANNOTATION_FIELDS = (
+    "chunk_id", "document_id", "source_tier", "claim_classes",
+    "claim_confidence", "claim_evidence_levels", "ad_relevant",
+    "ad_relevance_score",
+)
+
+
+def tag_chunk(ch: dict, claim_types: list[dict], evidence_levels: list[dict],
+              dist: Counter, evidence_dist: Counter) -> dict:
+    """Tag one chunk in place with both dimensions' labels, updating the
+    running distribution counters. Pulled out of main() so the streaming
+    loop and any future caller share one tagging path."""
+    hits = keyword_match(ch.get("text", ""), claim_types)
+    ch["claim_classes"] = [h["claim_class"] for h in hits]
+    ch["claim_confidence"] = max([h["confidence"] for h in hits], default=0.0)
+    ch["claim_method"] = hits[0]["method"] if hits else "none"
+    for h in hits:
+        dist[h["claim_class"]] += 1
+    if not hits:
+        dist["<untagged>"] += 1
+
+    ev_hits = keyword_match(ch.get("text", ""), evidence_levels)
+    ch["claim_evidence_levels"] = [h["claim_class"] for h in ev_hits]
+    ch["claim_evidence_confidence"] = max([h["confidence"] for h in ev_hits], default=0.0)
+    for h in ev_hits:
+        evidence_dist[h["claim_class"]] += 1
+    if not ev_hits:
+        evidence_dist["<untagged>"] += 1
+    return ch
 
 
 def main(argv=None) -> int:
@@ -176,27 +222,37 @@ def main(argv=None) -> int:
         log.error("no input at %s - run stage 06 first", src)
         return 2
 
-    chunks = list(read_jsonl(src))
-    dist = Counter()
-    evidence_dist = Counter()
-    for ch in chunks:
-        hits = keyword_match(ch.get("text", ""), claim_types)
-        ch["claim_classes"] = [h["claim_class"] for h in hits]
-        ch["claim_confidence"] = max([h["confidence"] for h in hits], default=0.0)
-        ch["claim_method"] = hits[0]["method"] if hits else "none"
-        for h in hits:
-            dist[h["claim_class"]] += 1
-        if not hits:
-            dist["<untagged>"] += 1
+    # Streams src -> a temp file, then atomically replaces src, instead of
+    # `chunks = list(read_jsonl(src))` + write_jsonl(src, chunks) at the
+    # end: on a multi-million-chunk corpus (the real corpus produces 4.3M+
+    # chunks) holding every chunk's full text in memory at once, then
+    # writing nothing until the very end, is the same memory/visibility
+    # problem Stage 06 had before its batching rewrite - just relocated
+    # one stage later. This keeps peak memory to O(1) chunks in flight
+    # plus one lightweight (no text) record per chunk for the stratified
+    # sample, and reports progress instead of running silently.
+    tmp = src.with_suffix(src.suffix + ".part")
+    dist: Counter = Counter()
+    evidence_dist: Counter = Counter()
+    sample_pool: list[dict] = []
+    start = time.monotonic()
 
-        ev_hits = keyword_match(ch.get("text", ""), evidence_levels)
-        ch["claim_evidence_levels"] = [h["claim_class"] for h in ev_hits]
-        ch["claim_evidence_confidence"] = max([h["confidence"] for h in ev_hits], default=0.0)
-        for h in ev_hits:
-            evidence_dist[h["claim_class"]] += 1
-        if not ev_hits:
-            evidence_dist["<untagged>"] += 1
-    write_jsonl(src, chunks)
+    def tag_and_track():
+        n = 0
+        for ch in read_jsonl(src):
+            ch = tag_chunk(ch, claim_types, evidence_levels, dist, evidence_dist)
+            sample_pool.append({k: ch.get(k) for k in _ANNOTATION_FIELDS})
+            n += 1
+            if n % PROGRESS_EVERY == 0:
+                elapsed = time.monotonic() - start
+                log.info(
+                    "stage 07 progress | chunks=%d | %.1f chunks/sec | elapsed=%.0fs",
+                    n, n / elapsed if elapsed > 0 else 0, elapsed,
+                )
+            yield ch
+
+    n_chunks = write_jsonl(tmp, tag_and_track())
+    tmp.replace(src)
 
     write_report("claim_class_distribution.csv",
                  [{"claim_class": k, "chunks": v} for k, v in dist.most_common()],
@@ -204,7 +260,7 @@ def main(argv=None) -> int:
     write_report("evidence_level_distribution.csv",
                  [{"evidence_level": k, "chunks": v} for k, v in evidence_dist.most_common()],
                  ["evidence_level", "chunks"])
-    sample = stratified_sample(chunks, args.sample, args.seed)
+    sample = stratified_sample(sample_pool, args.sample, args.seed)
     write_report("annotation_report.csv",
                  [{"chunk_id": c["chunk_id"], "document_id": c["document_id"],
                    "source_tier": c.get("source_tier", ""),
@@ -220,11 +276,12 @@ def main(argv=None) -> int:
                   "automatic_confidence", "automatic_evidence_levels",
                   "ad_relevant", "ad_relevance_score",
                   "human_labels", "annotator_notes"])
+    elapsed = time.monotonic() - start
     log.info("stage 07 | chunks=%d | tagged claim_types=%d | tagged evidence_levels=%d | "
-             "validation sample=%d (stratified, seed=%d)",
-             len(chunks), len([k for k in dist if k != "<untagged>"]),
+             "validation sample=%d (stratified, seed=%d) | elapsed=%.0fs",
+             n_chunks, len([k for k in dist if k != "<untagged>"]),
              len([k for k in evidence_dist if k != "<untagged>"]),
-             len(sample), args.seed)
+             len(sample), args.seed, elapsed)
     return 0
 
 

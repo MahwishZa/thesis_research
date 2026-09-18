@@ -15,8 +15,10 @@ claim_status/temporal_status/disease_relevance are not tagged here.
 """
 
 import importlib.util
+import json
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "alzheimer_corpus" / "scripts" / "07_claim_classification.py"
@@ -172,6 +174,139 @@ class RealTaxonomyIntegrationTests(unittest.TestCase):
         second, coarser classifier here would risk disagreeing with it."""
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertNotIn('cfg["disease_relevance"]', source)
+
+
+def reference_tag_all(chunks, claim_types, evidence_levels, m):
+    """The ORIGINAL, pre-streaming implementation: hold every chunk in
+    memory, tag it, return the whole mutated list. Preserved verbatim as
+    ground truth - not reading main()'s current body - so the streaming
+    rewrite is checked against independently-reasoned-about behaviour, not
+    against itself."""
+    out = []
+    for ch in chunks:
+        ch = dict(ch)
+        hits = m.keyword_match(ch.get("text", ""), claim_types)
+        ch["claim_classes"] = [h["claim_class"] for h in hits]
+        ch["claim_confidence"] = max([h["confidence"] for h in hits], default=0.0)
+        ch["claim_method"] = hits[0]["method"] if hits else "none"
+        ev_hits = m.keyword_match(ch.get("text", ""), evidence_levels)
+        ch["claim_evidence_levels"] = [h["claim_class"] for h in ev_hits]
+        ch["claim_evidence_confidence"] = max(
+            [h["confidence"] for h in ev_hits], default=0.0)
+        out.append(ch)
+    return out
+
+
+class StreamingRewriteTests(unittest.TestCase):
+    """This stage now streams (its real input is 4.3M+ chunks - holding
+    every chunk's full text in memory at once, then writing nothing until
+    the very end, is exactly the memory/visibility problem Stage 06 had
+    before its batching rewrite). These tests lock the rewrite's shape and
+    its exact equivalence to the original in-memory algorithm."""
+
+    def setUp(self):
+        self.m = load_module()
+        self.source = SCRIPT.read_text(encoding="utf-8")
+
+    def test_does_not_materialise_the_whole_corpus_as_a_list(self):
+        code_lines = [line for line in self.source.splitlines()
+                      if not line.strip().startswith("#")]
+        self.assertFalse(
+            any("list(read_jsonl(" in line for line in code_lines),
+            "found a live (non-comment) list(read_jsonl(...)) call",
+        )
+
+    def test_writes_through_a_temp_file_then_replaces_atomically(self):
+        self.assertIn(".part", self.source)
+        self.assertIn("tmp.replace(src)", self.source)
+
+    def test_reports_progress_during_a_run(self):
+        self.assertIn("stage 07 progress", self.source)
+        self.assertGreater(self.m.PROGRESS_EVERY, 0)
+
+    def test_tag_chunk_matches_the_reference_algorithm(self):
+        from collections import Counter
+        cfg = self.m.load_config(str(REAL_TAXONOMY))
+        claim_types = self.m.load_dimension(cfg["claim_types"], keyed_by_group=False)
+        evidence_levels = self.m.load_dimension(cfg["evidence_levels"], keyed_by_group=True)
+
+        chunks = [
+            {"chunk_id": f"C{i}", "document_id": f"D{i}", "text": text,
+             "source_tier": "peer_reviewed_primary", "ad_relevant": True,
+             "ad_relevance_score": 0.9}
+            for i, text in enumerate([
+                "Alzheimer disease diagnosis relies on biomarkers.",
+                "A randomized controlled trial of donepezil.",
+                "", "Amyloid plaques and tau tangles in the brain.",
+                "A case report of early-onset dementia.",
+            ])
+        ]
+
+        expected = reference_tag_all(chunks, claim_types, evidence_levels, self.m)
+
+        dist, evidence_dist = Counter(), Counter()
+        actual = [
+            self.m.tag_chunk(dict(ch), claim_types, evidence_levels, dist, evidence_dist)
+            for ch in chunks
+        ]
+
+        for exp, act in zip(expected, actual):
+            for key in ("claim_classes", "claim_confidence", "claim_method",
+                       "claim_evidence_levels", "claim_evidence_confidence"):
+                self.assertEqual(exp[key], act[key], msg=f"{key} for {exp['chunk_id']}")
+
+    def test_end_to_end_streaming_run_matches_reference_and_is_atomic(self):
+        """Runs the real main() against a real (copied) alzheimer_corpus/
+        tree - never the actual one - and checks the streamed output
+        equals what the original in-memory algorithm would have produced,
+        record for record, plus every report file is written."""
+        import shutil
+        import subprocess
+        import sys as _sys
+
+        with TemporaryDirectory() as tmp:
+            copy = Path(tmp) / "alzheimer_corpus"
+            shutil.copytree(ROOT / "alzheimer_corpus", copy,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+
+            chunks = [
+                {"chunk_id": f"C{i}", "document_id": f"D{i}",
+                 "text": text, "source_tier": "peer_reviewed_primary",
+                 "ad_relevant": True, "ad_relevance_score": 0.5,
+                 "claim_classes": [], "claim_confidence": 0.0}
+                for i, text in enumerate([
+                    "Alzheimer disease diagnosis relies on biomarkers.",
+                    "A randomized controlled trial of donepezil.",
+                    "Amyloid plaques and tau tangles in the brain.",
+                ])
+            ]
+            chunks_path = copy / "data" / "chunks" / "chunks.jsonl"
+            chunks_path.write_text(
+                "\n".join(json.dumps(c) for c in chunks) + "\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [_sys.executable, "scripts/07_claim_classification.py"],
+                cwd=copy, capture_output=True, text=True, timeout=60,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            out_rows = [json.loads(l) for l in
+                       chunks_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(out_rows), len(chunks))
+            for row in out_rows:
+                for key in ("claim_classes", "claim_confidence", "claim_method",
+                           "claim_evidence_levels", "claim_evidence_confidence"):
+                    self.assertIn(key, row)
+
+            for report in ("claim_class_distribution.csv",
+                          "evidence_level_distribution.csv",
+                          "annotation_report.csv"):
+                self.assertTrue((copy / "reports" / report).exists())
+
+            self.assertFalse(
+                chunks_path.with_suffix(".jsonl.part").exists(),
+                "temp file must be replaced, not left behind",
+            )
 
 
 if __name__ == "__main__":
