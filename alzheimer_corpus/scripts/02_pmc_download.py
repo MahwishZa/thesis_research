@@ -1971,9 +1971,22 @@ def extract_full_run_evidence(
         r"Processing PMC record \d+/\d+:\s*(PMC\d+)"
     )
 
+    # Match the core statement only. The same fact - PMC holds no article
+    # version for this PMCID - has been written in three different wordings
+    # by three versions of this script:
+    #
+    #   "PMC123: no article version found"
+    #   "PMC123: no article version found during targeted retry"
+    #   "PMC123: no article version found; recording unavailable_current_dataset"
+    #
+    # The corpus was retrieved by the earliest of those, so requiring the
+    # newest wording made the historical evidence unreadable and left every
+    # such PMCID permanently unaccountable. Log lines already written cannot
+    # be reworded, so the reader accepts the statement and ignores the
+    # trailing prose. This does not weaken the evidence standard: all three
+    # wordings assert exactly the same finding.
     unavailable_pattern = re.compile(
-        r"(PMC\d+): no article version found; "
-        r"recording unavailable_current_dataset"
+        r"(PMC\d+): no article version found"
     )
 
     non_oa_pattern = re.compile(
