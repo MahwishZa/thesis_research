@@ -11,3 +11,12 @@
 2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ42
 2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ40
 2026-09-11 23:05:55,243Z INFO    04_normalize preserved verbatim: Aβ
+2026-09-18 10:45:12,548Z INFO    04_normalize PMC extraction | verified=114157 | parsed=114157 | failed=0
+2026-09-18 10:45:12,916Z WARNING 04_normalize 392/676 PubMed PMIDs have no PMC full text and contribute no content under the current pipeline (Stage 01 does not fetch abstracts). Extend Stage 01 with efetch/esummary if PubMed-only content is required.
+2026-09-18 10:45:12,925Z INFO    04_normalize guidelines.csv | rows=0 | parsed=0 | not_downloaded=0 | restricted=0 | failed=0
+2026-09-18 10:45:12,927Z INFO    04_normalize textbooks.csv | rows=0 | parsed=0 | not_downloaded=0 | restricted=0 | failed=0
+2026-09-18 10:46:35,807Z INFO    04_normalize stage 04 | normalized=114157 | ad_relevant=67608 | excluded=46549
+2026-09-18 10:46:35,818Z INFO    04_normalize preserved verbatim: Aβ42
+2026-09-18 10:46:35,827Z INFO    04_normalize preserved verbatim: Aβ40
+2026-09-18 10:46:35,827Z INFO    04_normalize preserved verbatim: Aβ
+2026-09-18 10:57:38,398Z WARNING 06_chunk using WHITESPACE tokenizer - NOT the specified MedCPT tokenizer; 256 words is ~340-400 MedCPT tokens

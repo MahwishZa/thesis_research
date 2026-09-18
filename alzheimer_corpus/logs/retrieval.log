@@ -121658,3 +121658,9 @@
 2026-09-18 06:31:23,672 | INFO | Authoritative PMC manifest written: C:\Users\mahwi\Documents\MS SE\4th semester\research_thesis\alzheimer_corpus\metadata\pmc.csv
 2026-09-18 06:31:23,676 | INFO | Final accounting: matched_pmcids=112260, accounted_pmcids=112260, manifest_rows=114256, ignored_stale_or_non_oa_versions=702
 2026-09-18 06:31:23,677 | INFO | Original selected run contained 6 failed PMCID(s); successful local verification confirms any subsequently recovered artifacts.
+2026-09-18 09:59:54,456Z INFO    03_guidelines stage 03 | 0 guidelines rows in guidelines.csv
+2026-09-18 09:59:54,456Z INFO    03_guidelines guidelines licensing: 0 distributable | 0 restricted | 0 unknown (fail closed) | 0 downloaded
+2026-09-18 09:59:54,457Z INFO    03_guidelines guidelines registry is empty - populate guidelines.csv per MANUAL steps
+2026-09-18 09:59:54,465Z INFO    03_guidelines stage 03 | 0 textbooks rows in textbooks.csv
+2026-09-18 09:59:54,466Z INFO    03_guidelines textbooks licensing: 0 distributable | 0 restricted | 0 unknown (fail closed) | 0 downloaded
+2026-09-18 09:59:54,466Z INFO    03_guidelines textbooks registry is empty - populate textbooks.csv per MANUAL steps
