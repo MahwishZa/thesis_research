@@ -1,30 +1,49 @@
 #!/usr/bin/env python3
-"""Run the proposed system against the RAG² baseline end-to-end, ablate the
-proposed system's recency weight, and score every arm with standard RAG
-metrics.
+"""Run the proposed system end-to-end, evaluate it against the RAG²
+baseline (step 3: main evaluation), and ablate its key component - recency
+weighting - against the same protocol (step 4: ablation study). This is the
+single entry point for the thesis's three current objectives (see
+docs/current_objectives.md): validate the proposed system runs correctly,
+run a standard-RAG-metrics ablation of its key component, and determine
+experimentally whether it improves on RAG².
 
-This is the single entry point the earlier design was missing: before this
-script existed, every piece (retriever, admission policies, generator
-interface, runner) was real and unit-tested, but nothing glued them to a
-concrete set of questions and produced a number. This script is that glue.
+Before this script existed, every piece (retriever, admission policies,
+generator interface, runner) was real and unit-tested, but nothing glued
+them to a concrete set of questions and produced a number. This script is
+that glue.
 
 Three arms are run over the same frozen candidate sets:
   - baseline : RAG2System            (systems/baseline/rag2.py)
-  - proposed : RecencyAwareSystem at its configured lambda
+  - proposed : RecencyAwareSystem, swept across --ablation-lambdas
   - no_filter: NoFilterSystem        (the admit-everything control)
 
-Ablation: the proposed arm is additionally run at every lambda in
---ablation-lambdas (default: 0.0, 0.25, 0.5, 0.75, 1.0), each as its own
-extra "arm" in the comparison, so the sweep is visible in one report rather
-than requiring N separate invocations. lambda=0.0 is the built-in
-pure-relevance ablation (systems/proposed/scorer.py); the rest interpolate
-to lambda=1.0 (pure recency).
+--proposed-lambda (default 1.0) designates which swept configuration is
+"the full proposed system" for two distinct comparisons the report keeps
+separate:
+  - main_evaluation (step 3): that arm vs. the RAG² baseline.
+  - ablation_study  (step 4): that arm vs. the same system with its key
+    component - recency weighting - removed (lambda=0, pure relevance
+    ranking, systems/proposed/scorer.py's built-in ablation). lambda=0 is
+    always included in the sweep for this reason, even if
+    --ablation-lambdas omits it.
+The rest of --ablation-lambdas (default also sweeps 0.25/0.5/0.75) is
+reported as supplementary context, not a required part of either step.
+
+Older activities this project does not treat as required pipeline stages
+(a separate bias probe, temporal test-pair studies, verifier studies,
+contestedness/authority studies, clinician studies, SOTA comparisons,
+additional backbones) are not exercised by this script and are not needed
+for it to answer the three current objectives; see
+docs/current_objectives.md for what is/isn't in scope and why nothing was
+deleted.
 
 Every arm's answers are scored with experiments/evaluation/rag_metrics.py
 (exact match, token F1, ROUGE-L, context precision/recall, groundedness) and
 a summary table is printed and written to --output-dir. This is the
-AUTOMATIC-METRICS ablation track; it does not replace the thesis's primary
-human-annotated hallucination-rate protocol (annotation.py/stats.py).
+AUTOMATIC-METRICS track; it does not replace the thesis's earlier
+human-annotated hallucination-rate protocol (annotation.py/stats.py), which
+remains available as a secondary, more rigorous confirmation but is not
+required for the three current objectives.
 
 DATA: by default this runs against a small synthetic fixture (10 questions
 with dated evidence, mirroring the shape of a real frozen candidate set) so
@@ -229,6 +248,16 @@ def main(argv=None) -> int:
         "--ablation-lambdas", default="0,0.25,0.5,0.75,1.0",
         help="comma-separated lambda values to sweep for the proposed arm",
     )
+    ap.add_argument(
+        "--proposed-lambda", type=float, default=1.0,
+        help="the recency weight that designates 'the full proposed system' "
+             "for the main evaluation (step 3: proposed vs RAG²) and the "
+             "ablation study (step 4: full vs the same system with its key "
+             "component - recency weighting - removed, i.e. lambda=0). "
+             "Must be one of --ablation-lambdas. Unfit on real data (see "
+             "docs/current_objectives.md); 1.0 is a placeholder until a "
+             "validation split exists to fit it on.",
+    )
     ap.add_argument("--real-model", action="store_true",
                     help="use a real Hugging Face generator instead of the "
                          "deterministic fixture stand-in (needs transformers/"
@@ -240,6 +269,12 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     lambdas = [float(x) for x in args.ablation_lambdas.split(",") if x.strip()]
+    if 0.0 not in lambdas:
+        lambdas = [0.0] + lambdas  # the ablation (component removed) arm is mandatory
+    if args.proposed_lambda not in lambdas:
+        lambdas = sorted(set(lambdas) | {args.proposed_lambda})
+    proposed_label = f"proposed_lambda_{args.proposed_lambda:g}"
+    ablated_label = "proposed_lambda_0"
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -269,11 +304,30 @@ def main(argv=None) -> int:
     rows = score_run(records, gold)
     by_system = rm.aggregate_by_system(rows)
 
+    def delta(a: str, b: str) -> float:
+        return by_system[a]["token_f1"] - by_system[b]["token_f1"]
+
+    main_evaluation = {
+        "baseline": "baseline",
+        "proposed": proposed_label,
+        "token_f1_delta": delta(proposed_label, "baseline"),
+        "verdict": "IMPROVES" if delta(proposed_label, "baseline") > 0 else "DOES NOT IMPROVE",
+    }
+    ablation_study = {
+        "full_proposed": proposed_label,
+        "ablated_proposed": ablated_label,
+        "component_removed": "recency weighting (lambda=0, pure relevance ranking)",
+        "token_f1_delta": delta(proposed_label, ablated_label),
+        "verdict": ("COMPONENT HELPS" if delta(proposed_label, ablated_label) > 0
+                    else "COMPONENT DOES NOT HELP"),
+    }
+
     report = {
         "run_summary": summary,
         "metrics_by_system": by_system,
-        "baseline_system": "baseline",
-        "proposed_systems": [n for n in systems if n.startswith("proposed_")],
+        "main_evaluation": main_evaluation,   # step 3: RAG2 vs proposed
+        "ablation_study": ablation_study,      # step 4: full vs ablated proposed
+        "ablation_sweep": [n for n in systems if n.startswith("proposed_")],
     }
     report_path = out_dir / "metrics_report.json"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
@@ -290,19 +344,20 @@ def main(argv=None) -> int:
               f"{metrics['context_recall']:>8.3f}"
               f"{metrics['groundedness']:>9.3f}")
 
-    baseline_f1 = by_system.get("baseline", {}).get("token_f1", 0.0)
-    print("\nProposed vs. baseline (token F1, positive = improvement):")
-    best_proposed = None
-    for name in sorted(n for n in by_system if n.startswith("proposed_")):
-        delta = by_system[name]["token_f1"] - baseline_f1
-        print(f"  {name:<24} {delta:+.3f}")
-        if best_proposed is None or by_system[name]["token_f1"] > by_system[best_proposed]["token_f1"]:
-            best_proposed = name
-    if best_proposed:
-        best_delta = by_system[best_proposed]["token_f1"] - baseline_f1
-        verdict = "IMPROVES" if best_delta > 0 else "DOES NOT IMPROVE"
-        print(f"\nBest proposed configuration: {best_proposed} "
-              f"({verdict} on baseline by {best_delta:+.3f} token F1)")
+    print(f"\nStep 3 - Main evaluation (RAG2 baseline vs proposed, lambda="
+          f"{args.proposed_lambda:g}): token F1 delta {main_evaluation['token_f1_delta']:+.3f} "
+          f"-> proposed {main_evaluation['verdict']} on the baseline")
+
+    print(f"\nStep 4 - Ablation study (full proposed vs the same system with "
+          f"its key component - recency weighting - removed, lambda=0): "
+          f"token F1 delta {ablation_study['token_f1_delta']:+.3f} "
+          f"-> the recency component {ablation_study['verdict']}")
+
+    if len(lambdas) > 2:
+        print("\nFull lambda sweep (token F1 delta vs baseline, for context beyond "
+              "the two required arms above):")
+        for name in sorted(n for n in by_system if n.startswith("proposed_")):
+            print(f"  {name:<24} {delta(name, 'baseline'):+.3f}")
 
     print(f"\nFull report: {report_path}")
     return 0

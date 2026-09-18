@@ -43,6 +43,41 @@ class EndToEndRunnerTests(unittest.TestCase):
             # 5 questions x (no_filter, baseline, 3 proposed lambdas) = 5*5
             self.assertEqual(len(records), 25)
 
+    def test_report_separates_main_evaluation_from_ablation_study(self):
+        """The report must distinguish step 3 (RAG2 vs proposed) from step 4
+        (full proposed vs the same system with its key component - recency
+        weighting - removed), not just dump an undifferentiated lambda
+        sweep: those are two different pipeline steps with two different
+        research questions."""
+        with TemporaryDirectory() as tmp:
+            e2e.main([
+                "--output-dir", tmp, "--n-questions", "10",
+                "--ablation-lambdas", "0,1.0", "--proposed-lambda", "1.0",
+            ])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+
+            main_eval = report["main_evaluation"]
+            self.assertEqual(main_eval["baseline"], "baseline")
+            self.assertEqual(main_eval["proposed"], "proposed_lambda_1")
+            self.assertEqual(main_eval["verdict"], "IMPROVES")
+
+            ablation = report["ablation_study"]
+            self.assertEqual(ablation["full_proposed"], "proposed_lambda_1")
+            self.assertEqual(ablation["ablated_proposed"], "proposed_lambda_0")
+            self.assertEqual(ablation["verdict"], "COMPONENT HELPS")
+
+    def test_ablation_lambda_zero_is_always_included(self):
+        """lambda=0 (the component-removed arm) is mandatory for the
+        ablation study - it must be added even if the caller's
+        --ablation-lambdas omits it."""
+        with TemporaryDirectory() as tmp:
+            e2e.main([
+                "--output-dir", tmp, "--n-questions", "4",
+                "--ablation-lambdas", "0.5,1.0",
+            ])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            self.assertIn("proposed_lambda_0", report["metrics_by_system"])
+
     def test_report_contains_every_arm(self):
         with TemporaryDirectory() as tmp:
             e2e.main([
