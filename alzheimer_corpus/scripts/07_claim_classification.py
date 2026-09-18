@@ -121,14 +121,40 @@ def load_dimension(cfg_section: dict, *, keyed_by_group: bool) -> list[dict]:
 def _term_pattern(term: str) -> re.Pattern:
     """Compile one keyword's match pattern once, not once per chunk.
 
-    A keyword's folded form and escaped pattern never change between calls -
-    only the chunk text does - so rebuilding the pattern string and
-    recompiling it on every one of 4M+ chunk x class x keyword combinations
-    was pure waste. ``term`` is already folded by the caller so this cache
-    hits on the very small (well under a hundred) set of distinct keywords
-    across every class, regardless of corpus size.
+    Only used for a PHRASE keyword (contains whitespace/underscore/hyphen) -
+    single-word keywords use the much faster word-set path in
+    keyword_match() below. A keyword's folded form and escaped pattern never
+    change between calls - only the chunk text does - so rebuilding the
+    pattern string and recompiling it on every chunk was pure waste even
+    for the phrase path. ``term`` is already folded by the caller.
     """
     return re.compile(r"(?<!\w)" + re.escape(term) + r"(?!\w)")
+
+
+@lru_cache(maxsize=None)
+def _is_phrase(term: str) -> bool:
+    return bool(re.search(r"[\s_-]", term))
+
+
+def _word_set(text: str) -> frozenset[str]:
+    """Every whole word in ``text``, folded, as a set.
+
+    Every keyword _tokens_from_name() currently produces is already a
+    single word (it splits category ids/labels/subtypes on the same
+    separator characters), so "does this keyword appear as a standalone
+    word" reduces to set membership - one O(text length) tokenization
+    per chunk instead of one O(text length) regex scan per keyword per
+    class (up to ~43 classes). This is what made Stage 07 slow at the
+    real corpus's 4.3M-chunk, ~256-MedCPT-token-per-chunk scale even
+    after precompiling patterns: precompilation avoided rebuilding a
+    pattern, not the O(text length) cost of re-scanning the same text
+    once per keyword. A future CURATED (has_curated_keywords=True)
+    keyword list could contain a multi-word phrase, which this set can't
+    match - keyword_match() below falls back to the regex path for any
+    keyword that isn't a single word, so that case still works correctly,
+    just without this speedup.
+    """
+    return frozenset(re.findall(r"\w+", fold(text)))
 
 
 def keyword_match(text: str, classes: list[dict]) -> list[dict]:
@@ -136,13 +162,23 @@ def keyword_match(text: str, classes: list[dict]) -> list[dict]:
     (module docstring), reported at reduced confidence so the gap between
     'a curated keyword list' and 'tokens borrowed from the taxonomy's own
     naming' is visible in the output, not hidden by it."""
-    f = fold(text)
+    words = _word_set(text)
+    f = None  # only folded if a phrase keyword actually needs it
     hits = []
     for c in classes:
         terms = c["keywords"]
         if not terms:
             continue
-        matched = [t for t in terms if _term_pattern(fold(t)).search(f)]
+        matched = []
+        for t in terms:
+            ft = fold(t)
+            if _is_phrase(ft):
+                if f is None:
+                    f = fold(text)
+                if _term_pattern(ft).search(f):
+                    matched.append(t)
+            elif ft in words:
+                matched.append(t)
         if matched:
             confidence = min(1.0, len(matched) / max(1, len(terms)))
             hits.append({"claim_class": c["id"], "confidence": round(

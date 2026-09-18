@@ -16,6 +16,7 @@ claim_status/temporal_status/disease_relevance are not tagged here.
 
 import importlib.util
 import json
+import re
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -123,6 +124,83 @@ class KeywordMatchTests(unittest.TestCase):
         classes = [{"id": "x", "keywords": ["ad"], "has_curated_keywords": False}]
         self.assertEqual(self.m.keyword_match("radiology report", classes), [])
         self.assertEqual(len(self.m.keyword_match("the AD diagnosis", classes)), 1)
+
+    def test_a_phrase_keyword_still_matches_via_the_regex_fallback(self):
+        """_tokens_from_name never produces a multi-word keyword today, but
+        a future curated keyword list (has_curated_keywords=True) could -
+        the word-set fast path can't match a phrase, so keyword_match()
+        must fall back to the regex path for any keyword containing a
+        separator character."""
+        classes = [{"id": "onset", "keywords": ["early onset", "early_onset"],
+                   "has_curated_keywords": True}]
+        hits = self.m.keyword_match("This is early onset disease.", classes)
+        self.assertEqual(len(hits), 1)
+        self.assertIn("early onset", hits[0]["matched_terms"])
+
+    def test_a_phrase_keyword_respects_word_boundaries_too(self):
+        classes = [{"id": "onset", "keywords": ["early onset"],
+                   "has_curated_keywords": True}]
+        self.assertEqual(
+            self.m.keyword_match("a very early onsetting condition", classes), [])
+
+
+def reference_keyword_match(text, classes, m):
+    """The keyword-matching algorithm before the word-set optimisation:
+    one regex search per keyword per class, always. Preserved verbatim
+    (not reading keyword_match()'s current body) as ground truth for the
+    equivalence test below."""
+    f = m.fold(text)
+    hits = []
+    for c in classes:
+        terms = c["keywords"]
+        if not terms:
+            continue
+        matched = [t for t in terms
+                  if re.search(r"(?<!\w)" + re.escape(m.fold(t)) + r"(?!\w)", f)]
+        if matched:
+            confidence = min(1.0, len(matched) / max(1, len(terms)))
+            hits.append({"claim_class": c["id"], "confidence": round(
+                            confidence * (1.0 if c["has_curated_keywords"] else 0.4), 3),
+                         "method": "keyword" if c["has_curated_keywords"] else "keyword-from-taxonomy",
+                         "matched_terms": matched})
+    return hits
+
+
+class KeywordMatchEquivalenceTests(unittest.TestCase):
+    """The word-set optimisation must match the original per-keyword regex
+    algorithm exactly, over the real taxonomy and a range of realistic and
+    adversarial text - not just the hand-picked cases above."""
+
+    def setUp(self):
+        if not REAL_TAXONOMY.exists():
+            self.skipTest("real taxonomy config not present")
+        self.m = load_module()
+        cfg = self.m.load_config(str(REAL_TAXONOMY))
+        self.claim_types = self.m.load_dimension(cfg["claim_types"], keyed_by_group=False)
+        self.evidence_levels = self.m.load_dimension(cfg["evidence_levels"], keyed_by_group=True)
+
+    def test_matches_the_reference_algorithm_across_many_texts(self):
+        texts = [
+            "Alzheimer disease diagnosis relies on amyloid and tau biomarkers.",
+            "A randomized controlled trial evaluated donepezil for cognitive decline.",
+            "",
+            "radiology report shows no acute findings",  # 'ad' inside 'radiology'
+            "the AD diagnosis was confirmed by PET imaging",
+            "Aβ42 and p-tau181 levels were measured in cerebrospinal fluid samples "
+            "from patients with mild cognitive impairment and early-onset dementia.",
+            "A systematic review and meta-analysis pooling fourteen trials.",
+            "Case report of a rare genetic mutation causing familial disease.",
+            "1234567890 !@#$%^&*() no real words here at all just symbols",
+            "amyloidamyloidamyloid" * 5,  # keyword as a substring of a longer word
+        ]
+        for text in texts:
+            for classes in (self.claim_types, self.evidence_levels):
+                expected = reference_keyword_match(text, classes, self.m)
+                actual = self.m.keyword_match(text, classes)
+                self.assertEqual(
+                    expected, actual,
+                    msg=f"mismatch for text={text!r}",
+                )
 
 
 class RealTaxonomyIntegrationTests(unittest.TestCase):
