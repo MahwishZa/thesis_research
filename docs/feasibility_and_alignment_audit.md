@@ -2,6 +2,14 @@
 
 **Date:** 2026-09-17 · **Repository state audited:** `0298d0d` (clean working tree)
 
+> **Note added 2026-09-18:** the FAISS-based retrieval plan this audit
+> discusses (§5C and elsewhere) was superseded by D-37: retrieval is
+> implemented as a flat **exact** index, deliberately not FAISS — see
+> `docs/next_steps.md` D-37, `docs/system_specification.md` §3, and
+> `experiments/retrieval/index.py` for why. FAISS is no longer part of
+> the plan; the point-in-time hardware figures below are otherwise
+> unaffected and left as measured.
+
 Every quantity below carries a label: **MEASURED** (observed in this
 environment), **ESTIMATED** (derived from published model specifications),
 **ASSUMED** (a stated premise), or **UNKNOWN / REQUIRES VERIFICATION**.

@@ -6,7 +6,7 @@
 thesis_research/
 ├── README.md                      repository root readme (stays at root)
 ├── docs/                          every other Markdown document
-├── alzheimer_corpus/              Stage 1: corpus pipeline, config, metadata
+├── alzheimer_corpus/              Step 1: corpus pipeline, config, metadata
 │   ├── config/                    MeSH vocabulary, claim taxonomy, queries
 │   └── scripts/                   01_pubmed → 07_claim_classification
 ├── systems/                       the three experimental arms

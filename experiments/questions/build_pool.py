@@ -21,7 +21,7 @@ from typing import Any, Optional, Sequence
 
 from ..evaluation.questions import (
     REVIEW_COLUMNS, EvaluationQuestion, find_duplicates, looks_indeterminate,
-    review_export, summarise_pool, validate, validation_failures,
+    review_export, summarise_pool, validate,
 )
 from .export_review import assert_neutral
 from .sources import cochrane, nih_medquad

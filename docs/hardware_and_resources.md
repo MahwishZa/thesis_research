@@ -2,6 +2,11 @@
 
 **Updated:** 2026-09-17 · Local environment now **VERIFIED**.
 
+> **Note added 2026-09-18:** retrieval is implemented as a flat **exact**
+> index (D-37), not FAISS — determinism, not a hardware constraint, was
+> the reason. The FAISS rows below are superseded; see
+> `docs/system_specification.md` §3 and `experiments/retrieval/index.py`.
+
 Labels: **VERIFIED** (measured on the student's laptop and reported here),
 **MEASURED** (observed in the audit container), **ESTIMATED** (arithmetic from
 published model sizes), **UNKNOWN**.
@@ -65,7 +70,7 @@ The audit itself ran in a **Linux container with no GPU and no ML stack**
 | **FAISS retrieval** | **RESOURCE-CONSTRAINED** | faiss installed (VERIFIED). Index RAM and disk scale with the final corpus, whose size is **UNKNOWN**. CPU index is the right choice; 16 GB RAM is the limit to watch |
 | **Alzheimer's corpus processing** | **FEASIBLE LOCALLY, SLOW** | CPU-bound text processing; already running |
 | **Llama-3-8B-Instruct** inference | **NOT PRACTICAL LOCALLY — see §3** | |
-| **100-question orchestration** | **FEASIBLE LOCALLY** | the runner, freezing, hashing, annotation and statistics are pure Python; 229 tests pass with no ML stack |
+| **100-question orchestration** | **FEASIBLE LOCALLY** | the runner, freezing, hashing, annotation and statistics are pure Python; 401 tests pass with no ML stack (2026-09-18) |
 
 ---
 

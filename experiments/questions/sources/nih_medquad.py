@@ -23,10 +23,9 @@ Two limitations are recorded rather than worked around:
 
 from __future__ import annotations
 
-import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 from ...evaluation.questions import EvaluationQuestion
 from .cochrane import SourceUnavailable, bottom_line

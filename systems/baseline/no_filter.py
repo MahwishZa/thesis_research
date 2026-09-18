@@ -68,8 +68,9 @@ class NoFilterSystem(System):
         affects what a model attends to, and the other two arms emit
         candidate-list order. Sorting here would have given the control arm a
         differently-ordered context whenever the cached candidate list was
-        not already in rank order - which is exactly what Stage 3 produces
-        when it injects the evaluation pair into a retrieved candidate set.
+        not already in rank order - which is exactly what happens when a
+        cached candidate list injects a matched evaluation pair into a
+        retrieved set, as the earlier matched-pair design did.
         """
 
         ordered = sorted(

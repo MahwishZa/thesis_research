@@ -1,4 +1,14 @@
-"""Retriever and reranker interfaces."""
+"""Retriever and reranker interfaces.
+
+**Superseded by `experiments/retrieval/`.** These ABCs and their
+``Passthrough*`` dev stubs were written before the real MedCPT retrieval
+stage existed and are not invoked by any ``System`` or by the runner - the
+frozen candidate set is built upstream, once, by
+``experiments.retrieval.RetrievalPipeline``, and every arm only ever replays
+it. Kept for backward compatibility with anything importing
+``systems.interfaces``; new code should use ``experiments.retrieval``
+(``Encoder``, ``CrossEncoderReranker``, ``RetrievalPipeline``) instead.
+"""
 
 from __future__ import annotations
 

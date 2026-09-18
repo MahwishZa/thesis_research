@@ -17,7 +17,6 @@ and a consumer of the same evidence drifting apart.
 
 import importlib.util
 import logging
-import re
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory

@@ -18,7 +18,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from systems.interfaces.evidence import Candidate, Evidence
 
-from .freezing import FreezeError, FrozenItem, assert_same_candidate_sets
+from .freezing import FrozenItem, assert_same_candidate_sets
 
 
 class RunnerError(RuntimeError):

@@ -105,9 +105,10 @@ tests/               unit + integration
 
 ## Status
 
-Step 1 (corpus) in progress. Step 2 (questions) in human review. Steps 3–12
-have tested infrastructure and are waiting on real data; nothing has been
-executed and no result exists. See `docs/next_steps.md`.
+Step 1 (corpus): PMC source retrieval executed and verified; other sources
+and normalize/deduplicate/chunk still in progress. Step 2 (questions) in
+human review. Steps 3–12 have tested infrastructure and are waiting on real
+data. No experimental result exists. See `docs/next_steps.md`.
 
 ```bash
 python -m unittest discover -s tests -t .

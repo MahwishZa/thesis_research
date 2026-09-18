@@ -88,7 +88,8 @@ class AdmissionConfig:
     admit_threshold: Optional[float] = None
 
     #: t_q, the information state the decision is evaluated against. Set per
-    #: item by Stage 2; never derived from the evidence being scored.
+    #: item during question construction; never derived from the evidence
+    #: being scored.
     question_date: Optional[date] = None
 
     #: The shared context budget. Must be identical across all three arms,

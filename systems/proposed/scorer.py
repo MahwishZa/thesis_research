@@ -79,7 +79,7 @@ class AdmissionScorer:
         Rank-based rather than min-max over raw reranker scores, so that one
         threshold is comparable across queries whose score ranges differ.
 
-        Two requirements follow from this, and Stage 3 must satisfy both when
+        Two requirements follow from this, and evidence freezing must satisfy both when
         it builds the cached candidate set:
 
         * **Ranks are 1..N contiguous.** Injecting the evaluation pair into a

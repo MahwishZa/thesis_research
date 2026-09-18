@@ -24,8 +24,10 @@ packages = [
     "systems.proposed",
     "experiments",
     "experiments.evaluation",
+    "experiments.filter_training",
     "experiments.questions",
     "experiments.questions.sources",
+    "experiments.retrieval",
     "experiments.test_pairs",
     "experiments.test_pairs.scripts",
 ]
