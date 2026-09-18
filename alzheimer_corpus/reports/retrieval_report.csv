@@ -1,1 +1,9 @@
-query_id,label,timestamp_utc,result_count,retrieved_pmid_count,dry_run
+query_id,priority,execution_group,disease_scope,timestamp_utc,result_count,retrieved_pmid_count,unique_pmid_count,retrieval_strategy,segment_count,dry_run,status,error,query_expression
+ad_retracted_records,P1,audit,,2026-09-12T17:26:30.609956+00:00,676,676,676,complete,1,False,OK,,"(
+  ""Alzheimer Disease""[Mesh]
+  OR Alzheimer*[tiab]
+) AND (
+  ""Retracted Publication""[pt]
+  OR ""retracted publication""[tiab]
+  OR retraction[tiab]
+)"
