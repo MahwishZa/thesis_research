@@ -1,4 +1,11 @@
-# Frozen Scope — canonical reference
+# Frozen Scope — superseded by docs/current_objectives.md (2026-09-18)
+
+**SUPERSEDED.** As of 2026-09-18, `docs/current_objectives.md` is the
+canonical statement of scope: run the proposed system end-to-end, add an
+ablation study on standard RAG metrics, and assess whether it improves on
+the RAG² baseline. Where this document and `current_objectives.md`
+disagree, `current_objectives.md` governs. This document is kept below for
+provenance — it is not an alternative active scope.
 
 **Rewritten 2026-09-17** to state the current research question. Where any
 other document disagrees with this one about what is *primary*, this one

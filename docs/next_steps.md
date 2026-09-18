@@ -1,6 +1,17 @@
 # Next Actions
 
-**Updated:** 2026-09-18 · 395 tests passing.
+**Scope note (2026-09-18):** `docs/current_objectives.md` now governs scope
+and priority. The concrete next actions it implies: (1) run
+`experiments/runners/run_end_to_end.py` for real once a real model and real
+question/evidence data are available (see that doc's "known blockers"), (2)
+extend the standard-metrics ablation in `experiments/evaluation/rag_metrics.py`
+as needed, (3) do not let the plan below re-expand scope beyond those three
+objectives. Everything below predates that scope note and is kept as
+detailed status/history, not as the active priority order.
+
+**Updated:** 2026-09-18 · 395 tests passing (before this realignment; see
+`docs/current_objectives.md` and the new `experiments/runners/run_end_to_end.py`
++ `experiments/evaluation/rag_metrics.py` for what was added since).
 
 **PMC retrieval is now EXECUTED** — see "PMC finalization" below. Nothing
 else in this repository is EXECUTED.
