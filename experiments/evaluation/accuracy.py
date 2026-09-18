@@ -1,12 +1,14 @@
 """QA accuracy judgement schema.
 
-QA accuracy is the secondary outcome; hallucination rate stays primary. This
-module deliberately does not decide what "correct" means - it does not run
-exact match, fuzzy match, or any automatic scorer against the reference
-answer. Automatic string-overlap scoring (ROUGE/BLEU/BERTScore and similar)
-is explicitly excluded from this thesis as a primary correctness signal, and
-inventing a bespoke automatic judge here would be adding a new, undeclared
-scoring methodology through the back door.
+This module is the human-judged correctness track (secondary confirmation
+under the current objectives - see docs/current_objectives.md; it was
+primary under an earlier, superseded scope). It deliberately does not
+decide what "correct" means - it does not run exact match, fuzzy match, or
+any automatic scorer against the reference answer. Automatic string-overlap
+scoring (ROUGE/BLEU/BERTScore and similar) belongs in
+``experiments/evaluation/rag_metrics.py``, the current objectives' ablation
+study metrics track, not here - inventing a second, bespoke automatic judge
+in this module would duplicate that with an undeclared scoring methodology.
 
 Instead, ``correct`` is supplied by whatever the thesis's QA protocol decides
 - a human judge reading the generated answer against the reference, or an

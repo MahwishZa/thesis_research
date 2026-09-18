@@ -235,6 +235,23 @@ evaluation data and a real generator into
 | **Llama-3 licence** | generation | a click-through on Hugging Face, then a read token |
 | **Generation speed** | run planning | **unmeasured**; the timing check produces it |
 | **Identifier verification** | question approval | PMIDs transcribed, not resolved |
+| **PMC licensing gate not enforced** | corpus composition | see below |
+
+### PMC licensing gate is not enforced (relocated from the now-removed alzheimer_corpus/README.md)
+
+`04_normalize.py` stamps `redistribution_allowed` on every PMC-sourced
+record (`_common.redistribution_allowed`) but does not act on it - unlike
+the guidelines/textbooks path, which correctly excludes a restricted row's
+text (`_common.iter_official_documents`). On the real, finalized manifest
+(`metadata/pmc.csv`, 114,256 rows) roughly **19,669 rows (~17%)** carry a
+licence outside `_common.DISTRIBUTABLE` (`CC BY-NC-ND`, `TDM`, blank, or
+missing) and would be affected if this gate were enforced. Stage 04 has
+been run for real since this was first found (see
+"Normalize/deduplicate/chunk — EXECUTED" above), so this now DOES affect
+already-generated real output, not just a future run - the gate should be
+decided and, if enforced, Stage 04 re-run, before that output is treated as
+final. This is a dataset-composition decision, not a bug fix silently
+applied - it changes which real documents' text is in the corpus.
 
 ## NEXT — in order
 

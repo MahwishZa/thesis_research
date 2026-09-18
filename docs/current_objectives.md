@@ -104,8 +104,7 @@ run before a main result can be reported.
 
 These are pre-existing, not introduced by this realignment — see
 `docs/filter_training.md`, `docs/generator_contract.md`,
-`docs/question_review.md`, and `alzheimer_corpus/README.md`'s "Open
-decisions" for detail:
+`docs/question_review.md`, and `docs/next_steps.md`'s "Blockers" for detail:
 
 - RAG²'s real trained admission-filter checkpoint does not exist
   (`docs/filter_training.md`). Until it is trained, a "beats RAG²" result is
@@ -121,9 +120,10 @@ decisions" for detail:
   stand-ins in tests and in `run_end_to_end.py`'s default fixture run) —
   this sandbox has no network access to download one.
 - `04_normalize.py`'s licensing gate is not enforced for PMC records
-  (`alzheimer_corpus/README.md`, "Open decisions") — affects what the real
-  corpus contains, not this script, but relevant before a real corpus-wide
-  run.
+  (`docs/next_steps.md`, "PMC licensing gate is not enforced") — affects
+  what the real corpus contains, not this script, but relevant before a
+  real corpus-wide run; the real corpus has already been normalized
+  without this gate enforced.
 
 None of these block objectives 1-2 as stated (run it, check performance, fix
 errors, ablate with standard metrics) against the fixture; they block

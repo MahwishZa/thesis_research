@@ -1,5 +1,14 @@
 # Methodology Reference (Step 12)
 
+**Scope note (2026-09-18):** `docs/current_objectives.md` is now the
+canonical scope statement. The research question and step numbering below
+describe the earlier, superseded design; the current pipeline is the
+5-step one in `docs/current_objectives.md` and `README.md` (experimental
+setup, proposed-system validation, main evaluation vs. RAG², ablation
+study, analysis and write-up). This page's content is otherwise still
+useful reference (corpus methodology, statistical procedures) and is kept
+rather than rewritten wholesale.
+
 **Written before any experimental results exist.** This page assembles, in
 one place, the definitions and procedures the thesis methods chapter can be
 written from now. It contains **no results, no conclusions, and no claim
