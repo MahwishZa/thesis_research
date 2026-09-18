@@ -80,3 +80,4 @@
 2026-09-18 17:37:55,443Z INFO    06_chunk stage 06 | chunks_this_run=4377041 | chunks_total=4377041 | tokenizer=ncbi/MedCPT-Article-Encoder | 256/32/224
 2026-09-18 18:29:49,051Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
 2026-09-18 20:01:15,037Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
+2026-09-18 20:26:49,820Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
