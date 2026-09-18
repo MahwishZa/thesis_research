@@ -40,7 +40,8 @@ Usage:
     python -m experiments.runners.run_end_to_end
     python -m experiments.runners.run_end_to_end --ablation-lambdas 0,0.5,1
     python -m experiments.runners.run_end_to_end --real-model \\
-        --model-name meta-llama/Meta-Llama-3-8B-Instruct
+        --model-name meta-llama/Meta-Llama-3-8B-Instruct \\
+        --model-revision <pinned-commit-sha>
 """
 from __future__ import annotations
 
@@ -96,14 +97,22 @@ def _synthetic_generate(question, evidence, prompt):
     )
 
 
-def make_generator(real_model: bool, model_name: Optional[str]):
+def make_generator(
+    real_model: bool, model_name: Optional[str], model_revision: Optional[str],
+):
     if not real_model:
         return CallableGenerator(_synthetic_generate)
     from systems.interfaces.hf_generator import GenerationConfig, HuggingFaceGenerator, ModelSpec
 
     if not model_name:
         raise SystemExit("--real-model requires --model-name")
-    spec = ModelSpec(name=model_name)
+    if not model_revision:
+        raise SystemExit(
+            "--real-model requires --model-revision, a pinned commit sha "
+            "(not a branch name like 'main') so the run is reproducible - "
+            "see systems/interfaces/hf_generator.py's ModelSpec."
+        )
+    spec = ModelSpec(model_id=model_name, revision=model_revision)
     return HuggingFaceGenerator(spec, GenerationConfig())
 
 
@@ -225,6 +234,9 @@ def main(argv=None) -> int:
                          "deterministic fixture stand-in (needs transformers/"
                          "torch and a downloaded checkpoint)")
     ap.add_argument("--model-name", default=None)
+    ap.add_argument("--model-revision", default=None,
+                    help="pinned commit sha for --real-model (required with "
+                         "it; never a branch name - see ModelSpec)")
     args = ap.parse_args(argv)
 
     lambdas = [float(x) for x in args.ablation_lambdas.split(",") if x.strip()]
@@ -236,7 +248,7 @@ def main(argv=None) -> int:
         results_path.unlink()  # each invocation is a fresh run
 
     items = make_fixture_items(args.n_questions)
-    generator = make_generator(args.real_model, args.model_name)
+    generator = make_generator(args.real_model, args.model_name, args.model_revision)
     systems = build_systems(generator, lambdas, items)
 
     config = RunConfig(

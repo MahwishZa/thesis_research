@@ -522,13 +522,6 @@ def make_month_query(
     month: int,
 ) -> str:
 
-    if month == 12:
-        next_year = year + 1
-        next_month = 1
-    else:
-        next_year = year
-        next_month = month + 1
-
     # Use the final day of the current month as the upper boundary.
     if month == 2:
         if (

@@ -10,9 +10,14 @@ passage size than the specification. --tokenizer whitespace is available as an
 explicit, recorded fallback and stamps tokenizer_used so the difference can
 never be mistaken for the specified configuration.
 
-Guidelines are chunked structure-aware: a recommendation is never split from its
-qualifying conditions to hit exactly 256 tokens. Such chunks record
-chunk_size_exception and its reason.
+Guidelines are chunked structure-aware in the sense that a split is never made
+silently: windowing itself is uniform across all source tiers (a guideline
+recommendation CAN still be split across windows like any other section), but
+when it happens to a clinical_guideline/consensus_statement/currency_pack
+section, every resulting chunk records chunk_size_exception=True and a reason
+("guideline recommendation kept with its qualifying conditions" is the
+existing exception label) - so a downstream consumer can detect and handle a
+split recommendation instead of it passing unflagged.
 
 PERFORMANCE. The original implementation called the tokenizer's encode()
 once per (document, section) and decode() once per output window - on the

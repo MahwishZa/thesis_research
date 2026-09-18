@@ -445,10 +445,14 @@ class ResumeTests(unittest.TestCase):
 
 
 class FixtureRegressionTests(unittest.TestCase):
-    """Against the committed fixture corpus - the same offline path the
-    project already tests everything else through."""
+    """Against whatever fixture chunks.jsonl is currently on disk under
+    alzheimer_corpus/data/chunks/ - the same offline path the project
+    already tests everything else through. That file is gitignored (see
+    alzheimer_corpus/.gitignore: research data is never committed), so this
+    test needs a prior local pipeline run to be meaningful - see the note
+    at the top of test_corpus_normalize_pipeline.py."""
 
-    def test_matches_the_already_committed_chunks_for_the_fixture_corpus(self):
+    def test_matches_the_local_chunks_output_for_the_fixture_corpus(self):
         import shutil, subprocess, sys as _sys
         with TemporaryDirectory() as tmp:
             copy = Path(tmp) / "alzheimer_corpus"
@@ -472,9 +476,14 @@ class FixtureRegressionTests(unittest.TestCase):
             committed = [json.loads(l) for l in
                         (ROOT / "alzheimer_corpus" / "data" / "chunks" / "chunks.jsonl")
                         .read_text(encoding="utf-8").splitlines()]
-            # claim_classes differs (Stage 07 hasn't run in this copy) - same
-            # known diff set as test_corpus_normalize_pipeline.py's
-            # equivalent regression test for this fixture.
+            # Stage 07's claim_classes/claim_confidence/claim_method (topical
+            # dimension) and claim_evidence_levels/claim_evidence_confidence
+            # (evidence-level dimension) differ because Stage 07 hasn't run
+            # in this fresh copy, only in the local reference - same known
+            # diff set as test_corpus_normalize_pipeline.py's equivalent
+            # regression test for this fixture. ad_relevant/ad_relevance_score
+            # are NOT in this set: both sides run the same current Stage 04,
+            # so those fields agree.
             self.assertEqual(len(fresh), len(committed))
             diffs = set()
             for a, b in zip(fresh, committed):
@@ -483,8 +492,8 @@ class FixtureRegressionTests(unittest.TestCase):
                         diffs.add(key)
             self.assertEqual(
                 diffs,
-                {"ad_relevant", "ad_relevance_score", "claim_classes",
-                 "claim_confidence", "claim_method"},
+                {"claim_classes", "claim_confidence", "claim_method",
+                 "claim_evidence_levels", "claim_evidence_confidence"},
             )
 
 

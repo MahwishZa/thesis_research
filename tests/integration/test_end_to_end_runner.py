@@ -101,6 +101,24 @@ class EndToEndRunnerTests(unittest.TestCase):
                 by_system["baseline"]["token_f1"],
             )
 
+    def test_real_model_flag_builds_a_valid_model_spec(self):
+        """Regression test: --real-model used to construct ModelSpec with a
+        'name' kwarg that does not exist on that dataclass (it takes
+        model_id + a required, pinned revision), so --real-model raised
+        TypeError/GeneratorError immediately. No torch/transformers needed
+        for this check - only ModelSpec construction is exercised."""
+        gen = e2e.make_generator(True, "org/model-name", "abc123def456")
+        self.assertEqual(gen.spec.model_id, "org/model-name")
+        self.assertEqual(gen.spec.revision, "abc123def456")
+
+    def test_real_model_flag_requires_a_pinned_revision(self):
+        with self.assertRaises(SystemExit):
+            e2e.make_generator(True, "org/model-name", None)
+
+    def test_real_model_flag_requires_a_model_name(self):
+        with self.assertRaises(SystemExit):
+            e2e.make_generator(True, None, "abc123def456")
+
     def test_refuses_to_overwrite_an_existing_run(self):
         """run_experiment() itself refuses to overwrite raw model output;
         this script clears its own output directory instead, so a second

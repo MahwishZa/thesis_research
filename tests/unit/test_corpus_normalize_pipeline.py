@@ -1,20 +1,31 @@
-"""Stages 04-06's real-data path and their regression safety against the
-already-committed fixture output.
+"""Stages 04-06's real-data path and their regression safety against
+whatever fixture output is currently sitting in the local working tree.
 
 Two things are locked here:
 
 1. The offline fixture path (--input records.example.jsonl) must keep
-   producing byte-identical output to what is already committed under
-   alzheimer_corpus/data/ - these are real, reviewed corpus artifacts, and a
-   rewrite that changes them without anyone deciding to would be a silent
-   regression in already-accepted output.
+   producing byte-identical output to what is currently on disk under
+   alzheimer_corpus/data/ - a rewrite that changes it without anyone
+   deciding to would be a silent regression. IMPORTANT: alzheimer_corpus/
+   data/** is gitignored by design ("research data is never committed" -
+   see alzheimer_corpus/.gitignore), so this is NOT a comparison against a
+   git-tracked golden file, despite this module's name. On a fresh clone
+   with no prior local pipeline run, alzheimer_corpus/data/normalized/,
+   deduplicated/ and chunks/ do not exist, and the tests below that read
+   `tree=CORPUS` will fail with FileNotFoundError rather than skip. Run
+   04_normalize.py --input records.example.jsonl -> 05_deduplicate.py ->
+   06_chunk.py --tokenizer whitespace once against the real
+   alzheimer_corpus/ tree first (see alzheimer_corpus/README.md) to
+   populate a local baseline before these tests are meaningful; they then
+   catch drift within this working copy over time, not against history.
 2. The new real-data path (reading metadata/pmc.csv + XML directly) must
    produce internally consistent records: the AD-relevance decision made
    once in Stage 04 must be the same one that appears on every chunk in
    Stage 06, not a null or a recomputation.
 
 Every test runs against an isolated temporary copy of alzheimer_corpus/ -
-nothing here writes to the real tree.
+nothing here writes to the real tree. (The `tree=CORPUS` comparison reads
+the real tree; it never writes to it.)
 """
 
 import csv
@@ -95,10 +106,15 @@ class FixturePathRegressionTests(unittest.TestCase):
         committed = (CORPUS / "metadata" / "duplicates.csv").read_text(encoding="utf-8")
         self.assertEqual(fresh, committed)
 
-    def test_chunk_output_differs_only_by_the_two_new_propagated_fields(self):
-        """06 now carries ad_relevant/ad_relevance_score through, and
-        claim_classes differs because Stage 07 hasn't run in this copy -
-        every other field must be unchanged."""
+    def test_chunk_output_differs_only_by_stage_07_fields(self):
+        """This copy only runs 04->06 (see setUpClass), while the local
+        reference under alzheimer_corpus/data/ has also had Stage 07 run -
+        so only Stage 07's fields (claim_classes/claim_confidence/
+        claim_method for the topical dimension, claim_evidence_levels/
+        claim_evidence_confidence for the evidence-level dimension) should
+        differ; everything Stage 04-06 produce, including ad_relevant/
+        ad_relevance_score, must be identical since both sides run the same
+        current code."""
         fresh = self._rows("data/chunks/chunks.jsonl")
         committed = self._rows("data/chunks/chunks.jsonl", tree=CORPUS)
         self.assertEqual(len(fresh), len(committed))
@@ -109,8 +125,8 @@ class FixturePathRegressionTests(unittest.TestCase):
                     diffs.add(key)
         self.assertEqual(
             diffs,
-            {"ad_relevant", "ad_relevance_score", "claim_classes",
-             "claim_confidence", "claim_method"},
+            {"claim_classes", "claim_confidence", "claim_method",
+             "claim_evidence_levels", "claim_evidence_confidence"},
         )
 
 

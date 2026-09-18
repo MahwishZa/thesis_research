@@ -127,9 +127,11 @@ only on the student's machine:
   dependency.
 * `04_normalize.py` reads `metadata/pmc.csv` + XML by default now;
   `--input <fixture path>` still selects the old offline single-JSONL path
-  unchanged (verified byte-identical to the already-committed fixture
-  output). A missing manifest fails clearly rather than silently falling
-  back to the fixture.
+  unchanged (verified byte-identical to the fixture output already on disk
+  under `alzheimer_corpus/data/` - gitignored, not git-tracked; see the
+  note at the top of `tests/unit/test_corpus_normalize_pipeline.py`). A
+  missing manifest fails clearly rather than silently falling back to the
+  fixture.
 * `05_deduplicate.py`: `metadata/duplicates.csv` now written through the
   same safe CSV writer as its report counterpart, not hand-joined strings.
 * `06_chunk.py` now carries `ad_relevant`/`ad_relevance_score` from the

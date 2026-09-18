@@ -266,6 +266,27 @@ class AdmissionBehaviourTests(unittest.TestCase):
         self.assertEqual(policy().decide("q", []), ())
 
 
+class RAG2ConfigValidationTests(unittest.TestCase):
+    """RAG2Config must reject an invalid budget exactly like
+    NoFilterSystem and AdmissionConfig already do for the same field -
+    before this, a non-positive max_admitted_passages here silently
+    degraded to "keep everything" instead of being rejected."""
+
+    def test_rejects_zero_budget(self):
+        with self.assertRaises(ValueError):
+            RAG2Config(max_admitted_passages=0)
+
+    def test_rejects_negative_budget(self):
+        with self.assertRaises(ValueError):
+            RAG2Config(max_admitted_passages=-1)
+
+    def test_accepts_a_positive_budget(self):
+        self.assertEqual(RAG2Config(max_admitted_passages=3).max_admitted_passages, 3)
+
+    def test_accepts_no_budget(self):
+        self.assertIsNone(RAG2Config().max_admitted_passages)
+
+
 class ThreeArmFairnessTests(unittest.TestCase):
     """Controls that make the three-arm comparison interpretable."""
 

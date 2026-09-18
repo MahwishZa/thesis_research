@@ -1,6 +1,12 @@
 # Repository Structure
 
-**Updated:** 2026-09-17, after completing Steps 3–12 infrastructure.
+**Updated:** 2026-09-17, after completing Steps 3–12 infrastructure. **Scope
+note (2026-09-18):** `docs/current_objectives.md` is now the canonical scope
+statement; see it for current priorities. Two structural changes since this
+file was last updated: `experiments/runners/` now holds
+`run_end_to_end.py` (no longer "reserved for launch scripts" - it is one),
+and `experiments/evaluation/` gained `rag_metrics.py` (standard automatic
+RAG metrics for the ablation study).
 
 ```
 thesis_research/
@@ -50,6 +56,7 @@ Every Markdown document except the root `README.md`, named
 
 | File | Contents |
 |---|---|
+| `current_objectives.md` | **canonical scope** (2026-09-18) — supersedes `frozen_scope.md` below |
 | `research_understanding.md` | **partly superseded** — RAG² facts remain accurate; its scope statements do not |
 | `research_ledger.md` | living decision log |
 | `research_experimental_specification.md` | **superseded** — the earlier admission-asymmetry spec, kept for provenance |

@@ -44,10 +44,19 @@ spent on duplicates. The fixture run demonstrates it catching a preprint/journal
 - **Tokenizer, not whitespace.** 256 tokens / 32 overlap / 224 stride against the MedCPT article
   encoder's 512-token limit. `--tokenizer whitespace` exists only as an explicit fallback and
   stamps `tokenizer_used` on every chunk so it can never be mistaken for the specification.
-- **Licensing fails closed.** Unknown licence ⇒ `redistribution_allowed=False` ⇒ text not
-  committed. Textbooks are metadata only.
-- **Surface forms preserved verbatim**: `Aβ42`, `Aβ40`, `p-tau181`, `p-tau217`, `ARIA-E`,
-  `ARIA-H`, `APOE ε4`. Case-folding is used for matching only and never written back.
+- **Licensing fails closed for guidelines and textbooks.** Unknown licence ⇒
+  `redistribution_allowed=False` ⇒ text not committed; a restricted row stays metadata only
+  (`_common.iter_official_documents`). **Known gap: not yet enforced for PMC.**
+  `04_normalize.py` stamps `redistribution_allowed` on every PMC-sourced record
+  (`_common.redistribution_allowed`) but does not act on it - a PMC record's text is currently
+  included regardless of its licence. On the real, finalized manifest
+  (`metadata/pmc.csv`, 114,256 rows) roughly 19,669 rows (~17%) carry a licence outside
+  `_common.DISTRIBUTABLE` (`CC BY-NC-ND`, `TDM`, blank, or missing) and would be affected if this
+  gate were enforced. Fixing this changes which real documents' text enters the corpus, so it is
+  left as an open decision below rather than changed silently.
+- **Surface forms preserved verbatim**: `Aβ42`, `Aβ40`, `Aβ`, `p-tau181`, `p-tau217`, `p-tau231`,
+  `ARIA-E`, `ARIA-H`, `APOE ε4` (the complete list is `_common.PRESERVE_VERBATIM`). Case-folding
+  is used for matching only and never written back.
 - **Nothing deleted silently.** Excluded records keep their reason; duplicates are recorded, not
   removed; retracted documents stay retrievable and flagged.
 - **Source tiers carry no ordering** — authority is a tested variable in the thesis (ablation A12).
@@ -91,10 +100,19 @@ document's row stays as metadata only, exactly as an unlicensed one does.
 
 ## Open decisions
 
+- **PMC licensing gate is not enforced.** See "Licensing fails closed" above: `04_normalize.py`
+  computes `redistribution_allowed` for every PMC record but never excludes a restricted one's
+  text, unlike the guidelines/textbooks path, which does. ~17% of the real PMC manifest (roughly
+  19,669 of 114,256 rows) carries a licence outside `_common.DISTRIBUTABLE`. Stage 04 has not yet
+  been run on the real corpus (only Stage 01/02 retrieval is EXECUTED - see
+  `docs/research_ledger.md`), so no already-generated output is affected yet, but the gate should
+  be enforced before Stage 04 is run for real - it affects what the real corpus actually
+  contains, same as the publication window below.
 - **Publication window.** `config/search_queries.yaml` inherits a five-year window (2021–2026)
   from the executed strategy. The proposal states no date restriction. Measured consequence: over
   that span at a five-year half-life the currency term never falls below 0.536 — minimal dynamic
   range for the very mechanism this thesis studies. **Highest-impact open decision.**
-- **Taxonomy keywords are empty.** 50 classes are defined; populating keywords is gated on the
-  granularity decision (group vs leaf), which determines whether the contested state can fire.
+- **Taxonomy keywords are empty.** `config/claim_taxonomy.yaml` currently defines 26 `claim_types`
+  + 17 `evidence_levels` (43 classes total); populating keywords is gated on the granularity
+  decision (group vs leaf), which determines whether the contested state can fire.
 - **Supersession** is not yet populated, so no supersession or contested state can be exercised.

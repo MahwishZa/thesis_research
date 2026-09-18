@@ -38,6 +38,14 @@ class RAG2Config:
     # recency-aware policy.
     context_prompt: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        # Matches the validation NoFilterSystem and AdmissionConfig already
+        # do for the same field - an invalid budget here silently degrades
+        # to "keep everything" instead of being rejected, which the other
+        # two arms do not allow.
+        if self.max_admitted_passages is not None and self.max_admitted_passages <= 0:
+            raise ValueError("max_admitted_passages must be positive.")
+
 
 class RAG2System(System):
     """RAG² filtering and answer-generation stages."""
