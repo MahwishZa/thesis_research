@@ -13,8 +13,11 @@ detailed status/history, not as the active priority order.
 `docs/current_objectives.md` and the new `experiments/runners/run_end_to_end.py`
 + `experiments/evaluation/rag_metrics.py` for what was added since).
 
-**PMC retrieval is now EXECUTED** — see "PMC finalization" below. Nothing
-else in this repository is EXECUTED.
+**PMC retrieval, normalize and deduplicate are now EXECUTED on the real
+corpus** — see "PMC finalization" and "Normalize/deduplicate — EXECUTED"
+below. **Chunking (Stage 06) was started on the real corpus but did NOT
+complete** — see that same section for the verified evidence and the
+concrete next action. Nothing past that point is EXECUTED.
 
 Status vocabulary, used strictly: **IMPLEMENTED** (code exists) · **TESTED**
 (tested on fixtures) · **VALIDATED** (whole pathway exercised end to end) ·
@@ -53,8 +56,11 @@ default them. They are fitted on the validation split, never on test.
 
 | Step | Status | Waiting on |
 |---|---|---|
-| 1. Corpus — PMC source | **EXECUTED** (retrieval + finalization) | normalize/dedup/chunk still to run over it |
-| 1. Corpus — other sources, normalize/dedup/chunk | IN PROGRESS | student's build |
+| 1. Corpus — PMC source | **EXECUTED** (retrieval + finalization) | — |
+| 1. Corpus — normalize (04) | **EXECUTED** on real corpus (114,157 docs) | — |
+| 1. Corpus — deduplicate (05) | **EXECUTED** on real corpus (111,315 unique) | — |
+| 1. Corpus — chunk (06) | **STARTED, DID NOT COMPLETE** — see below | re-run with the batched 06_chunk.py |
+| 1. Corpus — guidelines/textbooks (03) | IMPLEMENTED, TESTED, zero rows curated | manual curation (optional, not blocking) |
 | 2. Questions | IN PROGRESS | human review of 123 candidates |
 | 3. Freeze evidence | READY FOR REAL EXECUTION | corpus + approved questions |
 | 3a. Retrieval/rerank | IMPLEMENTED, TESTED | corpus; `torch` on the run machine |
@@ -101,11 +107,48 @@ All three cross-checks — predicted row count, XML file count, JSON file
 count — closed exactly against numbers reported independently of the
 manifest itself. **This is the first EXECUTED artifact in the repository.**
 
-**What this does not mean:** Step 1 as a whole is not complete. PubMed
-(676 records), guidelines (0) and textbooks (0) metadata are unchanged, and
-`data/normalized/`, `data/deduplicated/` and `data/chunks/` still hold only
-the 10-record synthetic fixture — the normalize → deduplicate → chunk stages
-have not run over the real PMC data yet.
+**What this did not mean at the time:** the normalize → deduplicate → chunk
+stages had not yet run over the real PMC data. They have since - see below.
+
+---
+
+## Normalize/deduplicate — EXECUTED; chunk — STARTED, NOT COMPLETE (2026-09-18)
+
+Independently verified from `alzheimer_corpus/logs/quality_control.log` and
+`alzheimer_corpus/logs/deduplication.log` (both git-tracked, committed
+2026-09-18) cross-checked against the git-tracked registries/reports - not
+assumed:
+
+| Stage | Evidence | Result |
+|---|---|---|
+| 04 normalize | `quality_control.log`: `PMC extraction \| verified=114157 \| parsed=114157 \| failed=0`, then `stage 04 \| normalized=114157 \| ad_relevant=67608 \| excluded=46549` | **EXECUTED**, matches `reports/normalization_report.csv` (114,157 data rows) |
+| 05 deduplicate | `deduplication.log`: `stage 05 \| unique=111315 \| duplicates recorded=2842` | **EXECUTED**, matches `metadata/duplicates.csv` and `reports/deduplication_report.csv` (2,842 data rows, exact match) |
+| 06 chunk | `quality_control.log`'s last line: `06_chunk using WHITESPACE tokenizer...` (a warning logged before any chunking starts) - **no completion line follows it anywhere in the file** | **STARTED, DID NOT COMPLETE.** This is the original stuck run (running ~1 hour, no output) that motivated the Stage 06 batching rewrite earlier in this project. |
+
+**guidelines.csv and textbooks.csv are header-only (0 rows)** — confirmed
+directly (`04_normalize`'s own log line: `guidelines.csv \| rows=0 ...`,
+`textbooks.csv \| rows=0 ...`). `03_guidelines.py` is implemented and tested
+but no document has been curated into it yet; this does not block anything
+below (04's real-data path treats both registries as optional).
+
+**The real 114,157-row `data/normalized/documents.jsonl` and 111,315-row
+`data/deduplicated/documents.jsonl` exist only on the machine that produced
+them** (`alzheimer_corpus/data/**` is gitignored by design - "research data
+is never committed", see `alzheimer_corpus/.gitignore`) — they were never
+present in, and are not recoverable from, any git history or sandbox that
+only has this repository checked out.
+
+**Concrete next action, on the machine holding the real corpus:**
+```bash
+python alzheimer_corpus/scripts/06_chunk.py --tokenizer ncbi/MedCPT-Article-Encoder
+```
+This is the rewritten, batched, resumable `06_chunk.py` (not the one that
+produced the stuck run above) - it logs progress every ~2000 documents and
+can be safely interrupted and resumed with `--resume`. Size the run first
+with `alzheimer_corpus/scripts/tools/benchmark_06_chunk.py --sample 500`
+against the real `data/deduplicated/documents.jsonl` to get a realistic
+time estimate before committing to the full run. `07_claim_classification.py`
+cannot run for real until this produces a real `data/chunks/chunks.jsonl`.
 
 ---
 
@@ -157,9 +200,10 @@ data (676 PMIDs; the independently-verified 114,256-row PMC manifest) —
 "placeholder logic" does not describe them, and rewriting either would risk
 the real, already-collected data disagreeing with a "corrected" script.
 
-**Next real step:** run `04_normalize.py` → `05_deduplicate.py` →
-`06_chunk.py` → `07_claim_classification.py` in order on the machine holding
-the real corpus.
+**Next real step (updated - 04 and 05 have since run for real, see
+"Normalize/deduplicate — EXECUTED" above):** run the batched `06_chunk.py`
+on the machine holding the real corpus, then `07_claim_classification.py`
+once it produces real output.
 
 ---
 
