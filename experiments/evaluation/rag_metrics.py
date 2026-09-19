@@ -1,18 +1,11 @@
 """Standard, automatic RAG evaluation metrics for the ablation study.
 
-``accuracy.py`` deliberately excludes automatic string-overlap scoring
-(ROUGE/BLEU/EM/F1) from the thesis's PRIMARY correctness signal, and that
-decision stands: hallucination rate (human-annotated) is still primary, QA
-accuracy (human- or exact-match-judged) is still secondary. This module does
-not reopen that decision.
-
-What it adds is a separate, net-new track: the ablation study asked for in
-the current objectives, which is required to use STANDARD, automatic RAG
-metrics so different admission configurations (lambda, theta, no-filter,
-RAG², proposed) can be compared cheaply, deterministically, and without a
-human annotator in the loop for every ablation cell. These numbers are a
-diagnostic signal for the ablation, not a replacement for the primary
-human-judged outcomes recorded elsewhere.
+These are the metrics the current objectives' main evaluation (proposed vs
+RAG²) and ablation study are scored with - see docs/current_objectives.md.
+``accuracy.py`` remains the separate human-judged correctness track and
+deliberately computes no automatic score of its own; this module owns
+automatic scoring so the two cannot drift into two competing judges of the
+same thing.
 
 Every metric here is stdlib-only (matching stats.py's no-scipy convention)
 and operates on plain strings/ids already present in a runner result record
@@ -38,7 +31,7 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Optional, Sequence
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 _ARTICLES = {"a", "an", "the"}
 
@@ -142,23 +135,33 @@ class ContextScore:
 def context_scores(
     admitted_evidence_ids: Iterable[str],
     gold_evidence_ids: Iterable[str],
-) -> ContextScore:
-    """How well the admitted evidence matches the question's gold evidence.
+) -> Optional[ContextScore]:
+    """How well the admitted evidence matches the question's gold evidence,
+    or ``None`` when the question carries no gold-evidence annotation.
 
-    ``gold_evidence_ids`` must come from the question/evidence pool (e.g. a
-    curated relevance judgement), not be guessed from the run itself. An
-    empty gold set makes precision/recall undefined; this returns 0.0 for
-    both rather than raising, so a question with no annotated gold evidence
-    does not crash an ablation sweep - callers that need to distinguish
-    "no gold evidence" from "zero overlap" should check the gold set length
-    themselves.
+    ``gold_evidence_ids`` must come from the question/evidence pool (a
+    curated relevance judgement), never be guessed from the run itself.
+
+    **Why "no gold" returns None rather than 0.0.** Context precision/recall
+    are undefined without an annotation to score against, and for this
+    thesis that is the EXPECTED case on real data, not an edge case: the
+    provenance firewall means an externally-authored question's reference
+    answer is deliberately independent of the retrieved candidate set (see
+    ``FrozenItem.provenance_leak`` - an overlap there is a defect, not the
+    goal). Returning 0.0 would then report "context precision 0.000" for
+    every arm, which reads as a real, uniformly terrible result instead of
+    "this metric does not apply to these questions" - and it would do so
+    identically for the baseline and the proposed system, quietly diluting
+    the comparison. ``aggregate()`` skips None and reports how many rows
+    were scorable, so an unannotated run says so rather than inventing a
+    number.
     """
     admitted = set(admitted_evidence_ids)
     gold = set(gold_evidence_ids)
 
-    if not admitted and not gold:
-        return ContextScore(precision=1.0, recall=1.0, f1=1.0)
-    if not admitted or not gold:
+    if not gold:
+        return None
+    if not admitted:
         return ContextScore(precision=0.0, recall=0.0, f1=0.0)
 
     overlap = admitted & gold
@@ -215,9 +218,12 @@ class MetricRow:
     exact_match: float
     token_f1: float
     rouge_l_f1: float
-    context_precision: float
-    context_recall: float
-    context_f1: float
+    #: None when the question carries no gold-evidence annotation - see
+    #: context_scores(). Not the same as 0.0, which means "annotated, and
+    #: nothing the arm admitted was in the gold set".
+    context_precision: Optional[float]
+    context_recall: Optional[float]
+    context_f1: Optional[float]
     groundedness: float
 
 
@@ -245,20 +251,34 @@ def score_record(
         exact_match=exact_match(prediction, reference),
         token_f1=token_f1(prediction, reference),
         rouge_l_f1=rouge_l_f1(prediction, reference),
-        context_precision=ctx.precision,
-        context_recall=ctx.recall,
-        context_f1=ctx.f1,
+        context_precision=ctx.precision if ctx else None,
+        context_recall=ctx.recall if ctx else None,
+        context_f1=ctx.f1 if ctx else None,
         groundedness=groundedness(prediction, admitted_text),
     )
 
 
-def aggregate(rows: Sequence[MetricRow]) -> dict[str, float]:
-    """Mean of every metric across a set of rows (one system, typically)."""
+def _mean_or_none(values: Sequence[Optional[float]]) -> Optional[float]:
+    """Mean of the scorable values, or None when none are scorable."""
+    scorable = [v for v in values if v is not None]
+    if not scorable:
+        return None
+    return sum(scorable) / len(scorable)
+
+
+def aggregate(rows: Sequence[MetricRow]) -> dict[str, Any]:
+    """Mean of every metric across a set of rows (one system, typically).
+
+    ``context_*`` are None when no row in the group carried a gold-evidence
+    annotation, and are averaged over only the annotated rows otherwise;
+    ``context_scored_n`` reports how many rows that was, so a reader can
+    tell "0.0 across 10 annotated questions" from "not measurable here".
+    """
     if not rows:
         return {
             "n": 0, "exact_match": 0.0, "token_f1": 0.0, "rouge_l_f1": 0.0,
-            "context_precision": 0.0, "context_recall": 0.0, "context_f1": 0.0,
-            "groundedness": 0.0,
+            "context_precision": None, "context_recall": None,
+            "context_f1": None, "context_scored_n": 0, "groundedness": 0.0,
         }
     n = len(rows)
     return {
@@ -266,16 +286,17 @@ def aggregate(rows: Sequence[MetricRow]) -> dict[str, float]:
         "exact_match": sum(r.exact_match for r in rows) / n,
         "token_f1": sum(r.token_f1 for r in rows) / n,
         "rouge_l_f1": sum(r.rouge_l_f1 for r in rows) / n,
-        "context_precision": sum(r.context_precision for r in rows) / n,
-        "context_recall": sum(r.context_recall for r in rows) / n,
-        "context_f1": sum(r.context_f1 for r in rows) / n,
+        "context_precision": _mean_or_none([r.context_precision for r in rows]),
+        "context_recall": _mean_or_none([r.context_recall for r in rows]),
+        "context_f1": _mean_or_none([r.context_f1 for r in rows]),
+        "context_scored_n": sum(1 for r in rows if r.context_precision is not None),
         "groundedness": sum(r.groundedness for r in rows) / n,
     }
 
 
 def aggregate_by_system(
     rows: Iterable[MetricRow],
-) -> dict[str, dict[str, float]]:
+) -> dict[str, dict[str, Any]]:
     """Group rows by system and aggregate each group."""
     by_system: dict[str, list[MetricRow]] = {}
     for row in rows:

@@ -75,16 +75,19 @@ class ContextScoresTests(unittest.TestCase):
         self.assertAlmostEqual(ctx.precision, 1 / 3)
         self.assertAlmostEqual(ctx.recall, 1 / 2)
 
-    def test_no_gold_and_nothing_admitted_is_vacuously_perfect(self):
-        ctx = rm.context_scores([], [])
-        self.assertEqual((ctx.precision, ctx.recall, ctx.f1), (1.0, 1.0, 1.0))
+    def test_no_gold_annotation_is_not_applicable_not_zero(self):
+        """The distinction the real run depends on: under the provenance
+        firewall an externally-authored question's reference is independent
+        of the candidate set, so gold evidence ids are routinely absent.
+        Scoring that 0.0 would report a uniformly terrible context
+        precision for every arm and read as a result."""
+        self.assertIsNone(rm.context_scores(["a"], []))
+        self.assertIsNone(rm.context_scores([], []))
 
     def test_nothing_admitted_but_gold_exists_scores_zero(self):
+        """Annotated, and the arm admitted none of it - a real 0.0, not a
+        missing annotation."""
         ctx = rm.context_scores([], ["a"])
-        self.assertEqual((ctx.precision, ctx.recall, ctx.f1), (0.0, 0.0, 0.0))
-
-    def test_admitted_but_no_gold_scores_zero(self):
-        ctx = rm.context_scores(["a"], [])
         self.assertEqual((ctx.precision, ctx.recall, ctx.f1), (0.0, 0.0, 0.0))
 
 
@@ -142,6 +145,7 @@ class ScoreRecordTests(unittest.TestCase):
         }
         row = rm.score_record(record, gold_evidence_ids=set())
         self.assertEqual(row.exact_match, 1.0)  # both empty
+        self.assertIsNone(row.context_precision)  # no gold annotation
 
 
 class AggregateTests(unittest.TestCase):
@@ -160,6 +164,35 @@ class AggregateTests(unittest.TestCase):
         agg = rm.aggregate([])
         self.assertEqual(agg["n"], 0)
         self.assertEqual(agg["exact_match"], 0.0)
+        self.assertIsNone(agg["context_precision"])
+        self.assertEqual(agg["context_scored_n"], 0)
+
+    def test_unannotated_rows_report_none_not_a_fabricated_zero(self):
+        """The whole group lacks gold evidence: context_* must come back
+        None with context_scored_n=0, so a reader sees "not measurable"
+        rather than a 0.000 that looks like a measured result."""
+        rows = [
+            rm.MetricRow("Q1", "s", 1.0, 1.0, 1.0, None, None, None, 1.0),
+            rm.MetricRow("Q2", "s", 1.0, 1.0, 1.0, None, None, None, 1.0),
+        ]
+        agg = rm.aggregate(rows)
+        self.assertIsNone(agg["context_precision"])
+        self.assertIsNone(agg["context_recall"])
+        self.assertIsNone(agg["context_f1"])
+        self.assertEqual(agg["context_scored_n"], 0)
+        self.assertEqual(agg["token_f1"], 1.0)  # the rest still scores
+
+    def test_context_is_averaged_over_only_the_annotated_rows(self):
+        """A mixed group averages context over the 1 annotated row, not
+        over 2 with the unannotated one counted as zero."""
+        rows = [
+            rm.MetricRow("Q1", "s", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+            rm.MetricRow("Q2", "s", 1.0, 1.0, 1.0, None, None, None, 1.0),
+        ]
+        agg = rm.aggregate(rows)
+        self.assertEqual(agg["context_precision"], 1.0)
+        self.assertEqual(agg["context_scored_n"], 1)
+        self.assertEqual(agg["n"], 2)
 
     def test_aggregate_by_system_groups_correctly(self):
         rows = [

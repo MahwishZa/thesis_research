@@ -136,6 +136,44 @@ class EndToEndRunnerTests(unittest.TestCase):
                 by_system["baseline"]["token_f1"],
             )
 
+    def test_report_records_which_rag2_filter_the_baseline_actually_used(self):
+        """Without a trained checkpoint the baseline is a stand-in, and the
+        report must say so: 'proposed IMPROVES on baseline' against an
+        all-HELPFUL mock is a different claim from the same verdict against
+        the paper's classifier, and a reader of metrics_report.json cannot
+        be left to infer which."""
+        with TemporaryDirectory() as tmp:
+            e2e.main(["--output-dir", tmp, "--n-questions", "3"])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            main_eval = report["main_evaluation"]
+            self.assertFalse(main_eval["baseline_is_trained_rag2"])
+            self.assertIn("stand-in", main_eval["baseline_filter"])
+            self.assertIn("NO trained checkpoint", main_eval["baseline_filter"])
+
+    def test_the_real_rag2_filter_is_reachable_from_the_cli(self):
+        """--rag2-checkpoint must route to the real FlanT5RAG2Filter. It
+        needs torch/transformers plus a real checkpoint, so this asserts
+        the wiring reaches that constructor rather than silently falling
+        back to the mock - a silent fallback would produce a report
+        labelled as the real baseline when it was not."""
+        with self.assertRaises((ImportError, OSError, ValueError)):
+            e2e.make_rag2_filter("definitely/not-a-real-checkpoint", [])
+
+    def test_no_checkpoint_returns_the_labelled_stand_in(self):
+        filt, label = e2e.make_rag2_filter(None, e2e.make_fixture_items(2))
+        self.assertEqual(type(filt).__name__, "MockRAG2Filter")
+        self.assertIn("stand-in", label)
+
+    def test_real_model_defaults_to_the_contract_quantization(self):
+        """A full-precision 8B load is the one configuration the documented
+        target GPU cannot run, so nf4 is the default, not an opt-in."""
+        gen = e2e.make_generator(True, "org/model", "abc123def456")
+        self.assertEqual(gen.spec.quantization, "nf4")
+
+    def test_quantization_can_be_disabled_explicitly(self):
+        gen = e2e.make_generator(True, "org/model", "abc123def456", "none")
+        self.assertIsNone(gen.spec.quantization)
+
     def test_real_model_flag_builds_a_valid_model_spec(self):
         """Regression test: --real-model used to construct ModelSpec with a
         'name' kwarg that does not exist on that dataclass (it takes

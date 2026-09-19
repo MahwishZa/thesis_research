@@ -55,12 +55,20 @@ Hugging Face generator instead of the deterministic stand-in (requires
 transformers/torch and a downloaded checkpoint - not available in this
 sandbox; see docs/generator_contract.md for the target model spec).
 
+The RAG² baseline arm runs the real ``FlanT5RAG2Filter`` when
+``--rag2-checkpoint`` supplies a trained checkpoint. Without one it runs a
+documented all-HELPFUL stand-in, and both the console output and the
+report's ``main_evaluation.baseline_filter`` /
+``baseline_is_trained_rag2`` fields say which - a verdict against the
+stand-in is a weaker claim than one against the paper's classifier, and
+nothing should have to infer that from context.
+
 Usage:
     python -m experiments.runners.run_end_to_end
     python -m experiments.runners.run_end_to_end --ablation-lambdas 0,0.5,1
     python -m experiments.runners.run_end_to_end --real-model \\
-        --model-name meta-llama/Meta-Llama-3-8B-Instruct \\
-        --model-revision <pinned-commit-sha>
+        --model-revision <pinned-commit-sha> \\
+        --rag2-checkpoint /path/to/trained/rag2-filter
 """
 from __future__ import annotations
 
@@ -78,6 +86,7 @@ from systems.baseline.admission import HELPFUL, MockRAG2Filter
 from systems.baseline.no_filter import NoFilterSystem
 from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
+from systems.interfaces.hf_generator import RAG2_GENERATOR_ID
 from systems.proposed.admission import (
     AdmissionConfig, RecencyAwareAdmissionPolicy, RecencyAwareSystem,
 )
@@ -93,6 +102,11 @@ BUDGET = 1
 QUESTION_DATE = date(2026, 1, 1)
 HALF_LIFE_DAYS = 365.0
 THETA = 0.5
+
+#: 4-bit NF4 is what the generator contract specifies, and what makes an
+#: 8B model fit the target GPU at all - a full-precision load is the one
+#: configuration the documented hardware cannot run. "none" disables it.
+DEFAULT_QUANTIZATION = "nf4"
 
 CONTEXT_PROMPT = (
     "Answer the question using only the provided evidence.\n\n"
@@ -118,6 +132,7 @@ def _synthetic_generate(question, evidence, prompt):
 
 def make_generator(
     real_model: bool, model_name: Optional[str], model_revision: Optional[str],
+    quantization: Optional[str] = DEFAULT_QUANTIZATION,
 ):
     if not real_model:
         return CallableGenerator(_synthetic_generate)
@@ -131,8 +146,44 @@ def make_generator(
             "(not a branch name like 'main') so the run is reproducible - "
             "see systems/interfaces/hf_generator.py's ModelSpec."
         )
-    spec = ModelSpec(model_id=model_name, revision=model_revision)
+    spec = ModelSpec(
+        model_id=model_name,
+        revision=model_revision,
+        quantization=None if quantization == "none" else quantization,
+    )
     return HuggingFaceGenerator(spec, GenerationConfig())
+
+
+def make_rag2_filter(checkpoint: Optional[str], items: list[fz.FrozenItem]):
+    """The RAG² baseline's admission filter, and a label saying which one.
+
+    With ``--rag2-checkpoint`` this is the real ``FlanT5RAG2Filter`` over the
+    supplied trained checkpoint. Without it, no trained checkpoint exists yet
+    (the released weights are not distributed - see the filter-training
+    contract), so the baseline necessarily runs on a stand-in that labels
+    every candidate HELPFUL - i.e. RAG²'s code path with its relevance
+    ordering and shared budget, but no learned filtering.
+
+    The label is returned with the filter and stamped into the report
+    because the difference matters for what the comparison means: a
+    "proposed IMPROVES on baseline" verdict against the stand-in is not the
+    same claim as one against the paper's classifier, and a reader of
+    metrics_report.json must not have to guess which they are looking at.
+    """
+    if checkpoint:
+        from systems.baseline.admission import FlanT5RAG2Filter
+        return (
+            FlanT5RAG2Filter(checkpoint),
+            f"FlanT5RAG2Filter({checkpoint})",
+        )
+    helpful = {
+        c.evidence_id: HELPFUL
+        for item in items for c in item.candidates
+    }
+    return (
+        MockRAG2Filter(helpful),
+        "MockRAG2Filter(all-HELPFUL stand-in; NO trained checkpoint)",
+    )
 
 
 def make_fixture_items(n: int = 10) -> list[fz.FrozenItem]:
@@ -176,25 +227,14 @@ def make_fixture_items(n: int = 10) -> list[fz.FrozenItem]:
 
 
 def build_systems(
-    generator, lambdas: list[float], items: list[fz.FrozenItem],
+    generator, lambdas: list[float], rag2_filter,
 ) -> dict[str, object]:
     """baseline (RAG2), no_filter control, and one proposed arm per lambda
     in ``lambdas`` (labelled proposed_lambda_<value>).
 
-    RAG²'s real trained filter checkpoint does not exist yet
-    (docs/filter_training.md: "NOT TRAINED. No checkpoint exists."), so the
-    baseline here uses MockRAG2Filter labelling every candidate HELPFUL -
-    the faithful relevance-only stand-in for "the filter admits everything
-    relevance ranked it as passing", which is documented, not hidden. This
-    means today's "beats baseline" comparison is against RAG²'s CODE PATH
-    with an untrained filter, not the paper's actual classifier; training
-    the real filter (D-39/D-40) would make it a faithful reproduction.
+    ``rag2_filter`` comes from make_rag2_filter() - the real trained
+    checkpoint when one is supplied, the documented stand-in otherwise.
     """
-    helpful = {
-        c.evidence_id: HELPFUL
-        for item in items for c in item.candidates
-    }
-
     systems: dict[str, object] = {
         "no_filter": NoFilterSystem(
             answer_generator=generator, max_admitted_passages=BUDGET,
@@ -202,7 +242,7 @@ def build_systems(
         ),
         "baseline": RAG2System(
             answer_generator=generator,
-            admission_filter=MockRAG2Filter(helpful),
+            admission_filter=rag2_filter,
             config=RAG2Config(
                 max_admitted_passages=BUDGET, context_prompt=CONTEXT_PROMPT,
             ),
@@ -262,10 +302,22 @@ def main(argv=None) -> int:
                     help="use a real Hugging Face generator instead of the "
                          "deterministic fixture stand-in (needs transformers/"
                          "torch and a downloaded checkpoint)")
-    ap.add_argument("--model-name", default=None)
+    ap.add_argument("--model-name", default=RAG2_GENERATOR_ID,
+                    help="generator model id (default: the contract's "
+                         f"{RAG2_GENERATOR_ID})")
     ap.add_argument("--model-revision", default=None,
                     help="pinned commit sha for --real-model (required with "
                          "it; never a branch name - see ModelSpec)")
+    ap.add_argument("--quantization", default=DEFAULT_QUANTIZATION,
+                    choices=("nf4", "int8", "none"),
+                    help="generator quantization for --real-model "
+                         f"(default: {DEFAULT_QUANTIZATION}, per the "
+                         "generator contract)")
+    ap.add_argument("--rag2-checkpoint", default=None,
+                    help="path/id of a TRAINED RAG² filter checkpoint, to "
+                         "run the baseline arm as the real classifier. "
+                         "Without it the baseline runs on a documented "
+                         "all-HELPFUL stand-in and the report says so.")
     args = ap.parse_args(argv)
 
     lambdas = [float(x) for x in args.ablation_lambdas.split(",") if x.strip()]
@@ -283,17 +335,25 @@ def main(argv=None) -> int:
         results_path.unlink()  # each invocation is a fresh run
 
     items = make_fixture_items(args.n_questions)
-    generator = make_generator(args.real_model, args.model_name, args.model_revision)
-    systems = build_systems(generator, lambdas, items)
+    generator = make_generator(args.real_model, args.model_name,
+                               args.model_revision, args.quantization)
+    rag2_filter, rag2_filter_label = make_rag2_filter(args.rag2_checkpoint, items)
+    systems = build_systems(generator, lambdas, rag2_filter)
 
     config = RunConfig(
         run_id="end_to_end-001",
-        model="hf:" + args.model_name if args.real_model else "synthetic-fixture-generator",
-        model_version="n/a",
+        model=("hf:" + args.model_name if args.real_model
+               else "synthetic-fixture-generator"),
+        # The pinned revision IS the reproducibility anchor - ModelSpec
+        # refuses a branch name precisely so this field can identify the
+        # exact weights. Recording "n/a" would throw that away.
+        model_version=(args.model_revision or "n/a") if args.real_model else "n/a",
         generation_config={"temperature": 0.0},
         system_config_hash=fz.config_hash({
             "budget": BUDGET, "theta": THETA, "half_life": HALF_LIFE_DAYS,
-            "lambdas": lambdas,
+            "lambdas": lambdas, "proposed_lambda": args.proposed_lambda,
+            "quantization": args.quantization if args.real_model else None,
+            "rag2_filter": rag2_filter_label,
         }),
     )
 
@@ -309,6 +369,8 @@ def main(argv=None) -> int:
 
     main_evaluation = {
         "baseline": "baseline",
+        "baseline_filter": rag2_filter_label,
+        "baseline_is_trained_rag2": bool(args.rag2_checkpoint),
         "proposed": proposed_label,
         "token_f1_delta": delta(proposed_label, "baseline"),
         "verdict": "IMPROVES" if delta(proposed_label, "baseline") > 0 else "DOES NOT IMPROVE",
@@ -334,14 +396,26 @@ def main(argv=None) -> int:
                            encoding="utf-8")
 
     print(f"\nRan {summary['n_systems']} arms over {summary['n_items']} questions "
-          f"({summary['n_errors']} errors). Results: {results_path}\n")
+          f"({summary['n_errors']} errors). Results: {results_path}")
+    print(f"RAG2 baseline filter: {rag2_filter_label}")
+    if not args.rag2_checkpoint:
+        print("  ^ NOT the paper's trained classifier. A verdict against this "
+              "stand-in is a weaker claim;\n    pass --rag2-checkpoint once a "
+              "trained checkpoint exists.")
+    print()
+
+    def fmt(value) -> str:
+        """None means the metric was not applicable (no gold annotation),
+        which must not print as 0.000."""
+        return "     n/a" if value is None else f"{value:>8.3f}"
+
     print(f"{'system':<24}{'n':>4}{'EM':>8}{'F1':>8}{'ROUGE-L':>9}"
           f"{'ctx_P':>8}{'ctx_R':>8}{'ground':>9}")
     for name, metrics in sorted(by_system.items()):
         print(f"{name:<24}{metrics['n']:>4}{metrics['exact_match']:>8.3f}"
               f"{metrics['token_f1']:>8.3f}{metrics['rouge_l_f1']:>9.3f}"
-              f"{metrics['context_precision']:>8.3f}"
-              f"{metrics['context_recall']:>8.3f}"
+              f"{fmt(metrics['context_precision'])}"
+              f"{fmt(metrics['context_recall'])}"
               f"{metrics['groundedness']:>9.3f}")
 
     print(f"\nStep 3 - Main evaluation (RAG2 baseline vs proposed, lambda="
