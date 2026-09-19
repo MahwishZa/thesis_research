@@ -29,16 +29,79 @@ student assumption · `[REC]` assistant recommendation.
 | **Evaluation questions** | 123 candidates, **under human review**. 0 approved. |
 | **RAG² baseline filter** | Code complete and reachable; **no trained checkpoint exists**. |
 | **Proposed system** | Code complete; **λ, θ, H unfitted** by design. |
-| **Generator** | Contract pinned and wired; **no model has ever been downloaded or run**. |
-| **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures. |
+| **Generator** | Contract pinned and wired; **real generation confirmed working** with a small model (see §1.1) — Llama-3-8B-Instruct itself has not been downloaded or run. |
+| **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures; **confirmed consuming real (non-mock) generation output** (§1.1). |
 | **Experimental result** | **None exists.** No number in this repository is a research finding. |
 
-**No real (non-fixture) experimental run has been performed.** The whole
-pathway is VALIDATED end to end on synthetic fixtures
+**No real (non-fixture, non-thesis-model) experimental run has been
+performed.** The whole pathway is VALIDATED end to end on synthetic fixtures
 (`tests/integration/test_controlled_validation.py`): corpus → index →
 retrieval → rerank → freeze → every arm → runner → JSONL, with all control
-properties asserted. That is software validation, not a pilot, and it produces
-no number that could be read as a result.
+properties asserted. §1.1 additionally confirms the same pathway runs
+cleanly with a real, non-mock generator producing real text — the one link
+software validation alone cannot exercise. Neither is a pilot, and neither
+produces a number that could be read as a result.
+
+### 1.1 Real-generator smoke test — CONFIRMED 2026-09-19
+
+The one component the fixture-based validation in §1 cannot exercise — an
+actual language model loading, receiving the runner's built context, and
+generating real text that flows into a real evaluation record — was
+confirmed working end to end on the student's own machine, using a small
+stand-in model in place of the thesis generator (Llama-3-8B-Instruct itself
+needs a 16 GB GPU the student's laptop does not have — see
+`research_experimental_specification.md` §9).
+
+**Command run** (`--real-model` with a small, ungated, architecturally
+identical stand-in):
+
+```powershell
+python -m experiments.runners.run_end_to_end `
+  --output-dir experiments\outputs\smoke_test_NOT_FINAL `
+  --n-questions 4 --ablation-lambdas 0,1.0 `
+  --real-model --model-name TinyLlama/TinyLlama-1.1B-Chat-v1.0 `
+  --model-revision fe8a4ea1ffedaf415f4da2f062534de366a451e6 `
+  --quantization nf4
+```
+
+**Result:** `Ran 4 arms over 4 questions (0 errors)`. All 16 records `status:
+ok`, non-empty `generated_answer` (e.g. `"The current value for question 0
+is 0."`), correct `model: hf:TinyLlama/TinyLlama-1.1B-Chat-v1.0` stamped on
+every record. Metrics computed correctly on real output: on this fixture,
+gold evidence ids are present (unlike the real-data case — see
+`rag_metrics.py`'s `None`-vs-`0.0` distinction in the specification §11),
+so `context_precision/recall = 0.000` for the three arms that admitted the
+wrong passage and `1.000` for the arm that admitted the right one — real
+measured zeros, not the `n/a` case. `main_evaluation`/`ablation_study`
+verdicts were produced from real generation for the first time, though they
+remain fixture output on a stand-in model and are not a thesis result.
+
+**Environment defect found and fixed by the student, not this repository:**
+the student's environment had drifted to `transformers` 5.17.0, which
+refuses to load PyTorch below 2.5 and silently disables all model loading
+(`AutoModelForCausalLM` becomes undefined) rather than raising a clear
+error at the point of use — every one of an initial 16 generations failed
+with `NameError: name 'torch' is not defined` before any model code ran.
+Pinning `transformers==4.51.3` (compatible with the student's PyTorch
+2.4.1+cu121, and still above this repository's declared floor of
+`transformers>=4.40` in `pyproject.toml`) resolved it. No repository code
+was at fault and none was changed for this.
+
+**What this confirms:** `HuggingFaceGenerator` (`systems/interfaces/
+hf_generator.py`) is a real, working implementation — not merely code that
+type-checks — for loading a causal LM, applying its chat template,
+quantizing to NF4, generating greedily, and returning real text through the
+exact same code path Llama-3-8B-Instruct will use. Retrieval → admission
+(all three arms) → context construction → generation → record → metrics →
+report is now confirmed working with genuine model output, on top of the
+software-only validation in §1.
+
+**What this does NOT confirm:** nothing about Llama-3-8B-Instruct's own
+memory footprint, load time, generation speed, or output quality — a 1.1B
+model's resource behaviour does not transfer. The timing check specified
+in `research_experimental_specification.md` §9.3 step 4 (on the actual
+target model, on the actual T4 venue) remains unperformed. TinyLlama does
+not appear in, and must never be cited as, a thesis result.
 
 ## 2. Corpus stage — COMPLETE / FROZEN
 
@@ -121,9 +184,9 @@ provenance.
 | Evidence freezing (`freezing.py`) | READY FOR REAL EXECUTION | approved questions |
 | Baseline arm (`systems/baseline/`) | READY except the checkpoint | filter training |
 | Proposed arm (`systems/proposed/`) | READY | λ/θ/H fitting on a validation split |
-| Generator interface (`hf_generator.py`) | IMPLEMENTED, TESTED without loading a model | Hugging Face licence + a pinned sha |
-| Standard metrics (`rag_metrics.py`) | IMPLEMENTED, TESTED | real answers |
-| End-to-end runner (`run_end_to_end.py`) | IMPLEMENTED, TESTED, VALIDATED | all of the above |
+| Generator interface (`hf_generator.py`) | IMPLEMENTED, TESTED, **confirmed loading and generating with a real model** (§1.1) | the Llama-3-8B licence + a pinned sha + a GPU that fits it |
+| Standard metrics (`rag_metrics.py`) | IMPLEMENTED, TESTED, **confirmed scoring real generation output** (§1.1) | approved questions with gold annotation |
+| End-to-end runner (`run_end_to_end.py`) | IMPLEMENTED, TESTED, VALIDATED, **confirmed end-to-end with a real generator** (§1.1) | Llama-3-8B-Instruct itself + the remaining blockers below |
 | Ablation (`λ = 0` arm, always included) | IMPLEMENTED, TESTED | a fitted full-system λ to ablate against |
 | Annotation / HAR / statistics | IMPLEMENTED, TESTED — out of the critical path | real outcomes |
 
@@ -464,6 +527,8 @@ asserts that a *real* run — which never sets the variable — still logs to
 
 | Date | Change |
 |---|---|
+| 2026-09-19 | **First real-generator smoke test confirmed working end to end** — see §1.1. `HuggingFaceGenerator` loads a real causal LM, applies its chat template, quantizes to NF4, generates greedily and returns real text through `run_end_to_end.py --real-model`, verified with a small stand-in (TinyLlama-1.1B) since the thesis generator needs a GPU the student's laptop does not have. 0 errors across 16 real-model records; metrics scored the real output correctly, including the annotated-fixture case of `context_precision/recall` (0.000/1.000, not `n/a` — gold evidence ids are present in this fixture, unlike the real-data case). No repository defect found; the one failure encountered (`transformers` 5.17.0 silently disabling PyTorch below 2.5) was an environment-drift issue outside this repository, resolved by the student pinning `transformers==4.51.3`. No thesis result was produced or claimed. |
+| 2026-09-19 | **`admit_threshold` (θ) range-checked; θ/H/budget made reachable from the CLI.** `AdmissionConfig.validate()` refused an unresolved θ but not an out-of-range one, although `A(s)` is a convex combination of two `[0, 1]` quantities and θ > 1 or θ < 0 is silently degenerate (admits nothing, or everything, on every question) rather than merely wrong. `validate()` now rejects θ outside `[0, 1]`. Separately, θ, the recency half-life and the context budget were module-level constants in `run_end_to_end.py` with no CLI override, so a real run would have used the fixture placeholders (θ=0.5, H=365, budget=1) regardless of a validation-split fit — defeating `validate()`'s deliberate refusal to default θ. Added `--theta`/`--half-life`/`--budget`; the report now records them in a readable `system_config` block flagged `theta_and_half_life_are_fitted: false`, rather than only inside an opaque config hash. Two existing tests that used θ=1.1 as a shortcut for "nothing clears θ" were rewritten to produce the same condition in range. `λ=0` was separately audited and needs no correction: it zeroes the recency term exactly, leaving `A(s) = ρ(s)`. 569 tests pass. |
 | 2026-09-19 | **Corpus provenance logs were being contaminated by the test suite, and are not any more.** `_common.get_logger()` resolved its directory from the loaded module's own `__file__`, so a test calling a stage's `main()` in-process against a temp corpus still appended to the real, git-tracked `alzheimer_corpus/logs/quality_control.log` — a suite run added Stage-06 whitespace-tokenizer lines naming `/tmp` paths to the file the §2 evidence chain is read out of. `get_logger()` now honours `ALZHEIMER_CORPUS_LOGS`; `tests/__init__.py` sets it once for the whole run; `tests/unit/test_corpus_log_isolation.py` (4 tests) guards both the redirection and the unchanged real-run default. The contaminating lines were reverted; every tracked corpus artifact matches the student's own pushed commits. |
 | 2026-09-19 | **Documentation consolidated from 21 Markdown files to 4.** `system_specification.md`, `generator_contract.md`, `filter_training.md`, `rag2_classifier_feasibility.md`, `experimental_parity_audit.md`, `methodology.md`, `question_sources.md` and `external_evaluation_data.md` were merged into `research_experimental_specification.md` (whose superseded admission-asymmetry contents were replaced — they are recorded as provenance in `current_objectives.md` and §8.2 above). `research_ledger.md`, `next_steps.md`, `hardware_and_resources.md`, `question_pool_status.md`, `repository_structure.md`, `experiment_outputs.md`, `feasibility_and_alignment_audit.md`, `research_understanding.md` and `proposal_scope_amendment.md` were merged into this file. `frozen_scope.md`'s live content (interface requirements, reporting requirements, the formula) moved into the specification and its §7 superseded-design paragraph into `current_objectives.md`. `current_objectives.md` and `question_review.md` were kept. Every code and test reference to a merged document was updated to its new home in the same commit. |
 | 2026-09-19 | **Readiness defects corrected before any real run.** (1) The real `FlanT5RAG2Filter` was unreachable from `run_end_to_end.py` — the baseline could only ever be the all-HELPFUL stand-in, and the report did not say so; added `--rag2-checkpoint`, plus `baseline_filter`/`baseline_is_trained_rag2` in the report and a console warning. (2) `rag_metrics.context_scores` returned 0.0 for an unannotated question, which under the provenance firewall is the *expected* real-data case — every arm would have reported context precision 0.000 as if measured; it now returns `None`, `aggregate()` averages over only the annotated rows and reports `context_scored_n`. (3) `--real-model` constructed `ModelSpec(name=...)`, a field that does not exist, so it raised immediately; fixed with `--model-name`/`--model-revision`/`--quantization` (defaulting to the contract's `nf4`). Also: `RAG2Config` accepted a non-positive context budget where the other two arms rejected it. 553 tests pass. |
