@@ -81,3 +81,48 @@
 2026-09-18 18:29:49,051Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
 2026-09-18 20:01:15,037Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
 2026-09-18 20:26:49,820Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
+2026-09-18 20:50:12,204Z INFO    07_claim_classification taxonomy | claim_types=26 classes | evidence_levels=17 classes across 4 groups | all classes use taxonomy-derived keywords (no curated keyword lists exist yet)
+2026-09-18 20:51:57,553Z INFO    07_claim_classification stage 07 progress | chunks=100000 | 949.4 chunks/sec | elapsed=105s
+2026-09-18 20:53:57,012Z INFO    07_claim_classification stage 07 progress | chunks=200000 | 889.8 chunks/sec | elapsed=225s
+2026-09-18 20:55:10,622Z INFO    07_claim_classification stage 07 progress | chunks=300000 | 1005.4 chunks/sec | elapsed=298s
+2026-09-18 20:56:29,733Z INFO    07_claim_classification stage 07 progress | chunks=400000 | 1059.6 chunks/sec | elapsed=377s
+2026-09-18 20:58:29,117Z INFO    07_claim_classification stage 07 progress | chunks=500000 | 1006.3 chunks/sec | elapsed=497s
+2026-09-18 21:00:10,393Z INFO    07_claim_classification stage 07 progress | chunks=600000 | 1003.1 chunks/sec | elapsed=598s
+2026-09-18 21:01:52,889Z INFO    07_claim_classification stage 07 progress | chunks=700000 | 999.1 chunks/sec | elapsed=701s
+2026-09-18 21:03:44,943Z INFO    07_claim_classification stage 07 progress | chunks=800000 | 984.4 chunks/sec | elapsed=813s
+2026-09-18 21:05:25,583Z INFO    07_claim_classification stage 07 progress | chunks=900000 | 985.4 chunks/sec | elapsed=913s
+2026-09-18 21:07:06,613Z INFO    07_claim_classification stage 07 progress | chunks=1000000 | 985.9 chunks/sec | elapsed=1014s
+2026-09-18 21:08:53,048Z INFO    07_claim_classification stage 07 progress | chunks=1100000 | 981.5 chunks/sec | elapsed=1121s
+2026-09-18 21:10:33,731Z INFO    07_claim_classification stage 07 progress | chunks=1200000 | 982.5 chunks/sec | elapsed=1221s
+2026-09-18 21:12:13,804Z INFO    07_claim_classification stage 07 progress | chunks=1300000 | 983.7 chunks/sec | elapsed=1321s
+2026-09-18 21:14:01,041Z INFO    07_claim_classification stage 07 progress | chunks=1400000 | 979.9 chunks/sec | elapsed=1429s
+2026-09-18 21:15:42,498Z INFO    07_claim_classification stage 07 progress | chunks=1500000 | 980.3 chunks/sec | elapsed=1530s
+2026-09-18 21:17:22,916Z INFO    07_claim_classification stage 07 progress | chunks=1600000 | 981.2 chunks/sec | elapsed=1631s
+2026-09-18 21:19:10,779Z INFO    07_claim_classification stage 07 progress | chunks=1700000 | 977.9 chunks/sec | elapsed=1738s
+2026-09-18 21:20:52,378Z INFO    07_claim_classification stage 07 progress | chunks=1800000 | 978.2 chunks/sec | elapsed=1840s
+2026-09-18 21:22:32,645Z INFO    07_claim_classification stage 07 progress | chunks=1900000 | 979.2 chunks/sec | elapsed=1940s
+2026-09-18 21:24:18,556Z INFO    07_claim_classification stage 07 progress | chunks=2000000 | 977.4 chunks/sec | elapsed=2046s
+2026-09-18 21:25:58,077Z INFO    07_claim_classification stage 07 progress | chunks=2100000 | 978.7 chunks/sec | elapsed=2146s
+2026-09-18 21:27:37,405Z INFO    07_claim_classification stage 07 progress | chunks=2200000 | 979.9 chunks/sec | elapsed=2245s
+2026-09-18 21:29:26,534Z INFO    07_claim_classification stage 07 progress | chunks=2300000 | 977.0 chunks/sec | elapsed=2354s
+2026-09-18 21:31:05,928Z INFO    07_claim_classification stage 07 progress | chunks=2400000 | 978.2 chunks/sec | elapsed=2454s
+2026-09-18 21:32:44,996Z INFO    07_claim_classification stage 07 progress | chunks=2500000 | 979.4 chunks/sec | elapsed=2553s
+2026-09-18 21:34:31,422Z INFO    07_claim_classification stage 07 progress | chunks=2600000 | 977.8 chunks/sec | elapsed=2659s
+2026-09-18 21:36:11,953Z INFO    07_claim_classification stage 07 progress | chunks=2700000 | 978.4 chunks/sec | elapsed=2760s
+2026-09-18 21:37:56,012Z INFO    07_claim_classification stage 07 progress | chunks=2800000 | 977.8 chunks/sec | elapsed=2864s
+2026-09-18 21:39:41,720Z INFO    07_claim_classification stage 07 progress | chunks=2900000 | 976.7 chunks/sec | elapsed=2969s
+2026-09-18 21:41:21,874Z INFO    07_claim_classification stage 07 progress | chunks=3000000 | 977.4 chunks/sec | elapsed=3069s
+2026-09-18 21:43:04,950Z INFO    07_claim_classification stage 07 progress | chunks=3100000 | 977.1 chunks/sec | elapsed=3173s
+2026-09-18 21:44:50,392Z INFO    07_claim_classification stage 07 progress | chunks=3200000 | 976.2 chunks/sec | elapsed=3278s
+2026-09-18 21:46:31,443Z INFO    07_claim_classification stage 07 progress | chunks=3300000 | 976.6 chunks/sec | elapsed=3379s
+2026-09-18 21:48:15,700Z INFO    07_claim_classification stage 07 progress | chunks=3400000 | 976.1 chunks/sec | elapsed=3483s
+2026-09-18 21:50:05,029Z INFO    07_claim_classification stage 07 progress | chunks=3500000 | 974.2 chunks/sec | elapsed=3593s
+2026-09-18 21:51:46,949Z INFO    07_claim_classification stage 07 progress | chunks=3600000 | 974.4 chunks/sec | elapsed=3695s
+2026-09-18 21:53:31,067Z INFO    07_claim_classification stage 07 progress | chunks=3700000 | 974.0 chunks/sec | elapsed=3799s
+2026-09-18 21:55:17,202Z INFO    07_claim_classification stage 07 progress | chunks=3800000 | 973.2 chunks/sec | elapsed=3905s
+2026-09-18 21:56:58,428Z INFO    07_claim_classification stage 07 progress | chunks=3900000 | 973.5 chunks/sec | elapsed=4006s
+2026-09-18 21:58:42,116Z INFO    07_claim_classification stage 07 progress | chunks=4000000 | 973.3 chunks/sec | elapsed=4110s
+2026-09-18 22:00:28,475Z INFO    07_claim_classification stage 07 progress | chunks=4100000 | 972.5 chunks/sec | elapsed=4216s
+2026-09-18 22:02:12,083Z INFO    07_claim_classification stage 07 progress | chunks=4200000 | 972.3 chunks/sec | elapsed=4320s
+2026-09-18 22:03:59,065Z INFO    07_claim_classification stage 07 progress | chunks=4300000 | 971.4 chunks/sec | elapsed=4427s
+2026-09-18 22:05:32,858Z INFO    07_claim_classification stage 07 | chunks=4377041 | tagged claim_types=26 | tagged evidence_levels=17 | validation sample=300 (stratified, seed=42) | elapsed=4520s
