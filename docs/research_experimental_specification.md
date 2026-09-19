@@ -1,1930 +1,817 @@
 # Research and Experimental Specification
 
-> ## ⚠ SUPERSEDED — historical record, not current scope
->
-> **This document describes the earlier admission-asymmetry design and is
-> retained for provenance only.** Its research questions (RQ1–RQ6), its
-> primary measurement `Δ = P(admit | older) − P(admit | newer)`, its
-> multi-backbone replication question and its contribution structure are **no
-> longer the thesis**, and nothing in it is a thesis outcome.
->
-> The current research question is stated in `docs/frozen_scope.md`, which
-> governs:
->
-> > Does the proposed solution/system reduce the rate of hallucinated answers
-> > in Alzheimer's disease question answering, relative to the baseline
-> > system, under identical question and evidence conditions, while
-> > maintaining comparable QA accuracy?
->
-> Primary outcome: hallucination rate. Secondary outcome: QA accuracy. There
-> is no diagnostic objective.
->
-> What survived the pivot is the proposed method itself — the `A(s)` scoring
-> rule in §4 below is unchanged and is still the thesis's method. Read this
-> file for how that method was derived and for RAG² fidelity detail; do not
-> read it for what is being measured.
+**Authoritative method specification. Rewritten 2026-09-19** by consolidating
+the eight separate design documents that previously described it
+(`system_specification.md`, `generator_contract.md`, `filter_training.md`,
+`rag2_classifier_feasibility.md`, `experimental_parity_audit.md`,
+`methodology.md`, `question_sources.md`, `external_evaluation_data.md`) plus
+the still-live interface and reporting requirements from `frozen_scope.md`.
+Every claim below was checked against the code it names.
 
-## MS Thesis Research Project
-
-**Thesis Title:** `[TITLE TO BE SPECIFIED]`
-
-**Research Domain:** Alzheimer's disease and related dementias
-
-**Research Pipeline:**
-
-1. Build Alzheimer's corpus
-2. Build test pairs
-3. Run the bias probe
-4. Build SCAF
-5. Compare all variants
-6. Analyze and write up
-
-**Scope of this specification:** Steps 2–5
-
-**Specification Version:** `[VERSION TO BE SPECIFIED]`
-
-**Date:** `[DATE TO BE SPECIFIED]`
+This document answers **what is being compared, how, and under what
+conditions**. It contains no results — none exist. For *what the thesis is
+for*, see `docs/current_objectives.md`, which governs scope. For *what has
+actually been executed, decided and measured*, see
+`docs/status_and_decisions.md`.
 
 ---
 
-# 0. Scope Amendment (2026-09-16) — read this first
+## 1. The comparison in one line
 
-> The canonical, frozen statement of scope is `docs/frozen_scope.md`.
-> This section summarises it; where the two differ, that file governs.
+Both arms receive **the same question and the same frozen candidate
+evidence**, and both answer with **the same generator under the same decoding
+settings and the same prompt**. They differ in **which subset of that evidence
+reaches the generator**, and in nothing else.
 
-This specification was written for a larger design than the thesis now
-executes. The reduced scope below **governs wherever the body of this document
-disagrees with it**; the body is retained because its definitions, controls and
-reproducibility requirements remain correct for the parts still in scope.
+## 2. Shared upstream (identical by construction)
 
-## 0.1 The primary experiment
+Performed **once per question** and serialised before either arm runs:
 
-Three arms over one frozen candidate set: a **no-filter control**, the **RAG²
-baseline**, and the proposed **recency-aware admission policy**.
+```
+question → rationale → MedCPT retrieval → MedCPT reranking → candidate set → FROZEN
+```
 
-The proposed policy is:
+Implementation: `experiments/retrieval/` builds it, `experiments/evaluation/
+freezing.py` freezes it. The frozen `FrozenItem` carries the candidate list,
+its order, each passage's `rerank_score` and `rerank_rank`, publication dates,
+the `corpus_snapshot` id, and an order-sensitive `candidate_set_hash`.
 
-    A(s) = (1 - lambda) * rho(s) + lambda * R(s, q, t_q),  admit if A(s) >= theta
+Neither arm retrieves, re-ranks, or re-scores anything. `RAG2System` records
+`retrieval_external: True` precisely because stages 1–2 are not its job.
 
-where `rho` is the rank-normalised reranker score (section 28) and `R` is the
-recency score — plain exponential decay in the age of the passage relative to
-`t_q`. `lambda`, `theta` and the half-life `H` are the only tunable
-quantities and are fitted on the validation split.
+RAG² uses MedCPT at both stages — a dual-encoder for retrieval, a
+cross-encoder for reranking (established fact E6 in
+`docs/status_and_decisions.md`). The thesis keeps both, over its own
+Alzheimer's corpus rather than RAG²'s 564 GB general-medical one. That
+substitution of *corpus* is the declared adaptation; the *method* is
+unchanged. The index is a **flat exact** inner-product search, not an
+approximate one (decision D-37): an approximate index introduces
+build-order-dependent recall, and a domain-slice corpus is small enough that
+exact search removes that reproducibility hazard for free.
 
-## 0.2 Removed from the primary scope
+## 3. Baseline — `systems/baseline/rag2.py`, `name = "B2_RAG2"`
 
-The following are no longer primary components. Sections 20-24, 27, 29, 30 and
-46 describe them and are retained as secondary or future work:
+```
+frozen candidates
+  → for each candidate: Flan-T5 filter → [HELPFUL] | [NOT_HELPFUL]
+  → keep the [HELPFUL] ones
+  → budget: keep the best rerank_rank, ties broken by evidence_id
+  → build context in candidate-list order
+  → generate
+```
 
-* entailment-derived support, sigma (sections 20-22, 24);
-* source authority, tau (section 27);
-* contested-evidence handling (sections 29, 30);
-* supersession discounting (section 25, secondary branch);
-* answer verification (section 31 verifier);
-* the clinician rating study (section 46);
-* comparison against an additional state-of-the-art filtering system.
+**The filter** (`systems/baseline/admission.py`) scores one `(question,
+passage)` pair at a time using RAG²'s verbatim prompt template, takes a
+two-way softmax over the `[HELPFUL]` / `[NOT_HELPFUL]` label-token logits at
+the first decoder position, and labels by argmax. It sees **no date, no rank,
+no metadata** — only the question and the passage text. That is faithful to
+the published method and it matters here: the baseline cannot respond to
+recency even in principle, which is what makes the contrast interpretable.
 
-Code for contested detection and verification remains in `systems/proposed/`,
-marked SECONDARY and disabled by default.
+**Budget ordering is by reranker rank** because RAG²'s filter emits a binary
+label, not a ranking, so rank is the only ordering available to it.
 
-## 0.3 Terminology
+A no-filter control (`systems/baseline/no_filter.py`, `name = "B1_NO_FILTER"`)
+admits everything up to the budget. It is not a research objective; it is the
+**honest floor** — if a trained filter does not beat admitting everything, the
+baseline was weak, and any advantage for the proposed system must be read
+against that rather than celebrated.
 
-| Old | Current | Why |
+## 4. Proposed system — `systems/proposed/admission.py`, `name = "P_RECENCY"`
+
+```
+frozen candidates
+  → for each candidate: A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)
+  → admit if A(s) ≥ θ
+  → budget: keep the highest A(s), ties broken by evidence_id
+  → build context in candidate-list order
+  → generate
+```
+
+* `ρ(s)` — `AdmissionScorer.normalize_rank`: rank-normalised reranker score in
+  [0, 1], best rank scoring 1.0. **The same signal the baseline's upstream
+  produced.** Rank-based rather than min-max normalisation, so a single global
+  θ is well defined across questions (D-12).
+* `R(s, q, t_q)` — `RecencyPolicy`: `2^(−age_days / H)` where
+  `age_days = t_q − publication_date(s)`, clamped at zero, in (0, 1].
+  **Plain age decay and nothing else** (D-28).
+* `A(s)` is therefore in [0, 1] and θ is directly interpretable on that scale.
+
+One weight, two components, no hidden rescaling — a single weight removes the
+redundant degree of freedom two free weights would give, and makes `λ = 0` a
+built-in pure-relevance ablation rather than a fourth arm (D-27, D-30).
+
+Secondary machinery (contested evidence, supersession, retraction, ψ,
+verification) is present, `None`/off by default, and records itself in run
+metadata when enabled. Enabling any of it is a declared secondary analysis,
+never part of a primary result.
+
+## 5. The independent experimental factor
+
+**The admission rule, and only that.**
+
+| | Baseline | Proposed |
 |---|---|---|
-| currency score, gamma | **recency score, R** | Two of the three "currency" states are out of scope, and "currency" reads as money |
-| SCAF | **recency-aware admission** | The acronym named components that no longer exist; no replacement acronym is introduced |
-| framework | **admission policy** | It is a deterministic scoring rule plus a threshold |
+| Decides admission by | learned binary label from passage text | `A(s) ≥ θ` over rank + recency |
+| Can see publication date | **no** | **yes** |
+| Orders the budget by | reranker rank | `A(s)` |
 
-Output states reduce to **GROUNDED** and **ABSTAIN**; CONTESTED is produced
-only when the secondary contested detector is explicitly enabled.
+Everything a difference in outcome could otherwise be attributed to is held
+constant — and checked in code rather than assumed:
 
-## 0.4 What is unchanged
+| Held constant | Enforced by |
+|---|---|
+| Question and question id | one value passed to every arm by the runner (`sample_id` set once per item) |
+| Candidate evidence and its order | `assert_same_candidate_sets` + `candidate_set_hash` |
+| Context budget | `assert_budget_parity` |
+| Prompt template | `assert_prompt_parity` (defaults are byte-identical) |
+| Generator instance and decoding | `assert_generator_parity` + one `RunConfig` |
+| Context ordering | both arms emit candidate-list order; rank decides *which*, never *where* |
+| Abstention behaviour | `ANSWER_ALWAYS` by default — see §7 |
+| Output schema | all arms return `ExperimentResult` |
 
-The research question, the provenance firewall, the frozen-candidate-set
-control (section 16), the temporal definitions (sections 9, 10), the
-leakage rules (section 33), dual reporting (section 42) and the
-reproducibility requirements (section 50) all stand as written.
+All four assertions run in `run_experiment` **before the first item**, not
+after. Tests: `tests/unit/test_runner_parity.py`.
 
----
+Two of these were documented but previously unchecked, and both were real
+hazards rather than hypothetical ones:
 
-# 1. Purpose
+* **Context budget.** Each arm stores its cap in a different place — on the
+  system itself (`NoFilterSystem`), on `config` (`RAG2System`), on
+  `admission_policy.config` (`RecencyAwareSystem`). Nothing compared them. An
+  arm allowed more passages answers from more context, so a difference in
+  outcome would be attributable to context volume rather than to the admission
+  rule. `context_budget()` resolves the value through all three shapes; an arm
+  with no cap reads as `None` rather than as some number, so an uncapped arm
+  cannot be mistaken for a capped one. The repository's own smoke fixture had
+  obtained "arms that admit different subsets" precisely by encoding this
+  confound; it now differs by admission rule instead.
+* **Generator.** `RunConfig` records one model, one model version and one
+  generation config and stamps them onto every result record. Different
+  generator objects would make that metadata silently mislabel which model
+  produced which answer — worse than an unchecked difference, because the
+  output would look correct. `assert_generator_parity` compares object
+  identity, which is what the `Generator` interface exposes and what a real
+  run does: load once, share.
 
-This document defines the research and experimental specification governing Steps 2–5 of the thesis research pipeline.
+## 6. What reaches generation
 
-Its purpose is to establish:
+Both arms build context as `[evidence_id] text`, joined by blank lines, **in
+candidate-list order**, substituted into the shared `{question}` / `{context}`
+template. The runner records `admitted_evidence_ids` and
+`admitted_evidence_text` per answer, so every answer can be scored against the
+evidence that answer actually saw.
 
-* the research objective and questions;
-* the operational definition of the phenomenon under investigation;
-* the construction and representation of evaluation data;
-* the experimental controls and comparison conditions;
-* the separation of retrieval, admission, and generation effects;
-* the development, validation, and test methodology;
-* the proposed SCAF admission policy;
-* the evaluation framework;
-* the statistical analysis framework;
-* the reproducibility and provenance requirements.
+## 7. Abstention — the one resolved asymmetry
 
-The specification is intended to serve as the methodological contract for subsequent implementation.
+`RecencyAwareSystem.run()` used to return `prediction=None`,
+`output_state=ABSTAIN` when no passage cleared θ. `RAG2System.run()` has no
+empty-evidence guard: when its filter admits nothing it builds a prompt with an
+empty evidence block and generates anyway.
 
-Where a methodological value, threshold, dataset source, sampling rule, or implementation choice has not yet been established, it is represented explicitly as:
+**Abstention is not an intended component.** It fires only in the degenerate
+case where the threshold admits nothing, it is not part of the scoring rule,
+and the original RAG² has no abstention mechanism at all. Left in place it is
+metric gaming by construction: an abstention makes no claims, so a θ set high
+enough drives any faithfulness rate to zero while answering nothing.
 
-> `[TO BE SPECIFIED]`
+**Decision.** `AbstentionPolicy.ANSWER_ALWAYS` is the **default** — the
+proposed system generates from whatever it admitted, including nothing,
+exactly as the baseline does. `ABSTAIN_WHEN_EMPTY` remains available as a
+declared secondary condition, never the primary comparison. Under
+`ANSWER_ALWAYS`, an answer produced from an empty evidence block is recorded
+as `output_state=UNGROUNDED` — not `GROUNDED`, which would be false, and not
+`ABSTAIN`, because an answer was produced. `experiments/evaluation/stats.py`
+always reports `answered`, `abstained`, `hallucinated` and `non_hallucinated`
+separately with `answer_coverage` beside every rate, and `compare_systems()`
+sets `interpretable: false` and refuses a headline difference when either
+system answered nothing.
 
-Such placeholders must be resolved and recorded before the corresponding implementation stage is frozen.
+Two alternatives were considered and rejected: allowing abstention with
+coverage reported separately (sound, but makes the outcome a pair with no
+pre-declared exchange rate), and counting abstention as failure (ungameable,
+but conflates "declined to answer" with "answered wrongly" in one
+denominator). Option A is the smallest change that makes the comparison fair,
+and Option B's accounting is reported alongside it regardless.
 
----
+Tests: `AbstentionAccountingTests`, `AbstentionPolicyConfigTests` — including
+that a system abstaining on every question yields `interpretable: false` and
+no headline difference.
 
-# 2. Research Problem
+## 8. Parameters
 
-Retrieval-augmented generation can provide external evidence to language models whose parametric knowledge may be incomplete or outdated. However, retrieved evidence is not necessarily used symmetrically. A filtering or admission mechanism may preferentially retain evidence that is compatible with the model's existing knowledge while rejecting evidence that conflicts with those priors.
+### 8.1 Fitted on the validation split, never on test
 
-This thesis investigates whether such an asymmetry can occur with respect to **evidence age** at the evidence-admission stage of a medical RAG pipeline.
+| Parameter | Meaning | Status |
+|---|---|---|
+| `λ` | recency weight | **unresolved by design** — `AdmissionConfig.validate()` raises rather than default |
+| `θ` | admission threshold | same |
+| `H` | recency half-life (days) | same |
 
-The research focuses specifically on the distinction between:
+`validate()` raises with *"Fit it on the validation split before any test
+run"* if θ is unresolved. There is no default value any of these could
+silently inherit, and no code path reads test outcomes. **They are not tuned
+on the test set, and cannot be by accident.** `λ = 0` is the built-in
+pure-relevance ablation.
 
-1. **retrieval**, which determines which evidence is available;
-2. **admission/filtering**, which determines which retrieved evidence is retained;
-3. **generation**, which produces the final answer from the retained evidence.
+The evaluation question pool is likewise never used to select θ, λ, H,
+generation settings, prompt wording or retrieval parameters.
 
-The primary research problem is therefore:
+### 8.2 Engineering constants (decided, not fitted)
 
-> Whether a confidence-derived evidence-utility signal used for passage admission systematically favours older evidence over newer evidence when the underlying clinical claim has changed, after controlling the upstream retrieval process and relevant characteristics of the paired evidence.
+| Parameter | Value | Reasoning |
+|---|---|---|
+| `max_admitted_passages` (context budget) | **5** | The budget is a *control*, not a treatment: it exists so both arms answer from the same amount of evidence. Comfortable for a 7–8B generator's context window alongside the prompt. Applied identically to both arms and asserted by `assert_budget_parity`. |
+| Candidate-set size `N` | **20** | Fixed and identical for every item, because `ρ` is a within-set rank: θ is only comparable across questions at constant N. 20 gives the admission rule something to discriminate at a budget of 5 without making the reranker pass expensive. |
+| Retrieval depth before reranking | **50** | Reranked down to the 20 kept. Deep enough that reranking is doing real work, shallow enough to stay cheap. |
+| `undated_score` | not a primary parameter | Candidate sets contain only dated passages (§15.3), so the undated branch never fires. Every run reports its `UNDATED` count; in a valid run it is zero. |
 
-The thesis subsequently investigates whether an admission policy based on evidential support and temporal information can reduce such undesirable asymmetry while preserving performance on claims for which recency is not relevant.
+These are engineering choices with defensible reasons, not empirical findings.
+They are set **before** any outcome is seen and do not change between arms or
+between runs. Cited from code at `experiments/retrieval/pipeline.py`.
 
----
+## 9. Generator execution contract
 
-# 3. Research Objective
+**Decided 2026-09-17 (D-38). Both arms run under it; nothing in it differs
+between them.**
 
-## 3.1 Aim
+**Model: `meta-llama/Meta-Llama-3-8B-Instruct` — RAG²'s own generator, kept.
+Venue: free-tier remote GPU (Colab or Kaggle T4, 16 GB). Precision: 4-bit
+NF4.**
 
-The research aim is:
+The local machine (RTX 2050, 4 GB VRAM) cannot run an 8B model at any
+precision — BF16 ≈ 18–20 GB, 8-bit ≈ 10 GB, 4-bit NF4 ≈ 6–8 GB including KV
+cache at RAG-length contexts, all against 4 GB. CPU-only inference is
+technically possible and practically unusable for a run that has to be
+repeatable.
 
-> To determine whether confidence-derived evidence utility signals exhibit measurable recency-related admission asymmetry in medical retrieval-augmented generation, and to develop and evaluate a corrective admission policy for Alzheimer's clinical reasoning.
+**That rules out the venue, not the model.** The tempting move is to swap in a
+model small enough for 4 GB; it is the wrong one, because it would trade away
+fidelity to RAG² to solve a problem a free T4 already solves. Quantisation is
+the one deviation from the paper, it is a precision change applied
+**identically to both arms**, and it is reported as a limitation.
 
-## 3.2 Objectives
+**Declared fallback:** Llama-3 is gated on Hugging Face. If the licence cannot
+be obtained, `Qwen/Qwen2.5-7B-Instruct` (ungated, same parameter scale)
+substitutes, and the substitution is stated in the thesis rather than made
+quietly. Accepting the licence is a student action, not a technical blocker.
 
-The research objectives are:
+### 9.1 Greedy decoding, and why it is not a knob
 
-1. Reproduce the baseline RAG² system sufficiently to establish a controlled experimental baseline.
-2. Construct a date-annotated Alzheimer's retrieval corpus.
-3. Construct controlled temporal-counterfactual test pairs representing changes in clinical evidence.
-4. Measure admission asymmetry between older and newer evidence.
-5. Determine whether any observed asymmetry is replicated across filter backbones.
-6. Compare the baseline confidence-derived labelling mechanism with an entailment-derived alternative.
-7. Develop SCAF as an admission policy incorporating evidential support, temporal currency, source authority, disagreement handling, and abstention.
-8. Compare SCAF with the baseline and specified experimental controls under a frozen retrieval environment.
-9. Evaluate whether SCAF reduces unsupported or superseded claims without unacceptable loss of accuracy or coverage.
-10. Characterise remaining failure modes through structured error analysis and, where applicable, blinded expert evaluation.
+`do_sample=False`, no temperature, no top-p, no top-k.
 
-The proposal identifies filter-stage admission asymmetry as the primary research gap and positions SCAF as the corrective component following measurement of the phenomenon.
+With sampling, one run per arm would be a *sample* from a distribution, and
+separating a real difference from decoding variance would need many runs per
+question — which the compute budget does not allow. With greedy decoding, one
+run per arm **is** the measurement, and a repeat run reproduces it exactly.
 
----
+`GenerationConfig` raises if `do_sample=True` rather than permitting it
+quietly, and raises if temperature or top-p are set while greedy, because
+recording parameters the run ignored would misdescribe it.
 
-# 4. Research Questions and Hypotheses
+There is no random seed, because nothing samples. A seed that does not matter
+is worse than no seed: it implies a control that is not there.
 
-## 4.1 Research Questions
+### 9.2 The contract
 
-| ID  | Research Question                                                                                                                                                       |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| RQ1 | Do confidence-derived utility signals admit passages asymmetrically with respect to evidence age when relevant content, source tier, and passage length are controlled? |
-| RQ2 | Does any observed admission asymmetry replicate across filter backbones?                                                                                                |
-| RQ3 | Does an entailment-derived evidence label reduce unsupported and superseded claims relative to the confidence-derived baseline?                                         |
-| RQ4 | Are observed improvements attributable to the admission policy rather than differences in retrieval quality?                                                            |
-| RQ5 | Does explicit representation of contested evidence improve clinical appropriateness on unresolved questions?                                                            |
-| RQ6 | Can improved evidence selection be achieved without materially degrading performance on time-invariant medical questions?                                               |
+| Field | Value | Recorded in |
+|---|---|---|
+| Model id | `meta-llama/Meta-Llama-3-8B-Instruct` | `ModelSpec.model_id` |
+| Revision | **a commit sha — pinned at download** | `ModelSpec.revision` |
+| Quantization | `nf4`, double quant, bf16 compute | `ModelSpec.quantization` |
+| Prompt template | shared; `assert_prompt_parity` | `RunConfig` |
+| Chat template | the checkpoint's own, applied to the built prompt | generator metadata |
+| Decoding | greedy, `max_new_tokens=256` | `GenerationConfig` |
+| Context budget | 5 admitted passages, both arms | `assert_budget_parity` |
+| Generator instance | **one object, shared** | `assert_generator_parity` |
+| Software versions | transformers, torch, bitsandbytes, python | run manifest |
 
-These questions are derived from the established research proposal.
+**`revision` must be a commit sha and `ModelSpec` refuses `"main"`.** A branch
+name resolves to different weights over time, so a result recorded against one
+could not be reproduced. The sha is read off the Hub at download time and
+written into the run manifest. It is deliberately **not** pre-filled in the
+code: a placeholder would be a fabricated provenance record.
 
-## 4.2 Hypotheses
+`experiments/runners/run_end_to_end.py --real-model` requires
+`--model-revision` for this reason and exits rather than defaulting it;
+`--quantization` defaults to `nf4`, because a full-precision 8B load is the
+one configuration the documented venue cannot run.
 
-| ID | Hypothesis                                                                                                                                              |
-| -- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| H1 | The baseline confidence-derived filter exhibits positive admission asymmetry, such that older evidence is admitted more frequently than newer evidence. |
-| H2 | Admission asymmetry under the confidence-derived filter is greater than admission asymmetry under the entailment-derived filter.                        |
-| H3 | The direction of the observed asymmetry replicates across filter backbones.                                                                             |
-| H4 | `[VALIDITY-CONTROL HYPOTHESIS TO BE SPECIFIED AFTER FINAL CONTROL DESIGN]`                                                                              |
-| H5 | The entailment-derived admission policy reduces the rate of unsupported claims and/or superseded claims relative to the baseline.                       |
-| H6 | The effect of the admission policy persists after accounting for retrieval recall.                                                                      |
-| H7 | Performance on time-invariant medical questions remains non-inferior to the baseline under a pre-specified margin.                                      |
+### 9.3 Execution procedure
 
-The non-inferiority margin for H7 is:
+1. Accept the Llama-3 licence on Hugging Face; create a read token.
+2. Open a T4 session. Install pinned `transformers`, `bitsandbytes`,
+   `accelerate`.
+3. Download the model **recording the resolved commit sha**.
+4. **Timing check:** generate 5 answers, record wall-clock and tokens/second.
+   This is the first measurement and it decides whether the full run fits the
+   session limit. It is engineering measurement, not a result.
+5. Fit λ, θ, H on the **validation split only**.
+6. Run every arm over the frozen test manifest, one shared generator object.
+7. Download the raw JSONL. It is never overwritten (`run_experiment` refuses
+   an existing path).
 
-**δ = `[TO BE SPECIFIED]`**
+**No tokens/second figure appears anywhere in this repository until one is
+produced on the actual venue.** Generation speed has not been measured.
 
-The statistical criterion and justification for δ must be established before final test evaluation.
+## 10. RAG² filter training
 
----
+**Decided 2026-09-17 (D-39, D-40). DECIDED AND IMPLEMENTED. NOT TRAINED —
+no checkpoint exists and no label has been generated.**
 
-# 5. Scope and Delimitations
+### 10.1 Why the filter must be trained at all
 
-## 5.1 Included
+RAG²'s contribution is a filter trained on perplexity-derived helpfulness
+labels. The checkpoint is not distributed (E9), so an identical baseline is
+impossible for anyone, not just for this thesis. The baseline is therefore an
+**adaptation**, and the thesis says so.
 
-The research includes:
+The official repository's `classifier/data/medqa/llama3_cot/5%-train.json`
+looks like the paper's 5% training split. **It was downloaded and inspected:
+it contains 5 examples.** The ids run to `llama3_5%_23600`, so the real split
+held roughly 23,600 — the released file is an illustration of the format. This
+settles the strategy: labels cannot be obtained, only regenerated.
 
-* Alzheimer's disease and related dementias;
-* English-language public medical evidence;
-* evidence admission within a single-pass RAG pipeline;
-* filter models within the specified computational limit;
-* open-weight generator models within the specified computational limit;
-* the baseline RAG² admission mechanism;
-* an entailment-derived admission alternative;
-* SCAF;
-* controlled temporal evaluation;
-* structured clinical reasoning evaluation;
-* evidence-support, currency, and safety-related outcomes.
+### 10.2 The label function — kept exactly
 
-The proposal specifies a maximum filter size of one billion parameters and open-weight generators of at most eight billion parameters, with an optional commercial comparison.
+`experiments/filter_training/labeling.py` implements the paper's decision tree
+(§3.2, Fig. 2, Eq. 3):
 
-## 5.2 Excluded
+1. Answer the question **without** the passage → correct or not.
+2. Answer it **with** the passage → correct or not.
+3. **Correctness flip decides:** wrong → right is `[HELPFUL]`; right → wrong is
+   `[NOT_HELPFUL]`.
+4. **Unchanged correctness falls back to the perplexity differential** of the
+   generated *rationale* (not the query — E3). Top τ = 0.25 of reductions is
+   `[HELPFUL]`.
 
-The following are outside the primary research scope:
+Two details that are easy to get wrong and are locked by tests: **a flip
+always outranks perplexity** (a large perplexity gain cannot rescue a passage
+that turned a right answer wrong), and **the τ quantile is computed only over
+the pairs the tie-break actually judges** — the unchanged ones.
 
-* retriever optimisation;
-* replacement of the frozen retrieval system;
-* agentic retrieval as a primary competitor;
-* reinforcement-learned retrieval;
-* private clinical data;
-* claims of clinical validation.
+**τ is a property of the reference method, not a thesis parameter.** Fixed at
+0.25, never fitted, tuned or swept. Fitting it would make the baseline
+something this thesis chose rather than something the paper specifies.
 
-The expert evaluation is intended to assess mechanism and clinical appropriateness at limited scale, not to constitute clinical validation.
+MedQA is multiple-choice, so correctness is checked automatically. **No human
+annotation is involved and none is planned.**
 
----
+### 10.3 The recipe, read from the official repository
 
-# 6. Conceptual Experimental Model
+Source: `classifier/README.md`, `classifier/run_classifier.py`,
+`classifier/run/run_large_train_xl_000.sh`, read directly on 2026-09-17.
+Nothing here is from memory.
 
-The experimental pipeline is:
+The filter is a **Flan-T5 seq2seq model** fine-tuned with HF Accelerate. The
+two labels are added as special tokens and the embedding matrix is resized:
 
-```text
-Clinical Question + As-of Date
-              │
-              ▼
-      Rationale Generation
-              │
-              ▼
-       Frozen Retrieval
-              │
-              ▼
-        Reranking
-              │
-              ▼
-    Cached Candidate Set
-              │
-       ┌──────┴──────┐
-       │             │
-       ▼             ▼
- Baseline Filter   Proposed Filter
-       │             │
-       ▼             ▼
-  Admitted Evidence
-       │             │
-       └──────┬──────┘
-              ▼
-       Frozen Generation
-              │
-              ▼
-        Verification
-              │
-              ▼
-        Final Output
+```python
+new_tokens = ["[HELPFUL]", "[NOT_HELPFUL]"]
+tokenizer.add_tokens(new_tokens)
+model.resize_token_embeddings(len(tokenizer))
 ```
 
-All components upstream of the admission policy must remain identical across controlled experimental arms.
-
-This is the principal internal-validity requirement of the study. The proposal explicitly defines isolation of one variable and byte-identical candidate replay as central design principles.
-
----
-
-# 7. Role of the Alzheimer's Corpus
-
-The Alzheimer's corpus serves as the common evidence environment for the experimental pipeline.
-
-Its functions are:
-
-1. provide the retrieval population;
-2. provide temporal metadata;
-3. provide source-tier information;
-4. provide guideline/version information;
-5. provide supersession and retraction metadata;
-6. support controlled evidence selection;
-7. support evaluation of evidence currency;
-8. provide a reproducible retrieval substrate shared across experimental arms.
-
-The corpus is not itself the experimental treatment.
-
-The corpus must therefore remain identical across all primary experimental conditions.
-
----
-
-# 8. Corpus and Evidence Representation
-
-Each passage must have a persistent provenance record.
-
-At minimum, passage metadata shall include:
-
-| Field                 | Requirement               |
-| --------------------- | ------------------------- |
-| Passage ID            | Required                  |
-| Document ID           | Required                  |
-| Persistent identifier | Required where available  |
-| Source tier           | Required                  |
-| Publication date      | Required where available  |
-| Date precision        | Required                  |
-| Journal/source        | Required where applicable |
-| Guideline family      | Required where applicable |
-| Guideline version     | Required where applicable |
-| Supersession pointer  | Required where applicable |
-| Retraction status     | Required                  |
-| Withdrawal status     | Required                  |
-| Claim class           | Required                  |
-| Section               | Required                  |
-| Character span        | Required                  |
-| Corpus snapshot       | Required                  |
-
-The proposal establishes this metadata structure as part of the corpus specification.
-
----
-
-# 9. Temporal Representation
-
-Temporal information shall be represented independently of whether it is exposed to a particular experimental model.
-
-Each relevant passage shall preserve:
-
-* publication date;
-* date precision;
-* date provenance;
-* guideline/version date where applicable;
-* supersession relationship;
-* retraction/withdrawal status;
-* temporal position within an evaluation pair.
-
-For a query, the system may additionally have an **as-of date**:
-
-$$
-t_q
-$$
-
-representing the temporal point at which the question is evaluated.
-
-The exact representation of incomplete publication dates is:
-
-**`[TO BE SPECIFIED]`**
-
-The treatment of uncertain or interval-valued dates is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 10. Test-Pair Definition
-
-## 10.1 Temporal-Counterfactual Pair
-
-A temporal-counterfactual pair consists of two passages:
-
-* an **older passage** representing the pre-change evidence state; and
-* a **newer passage** representing the post-change evidence state,
-
-where both passages address the same underlying clinical claim and occur on opposite sides of an externally established change point.
-
-The pair is intended to vary evidence age while controlling other relevant factors.
-
-The proposal specifies matching on:
-
-1. underlying claim;
-2. source tier;
-3. passage length within a tolerance band;
-4. topical similarity to the query.
-
-## 10.2 Pair Relationship
-
-The two passages must not merely discuss the same general topic.
-
-They must represent the **same evaluative claim or clinical proposition**, such that the temporal difference can be meaningfully interpreted as an evidence update.
-
-The operational criterion for "same claim" is:
-
-**`[TO BE SPECIFIED]`**
-
-The annotation or verification procedure for establishing claim equivalence is:
-
-**`[TO BE SPECIFIED]`**
-
-## 10.3 Change Point
-
-Each pair must have an externally defensible change point:
-
-**Change-point source:** MedChangeQA (Vladika et al., Findings of EMNLP 2025) — 512 changed-verdict items derived from MedRevQA, itself built from systematic-review abstracts indexed in PubMed 2000–January 2024. This records the dataset the proposal already names; it is stated here because this section previously left the primary instrument's source unspecified.
-
-**Change-point definition:** the transition between the superseded verdict and the current verdict on the same review question, as established by the dataset. The thesis does not judge which verdict is correct, and a change point the dataset does not supply is left absent rather than substituted with a publication date.
-
-**Required temporal separation:** `[TO BE SPECIFIED AFTER PILOT]` — to be read off the observed separation distribution rather than assumed. Until it is set, the rule is recorded as not enforced.
-
----
-
-# 11. Pair Categories
-
-The evaluation data shall distinguish the following evidence relationships.
-
-## 11.1 Changed / Superseded
-
-The newer evidence materially changes the applicable clinical conclusion or recommendation.
-
-These pairs constitute the principal temporal-counterfactual condition.
-
-## 11.2 Unchanged
-
-The underlying claim remains materially stable across the relevant temporal interval.
-
-These items constitute the principal negative-control condition.
-
-## 11.3 Contested
-
-Credible evidence supports materially opposing positions within a relevant temporal window, without a justified basis for treating one position as an unambiguous supersession of the other.
-
-The contested state must be evaluated before supersession classification.
-
-This ordering is explicitly established in the proposal.
-
-## 11.4 Non-comparable
-
-Two passages must be classified as non-comparable when their apparent disagreement results from differences in:
-
-* population;
-* disease stage;
-* intervention;
-* outcome;
-* eligibility;
-* clinical setting;
-* scope;
-* or another substantive contextual condition.
-
-For example, differing conclusions for early-stage and moderate disease are not automatically contradictory.
-
-The exact operational criteria are:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 12. Meaningful Evidence Change
-
-A meaningful change is a change that materially alters the answer or clinical recommendation associated with the underlying claim.
-
-Candidate categories include:
-
-* changed recommendation;
-* changed diagnostic criterion;
-* changed eligibility;
-* changed contraindication;
-* changed treatment conclusion;
-* changed monitoring requirement;
-* materially changed risk interpretation;
-* materially changed evidence-supported conclusion.
-
-The final claim-change taxonomy shall be aligned with:
-
-**`[STAGE-1 CLAIM TAXONOMY / VERSION TO BE SPECIFIED]`**
-
-Changes that are purely stylistic, terminological, or bibliographic shall not be treated as substantive evidence changes unless they alter the clinical proposition.
-
----
-
-# 13. Definition of Admission Bias
-
-For a filter \(f\), define admission asymmetry as:
-
-$$
-\Delta_f =
-E[
-P(\mathrm{admit}\mid\mathrm{older})
--
-P(\mathrm{admit}\mid\mathrm{newer})
-]
-$$
-
-where the expectation is taken over valid matched test pairs.
-
-Interpretation:
-
-| Value                  | Interpretation                              |
-| ---------------------- | ------------------------------------------- |
-| \(\Delta_f > 0\)       | Older evidence is preferentially admitted   |
-| \(\Delta_f \approx 0\) | No directional admission asymmetry detected |
-| \(\Delta_f < 0\)       | Newer evidence is preferentially admitted   |
-
-The thesis does **not** define legitimate preference for newer evidence as bias.
-
-A newer passage may legitimately be more useful when it reflects a genuine evidence update.
-
-The research question is whether evidence age is associated with admission differences **beyond the substantive evidence change and controlled characteristics of the pair**.
-
----
-
-# 14. Distinguishing Recency Bias from Legitimate Evidence Updating
-
-The experimental design shall distinguish:
-
-1. legitimate preference caused by changed evidence;
-2. source-authority differences;
-3. retrieval differences;
-4. passage-level linguistic differences;
-5. temporal/prose-era effects;
-6. genuine admission asymmetry associated with evidence age.
-
-Matching alone cannot establish that age is the sole remaining difference.
-
-Therefore the study shall use negative controls and additional validity controls.
-
-The primary negative control shall consist of claims that did not materially change across the study window.
-
-If a comparable age preference is observed for unchanged claims, the interpretation of the changed-claim effect as recency-specific bias must be reconsidered.
-
-The exact formal criterion for comparing changed and unchanged effects is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 15. Retrieval, Admission, and Generation Effects
-
-The experiment shall treat the RAG pipeline as three analytically distinct stages.
-
-## 15.1 Retrieval Effect
-
-A retrieval effect occurs when relevant evidence is or is not included in the candidate set.
-
-Primary measures include:
-
-* Recall@k;
-* precision;
-* MRR;
-* nDCG;
-* evidence coverage.
-
-## 15.2 Admission Effect
-
-An admission effect occurs when the same candidate set is available but different filtering policies select different evidence.
-
-This is the primary target of the bias probe.
-
-## 15.3 Generation Effect
-
-A generation effect occurs when the same or equivalent admitted evidence produces different final outputs.
-
-Generation is therefore downstream of admission.
-
----
-
-# 16. Candidate-Set Control
-
-Retrieval and reranking must be performed once for each evaluation item.
-
-The resulting candidate set must be serialised and replayed byte-identically across experimental arms.
-
-The following must therefore be invariant across controlled arms:
-
-* query;
-* rationale;
-* retrieval index;
-* retrieval model;
-* retrieved candidates;
-* candidate order;
-* reranker;
-* reranker scores;
-* candidate-set size;
-* context budget.
-
-This control is essential because otherwise differences in final output cannot be attributed specifically to admission policy. The proposal identifies cached candidate replay as a load-bearing validity control.
-
----
-
-# 17. Baseline System
-
-The primary baseline is the reproduced **RAG²** system.
-
-The original RAG² framework contains:
-
-1. rationale-based query formulation;
-2. balanced retrieval;
-3. MedCPT reranking;
-4. rationale-guided passage filtering;
-5. final answer generation.
-
-The original paper reports rationale-based queries rather than concatenating the original question with the rationale, and uses balanced retrieval across multiple biomedical corpora followed by MedCPT reranking.
-
-The thesis baseline shall reproduce the relevant admission mechanism rather than introducing a modified baseline.
-
-The exact reproduced RAG² implementation shall be:
-
-**`[IMPLEMENTATION VERSION / COMMIT TO BE SPECIFIED]`**
-
----
-
-# 18. Baseline Admission Label
-
-The baseline filter shall reproduce the RAG² label-generation procedure.
-
-The proposal describes the baseline as:
-
-1. determine whether evidence changes the model from an incorrect to a correct answer;
-2. resolve ambiguous cases using the perplexity differential;
-3. retain the relevant upper portion according to the original threshold;
-4. discard unresolved cases.
-
-The exact operational implementation shall follow the verified RAG² source.
-
-Because the original paper and the thesis proposal do not fully establish every implementation detail required for exact reproduction, the following must be recorded before final Stage-3 execution:
-
-* exact correctness-flip procedure;
-* perplexity calculation target;
-* perplexity equation;
-* threshold;
-* tie-handling;
-* discard rule;
-* label distribution;
-* training-data construction.
-
-**RAG² reproduction specification:** `[TO BE SPECIFIED AFTER SOURCE VERIFICATION]`
-
----
-
-# 19. Experimental Filter Comparison
-
-The primary filter comparison consists of two controlled conditions.
-
-| Condition   | Label Function                           | Backbone | Training Data | Hyperparameters |
-| ----------- | ---------------------------------------- | -------- | ------------- | --------------- |
-| Baseline    | RAG² confidence/perplexity-derived label | Same     | Same          | Same            |
-| Alternative | Entailment-derived support label         | Same     | Same          | Same            |
-
-The purpose of this comparison is to isolate the effect of the **label/signal formulation**.
-
-The two filters must therefore have:
-
-* the same backbone;
-* the same parameter count;
-* the same training data;
-* the same training procedure;
-* the same hyperparameter policy;
-* the same inference conditions.
-
-Only the label function should differ.
-
-This controlled comparison is explicitly established in the proposal.
-
----
-
-# 20. Entailment-Derived Label
-
-During training, the gold answer may be verbalised as a hypothesis:
-
-$$
-h^* = \mathrm{verbalise}(Q,\mathrm{gold})
-$$
-
-The support score is:
-
-$$
-\sigma^* =
-P_{\mathrm{entail}}(
-premise=s,
-hypothesis=h^*
-)
-$$
-
-The proposed binary label is:
-
-$$
-y(s)=
-\begin{cases}
-1 & \sigma^* \geq \theta_{hi}\\
-0 & \sigma^* \leq \theta_{lo}\\
-\mathrm{discard} & \text{otherwise}
-\end{cases}
-$$
-
-The exact values of:
-
-$$
-\theta_{hi},\theta_{lo}
-$$
-
-are:
-
-**`[TO BE SPECIFIED]`**
-
-Both filters are intended to be trained on general medical QA and applied zero-shot to Alzheimer's evaluation data.
-
----
-
-# 21. Inference-Time Support
-
-At inference time, the gold answer is unavailable.
-
-The support score shall therefore be derived from hypotheses constructed from the available query/rationale.
-
-For multiple-choice questions:
-
-* hypotheses may correspond to verbalised answer options.
-
-For open-ended questions:
-
-* hypotheses may correspond to atomic claims derived from the rationale.
-
-The maximum entailment probability is used as the support score:
-
-$$
-\sigma(s)=
-\max_h P_{\mathrm{entail}}(s,h)
-$$
-
-The maximum number of atomic hypotheses is currently specified as eight.
-
-The exact decomposition procedure is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 22. Discriminativeness
-
-The difference between the highest and second-highest entailment scores may provide information about whether a passage supports one answer specifically or several alternatives equally.
-
-The discriminativeness margin shall be recorded as a diagnostic:
-
-$$
-D(s)=\sigma_{(1)}(s)-\sigma_{(2)}(s)
-$$
-
-Whether \(D(s)\) contributes directly to admission is:
-
-**`[TO BE SPECIFIED]`**
-
-This value must not be incorporated into SCAF without an explicit experimental decision.
-
----
-
-# 23. SCAF
-
-SCAF is the proposed corrective admission policy.
-
-Its purpose is to replace confidence-derived utility with an admission score incorporating:
-
-1. evidential support;
-2. temporal currency;
-3. retrieval/reranking position;
-4. source authority.
-
-The proposed admission score is:
-
-$$
-A(s)=
-w_1\sigma(s)
-+w_2\gamma(s,q,t_q)
-+w_3\rho(s)
-+w_4\tau(s)
-$$
-
-A passage is admitted when:
-
-$$
-A(s)\geq\theta_{\mathrm{admit}}
-$$
-
-The weights and threshold are:
-
-$$
-w_1,w_2,w_3,w_4,\theta_{\mathrm{admit}}
-=
-[\text{TO BE SPECIFIED}]
-$$
-
----
-
-# 24. SCAF Support Component
-
-The support component is:
-
-$$
-\sigma(s)
-$$
-
-and is derived from entailment rather than model confidence.
-
-The support model is:
-
-**`[MODEL TO BE SPECIFIED]`**
-
-The support threshold is:
-
-$$
-\theta_{\mathrm{support}}
-=
-[\text{TO BE SPECIFIED}]
-$$
-
----
-
-# 25. SCAF Currency Component
-
-The currency component is:
-
-$$
-\gamma(s,q,t_q)
-$$
-
-The proposed formulation distinguishes:
-
-1. retracted/withdrawn evidence;
-2. time-invariant questions;
-3. superseded evidence;
-4. current evidence.
-
-The proposal gives the following conceptual form:
-
-$$
-\gamma(s,q,t_q)=
-\begin{cases}
-0 & \text{if retracted or withdrawn}\\
-1 & \text{if }\psi(q)=0\\
-\delta 2^{-(t_q-date(s))/H}
-& \text{if superseded}\\
-2^{-(t_q-date(s))/H}
-& \text{otherwise}
-\end{cases}
-$$
-
-The following parameters remain:
-
-* half-life \(H\);
-* supersession discount \(\delta\);
-* temporal-sensitivity function \(\psi(q)\).
-
-Their final definitions are:
-
-**`[TO BE SPECIFIED]`**
-
-Superseded evidence shall be down-weighted rather than automatically deleted.
-
-Hard exclusion shall be restricted to objectively established retraction or withdrawal states unless a different rule is explicitly approved.
-
----
-
-# 26. Temporal Sensitivity
-
-The currency mechanism shall be conditioned on whether the question is temporally sensitive.
-
-This prevents a general recency preference from unnecessarily penalising older evidence for time-invariant claims.
-
-The implementation of:
-
-$$
-\psi(q)
-$$
-
-is:
-
-**`[TO BE SPECIFIED]`**
-
-Possible approaches include:
-
-* rule-based classification using claim classes;
-* a trained classifier;
-* another explicitly justified method.
-
-The selected method must be frozen before final evaluation.
-
----
-
-# 27. Source Authority
-
-Source authority is represented as:
-
-$$
-\tau(s)
-$$
-
-The thesis does not assume a universal fixed ordering of source types.
-
-Instead, source authority shall be evaluated as an experimental variable.
-
-The authority representation is:
-
-**`[TO BE SPECIFIED]`**
-
-The source-authority ablation shall compare:
-
-* authority included;
-* authority excluded;
-* alternative authority formulation where justified.
-
----
-
-# 28. Rank-Normalised Relevance
-
-The reranker contribution is:
-
-$$
-\rho(s)
-$$
-
-Rank-based normalisation shall be used rather than min-max normalisation.
-
-This ensures comparability across queries and supports the use of a global admission threshold.
-
-The exact rank-normalisation function is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 29. Contested Evidence
-
-SCAF shall explicitly represent unresolved evidential disagreement.
-
-A claim is considered contested when:
-
-1. relevant passages belong to the same claim class;
-2. the passages support opposing conclusions;
-3. the passages fall within the defined contest window;
-4. both satisfy the minimum source-quality requirement.
-
-The contest window is:
-
-**`[TO BE SPECIFIED]`**
-
-The minimum source tier is:
-
-**`[TO BE SPECIFIED]`**
-
-The contested state is evaluated before supersession.
-
-When a contested condition is triggered, the system shall preserve representative evidence for both positions and identify the disagreement in the output.
-
-Preservation operates within the common context budget of section 16, which is never exceeded. Where contested evidence exceeds that budget, contested evidence is retained ahead of uncontested evidence, in descending A(s) with `evidence_id` as tie-break, up to the budget; the contested positions preserved and those dropped are recorded in the run metadata. This clarification resolves the conflict between this section and section 16 and does not alter either requirement in the non-exceeding case.
-
----
-
-# 30. Non-Comparability and Contradiction
-
-The contested detector must distinguish substantive contradiction from differences caused by scope.
-
-The following are not automatically contradictions:
-
-* different populations;
-* different disease stages;
-* different interventions;
-* different outcomes;
-* different clinical settings;
-* conditional recommendations.
-
-The formal contradiction criterion is:
-
-**`[TO BE SPECIFIED]`**
-
-Because the proposal identifies contradiction-versus-scope detection as a technical limitation, contested-state results shall be interpreted as evidence about the mechanism unless the validation procedure establishes sufficient reliability.
-
----
-
-# 31. SCAF Output States
-
-The proposed output policy contains four states:
-
-| State     | Meaning                                                              |
-| --------- | -------------------------------------------------------------------- |
-| GROUNDED  | Adequately supported and sufficiently current evidence is available  |
-| FLAGGED   | Evidence is usable but contains relevant currency/staleness concerns |
-| CONTESTED | Credible evidence supports opposing positions                        |
-| ABSTAIN   | Available evidence is insufficient for a supported answer            |
-
-The exact state-transition thresholds are:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 32. Development, Validation, and Test Data
-
-The research shall use independent development, validation, and final-test partitions.
-
-## Development
-
-Used for:
-
-* implementation;
-* debugging;
-* preliminary analysis;
-* engineering decisions.
-
-## Validation
-
-Used for:
-
-* parameter selection;
-* threshold selection;
-* model selection;
-* SCAF tuning;
-* classifier tuning;
-* sensitivity analysis.
-
-## Final Test
-
-Used only after all relevant decisions have been frozen.
-
-The final test set must not be used for:
-
-* parameter tuning;
-* threshold selection;
-* model selection;
-* pair-selection decisions;
-* hypothesis modification;
-* post-hoc control selection.
-
-The exact partitioning scheme is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 33. Data Leakage Prevention
-
-The following rules are mandatory.
-
-### 33.1 Evaluation isolation
-
-Final test questions and pairs must not be used for training or tuning.
-
-### 33.2 Provenance isolation
-
-The source of evaluation passages must be documented independently of the experimental result.
-
-### 33.3 Answer isolation
-
-Gold answers may be used where explicitly required for training-label construction but must not be available to inference-time admission.
-
-### 33.4 Metadata isolation
-
-Temporal metadata must not enter date-blind model conditions.
-
-### 33.5 Retrieval isolation
-
-All primary experimental arms must receive the same cached candidate set.
-
-### 33.6 Configuration isolation
-
-Once final test evaluation begins, model, prompt, retrieval, filter, SCAF, and evaluation configurations must be frozen.
-
----
-
-# 34. Test-Pair Sampling
-
-The final sampling procedure shall be designed to preserve the distribution of relevant evidence characteristics.
-
-At minimum, sampling shall consider:
-
-* claim class;
-* source tier;
-* temporal interval;
-* type of evidence change;
-* pre-training cutoff relationship;
-* question type;
-* clinical topic.
-
-The exact sampling proportions are:
-
-**`[TO BE SPECIFIED]`**
-
-The random seed is:
-
-**`[TO BE SPECIFIED]`**
-
-The target number of valid FRB pairs is:
-
-**`[TO BE SPECIFIED AFTER PILOT AND POWER ANALYSIS]`**
-
-The target sizes for negative-control, contested, and other evaluation sets are:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 35. Pair Attrition and Eligibility
-
-A candidate pair may be excluded because of:
-
-* inability to verify claim equivalence;
-* unavailable provenance;
-* insufficient temporal evidence;
-* source-tier mismatch;
-* excessive length mismatch;
-* insufficient topical similarity;
-* non-comparability;
-* uncertain change status;
-* leakage;
-* duplicate content;
-* inadequate metadata.
-
-Every exclusion must have a recorded reason.
-
-The final pair-selection criteria are:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 36. Pre-Training Cutoff Analysis
-
-The temporal-counterfactual design depends partly on the relationship between evidence dates and the knowledge available to the model used to generate training labels.
-
-Each pair shall therefore retain:
-
-* older evidence date;
-* newer evidence date;
-* change-point date;
-* model identity;
-* relevant model knowledge/pre-training cutoff information where available.
-
-The final cutoff-stratification rule is:
-
-**`[TO BE SPECIFIED]`**
-
-The number and proportion of usable pairs in each temporal stratum shall be reported before the final test set is frozen.
-
----
-
-# 37. Primary Bias-Probe Experiment
-
-The primary experiment compares:
-
-```text
-Matched Older Passage ──┐
-                        ├── Baseline Filter ── Δbaseline
-Matched Newer Passage ──┘
-
-Matched Older Passage ──┐
-                        ├── Entailment Filter ── Δsupport
-Matched Newer Passage ──┘
+| Setting | Value | Source |
+|---|---|---|
+| Base model | a Flan-T5 checkpoint with the label tokens added | `MODEL=/classifier/model/updated_flan_t5_model` |
+| Learning rate | **3e-5** | launch script |
+| Optimizer | **AdamW** | `run_classifier.py:528` |
+| Max sequence length | **512** | launch script |
+| Doc stride | **128** | launch script |
+| Train batch size per device | **16** | launch script |
+| Epochs | **40** | launch script |
+| Checkpointing | **per epoch** | launch script |
+| Weight decay | **0.0** (default) | `run_classifier.py:283` |
+| Warmup steps | **0** (default) | `run_classifier.py:306` |
+| Gradient accumulation | configurable, default **1** | `run_classifier.py:293` |
+| LR scheduler | configurable (HF default linear) | `run_classifier.py:299` |
+| Precision | **not hardcoded** — from `accelerate config` | `accelerator.use_fp16`, line 499 |
+
+Training data format — a JSON list, one object per example, with `id`,
+`answer` (the label token), `dataset_name` and `question` (the rendered
+prompt). **Inference** takes a softmax over the two label-token logits and
+predicts the higher-probability label — exactly what
+`systems/baseline/admission.py` implements.
+
+**One ambiguity, recorded rather than resolved.** The launch script sets
+`MODELNAME=flant5` and points at a generic directory; its filename mentions
+both "large" and "xl". The paper record states Flan-T5-large (≈770–780 M).
+**The released script does not pin the base size.** Confirm against the paper
+before stating a size in the thesis.
+
+### 10.4 Deviations, each with its reason
+
+`experiments/filter_training/config.py`. Every value there is either the
+paper's or a deviation that states itself, side by side in one object, so a
+deviation cannot be made without appearing in the training report.
+
+| Deviation | Reason |
+|---|---|
+| Per-device batch **4**, accumulation **4** (paper: 16 on one device) | A free 16 GB T4 cannot hold batch 16 at seq 512 for a 770M seq2seq model. **The effective batch stays 16** — `validate()` refuses a configuration where it does not, so accumulation cannot be used to quietly shrink it. |
+| Epochs **below 40** | Free-session limits. The count is deliberately **unset in code**: `validate()` raises rather than default it, because what fits depends on the labelled-set size. The count actually run is reported. |
+| **Subsampled training set** | Label generation needs two rationale generations per (question, passage) pair, so cost is linear in set size. The size is chosen from the §9.3 timing measurement — a budget, not a target. |
+
+**The base model is not reduced.** Dropping to Flan-T5-base is the obvious
+economy and is not taken: the venue is already a free T4, where the paper's
+own size trains, so shrinking it would give up fidelity to solve a problem
+that no longer exists.
+
+Training Flan-T5-large locally is ruled out by arithmetic, not tuning: ≈3.1 GB
+fp32 master weights + ≈3.1 GB gradients + ≈6.2 GB AdamW moments ≈ **12.4 GB
+before a single activation**, against 4 GB of VRAM — and batch 1 with
+accumulation does not reduce the optimizer footprint. CPU training on 16 GB
+RAM would not crash but would take days to weeks for 40 epochs. **Filter
+*inference* runs locally** (≈1.6 GB fp16 fits 4 GB); only the one-off training
+moves to a remote GPU.
+
+### 10.5 Before a checkpoint may produce thesis numbers
+
+`CheckpointRecord` requires all of: base model, training and validation set
+sizes, validation accuracy, epochs actually run, label distribution.
+
+* `is_usable()` returns False at or below chance (0.5). A binary classifier at
+  chance has not learned the label function, and a baseline built on one would
+  be **broken rather than weak** — which changes what a difference means.
+* `label_distribution()` is checked **before** training: a set that is 95% one
+  label teaches the prior, and that is better caught in the data than
+  diagnosed afterwards from a bad validation number.
+* `FlanT5RAG2Filter` refuses to run without an explicit checkpoint path, and
+  validates that each label token maps to exactly one token id.
+* `MockRAG2Filter` states in its own docstring that it must never produce
+  thesis performance results, and `run_end_to_end.py` labels every report it
+  appears in `MockRAG2Filter(all-HELPFUL stand-in; NO trained checkpoint)`
+  with `baseline_is_trained_rag2: false`.
+
+### 10.6 Procedure and contamination control
+
+1. Open a T4 session; install pinned dependencies.
+2. Run the generator timing check (§9.3).
+3. Choose the labelled-set size from that measurement.
+4. Generate labels over a MedQA subsample with the paper's decision tree.
+   Write with `write_training_file()`, which refuses to overwrite — labels
+   cost GPU hours and a silent rerun would destroy a checkpoint's provenance.
+5. Check `label_distribution()` before training.
+6. Train Flan-T5-large with the config above; record epochs actually run.
+7. Record validation accuracy in a `CheckpointRecord`.
+8. Download the checkpoint; run inference locally.
+
+The filter is trained on **general-medical** MedQA, never on the thesis's
+Alzheimer's evaluation questions. This is the paper's own setup (D-13) and it
+also removes any suspicion that the baseline was tuned on the evaluation set.
+The 123-candidate question pool plays no part in filter training.
+
+**What the thesis must state:** the checkpoint was unavailable · the filter
+was retrained by the student · the base size used · the epoch count and
+validation accuracy actually reached · the training-set size and that it is a
+subsample · that training ran on different hardware from the rest of the
+pipeline · **that this makes the baseline an adaptation of RAG², not a
+reproduction.**
+
+## 11. Evaluation metrics
+
+`experiments/evaluation/rag_metrics.py`, stdlib only (matching `stats.py`'s
+no-SciPy convention). These are the metrics the main evaluation (objective 3)
+and the ablation study (objective 2) are scored with.
+
+| Metric | Definition |
+|---|---|
+| `exact_match` | Normalized string equality against the reference answer (SQuAD normalization: lowercase, strip punctuation and articles, collapse whitespace). |
+| `token_f1` | SQuAD-style unigram precision/recall/F1 over multiset token overlap. 1.0 when both sides are empty, 0.0 when exactly one is. |
+| `rouge_l_f1` | Standard ROUGE-L: F1 over the longest common in-order subsequence. |
+| `context_precision` / `context_recall` / `context_f1` | How well the admitted evidence ids match the question's gold-relevant evidence ids. |
+| `groundedness` | Fraction of the answer's content tokens (stopwords removed) that appear in the admitted evidence text. |
+
+**`groundedness` is an automatic PROXY for faithfulness, not an entailment
+judgement.** Token overlap has no access to entailment, negation or
+paraphrase, so a high score does not certify that a claim is supported and a
+low score does not certify that it is not. It is a cheap, deterministic
+diagnostic for comparing arms against each other.
+
+**Context metrics return `None`, never 0.0, when a question carries no
+gold-evidence annotation.** This is load-bearing rather than a nicety: under
+the provenance firewall (§15.7) an externally-authored question's reference
+answer is deliberately independent of the retrieved candidate set, so absent
+gold evidence ids are the **expected** case on real data. Scoring that 0.0
+would report "context precision 0.000" for every arm — which reads as a real,
+uniformly terrible result — and would do so identically for baseline and
+proposed, quietly diluting the comparison. `aggregate()` skips `None`,
+averages over only the annotated rows, and reports `context_scored_n` so a
+reader can tell "0.0 across 10 annotated questions" from "not measurable
+here". `gold_evidence_ids` must come from the question/evidence pool; it is
+never guessed from the run.
+
+`experiments/evaluation/accuracy.py` remains the separate judged-correctness
+track and deliberately computes no automatic score of its own: `QAJudgment`
+records the generated answer, the reference answer, a binary `correct`
+outcome, and **who or what decided** (a human annotator id, or a named rule
+for closed-form questions). `rag_metrics.py` owns automatic scoring so the two
+cannot drift into two competing judges of the same thing.
+
+### 11.1 Human-judged hallucination protocol (out of the critical path)
+
+Retained, implemented and tested, but **not required before a main result** —
+see `docs/current_objectives.md`, "Removed from the primary pipeline".
+Recorded here because it defines terms the write-up uses.
+
+An answer is hallucinated if it contains **at least one claim unsupported by,
+or contradicted by, the evidence supplied to the system that produced it** — a
+faithfulness judgement against the frozen candidate set, not a clinical
+correctness judgement. Schema and validation:
+`experiments/evaluation/annotation.py`. Diagnostic subtypes, recorded but not
+separately weighted: faithfulness, factuality, temporal, misinterpretation,
+ambiguity, other.
+
+Generated answers are exported as a blinded packet (`build_blinded_packet`)
+with system identity replaced by "System A" / "System B" and order randomised;
+the unblinding key is kept separate from what the annotator sees. Completed
+annotations are re-validated on import (`read_annotations`) and recombined
+with system identity only after review (`unblind_annotations`). Arm identity
+must be hidden and order randomised, with the mapping stored separately —
+without it the result is not defensible.
+
+## 12. Statistical procedures
+
+`experiments/evaluation/stats.py`, standard library only.
+
+* **Exact McNemar** (`mcnemar`) on the paired discordant answers — a two-sided
+  exact binomial test, no normal approximation, no SciPy dependency.
+* **Paired bootstrap 95% CI** (`paired_bootstrap_ci`) on the absolute
+  difference, resampling **questions** as units so each question's paired
+  outcome stays together.
+* **Holm correction** (`holm`) across the pre-declared comparisons.
+* `har()` reports every rate two ways — conditional on answering, and over
+  every item with abstentions counted — because a bare rate over zero answers
+  is not a rate. `coverage()` and `compare_systems()` refuse a headline
+  difference when either system answered nothing.
+* `outcome_crosstab()` splits paired outcomes into baseline-only /
+  proposed-only / both / neither, keeping question ids so representative
+  examples — including cases where the proposed system does worse — can be
+  pulled directly. `error_analysis()` breaks each cell down by diagnostic
+  subtype. Both only count what annotation already recorded; neither infers a
+  pattern.
+
+No separate test was written for QA accuracy: it is the same paired-binary
+shape, so the same functions apply (verified in
+`tests/unit/test_evaluation.py::QAAccuracyStatsTests`).
+
+Dev/validation/test assignment is a pure function of `question_id` and a
+recorded seed, with the **question** — not the pair — as the unit (D-18), so
+adding questions cannot quietly change the test partition's composition.
+
+## 13. Evaluation-question provenance protocol
+
+**Established 2026-09-17, before any question was sourced.** It keeps a single
+property true: **every reference answer is traceable to a real record that
+this thesis did not author.**
+
+```
+inspected external source record → factual proposition → candidate question
+→ verbatim reference answer → citation + stable locator + date
+→ automatic validation and deduplication
+→ human review        ← authority to approve lives here
+→ approved candidate → corpus-support check → final evaluation question
 ```
 
-The candidate evidence, query, retrieval, reranking, model backbone, and experimental conditions are held constant except for the filter label function.
-
-The primary comparison is:
-
-$$
-\Delta_{\mathrm{baseline}}
-\quad\text{vs.}\quad
-\Delta_{\mathrm{support}}
-$$
-
----
-
-# 38. Validity Controls
-
-The following controls shall be included or explicitly resolved before final experimentation.
-
-| Control                   | Purpose                                                            |
-| ------------------------- | ------------------------------------------------------------------ |
-| Candidate replay          | Isolate admission from retrieval                                   |
-| Backbone replication      | Test whether the effect generalises beyond one filter model        |
-| Negative-control set      | Distinguish claim-recency effects from general era/prose effects   |
-| Decoupled verifier        | Reduce correlated evaluation errors                                |
-| Date-manipulation control | `[FINAL DESIGN TO BE SPECIFIED]`                                   |
-| Date-annotated condition  | Evaluate effects of explicit temporal information where applicable |
-
-The original proposal specifies a permutation control in which publication dates are reassigned. Its precise use in a date-blind condition requires methodological resolution because the filter cannot respond to dates it does not receive. Therefore the final control design is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 39. Experimental Variants
-
-The complete experimental comparison shall include the following conceptual arms.
-
-| ID | Variant                                    | Purpose                          |
-| -- | ------------------------------------------ | -------------------------------- |
-| B0 | Closed-book baseline                       | Establish no-retrieval reference |
-| B1 | Retrieval + reranking without filtering    | Measure retrieval contribution   |
-| B2 | Original RAG²                              | Primary baseline                 |
-| B3 | Contemporary support-supervised comparator | External comparison              |
-| B4 | Agentic/reference system                   | Contextual comparison            |
-| P  | SCAF                                       | Proposed system                  |
-
-The exact implementation of B3 and B4 is:
-
-**`[TO BE SPECIFIED]`**
-
-The proposal explicitly includes these comparative conditions.
-
----
-
-# 40. Ablation Plan
-
-The following ablations are specified conceptually.
-
-| ID  | Ablation                              | Purpose                              |
-| --- | ------------------------------------- | ------------------------------------ |
-| A1  | Perplexity label vs. entailment label | Primary causal comparison            |
-| A2  | Date/control condition                | Validity                             |
-| A3  | Second filter backbone                | Replication                          |
-| A4  | No filter                             | Determine filtering contribution     |
-| A5  | Support without currency              | Measure currency contribution        |
-| A6  | Date-blind vs. date-annotated prompt  | Separate temporal cue effects        |
-| A7  | Currency without support              | Measure support contribution         |
-| A8  | Contested state removed               | Measure disagreement handling        |
-| A9  | Abstention removed                    | Measure abstention contribution      |
-| A10 | Teacher vs. distilled student         | Measure distillation trade-off       |
-| A11 | Parameter sensitivity                 | Assess robustness                    |
-| A12 | Authority variants                    | Assess authority/recency interaction |
-| A13 | Hard supersession                     | Assess soft-supersession design      |
-| A14 | Generator transfer                    | Assess generality                    |
-
-The exact subset designated as primary versus secondary is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 41. Evaluation Metrics
-
-## 41.1 Primary Bias Metric
-
-$$
-\Delta =
-E[
-P(\mathrm{admit}\mid older)
--
-P(\mathrm{admit}\mid newer)
-]
-$$
-
-with:
-
-* point estimate;
-* 95% confidence interval;
-* pair-level analysis.
-
-## 41.2 Admission Metrics
-
-* older admission rate;
-* newer admission rate;
-* pairwise admission difference;
-* proportion of pairs favouring older evidence;
-* proportion favouring newer evidence;
-* tie rate.
-
-## 41.3 Retrieval Metrics
-
-* Recall@k;
-* Precision@k;
-* MRR;
-* nDCG@10;
-* evidence coverage;
-* redundancy.
-
-## 41.4 Evidence and Claim Metrics
-
-* unsupported-claim rate;
-* contradicted-claim rate;
-* superseded-claim rate;
-* citation precision;
-* citation recall;
-* entity-attribution error;
-* evidence insufficiency.
-
-## 41.5 Currency Metrics
-
-* outdated-evidence rate;
-* temporal correctness;
-* superseded-answer rate;
-* guideline-version correctness;
-* update-flip rate.
-
-## 41.6 Safety and Abstention Metrics
-
-* abstention rate;
-* appropriate abstention;
-* over-abstention;
-* risk–coverage area;
-* coverage at fixed accuracy.
-
-## 41.7 Efficiency Metrics
-
-* latency;
-* computational cost;
-* cost per correct answer.
-
-These metric categories are established in the proposal's evaluation framework.
-
----
-
-# 42. Dual Reporting of Answer-Conditional Metrics
-
-Any metric affected by abstention must be reported in two forms:
-
-1. conditional on the system providing an answer;
-2. with abstentions counted as failures.
-
-This prevents increased abstention from artificially improving conditional performance.
-
-This requirement is part of the established evaluation design.
-
----
-
-# 43. Statistical Analysis
-
-## 43.1 Admission Asymmetry
-
-Primary analysis:
-
-* paired bootstrap;
-* 10,000 resamples;
-* matched pair as unit of analysis;
-* 95% confidence interval.
-
-## 43.2 Claim-Level Outcomes
-
-For repeated claims nested within questions:
-
-* mixed-effects logistic regression;
-* arm as a fixed effect;
-* question as a random effect;
-* claim-level clustering where appropriate.
-
-## 43.3 Retrieval–Admission Decoupling
-
-The relationship between retrieval and unsupported claims shall be examined using:
-
-* item-level association between retrieval-recall change and unsupported-claim change;
-* mixed-effects mediation where appropriate;
-* analysis of items where admission differs but retrieval recall remains unchanged.
-
-## 43.4 Paired Currency Outcomes
-
-For paired categorical outcomes:
-
-* McNemar's exact test;
-* effect size using Cohen's \(h\).
-
-## 43.5 Expert Ratings
-
-For ordinal expert ratings:
-
-* mixed-effects cumulative-link model;
-* effect-size analysis using Cliff's delta where appropriate.
-
-These statistical structures are specified in the proposal.
-
----
-
-# 44. Multiple Comparisons
-
-The primary hypothesis family shall use:
-
-* family-wise significance level: \(\alpha = 0.05\);
-* Holm–Bonferroni correction.
-
-Secondary/exploratory analyses shall be clearly identified as such.
-
-Any alternative multiplicity policy is:
-
-**`[TO BE SPECIFIED BEFORE FINAL ANALYSIS]`**
-
----
-
-# 45. Evaluation of Automatic Judges
-
-Automatic claim labels shall be validated against human annotations on a stratified sample.
-
-The validation procedure shall report:
-
-* sample size;
-* sampling method;
-* agreement statistic;
-* validation precision/recall where appropriate.
-
-The proposal specifies Cohen's kappa as the agreement measure and proposes a minimum kappa criterion of 0.6 for retaining automatic claim labels as primary evaluation measures.
-
-The final validation sample size is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 46. Clinical Evaluation
-
-Where expert evaluation is conducted, outputs shall be:
-
-* anonymised with respect to system arm;
-* presented in randomised order;
-* evaluated under a pre-generated assignment key;
-* assessed using predefined rating criteria.
-
-The proposed rating dimensions include:
-
-* factual correctness;
-* evidence support;
-* currency;
-* clinical appropriateness;
-* safety;
-* completeness.
-
-Additional binary safety/appropriateness items may be included according to the final evaluation instrument.
-
-The exact evaluator composition is:
-
-**`[TO BE SPECIFIED]`**
-
-The final rating instrument is:
-
-**`[TO BE SPECIFIED]`**
-
----
-
-# 47. Inter-Rater Reliability
-
-Inter-rater reliability shall be assessed before interpreting between-arm expert-rating differences.
-
-The proposed statistic is:
-
-**Krippendorff's alpha**
-
-The minimum reliability threshold is:
-
-**0.4**
-
-Dimensions falling below the threshold shall be reported descriptively unless an alternative criterion is specified in advance.
-
-This follows the evaluation framework established in the proposal.
-
----
-
-# 48. Error Taxonomy
-
-Every relevant failure should be assigned to a predefined error category where sufficient logged evidence exists.
-
-The proposed categories are:
-
-1. retrieval failure;
-2. reranking failure;
-3. filter over-rejection;
-4. filter under-rejection;
-5. temporal failure;
-6. evidence insufficiency;
-7. hallucination;
-8. contradiction;
-9. clinical reasoning error;
-10. abstention error.
-
-The taxonomy is intended to distinguish failures occurring at different stages of the RAG pipeline.
-
----
-
-# 49. Success Criteria
-
-## 49.1 Bias-Probe Success
-
-The primary bias finding is considered supported only if:
-
-1. the primary admission asymmetry is measurable;
-2. the pair construction satisfies the predefined eligibility criteria;
-3. the effect meets the pre-specified statistical criterion;
-4. the negative-control result supports interpretation as a claim-recency effect rather than a generic era effect;
-5. the result is not attributable to retrieval differences;
-6. the result is sufficiently replicated across the specified backbone conditions.
-
-The precise minimum effect of interest is:
-
-**`[TO BE SPECIFIED]`**
-
-## 49.2 SCAF Success
-
-SCAF is considered successful if it demonstrates the pre-specified improvement in relevant evidence-selection outcomes while satisfying the pre-specified constraints on:
-
-* accuracy;
-* over-rejection;
-* over-abstention;
-* evidence insufficiency;
-* safety.
-
-The exact success thresholds are:
-
-**`[TO BE SPECIFIED]`**
-
-## 49.3 Null Result
-
-A null result shall be considered scientifically valid if:
-
-* the study is adequately powered;
-* the evaluation set satisfies the predefined criteria;
-* controls function as expected;
-* the experimental conditions were executed as specified.
-
-A null result shall not be treated as experimental failure.
-
----
-
-# 50. Reproducibility Requirements
-
-Every experimental result must be traceable to:
-
-1. a corpus snapshot;
-2. a pair/test-set manifest;
-3. a model version;
-4. a filter version;
-5. a SCAF configuration;
-6. a prompt version;
-7. a retrieval configuration;
-8. a random seed where applicable;
-9. a candidate-set snapshot;
-10. an analysis configuration.
-
-The following artefacts shall be versioned:
-
-### Research
-
-* research specification;
-* research ledger;
-* hypotheses;
-* preregistration;
-* deviation record.
-
-### Data
-
-* corpus manifest;
-* pair manifest;
-* train/validation/test manifests;
-* metadata;
-* exclusion log.
-
-### Models
-
-* model identifiers;
-* checkpoint identifiers;
-* tokenizer versions;
-* training configurations;
-* filter checkpoints;
-* SCAF configuration.
-
-### Experiments
-
-* prompts;
-* decoding parameters;
-* retrieval parameters;
-* candidate sets;
-* admission decisions;
-* generated outputs;
-* verification outputs;
-* evaluation labels;
-* statistical-analysis scripts/configuration.
-
----
-
-# 51. Stage Interfaces
-
-## 51.1 Stage 1 → Stage 2
-
-Stage 1 shall provide:
-
-* frozen corpus snapshot;
-* document identifiers;
-* passage/chunk identifiers;
-* publication dates;
-* date provenance;
-* source tiers;
-* guideline/version metadata;
-* supersession information;
-* retraction/withdrawal status;
-* claim classes;
-* provenance information;
-* corpus manifest.
-
-## 51.2 Stage 2 → Stage 3
-
-Stage 2 shall provide:
-
-* final temporal-counterfactual pairs;
-* negative-control set;
-* contested set;
-* additional evaluation sets;
-* pair provenance;
-* matching metadata;
-* change-point metadata;
-* train/validation/test assignments;
-* sampling information;
-* exclusion log;
-* leakage audit.
-
-## 51.3 Stage 3 → Stage 4
-
-Stage 3 shall provide:
-
-* baseline admission asymmetry;
-* alternative-filter admission asymmetry;
-* confidence intervals;
-* control results;
-* backbone replication results;
-* temporal-stratum results;
-* identified failure modes;
-* evidence supporting or failing to support the proposed mechanism.
-
-SCAF implementation must remain conditional on the scientific interpretation of the Stage-3 findings.
-
-## 51.4 Stage 4 → Stage 5
-
-Stage 4 shall provide:
-
-* frozen SCAF implementation;
-* frozen parameters;
-* model checkpoints;
-* support model;
-* currency configuration;
-* authority configuration;
-* contested-state configuration;
-* abstention configuration;
-* verifier;
-* validation results;
-* final configuration manifest.
-
----
-
-# 52. Frozen Components
-
-The following components shall be frozen for the primary comparative experiments.
-
-## Retrieval
-
-* corpus snapshot;
-* index;
-* retriever;
-* retrieval parameters;
-* candidate-set size;
-* balanced retrieval policy;
-* reranker;
-* reranking procedure.
-
-## Generation
-
-* generator model;
-* prompt;
-* decoding configuration;
-* temperature;
-* maximum output configuration.
-
-## Evaluation
-
-* final test set;
-* metric definitions;
-* annotation protocol;
-* statistical analysis plan.
-
-## Baseline
-
-* verified RAG² implementation;
-* baseline filter architecture;
-* baseline training procedure;
-* baseline label-generation procedure.
-
----
-
-# 53. Tunable Components
-
-The following may be tuned only using development/validation data:
-
-* filter training hyperparameters;
-* entailment thresholds;
-* SCAF weights;
-* admission threshold;
-* currency half-life;
-* supersession discount;
-* temporal-sensitivity parameters;
-* authority parameters;
-* contested-state thresholds;
-* abstention threshold;
-* verifier thresholds.
-
-The final configuration must be frozen before final test execution.
-
----
-
-# 54. Pre-Registration Requirements
-
-Before final test evaluation, the following shall be pre-registered:
-
-* research questions;
-* hypotheses;
-* primary outcomes;
-* secondary outcomes;
-* pair-selection criteria;
-* sampling procedure;
-* train/validation/test split;
-* statistical tests;
-* significance level;
-* multiplicity correction;
-* non-inferiority margin;
-* minimum effect of interest;
-* control definitions;
-* SCAF tuning procedure;
-* pivot criteria;
-* exclusion rules.
-
-The proposal explicitly establishes pre-registration before contact with final test data.
-
----
-
-# 55. Methodological Decision Register
-
-The following items remain deliberately unspecified until sufficient justification is available.
-
-| Decision                          | Specification                                  |
-| --------------------------------- | ---------------------------------------------- |
-| Thesis title                      | `[TO BE SPECIFIED]`                            |
-| Pair passage provenance           | `[TO BE SPECIFIED]`                            |
-| Same-claim criterion              | `[TO BE SPECIFIED]`                            |
-| Change-point definition           | `[TO BE SPECIFIED]`                            |
-| Length tolerance                  | `[TO BE SPECIFIED]`                            |
-| Topical-similarity criterion      | `[TO BE SPECIFIED]`                            |
-| Date precision handling           | `[TO BE SPECIFIED]`                            |
-| Non-comparability rule            | `[TO BE SPECIFIED]`                            |
-| Contradiction criterion           | `[TO BE SPECIFIED]`                            |
-| Pre-training cutoff rule          | `[TO BE SPECIFIED]`                            |
-| Final pair sample size            | `[TO BE SPECIFIED AFTER PILOT/POWER ANALYSIS]` |
-| Sampling proportions              | `[TO BE SPECIFIED]`                            |
-| Development/validation/test split | `[TO BE SPECIFIED]`                            |
-| RAG² reproduction details         | `[TO BE SPECIFIED AFTER SOURCE VERIFICATION]`  |
-| RAG² perplexity target            | `[TO BE SPECIFIED]`                            |
-| Entailment model                  | `[TO BE SPECIFIED]`                            |
-| Entailment thresholds             | `[TO BE SPECIFIED]`                            |
-| Discriminativeness usage          | `[TO BE SPECIFIED]`                            |
-| Currency half-life                | `[TO BE SPECIFIED]`                            |
-| Supersession discount             | `[TO BE SPECIFIED]`                            |
-| Temporal-sensitivity function     | `[TO BE SPECIFIED]`                            |
-| Source-authority function         | `[TO BE SPECIFIED]`                            |
-| Contested window                  | `[TO BE SPECIFIED]`                            |
-| Contested threshold               | `[TO BE SPECIFIED]`                            |
-| SCAF weights                      | `[TO BE SPECIFIED]`                            |
-| SCAF admission threshold          | `[TO BE SPECIFIED]`                            |
-| Abstention threshold              | `[TO BE SPECIFIED]`                            |
-| Non-inferiority margin δ          | `[TO BE SPECIFIED]`                            |
-| Judge-validation sample size      | `[TO BE SPECIFIED]`                            |
-| Expert-evaluation protocol        | `[TO BE SPECIFIED]`                            |
-| Final validity-control design     | `[TO BE SPECIFIED]`                            |
-
----
-
-# 56. Methodological Principles
-
-The following principles govern implementation of the specification.
-
-### Principle 1 — Isolate the variable
-
-Where an experiment is intended to compare admission policies, all upstream components must remain fixed.
-
-### Principle 2 — Measure before intervening
-
-The existence and characteristics of the proposed bias must be measured before the corrective policy is interpreted as necessary.
-
-### Principle 3 — Preserve the distinction between retrieval and admission
-
-A change in retrieved evidence is not evidence of an admission-policy effect.
-
-### Principle 4 — Do not equate recency with correctness
-
-Newer evidence may legitimately differ from older evidence because the underlying evidence has changed.
-
-### Principle 5 — Do not equate disagreement with supersession
-
-A live scientific dispute must not automatically be resolved in favour of the newest source.
-
-### Principle 6 — Protect the final test set
-
-No final-test observation may influence model, threshold, pair, or hypothesis selection.
-
-### Principle 7 — Prefer explicit uncertainty to invented precision
-
-Any methodological value not yet justified shall remain a documented placeholder until specified.
-
-### Principle 8 — Design for an informative null
-
-The methodology must remain scientifically interpretable if the predicted bias is not detected.
-
----
-
-# 57. Final Experimental Sequence
-
-The intended sequence is:
-
-```text
-Stage 1
-Frozen Alzheimer's Corpus
-        │
-        ▼
-Stage 2
-Pilot Pair Construction
-        │
-        ├── Eligibility / Attrition Analysis
-        ├── Temporal Feasibility
-        ├── Pre-training-Cutoff Analysis
-        └── Power Analysis
-                │
-                ▼
-        Final Pair Construction
-                │
-                ▼
-Stage 3
-Filter Recency-Bias Probe
-        │
-        ├── Baseline Filter
-        ├── Entailment Filter
-        ├── Backbone Replication
-        └── Validity Controls
-                │
-                ▼
-Stage 4
-SCAF Development and Validation
-        │
-        ├── Support
-        ├── Currency
-        ├── Authority
-        ├── Contested State
-        └── Abstention
-                │
-                ▼
-        Freeze SCAF
-                │
-                ▼
-Stage 5
-Final Comparative Evaluation
-        │
-        ├── Baseline
-        ├── Retrieval-only
-        ├── RAG²
-        ├── Contemporary Comparator
-        ├── SCAF
-        └── Ablations
-                │
-                ▼
-Stage 6
-Statistical Analysis
-Error Analysis
-Clinical Evaluation
-Thesis Write-up
+**Forbidden.** A language model inventing a question, an answer or a citation
+that is then treated as ground truth. Search snippets as reference evidence.
+An LLM cited as a source. A paraphrase presented as a quotation.
+
+**What automation does:** parsing, normalising, keyword classification,
+deduplication, completeness checks, formatting a review file. It does not
+decide what is true. No LLM wrote any question or answer in the current pool.
+
+| # | Rule |
+|---|---|
+| Source of the question | The source record itself — a Cochrane review states its own review question, an NIH page its own section question. |
+| Source of the answer | One **verbatim** sentence of the source's own conclusion or section text. Methodological preamble and restated headings are skipped: they cite correctly but answer nothing. |
+| Independent verification | **Not done yet.** Every record carries `verification_required: true` and `status: candidate`; PubMed E-utilities and doi.org were blocked in the build environment, so identifiers were transcribed, not resolved. This is the first review task. |
+| Date recorded | The source's publication date where it has one. MedQuAD carries none, so the retrieval date is recorded and flagged `reference_date_is_retrieval_date: true`. |
+| AD relevance | Cochrane: the record must name Alzheimer's *somewhere* and the question or objectives must be about Alzheimer's, dementia or cognition. NIH: UMLS CUI **C0002395**, assigned by NLM indexers. Never a bare keyword match on the question. |
+| Determinacy | Cochrane items carry an explicit verdict label. `NOT ENOUGH INFORMATION` is still a determinate finding *about the evidence base*, flagged ambiguous for the reviewer. Final determinacy is the reviewer's call. |
+| Corpus support | `corpus_support_expected` is an expectation, not a check. The real check runs against the completed corpus. |
+| Temporal flag | `temporal_candidate` is set when the Cochrane citation carries `.pub2` or higher. **It does not assert the verdict changed** — diagnostic only. |
+| Ambiguity flag | Recorded, not acted on. Ambiguity is a *cause* of hallucination, so these are the cases most likely to expose the behaviour under study; discarding them would remove the signal. |
+| Duplicates | Content-derived ids catch exact repeats; Jaccard over normalised tokens at 0.85 catches near-duplicates. First occurrence kept, later ones marked `rejected` with a reason so counts reconcile. Deliberately crude and deterministic — an embedding model would make the set depend on an unreproducible judgement. |
+| Provenance stored | `reference_source`, `reference_source_type`, `reference_locator`, `reference_date`, the source dataset and citation, and how the answer was extracted. Locators are concrete, never a bare title. |
+| Approval | **A human reviewer, and only a human.** The builder emits `candidate` or `rejected`; no code path produces `approved` or `final`. |
+
+### 13.1 Source categories
+
+| Category | Status | Acceptable for | Not acceptable for |
+|---|---|---|---|
+| **A. Peer-reviewed evidence synthesis** (Cochrane) | **In use** | treatment, diagnosis, prevention, prognosis | facts the review does not state |
+| **D. Government / public health** (NIH via MedQuAD) | **In use** | disease characteristics, genetics, symptoms, epidemiology | fine-grained treatment efficacy |
+| **C. Guidelines / consensus documents** | Not yet used | diagnostic criteria, recommendations, temporal facts | — |
+| **B. Research organisations** | Not yet used | epidemiology, general characteristics | efficacy claims |
+| **E. Existing ADRD QA datasets** | Not used | — | licensing and provenance unverified |
+| **F. The thesis corpus itself** | **Excluded by design** | — | **anything** — a question written from a passage later shown to the model is circular |
+
+Where sources conflict, a dated peer-reviewed synthesis beats an undated
+public-health page.
+
+### 13.2 Review
+
+Materials: `experiments/questions/review.csv` and `docs/question_review.md`.
+Outcomes: `ACCEPT` · `REVISE` · `REJECT` · `HOLD`. No numeric score.
+
+**The review file is deliberately neutral.** It carries the question, the
+reference answer and everything needed to trace that answer to a source — and
+none of the classifications this pipeline assigned. Internal flags
+(`temporal_candidate`, `ambiguity_candidate`, source verdict label, automatic
+validation outcomes) stay in `candidates.jsonl`, because a column saying a
+candidate looked weak invites confirmation rather than assessment — and the
+automated judgement is precisely what needs independent checking.
+`export_review.py` enforces this: it emits exactly `REVIEW_COLUMNS` and raises
+rather than write a file carrying a withheld field.
+
+The reviewer fills `review_decision`, `reviewer_note`, `reviewer_id` and
+`review_date`, and edits nothing else; a reference-answer change is described
+in the note and applied afterwards, so the original wording and its provenance
+stay recoverable.
+
+## 14. External evaluation data — input contract
+
+Used by the superseded temporal test-pair design (`experiments/test_pairs/`,
+out of the critical path per `docs/current_objectives.md`). The contract is
+recorded here because `validate_external.py` and `build_pairs.py` cite it at
+runtime and refuse to run without it.
+
+**Nothing in this repository generates that material**, and
+`build_pairs.py --pool primary_external` fails with a message naming the
+dependency rather than falling back to thesis-written questions.
+
+**Dependency:** MedChangeQA (Vladika, Dhaini & Matthes, *Facts Fade Fast*,
+Findings of EMNLP 2025), <https://github.com/jvladika/MedChange>. **No
+`LICENSE` file is published**, and the underlying text is Cochrane Library
+abstract content (Wiley copyright), so **do not commit the dataset** — fetch
+it at build time, record the commit SHA and the file SHA-256, and cite the
+paper.
+
+Released files (inspected directly, 2026-09-16): `MedChangeQA.csv` (512 rows:
+`Question`, `Newest Label`, `Outdated Label`), `MedRevQA.csv` (16,501 rows,
+including `conclusions`, `DOI_Date`, `PMID`), `AllStudyGroups.csv` (4,379
+rows: `Group_ID`, `Study_ID`, `Label`).
+
+**The join (D-34), deterministic and verified:** `MedChangeQA.csv` alone has
+no PMIDs, dates or evidence text. `AllStudyGroups.csv` supplies the linkage —
+`Group_ID` is sparse and must be forward-filled (1,535 groups of size 2–9);
+`Study_ID` is a **0-based row index into `MedRevQA.csv`**, verified by label
+agreement on 4,379/4,379 rows. Groups holding more than one distinct `Label`
+number exactly **512** and align 1:1 in file order with `MedChangeQA.csv`
+(`Newest Label` agreement 512/512). Per side: evidence text = `conclusions`,
+id = `PMID`, date = year parsed from `DOI_Date`. **No lexical matching, no
+embeddings, no semantic retrieval.** Do not try to recover the sides by
+matching question text: it was tried and only 6 of 512 recover both labels.
+
+### 14.1 JSONL contract
+
+One JSON object per line. The loader validates these and supplies **no
+defaults**, because a silently defaulted reference answer is
+indistinguishable from a real one.
+
+**Required** — without them the record does not identify an evaluation item:
+`question_id` (the partition unit, so all pairs for one question stay
+together), `question_text`, `reference_answer`, `older_document_id`,
+`newer_document_id`.
+
+**Optional** — absence is counted as a visible exclusion, never filled in:
+`older_text`, `newer_text` (absent ⇒ `missing_evidence_text`),
+`older_publication_date`, `newer_publication_date` (absent ⇒
+`missing_publication_date`), `question_date`, `change_point_date`,
+`older_evidence_id`, `newer_evidence_id`, `claim_class`, `pair_category`,
+`contradiction_status`, and per-side `*_source_tier`, `*_persistent_id`,
+`*_length_tokens`.
+
+`evidence_id` is minted as `EXT:<dataset>:<question_id>:<side>` when the
+dataset supplies none.
+
+A missing **required** field makes the file unusable: the validator exits
+non-zero and the builder refuses it. Neither fills the gap.
+
+### 14.2 Four different dates, kept apart
+
+| Field | Meaning |
+|---|---|
+| `question_date` (t_q) | The information state the admission decision is evaluated against |
+| `*_publication_date` | When each passage appeared |
+| `change_point_date` | When the clinical verdict moved |
+| `label_model_cutoffs` (config) | Pre-training cutoffs of the label-generating models |
+
+`question_date` comes from the dataset when it supplies one, otherwise from a
+single configured `evaluation_as_of_date`. It is **never** derived from a
+passage in the pair, and the schema rejects such a value: setting t_q to the
+newer passage's publication date gives that passage `R = 1` by construction
+and inflates the recency contrast the proposed method is measured on (D-21). A
+`change_point_date` the dataset does not supply is left absent, not
+synthesised from a publication date.
+
+### 14.3 Acquisition
+
+```bash
+BASE=https://raw.githubusercontent.com/jvladika/MedChange/main/Datasets
+for f in MedChangeQA.csv MedRevQA.csv AllStudyGroups.csv; do
+  curl -fsS -o "experiments/test_pairs/data/external/$f" "$BASE/$f"
+done
+
+# Convert to the §14.1 contract via the §14 join, then check it BEFORE building:
+python -m experiments.test_pairs.scripts.validate_external \
+    --input experiments/test_pairs/data/external/pairs_input.jsonl \
+    --dataset "MedChangeQA @ <commit-sha>" \
+    --output experiments/outputs/stage2_pilot/acquisition.json
+
+python -m experiments.test_pairs.scripts.build_pairs \
+    --pool primary_external \
+    --input experiments/test_pairs/data/external/pairs_input.jsonl \
+    --output-dir experiments/outputs/stage2_pilot
 ```
 
----
+`validate_external` records the raw file's SHA-256 and the dataset name, so
+the evaluation set can be traced back to the exact bytes it came from.
 
-# 58. Specification Freeze Conditions
+## 15. Interface requirements the experiment must satisfy
 
-Before implementation of each stage begins, the following conditions must be satisfied.
+1. **Candidate sets are frozen once and replayed byte-identically** to every
+   arm. No arm retrieves for itself during the comparison.
+2. **N is identical for every item.** `ρ` is a within-set rank, so `θ` is only
+   comparable across items at fixed candidate-set size.
+3. **Candidate sets contain only dated passages.** Applied identically to
+   every arm at construction (`experiments/retrieval/corpus.py::dated_only`),
+   so the undated branch of the recency score never fires and `undated_score`
+   is not a tunable. Every run reports its count of `UNDATED` passages; in a
+   valid run that count is zero.
+4. **Context order is candidate-list order in every arm.** Rank decides
+   *which* passages survive the budget; it does not reorder what the generator
+   sees.
+5. **The frozen manifest's hash is asserted before the run**, so the
+   evaluation set cannot change after outcomes are seen.
+6. **λ, θ and H are fitted on the validation split and frozen before any test
+   run.** `AdmissionConfig.validate()` raises rather than supply a default.
+7. **The provenance firewall.** `assert_firewall` refuses a manifest where a
+   question's reference evidence also appears among its candidates, which
+   would make the comparison circular. `FrozenItem.provenance_leak()` treats
+   any such overlap as a **defect**, not a goal.
+8. **Corpus version identification.** Every `FrozenItem` carries a
+   `corpus_snapshot` id: a manifest frozen against one corpus build is not
+   comparable to one frozen against another.
 
-## Step 2 may begin when:
+## 16. Reporting requirements
 
-* pair definition is specified;
-* provenance is specified;
-* matching criteria are specified;
-* change-point definition is specified;
-* sampling procedure is specified;
-* leakage rules are specified.
+* Every rate is reported both conditional on answering and with abstentions
+  counted, alongside answer coverage. **Never report a bare rate.**
+* The report must record which RAG² filter the baseline actually used
+  (`baseline_filter`, `baseline_is_trained_rag2`): "proposed improves on
+  baseline" against an all-HELPFUL stand-in is a different claim from the same
+  verdict against the paper's classifier, and a reader must not have to infer
+  which.
+* Context metrics that were not measurable are reported as such, with
+  `context_scored_n`, never as 0.000.
+* Statistical comparison: exact McNemar on paired discordant answers, paired
+  bootstrap CI resampling questions, Holm correction across the pre-declared
+  comparisons.
+* The corpus date distribution is reported alongside results (corpus recency
+  skew is a condition of the experiment, not a finding).
+* The generator's knowledge cutoff relative to the reference time is recorded
+  and treated as a documented condition: the generator may answer correctly
+  from parametric memory without using the evidence, which is not
+  hallucination but does compress the difference between arms.
 
-## Step 3 may begin when:
+## 17. How to run it
 
-* the final or pilot pair methodology is frozen;
-* baseline RAG² implementation is verified;
-* filter-label definitions are frozen;
-* control design is frozen;
-* candidate replay is operational;
-* statistical analysis is specified.
+```bash
+# Full test suite (no network, no model required)
+python -m unittest discover -s tests -t .
 
-## Step 4 may begin when:
+# Fixture end-to-end run: every arm, both comparisons, standard metrics
+python -m experiments.runners.run_end_to_end --output-dir experiments/outputs/smoke
 
-* Stage-3 findings are available;
-* SCAF components are formally defined;
-* tuning data are separated from test data;
-* tunable parameters are identified;
-* validation procedure is frozen.
+# A real run, once the §18 dependencies are resolved
+python -m experiments.runners.run_end_to_end \
+    --questions <frozen manifest> --index <built index> \
+    --real-model --model-name meta-llama/Meta-Llama-3-8B-Instruct \
+    --model-revision <commit-sha> --quantization nf4 \
+    --rag2-checkpoint <trained Flan-T5 checkpoint> \
+    --proposed-lambda <fitted λ> \
+    --output-dir experiments/outputs/<run id>
+```
 
-## Step 5 may begin when:
+Reproducibility rests on: a pinned model revision (§9.2), greedy decoding with
+no seed because nothing samples (§9.1), an order-sensitive
+`candidate_set_hash` asserted before the run (§15.5), a recorded
+`corpus_snapshot` (§15.8), a `RunConfig` hash covering model, revision,
+quantization, prompt, budget, λ and the baseline filter identity, and an
+output directory that `run_experiment` refuses to overwrite.
 
-* SCAF is frozen;
-* final test sets are locked;
-* all model and retrieval configurations are frozen;
-* evaluation metrics are frozen;
-* statistical analysis is frozen;
-* non-inferiority margin is specified;
-* preregistration is complete.
+## 18. Unresolved dependencies
 
----
+Each is a dependency with a known resolution, not a design ambiguity. Current
+state of each: `docs/status_and_decisions.md`.
 
-# 59. Specification Status
-
-This document defines the methodological framework for Steps 2–5.
-
-It intentionally does not assign values to parameters, thresholds, sample sizes, or procedures that have not yet been established by the research record.
-
-All `[TO BE SPECIFIED]` fields represent genuine methodological decisions that must be resolved before the corresponding component is frozen.
-
-No placeholder shall be populated solely for implementation convenience.
-
-The final experimental implementation shall conform to this specification unless a formally recorded methodological amendment is made before the affected experiment is conducted.
+1. **λ, θ, H are unfitted**, by design, until a validation split exists.
+2. **The baseline filter checkpoint does not exist** (§10). Until it does, the
+   baseline arm runs only against `MockRAG2Filter`, which is engineering
+   validation and never a result.
+3. **No approved evaluation question set exists**: the 123-candidate pool is
+   under human review (§13.2).
+4. **No model has been downloaded or run** (§9.3 step 3), so no
+   tokens/second figure exists anywhere in this repository.

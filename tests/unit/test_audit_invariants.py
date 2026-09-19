@@ -254,7 +254,8 @@ class ExternalValidatorTests(unittest.TestCase):
                     input_path=Path(tmp) / "nope.jsonl",
                     dataset_name="ExternalQA v1",
                 )
-            self.assertIn("external_evaluation_data.md", str(ctx.exception))
+            self.assertIn("research_experimental_specification.md",
+                          str(ctx.exception))
 
 
 if __name__ == "__main__":

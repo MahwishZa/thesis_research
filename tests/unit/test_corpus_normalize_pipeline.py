@@ -15,7 +15,8 @@ Two things are locked here:
    `tree=CORPUS` will fail with FileNotFoundError rather than skip. Run
    04_normalize.py --input records.example.jsonl -> 05_deduplicate.py ->
    06_chunk.py --tokenizer whitespace once against the real
-   alzheimer_corpus/ tree first (see README.md and docs/next_steps.md) to
+   alzheimer_corpus/ tree first (see README.md and
+   docs/status_and_decisions.md) to
    populate a local baseline before these tests are meaningful; they then
    catch drift within this working copy over time, not against history.
 2. The new real-data path (reading metadata/pmc.csv + XML directly) must

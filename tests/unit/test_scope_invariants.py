@@ -11,12 +11,18 @@ governs every other decision, and nothing else was checking it.
 
 This file guards ``docs/current_objectives.md`` (adopted 2026-09-18), the
 current canonical scope. It previously guarded ``docs/frozen_scope.md``,
-which is itself now superseded by current_objectives.md; that history is
-why ROUGE/BLEU/BERTScore, once a forbidden outcome, are now a REQUIRED part
-of the ablation study (``experiments/evaluation/rag_metrics.py``) - the
+which current_objectives.md superseded; that history is why
+ROUGE/BLEU/BERTScore, once a forbidden outcome, are now a REQUIRED part of
+the ablation study (``experiments/evaluation/rag_metrics.py``) - the
 opposite invariant. Guarding a superseded document's *old* invariants after
 the scope moved on would itself be the kind of drift this file exists to
 catch, so this file was retargeted rather than left in place.
+
+``frozen_scope.md`` no longer exists: the 2026-09-19 documentation
+consolidation merged its live content into
+``docs/research_experimental_specification.md`` and its superseded-design
+section into ``current_objectives.md``. The superseded designs are therefore
+guarded where they now live, not where they used to.
 """
 
 import unittest
@@ -82,10 +88,28 @@ class SupersededScopeTests(unittest.TestCase):
     """The old (hallucination-rate-primary) question may be remembered as
     history, never asserted as current."""
 
-    def test_frozen_scope_is_marked_superseded(self):
-        body = text(ROOT / "docs" / "frozen_scope.md")
-        self.assertIn("SUPERSEDED", body)
-        self.assertIn("current_objectives.md", body)
+    def test_superseded_designs_are_recorded_as_history_in_the_scope_doc(self):
+        """Both earlier research questions must stay *recorded* - deleting
+        them would make experiments/test_pairs/ inexplicable - and must stay
+        marked superseded, so neither can be mistaken for current."""
+        body = text(SCOPE)
+        self.assertIn("Superseded designs", body)
+        self.assertIn("superseded, not current", body)
+        self.assertIn("admission asymmetry", body.lower())
+        self.assertIn("test_pairs", body)
+
+    def test_the_four_authoritative_docs_all_exist(self):
+        """The 2026-09-19 consolidation reduced docs/ to four files and
+        pointed code, tests and README at them. A missing one means a
+        reference in this repository now dangles."""
+        docs = ROOT / "docs"
+        expected = {
+            "current_objectives.md",
+            "research_experimental_specification.md",
+            "status_and_decisions.md",
+            "question_review.md",
+        }
+        self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
 
     def test_readme_does_not_state_the_old_question_as_current(self):
         """The old primary/secondary framing (hallucination rate primary,

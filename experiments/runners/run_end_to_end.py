@@ -53,7 +53,8 @@ to run against a real frozen candidate set once one exists (see
 experiments/evaluation/freezing.py), and --real-model to use an actual
 Hugging Face generator instead of the deterministic stand-in (requires
 transformers/torch and a downloaded checkpoint - not available in this
-sandbox; see docs/generator_contract.md for the target model spec).
+sandbox; see docs/research_experimental_specification.md §9 for the target
+model spec).
 
 The RAG² baseline arm runs the real ``FlanT5RAG2Filter`` when
 ``--rag2-checkpoint`` supplies a trained checkpoint. Without one it runs a

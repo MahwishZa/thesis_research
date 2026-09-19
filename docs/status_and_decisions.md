@@ -1,0 +1,478 @@
+# Status, Decisions and Record
+
+**Authoritative status and decision record. Consolidated 2026-09-19** from
+`research_ledger.md`, `next_steps.md`, `hardware_and_resources.md`,
+`question_pool_status.md`, `repository_structure.md`,
+`experiment_outputs.md`, `feasibility_and_alignment_audit.md`,
+`research_understanding.md` and `proposal_scope_amendment.md`.
+
+Scope is governed by `docs/current_objectives.md`. The method is specified in
+`docs/research_experimental_specification.md`. **This document records what is
+true right now, what was decided and why, and what is still missing.**
+
+Status vocabulary, used strictly: **IMPLEMENTED** (code exists) · **TESTED**
+(tested on fixtures) · **VALIDATED** (whole pathway exercised end to end) ·
+**READY FOR REAL EXECUTION** (only inputs missing) · **EXECUTED** (actually
+run on real data).
+
+Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]`
+reported by published research · `[INF]` methodological inference · `[STU]`
+student assumption · `[REC]` assistant recommendation.
+
+---
+
+## 1. Headline status
+
+| | |
+|---|---|
+| **Alzheimer's corpus** | **COMPLETE / FROZEN** (verified 2026-09-19). Do not rerun stages 01–07. |
+| **Evaluation questions** | 123 candidates, **under human review**. 0 approved. |
+| **RAG² baseline filter** | Code complete and reachable; **no trained checkpoint exists**. |
+| **Proposed system** | Code complete; **λ, θ, H unfitted** by design. |
+| **Generator** | Contract pinned and wired; **no model has ever been downloaded or run**. |
+| **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures. |
+| **Experimental result** | **None exists.** No number in this repository is a research finding. |
+
+**No real (non-fixture) experimental run has been performed.** The whole
+pathway is VALIDATED end to end on synthetic fixtures
+(`tests/integration/test_controlled_validation.py`): corpus → index →
+retrieval → rerank → freeze → every arm → runner → JSONL, with all control
+properties asserted. That is software validation, not a pilot, and it produces
+no number that could be read as a result.
+
+## 2. Corpus stage — COMPLETE / FROZEN
+
+All seven pipeline stages have run for real against the live corpus. The
+evidence chain below was verified end to end by cross-checking each stage's
+*output count* against the *next* stage's *input count* as independently
+reported by that next stage's own log line — not by trusting any stage's
+self-report in isolation:
+
+```
+PMC finalize:   matched_pmcids=112260 = accounted_pmcids=112260, manifest_rows=114256  (exact)
+04 normalize:   PMC verified=114157 = parsed=114157 = normalized=114157                (exact)
+05 deduplicate: input 114157, duplicates=2842, unique=111315   (114157 − 2842)         (exact)
+06 chunk:       documents=111315 (matches 05 exactly)  →  chunks=4377041               (exact)
+07 classify:    chunks=4377041 (matches 06 exactly)    →  all 4377041 tagged           (exact)
+```
+
+| Stage | Result |
+|---|---|
+| 01 PubMed | **EXECUTED** — 676 records |
+| 02 PMC retrieval + finalization | **EXECUTED** — 114,256-row manifest, 0 duplicate (pmcid, version) pairs, 114,157 `already_verified` + 99 `unavailable_current_dataset`, every row's paths consistent with its status |
+| 03 guidelines / textbooks | IMPLEMENTED, TESTED, **0 rows curated** — optional, not blocking |
+| 04 normalize | **EXECUTED** — 114,157 normalized (67,608 AD-relevant, 46,549 excluded) |
+| 05 deduplicate | **EXECUTED** — 111,315 unique, 2,842 duplicates recorded |
+| 06 chunk | **EXECUTED** — 4,377,041 chunks, real `ncbi/MedCPT-Article-Encoder` tokenizer, 256/32/224 spec, ~7,892 s (≈2 h 11 m) |
+| 07 claim classification | **EXECUTED** — 4,377,041 chunks tagged, all 26 `claim_types` and all 17 `evidence_levels` matched at least once, ~4,520 s at ~975 chunks/sec |
+
+Also checked and found clean: every tracked CSV (`metadata/*.csv`,
+`reports/*.csv`) parses as well-formed CSV with a consistent column count on
+every row (verified programmatically); `quality_control.log` and
+`deduplication.log` contain no `ERROR`, `CRITICAL` or traceback lines;
+`retrieval.log`'s 227 `ERROR` lines are all transient retries from the
+multi-day retrieval campaign, all preceding its own final authoritative
+`Stage 02 finalization completed successfully` line with zero reconciliation
+discrepancy — resolved history, not a live problem.
+`tests/integration/test_corpus_to_retrieval.py` runs the real 04→05→06→07
+chain and confirms `experiments/retrieval/corpus.py::read_passages()` loads
+the result, every passage carries the fields retrieval and admission need,
+chunk_ids are unique, and Stage 07's tags survive into what retrieval hands
+onward — proof, not assumption, that the corpus schema is what the retrieval
+layer expects.
+
+**Conclusion: no genuine integrity problem was found; nothing was corrected,
+rerun or regenerated.**
+
+**The real intermediate JSONL files exist only on the machine that produced
+them.** `alzheimer_corpus/data/**` is gitignored by design ("research data is
+never committed"); only the logs, reports and registries above are tracked
+provenance.
+
+### 2.1 Two known, non-blocking corpus gaps
+
+* **Stage 03 registries are header-only (0 rows).** `03_guidelines.py` is
+  implemented and tested but no document has been curated into it. Stage 04's
+  real-data path treats both registries as optional, so nothing upstream is
+  affected. Real open-access guidance exists (US government work is public
+  domain by statute), but this environment's egress blocks `who.int` and
+  `nia.nih.gov`, so no specific title, URL or licence could be independently
+  verified — and fabricating one was prohibited from the start. Populating a
+  row remains a per-document curation step for the student (D-45).
+* **The PMC licensing gate is not enforced.** `04_normalize.py` stamps
+  `redistribution_allowed` on every PMC record but does not act on it — unlike
+  the guidelines/textbooks path, which correctly excludes a restricted row's
+  text. On the finalized manifest roughly **19,669 of 114,256 rows (~17%)**
+  carry a licence outside `_common.DISTRIBUTABLE` (`CC BY-NC-ND`, `TDM`, blank
+  or missing) and would be affected if the gate were enforced. Stage 04 has
+  already run, so this affects real generated output, not a future run. It is
+  a **dataset-composition decision**, not a bug fix to apply silently: it
+  changes which real documents' text is in the corpus. It affects
+  redistributability, not internal use — the corpus JSONL is gitignored and
+  never leaves the machine — so it does not block research use now, but it
+  must be decided before any external publication or redistribution of the
+  corpus text, and Stage 04 re-run if the gate is enforced.
+
+## 3. Component readiness
+
+| Component | Status | Waiting on |
+|---|---|---|
+| Retrieval / rerank (`experiments/retrieval/`) | IMPLEMENTED, TESTED | `torch` on the run machine |
+| Evidence freezing (`freezing.py`) | READY FOR REAL EXECUTION | approved questions |
+| Baseline arm (`systems/baseline/`) | READY except the checkpoint | filter training |
+| Proposed arm (`systems/proposed/`) | READY | λ/θ/H fitting on a validation split |
+| Generator interface (`hf_generator.py`) | IMPLEMENTED, TESTED without loading a model | Hugging Face licence + a pinned sha |
+| Standard metrics (`rag_metrics.py`) | IMPLEMENTED, TESTED | real answers |
+| End-to-end runner (`run_end_to_end.py`) | IMPLEMENTED, TESTED, VALIDATED | all of the above |
+| Ablation (`λ = 0` arm, always included) | IMPLEMENTED, TESTED | a fitted full-system λ to ablate against |
+| Annotation / HAR / statistics | IMPLEMENTED, TESTED — out of the critical path | real outcomes |
+
+### 3.1 Blockers to a real (non-fixture) run
+
+| Blocked on | Blocks | Note |
+|---|---|---|
+| **Human question review** | the final ~100 questions | 123 candidates in `experiments/questions/review.csv` |
+| **Filter training** | a *trained* RAG² baseline | strategy decided; needs one free-tier GPU session |
+| **Llama-3 licence** | generation | a click-through on Hugging Face, then a read token |
+| **λ/θ/H fitting** | the proposed arm's real configuration | needs a validation split of approved questions |
+| **Generation speed** | run planning | **unmeasured**; the timing check produces it |
+| **Identifier verification** | question approval | PMIDs transcribed, not resolved |
+| **PMC licensing gate** | corpus composition (§2.1) | decision, not a bug fix |
+
+None of these blocks running, validating and ablating the system against the
+fixture. They block treating any number as a real result.
+
+### 3.2 Next steps, in order
+
+1. **Finish question review.** ACCEPT / REVISE / REJECT / HOLD per
+   `docs/question_review.md`. Spot-check a sample of PMIDs first. Target ~100
+   accepted, not a fixed count.
+2. **Accept the Llama-3 licence** on Hugging Face; create a read token.
+3. Build the index (`python -m experiments.retrieval.build_index`), recording
+   the corpus snapshot id.
+4. Timing check on the remote GPU — the first real measurement.
+5. Generate filter labels on a subsample; check the label distribution; train
+   Flan-T5-large; record validation accuracy in a `CheckpointRecord`.
+6. Freeze evidence for the approved questions.
+7. Fit λ, θ, H on the **validation split only**, then freeze them.
+8. Run every arm over the frozen test manifest with one shared generator
+   (`run_end_to_end.py`, see the specification §17).
+9. Score with the standard metrics; report `main_evaluation` (objective 3) and
+   `ablation_study` (objective 2) separately.
+
+Do not add a pilot study, extra metrics, or extra baselines.
+
+## 4. Question pool status
+
+**Built 2026-09-17.** Reproduce with:
+
+```bash
+python -m experiments.questions.build_pool \
+    --medrevqa <path>/MedRevQA.csv --medquad <path>/MedQuAD --retrieved-on 2026-09
+```
+
+> **Nothing in this pool is final.** Every record is `candidate` or
+> `rejected`. No question has been human-reviewed, and none has been checked
+> against the corpus.
+
+| | |
+|---|---|
+| Sourced from adapters | 170 |
+| After dropping identical-id repeats | 150 |
+| **Auto-validated, awaiting human review** | **123** |
+| Auto-rejected (all `near_duplicate_of_earlier_candidate`) | 27 |
+| Near-duplicate pairs detected | 35 |
+| Distinct source records | 133 |
+| AD-anchored / determinate | 150 / 150 |
+| Temporal candidates / ambiguity candidates | 74 / 47 |
+| Missing provenance | 0 — the schema refuses a record without source, locator and date |
+| **Approved / final** | **0** |
+
+Target is roughly 100 after review; 123 candidates gives room to reject weak
+ones without dropping below it. Rejected records are kept in
+`candidates.jsonl` with their reason, so counts reconcile.
+
+**Topics:** treatment 79, diagnosis 17, management 17, prevention 9, general
+7, disease_characteristics 6, mechanism 6, disease_course 5, epidemiology 4.
+Skewed to treatment because Cochrane is intervention-heavy. **Not corrected**
+— forcing balance would mean dropping sound items or inventing weak ones. A
+reviewer wanting more diagnosis or epidemiology coverage should add a
+guideline source rather than rebalance this one.
+
+**Source types:** peer_reviewed_evidence_synthesis 128,
+government_public_health 22.
+
+### 4.1 Known limitations of the pool
+
+1. **Identifiers were transcribed, not resolved.** PubMed E-utilities and
+   doi.org are blocked in the build environment, so no PMID or DOI was
+   confirmed to resolve. Every record carries `verification_required: true`.
+   Spot-checking these is the first review task.
+2. **Two sources, ~85% Cochrane.** A guideline source would strengthen it.
+3. **MedQuAD items carry no publication date**; the retrieval date is recorded
+   and flagged as such. Two of its AD source sites have been retired into
+   MedlinePlus and their URLs may redirect.
+4. **`corpus_support_expected` is an expectation, not a check.**
+5. **Reference answers are one-sentence verbatim extracts** — short by design,
+   for copyright and judgeability, but a reviewer should confirm each one
+   *answers* its question rather than merely relating to it.
+
+## 5. Hardware and execution venue
+
+**Local environment VERIFIED 2026-09-17** (measured on the student's laptop):
+64-bit Windows on AMD Ryzen 5 7535HS, 16 GB RAM (15.2 GB usable), NVIDIA RTX
+2050 with **4096 MiB VRAM**, driver 592.82 (driver-reported CUDA 13.1),
+Python 3.12.6, PyTorch 2.4.1+cu121 with `torch.cuda.is_available() == True`,
+transformers/accelerate/huggingface_hub installed, 30.07 GB free on C:.
+
+**The CUDA version mismatch is not a problem.** Driver-reported CUDA 13.1 is a
+*ceiling*; PyTorch's build CUDA 12.1 is what is *used*; NVIDIA drivers are
+backward compatible. `torch.cuda.is_available()` returns True and PyTorch
+names the RTX 2050. **Do not reinstall CUDA or PyTorch because the numbers
+differ** — it risks breaking a working stack and consuming scarce disk for no
+gain.
+
+All runtime figures below are **ESTIMATED**: no model has been executed on
+either machine, and the audits themselves ran in a Linux container with no GPU
+and no ML stack.
+
+| Component | Verdict | Basis |
+|---|---|---|
+| MedCPT query encoder / reranker inference | **FEASIBLE LOCALLY** | ≈109 M params, ≈0.44 GB fp32; cost scales with candidates per question, not corpus size |
+| Flan-T5 filter **inference** | **FEASIBLE LOCALLY** | ≈1.6 GB fp16 |
+| Flan-T5 filter **training** | **REQUIRES REMOTE GPU** | ≈12.4 GB before activations — specification §10.4 |
+| Retrieval index | **FEASIBLE** | flat exact index (D-37), CPU; 16 GB RAM is the limit to watch |
+| Corpus processing | **EXECUTED LOCALLY** | CPU-bound; see §2 |
+| Llama-3-8B inference | **NOT PRACTICAL LOCALLY** | specification §9 |
+| ~100-question orchestration | **FEASIBLE LOCALLY** | pure Python; the full suite passes with no ML stack |
+
+**Storage budget (ESTIMATED, nothing downloaded):** Llama-3-8B BF16 ≈16 GB
+(not needed), Q4_K_M GGUF ≈4.9 GB, Flan-T5-large ≈3 GB, the trained filter
+checkpoint ≈3 GB, MedCPT encoder + reranker ≈0.9 GB, HF cache overhead ≈1.5×
+model size during download, generated outputs a few MB. A naive "download
+everything" would need ~25 GB of the 30 GB free.
+
+**Strategy.** Locally: corpus build, question sourcing and review, evidence
+freezing and hashing, annotation packets, statistics, tests, MedCPT and
+Flan-T5 *inference*. Remotely (free-tier 16 GB GPU session): filter training,
+once; generation for every arm. The runner takes a frozen manifest in and
+writes JSONL out, so only two small files cross machines. **Execution venue is
+a deployment detail; the scientific comparison is unchanged.**
+
+## 6. Repository layout
+
+```
+thesis_research/
+├── README.md                      the one root readme
+├── pyproject.toml
+├── docs/                          four authoritative documents (§6.1)
+├── alzheimer_corpus/              the evidence corpus
+│   ├── config/                    MeSH vocabulary, claim taxonomy, queries
+│   ├── scripts/                   01_pubmed … 07_claim_classification
+│   ├── metadata/ reports/ logs/   tracked provenance
+│   └── data/                      gitignored — research data is never committed
+├── systems/                       the experimental arms
+│   ├── interfaces/                Evidence, Candidate, ExperimentResult,
+│   │                              Generator, Retriever, System, HF generator
+│   ├── baseline/                  no-filter control · RAG²-style Flan-T5 filter
+│   └── proposed/                  recency-aware admission
+├── experiments/
+│   ├── configs/                   run configuration
+│   ├── outputs/                   run artefacts (never overwritten)
+│   ├── runners/run_end_to_end.py  the single entry point for pipeline steps 2–4
+│   ├── evaluation/                questions · freezing · runner · rag_metrics ·
+│   │                              accuracy · annotation · stats
+│   ├── questions/                 the candidate question pool + review export
+│   ├── retrieval/                 MedCPT retrieval + reranking + flat exact index
+│   ├── filter_training/           RAG² filter labels and training config
+│   └── test_pairs/                superseded design's infrastructure, unrun
+└── tests/                         unit + integration
+```
+
+### 6.1 `docs/`
+
+| File | Purpose |
+|---|---|
+| `current_objectives.md` | **Canonical scope.** The three objectives, the pipeline, what is out of the critical path, and the known blockers. Governs every other document. |
+| `research_experimental_specification.md` | **The method.** What each arm does, what is held constant, the parameters, the generator contract, filter training, metrics, statistics, question provenance, the external-data contract, and how to run it reproducibly. |
+| `status_and_decisions.md` | **This file.** What is executed, decided, measured, blocked and limited, plus the decision/fact/risk record and the change log. |
+| `question_review.md` | **Reviewer instructions** for `experiments/questions/review.csv` — a human-facing worksheet, not a design document. |
+
+Seventeen earlier documents were consolidated into these on 2026-09-19; the
+change log (§13) records what went where.
+
+### 6.2 What is not in the repository, and why
+
+| Not vendored | Reason |
+|---|---|
+| The Alzheimer's corpus data | size; built locally; ignored by `alzheimer_corpus/.gitignore` |
+| MedRevQA / MedChangeQA CSVs | no upstream licence file; Cochrane abstract text |
+| MedQuAD checkout | CC BY 4.0 but large; cloned on demand |
+| Model weights | disk; see §5 |
+
+Each source adapter takes a path and fails with a message naming what to
+fetch, rather than silently falling back to thesis-authored material.
+
+### 6.3 `experiments/outputs/stage2_pilot/` is not research data
+
+Those files were produced by running the superseded Stage-2 pilot against the
+10-document fixture corpus. Every candidate is excluded, 0 pairs are eligible,
+the questions are placeholders, and `check_a_interpretable: false` because the
+change points are corpus publication dates rather than evidence-change dates.
+**No number in that directory may be cited as a research finding.**
+
+## 7. Established facts
+
+| # | Fact | Tag | Source |
+|---|---|---|---|
+| E1 | RAG²'s filter is Flan-T5-large (≈770 M), trained on labels from a correctness-flip decision tree with a perplexity differential as tie-breaker at τ = top 25% | `[DOC]` | RAG² §3.2, Fig. 2, Eq. 3 |
+| E2 | The primary label criterion is the correctness flip; perplexity was introduced explicitly "to address" cases where accuracy is unchanged | `[DOC]` | RAG² §3.2 |
+| E3 | Perplexity is computed over the model's generated **rationale**; the paper's Eq. 4 notation is ambiguous and appears to score the query | `[DOC]` | RAG² §1, §5.1 vs Eq. 4 |
+| E4 | RAG² corpus: 37.6 M docs / 116.7 M passages / 564.2 GB across PubMed, PMC, CPG, 18 textbooks | `[DOC]` | RAG² Table A1 |
+| E5 | Reported gains +6.1 / +3.8 / +0.9 average accuracy points (Llama-3-8B 60.2→66.3; Meerkat-7B 68.6→72.4; GPT-4o 86.0→86.9) | `[DOC]` | RAG² Table 2 |
+| E6 | Retrieval uses the **rationale** as query (original query excluded for length); reranking uses the **original query**. MedCPT at both stages | `[DOC]` | RAG² §3.3, §3.4 |
+| E7 | RAG² contains no temporal representation anywhere — corpus, index, retriever, reranker or filter | `[INF]` | Absence across the paper |
+| E8 | RAG²'s only open-ended evaluation is ClinicalQA25 — 25 queries, ROUGE-L and BERTScore | `[DOC]` | RAG² §A.4 |
+| E9 | RAG² code is released at `github.com/dmis-lab/RAG2`; **the trained checkpoint is not distributed**, and the README states "this repository is not a full, one-command reproduction of the paper" | `[DOC]` | repository README, fetched 2026-09-17 |
+| E10 | The paper demonstrates cross-**dataset** filter transfer, not cross-**backbone** transfer, and never states how the GPT-4o filter was obtained | `[DOC]` | RAG² §4.2, §4.3 |
+| E11 | The paper's own stated limitations: snippets are labelled individually, ignoring combined effects; Flan-T5's context limit means one snippet at a time | `[DOC]` | RAG² Limitations |
+| E12 | Largest medical-RAG expert evaluation to date: 18 clinicians, 80,502 annotations, 800 outputs; 22% top-16 relevance, 31% of queries with no relevant passage | `[PUB]` | arXiv:2511.06738 |
+| E13 | MedChangeQA: 512 changed-verdict pairs derived from MedRevQA (16,501 pairs, Cochrane census 2000–2024) | `[PUB]` | Vladika et al. 2025 |
+| E14 | Cochrane CD016297 (April 2026, 17 trials, 20,342 participants) concluded anti-amyloid mAbs probably produce little/no clinically meaningful cognitive difference at 18 months; contested within days | `[DOC]` | proposal §1.3 |
+| E15 | **The RAG² abstract motivates the work by stating that LLMs "struggle with hallucinations and outdated knowledge" — and then measures neither.** Measuring evidence recency directly is therefore not a detour from the base paper; it addresses the base paper's own unmeasured claim | `[DOC]` | RAG² abstract vs §4 |
+
+## 8. Decisions
+
+Decisions before D-36 were taken under superseded framings. They are kept for
+provenance; where one concerns what is *measured* rather than what is *built*,
+D-36 and then `current_objectives.md` supersede it. Decisions concerning what
+is *built* are still in force and are implemented as described in the
+specification.
+
+### 8.1 In force
+
+| # | Decision |
+|---|---|
+| D-1 | Freeze everything upstream of admission; arms are distinct functions over one cached candidate list. **The central internal-validity guarantee.** |
+| D-2 | **Provenance firewall:** the primary claim rests on externally-authored material; thesis-curated material supports replication and case study only. |
+| D-3 | Soft supersession (down-weight); hard rejection only for retraction/withdrawal — claim-class tagging precision is unverified, and a hard gate would silently delete correct evidence in proportion to tagging error. |
+| D-8 | The main comparison uses a prompt template **without** date annotations, so gains attribute to which passages were admitted rather than to date cues. |
+| D-10 | Mandatory dual reporting of every rate (conditional on answering; and with abstentions counted). |
+| D-12 | Rank-based rather than min-max normalisation of `ρ(s)`, so a global θ is well defined across queries. |
+| D-13 | The filter is trained on general medical QA and applied to AD items, removing any suspicion that gains come from domain-specific fine-tuning. |
+| D-14 | Contested evidence is **capped** by the common context budget, never exempted from it; preserved and dropped contested positions are recorded in run metadata. Exempting it would give the proposed arm more context than the baseline. |
+| D-18 | Dev/validation/test assignment is a pure function of `question_id` and a recorded seed, with the **question** as the unit. |
+| D-21 | `question_date` is the dataset's own date when supplied, otherwise one experiment-wide `evaluation_as_of_date`. **Never** derived from a passage in the pair; the schema rejects such a value. |
+| D-26 | Terminology fixed: "recency", not "currency"; "admission policy", not "framework". One term per concept. |
+| D-27 | `A(s) = (1 − λ)·ρ(s) + λ·R(s,q,t_q)`, admit if `A(s) ≥ θ`. One weight removes a redundant degree of freedom and makes `λ = 0` a built-in ablation. Tunables: λ, θ, H — all fitted on validation. |
+| D-28 | The recency score is **plain age decay only**. Retraction, supersession and time-invariance are secondary, opt-in and recorded when enabled — folding validity rules into the same scalar would make an observed effect unattributable to age. |
+| D-29 | The no-filter control arm is implemented: without it, neither comparison shows whether filtering helps at all. |
+| D-30 | `λ = 0` is an **internal ablation**, not a fourth arm: it still admits at θ, so it is relevance-thresholded admission, not unfiltered. |
+| D-33 | Candidate sets contain **only dated passages**, applied identically to every arm at construction, keeping the tunable count at three. |
+| D-37 | Retrieval and reranking are MedCPT + a deterministic **flat exact** index — an approximate index introduces build-order-dependent recall, and a domain slice is small enough that exact search removes that hazard for free. |
+| D-38 | The generator stays **Llama-3-8B-Instruct** at 4-bit NF4 on a free-tier remote T4, under a pinned contract. Local execution is ruled out at every precision — that rules out the *venue*, not the *model*. Declared fallback: Qwen2.5-7B-Instruct, reported as a limitation. |
+| D-39 | The RAG² filter is trained by us: Flan-T5-large, the paper's recipe, effective batch preserved by accumulation. The released 5%-split file was downloaded and **contains 5 examples** — a format sample — so label regeneration is unavoidable. |
+| D-40 | The labelled training set is a subsample: an honest budget, not a target. The weaker filter is a limitation on the **baseline's strength**, not a threat to the comparison's validity, and the no-filter control keeps it visible. |
+| D-44 | `claim_status`, `temporal_status` and `disease_relevance` are deliberately **not** tagged by Stage 07. The first two need cross-passage comparison keywords cannot establish; temporal status is the thesis's own experimental treatment, and pre-baking a weaker keyword version would duplicate it with a worse method; disease relevance is already decided with a full rule trace by Stage 04. |
+| D-45 | Guideline/textbook acquisition is implemented (`03_guidelines.py --download` + a Stage 04 extraction bridge), but **no specific document was added** — no title, URL or licence could be independently verified from this environment, and fabricating one was prohibited. PDF only: a scraped HTML page cannot be reliably separated from its boilerplate. |
+
+### 8.2 Superseded, recorded for provenance
+
+| # | Decision | Fate |
+|---|---|---|
+| D-4 to D-7, D-9, D-11 | Contested-before-superseded ordering · ψ-conditioned decay · a SOTA arm · source authority as a tested variable · judge-validation guard · phase ordering | Components moved out of the primary pipeline by D-25 and `current_objectives.md` |
+| D-15, D-16, D-19, D-20, D-22 to D-24, D-31, D-32, D-34, D-35 | The matched-pair / admission-asymmetry machinery: inherited claim equivalence, interval-based temporal eligibility, claim classes as diagnostics only, no target pair count, frozen hashed Stage-2 spec, the unchanged-claim negative control, one primary backbone, the verified MedChangeQA join, and the measured AD census ceiling (only 9 of 512 items are AD-domain, exact power 0.000) | Retained under `experiments/test_pairs/`; produce no thesis outcome |
+| D-17 | `question_date` falls back to the newer passage's date | **Superseded by D-21** — it set the newer passage's recency to exactly 1 in every pair, maximising the contrast by construction |
+| D-25 | Scope reduction to recency + rank-normalised relevance under one weight; support and authority become ablations | Absorbed into the current scope |
+| D-36 | The research question becomes hallucination rate (primary) and QA accuracy (secondary); admission asymmetry ceases to be an outcome | **Superseded by `current_objectives.md`** (2026-09-18), which makes the RAG² comparison on standard RAG metrics the main contribution |
+| D-41 | Stage 02 finalization failed on a producer/consumer log-evidence mismatch, not corpus damage; the reader was widened to the wordings actually written | Discharged — the manifest was produced (D-42) |
+| D-42 | Stage 02 finalization executed and independently verified | Superseded by the fuller §2 verification |
+| D-43 | Stages 04–07 rewritten to consume the real corpus; 01/02/03 deliberately left untouched | Executed — see §2 |
+
+## 9. Assumptions
+
+| # | Assumption | Status |
+|---|---|---|
+| A1 | Newer evidence lies outside the label model's parametric priors | **Resolved — false, and retired as blocking.** Measured: change points span 2004–2024, peaking 2013–2015; **1 of 512** falls after the Llama-3-8B cutoff. Re-scoped to the *generator* analysis, where it remains a real constraint (see K7) |
+| A3 | 150–300 matched pairs are obtainable from 512 MedChangeQA items | **Resolved — supported.** All 512 reconstruct with both PMIDs, dates and texts; separation min 1 y, median 12 y, max 23 y |
+| A5 | Perplexity labels require per-backbone filter retraining | Open (cost) |
+| A6 | Baseline labels are predominantly confidence-derived | Open — instrument the label pipeline and report branch proportions |
+| A7 | A 20–30 k subsample suffices to reproduce the baseline filter | Open — cost-verify on 100 items first |
+| A8 | Claim-class tagging precision is adequate for down-weighting | Open — 300-passage audit; report P/R |
+| A9 | Guideline PDFs yield poorer date coverage than XML | Open — report per-corpus null-date rates |
+| A13 | The available hardware suffices | **Resolved for everything but generation and filter training** — see §5 |
+
+## 10. Risks and confounders
+
+| # | Risk | Severity | Mitigation |
+|---|---|---|---|
+| K1 | **Abstention asymmetry.** The proposed arm can abstain; the baseline cannot. A threshold set high enough answers nothing and cannot hallucinate | **Resolved** | `ANSWER_ALWAYS` is the default, coverage is reported beside every rate, and a fully-abstaining system yields `interpretable: false` (specification §7) |
+| K2 | **Prompt-parity drift.** Each arm accepts a `context_prompt` override | **Resolved** | `assert_prompt_parity` before the first item |
+| K3 | **Filter fidelity.** A student-trained filter is not the paper's; if it is weaker, the baseline is unfairly weak and the intervention looks better than it is | **High, standing** | Report the filter's own validation accuracy; treat the no-filter control as the honest floor; label every report with which filter actually ran |
+| K4 | **Reference-answer leakage.** A passage used to establish a reference answer entering the candidate set makes the evaluation circular | **Resolved** | The provenance firewall, enforced as a machine check (`assert_firewall`), not a convention |
+| K5 | **Corpus recency skew** | Medium | Report the corpus date distribution alongside results |
+| K6 | **Annotator blinding** | Medium | Arm identity hidden, order randomised, mapping stored separately |
+| K7 | **Generator knowledge cutoff.** The generator may answer correctly from parametric memory without using the evidence — not hallucination, but it compresses the difference between arms | Medium | Record the cutoff relative to the reference time; treat it as a documented condition |
+| K8 | **Inconclusive rather than negative outcome** | **High** | Report honestly either way; `current_objectives.md` explicitly requires reporting a negative result as such |
+| K9 | **Pair-count pressure breaching the provenance firewall** — the cheapest way to more items is to author them | **High** | D-2; no code path produces an approved question |
+| K10 | **Corpus irreproducibility** from live-database snapshots | Medium | Frozen query strings, MeSH settings, pull dates and per-collection counts are recorded in `alzheimer_corpus/` |
+| K12 | **Reproduction cost overrun** — label regeneration is GPU-hours per item | **High** | Subsample budgeted from the measured timing check, not assumed |
+
+## 11. Standing limitations for the thesis
+
+1. The baseline is an **adaptation** of RAG², not a reproduction — the
+   checkpoint is not distributed and the released training file is a 5-example
+   format sample.
+2. The filter is trained on a **subsample**, so it is weaker than the paper's.
+   The no-filter control is the floor that keeps this visible.
+3. The generator runs **4-bit quantised**, identically for both arms.
+4. ~100 questions is a **practical budget, not a powered sample size**.
+5. Question sources are ~85% Cochrane; a guideline source would strengthen it.
+6. Identifiers were transcribed from an inspected dataset, not resolved.
+7. Execution hardware differs from the paper's — a resource limitation, not a
+   methodological one.
+8. Judged correctness (where used) is human or rule-based, not computed by an
+   automatic scorer; the automatic metrics in `rag_metrics.py` are reported as
+   what they are.
+9. The corpus is an Alzheimer's domain slice, not RAG²'s 564 GB
+   general-medical corpus. The *method* is unchanged; the *corpus* is the
+   declared adaptation.
+
+## 12. Test suite
+
+```bash
+python -m unittest discover -s tests -t .
+```
+
+**558 tests. Two fail, both pre-existing and both for the same reason: they
+compare a tracked real artifact against what a fixture-scale run produces.**
+Neither indicates a defect in the system under test, and neither should be
+"fixed" by editing the tracked artifact.
+
+| Failing test | Why |
+|---|---|
+| `test_corpus_normalize_pipeline.FixturePathRegressionTests.test_duplicates_registry_matches_and_is_valid_csv` | Compares a freshly-run 10-record fixture `duplicates.csv` against the committed **real** one (2,842 rows from the executed corpus). The committed file is correct; the fixture cannot reproduce it. |
+| `test_review_export.CommittedPoolTests.test_decision_columns_start_empty` | Asserts the committed `review.csv` ships with every reviewer column blank. It now carries `reviewer_id = R1` on all 123 rows — the reviewer has been assigned and review is in progress. `review_decision` is still empty on all 123 rows, so **no question has been decided**; the test's own premise (a pristine export) simply stopped holding once review began. |
+
+**The suite does not write to the corpus's tracked logs.** `tests/__init__.py`
+redirects `ALZHEIMER_CORPUS_LOGS` to a temporary directory for the duration of
+a run; `tests/unit/test_corpus_log_isolation.py` keeps that true and also
+asserts that a *real* run — which never sets the variable — still logs to
+`alzheimer_corpus/logs/`.
+
+## 13. Change log
+
+| Date | Change |
+|---|---|
+| 2026-09-19 | **Corpus provenance logs were being contaminated by the test suite, and are not any more.** `_common.get_logger()` resolved its directory from the loaded module's own `__file__`, so a test calling a stage's `main()` in-process against a temp corpus still appended to the real, git-tracked `alzheimer_corpus/logs/quality_control.log` — a suite run added Stage-06 whitespace-tokenizer lines naming `/tmp` paths to the file the §2 evidence chain is read out of. `get_logger()` now honours `ALZHEIMER_CORPUS_LOGS`; `tests/__init__.py` sets it once for the whole run; `tests/unit/test_corpus_log_isolation.py` (4 tests) guards both the redirection and the unchanged real-run default. The contaminating lines were reverted; every tracked corpus artifact matches the student's own pushed commits. |
+| 2026-09-19 | **Documentation consolidated from 21 Markdown files to 4.** `system_specification.md`, `generator_contract.md`, `filter_training.md`, `rag2_classifier_feasibility.md`, `experimental_parity_audit.md`, `methodology.md`, `question_sources.md` and `external_evaluation_data.md` were merged into `research_experimental_specification.md` (whose superseded admission-asymmetry contents were replaced — they are recorded as provenance in `current_objectives.md` and §8.2 above). `research_ledger.md`, `next_steps.md`, `hardware_and_resources.md`, `question_pool_status.md`, `repository_structure.md`, `experiment_outputs.md`, `feasibility_and_alignment_audit.md`, `research_understanding.md` and `proposal_scope_amendment.md` were merged into this file. `frozen_scope.md`'s live content (interface requirements, reporting requirements, the formula) moved into the specification and its §7 superseded-design paragraph into `current_objectives.md`. `current_objectives.md` and `question_review.md` were kept. Every code and test reference to a merged document was updated to its new home in the same commit. |
+| 2026-09-19 | **Readiness defects corrected before any real run.** (1) The real `FlanT5RAG2Filter` was unreachable from `run_end_to_end.py` — the baseline could only ever be the all-HELPFUL stand-in, and the report did not say so; added `--rag2-checkpoint`, plus `baseline_filter`/`baseline_is_trained_rag2` in the report and a console warning. (2) `rag_metrics.context_scores` returned 0.0 for an unannotated question, which under the provenance firewall is the *expected* real-data case — every arm would have reported context precision 0.000 as if measured; it now returns `None`, `aggregate()` averages over only the annotated rows and reports `context_scored_n`. (3) `--real-model` constructed `ModelSpec(name=...)`, a field that does not exist, so it raised immediately; fixed with `--model-name`/`--model-revision`/`--quantization` (defaulting to the contract's `nf4`). Also: `RAG2Config` accepted a non-positive context budget where the other two arms rejected it. 553 tests pass. |
+| 2026-09-19 | **Alzheimer's corpus marked COMPLETE / FROZEN** after independent end-to-end verification of all seven stages — see §2. No integrity problem found; nothing corrected or rerun. Added `tests/integration/test_corpus_to_retrieval.py`. |
+| 2026-09-18 | Stage 07 found to have the same architectural flaw Stage 06 had (whole corpus loaded into one list, nothing written until the end, no progress logging) at 4.3 M-chunk scale; rewritten to stream to a temp file, replace atomically, log every 100,000 chunks and keep only an 8-field projection for the stratified sample. A second real bottleneck — per-keyword regex scans over full chunk text — was replaced by one tokenization plus set membership, with a regex fallback for phrase keywords (≈12× faster on a realistic 30 k-chunk sample). Verified field-for-field identical to the original algorithm, preserved as a reference implementation in the test. |
+| 2026-09-18 | Scope realigned to the three current objectives (`current_objectives.md`). Added the missing single entry point `experiments/runners/run_end_to_end.py` and `experiments/evaluation/rag_metrics.py`. Repository reduced to a single `main` branch; feature branches and pull requests are no longer used. |
+| 2026-09-18 | Stage 06 rewritten for performance and observability after a ~1 h run produced no output: batched encode/decode (same token boundaries), streamed output, periodic progress, `--resume` refusing a mismatched tokenizer/size/overlap. Chunking specification unchanged. |
+| 2026-09-18 | Removed `alzheimer_corpus/README.md` and the `tools/` benchmark; relocated the PMC licensing-gate finding rather than losing it. Rewrote the root `README.md` against the current scope. |
+| 2026-09-17 | Generator contract (D-38), filter-training strategy (D-39/40) and the parity/abstention audit decided and implemented. |
+| 2026-09-16 | Design freeze under the admission-asymmetry framing. One genuine fairness defect fixed: the no-filter control emitted context in rank-sorted order while the other arms emitted candidate-list order. D-30 to D-35 recorded. |
+| 2026-09-15 | Stage-2 readiness audit and methodological review: D-15 to D-29 recorded; D-17 superseded by D-21; scope reduced (D-25). |
+| 2026-09-11 | Ledger created from the proposal and the RAG² paper. |

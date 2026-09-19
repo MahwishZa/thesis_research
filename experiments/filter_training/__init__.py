@@ -6,7 +6,8 @@ deviation states itself (``config.py``). Nothing here loads a model: the
 expensive half runs on the remote machine, and what lives in the repository is
 the part that has to be correct and reproducible.
 
-See ``docs/filter_training.md`` for the strategy, the cost and the status.
+See ``docs/research_experimental_specification.md`` §10 for the strategy and
+the cost, and ``docs/status_and_decisions.md`` for the status.
 """
 
 from .config import (

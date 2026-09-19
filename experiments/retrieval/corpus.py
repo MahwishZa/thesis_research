@@ -173,7 +173,8 @@ def dated_only(
 ) -> tuple[CorpusPassage, ...]:
     """Keep only passages carrying a publication date.
 
-    ``docs/frozen_scope.md`` §8.3 requires candidate sets to contain only
+    ``docs/research_experimental_specification.md`` §15.3 requires candidate
+    sets to contain only
     dated passages, applied identically to every arm at construction, so the
     undated branch of the recency score never fires and ``undated_score``
     stays out of the tunable count. Applying it here - upstream of both arms -

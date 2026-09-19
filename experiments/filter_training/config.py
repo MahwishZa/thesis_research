@@ -1,7 +1,8 @@
 """Training configuration for the RAG² filter, and what deviates from it.
 
 Every value here is either the paper's (taken from the released launch script,
-`docs/rag2_classifier_feasibility.md` §1) or a deviation with a reason. The
+`docs/research_experimental_specification.md` §10.3) or a deviation with a
+reason, §10.4. The
 point of keeping them side by side in one object is that a deviation cannot be
 made without it appearing in the training report.
 """

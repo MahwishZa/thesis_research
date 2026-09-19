@@ -21,6 +21,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import os
 import re
 import unicodedata
 
@@ -93,8 +94,18 @@ def get_logger(
     If logfile is omitted, '<stage>.log' is used.
 
     Logs are treated as provenance and are therefore never truncated.
+
+    The directory is ``LOGS`` unless ``ALZHEIMER_CORPUS_LOGS`` is set, which
+    exists for one reason: a test that calls a stage's ``main()``
+    **in-process** against a temp corpus resolves this path from the loaded
+    module's own ``__file__`` and therefore appends fixture-scale lines to
+    the real, git-tracked logs under ``alzheimer_corpus/logs/`` - which are
+    the corpus's provenance record, cited by
+    ``docs/status_and_decisions.md`` §2. A real pipeline run never sets the
+    variable and is byte-for-byte unaffected.
     """
-    LOGS.mkdir(parents=True, exist_ok=True)
+    log_dir = Path(os.environ.get("ALZHEIMER_CORPUS_LOGS") or LOGS)
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     log = logging.getLogger(stage)
 
@@ -120,7 +131,7 @@ def get_logger(
     logfile = Path(logfile)
 
     if not logfile.is_absolute():
-        logfile = LOGS / logfile
+        logfile = log_dir / logfile
 
     logfile.parent.mkdir(parents=True, exist_ok=True)
 

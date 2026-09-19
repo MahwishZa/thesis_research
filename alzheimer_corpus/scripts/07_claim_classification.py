@@ -34,7 +34,7 @@ Reads config/claim_taxonomy.yaml's current schema:
                        "current vs superseded" label onto the corpus here
                        would duplicate that treatment with a much weaker
                        method and risk disagreeing with it. See
-                       docs/frozen_scope.md.
+                       docs/research_experimental_specification.md §4.
   disease_relevance -> NOT re-tagged here. Stage 04's assess_ad_relevance()
                        already makes this decision, with a full rule trace,
                        for every chunk's source document. This stage

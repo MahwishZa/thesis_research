@@ -1,7 +1,7 @@
 """MedCPT encoders and the cross-encoder reranker.
 
 RAG² uses MedCPT at both stages: a dual-encoder for retrieval and a
-cross-encoder for reranking (`docs/research_understanding.md`, fact E6). The
+cross-encoder for reranking (`docs/status_and_decisions.md`, fact E6). The
 thesis keeps both, over its own Alzheimer's corpus rather than RAG²'s 564 GB
 general-medical one. That substitution of *corpus* is the thesis's declared
 adaptation; the *method* is unchanged.

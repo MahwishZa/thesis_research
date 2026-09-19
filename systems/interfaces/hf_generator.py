@@ -246,8 +246,8 @@ class HuggingFaceGenerator(Generator):
 
 #: RAG²'s own generator. The revision is left unset deliberately: pinning it
 #: requires reading the sha off the Hub, and a placeholder here would be a
-#: fabricated provenance record. `docs/generator_contract.md` says where to
-#: get it and where to record it.
+#: fabricated provenance record. `docs/research_experimental_specification.md`
+#: §9.2 says where to get it and where to record it.
 RAG2_GENERATOR_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 #: Declared fallback if the gated licence cannot be obtained (ledger D-38).

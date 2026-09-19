@@ -23,7 +23,8 @@ from experiments.evaluation.freezing import FrozenCandidate
 from .corpus import CorpusPassage
 from .index import ORDERING_PRECISION, DenseIndex, Hit
 
-#: Engineering constants, decided in docs/system_specification.md §8.
+#: Engineering constants, decided in
+#: docs/research_experimental_specification.md §8.2.
 DEFAULT_RETRIEVAL_DEPTH = 50
 DEFAULT_CANDIDATE_COUNT = 20
 

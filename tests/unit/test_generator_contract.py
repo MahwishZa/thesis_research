@@ -1,4 +1,5 @@
-"""The generator execution contract (docs/generator_contract.md).
+"""The generator execution contract
+(docs/research_experimental_specification.md §9).
 
 No model is loaded here and none should ever be: these tests lock the
 reproducibility guarantees around generation, which are configuration
