@@ -108,6 +108,18 @@ class AdmissionConfig:
                 "validation split before any test run."
             )
 
+        # A(s) is a convex combination of two quantities in [0, 1], so it is
+        # itself in [0, 1] and theta is only meaningful on that scale. Out of
+        # range, theta is not a wrong setting but a silently degenerate one:
+        # above 1 nothing ever clears it, so the arm answers every question
+        # from an empty context; below 0 everything clears it, so the arm
+        # stops admitting at all. Either reads as a real (terrible or
+        # indiscriminate) result rather than as a misconfiguration, and a
+        # validation-split sweep that strays outside [0, 1] would produce
+        # exactly that with no error.
+        if not 0.0 <= float(self.admit_threshold) <= 1.0:
+            raise ValueError("admit_threshold (theta) must be in [0, 1].")
+
         if self.question_date is None:
             raise ValueError(
                 "question_date (t_q) is required: the recency score is "

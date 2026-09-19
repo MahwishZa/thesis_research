@@ -99,10 +99,18 @@ from systems.proposed.scorer import AdmissionScorer
 #: relevance-only ranking (RAG², no-filter) prefers a higher-reranked but
 #: STALE passage over a lower-reranked but CURRENT one, while a
 #: sufficiently recency-weighted proposed policy prefers the current one.
-BUDGET = 1
+#: FIXTURE defaults - not fitted values, and not the specification's
+#: engineering constants. theta and the half-life must be fitted on the
+#: validation split before any real run (specification S8.1), and the real
+#: context budget is 5 (S8.2); 1 is used here only to force the
+#: one-passage demonstration described above. All three are overridable
+#: from the CLI (--theta/--half-life/--budget) so a real run does not have
+#: to edit this file: AdmissionConfig.validate() deliberately refuses to
+#: default theta, and a hard-coded placeholder here would defeat that.
+DEFAULT_BUDGET = 1
 QUESTION_DATE = date(2026, 1, 1)
-HALF_LIFE_DAYS = 365.0
-THETA = 0.5
+DEFAULT_HALF_LIFE_DAYS = 365.0
+DEFAULT_THETA = 0.5
 
 #: 4-bit NF4 is what the generator contract specifies, and what makes an
 #: 8B model fit the target GPU at all - a full-precision load is the one
@@ -228,7 +236,10 @@ def make_fixture_items(n: int = 10) -> list[fz.FrozenItem]:
 
 
 def build_systems(
-    generator, lambdas: list[float], rag2_filter,
+    generator, lambdas: list[float], rag2_filter, *,
+    theta: float = DEFAULT_THETA,
+    half_life: float = DEFAULT_HALF_LIFE_DAYS,
+    budget: int = DEFAULT_BUDGET,
 ) -> dict[str, object]:
     """baseline (RAG2), no_filter control, and one proposed arm per lambda
     in ``lambdas`` (labelled proposed_lambda_<value>).
@@ -238,26 +249,29 @@ def build_systems(
     """
     systems: dict[str, object] = {
         "no_filter": NoFilterSystem(
-            answer_generator=generator, max_admitted_passages=BUDGET,
+            answer_generator=generator, max_admitted_passages=budget,
             context_prompt=CONTEXT_PROMPT,
         ),
         "baseline": RAG2System(
             answer_generator=generator,
             admission_filter=rag2_filter,
             config=RAG2Config(
-                max_admitted_passages=BUDGET, context_prompt=CONTEXT_PROMPT,
+                max_admitted_passages=budget, context_prompt=CONTEXT_PROMPT,
             ),
         ),
     }
 
     for lam in lambdas:
         scorer = AdmissionScorer(recency_weight=lam)
-        recency = RecencyPolicy(half_life_days=HALF_LIFE_DAYS, undated_score=0.0)
+        recency = RecencyPolicy(half_life_days=half_life, undated_score=0.0)
         config = AdmissionConfig(
-            admit_threshold=THETA,
+            admit_threshold=theta,
             question_date=QUESTION_DATE,
-            max_admitted_passages=BUDGET,
+            max_admitted_passages=budget,
         )
+        # Validate up front, so a bad theta/budget fails before any
+        # generation rather than part-way through a run.
+        config.validate()
         policy = RecencyAwareAdmissionPolicy(
             scorer=scorer, recency=recency, config=config,
         )
@@ -314,6 +328,20 @@ def main(argv=None) -> int:
                     help="generator quantization for --real-model "
                          f"(default: {DEFAULT_QUANTIZATION}, per the "
                          "generator contract)")
+    ap.add_argument("--theta", type=float, default=DEFAULT_THETA,
+                    help="admission threshold. MUST be a value fitted on "
+                         "the validation split for a real run; the default "
+                         f"({DEFAULT_THETA}) is a fixture placeholder, not "
+                         "a fitted value. Must be in [0, 1].")
+    ap.add_argument("--half-life", type=float, default=DEFAULT_HALF_LIFE_DAYS,
+                    help="recency half-life H in days. Same status as "
+                         f"--theta: the default ({DEFAULT_HALF_LIFE_DAYS:g}) "
+                         "is a fixture placeholder. Must be positive.")
+    ap.add_argument("--budget", type=int, default=DEFAULT_BUDGET,
+                    help="shared context budget, applied identically to "
+                         f"every arm. Default {DEFAULT_BUDGET} is the "
+                         "fixture's one-passage demonstration; the "
+                         "specification's value for a real run is 5.")
     ap.add_argument("--rag2-checkpoint", default=None,
                     help="path/id of a TRAINED RAG² filter checkpoint, to "
                          "run the baseline arm as the real classifier. "
@@ -339,7 +367,9 @@ def main(argv=None) -> int:
     generator = make_generator(args.real_model, args.model_name,
                                args.model_revision, args.quantization)
     rag2_filter, rag2_filter_label = make_rag2_filter(args.rag2_checkpoint, items)
-    systems = build_systems(generator, lambdas, rag2_filter)
+    systems = build_systems(generator, lambdas, rag2_filter,
+                            theta=args.theta, half_life=args.half_life,
+                            budget=args.budget)
 
     config = RunConfig(
         run_id="end_to_end-001",
@@ -351,7 +381,8 @@ def main(argv=None) -> int:
         model_version=(args.model_revision or "n/a") if args.real_model else "n/a",
         generation_config={"temperature": 0.0},
         system_config_hash=fz.config_hash({
-            "budget": BUDGET, "theta": THETA, "half_life": HALF_LIFE_DAYS,
+            "budget": args.budget, "theta": args.theta,
+            "half_life": args.half_life,
             "lambdas": lambdas, "proposed_lambda": args.proposed_lambda,
             "quantization": args.quantization if args.real_model else None,
             "rag2_filter": rag2_filter_label,
@@ -386,6 +417,25 @@ def main(argv=None) -> int:
     }
 
     report = {
+        # The config hash detects a changed setting but cannot tell a
+        # reader WHAT theta or the half-life was, and neither appears
+        # anywhere else in the outputs. Recording them in readable form is
+        # what lets a run be described (and reproduced) from its own
+        # report rather than from whatever the CLI history happened to be.
+        "system_config": {
+            "theta": args.theta,
+            "half_life_days": args.half_life,
+            "context_budget": args.budget,
+            "proposed_lambda": args.proposed_lambda,
+            "ablation_lambdas": lambdas,
+            "question_date": QUESTION_DATE.isoformat(),
+            "theta_and_half_life_are_fitted": False,
+            "fitted_note": (
+                "theta and half_life are NOT fitted values unless a "
+                "validation-split procedure set them; the CLI defaults are "
+                "fixture placeholders."
+            ),
+        },
         "run_summary": summary,
         "metrics_by_system": by_system,
         "main_evaluation": main_evaluation,   # step 3: RAG2 vs proposed

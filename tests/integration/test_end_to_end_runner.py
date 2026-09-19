@@ -206,3 +206,58 @@ class EndToEndRunnerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FittedParameterPlumbingTests(unittest.TestCase):
+    """theta, the half-life and the context budget were module constants
+    with no CLI override, so a real run would silently have used fixture
+    placeholders (theta=0.5, H=365, budget=1) no matter what the validation
+    split produced - defeating AdmissionConfig.validate()'s refusal to
+    default theta. They are now arguments, and their values are recorded in
+    readable form rather than only inside an opaque config hash."""
+
+    def test_theta_half_life_and_budget_are_settable_from_the_cli(self):
+        with TemporaryDirectory() as tmp:
+            code = e2e.main([
+                "--output-dir", tmp, "--n-questions", "3",
+                "--theta", "0.25", "--half-life", "180", "--budget", "2",
+            ])
+            self.assertEqual(code, 0)
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            cfg = report["system_config"]
+            self.assertEqual(cfg["theta"], 0.25)
+            self.assertEqual(cfg["half_life_days"], 180.0)
+            self.assertEqual(cfg["context_budget"], 2)
+
+    def test_the_recorded_config_says_the_values_are_not_fitted(self):
+        """A reader must not mistake a placeholder for a fitted value."""
+        with TemporaryDirectory() as tmp:
+            e2e.main(["--output-dir", tmp, "--n-questions", "3"])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            self.assertFalse(
+                report["system_config"]["theta_and_half_life_are_fitted"])
+
+    def test_the_budget_is_applied_to_every_arm(self):
+        """The budget is a control, not a treatment: if it reached only
+        some arms, an admission difference would be confounded with context
+        volume. assert_budget_parity already guards this inside a run, so a
+        budget that failed to plumb through would raise here."""
+        with TemporaryDirectory() as tmp:
+            code = e2e.main([
+                "--output-dir", tmp, "--n-questions", "3", "--budget", "3",
+            ])
+            self.assertEqual(code, 0)
+            records = [json.loads(l) for l in
+                       (Path(tmp) / "results.jsonl").read_text().splitlines()]
+            for record in records:
+                self.assertLessEqual(len(record["admitted_evidence_ids"]), 3)
+
+    def test_an_out_of_range_theta_fails_before_any_generation(self):
+        """Not merely rejected, but rejected up front: a degenerate theta
+        discovered part-way through a real run wastes the GPU session."""
+        with TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                e2e.main([
+                    "--output-dir", tmp, "--n-questions", "3", "--theta", "1.5",
+                ])
+            self.assertFalse((Path(tmp) / "results.jsonl").exists())

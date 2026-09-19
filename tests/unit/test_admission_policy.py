@@ -31,6 +31,11 @@ from systems.proposed import (
 
 TQ = date(2026, 1, 1)
 
+#: Old enough that its recency score is well below 1.0, which is how
+#: a test builds the "nothing clears theta" condition using an
+#: in-range theta.
+STALE = date(2016, 1, 1)
+
 
 class EchoGenerator(Generator):
     """Records what the generator was actually given."""
@@ -247,14 +252,21 @@ class AdmissionBehaviourTests(unittest.TestCase):
         )
 
     def test_rejected_passages_carry_no_state(self):
-        decisions = policy(threshold=1.1).decide("q", [candidate("a", 1)])
+        # theta=1.0 with a STALE sole candidate under pure recency: A < 1.0,
+        # so nothing is admitted. (A theta above 1.0 would be simpler but is
+        # now rejected as degenerate - it can never admit anything at all,
+        # whatever the evidence.)
+        decisions = policy(weight=1.0, threshold=1.0).decide(
+            "q", [candidate("a", 1, published=STALE)])
         self.assertTrue(all(d.state is None for d in decisions))
+        self.assertTrue(all(not d.admitted for d in decisions))
 
     def test_no_admitted_evidence_answers_ungrounded_by_default(self):
         system = RecencyAwareSystem(answer_generator=EchoGenerator(),
-                                    admission_policy=policy(threshold=1.1))
+                                    admission_policy=policy(weight=1.0,
+                                                            threshold=1.0))
         result = system.run(sample_id="s", experiment_id="e", question="q",
-                            candidates=[candidate("a", 1)])
+                            candidates=[candidate("a", 1, published=STALE)])
         # Default policy is ANSWER_ALWAYS: the baseline generates from an
         # empty evidence block in this situation, so this arm must too, or
         # the hallucination rates are not comparable.
