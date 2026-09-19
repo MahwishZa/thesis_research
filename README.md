@@ -103,11 +103,19 @@ tests/               unit + integration
 
 ## Status
 
-Corpus (Step 1): PubMed and PMC retrieval, normalize, deduplicate and chunk
-have all run for real against the live corpus (111,315 unique documents →
-4,377,041 chunks, real MedCPT tokenizer). Claim classification has been
-started. Questions (Step 2) are in human review. Steps 2-4 above (proposed
-system validation, main evaluation, ablation) have tested infrastructure
+**Alzheimer's corpus: COMPLETE / FROZEN** (verified 2026-09-19, see
+`docs/next_steps.md`'s "Corpus integrity verification"). All seven
+pipeline stages have run for real against the live corpus and their
+outputs are independently cross-checked consistent end to end: 676 PubMed
+records; 114,256-row PMC manifest, 114,157 verified and normalized;
+111,315 unique after dedup; 4,377,041 chunks via the real MedCPT
+tokenizer; every chunk tagged by claim classification (all 43
+topical/evidence-level classes matched at least once). Confirmed
+consumable by the retrieval layer via a real end-to-end test. Do not
+rerun stages 01-07.
+
+Questions (Step 2) are in human review. Steps 2-4 above (proposed system
+validation, main evaluation, ablation) have tested infrastructure
 (`run_end_to_end.py`) but no real run yet — see `docs/current_objectives.md`
 for what's still needed (a real generator, real evaluation data, a fitted
 `lambda`). No experimental result exists yet. See `docs/next_steps.md`.
