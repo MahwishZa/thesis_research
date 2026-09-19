@@ -92,19 +92,27 @@ full list and why each is kept rather than deleted.
 ## Layout
 
 ```
-docs/                current_objectives.md (canonical scope) — see
-                     docs/repository_structure.md for the full index
-alzheimer_corpus/    Step 1 — the evidence corpus (PMC-based)
+docs/                four authoritative documents — see below
+alzheimer_corpus/    the evidence corpus (PMC-based), COMPLETE / FROZEN
 systems/             the arms: baseline (RAG²), proposed, no-filter control
 experiments/         retrieval, question pool, evaluation infrastructure,
                      runners/run_end_to_end.py (steps 2-4's entry point)
 tests/               unit + integration
 ```
 
+## Documentation
+
+| Document | Read it for |
+|---|---|
+| [`docs/current_objectives.md`](docs/current_objectives.md) | **Canonical scope** — the three objectives, the pipeline, what is out of the critical path, the known blockers. Governs every other document. |
+| [`docs/research_experimental_specification.md`](docs/research_experimental_specification.md) | **The method** — what each arm does, what is held constant, the parameters, the generator contract, filter training, metrics, statistics, question provenance, and how to run it reproducibly. |
+| [`docs/status_and_decisions.md`](docs/status_and_decisions.md) | **The record** — what has been executed, decided, measured, blocked and limited, plus the decision log and change log. |
+| [`docs/question_review.md`](docs/question_review.md) | Reviewer instructions for the candidate question pool. |
+
 ## Status
 
 **Alzheimer's corpus: COMPLETE / FROZEN** (verified 2026-09-19, see
-`docs/next_steps.md`'s "Corpus integrity verification"). All seven
+`docs/status_and_decisions.md` §2). All seven
 pipeline stages have run for real against the live corpus and their
 outputs are independently cross-checked consistent end to end: 676 PubMed
 records; 114,256-row PMC manifest, 114,157 verified and normalized;
@@ -118,7 +126,8 @@ Questions (Step 2) are in human review. Steps 2-4 above (proposed system
 validation, main evaluation, ablation) have tested infrastructure
 (`run_end_to_end.py`) but no real run yet — see `docs/current_objectives.md`
 for what's still needed (a real generator, real evaluation data, a fitted
-`lambda`). No experimental result exists yet. See `docs/next_steps.md`.
+`lambda`). No experimental result exists yet. See
+`docs/status_and_decisions.md` for full component readiness and blockers.
 
 ```bash
 python -m unittest discover -s tests -t .
