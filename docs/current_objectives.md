@@ -15,6 +15,16 @@ There are three other documents, and only three:
   executed, decided, measured, blocked and limited.
 - `docs/question_review.md` — reviewer instructions for the question pool.
 
+**Terminology note (2026-09-20).** "Temporal filtering mechanism" and
+"recency-aware admission" name the same thing. The proposed system's
+admission rule, `A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)`, filters retrieved
+evidence by combining relevance with a function of the evidence's *age
+relative to the question* — that is a temporal filter, placed at RAG²'s
+admission stage, evaluated exactly as such against the RAG² baseline. No
+new component is introduced by using one name or the other; this document
+uses "recency weighting" throughout because that is what the code and
+tests already say, and the specification (§4) is the full definition.
+
 ---
 
 ## The three objectives

@@ -499,6 +499,21 @@ class FreezeFromQuestionTests(unittest.TestCase):
         self.assertEqual(item.reference_date, q.reference_date)
         self.assertEqual(item.corpus_snapshot, "alzheimer_corpus@fixture")
 
+    def test_temporal_candidate_is_carried_from_the_question(self):
+        """Diagnostic-only metadata (specification SS13), but it has to
+        survive freezing for run_end_to_end.py's temporal-subgroup
+        breakdown to be able to use it at all."""
+        temporal_item = fz.from_question(
+            question(status="approved", temporal_candidate=True),
+            candidates(), corpus_snapshot="c@v1",
+        )
+        plain_item = fz.from_question(
+            question(status="approved", temporal_candidate=False),
+            candidates(), corpus_snapshot="c@v1",
+        )
+        self.assertTrue(temporal_item.temporal_candidate)
+        self.assertFalse(plain_item.temporal_candidate)
+
     def test_reference_evidence_ids_pass_through_to_the_firewall(self):
         q = question(status="approved")
         item = fz.from_question(

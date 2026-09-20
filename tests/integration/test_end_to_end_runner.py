@@ -252,6 +252,22 @@ class FittedParameterPlumbingTests(unittest.TestCase):
             for record in records:
                 self.assertLessEqual(len(record["admitted_evidence_ids"]), 3)
 
+    def test_the_report_always_carries_a_temporal_subgroup_breakdown(self):
+        """The key must exist on every run, not only ones a caller happened
+        to populate with temporal-candidate questions - a missing key would
+        silently fail the analysis a real run needs this for, rather than
+        reporting zero."""
+        with TemporaryDirectory() as tmp:
+            e2e.main(["--output-dir", tmp, "--n-questions", "3"])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            sub = report["temporal_subgroup"]
+            self.assertEqual(sub["n_temporal_candidate_questions"]
+                             + sub["n_other_questions"], 3)
+            # The built-in fixture is synthetic, not sourced from an actual
+            # Cochrane republication, so it is honestly all "other".
+            self.assertEqual(sub["n_temporal_candidate_questions"], 0)
+            self.assertEqual(sub["temporal_candidate_questions"], {})
+
     def test_an_out_of_range_theta_fails_before_any_generation(self):
         """Not merely rejected, but rejected up front: a degenerate theta
         discovered part-way through a real run wastes the GPU session."""
@@ -261,3 +277,50 @@ class FittedParameterPlumbingTests(unittest.TestCase):
                     "--output-dir", tmp, "--n-questions", "3", "--theta", "1.5",
                 ])
             self.assertFalse((Path(tmp) / "results.jsonl").exists())
+
+
+class TemporalSubgroupBreakdownTests(unittest.TestCase):
+    """Unit-level check of the grouping logic itself, with a genuine mix of
+    temporal-candidate and non-temporal questions - the case the built-in
+    fixture (all-False, being synthetic) never exercises."""
+
+    def rows_for(self, question_id, system, token_f1):
+        from experiments.evaluation import rag_metrics as rm
+        return rm.MetricRow(
+            question_id=question_id, system=system, exact_match=0.0,
+            token_f1=token_f1, rouge_l_f1=0.0, context_precision=None,
+            context_recall=None, context_f1=None, groundedness=0.0,
+        )
+
+    def test_rows_split_by_the_temporal_candidate_flag(self):
+        rows = [
+            self.rows_for("Q1", "baseline", 0.2),
+            self.rows_for("Q1", "proposed", 0.9),   # temporal: proposed wins
+            self.rows_for("Q2", "baseline", 0.5),
+            self.rows_for("Q2", "proposed", 0.5),   # non-temporal: tied
+        ]
+        flags = {"Q1": True, "Q2": False}
+
+        breakdown = e2e.temporal_subgroup_breakdown(rows, flags)
+
+        self.assertEqual(breakdown["n_temporal_candidate_questions"], 1)
+        self.assertEqual(breakdown["n_other_questions"], 1)
+        temporal = breakdown["temporal_candidate_questions"]
+        other = breakdown["other_questions"]
+        self.assertAlmostEqual(
+            temporal["proposed"]["token_f1"] - temporal["baseline"]["token_f1"],
+            0.7,
+        )
+        self.assertAlmostEqual(
+            other["proposed"]["token_f1"] - other["baseline"]["token_f1"], 0.0,
+        )
+
+    def test_a_question_absent_from_flags_counts_as_non_temporal(self):
+        """flags.get(..., False): a question freezing never marked (an
+        older manifest, or a non-EvaluationQuestion source) must not raise
+        or vanish from the total - it counts as "other", not "unknown"."""
+        rows = [self.rows_for("Q9", "baseline", 1.0)]
+        breakdown = e2e.temporal_subgroup_breakdown(rows, flags={})
+        self.assertEqual(breakdown["n_temporal_candidate_questions"], 0)
+        self.assertEqual(breakdown["n_other_questions"], 1)  # scored, not dropped
+        self.assertEqual(len(breakdown["other_questions"]), 1)

@@ -78,7 +78,7 @@ import json
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from experiments.evaluation import freezing as fz
 from experiments.evaluation import rag_metrics as rm
@@ -295,6 +295,46 @@ def score_run(records: list[dict], gold: dict[str, set[str]]) -> list[rm.MetricR
     return rows
 
 
+def temporal_flags(items: list[fz.FrozenItem]) -> dict[str, bool]:
+    return {item.question_id: item.temporal_candidate for item in items}
+
+
+def temporal_subgroup_breakdown(
+    rows: list[rm.MetricRow], flags: dict[str, bool],
+) -> dict[str, Any]:
+    """Aggregate metrics separately for temporal-candidate questions (a
+    Cochrane review cited at .pub2+, so its conclusion has been revisited
+    at least once - specification SS13) versus the rest.
+
+    This is the direct, minimal test of whether recency weighting's effect
+    is concentrated where a temporal filter should matter, rather than flat
+    across the whole pool - and it costs nothing new to compute:
+    ``temporal_candidate`` already exists on every ``EvaluationQuestion``
+    and now survives freezing (``FrozenItem.temporal_candidate``); this
+    only groups rows that are already scored.
+
+    A real contrast needs both subgroups non-empty. On this module's own
+    demo fixture every item is synthetic (not sourced from an actual
+    Cochrane republication), so ``temporal_candidate`` is left at its
+    default ``False`` there rather than set to an unearned ``True`` -
+    the temporal-candidate group reports empty on the fixture, honestly,
+    not populated to make the breakdown look exercised.
+    """
+    temporal_ids = {qid for qid, flag in flags.items() if flag}
+    temporal_rows = [r for r in rows if r.question_id in temporal_ids]
+    other_rows = [r for r in rows if r.question_id not in temporal_ids]
+    # Counts come from the rows actually scored, not from len(flags): a
+    # question absent from flags entirely still gets scored (as "other",
+    # never dropped), and the two counts must always sum to the number of
+    # distinct questions these rows cover.
+    return {
+        "n_temporal_candidate_questions": len({r.question_id for r in temporal_rows}),
+        "n_other_questions": len({r.question_id for r in other_rows}),
+        "temporal_candidate_questions": rm.aggregate_by_system(temporal_rows),
+        "other_questions": rm.aggregate_by_system(other_rows),
+    }
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--output-dir", default="experiments/outputs/end_to_end")
@@ -415,6 +455,7 @@ def main(argv=None) -> int:
         "verdict": ("COMPONENT HELPS" if delta(proposed_label, ablated_label) > 0
                     else "COMPONENT DOES NOT HELP"),
     }
+    temporal_subgroup = temporal_subgroup_breakdown(rows, temporal_flags(items))
 
     report = {
         # The config hash detects a changed setting but cannot tell a
@@ -441,6 +482,11 @@ def main(argv=None) -> int:
         "main_evaluation": main_evaluation,   # step 3: RAG2 vs proposed
         "ablation_study": ablation_study,      # step 4: full vs ablated proposed
         "ablation_sweep": [n for n in systems if n.startswith("proposed_")],
+        # Does recency weighting's effect concentrate on questions whose
+        # evidence base has actually been revised over time, or is it flat
+        # across the pool regardless of temporal_candidate? Zero new data
+        # collection: temporal_candidate is already on every question.
+        "temporal_subgroup": temporal_subgroup,
     }
     report_path = out_dir / "metrics_report.json"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",

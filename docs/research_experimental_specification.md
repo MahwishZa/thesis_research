@@ -508,7 +508,65 @@ outcome, and **who or what decided** (a human annotator id, or a named rule
 for closed-form questions). `rag_metrics.py` owns automatic scoring so the two
 cannot drift into two competing judges of the same thing.
 
-### 11.1 Human-judged hallucination protocol (out of the critical path)
+### 11.1 Retrieval-only metrics (Recall@K, MRR, nDCG) — investigated, not added
+
+**Decision (2026-09-20): not part of this evaluation, and the reason is
+structural, not a preference.** Retrieval and reranking (§2) are performed
+**once per question and frozen**, then replayed byte-identically to every
+arm (D-1, the central internal-validity guarantee). The candidate set a
+ranking metric like Recall@K or nDCG would score is therefore **identical
+across every arm by construction** — RAG², the no-filter control, and every
+λ setting of the proposed system all receive the same ranked list. A metric
+that cannot vary between the things being compared cannot explain a
+difference between them, so it does not belong in a comparison whose
+independent variable is the admission rule (§5), not retrieval.
+
+This is also consistent with the base paper: RAG² itself never reports a
+retrieval-only ranking metric anywhere in its main results or appendix, even
+though it sweeps top-k (Figure 3) — it validates retrieval's contribution
+only through downstream accuracy at varying k, which is what `main_evaluation`
+and `ablation_study` already do here via `token_f1`/`rouge_l_f1`. Adding
+Recall@K/MRR/nDCG on top would be additional infrastructure — a K to choose,
+a "gold relevant set" definition distinct from `gold_evidence_ids`, a metric
+that under the provenance firewall (§15.7) is *usually unmeasurable on real
+data* for the same reason `context_precision/recall` already returns `None`
+— that answers a question this design does not ask: whether retrieval is
+good, not whether *admission from a fixed retrieval* differs.
+
+`context_precision` / `context_recall` already measure the one thing that
+*does* differ between arms — which of the (fixed) candidates each arm's
+admission rule actually kept — and that is the correct locus of measurement
+here, not a substitute chosen to avoid Recall@K.
+
+### 11.2 Temporal-candidate subgroup breakdown
+
+`run_end_to_end.py`'s report carries `temporal_subgroup`: every scored row,
+split by `FrozenItem.temporal_candidate` (§13, carried from
+`EvaluationQuestion.temporal_candidate` — a Cochrane review cited at `.pub2`
+or higher, so its conclusion has been revisited at least once) into
+`temporal_candidate_questions` and `other_questions`, each aggregated
+per-system exactly as `metrics_by_system` is.
+
+**Why this belongs in the design and not just the write-up.** The main
+comparison (§main_evaluation) asks whether recency weighting helps
+*averaged over the whole question pool*. A temporal filter's mechanism is
+specifically about evidence that has changed over time, so if it works at
+all, the effect should be concentrated on `temporal_candidate=True`
+questions and closer to null on the rest. Seeing that pattern — or not
+seeing it — is direct, specific evidence for or against the proposed
+mechanism, distinguishable from "the proposed system just happens to score
+higher on this pool for an unrelated reason." It costs no new data
+collection: `temporal_candidate` is already assigned to every sourced
+question (question-provenance protocol, §13) and is already summarised at
+the pool level (`summarise_pool`); this only carries a field one hop further
+(question → frozen item → report) and groups rows already being scored.
+
+On the module's own synthetic fixture every item is `temporal_candidate=False`
+(it is not sourced from an actual Cochrane republication, so it is left
+unmarked rather than set to an unearned `True`), so `temporal_candidate_questions`
+reports empty there — correctly, not a defect.
+
+### 11.3 Human-judged hallucination protocol (out of the critical path)
 
 Retained, implemented and tested, but **not required before a main result** —
 see `docs/current_objectives.md`, "Removed from the primary pipeline".
