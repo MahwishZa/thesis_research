@@ -176,7 +176,7 @@ def dated_only(
     ``docs/research_experimental_specification.md`` §15.3 requires candidate
     sets to contain only
     dated passages, applied identically to every arm at construction, so the
-    undated branch of the recency score never fires and ``undated_score``
+    undated branch of the temporal score never fires and ``undated_score``
     stays out of the tunable count. Applying it here - upstream of both arms -
     is what makes it identical by construction rather than by agreement.
     """

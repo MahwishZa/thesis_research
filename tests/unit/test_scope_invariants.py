@@ -20,9 +20,14 @@ catch, so this file was retargeted rather than left in place.
 
 ``frozen_scope.md`` no longer exists: the 2026-09-19 documentation
 consolidation merged its live content into
-``docs/research_experimental_specification.md`` and its superseded-design
-section into ``current_objectives.md``. The superseded designs are therefore
-guarded where they now live, not where they used to.
+``docs/research_experimental_specification.md``.
+
+2026-09-20: the repository was simplified and renamed ("recency" ->
+"temporal", "the proposed system" -> "the Temporal Filter"). The
+superseded-design history that used to live inside current_objectives.md
+moved with the code it explains, to ``_archive/README.md``, when
+``experiments/test_pairs/`` and the other exploratory machinery were moved
+into ``_archive/``. This file's superseded-design guard now points there.
 """
 
 import unittest
@@ -35,9 +40,9 @@ README = ROOT / "README.md"
 #: Load-bearing fragments of the current scope. Wording may be reformatted
 #: around them, so these are phrases rather than whole sentences.
 CURRENT_OBJECTIVES = (
-    "Proposed-system validation",
-    "Ablation study",
-    "RAG",  # "RAG² comparison" - the ² is easy to garble in an edit, don't require it literally
+    "Run it",
+    "Ablate it",
+    "Compare it to RAG",  # the ² is easy to garble in an edit, don't require it literally
 )
 
 #: The three objectives, as headline verbs - each must appear so dropping an
@@ -66,6 +71,15 @@ class CurrentScopeTests(unittest.TestCase):
         self.assertIn("main contribution", body)
         self.assertIn("improves rag", body)
 
+    def test_current_objectives_names_the_temporal_filter(self):
+        """"The Temporal Filter" is the one consistent name for the
+        proposed method - dropping it silently back to "recency-aware
+        admission" or similar is exactly the terminology drift the
+        2026-09-20 cleanup was asked to fix."""
+        body = text(SCOPE)
+        self.assertIn("Temporal Filter", body)
+        self.assertNotIn("recency", body.lower())
+
     def test_current_objectives_does_not_assume_the_answer(self):
         """The main contribution is to determine improvement experimentally,
         not to assert it - dropping this framing would silently turn a
@@ -88,15 +102,38 @@ class SupersededScopeTests(unittest.TestCase):
     """The old (hallucination-rate-primary) question may be remembered as
     history, never asserted as current."""
 
-    def test_superseded_designs_are_recorded_as_history_in_the_scope_doc(self):
-        """Both earlier research questions must stay *recorded* - deleting
-        them would make experiments/test_pairs/ inexplicable - and must stay
-        marked superseded, so neither can be mistaken for current."""
-        body = text(SCOPE)
-        self.assertIn("Superseded designs", body)
-        self.assertIn("superseded, not current", body)
-        self.assertIn("admission asymmetry", body.lower())
+    def test_archive_readme_records_why_the_earlier_work_is_not_current(self):
+        """Both earlier research questions must stay *recorded somewhere* -
+        deleting the explanation would make _archive/test_pairs/
+        inexplicable. That explanation used to live inside
+        current_objectives.md; it now lives with the code it explains."""
+        archive_readme = ROOT / "_archive" / "README.md"
+        self.assertTrue(archive_readme.exists())
+        body = text(archive_readme)
+        self.assertIn("not part of the current", body.lower())
         self.assertIn("test_pairs", body)
+
+    def test_active_code_does_not_import_the_archive(self):
+        """The archive move is only real isolation if nothing active
+        depends on it - the one thing this whole cleanup could get wrong
+        silently."""
+        import ast
+
+        hits = []
+        for path in ROOT.rglob("*.py"):
+            parts = path.relative_to(ROOT).parts
+            if parts[0] in ("_archive", "__pycache__") or "__pycache__" in parts:
+                continue
+            tree = ast.parse(text(path), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    if node.module.split(".")[0] == "_archive":
+                        hits.append(str(path))
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.split(".")[0] == "_archive":
+                            hits.append(str(path))
+        self.assertEqual(hits, [])
 
     def test_the_four_authoritative_docs_all_exist(self):
         """The 2026-09-19 consolidation reduced docs/ to four files and

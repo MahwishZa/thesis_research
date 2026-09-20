@@ -34,9 +34,9 @@ from systems.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
 from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
 from systems.proposed.admission import (
-    AdmissionConfig, RecencyAwareAdmissionPolicy, RecencyAwareSystem,
+    AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.recency import RecencyPolicy
+from systems.proposed.temporal import TemporalPolicy
 from systems.proposed.scorer import AdmissionScorer
 
 TQ = date(2026, 1, 1)
@@ -60,7 +60,7 @@ def fixture_generate(question, evidence, prompt):
 
 
 def make_corpus(n=40):
-    """Synthetic passages spread across years, so recency can discriminate."""
+    """Synthetic passages spread across years, so the temporal score can discriminate."""
     return tuple(
         CorpusPassage(
             chunk_id=f"FIXTURE-{i:03d}",
@@ -130,12 +130,12 @@ class ControlledValidationTests(unittest.TestCase):
                 config=RAG2Config(context_prompt=cls.prompt,
                                   max_admitted_passages=BUDGET),
             ),
-            "proposed": RecencyAwareSystem(
+            "proposed": TemporalFilterSystem(
                 answer_generator=cls.generator,
-                admission_policy=RecencyAwareAdmissionPolicy(
-                    scorer=AdmissionScorer(recency_weight=FIXTURE_LAMBDA),
-                    recency=RecencyPolicy(half_life_days=FIXTURE_HALF_LIFE,
-                                          undated_score=0.5),
+                admission_policy=TemporalFilterPolicy(
+                    scorer=AdmissionScorer(temporal_weight=FIXTURE_LAMBDA),
+                    temporal=TemporalPolicy(half_life_days=FIXTURE_HALF_LIFE,
+                                            undated_score=0.5),
                     config=AdmissionConfig(admit_threshold=FIXTURE_THETA,
                                            question_date=TQ,
                                            max_admitted_passages=BUDGET),

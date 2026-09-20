@@ -1,8 +1,8 @@
-"""The reduced recency-aware admission policy, and the three-arm fairness controls.
+"""The Temporal Filter admission policy, and the three-arm fairness controls.
 
 `systems/` had no committed tests before this file: the earlier checks lived
 in a scratch script and did not survive. These lock the properties the
-primary experiment depends on.
+main experiment depends on.
 """
 
 import unittest
@@ -22,14 +22,19 @@ from systems.proposed import (
     AdmissionConfig,
     AdmissionScorer,
     OutputState,
-    RecencyAwareAdmissionPolicy,
-    RecencyAwareSystem,
-    RecencyPolicy,
-    RecencyState,
+    TemporalFilterPolicy,
+    TemporalFilterSystem,
+    TemporalPolicy,
+    TemporalState,
 )
 
 
 TQ = date(2026, 1, 1)
+
+#: Old enough that its temporal score is well below 1.0, which is how
+#: a test builds the "nothing clears theta" condition using an
+#: in-range theta.
+STALE = date(2016, 1, 1)
 
 
 class EchoGenerator(Generator):
@@ -56,25 +61,24 @@ def candidate(eid, rank, **kwargs):
 
 
 def policy(*, weight=0.5, threshold=0.5, half_life=365.0, limit=None,
-           undated=0.5, contested=None, **recency_kwargs):
-    return RecencyAwareAdmissionPolicy(
+           undated=0.5, **temporal_kwargs):
+    return TemporalFilterPolicy(
         scorer=AdmissionScorer(weight),
-        recency=RecencyPolicy(half_life_days=half_life,
-                              undated_score=undated, **recency_kwargs),
+        temporal=TemporalPolicy(half_life_days=half_life,
+                                undated_score=undated, **temporal_kwargs),
         config=AdmissionConfig(admit_threshold=threshold, question_date=TQ,
                                max_admitted_passages=limit),
-        contested=contested,
     )
 
 
-class RecencyScoreTests(unittest.TestCase):
+class TemporalScoreTests(unittest.TestCase):
 
     def setUp(self):
-        self.recency = RecencyPolicy(half_life_days=365.0, undated_score=0.5)
+        self.temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.5)
 
     def score(self, published):
-        return self.recency.score(evidence("e", published=published),
-                                  question="q", question_date=TQ)
+        return self.temporal.score(evidence("e", published=published),
+                                   question="q", question_date=TQ)
 
     def test_same_day_scores_one(self):
         self.assertAlmostEqual(self.score(TQ).score, 1.0)
@@ -102,63 +106,62 @@ class RecencyScoreTests(unittest.TestCase):
     def test_undated_uses_the_configured_value_and_is_labelled(self):
         result = self.score(None)
         self.assertEqual(result.score, 0.5)
-        self.assertIs(result.state, RecencyState.UNDATED)
+        self.assertIs(result.state, TemporalState.UNDATED)
 
     def test_undated_score_has_no_default(self):
         with self.assertRaises(ValueError):
-            RecencyPolicy(half_life_days=365.0)
+            TemporalPolicy(half_life_days=365.0)
 
     def test_half_life_has_no_default(self):
         with self.assertRaises(ValueError):
-            RecencyPolicy(half_life_days=None, undated_score=0.5).score(
+            TemporalPolicy(half_life_days=None, undated_score=0.5).score(
                 evidence("e"), question="q", question_date=TQ)
 
 
 class SecondaryRulesAreOffByDefaultTests(unittest.TestCase):
-    """The primary score is plain age decay and nothing else."""
+    """The main score is plain age decay and nothing else."""
 
     def test_no_secondary_rules_by_default(self):
-        recency = RecencyPolicy(half_life_days=365.0, undated_score=0.5)
-        self.assertEqual(recency.secondary_rules_enabled, ())
+        temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.5)
+        self.assertEqual(temporal.secondary_rules_enabled, ())
 
     def test_retracted_evidence_is_scored_by_age_unless_asked_otherwise(self):
-        recency = RecencyPolicy(half_life_days=365.0, undated_score=0.5)
-        result = recency.score(evidence("e", retracted=True), question="q",
-                               question_date=TQ)
-        self.assertIs(result.state, RecencyState.DATED)
+        temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.5)
+        result = temporal.score(evidence("e", retracted=True), question="q",
+                                question_date=TQ)
+        self.assertIs(result.state, TemporalState.DATED)
         self.assertAlmostEqual(result.score, 1.0)
 
     def test_retraction_rule_is_opt_in_and_recorded(self):
-        recency = RecencyPolicy(half_life_days=365.0, undated_score=0.5,
-                                exclude_retracted=True)
-        result = recency.score(evidence("e", retracted=True), question="q",
-                               question_date=TQ)
+        temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.5,
+                                  exclude_retracted=True)
+        result = temporal.score(evidence("e", retracted=True), question="q",
+                                question_date=TQ)
         self.assertEqual(result.score, 0.0)
-        self.assertIn("exclude_retracted", recency.secondary_rules_enabled)
+        self.assertIn("exclude_retracted", temporal.secondary_rules_enabled)
 
     def test_supersession_is_opt_in_and_recorded(self):
-        plain = RecencyPolicy(half_life_days=365.0, undated_score=0.5)
+        plain = TemporalPolicy(half_life_days=365.0, undated_score=0.5)
         item = evidence("e", published=date(2025, 1, 1),
                         supersession_pointer="other")
         self.assertIs(
             plain.score(item, question="q", question_date=TQ).state,
-            RecencyState.DATED,
+            TemporalState.DATED,
         )
 
-        secondary = RecencyPolicy(half_life_days=365.0, undated_score=0.5,
-                                  superseded_factor=0.5)
+        secondary = TemporalPolicy(half_life_days=365.0, undated_score=0.5,
+                                   superseded_factor=0.5)
         result = secondary.score(item, question="q", question_date=TQ)
-        self.assertIs(result.state, RecencyState.SUPERSEDED)
+        self.assertIs(result.state, TemporalState.SUPERSEDED)
         self.assertIn("supersession_discount",
                       secondary.secondary_rules_enabled)
 
-    def test_metadata_reports_no_secondary_rules_in_a_primary_run(self):
-        system = RecencyAwareSystem(answer_generator=EchoGenerator(),
-                                    admission_policy=policy())
+    def test_metadata_reports_no_secondary_rules_in_a_main_run(self):
+        system = TemporalFilterSystem(answer_generator=EchoGenerator(),
+                                      admission_policy=policy())
         result = system.run(sample_id="s", experiment_id="e", question="q",
                             candidates=[candidate("a", 1)])
-        self.assertEqual(result.metadata["recency_secondary_rules"], [])
-        self.assertFalse(result.metadata["contested_detection_enabled"])
+        self.assertEqual(result.metadata["temporal_secondary_rules"], [])
 
 
 class ScoringRuleTests(unittest.TestCase):
@@ -168,20 +171,20 @@ class ScoringRuleTests(unittest.TestCase):
         for weight in (0.0, 0.25, 0.5, 0.75, 1.0):
             with self.subTest(weight=weight):
                 score = AdmissionScorer(weight).score(
-                    item, recency=0.2, candidate_count=2)
+                    item, temporal=0.2, candidate_count=2)
                 expected = (1 - weight) * score.relevance + weight * 0.2
                 self.assertAlmostEqual(score.total, expected)
 
     def test_weight_zero_is_pure_relevance_the_built_in_ablation(self):
-        score = AdmissionScorer(0.0).score(candidate("a", 1), recency=0.0,
+        score = AdmissionScorer(0.0).score(candidate("a", 1), temporal=0.0,
                                            candidate_count=4)
         self.assertAlmostEqual(score.total, score.relevance)
 
     def test_score_stays_in_unit_interval(self):
         for rank in range(1, 6):
-            for recency in (0.0, 0.5, 1.0):
+            for temporal in (0.0, 0.5, 1.0):
                 score = AdmissionScorer(0.5).score(
-                    candidate("a", rank), recency=recency, candidate_count=5)
+                    candidate("a", rank), temporal=temporal, candidate_count=5)
                 self.assertGreaterEqual(score.total, 0.0)
                 self.assertLessEqual(score.total, 1.0)
 
@@ -208,7 +211,7 @@ class ScoringRuleTests(unittest.TestCase):
 
 class AdmissionBehaviourTests(unittest.TestCase):
 
-    def test_recency_changes_which_passage_is_admitted(self):
+    def test_temporal_score_changes_which_passage_is_admitted(self):
         # The whole point: with weight 0 the older, better-ranked passage
         # wins; with weight 1 the newer one does.
         candidates = [
@@ -216,13 +219,13 @@ class AdmissionBehaviourTests(unittest.TestCase):
             candidate("new", 2, published=date(2025, 12, 1)),
         ]
         by_relevance = policy(weight=0.0, threshold=0.6, limit=1)
-        by_recency = policy(weight=1.0, threshold=0.6, limit=1)
+        by_temporal = policy(weight=1.0, threshold=0.6, limit=1)
 
         admitted = lambda p: [d.candidate.evidence.evidence_id
                               for d in p.decide("q", candidates) if d.admitted]
 
         self.assertEqual(admitted(by_relevance), ["old"])
-        self.assertEqual(admitted(by_recency), ["new"])
+        self.assertEqual(admitted(by_temporal), ["new"])
 
     def test_budget_is_never_exceeded(self):
         candidates = [candidate(f"e{i}", i + 1) for i in range(6)]
@@ -247,14 +250,21 @@ class AdmissionBehaviourTests(unittest.TestCase):
         )
 
     def test_rejected_passages_carry_no_state(self):
-        decisions = policy(threshold=1.1).decide("q", [candidate("a", 1)])
+        # theta=1.0 with a STALE sole candidate under pure temporal scoring:
+        # A < 1.0, so nothing is admitted. (A theta above 1.0 would be
+        # simpler but is now rejected as degenerate - it can never admit
+        # anything at all, whatever the evidence.)
+        decisions = policy(weight=1.0, threshold=1.0).decide(
+            "q", [candidate("a", 1, published=STALE)])
         self.assertTrue(all(d.state is None for d in decisions))
+        self.assertTrue(all(not d.admitted for d in decisions))
 
     def test_no_admitted_evidence_answers_ungrounded_by_default(self):
-        system = RecencyAwareSystem(answer_generator=EchoGenerator(),
-                                    admission_policy=policy(threshold=1.1))
+        system = TemporalFilterSystem(answer_generator=EchoGenerator(),
+                                      admission_policy=policy(weight=1.0,
+                                                              threshold=1.0))
         result = system.run(sample_id="s", experiment_id="e", question="q",
-                            candidates=[candidate("a", 1)])
+                            candidates=[candidate("a", 1, published=STALE)])
         # Default policy is ANSWER_ALWAYS: the baseline generates from an
         # empty evidence block in this situation, so this arm must too, or
         # the hallucination rates are not comparable.
@@ -297,7 +307,7 @@ class ThreeArmFairnessTests(unittest.TestCase):
 
     def arms(self):
         generators = {name: EchoGenerator()
-                      for name in ("no_filter", "rag2", "recency")}
+                      for name in ("no_filter", "rag2", "temporal")}
         return generators, [
             NoFilterSystem(answer_generator=generators["no_filter"],
                            max_admitted_passages=self.budget,
@@ -310,8 +320,8 @@ class ThreeArmFairnessTests(unittest.TestCase):
                 config=RAG2Config(max_admitted_passages=self.budget,
                                   context_prompt=self.prompt),
             ),
-            RecencyAwareSystem(
-                answer_generator=generators["recency"],
+            TemporalFilterSystem(
+                answer_generator=generators["temporal"],
                 admission_policy=policy(threshold=0.0, limit=self.budget),
                 context_prompt=self.prompt,
             ),
@@ -411,13 +421,13 @@ class ThreeArmFairnessTests(unittest.TestCase):
             expected,
         )
 
-        recency = RecencyAwareSystem(
+        temporal = TemporalFilterSystem(
             answer_generator=EchoGenerator(),
             admission_policy=policy(threshold=0.0, limit=3, weight=0.0),
         )
         self.assertEqual(
-            list(recency.run(sample_id="s", experiment_id="e", question="q",
-                             candidates=shuffled).admitted_evidence_ids),
+            list(temporal.run(sample_id="s", experiment_id="e", question="q",
+                              candidates=shuffled).admitted_evidence_ids),
             expected,
         )
 

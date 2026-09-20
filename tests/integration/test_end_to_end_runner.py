@@ -11,7 +11,7 @@ It runs entirely on the module's built-in synthetic fixture (no network, no
 downloaded model - this sandbox has neither), so it is not a scientific
 result; it is proof the pipeline executes cleanly end-to-end and that the
 comparison mechanism (objective 3) correctly detects an improvement when one
-is designed into the fixture (a recency-weighted policy should recover the
+is designed into the fixture (a temporal-weighted policy should recover the
 current passage that a relevance-only ranking would miss).
 """
 
@@ -45,7 +45,7 @@ class EndToEndRunnerTests(unittest.TestCase):
 
     def test_report_separates_main_evaluation_from_ablation_study(self):
         """The report must distinguish step 3 (RAG2 vs proposed) from step 4
-        (full proposed vs the same system with its key component - recency
+        (full proposed vs the same system with its key component - temporal
         weighting - removed), not just dump an undifferentiated lambda
         sweep: those are two different pipeline steps with two different
         research questions."""
@@ -98,11 +98,11 @@ class EndToEndRunnerTests(unittest.TestCase):
                 ):
                     self.assertIn(key, metrics)
 
-    def test_recency_weighted_policy_recovers_the_current_passage(self):
+    def test_temporal_weighted_policy_recovers_the_current_passage(self):
         """The fixture is deliberately built so a relevance-only ranking
         (baseline, no_filter) picks the higher-reranked but STALE passage,
-        while a sufficiently recency-weighted proposed policy picks the
-        lower-reranked but CURRENT one. lambda=1.0 (pure recency) must
+        while a sufficiently temporal-weighted proposed policy picks the
+        lower-reranked but CURRENT one. lambda=1.0 (pure temporal) must
         therefore score strictly higher than the baseline on token F1 -
         this is the concrete, checkable form of "the proposed system
         improves on the baseline" (objective 3)."""
@@ -121,7 +121,7 @@ class EndToEndRunnerTests(unittest.TestCase):
 
     def test_pure_relevance_ablation_matches_baseline_behaviour(self):
         """lambda=0 is the built-in pure-relevance ablation: with no
-        recency signal at all, the proposed policy's ranking degenerates to
+        temporal signal at all, the proposed policy's ranking degenerates to
         the same reranker-rank ordering the baseline and no-filter arms
         use, so it should NOT outperform the baseline on this fixture."""
         with TemporaryDirectory() as tmp:
@@ -206,3 +206,121 @@ class EndToEndRunnerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FittedParameterPlumbingTests(unittest.TestCase):
+    """theta, the half-life and the context budget were module constants
+    with no CLI override, so a real run would silently have used fixture
+    placeholders (theta=0.5, H=365, budget=1) no matter what the validation
+    split produced - defeating AdmissionConfig.validate()'s refusal to
+    default theta. They are now arguments, and their values are recorded in
+    readable form rather than only inside an opaque config hash."""
+
+    def test_theta_half_life_and_budget_are_settable_from_the_cli(self):
+        with TemporaryDirectory() as tmp:
+            code = e2e.main([
+                "--output-dir", tmp, "--n-questions", "3",
+                "--theta", "0.25", "--half-life", "180", "--budget", "2",
+            ])
+            self.assertEqual(code, 0)
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            cfg = report["system_config"]
+            self.assertEqual(cfg["theta"], 0.25)
+            self.assertEqual(cfg["half_life_days"], 180.0)
+            self.assertEqual(cfg["context_budget"], 2)
+
+    def test_the_recorded_config_says_the_values_are_not_fitted(self):
+        """A reader must not mistake a placeholder for a fitted value."""
+        with TemporaryDirectory() as tmp:
+            e2e.main(["--output-dir", tmp, "--n-questions", "3"])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            self.assertFalse(
+                report["system_config"]["theta_and_half_life_are_fitted"])
+
+    def test_the_budget_is_applied_to_every_arm(self):
+        """The budget is a control, not a treatment: if it reached only
+        some arms, an admission difference would be confounded with context
+        volume. assert_budget_parity already guards this inside a run, so a
+        budget that failed to plumb through would raise here."""
+        with TemporaryDirectory() as tmp:
+            code = e2e.main([
+                "--output-dir", tmp, "--n-questions", "3", "--budget", "3",
+            ])
+            self.assertEqual(code, 0)
+            records = [json.loads(l) for l in
+                       (Path(tmp) / "results.jsonl").read_text().splitlines()]
+            for record in records:
+                self.assertLessEqual(len(record["admitted_evidence_ids"]), 3)
+
+    def test_the_report_always_carries_a_temporal_subgroup_breakdown(self):
+        """The key must exist on every run, not only ones a caller happened
+        to populate with temporal-candidate questions - a missing key would
+        silently fail the analysis a real run needs this for, rather than
+        reporting zero."""
+        with TemporaryDirectory() as tmp:
+            e2e.main(["--output-dir", tmp, "--n-questions", "3"])
+            report = json.loads((Path(tmp) / "metrics_report.json").read_text())
+            sub = report["temporal_subgroup"]
+            self.assertEqual(sub["n_temporal_candidate_questions"]
+                             + sub["n_other_questions"], 3)
+            # The built-in fixture is synthetic, not sourced from an actual
+            # Cochrane republication, so it is honestly all "other".
+            self.assertEqual(sub["n_temporal_candidate_questions"], 0)
+            self.assertEqual(sub["temporal_candidate_questions"], {})
+
+    def test_an_out_of_range_theta_fails_before_any_generation(self):
+        """Not merely rejected, but rejected up front: a degenerate theta
+        discovered part-way through a real run wastes the GPU session."""
+        with TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                e2e.main([
+                    "--output-dir", tmp, "--n-questions", "3", "--theta", "1.5",
+                ])
+            self.assertFalse((Path(tmp) / "results.jsonl").exists())
+
+
+class TemporalSubgroupBreakdownTests(unittest.TestCase):
+    """Unit-level check of the grouping logic itself, with a genuine mix of
+    temporal-candidate and non-temporal questions - the case the built-in
+    fixture (all-False, being synthetic) never exercises."""
+
+    def rows_for(self, question_id, system, token_f1):
+        from experiments.evaluation import rag_metrics as rm
+        return rm.MetricRow(
+            question_id=question_id, system=system, exact_match=0.0,
+            token_f1=token_f1, rouge_l_f1=0.0, context_precision=None,
+            context_recall=None, context_f1=None, groundedness=0.0,
+        )
+
+    def test_rows_split_by_the_temporal_candidate_flag(self):
+        rows = [
+            self.rows_for("Q1", "baseline", 0.2),
+            self.rows_for("Q1", "proposed", 0.9),   # temporal: proposed wins
+            self.rows_for("Q2", "baseline", 0.5),
+            self.rows_for("Q2", "proposed", 0.5),   # non-temporal: tied
+        ]
+        flags = {"Q1": True, "Q2": False}
+
+        breakdown = e2e.temporal_subgroup_breakdown(rows, flags)
+
+        self.assertEqual(breakdown["n_temporal_candidate_questions"], 1)
+        self.assertEqual(breakdown["n_other_questions"], 1)
+        temporal = breakdown["temporal_candidate_questions"]
+        other = breakdown["other_questions"]
+        self.assertAlmostEqual(
+            temporal["proposed"]["token_f1"] - temporal["baseline"]["token_f1"],
+            0.7,
+        )
+        self.assertAlmostEqual(
+            other["proposed"]["token_f1"] - other["baseline"]["token_f1"], 0.0,
+        )
+
+    def test_a_question_absent_from_flags_counts_as_non_temporal(self):
+        """flags.get(..., False): a question freezing never marked (an
+        older manifest, or a non-EvaluationQuestion source) must not raise
+        or vanish from the total - it counts as "other", not "unknown"."""
+        rows = [self.rows_for("Q9", "baseline", 1.0)]
+        breakdown = e2e.temporal_subgroup_breakdown(rows, flags={})
+        self.assertEqual(breakdown["n_temporal_candidate_questions"], 0)
+        self.assertEqual(breakdown["n_other_questions"], 1)  # scored, not dropped
+        self.assertEqual(len(breakdown["other_questions"]), 1)

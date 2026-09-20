@@ -117,6 +117,15 @@ class FrozenItem:
     configuration_hash: Optional[str] = None
     #: Evidence ids that established the reference answer. Firewalled.
     reference_evidence_ids: tuple[str, ...] = ()
+    #: Carried from ``EvaluationQuestion.temporal_candidate`` (a Cochrane
+    #: review cited at .pub2 or higher - its conclusion has been revisited
+    #: at least once). Diagnostic only, exactly as it is at the question
+    #: stage: it does not affect admission, generation or scoring. Its only
+    #: use is `run_end_to_end.py`'s subgroup breakdown, which asks whether
+    #: the Temporal Filter's effect concentrates on questions whose evidence
+    #: base has actually been revised over time - the question a temporal
+    #: filter exists to answer - rather than being flat across the pool.
+    temporal_candidate: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -294,6 +303,7 @@ def from_question(
         corpus_snapshot=corpus_snapshot,
         candidates=tuple(candidates),
         reference_evidence_ids=tuple(reference_evidence_ids),
+        temporal_candidate=question.temporal_candidate,
         evaluation_timestamp=evaluation_timestamp,
         configuration_hash=configuration_hash,
     )

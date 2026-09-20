@@ -1,7 +1,7 @@
 """Shared evidence and experiment data structures.
 
 These classes define the interface between the upstream corpus/retrieval
-pipeline and the three experimental arms (no-filter, RAG², recency-aware
+pipeline and the three experimental arms (no-filter, RAG², Temporal Filter
  admission).
 """
 

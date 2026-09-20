@@ -5,13 +5,13 @@ admission policy at all - every candidate in the frozen set is passed to the
 generator, up to the shared context budget.
 
 It is not a strawman, it is the reference point that makes the other two arms
-interpretable. Without it, RAG2 and the recency-aware policy can only be
+interpretable. Without it, RAG2 and the Temporal Filter can only be
 compared to each other, and a difference between them says nothing about
 whether filtering helps at all. With it:
 
 * RAG2 vs. no-filter says what confidence-derived filtering is worth;
-* recency-aware vs. no-filter says the same for the proposed policy;
-* recency-aware vs. RAG2 is the thesis's central comparison, and the control
+* Temporal Filter vs. no-filter says the same for the proposed policy;
+* Temporal Filter vs. RAG2 is the thesis's central comparison, and the control
   is what rules out "the proposed policy only looks better because it admits
   more evidence".
 

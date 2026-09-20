@@ -19,6 +19,14 @@ Evidence tags: `[DOC]` demonstrated by the provided documents · `[PUB]`
 reported by published research · `[INF]` methodological inference · `[STU]`
 student assumption · `[REC]` assistant recommendation.
 
+**Terminology note (2026-09-20).** The proposed method is now consistently
+called the **Temporal Filter**, and its signal the **temporal score**. Older
+decisions and facts below (D-17, D-25, D-26, D-28, E15, K5) were written when
+the code called this "recency" — they are left in their original wording as
+an accurate record of what was decided *then*, per this document's own rule
+that history is not rewritten. Nothing active uses "recency" any more; see
+`docs/current_objectives.md` and `_archive/README.md`.
+
 ---
 
 ## 1. Headline status
@@ -29,16 +37,79 @@ student assumption · `[REC]` assistant recommendation.
 | **Evaluation questions** | 123 candidates, **under human review**. 0 approved. |
 | **RAG² baseline filter** | Code complete and reachable; **no trained checkpoint exists**. |
 | **Proposed system** | Code complete; **λ, θ, H unfitted** by design. |
-| **Generator** | Contract pinned and wired; **no model has ever been downloaded or run**. |
-| **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures. |
+| **Generator** | Contract pinned and wired; **real generation confirmed working** with a small model (see §1.1) — Llama-3-8B-Instruct itself has not been downloaded or run. |
+| **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures; **confirmed consuming real (non-mock) generation output** (§1.1). |
 | **Experimental result** | **None exists.** No number in this repository is a research finding. |
 
-**No real (non-fixture) experimental run has been performed.** The whole
-pathway is VALIDATED end to end on synthetic fixtures
+**No real (non-fixture, non-thesis-model) experimental run has been
+performed.** The whole pathway is VALIDATED end to end on synthetic fixtures
 (`tests/integration/test_controlled_validation.py`): corpus → index →
 retrieval → rerank → freeze → every arm → runner → JSONL, with all control
-properties asserted. That is software validation, not a pilot, and it produces
-no number that could be read as a result.
+properties asserted. §1.1 additionally confirms the same pathway runs
+cleanly with a real, non-mock generator producing real text — the one link
+software validation alone cannot exercise. Neither is a pilot, and neither
+produces a number that could be read as a result.
+
+### 1.1 Real-generator smoke test — CONFIRMED 2026-09-19
+
+The one component the fixture-based validation in §1 cannot exercise — an
+actual language model loading, receiving the runner's built context, and
+generating real text that flows into a real evaluation record — was
+confirmed working end to end on the student's own machine, using a small
+stand-in model in place of the thesis generator (Llama-3-8B-Instruct itself
+needs a 16 GB GPU the student's laptop does not have — see
+`research_experimental_specification.md` §9).
+
+**Command run** (`--real-model` with a small, ungated, architecturally
+identical stand-in):
+
+```powershell
+python -m experiments.runners.run_end_to_end `
+  --output-dir experiments\outputs\smoke_test_NOT_FINAL `
+  --n-questions 4 --ablation-lambdas 0,1.0 `
+  --real-model --model-name TinyLlama/TinyLlama-1.1B-Chat-v1.0 `
+  --model-revision fe8a4ea1ffedaf415f4da2f062534de366a451e6 `
+  --quantization nf4
+```
+
+**Result:** `Ran 4 arms over 4 questions (0 errors)`. All 16 records `status:
+ok`, non-empty `generated_answer` (e.g. `"The current value for question 0
+is 0."`), correct `model: hf:TinyLlama/TinyLlama-1.1B-Chat-v1.0` stamped on
+every record. Metrics computed correctly on real output: on this fixture,
+gold evidence ids are present (unlike the real-data case — see
+`rag_metrics.py`'s `None`-vs-`0.0` distinction in the specification §11),
+so `context_precision/recall = 0.000` for the three arms that admitted the
+wrong passage and `1.000` for the arm that admitted the right one — real
+measured zeros, not the `n/a` case. `main_evaluation`/`ablation_study`
+verdicts were produced from real generation for the first time, though they
+remain fixture output on a stand-in model and are not a thesis result.
+
+**Environment defect found and fixed by the student, not this repository:**
+the student's environment had drifted to `transformers` 5.17.0, which
+refuses to load PyTorch below 2.5 and silently disables all model loading
+(`AutoModelForCausalLM` becomes undefined) rather than raising a clear
+error at the point of use — every one of an initial 16 generations failed
+with `NameError: name 'torch' is not defined` before any model code ran.
+Pinning `transformers==4.51.3` (compatible with the student's PyTorch
+2.4.1+cu121, and still above this repository's declared floor of
+`transformers>=4.40` in `pyproject.toml`) resolved it. No repository code
+was at fault and none was changed for this.
+
+**What this confirms:** `HuggingFaceGenerator` (`systems/interfaces/
+hf_generator.py`) is a real, working implementation — not merely code that
+type-checks — for loading a causal LM, applying its chat template,
+quantizing to NF4, generating greedily, and returning real text through the
+exact same code path Llama-3-8B-Instruct will use. Retrieval → admission
+(all three arms) → context construction → generation → record → metrics →
+report is now confirmed working with genuine model output, on top of the
+software-only validation in §1.
+
+**What this does NOT confirm:** nothing about Llama-3-8B-Instruct's own
+memory footprint, load time, generation speed, or output quality — a 1.1B
+model's resource behaviour does not transfer. The timing check specified
+in `research_experimental_specification.md` §9.3 step 4 (on the actual
+target model, on the actual T4 venue) remains unperformed. TinyLlama does
+not appear in, and must never be cited as, a thesis result.
 
 ## 2. Corpus stage — COMPLETE / FROZEN
 
@@ -121,9 +192,9 @@ provenance.
 | Evidence freezing (`freezing.py`) | READY FOR REAL EXECUTION | approved questions |
 | Baseline arm (`systems/baseline/`) | READY except the checkpoint | filter training |
 | Proposed arm (`systems/proposed/`) | READY | λ/θ/H fitting on a validation split |
-| Generator interface (`hf_generator.py`) | IMPLEMENTED, TESTED without loading a model | Hugging Face licence + a pinned sha |
-| Standard metrics (`rag_metrics.py`) | IMPLEMENTED, TESTED | real answers |
-| End-to-end runner (`run_end_to_end.py`) | IMPLEMENTED, TESTED, VALIDATED | all of the above |
+| Generator interface (`hf_generator.py`) | IMPLEMENTED, TESTED, **confirmed loading and generating with a real model** (§1.1) | the Llama-3-8B licence + a pinned sha + a GPU that fits it |
+| Standard metrics (`rag_metrics.py`) | IMPLEMENTED, TESTED, **confirmed scoring real generation output** (§1.1) | approved questions with gold annotation |
+| End-to-end runner (`run_end_to_end.py`) | IMPLEMENTED, TESTED, VALIDATED, **confirmed end-to-end with a real generator** (§1.1) | Llama-3-8B-Instruct itself + the remaining blockers below |
 | Ablation (`λ = 0` arm, always included) | IMPLEMENTED, TESTED | a fitted full-system λ to ablate against |
 | Annotation / HAR / statistics | IMPLEMENTED, TESTED — out of the critical path | real outcomes |
 
@@ -148,17 +219,29 @@ fixture. They block treating any number as a real result.
    `docs/question_review.md`. Spot-check a sample of PMIDs first. Target ~100
    accepted, not a fixed count.
 2. **Accept the Llama-3 licence** on Hugging Face; create a read token.
-3. Build the index (`python -m experiments.retrieval.build_index`), recording
+3. **Measure the real corpus's null publication-date rate** (found unmeasured
+   in the 2026-09-20 audit — §13's change-log entry for that date): a single
+   pass counting non-empty `publication_date` across the real
+   `alzheimer_corpus/data/chunks/chunks.jsonl`. This is cheap (one `wc`-scale
+   pass, no model, no GPU) and decides whether `dated_only()`'s undated-passage
+   drop (specification §15.3) is negligible or material before any time is
+   spent fitting `H`. Report the fraction; no code change is implied unless
+   the rate is high enough to threaten candidate-set size at N=20 (§8.2), in
+   which case that is a finding to bring back, not a fix to apply silently.
+4. Build the index (`python -m experiments.retrieval.build_index`), recording
    the corpus snapshot id.
-4. Timing check on the remote GPU — the first real measurement.
-5. Generate filter labels on a subsample; check the label distribution; train
+5. Timing check on the remote GPU — the first real measurement.
+6. Generate filter labels on a subsample; check the label distribution; train
    Flan-T5-large; record validation accuracy in a `CheckpointRecord`.
-6. Freeze evidence for the approved questions.
-7. Fit λ, θ, H on the **validation split only**, then freeze them.
-8. Run every arm over the frozen test manifest with one shared generator
-   (`run_end_to_end.py`, see the specification §17).
-9. Score with the standard metrics; report `main_evaluation` (objective 3) and
-   `ablation_study` (objective 2) separately.
+7. Freeze evidence for the approved questions.
+8. Fit λ, θ, H on the **validation split only**, then freeze them.
+9. Run every arm over the frozen test manifest with one shared generator
+   (`run_end_to_end.py`, see the specification §17). Include an `H`-sensitivity
+   sweep (2-3 `--half-life` values at the fitted λ) as the ablation study's
+   second configuration — already CLI-supported, no new code.
+10. Score with the standard metrics; report `main_evaluation` (objective 3),
+    `ablation_study` (objective 2, both configurations), and the
+    `temporal_subgroup` breakdown (specification §11.2) separately.
 
 Do not add a pilot study, extra metrics, or extra baselines.
 
@@ -266,6 +349,7 @@ thesis_research/
 ├── README.md                      the one root readme
 ├── pyproject.toml
 ├── docs/                          four authoritative documents (§6.1)
+├── _archive/                      earlier research direction, not active — see _archive/README.md
 ├── alzheimer_corpus/              the evidence corpus
 │   ├── config/                    MeSH vocabulary, claim taxonomy, queries
 │   ├── scripts/                   01_pubmed … 07_claim_classification
@@ -275,17 +359,15 @@ thesis_research/
 │   ├── interfaces/                Evidence, Candidate, ExperimentResult,
 │   │                              Generator, Retriever, System, HF generator
 │   ├── baseline/                  no-filter control · RAG²-style Flan-T5 filter
-│   └── proposed/                  recency-aware admission
+│   └── proposed/                  the Temporal Filter
 ├── experiments/
-│   ├── configs/                   run configuration
 │   ├── outputs/                   run artefacts (never overwritten)
 │   ├── runners/run_end_to_end.py  the single entry point for pipeline steps 2–4
 │   ├── evaluation/                questions · freezing · runner · rag_metrics ·
 │   │                              accuracy · annotation · stats
 │   ├── questions/                 the candidate question pool + review export
 │   ├── retrieval/                 MedCPT retrieval + reranking + flat exact index
-│   ├── filter_training/           RAG² filter labels and training config
-│   └── test_pairs/                superseded design's infrastructure, unrun
+│   └── filter_training/           RAG² filter labels and training config
 └── tests/                         unit + integration
 ```
 
@@ -294,7 +376,7 @@ thesis_research/
 | File | Purpose |
 |---|---|
 | `current_objectives.md` | **Canonical scope.** The three objectives, the pipeline, what is out of the critical path, and the known blockers. Governs every other document. |
-| `research_experimental_specification.md` | **The method.** What each arm does, what is held constant, the parameters, the generator contract, filter training, metrics, statistics, question provenance, the external-data contract, and how to run it reproducibly. |
+| `research_experimental_specification.md` | **The method.** What each arm does, what is held constant, the parameters, the generator contract, filter training, metrics, statistics, question provenance, and how to run it reproducibly. |
 | `status_and_decisions.md` | **This file.** What is executed, decided, measured, blocked and limited, plus the decision/fact/risk record and the change log. |
 | `question_review.md` | **Reviewer instructions** for `experiments/questions/review.csv` — a human-facing worksheet, not a design document. |
 
@@ -313,7 +395,7 @@ change log (§13) records what went where.
 Each source adapter takes a path and fails with a message naming what to
 fetch, rather than silently falling back to thesis-authored material.
 
-### 6.3 `experiments/outputs/stage2_pilot/` is not research data
+### 6.3 `_archive/stage2_pilot_outputs/` is not research data
 
 Those files were produced by running the superseded Stage-2 pilot against the
 10-document fixture corpus. Every candidate is excluded, 0 pairs are eligible,
@@ -381,7 +463,7 @@ specification.
 | # | Decision | Fate |
 |---|---|---|
 | D-4 to D-7, D-9, D-11 | Contested-before-superseded ordering · ψ-conditioned decay · a SOTA arm · source authority as a tested variable · judge-validation guard · phase ordering | Components moved out of the primary pipeline by D-25 and `current_objectives.md` |
-| D-15, D-16, D-19, D-20, D-22 to D-24, D-31, D-32, D-34, D-35 | The matched-pair / admission-asymmetry machinery: inherited claim equivalence, interval-based temporal eligibility, claim classes as diagnostics only, no target pair count, frozen hashed Stage-2 spec, the unchanged-claim negative control, one primary backbone, the verified MedChangeQA join, and the measured AD census ceiling (only 9 of 512 items are AD-domain, exact power 0.000) | Retained under `experiments/test_pairs/`; produce no thesis outcome |
+| D-15, D-16, D-19, D-20, D-22 to D-24, D-31, D-32, D-34, D-35 | The matched-pair / admission-asymmetry machinery: inherited claim equivalence, interval-based temporal eligibility, claim classes as diagnostics only, no target pair count, frozen hashed Stage-2 spec, the unchanged-claim negative control, one primary backbone, the verified MedChangeQA join, and the measured AD census ceiling (only 9 of 512 items are AD-domain, exact power 0.000) | Moved to `_archive/test_pairs/` (2026-09-20); produce no thesis outcome |
 | D-17 | `question_date` falls back to the newer passage's date | **Superseded by D-21** — it set the newer passage's recency to exactly 1 in every pair, maximising the contrast by construction |
 | D-25 | Scope reduction to recency + rank-normalised relevance under one weight; support and authority become ablations | Absorbed into the current scope |
 | D-36 | The research question becomes hallucination rate (primary) and QA accuracy (secondary); admission asymmetry ceases to be an outcome | **Superseded by `current_objectives.md`** (2026-09-18), which makes the RAG² comparison on standard RAG metrics the main contribution |
@@ -464,6 +546,10 @@ asserts that a *real* run — which never sets the variable — still logs to
 
 | Date | Change |
 |---|---|
+| 2026-09-20 | **Renamed "recency" to "Temporal Filter"/"temporal score" throughout the active repository, and archived the machinery that does not belong to the current thesis.** Purely a clarity pass for a beginner MS student — no methodology, formula, or experimental result changed. **Renamed:** `systems/proposed/recency.py` → `temporal.py` (`RecencyPolicy`→`TemporalPolicy`, `RecencyResult`→`TemporalResult`, `RecencyState`→`TemporalState`); `RecencyAwareAdmissionPolicy`→`TemporalFilterPolicy`, `RecencyAwareSystem`→`TemporalFilterSystem` (`admission.py`); `AdmissionScorer.recency_weight`→`temporal_weight`, its `score(recency=...)` parameter →`temporal=`; the proposed arm's `name` constant `"P_RECENCY"`→`"RAG2_TEMPORAL"`. Every doc, docstring, comment, and test updated to match; a repository-wide search for `recency` (case-insensitive) now returns zero hits outside `_archive/` and this document's own historical entries (D-17, D-25, D-26, D-28, E15, K5 — left in their original wording, since they record what was decided *then*; see the terminology note above §1). **Archived** (`_archive/`, see `_archive/README.md`): `experiments/test_pairs/` (the matched old-vs-new evidence pair design, its 8 scripts, and its data directory), `systems/proposed/{contested.py,verifier.py}` (contested-evidence detection and answer verification — both already `SECONDARY`-labelled and off by default), `experiments/configs/stage2_pilot.yaml`, `experiments/outputs/stage2_pilot/` → `_archive/stage2_pilot_outputs/`, and the 5 test files that exercised only that archived code (`test_eligibility.py`, `test_attrition_split.py`, `test_schema.py`, `test_audit_invariants.py`, `test_pilot_pipeline.py`, all moved to `_archive/test_pairs/tests/`). **Closed the one dependency the move would otherwise have created**: `systems/proposed/__init__.py` re-exported `ContestedDetector`/`ClaimVerifier`/etc. from the now-archived files — those re-exports were removed (nothing outside `__init__.py` imported them; verified by grep before removing). `pyproject.toml`'s package list and `OutputState.CONTESTED`/`PassageDecision.contested` (unreachable dead code once `contested.py` left the tree - nothing could ever set `is_contested=True`) were removed with it. Verified with an AST-based repository-wide import scan (`tests/unit/test_scope_invariants.py::test_active_code_does_not_import_the_archive`) that **zero active files import from `_archive/`**. `docs/research_experimental_specification.md` §14 (99 lines detailing the now-archived external-data contract) replaced with a 6-line pointer to the archive. README rewritten around the plain-language research question or **whether a Temporal Filter improves RAG² for Alzheimer's QA** rather than the implementation-first framing it had. 470 tests pass (103 fewer than before this pass — exactly the 5 files moved to `_archive/test_pairs/tests/`, which are no longer discovered under `tests/`); the same 2 pre-existing, unrelated failures. |
+| 2026-09-20 | **Research-realignment audit: re-read the base paper directly (all 15 pages of the NAACL 2025 PDF, not from memory) and re-inspected the repository against it.** Requested because the earlier (now-superseded) admission-asymmetry design had drifted through incremental additions; the finding is that the *current* design (`current_objectives.md`, adopted 2026-09-18) already **is** the minimal "RAG² baseline → temporal filter → controlled experiments → evaluation → ablation → statistics" methodology this audit was asked to (re)establish — confirmed rather than rebuilt. Concrete findings from the re-read and audit: (1) the paper's own evaluation never reports a retrieval-only ranking metric (Recall@K/MRR/nDCG) anywhere, even while sweeping top-k in Figure 3 — it validates retrieval only through downstream accuracy, which the existing `token_f1`/`rouge_l_f1`/`context_precision/recall` already do; formalised as a decision *not* to add ranking metrics, with reasoning, in specification §11.1 (the structural reason: retrieval is frozen and identical across every arm by construction, D-1, so a ranking metric cannot vary with the thing being compared). (2) `systems/proposed/{contested.py,verifier.py}` re-confirmed genuinely isolated — both self-labelled `SECONDARY` in their own docstrings, off by default, not imported anywhere in the critical path (`run_end_to_end.py` mentions them only in a comment listing what is out of scope) — no further pruning needed. (3) **Corpus temporal-metadata mechanics confirmed sound but two things newly found and recorded**: `_parse_pub_date()` picks one of possibly several `<pub-date>` elements by a documented, deterministic priority (`epub > pub > ppub > collection`) and returns "no date" rather than fabricating one - -but `01_pubmed_download.py` **only ever retrieves a PMID list, never abstracts or dates** (self-documented in `04_normalize.py`'s own top-of-file comment); all real corpus text and every real publication date come from PMC's JATS XML, not from the 676 PubMed PMIDs, which serve only to shape the PMC search and contribute no independent content. And: **the real corpus's null-date rate has never been measured** — `dated_only()` (specification §15.3) silently drops undated passages before either arm sees them, which is the correct behaviour, but nobody has run the one cheap count (non-empty `publication_date` across the real `chunks.jsonl`) that would show whether that drop is negligible or material before λ/θ/H are fitted. Recorded as an open pre-flight measurement, not assumed either way. (4) Verified the question pool already gives the temporal question a real, non-trivial contrast to test: 74/150 sourced candidates carry `temporal_candidate=True` (a Cochrane review cited at `.pub2`+, i.e. actually revised over time) — sourced from real, cited records, not invented. **Added, as the one concrete gap the audit found worth closing**: `temporal_candidate` was tracked on every `EvaluationQuestion` and summarised at the pool level but dropped at freezing and never used downstream. It now survives into `FrozenItem` (`from_question()`) and `run_end_to_end.py`'s report gains a `temporal_subgroup` breakdown — the same per-system metrics, split by whether each question's evidence base has actually been revised over time versus not (specification §11.2) — the direct, zero-new-data-collection test of whether the Temporal Filter's effect concentrates where it should matter rather than sitting flat across the pool. On the module's synthetic fixture (not sourced from a real Cochrane republication) the temporal subgroup is honestly empty, not populated to look exercised. (5) Confirmed the ablation study needs no new infrastructure beyond what already existed: `lambda=0` (component removed, mathematically verified correct in the 2026-09-19 session) plus a half-life (`H`) sensitivity sweep answer "does the chosen temporal window matter" using the `--half-life` flag that already exists — both configurations are already runnable, zero new code. 4 new tests (`FrozenItem.temporal_candidate` pass-through, the subgroup-breakdown grouping logic with a genuine mixed contrast, and that the report key is always present). 573 tests pass; the same 2 pre-existing failures. No corpus rerun, no architecture change, no new dataset, no new model. |
+| 2026-09-19 | **First real-generator smoke test confirmed working end to end** — see §1.1. `HuggingFaceGenerator` loads a real causal LM, applies its chat template, quantizes to NF4, generates greedily and returns real text through `run_end_to_end.py --real-model`, verified with a small stand-in (TinyLlama-1.1B) since the thesis generator needs a GPU the student's laptop does not have. 0 errors across 16 real-model records; metrics scored the real output correctly, including the annotated-fixture case of `context_precision/recall` (0.000/1.000, not `n/a` — gold evidence ids are present in this fixture, unlike the real-data case). No repository defect found; the one failure encountered (`transformers` 5.17.0 silently disabling PyTorch below 2.5) was an environment-drift issue outside this repository, resolved by the student pinning `transformers==4.51.3`. No thesis result was produced or claimed. |
+| 2026-09-19 | **`admit_threshold` (θ) range-checked; θ/H/budget made reachable from the CLI.** `AdmissionConfig.validate()` refused an unresolved θ but not an out-of-range one, although `A(s)` is a convex combination of two `[0, 1]` quantities and θ > 1 or θ < 0 is silently degenerate (admits nothing, or everything, on every question) rather than merely wrong. `validate()` now rejects θ outside `[0, 1]`. Separately, θ, the temporal half-life and the context budget were module-level constants in `run_end_to_end.py` with no CLI override, so a real run would have used the fixture placeholders (θ=0.5, H=365, budget=1) regardless of a validation-split fit — defeating `validate()`'s deliberate refusal to default θ. Added `--theta`/`--half-life`/`--budget`; the report now records them in a readable `system_config` block flagged `theta_and_half_life_are_fitted: false`, rather than only inside an opaque config hash. Two existing tests that used θ=1.1 as a shortcut for "nothing clears θ" were rewritten to produce the same condition in range. `λ=0` was separately audited and needs no correction: it zeroes the temporal term exactly, leaving `A(s) = ρ(s)`. 569 tests pass. |
 | 2026-09-19 | **Corpus provenance logs were being contaminated by the test suite, and are not any more.** `_common.get_logger()` resolved its directory from the loaded module's own `__file__`, so a test calling a stage's `main()` in-process against a temp corpus still appended to the real, git-tracked `alzheimer_corpus/logs/quality_control.log` — a suite run added Stage-06 whitespace-tokenizer lines naming `/tmp` paths to the file the §2 evidence chain is read out of. `get_logger()` now honours `ALZHEIMER_CORPUS_LOGS`; `tests/__init__.py` sets it once for the whole run; `tests/unit/test_corpus_log_isolation.py` (4 tests) guards both the redirection and the unchanged real-run default. The contaminating lines were reverted; every tracked corpus artifact matches the student's own pushed commits. |
 | 2026-09-19 | **Documentation consolidated from 21 Markdown files to 4.** `system_specification.md`, `generator_contract.md`, `filter_training.md`, `rag2_classifier_feasibility.md`, `experimental_parity_audit.md`, `methodology.md`, `question_sources.md` and `external_evaluation_data.md` were merged into `research_experimental_specification.md` (whose superseded admission-asymmetry contents were replaced — they are recorded as provenance in `current_objectives.md` and §8.2 above). `research_ledger.md`, `next_steps.md`, `hardware_and_resources.md`, `question_pool_status.md`, `repository_structure.md`, `experiment_outputs.md`, `feasibility_and_alignment_audit.md`, `research_understanding.md` and `proposal_scope_amendment.md` were merged into this file. `frozen_scope.md`'s live content (interface requirements, reporting requirements, the formula) moved into the specification and its §7 superseded-design paragraph into `current_objectives.md`. `current_objectives.md` and `question_review.md` were kept. Every code and test reference to a merged document was updated to its new home in the same commit. |
 | 2026-09-19 | **Readiness defects corrected before any real run.** (1) The real `FlanT5RAG2Filter` was unreachable from `run_end_to_end.py` — the baseline could only ever be the all-HELPFUL stand-in, and the report did not say so; added `--rag2-checkpoint`, plus `baseline_filter`/`baseline_is_trained_rag2` in the report and a console warning. (2) `rag_metrics.context_scores` returned 0.0 for an unannotated question, which under the provenance firewall is the *expected* real-data case — every arm would have reported context precision 0.000 as if measured; it now returns `None`, `aggregate()` averages over only the annotated rows and reports `context_scored_n`. (3) `--real-model` constructed `ModelSpec(name=...)`, a field that does not exist, so it raised immediately; fixed with `--model-name`/`--model-revision`/`--quantization` (defaulting to the contract's `nf4`). Also: `RAG2Config` accepted a non-positive context budget where the other two arms rejected it. 553 tests pass. |

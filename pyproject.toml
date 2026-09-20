@@ -1,5 +1,8 @@
 # Minimal packaging metadata. The file existed but was empty (0 bytes), which
 # is not valid TOML and made `pip install -e .` fail.
+#
+# _archive/ is not listed here: it is not an installable package and the
+# active code has zero imports from it (see _archive/README.md).
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -28,6 +31,4 @@ packages = [
     "experiments.questions",
     "experiments.questions.sources",
     "experiments.retrieval",
-    "experiments.test_pairs",
-    "experiments.test_pairs.scripts",
 ]

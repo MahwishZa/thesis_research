@@ -26,9 +26,9 @@ from systems.baseline.no_filter import NoFilterSystem
 from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
 from systems.proposed.admission import (
-    AdmissionConfig, RecencyAwareAdmissionPolicy, RecencyAwareSystem,
+    AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.recency import RecencyPolicy
+from systems.proposed.temporal import TemporalPolicy
 from systems.proposed.scorer import AdmissionScorer
 
 TQ = date(2026, 1, 1)
@@ -52,11 +52,11 @@ def rag2(generator, budget):
 
 
 def proposed(generator, budget):
-    return RecencyAwareSystem(
+    return TemporalFilterSystem(
         answer_generator=generator,
-        admission_policy=RecencyAwareAdmissionPolicy(
-            scorer=AdmissionScorer(recency_weight=0.5),
-            recency=RecencyPolicy(half_life_days=365.0, undated_score=0.5),
+        admission_policy=TemporalFilterPolicy(
+            scorer=AdmissionScorer(temporal_weight=0.5),
+            temporal=TemporalPolicy(half_life_days=365.0, undated_score=0.5),
             config=AdmissionConfig(admit_threshold=0.5, question_date=TQ,
                                    max_admitted_passages=budget),
         ),

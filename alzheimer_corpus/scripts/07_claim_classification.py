@@ -27,9 +27,9 @@ Reads config/claim_taxonomy.yaml's current schema:
   temporal_status   -> INTENTIONALLY NOT tagged here. Both require
                        comparing a claim against other evidence (is it
                        contradicted? has it been superseded?), which a
-                       single passage's keywords cannot determine. Recency
-                       is the thesis's actual experimental treatment
-                       (systems/proposed/recency.py scores it from
+                       single passage's keywords cannot determine.
+                       Temporal status is the thesis's actual experimental
+                       treatment (systems/proposed/temporal.py scores it from
                        publication date at admission time); pre-baking a
                        "current vs superseded" label onto the corpus here
                        would duplicate that treatment with a much weaker
