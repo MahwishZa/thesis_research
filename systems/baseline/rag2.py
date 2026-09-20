@@ -35,7 +35,7 @@ class RAG2Config:
     # Answer-prompt template with {question} and {context} fields.
     # Specification section 16 requires prompt parity, so the runner should
     # pass the SAME template to this system, the no-filter control and the
-    # recency-aware policy.
+    # Temporal Filter policy.
     context_prompt: Optional[str] = None
 
     def __post_init__(self) -> None:

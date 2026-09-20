@@ -122,7 +122,7 @@ class FrozenItem:
     #: at least once). Diagnostic only, exactly as it is at the question
     #: stage: it does not affect admission, generation or scoring. Its only
     #: use is `run_end_to_end.py`'s subgroup breakdown, which asks whether
-    #: recency weighting's effect concentrates on questions whose evidence
+    #: the Temporal Filter's effect concentrates on questions whose evidence
     #: base has actually been revised over time - the question a temporal
     #: filter exists to answer - rather than being flat across the pool.
     temporal_candidate: bool = False

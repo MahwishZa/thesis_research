@@ -66,7 +66,7 @@ two-way softmax over the `[HELPFUL]` / `[NOT_HELPFUL]` label-token logits at
 the first decoder position, and labels by argmax. It sees **no date, no rank,
 no metadata** — only the question and the passage text. That is faithful to
 the published method and it matters here: the baseline cannot respond to
-recency even in principle, which is what makes the contrast interpretable.
+temporal information even in principle, which is what makes the contrast interpretable.
 
 **Budget ordering is by reranker rank** because RAG²'s filter emits a binary
 label, not a ranking, so rank is the only ordering available to it.
@@ -77,11 +77,13 @@ admits everything up to the budget. It is not a research objective; it is the
 baseline was weak, and any advantage for the proposed system must be read
 against that rather than celebrated.
 
-## 4. Proposed system — `systems/proposed/admission.py`, `name = "P_RECENCY"`
+## 4. Proposed system — the Temporal Filter
+
+`systems/proposed/admission.py`, `name = "RAG2_TEMPORAL"`
 
 ```
 frozen candidates
-  → for each candidate: A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)
+  → for each candidate: A(s) = (1 − λ)·ρ(s) + λ·T(s, q, t_q)
   → admit if A(s) ≥ θ
   → budget: keep the highest A(s), ties broken by evidence_id
   → build context in candidate-list order
@@ -92,8 +94,8 @@ frozen candidates
   [0, 1], best rank scoring 1.0. **The same signal the baseline's upstream
   produced.** Rank-based rather than min-max normalisation, so a single global
   θ is well defined across questions (D-12).
-* `R(s, q, t_q)` — `RecencyPolicy`: `2^(−age_days / H)` where
-  `age_days = t_q − publication_date(s)`, clamped at zero, in (0, 1].
+* `T(s, q, t_q)` — `TemporalPolicy`, the temporal score: `2^(−age_days / H)`
+  where `age_days = t_q − publication_date(s)`, clamped at zero, in (0, 1].
   **Plain age decay and nothing else** (D-28).
 * `A(s)` is therefore in [0, 1] and θ is directly interpretable on that scale.
 
@@ -101,10 +103,12 @@ One weight, two components, no hidden rescaling — a single weight removes the
 redundant degree of freedom two free weights would give, and makes `λ = 0` a
 built-in pure-relevance ablation rather than a fourth arm (D-27, D-30).
 
-Secondary machinery (contested evidence, supersession, retraction, ψ,
-verification) is present, `None`/off by default, and records itself in run
+Secondary machinery (supersession, retraction, a time-invariance flag)
+is present in `temporal.py`, off by default, and records itself in run
 metadata when enabled. Enabling any of it is a declared secondary analysis,
-never part of a primary result.
+never part of a primary result. (Contested-evidence detection and answer
+verification, which were also secondary, have been moved to `_archive/` -
+see `_archive/README.md`.)
 
 ## 5. The independent experimental factor
 
@@ -112,7 +116,7 @@ never part of a primary result.
 
 | | Baseline | Proposed |
 |---|---|---|
-| Decides admission by | learned binary label from passage text | `A(s) ≥ θ` over rank + recency |
+| Decides admission by | learned binary label from passage text | `A(s) ≥ θ` over rank + a temporal score |
 | Can see publication date | **no** | **yes** |
 | Orders the budget by | reranker rank | `A(s)` |
 
@@ -138,7 +142,7 @@ hazards rather than hypothetical ones:
 
 * **Context budget.** Each arm stores its cap in a different place — on the
   system itself (`NoFilterSystem`), on `config` (`RAG2System`), on
-  `admission_policy.config` (`RecencyAwareSystem`). Nothing compared them. An
+  `admission_policy.config` (`TemporalFilterSystem`). Nothing compared them. An
   arm allowed more passages answers from more context, so a difference in
   outcome would be attributable to context volume rather than to the admission
   rule. `context_budget()` resolves the value through all three shapes; an arm
@@ -164,7 +168,7 @@ evidence that answer actually saw.
 
 ## 7. Abstention — the one resolved asymmetry
 
-`RecencyAwareSystem.run()` used to return `prediction=None`,
+`TemporalFilterSystem.run()` used to return `prediction=None`,
 `output_state=ABSTAIN` when no passage cleared θ. `RAG2System.run()` has no
 empty-evidence guard: when its filter admits nothing it builds a prompt with an
 empty evidence block and generates anyway.
@@ -204,9 +208,9 @@ no headline difference.
 
 | Parameter | Meaning | Status |
 |---|---|---|
-| `λ` | recency weight | **unresolved by design** — `AdmissionConfig.validate()` raises rather than default |
+| `λ` | temporal weight | **unresolved by design** — `AdmissionConfig.validate()` raises rather than default |
 | `θ` | admission threshold | same |
-| `H` | recency half-life (days) | same |
+| `H` | temporal half-life (days) | same |
 
 `validate()` raises with *"Fit it on the validation split before any test
 run"* if θ is unresolved. There is no default value any of these could
@@ -548,7 +552,7 @@ or higher, so its conclusion has been revisited at least once) into
 per-system exactly as `metrics_by_system` is.
 
 **Why this belongs in the design and not just the write-up.** The main
-comparison (§main_evaluation) asks whether recency weighting helps
+comparison (§main_evaluation) asks whether the Temporal Filter helps
 *averaged over the whole question pool*. A temporal filter's mechanism is
 specifically about evidence that has changed over time, so if it works at
 all, the effect should be concentrated on `temporal_candidate=True`
@@ -688,104 +692,13 @@ The reviewer fills `review_decision`, `reviewer_note`, `reviewer_id` and
 in the note and applied afterwards, so the original wording and its provenance
 stay recoverable.
 
-## 14. External evaluation data — input contract
+## 14. External evaluation data (archived)
 
-Used by the superseded temporal test-pair design (`experiments/test_pairs/`,
-out of the critical path per `docs/current_objectives.md`). The contract is
-recorded here because `validate_external.py` and `build_pairs.py` cite it at
-runtime and refuse to run without it.
-
-**Nothing in this repository generates that material**, and
-`build_pairs.py --pool primary_external` fails with a message naming the
-dependency rather than falling back to thesis-written questions.
-
-**Dependency:** MedChangeQA (Vladika, Dhaini & Matthes, *Facts Fade Fast*,
-Findings of EMNLP 2025), <https://github.com/jvladika/MedChange>. **No
-`LICENSE` file is published**, and the underlying text is Cochrane Library
-abstract content (Wiley copyright), so **do not commit the dataset** — fetch
-it at build time, record the commit SHA and the file SHA-256, and cite the
-paper.
-
-Released files (inspected directly, 2026-09-16): `MedChangeQA.csv` (512 rows:
-`Question`, `Newest Label`, `Outdated Label`), `MedRevQA.csv` (16,501 rows,
-including `conclusions`, `DOI_Date`, `PMID`), `AllStudyGroups.csv` (4,379
-rows: `Group_ID`, `Study_ID`, `Label`).
-
-**The join (D-34), deterministic and verified:** `MedChangeQA.csv` alone has
-no PMIDs, dates or evidence text. `AllStudyGroups.csv` supplies the linkage —
-`Group_ID` is sparse and must be forward-filled (1,535 groups of size 2–9);
-`Study_ID` is a **0-based row index into `MedRevQA.csv`**, verified by label
-agreement on 4,379/4,379 rows. Groups holding more than one distinct `Label`
-number exactly **512** and align 1:1 in file order with `MedChangeQA.csv`
-(`Newest Label` agreement 512/512). Per side: evidence text = `conclusions`,
-id = `PMID`, date = year parsed from `DOI_Date`. **No lexical matching, no
-embeddings, no semantic retrieval.** Do not try to recover the sides by
-matching question text: it was tried and only 6 of 512 recover both labels.
-
-### 14.1 JSONL contract
-
-One JSON object per line. The loader validates these and supplies **no
-defaults**, because a silently defaulted reference answer is
-indistinguishable from a real one.
-
-**Required** — without them the record does not identify an evaluation item:
-`question_id` (the partition unit, so all pairs for one question stay
-together), `question_text`, `reference_answer`, `older_document_id`,
-`newer_document_id`.
-
-**Optional** — absence is counted as a visible exclusion, never filled in:
-`older_text`, `newer_text` (absent ⇒ `missing_evidence_text`),
-`older_publication_date`, `newer_publication_date` (absent ⇒
-`missing_publication_date`), `question_date`, `change_point_date`,
-`older_evidence_id`, `newer_evidence_id`, `claim_class`, `pair_category`,
-`contradiction_status`, and per-side `*_source_tier`, `*_persistent_id`,
-`*_length_tokens`.
-
-`evidence_id` is minted as `EXT:<dataset>:<question_id>:<side>` when the
-dataset supplies none.
-
-A missing **required** field makes the file unusable: the validator exits
-non-zero and the builder refuses it. Neither fills the gap.
-
-### 14.2 Four different dates, kept apart
-
-| Field | Meaning |
-|---|---|
-| `question_date` (t_q) | The information state the admission decision is evaluated against |
-| `*_publication_date` | When each passage appeared |
-| `change_point_date` | When the clinical verdict moved |
-| `label_model_cutoffs` (config) | Pre-training cutoffs of the label-generating models |
-
-`question_date` comes from the dataset when it supplies one, otherwise from a
-single configured `evaluation_as_of_date`. It is **never** derived from a
-passage in the pair, and the schema rejects such a value: setting t_q to the
-newer passage's publication date gives that passage `R = 1` by construction
-and inflates the recency contrast the proposed method is measured on (D-21). A
-`change_point_date` the dataset does not supply is left absent, not
-synthesised from a publication date.
-
-### 14.3 Acquisition
-
-```bash
-BASE=https://raw.githubusercontent.com/jvladika/MedChange/main/Datasets
-for f in MedChangeQA.csv MedRevQA.csv AllStudyGroups.csv; do
-  curl -fsS -o "experiments/test_pairs/data/external/$f" "$BASE/$f"
-done
-
-# Convert to the §14.1 contract via the §14 join, then check it BEFORE building:
-python -m experiments.test_pairs.scripts.validate_external \
-    --input experiments/test_pairs/data/external/pairs_input.jsonl \
-    --dataset "MedChangeQA @ <commit-sha>" \
-    --output experiments/outputs/stage2_pilot/acquisition.json
-
-python -m experiments.test_pairs.scripts.build_pairs \
-    --pool primary_external \
-    --input experiments/test_pairs/data/external/pairs_input.jsonl \
-    --output-dir experiments/outputs/stage2_pilot
-```
-
-`validate_external` records the raw file's SHA-256 and the dataset name, so
-the evaluation set can be traced back to the exact bytes it came from.
+This section used to define the input contract for a matched old-vs-new
+evidence pair dataset (MedChangeQA). That design and all its code moved to
+`_archive/` (`_archive/test_pairs/`) — see `_archive/README.md` for what it
+was and why it is no longer part of this thesis. The full contract is
+preserved in the archived code's own docstrings, not duplicated here.
 
 ## 15. Interface requirements the experiment must satisfy
 
@@ -795,7 +708,7 @@ the evaluation set can be traced back to the exact bytes it came from.
    comparable across items at fixed candidate-set size.
 3. **Candidate sets contain only dated passages.** Applied identically to
    every arm at construction (`experiments/retrieval/corpus.py::dated_only`),
-   so the undated branch of the recency score never fires and `undated_score`
+   so the undated branch of the temporal score never fires and `undated_score`
    is not a tunable. Every run reports its count of `UNDATED` passages; in a
    valid run that count is zero.
 4. **Context order is candidate-list order in every arm.** Rank decides
@@ -827,7 +740,7 @@ the evaluation set can be traced back to the exact bytes it came from.
 * Statistical comparison: exact McNemar on paired discordant answers, paired
   bootstrap CI resampling questions, Holm correction across the pre-declared
   comparisons.
-* The corpus date distribution is reported alongside results (corpus recency
+* The corpus date distribution is reported alongside results (corpus date
   skew is a condition of the experiment, not a finding).
 * The generator's knowledge cutoff relative to the reference time is recorded
   and treated as a documented condition: the generator may answer correctly

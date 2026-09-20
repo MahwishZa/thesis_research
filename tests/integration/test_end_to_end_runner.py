@@ -11,7 +11,7 @@ It runs entirely on the module's built-in synthetic fixture (no network, no
 downloaded model - this sandbox has neither), so it is not a scientific
 result; it is proof the pipeline executes cleanly end-to-end and that the
 comparison mechanism (objective 3) correctly detects an improvement when one
-is designed into the fixture (a recency-weighted policy should recover the
+is designed into the fixture (a temporal-weighted policy should recover the
 current passage that a relevance-only ranking would miss).
 """
 
@@ -45,7 +45,7 @@ class EndToEndRunnerTests(unittest.TestCase):
 
     def test_report_separates_main_evaluation_from_ablation_study(self):
         """The report must distinguish step 3 (RAG2 vs proposed) from step 4
-        (full proposed vs the same system with its key component - recency
+        (full proposed vs the same system with its key component - temporal
         weighting - removed), not just dump an undifferentiated lambda
         sweep: those are two different pipeline steps with two different
         research questions."""
@@ -98,11 +98,11 @@ class EndToEndRunnerTests(unittest.TestCase):
                 ):
                     self.assertIn(key, metrics)
 
-    def test_recency_weighted_policy_recovers_the_current_passage(self):
+    def test_temporal_weighted_policy_recovers_the_current_passage(self):
         """The fixture is deliberately built so a relevance-only ranking
         (baseline, no_filter) picks the higher-reranked but STALE passage,
-        while a sufficiently recency-weighted proposed policy picks the
-        lower-reranked but CURRENT one. lambda=1.0 (pure recency) must
+        while a sufficiently temporal-weighted proposed policy picks the
+        lower-reranked but CURRENT one. lambda=1.0 (pure temporal) must
         therefore score strictly higher than the baseline on token F1 -
         this is the concrete, checkable form of "the proposed system
         improves on the baseline" (objective 3)."""
@@ -121,7 +121,7 @@ class EndToEndRunnerTests(unittest.TestCase):
 
     def test_pure_relevance_ablation_matches_baseline_behaviour(self):
         """lambda=0 is the built-in pure-relevance ablation: with no
-        recency signal at all, the proposed policy's ranking degenerates to
+        temporal signal at all, the proposed policy's ranking degenerates to
         the same reranker-rank ordering the baseline and no-filter arms
         use, so it should NOT outperform the baseline on this fixture."""
         with TemporaryDirectory() as tmp:

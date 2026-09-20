@@ -1,197 +1,118 @@
 # Current Objectives — canonical reference
 
-**Adopted 2026-09-18, refined 2026-09-19.** This document is the canonical
-statement of what this repository is for. Where any other doc under `docs/`
-disagrees with this one about scope, priority, or what counts as the primary
-contribution, **this one governs**.
+**Adopted 2026-09-18, last simplified 2026-09-20.** This document says what
+this repository is for. If another doc disagrees about scope or priority,
+**this one wins**.
 
-There are three other documents, and only three:
+There are three other active documents:
 
 - `docs/research_experimental_specification.md` — **the method**: what each
-  arm does, what is held constant, the parameters, the generator contract,
-  filter training, metrics, statistics, question provenance, and how to run
-  it reproducibly.
+  arm does, the parameters, the generator, the metrics, and how to run it.
 - `docs/status_and_decisions.md` — **the record**: what has actually been
-  executed, decided, measured, blocked and limited.
-- `docs/question_review.md` — reviewer instructions for the question pool.
+  run, decided, measured, and blocked.
+- `docs/question_review.md` — instructions for reviewing the question pool.
 
-**Terminology note (2026-09-20).** "Temporal filtering mechanism" and
-"recency-aware admission" name the same thing. The proposed system's
-admission rule, `A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)`, filters retrieved
-evidence by combining relevance with a function of the evidence's *age
-relative to the question* — that is a temporal filter, placed at RAG²'s
-admission stage, evaluated exactly as such against the RAG² baseline. No
-new component is introduced by using one name or the other; this document
-uses "recency weighting" throughout because that is what the code and
-tests already say, and the specification (§4) is the full definition.
+Earlier, larger research directions were moved to `_archive/` — see
+`_archive/README.md`. They are not part of this project anymore.
 
 ---
 
+## The research question
+
+> **Does adding a Temporal Filter to RAG² improve question answering for
+> Alzheimer's disease, compared to RAG² alone?**
+
+- **RAG²** is the published baseline (Sohn et al., NAACL 2025): a filter
+  decides which retrieved passages an LLM gets to see, based only on how
+  helpful the text looks.
+- **The Temporal Filter** is this thesis's one contribution: the same idea,
+  but the filter also considers *how old each passage is* relative to the
+  question. Code: `systems/proposed/`.
+- **No Filter** is a third arm that skips filtering entirely — it shows
+  whether filtering (of either kind) helps at all.
+
+**Main contribution:** determine, through experiments, whether the Temporal
+Filter improves RAG². Do not assume the answer. The point of the experiment is to find out, and to
+report honestly if the Temporal Filter does **not** help.
+
 ## The three objectives
 
-1. **Proposed-system validation.** Run the proposed system end-to-end,
-   evaluate its overall performance, identify and correct genuine
-   implementation/experimental errors, and verify it works correctly.
-
-2. **Ablation study.** Using standard RAG evaluation metrics, determine the
-   contribution of the proposed system's key component (recency weighting,
-   `lambda`) by comparing the full system against the same system with that
-   component removed (`lambda=0`, pure relevance ranking).
-
-3. **RAG² comparison.** Evaluate whether the proposed system improves the
-   RAG² baseline under comparable experimental conditions (same questions,
-   same frozen candidate set, same context budget, same prompt, same
-   generator).
-
-**Main contribution:** determine, through systematic experiments, whether
-the proposed system improves RAG² performance. This is the primary research
-question everything else serves — do not assume the answer; the pipeline
-below exists to determine it experimentally, honestly reporting a negative
-result if that's what the numbers show.
+1. **Run it.** Get the Temporal Filter working end-to-end and fix real bugs.
+2. **Ablate it.** Show whether the temporal part specifically is what helps,
+   by comparing the full Temporal Filter against the same system with the
+   temporal part switched off (`lambda=0`).
+3. **Compare it to RAG².** Under identical questions, evidence, and
+   generator, does the Temporal Filter score better than RAG² alone?
 
 ## The pipeline
 
-1. **Experimental setup** — finalize evaluation data, corpus, retrieval,
-   generator, RAG², proposed system, metrics and experiment configuration;
-   ensure both systems are evaluated under comparable conditions.
-2. **Proposed-system validation** — run the proposed system end-to-end,
-   detect and correct genuine implementation/evaluation errors, re-run until
-   results are valid and complete.
-3. **Main evaluation** — run RAG² and the proposed system on the same setup,
-   compare with the selected standard RAG metrics. Determined experimentally,
-   never assumed.
-4. **Ablation study** — disable/remove the key proposed component (recency
-   weighting) and compare the full system against the ablated version, same
-   protocol and metrics as step 3.
-5. **Analysis and write-up** — analyze proposed-system performance, RAG² vs.
-   proposed results, and ablation results; report positive or negative
-   findings honestly.
+```
+RAG² baseline  →  Temporal Filter  →  No-Filter control
+        ↓                ↓                    ↓
+                  same questions
+                  same retrieved evidence
+                  same generator
+                        ↓
+                    Evaluation
+                        ↓
+                     Ablation
+                        ↓
+              Statistical comparison
+```
 
-**The single entry point for all of steps 2-4** is
-`experiments/runners/run_end_to_end.py`. It runs RAG², the no-filter
-control, and the proposed system (swept across `--ablation-lambdas`,
-default `0, 0.25, 0.5, 0.75, 1.0`), scores every arm with
-`experiments/evaluation/rag_metrics.py`, and reports two distinct
-comparisons in its JSON report and console output:
-- `main_evaluation` (step 3): RAG² baseline vs. the full proposed system
-  (`--proposed-lambda`, default `1.0`).
-- `ablation_study` (step 4): the full proposed system vs. the same system
-  with recency weighting removed (`lambda=0`, always included in the sweep).
+One command runs steps 2-4 of this: `experiments/runners/run_end_to_end.py`.
+It runs all three arms, sweeps the Temporal Filter's weight `lambda` across
+`--ablation-lambdas` (default `0, 0.25, 0.5, 0.75, 1.0`), scores every arm
+with `experiments/evaluation/rag_metrics.py`, and prints two comparisons:
 
-The rest of the lambda sweep is reported as supplementary context, not a
-required part of either step.
+- `main_evaluation` — RAG² vs. the full Temporal Filter (`--proposed-lambda`,
+  default `1.0`).
+- `ablation_study` — the full Temporal Filter vs. the same system with
+  `lambda=0` (temporal weighting off).
 
-## Removed from the primary pipeline
+The rest of the lambda sweep is extra context, not a required result.
 
-Do not treat the following as independent thesis stages going forward,
-unless a specific one becomes demonstrably required by the three objectives
-above: a separate temporal/recency bias probe, temporal test-pair studies
-(`experiments/test_pairs/`), verifier studies (`systems/proposed/verifier.py`),
-contestedness/authority studies (`systems/proposed/contested.py`), clinician
-studies / human annotation (`experiments/evaluation/annotation.py`,
-`stats.py`), SOTA comparisons, or additional generator backbones. None of
-this code is deleted — it is real, tested, and may still support secondary
-analysis or a later write-up section — but it is not part of the critical
-path for objectives 1-3, and no future work here should assume it needs to
-run before a main result can be reported.
+## What is archived, and why
 
-## Superseded designs — provenance only
+`_archive/` holds an earlier, more complex research direction: matched pairs
+of old vs. new evidence, contested-evidence detection, and answer
+verification. None of it answers the current research question, so it was
+moved out of the active folders. It still works and is not deleted — see
+`_archive/README.md`.
 
-This repository has changed research question twice. Neither earlier question
-is an alternative active scope, and neither produces a thesis outcome. They
-are recorded here so the repository's history is traceable and so the code
-retained under `experiments/test_pairs/` is explicable.
+## What stays the same
 
-**First design — admission asymmetry (superseded 2026-09-18 by the
-hallucination framing, and again by this document).**
-
-> *(superseded, not current)* Does a confidence-derived evidence admission
-> mechanism exhibit recency asymmetry, and does explicitly incorporating
-> evidence recency reduce that asymmetry without simply degrading answer
-> quality?
-
-Its primary measurement was `Δ = P(admit | older) − P(admit | newer)` over
-matched temporal-counterfactual pairs. **Δ is no longer an outcome.** The
-pivot narrowed the thesis from "measure a bias, then correct it" to "does the
-correction help". The proximate cause was measured, not stylistic: the
-matched-pair instrument needed AD-domain pairs, and the Cochrane census
-contains only 9 usable ones (exact power 0.000) — a census ceiling, not a
-sampling shortfall (decision D-35). What did **not** survive: the asymmetry
-measurement, the matched-pair construction as a primary instrument, the
-negative control built for Δ, and the multi-backbone replication question.
-
-**Second design — hallucination rate primary (superseded 2026-09-18 by this
-document).**
-
-> *(superseded, not current)* Does the proposed system reduce the rate of
-> hallucinated answers relative to the baseline, under identical question and
-> evidence conditions, while maintaining comparable QA accuracy?
-
-The human-annotated hallucination protocol it defined is not deleted — it is
-implemented, tested, and moved out of the critical path (see "Removed from
-the primary pipeline"). Under the current scope the main evaluation and the
-ablation study are scored with **standard automatic RAG metrics**
-(`experiments/evaluation/rag_metrics.py`), which the first design explicitly
-forbade as outcomes. That inversion is guarded by
-`tests/unit/test_scope_invariants.py`.
-
-**What survives both pivots is the proposed method itself**, unchanged: the
-same `A(s) = (1 − λ)·ρ(s) + λ·R(s, q, t_q)` scoring rule served all three
-framings. `experiments/test_pairs/` is retained rather than deleted —
-deleting it would destroy provenance and it breaks nothing — but nothing in
-it produces a thesis outcome and it is not part of the five-step pipeline.
-
-## What this does NOT change
-
-- The corpus pipeline (`alzheimer_corpus/scripts/`), the retriever
-  (`experiments/retrieval/`), the admission policy implementations
+- The corpus pipeline (`alzheimer_corpus/scripts/`) is untouched.
+- The retriever (`experiments/retrieval/`), the admission code
   (`systems/proposed/`, `systems/baseline/`), and the runner
-  (`experiments/evaluation/runner.py`) are unchanged and are exactly what
-  `run_end_to_end.py` orchestrates.
-- The human-annotated hallucination-rate protocol is not removed, only
-  moved out of the critical path — see "Removed from the primary pipeline."
+  (`experiments/evaluation/runner.py`) are unchanged.
+- The human-annotated hallucination protocol
+  (`experiments/evaluation/annotation.py`, `stats.py`) still exists and
+  works, but is not required for the three objectives above.
 
-## What this DOES change, going forward
+## Standing rules
 
-- **The standard-metrics implementation** lives in
-  `experiments/evaluation/rag_metrics.py`. It is deliberately separate from
-  `experiments/evaluation/accuracy.py`, whose design decision to exclude
-  automatic string-overlap scoring as the PRIMARY correctness signal still
-  stands — `rag_metrics.py` is the ablation study's metrics track, not a
-  replacement for that decision.
-- **Git workflow**: this repository develops directly on `main`. Feature
-  branches and pull requests are not used; the GitHub repository carries
-  only `main`.
+- **Metrics:** `experiments/evaluation/rag_metrics.py` (automatic) is
+  separate from `experiments/evaluation/accuracy.py` (judged correctness).
+  They are not meant to agree; they measure different things.
+- **Git:** everything happens on `main`. No feature branches, no PRs.
 
-## Known blockers to a real (non-fixture) run
+## What is blocking a real (non-fixture) run
 
-These are pre-existing, not introduced by this realignment — see
-`docs/status_and_decisions.md` §3.1 for their current state and
-`docs/research_experimental_specification.md` §§9–10 for what resolving each
-one requires:
+See `docs/status_and_decisions.md` §3.1 for full detail. In short:
 
-- RAG²'s real trained admission-filter checkpoint does not exist
-  (specification §10). Until it is trained, a "beats RAG²" result is against
-  RAG²'s code path with an all-HELPFUL stand-in filter, not the paper's
-  actual classifier. `run_end_to_end.py` records which filter actually ran
-  (`baseline_is_trained_rag2`) so this cannot be inferred wrongly.
-- The proposed system's `lambda`/`theta`/half-life are unfit — they must be
-  chosen on a validation split before a real (non-ablation-sweep) run.
-  `--proposed-lambda 1.0` is a placeholder, not a fitted value.
-- No real gold question/evidence evaluation set exists yet
-  (`experiments/test_pairs/data/` is empty; the curated question pool is
-  still under human review — `docs/question_review.md`).
-- No real model has ever been invoked in this repository (only deterministic
-  stand-ins in tests and in `run_end_to_end.py`'s default fixture run) —
-  this sandbox has no network access to download one.
-- `04_normalize.py`'s licensing gate is not enforced for PMC records
-  (`docs/status_and_decisions.md` §2.1) — affects
-  what the real corpus contains, not this script, but relevant before a
-  real corpus-wide run; the real corpus has already been normalized
-  without this gate enforced.
+- **No trained RAG² filter checkpoint yet.** Until one is trained, RAG² runs
+  with an all-HELPFUL stand-in, and the report says so
+  (`baseline_is_trained_rag2`).
+- **`lambda`, `theta`, the half-life are unfit.** They must be chosen on a
+  validation split before a real run. `--proposed-lambda 1.0` is a
+  placeholder.
+- **No approved question set yet.** The 123-question pool is still under
+  human review (`docs/question_review.md`).
+- **No real generator run yet** in this environment — a smaller model has
+  confirmed the pipeline works; Llama-3-8B-Instruct itself has not run here.
+- **PMC licensing gate is not enforced** (`docs/status_and_decisions.md`
+  §2.1) — affects redistribution of the corpus text, not research use.
 
-None of these block objectives 1-2 as stated (run it, check performance, fix
-errors, ablate with standard metrics) against the fixture; they block
-treating the fixture's numbers as a real result. `run_end_to_end.py
---real-model` plus a real corpus-derived question set and a fitted
-`--proposed-lambda` is the path to a real result once these are resolved.
+None of this blocks running, checking, or ablating the system against the
+built-in fixture. It blocks treating fixture numbers as a real result.

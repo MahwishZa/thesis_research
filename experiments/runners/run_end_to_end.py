@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the proposed system end-to-end, evaluate it against the RAG²
-baseline (step 3: main evaluation), and ablate its key component - recency
-weighting - against the same protocol (step 4: ablation study). This is the
+baseline (step 3: main evaluation), and ablate its key component -
+temporal weighting - against the same protocol (step 4: ablation study). This is the
 single entry point for the thesis's three current objectives (see
 docs/current_objectives.md): validate the proposed system runs correctly,
 run a standard-RAG-metrics ablation of its key component, and determine
@@ -13,8 +13,9 @@ them to a concrete set of questions and produced a number. This script is
 that glue.
 
 Three arms are run over the same frozen candidate sets:
-  - baseline : RAG2System            (systems/baseline/rag2.py)
-  - proposed : RecencyAwareSystem, swept across --ablation-lambdas
+  - baseline : RAG2System            (systems/baseline/rag2.py) - RAG²
+  - proposed : TemporalFilterSystem, swept across --ablation-lambdas -
+               RAG² + the Temporal Filter
   - no_filter: NoFilterSystem        (the admit-everything control)
 
 --proposed-lambda (default 1.0) designates which swept configuration is
@@ -22,7 +23,7 @@ Three arms are run over the same frozen candidate sets:
 separate:
   - main_evaluation (step 3): that arm vs. the RAG² baseline.
   - ablation_study  (step 4): that arm vs. the same system with its key
-    component - recency weighting - removed (lambda=0, pure relevance
+    component - temporal weighting - removed (lambda=0, pure relevance
     ranking, systems/proposed/scorer.py's built-in ablation). lambda=0 is
     always included in the sweep for this reason, even if
     --ablation-lambdas omits it.
@@ -89,16 +90,16 @@ from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
 from systems.interfaces.hf_generator import RAG2_GENERATOR_ID
 from systems.proposed.admission import (
-    AdmissionConfig, RecencyAwareAdmissionPolicy, RecencyAwareSystem,
+    AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.recency import RecencyPolicy
+from systems.proposed.temporal import TemporalPolicy
 from systems.proposed.scorer import AdmissionScorer
 
 #: Forces every arm to pick exactly one passage per question, so the
 #: fixture cleanly demonstrates the thesis's central failure mode: a
 #: relevance-only ranking (RAG², no-filter) prefers a higher-reranked but
 #: STALE passage over a lower-reranked but CURRENT one, while a
-#: sufficiently recency-weighted proposed policy prefers the current one.
+#: sufficiently temporal-weighted proposed policy prefers the current one.
 #: FIXTURE defaults - not fitted values, and not the specification's
 #: engineering constants. theta and the half-life must be fitted on the
 #: validation split before any real run (specification S8.1), and the real
@@ -262,8 +263,8 @@ def build_systems(
     }
 
     for lam in lambdas:
-        scorer = AdmissionScorer(recency_weight=lam)
-        recency = RecencyPolicy(half_life_days=half_life, undated_score=0.0)
+        scorer = AdmissionScorer(temporal_weight=lam)
+        temporal = TemporalPolicy(half_life_days=half_life, undated_score=0.0)
         config = AdmissionConfig(
             admit_threshold=theta,
             question_date=QUESTION_DATE,
@@ -272,11 +273,11 @@ def build_systems(
         # Validate up front, so a bad theta/budget fails before any
         # generation rather than part-way through a run.
         config.validate()
-        policy = RecencyAwareAdmissionPolicy(
-            scorer=scorer, recency=recency, config=config,
+        policy = TemporalFilterPolicy(
+            scorer=scorer, temporal=temporal, config=config,
         )
         label = f"proposed_lambda_{lam:g}"
-        systems[label] = RecencyAwareSystem(
+        systems[label] = TemporalFilterSystem(
             answer_generator=generator, admission_policy=policy,
             context_prompt=CONTEXT_PROMPT,
         )
@@ -306,8 +307,8 @@ def temporal_subgroup_breakdown(
     Cochrane review cited at .pub2+, so its conclusion has been revisited
     at least once - specification SS13) versus the rest.
 
-    This is the direct, minimal test of whether recency weighting's effect
-    is concentrated where a temporal filter should matter, rather than flat
+    This is the direct, minimal test of whether the Temporal Filter's
+    effect is concentrated where it should matter, rather than flat
     across the whole pool - and it costs nothing new to compute:
     ``temporal_candidate`` already exists on every ``EvaluationQuestion``
     and now survives freezing (``FrozenItem.temporal_candidate``); this
@@ -345,10 +346,11 @@ def main(argv=None) -> int:
     )
     ap.add_argument(
         "--proposed-lambda", type=float, default=1.0,
-        help="the recency weight that designates 'the full proposed system' "
-             "for the main evaluation (step 3: proposed vs RAG²) and the "
-             "ablation study (step 4: full vs the same system with its key "
-             "component - recency weighting - removed, i.e. lambda=0). "
+        help="the temporal weight (lambda) that designates 'the full "
+             "proposed system' for the main evaluation (step 3: proposed vs "
+             "RAG²) and the ablation study (step 4: full vs the same system "
+             "with its key component - temporal weighting - removed, i.e. "
+             "lambda=0). "
              "Must be one of --ablation-lambdas. Unfit on real data (see "
              "docs/current_objectives.md); 1.0 is a placeholder until a "
              "validation split exists to fit it on.",
@@ -374,7 +376,7 @@ def main(argv=None) -> int:
                          f"({DEFAULT_THETA}) is a fixture placeholder, not "
                          "a fitted value. Must be in [0, 1].")
     ap.add_argument("--half-life", type=float, default=DEFAULT_HALF_LIFE_DAYS,
-                    help="recency half-life H in days. Same status as "
+                    help="temporal half-life H in days. Same status as "
                          f"--theta: the default ({DEFAULT_HALF_LIFE_DAYS:g}) "
                          "is a fixture placeholder. Must be positive.")
     ap.add_argument("--budget", type=int, default=DEFAULT_BUDGET,
@@ -450,7 +452,7 @@ def main(argv=None) -> int:
     ablation_study = {
         "full_proposed": proposed_label,
         "ablated_proposed": ablated_label,
-        "component_removed": "recency weighting (lambda=0, pure relevance ranking)",
+        "component_removed": "temporal weighting (lambda=0, pure relevance ranking)",
         "token_f1_delta": delta(proposed_label, ablated_label),
         "verdict": ("COMPONENT HELPS" if delta(proposed_label, ablated_label) > 0
                     else "COMPONENT DOES NOT HELP"),
@@ -482,7 +484,7 @@ def main(argv=None) -> int:
         "main_evaluation": main_evaluation,   # step 3: RAG2 vs proposed
         "ablation_study": ablation_study,      # step 4: full vs ablated proposed
         "ablation_sweep": [n for n in systems if n.startswith("proposed_")],
-        # Does recency weighting's effect concentrate on questions whose
+        # Does the Temporal Filter's effect concentrate on questions whose
         # evidence base has actually been revised over time, or is it flat
         # across the pool regardless of temporal_candidate? Zero new data
         # collection: temporal_candidate is already on every question.
@@ -520,9 +522,9 @@ def main(argv=None) -> int:
           f"-> proposed {main_evaluation['verdict']} on the baseline")
 
     print(f"\nStep 4 - Ablation study (full proposed vs the same system with "
-          f"its key component - recency weighting - removed, lambda=0): "
+          f"its key component - temporal weighting - removed, lambda=0): "
           f"token F1 delta {ablation_study['token_f1_delta']:+.3f} "
-          f"-> the recency component {ablation_study['verdict']}")
+          f"-> the Temporal Filter {ablation_study['verdict']}")
 
     if len(lambdas) > 2:
         print("\nFull lambda sweep (token F1 delta vs baseline, for context beyond "

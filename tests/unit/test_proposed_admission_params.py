@@ -65,7 +65,7 @@ class LambdaRangeTests(unittest.TestCase):
     def test_lambda_actually_reaches_the_score(self):
         """A parameter that is accepted but not used would be the worst
         case: every ablation cell would be identical and nothing would say
-        so. At lambda=0 the recency term must contribute exactly nothing;
+        so. At lambda=0 the temporal term must contribute exactly nothing;
         at lambda=1 it must be the whole score."""
 
         class Candidate:
@@ -74,16 +74,16 @@ class LambdaRangeTests(unittest.TestCase):
 
         zero = AdmissionScorer(0.0)
         scores = {
-            zero.score(Candidate(2), recency=r, candidate_count=4).total
+            zero.score(Candidate(2), temporal=r, candidate_count=4).total
             for r in (0.0, 0.5, 1.0)
         }
-        self.assertEqual(len(scores), 1, "recency still moved A(s) at lambda=0")
+        self.assertEqual(len(scores), 1, "temporal still moved A(s) at lambda=0")
         self.assertAlmostEqual(scores.pop(), zero.normalize_rank(2, 4))
 
         one = AdmissionScorer(1.0)
         for r in (0.0, 0.5, 1.0):
             self.assertAlmostEqual(
-                one.score(Candidate(2), recency=r, candidate_count=4).total, r
+                one.score(Candidate(2), temporal=r, candidate_count=4).total, r
             )
 
 

@@ -1,26 +1,18 @@
-"""Recency-aware evidence admission: the proposed method.
+"""The Temporal Filter: the thesis's proposed admission policy.
 
-This is an admission policy, not a framework. It scores each candidate in a
-frozen candidate set, admits those at or above a threshold, and caps the
-admitted set at the shared context budget:
+It scores each candidate in a frozen candidate set, admits those at or above
+a threshold, and caps the admitted set at the shared context budget:
 
-    1. score each candidate: A(s) = (1 - lambda) * rho(s) + lambda * R(s)
+    1. score each candidate: A(s) = (1 - lambda) * rho(s) + lambda * T(s)
     2. admit those with A(s) >= theta
     3. cap at the context budget by score rank, deterministically
     4. report the output state
 
-Everything that made the earlier design a "framework" - entailment-derived
-support, source authority, contested-state handling, supersession, answer
-verification - is outside the primary experiment. Contested handling can
-still be switched on for a secondary analysis (pass ``contested``), and it
-stays off unless it is.
-
-The point of keeping this small is attribution, not tidiness. The baseline
-and this policy receive the same questions, the same candidate set, the same
-reranker scores and the same context budget; the ONLY difference is that this
-policy can see publication dates. With one added signal and one weight, a
-difference in what gets admitted is attributable to the temporal signal. With
-four weighted components it would not be.
+The baseline and this policy receive the same questions, the same candidate
+set, the same reranker scores and the same context budget; the ONLY
+difference is that this policy can see publication dates. With one added
+signal (the temporal score, T) and one weight (lambda), a difference in what
+gets admitted is attributable to that one signal.
 """
 
 from __future__ import annotations
@@ -33,19 +25,16 @@ from typing import Optional, Sequence
 from ..interfaces.evidence import Candidate, ExperimentResult
 from ..interfaces.generator import Generator
 from ..interfaces.system import System
-from .recency import RecencyPolicy
+from .temporal import TemporalPolicy
 from .scorer import AdmissionScore, AdmissionScorer
 
 
 class OutputState(str, Enum):
     """System-level output states.
 
-    These describe the answer as a whole, not individual passages: a rejected
-    candidate carries ``state=None``, because ABSTAIN means "the available
-    evidence is insufficient" and is a property of the item.
-
-    GROUNDED and ABSTAIN are the primary states. CONTESTED is produced only
-    when the secondary contested detector is enabled.
+    These describe the answer as a whole, not individual passages: a
+    rejected candidate carries ``state=None``, because ABSTAIN means "the
+    available evidence is insufficient" and is a property of the item.
     """
 
     GROUNDED = "GROUNDED"
@@ -54,7 +43,6 @@ class OutputState(str, Enum):
     #: GROUNDED - there was nothing to ground on - and not ABSTAIN, because
     #: an answer was produced and must be annotated like any other.
     UNGROUNDED = "UNGROUNDED"
-    CONTESTED = "CONTESTED"
 
 
 class AbstentionPolicy(str, Enum):
@@ -122,7 +110,7 @@ class AdmissionConfig:
 
         if self.question_date is None:
             raise ValueError(
-                "question_date (t_q) is required: the recency score is "
+                "question_date (t_q) is required: the temporal score is "
                 "undefined without an as-of date."
             )
 
@@ -142,42 +130,28 @@ class PassageDecision:
 
     admitted: bool
     state: Optional[OutputState]
-    recency_state: str
+    temporal_state: str
 
     #: True when the passage cleared the threshold but was dropped to stay
     #: inside the context budget.
     dropped_for_budget: bool = False
 
-    #: Secondary: set only when the contested detector is enabled.
-    contested: bool = False
 
-
-class RecencyAwareAdmissionPolicy:
-    """Decide which candidates to admit."""
+class TemporalFilterPolicy:
+    """Decide which candidates to admit, using relevance + a temporal score."""
 
     def __init__(
         self,
         *,
         scorer: AdmissionScorer,
-        recency: RecencyPolicy,
+        temporal: TemporalPolicy,
         config: AdmissionConfig,
-        contested: Optional[object] = None,
     ) -> None:
-        """
-        Args:
-            contested: SECONDARY, default None (off). A
-                ``ContestedDetector`` for the qualitative contested-evidence
-                analysis. It plays no part in the primary experiment, and
-                enabling it changes which passages are admitted, so it is
-                recorded in the run metadata.
-        """
-
         config.validate()
 
         self.scorer = scorer
-        self.recency = recency
+        self.temporal = temporal
         self.config = config
-        self.contested = contested
 
     def decide(
         self,
@@ -195,19 +169,11 @@ class RecencyAwareAdmissionPolicy:
             # assertions are stripped under `python -O`.
             raise ValueError("question_date is required.")
 
-        contested_ids: set[str] = set()
-
-        if self.contested is not None:
-            conflicts = self.contested.find_conflicts(candidates)
-            for conflict in conflicts:
-                contested_ids.add(conflict.evidence_a)
-                contested_ids.add(conflict.evidence_b)
-
         decisions: list[PassageDecision] = []
 
         for candidate in candidates:
 
-            recency_result = self.recency.score(
+            temporal_result = self.temporal.score(
                 candidate.evidence,
                 question=question,
                 question_date=question_date,
@@ -215,20 +181,12 @@ class RecencyAwareAdmissionPolicy:
 
             score = self.scorer.score(
                 candidate,
-                recency=recency_result.score,
+                temporal=temporal_result.score,
                 candidate_count=len(candidates),
             )
 
             admitted = score.total >= self.config.admit_threshold
-            is_contested = candidate.evidence.evidence_id in contested_ids
-
-            state: Optional[OutputState]
-            if not admitted:
-                state = None
-            elif is_contested:
-                state = OutputState.CONTESTED
-            else:
-                state = OutputState.GROUNDED
+            state = OutputState.GROUNDED if admitted else None
 
             decisions.append(
                 PassageDecision(
@@ -236,8 +194,7 @@ class RecencyAwareAdmissionPolicy:
                     score=score,
                     admitted=admitted,
                     state=state,
-                    recency_state=recency_result.state.value,
-                    contested=is_contested,
+                    temporal_state=temporal_result.state.value,
                 )
             )
 
@@ -283,16 +240,16 @@ class RecencyAwareAdmissionPolicy:
         )
 
 
-class RecencyAwareSystem(System):
-    """The proposed arm: recency-aware admission plus answer generation."""
+class TemporalFilterSystem(System):
+    """The proposed arm: RAG² + the Temporal Filter."""
 
-    name = "P_RECENCY"
+    name = "RAG2_TEMPORAL"
 
     def __init__(
         self,
         *,
         answer_generator: Generator,
-        admission_policy: RecencyAwareAdmissionPolicy,
+        admission_policy: TemporalFilterPolicy,
         context_prompt: Optional[str] = None,
     ) -> None:
         """
@@ -357,26 +314,22 @@ class RecencyAwareSystem(System):
                 d.candidate.evidence.evidence_id: {
                     "total": d.score.total,
                     "relevance": d.score.relevance,
-                    "recency": d.score.recency,
-                    "recency_state": d.recency_state,
+                    "temporal": d.score.temporal,
+                    "temporal_state": d.temporal_state,
                     "admitted": d.admitted,
                     "dropped_for_budget": d.dropped_for_budget,
-                    "contested": d.contested,
                 }
                 for d in decisions
             },
-            "recency_weight": self.admission_policy.scorer.recency_weight,
+            "temporal_weight": self.admission_policy.scorer.temporal_weight,
             "admit_threshold": config.admit_threshold,
             "abstention_policy": config.abstention_policy.value,
-            "half_life_days": self.admission_policy.recency.half_life_days,
+            "half_life_days": self.admission_policy.temporal.half_life_days,
             "question_date": config.question_date.isoformat(),
-            # Empty in the primary experiment. Recorded so a result is never
-            # read as plain recency scoring when a secondary rule was on.
-            "recency_secondary_rules": list(
-                self.admission_policy.recency.secondary_rules_enabled
-            ),
-            "contested_detection_enabled": (
-                self.admission_policy.contested is not None
+            # Empty in the main experiment. Recorded so a result is never
+            # read as plain temporal scoring when a secondary rule was on.
+            "temporal_secondary_rules": list(
+                self.admission_policy.temporal.secondary_rules_enabled
             ),
             # Must match the other two arms exactly (fairness control).
             "context_budget": {
@@ -418,12 +371,7 @@ class RecencyAwareSystem(System):
             prompt=self.build_prompt(question, decisions),
         )
 
-        if not admitted:
-            output_state = OutputState.UNGROUNDED
-        elif any(d.state is OutputState.CONTESTED for d in admitted):
-            output_state = OutputState.CONTESTED
-        else:
-            output_state = OutputState.GROUNDED
+        output_state = OutputState.GROUNDED if admitted else OutputState.UNGROUNDED
 
         return ExperimentResult(
             sample_id=sample_id,

@@ -4,8 +4,8 @@ together through the shared runner (Steps 4, 5 and 6).
 The earlier smoke test only exercised ``NoFilterSystem`` against itself. This
 exercises ``RAG2System`` (the baseline, using ``MockRAG2Filter`` - never the
 real Flan-T5 checkpoint, exactly as that class's own docstring requires for
-anything that is not a thesis result) alongside ``RecencyAwareSystem`` (the
-proposed solution), over one frozen candidate set, through the same
+anything that is not a thesis result) alongside ``TemporalFilterSystem``
+(the proposed solution), over one frozen candidate set, through the same
 ``run_experiment`` call.
 
 This is engineering verification, not a scientific run: the generator is a
@@ -27,9 +27,9 @@ from systems.baseline.admission import MockRAG2Filter
 from systems.baseline.rag2 import RAG2Config, RAG2System
 from systems.interfaces.generator import CallableGenerator, GenerationResult
 from systems.proposed.admission import (
-    AdmissionConfig, RecencyAwareAdmissionPolicy, RecencyAwareSystem,
+    AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.recency import RecencyPolicy
+from systems.proposed.temporal import TemporalPolicy
 from systems.proposed.scorer import AdmissionScorer
 
 TQ = date(2026, 1, 1)
@@ -89,13 +89,13 @@ def make_proposed(*, prompt, generator):
     one model and gives it to every arm, and the runner now refuses arms that
     do not share one.
     """
-    policy = RecencyAwareAdmissionPolicy(
-        scorer=AdmissionScorer(recency_weight=0.5),
-        recency=RecencyPolicy(half_life_days=365.0, undated_score=0.5),
+    policy = TemporalFilterPolicy(
+        scorer=AdmissionScorer(temporal_weight=0.5),
+        temporal=TemporalPolicy(half_life_days=365.0, undated_score=0.5),
         config=AdmissionConfig(admit_threshold=0.5, question_date=TQ,
                                max_admitted_passages=BUDGET),
     )
-    return RecencyAwareSystem(
+    return TemporalFilterSystem(
         answer_generator=generator,
         admission_policy=policy,
         context_prompt=prompt,

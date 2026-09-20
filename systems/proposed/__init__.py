@@ -1,50 +1,39 @@
-"""Recency-aware evidence admission: the proposed method.
+"""The Temporal Filter: the thesis's proposed method.
 
-PRIMARY - the reduced admission policy under test:
+This package has one job: admit evidence using a temporal score alongside
+relevance, instead of relevance alone.
 
-    recency.py   R(s, q, t_q), the recency score
-    scorer.py    A(s) = (1 - lambda) * rho(s) + lambda * R(s)
-    admission.py threshold, context budget, output state
+    temporal.py   T(s, q, t_q), the temporal score (evidence age vs. the
+                  question date)
+    scorer.py     A(s) = (1 - lambda) * rho(s) + lambda * T(s), the combined
+                  admission score
+    admission.py  threshold, context budget, output state - ties the score
+                  to an admit/reject decision
 
-SECONDARY - kept because the code is written and may support a qualitative
-analysis or future work. NOT part of the primary experiment, off by default,
-and enabling either changes what is measured:
-
-    contested.py contested-evidence detection
-    verifier.py  answer-claim verification
+Earlier, secondary machinery (contested-evidence detection, answer
+verification) that was never part of this experiment has been moved to
+``_archive/`` - see ``_archive/README.md``. Nothing here imports it.
 """
 
 from .admission import (
     AdmissionConfig,
     OutputState,
     PassageDecision,
-    RecencyAwareAdmissionPolicy,
-    RecencyAwareSystem,
+    TemporalFilterPolicy,
+    TemporalFilterSystem,
 )
-from .recency import RecencyPolicy, RecencyResult, RecencyState
+from .temporal import TemporalPolicy, TemporalResult, TemporalState
 from .scorer import AdmissionScore, AdmissionScorer
 
-# Secondary. Imported so they remain reachable, listed apart so it is clear
-# they are not part of the primary path.
-from .contested import ClaimConflict, ContestedDetector
-from .verifier import ClaimVerifier, NoOpVerifier, VerificationResult
-
 __all__ = [
-    # primary
     "AdmissionConfig",
     "AdmissionScore",
     "AdmissionScorer",
     "OutputState",
     "PassageDecision",
-    "RecencyAwareAdmissionPolicy",
-    "RecencyAwareSystem",
-    "RecencyPolicy",
-    "RecencyResult",
-    "RecencyState",
-    # secondary
-    "ClaimConflict",
-    "ContestedDetector",
-    "ClaimVerifier",
-    "NoOpVerifier",
-    "VerificationResult",
+    "TemporalFilterPolicy",
+    "TemporalFilterSystem",
+    "TemporalPolicy",
+    "TemporalResult",
+    "TemporalState",
 ]

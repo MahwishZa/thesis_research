@@ -1,31 +1,31 @@
-"""Admission score for the recency-aware admission policy.
+"""Admission score for the Temporal Filter.
 
-    A(s) = (1 - lambda) * rho(s) + lambda * R(s, q, t_q)
+    A(s) = (1 - lambda) * rho(s) + lambda * T(s, q, t_q)
 
     admit if A(s) >= theta
 
 ``rho`` is the rank-normalised reranker score the baseline already uses, and
-``R`` is the recency score. Three decisions are worth stating, because each
-removes a parameter or a confound rather than just simplifying code:
+``T`` is the temporal score (temporal.py). Three decisions are worth
+stating, because each removes a parameter or a confound rather than just
+simplifying code:
 
-1.  **One weight, not two.** A pair of free weights ``w_r`` and ``w_t`` has a
-    redundant degree of freedom: scaling both moves the score without
-    changing the ranking, and the threshold then absorbs the difference.
-    A single ``lambda`` in [0, 1] says exactly one thing - how much of the
-    score is recency - and ``lambda = 0`` recovers pure relevance, which is
-    the built-in ablation that isolates the temporal contribution.
+1.  **One weight, not two.** A pair of free weights has a redundant degree
+    of freedom: scaling both moves the score without changing the ranking,
+    and the threshold then absorbs the difference. A single ``lambda`` in
+    [0, 1] says exactly one thing - how much of the score is temporal - and
+    ``lambda = 0`` recovers pure relevance, which is the built-in ablation
+    that isolates the Temporal Filter's contribution.
 
 2.  **No extra normalisation.** ``rho`` is rank-normalised to [0, 1] by
-    construction and ``R`` is an exponential decay in (0, 1], so A(s) is in
+    construction and ``T`` is an exponential decay in (0, 1], so A(s) is in
     [0, 1] and theta is directly interpretable. Rescaling either would put a
     second, hidden knob next to lambda.
 
-3.  **Two components only.** The earlier four-component form added an
-    entailment-derived support score and a source-authority term. Both are
-    outside the reduced primary experiment: support needs an entailment
-    model, authority needs a tier ordering the proposal itself calls
-    contestable, and with four weights plus a threshold no observed effect
-    could be attributed to the temporal component specifically.
+3.  **Two components only.** Nothing beyond relevance and temporal weight
+    is part of this experiment. (Earlier exploratory work looked at a
+    four-component score with an entailment-based "support" signal and a
+    source-authority term; both needed extra models the thesis does not
+    have, and are archived - see ``_archive/README.md``.)
 
 ``lambda``, ``theta`` and the half-life ``H`` are the only tunable
 quantities, and all three are fitted on the validation split.
@@ -45,32 +45,32 @@ class AdmissionScore:
 
     total: float
     relevance: float
-    recency: float
-    recency_weight: float
+    temporal: float
+    temporal_weight: float
 
 
 class AdmissionScorer:
-    """Combine the relevance and recency signals into one admission score."""
+    """Combine the relevance and temporal signals into one admission score."""
 
-    def __init__(self, recency_weight: Optional[float]) -> None:
+    def __init__(self, temporal_weight: Optional[float]) -> None:
         """
         Args:
-            recency_weight: lambda in [0, 1]. Unresolved by default and
+            temporal_weight: lambda in [0, 1]. Unresolved by default and
                 fitted on the validation split; 0.0 is a legitimate setting
                 (the pure-relevance ablation) and is distinct from "unset".
         """
 
-        if recency_weight is None:
+        if temporal_weight is None:
             raise ValueError(
-                "recency_weight (lambda) is unresolved. Fit it on the "
+                "temporal_weight (lambda) is unresolved. Fit it on the "
                 "validation split; it is not given a default. Pass 0.0 "
                 "explicitly for the pure-relevance ablation."
             )
 
-        if not 0.0 <= float(recency_weight) <= 1.0:
-            raise ValueError("recency_weight must be in [0, 1].")
+        if not 0.0 <= float(temporal_weight) <= 1.0:
+            raise ValueError("temporal_weight must be in [0, 1].")
 
-        self.recency_weight = float(recency_weight)
+        self.temporal_weight = float(temporal_weight)
 
     @staticmethod
     def normalize_rank(rank: int, candidate_count: int) -> float:
@@ -90,8 +90,8 @@ class AdmissionScorer:
           best passage always scores 1.0 and the worst 0.0 regardless of how
           relevant either actually is. theta is therefore only comparable
           across items when the candidate-set size is fixed - which
-          specification section 16 already requires across arms, and which
-          must also hold across items.
+          specification §15 already requires across arms, and which must
+          also hold across items.
         """
 
         if candidate_count <= 0:
@@ -109,12 +109,12 @@ class AdmissionScorer:
         self,
         candidate: Candidate,
         *,
-        recency: float,
+        temporal: float,
         candidate_count: int,
     ) -> AdmissionScore:
 
-        if not 0.0 <= recency <= 1.0:
-            raise ValueError("recency must be in [0, 1].")
+        if not 0.0 <= temporal <= 1.0:
+            raise ValueError("temporal must be in [0, 1].")
 
         relevance = self.normalize_rank(
             candidate.rerank_rank,
@@ -122,13 +122,13 @@ class AdmissionScorer:
         )
 
         total = (
-            (1.0 - self.recency_weight) * relevance
-            + self.recency_weight * recency
+            (1.0 - self.temporal_weight) * relevance
+            + self.temporal_weight * temporal
         )
 
         return AdmissionScore(
             total=total,
             relevance=relevance,
-            recency=recency,
-            recency_weight=self.recency_weight,
+            temporal=temporal,
+            temporal_weight=self.temporal_weight,
         )
