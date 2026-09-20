@@ -20,7 +20,7 @@ import numpy as np
 
 from experiments.retrieval.corpus import (
     CorpusError, CorpusPassage, dated_only, parse_publication_date,
-    read_passages, snapshot_id,
+    read_passages, read_passages_with_snapshot, snapshot_id,
 )
 from experiments.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
 from experiments.retrieval.index import (
@@ -104,6 +104,65 @@ class CorpusReadingTests(unittest.TestCase):
             finally:
                 Path.read_text = original_read_text
         self.assertEqual(len(passages), 5)
+
+    def test_combined_reader_matches_the_standalone_snapshot_id(self):
+        """read_passages_with_snapshot hashes the file line by line while
+        parsing; snapshot_id hashes it in 1MB binary blocks. A streaming
+        SHA-256's digest depends only on the byte sequence and its order,
+        not the chunking, so these two must always agree."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(7)])
+            passages, combined_snapshot = read_passages_with_snapshot(tmp)
+            standalone_snapshot = snapshot_id(tmp)
+        self.assertEqual(combined_snapshot, standalone_snapshot)
+        self.assertEqual(len(passages), 7)
+
+    def test_combined_reader_also_reads_only_once(self):
+        """Same Windows->2GB guard as read_passages, for the function
+        build_index.py actually calls."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            path = Path(tmp)
+
+            original_read_text = Path.read_text
+
+            def _guard(self, *a, **kw):
+                if self.name == "chunks.jsonl":
+                    raise AssertionError(
+                        "read_passages_with_snapshot must not read the whole "
+                        "chunk file into memory with Path.read_text()"
+                    )
+                return original_read_text(self, *a, **kw)
+
+            Path.read_text = _guard
+            try:
+                passages, _ = read_passages_with_snapshot(path)
+            finally:
+                Path.read_text = original_read_text
+        self.assertEqual(len(passages), 5)
+
+    def test_combined_reader_still_catches_duplicate_ids(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(1), chunk(1)])
+            with self.assertRaises(CorpusError) as ctx:
+                read_passages_with_snapshot(tmp)
+        self.assertIn("duplicate chunk_id", str(ctx.exception))
+
+    def test_progress_callback_fires_at_the_configured_interval(self):
+        seen = []
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(10)])
+            read_passages_with_snapshot(
+                tmp, on_progress=seen.append, progress_every=3
+            )
+        self.assertEqual(seen, [3, 6, 9])
+
+    def test_no_progress_callback_by_default(self):
+        """The library function stays silent unless a caller opts in -
+        build_index.py wires the printing, not this module."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            read_passages_with_snapshot(tmp)  # must not raise / require one
 
     def test_snapshot_id_tracks_content_not_a_typed_version(self):
         with TemporaryDirectory() as tmp:

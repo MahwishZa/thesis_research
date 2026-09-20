@@ -16,9 +16,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
-from .corpus import dated_only, read_passages, snapshot_id
+from .corpus import dated_only, read_passages_with_snapshot
 from .encoders import medcpt_article_encoder
 from .index import build_index
 
@@ -47,8 +48,22 @@ def main(argv=None) -> int:
               "directory instead.", file=sys.stderr)
         return 2
 
-    passages = read_passages(args.corpus)
-    snapshot = snapshot_id(args.corpus)
+    # One pass over the corpus file, not two (read_passages() then a
+    # separate snapshot_id() re-read) - a real simplification, though
+    # measurement showed the second read cost near-nothing (OS page cache).
+    # For a multi-million-line real corpus, parsing time in Python is what
+    # dominates, not I/O - so this prints progress every 200k lines rather
+    # than sitting silent, which is what actually looks like "hanging."
+    print(f"reading corpus (this can take a few minutes for a large "
+          f"corpus - progress prints every 200,000 lines)...")
+    t0 = time.time()
+
+    def _progress(n: int) -> None:
+        print(f"  ...{n:,} lines read ({time.time() - t0:.0f}s elapsed)")
+
+    passages, snapshot = read_passages_with_snapshot(
+        args.corpus, on_progress=_progress
+    )
     kept = passages if args.include_undated else dated_only(passages)
 
     print(f"corpus snapshot : {snapshot}")

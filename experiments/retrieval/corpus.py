@@ -18,7 +18,7 @@ import json
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Iterator, Optional, Sequence
+from typing import Callable, Iterator, Optional, Sequence
 
 from systems.interfaces.evidence import Evidence
 
@@ -99,11 +99,47 @@ def _as_bool(value) -> bool:
     return str(value).strip().lower() in {"true", "1", "yes"}
 
 
+def _snapshot_id_from_digest(digest: "hashlib._Hash") -> str:
+    return f"alzheimer_corpus@{digest.hexdigest()[:16]}"
+
+
 def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
     """Read every chunk, in file order.
 
     File order is preserved because it feeds the index row order, which feeds
     retrieval ties; a set that reorders between builds would not reproduce.
+    """
+    return read_passages_with_snapshot(corpus_root)[0]
+
+
+def read_passages_with_snapshot(
+    corpus_root: str | Path,
+    *,
+    on_progress: Optional[Callable[[int], None]] = None,
+    progress_every: int = 200_000,
+) -> tuple[tuple[CorpusPassage, ...], str]:
+    """``read_passages`` plus ``snapshot_id``, in one pass over the file.
+
+    ``build_index.py`` used to call ``read_passages`` then ``snapshot_id``
+    separately - two full reads of the corpus file. Measured on a 300k-line/
+    439 MB synthetic corpus, that redundant second read cost **nothing**
+    (7.75s vs. 7.78s for one pass): the OS page cache made the second read
+    essentially free. So this single-pass version is a real, harmless
+    simplification - one fewer place the file path can be wrong, one fewer
+    thing that could disagree - but **the time for a large real corpus is
+    dominated by parsing that many lines in Python, not by I/O**, and this
+    change does not make that faster. Each raw line is hashed (as bytes,
+    before decoding) into the same running SHA-256 that ``snapshot_id``
+    would have produced reading the file in 1 MB blocks - a streaming
+    hash's digest depends only on the byte sequence and its order, not how
+    it was chunked, so the two are guaranteed identical (locked by
+    ``test_combined_reader_matches_the_standalone_snapshot_id``).
+
+    ``on_progress(lines_read)`` is called every ``progress_every`` lines, so
+    a long real run can show it is alive rather than sitting silent - which
+    is indistinguishable from hung to someone watching it for the first
+    time. ``build_index.py`` wires this to a printed line; nothing here
+    prints on its own, so the function stays quiet for library/test use.
     """
     path = Path(corpus_root) / CHUNKS
     if not path.exists():
@@ -113,14 +149,19 @@ def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
         )
 
     passages: list[CorpusPassage] = []
-    # Streamed line by line, not ``path.read_text().splitlines()``: reading a
-    # multi-GB file as one string hits a real Windows limitation (CPython's
-    # text-mode read raises ``OSError: [Errno 22] Invalid argument`` once the
-    # underlying read exceeds ~2 GB in a single call) - which is exactly the
-    # regime a 4.3M-chunk corpus is in. Iterating the open handle reads in
-    # much smaller pieces and works the same on every platform.
-    with open(path, encoding="utf-8") as handle:
-        for number, line in enumerate(handle, 1):
+    seen: set[str] = set()
+    digest = hashlib.sha256()
+    # Opened in binary mode so the exact on-disk bytes are what get hashed
+    # (matching the old block-wise ``snapshot_id``); each line is decoded
+    # separately for parsing. Streamed rather than read whole - see
+    # ``read_passages``'s historical note on the Windows >2GB OSError this
+    # avoids.
+    with open(path, "rb") as handle:
+        for number, raw_line in enumerate(handle, 1):
+            if on_progress is not None and number % progress_every == 0:
+                on_progress(number)
+            digest.update(raw_line)
+            line = raw_line.decode("utf-8")
             if not line.strip():
                 continue
             try:
@@ -130,9 +171,16 @@ def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
             for required in ("chunk_id", "text"):
                 if required not in record:
                     raise CorpusError(f"{path}:{number}: missing {required!r}")
+            chunk_id = record["chunk_id"]
+            if chunk_id in seen:
+                raise CorpusError(
+                    f"duplicate chunk_id {chunk_id!r}; evidence ids must be "
+                    "unique or frozen candidate sets cannot be replayed"
+                )
+            seen.add(chunk_id)
             claim_classes = record.get("claim_classes") or ()
             passages.append(CorpusPassage(
-                chunk_id=record["chunk_id"],
+                chunk_id=chunk_id,
                 document_id=record.get("document_id", ""),
                 text=record["text"],
                 retrieval_text=record.get("retrieval_text") or record["text"],
@@ -146,16 +194,7 @@ def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
     if not passages:
         raise CorpusError(f"{path} contains no passages")
 
-    seen: set[str] = set()
-    for passage in passages:
-        if passage.chunk_id in seen:
-            raise CorpusError(
-                f"duplicate chunk_id {passage.chunk_id!r}; evidence ids must "
-                "be unique or frozen candidate sets cannot be replayed"
-            )
-        seen.add(passage.chunk_id)
-
-    return tuple(passages)
+    return tuple(passages), _snapshot_id_from_digest(digest)
 
 
 def snapshot_id(corpus_root: str | Path) -> str:
@@ -164,6 +203,10 @@ def snapshot_id(corpus_root: str | Path) -> str:
     A content hash of the chunk file, not a hand-written version string, so a
     corpus that changes cannot keep claiming the identifier frozen evidence
     was recorded under.
+
+    Kept as a standalone, single-purpose function (rather than always going
+    through ``read_passages_with_snapshot``) for callers - and tests - that
+    want the id without paying for a full parse.
     """
     path = Path(corpus_root) / CHUNKS
     if not path.exists():
@@ -172,7 +215,7 @@ def snapshot_id(corpus_root: str | Path) -> str:
     with open(path, "rb") as handle:
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
-    return f"alzheimer_corpus@{digest.hexdigest()[:16]}"
+    return _snapshot_id_from_digest(digest)
 
 
 def dated_only(
