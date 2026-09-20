@@ -1,0 +1,75 @@
+{
+  "ablation_study": {
+    "ablated_proposed": "proposed_lambda_0",
+    "component_removed": "recency weighting (lambda=0, pure relevance ranking)",
+    "full_proposed": "proposed_lambda_1",
+    "token_f1_delta": 0.0491228070175439,
+    "verdict": "COMPONENT HELPS"
+  },
+  "ablation_sweep": [
+    "proposed_lambda_0",
+    "proposed_lambda_1"
+  ],
+  "main_evaluation": {
+    "baseline": "baseline",
+    "baseline_filter": "MockRAG2Filter(all-HELPFUL stand-in; NO trained checkpoint)",
+    "baseline_is_trained_rag2": false,
+    "proposed": "proposed_lambda_1",
+    "token_f1_delta": 0.0491228070175439,
+    "verdict": "IMPROVES"
+  },
+  "metrics_by_system": {
+    "baseline": {
+      "context_f1": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "context_scored_n": 4,
+      "exact_match": 0.0,
+      "groundedness": 0.8,
+      "n": 4,
+      "rouge_l_f1": 0.5333333333333333,
+      "token_f1": 0.6666666666666666
+    },
+    "no_filter": {
+      "context_f1": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "context_scored_n": 4,
+      "exact_match": 0.0,
+      "groundedness": 0.8,
+      "n": 4,
+      "rouge_l_f1": 0.5333333333333333,
+      "token_f1": 0.6666666666666666
+    },
+    "proposed_lambda_0": {
+      "context_f1": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "context_scored_n": 4,
+      "exact_match": 0.0,
+      "groundedness": 0.8,
+      "n": 4,
+      "rouge_l_f1": 0.5333333333333333,
+      "token_f1": 0.6666666666666666
+    },
+    "proposed_lambda_1": {
+      "context_f1": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "context_scored_n": 4,
+      "exact_match": 0.0,
+      "groundedness": 0.8125,
+      "n": 4,
+      "rouge_l_f1": 0.5964912280701754,
+      "token_f1": 0.7157894736842105
+    }
+  },
+  "run_summary": {
+    "n_errors": 0,
+    "n_items": 4,
+    "n_records": 16,
+    "n_systems": 4,
+    "output_path": "experiments\\outputs\\smoke_test_NOT_FINAL\\results.jsonl",
+    "run_id": "end_to_end-001"
+  }
+}
