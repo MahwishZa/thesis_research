@@ -19,8 +19,9 @@ and build yields the same vector.
 from __future__ import annotations
 
 import hashlib
+import time
 from abc import ABC, abstractmethod
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 import numpy as np
 
@@ -106,13 +107,42 @@ class MedCPTEncoder(Encoder):
                 self._model.to(self.device)
         return self._tokenizer, self._model
 
-    def encode(self, texts: Sequence[str]) -> np.ndarray:
+    def encode(
+        self,
+        texts: Sequence[str],
+        *,
+        on_progress: Optional[Callable[[int, int, float], None]] = None,
+        progress_every_batches: int = 200,
+    ) -> np.ndarray:
+        """Encode every text, batched.
+
+        Writes each batch straight into a preallocated output array instead
+        of collecting per-batch arrays in a list and ``np.vstack``-ing them
+        at the end. For a small test corpus the difference is invisible; for
+        the real ~4.3M-chunk corpus at MedCPT's 768 dims, the vector matrix
+        alone is ~13 GB in float32, and the list-then-vstack approach holds
+        *two* copies (the growing list plus the freshly concatenated array)
+        at its peak - on the order of 26 GB, comfortably past a 16 GB
+        laptop. Preallocating keeps peak memory to roughly one matrix.
+
+        ``on_progress(batches_done, batches_total, elapsed_seconds)`` is
+        called every ``progress_every_batches`` batches (and always on the
+        last one) - encoding hundreds of thousands of batches on CPU can run
+        for hours with nothing else to show it is still working.
+        """
         import torch
 
         tokenizer, model = self._ensure()
-        out: list[np.ndarray] = []
+        n = len(texts)
+        if n == 0:
+            return np.zeros((0, 768), dtype=np.float32)
+
+        n_batches = (n + self.batch_size - 1) // self.batch_size
+        vectors: Optional[np.ndarray] = None
+        start_time = time.monotonic()
+
         with torch.no_grad():
-            for start in range(0, len(texts), self.batch_size):
+            for batch_index, start in enumerate(range(0, n, self.batch_size), 1):
                 batch = list(texts[start:start + self.batch_size])
                 encoded = tokenizer(
                     batch, truncation=True, padding=True,
@@ -122,8 +152,23 @@ class MedCPTEncoder(Encoder):
                     encoded = {k: v.to(self.device) for k, v in encoded.items()}
                 # MedCPT reads the [CLS] representation, per its model card.
                 hidden = model(**encoded).last_hidden_state[:, 0, :]
-                out.append(hidden.cpu().numpy().astype(np.float32))
-        return np.vstack(out) if out else np.zeros((0, 768), dtype=np.float32)
+                batch_vectors = hidden.cpu().numpy().astype(np.float32)
+
+                if vectors is None:
+                    # Dimension is only known once the model has actually
+                    # run, so the array is allocated after the first batch
+                    # rather than guessed up front.
+                    vectors = np.empty((n, batch_vectors.shape[1]), dtype=np.float32)
+                vectors[start:start + len(batch)] = batch_vectors
+
+                if on_progress is not None and (
+                    batch_index % progress_every_batches == 0
+                    or batch_index == n_batches
+                ):
+                    on_progress(batch_index, n_batches, time.monotonic() - start_time)
+
+        assert vectors is not None  # n > 0 guarantees at least one batch ran
+        return vectors
 
 
 def medcpt_query_encoder(**kwargs) -> MedCPTEncoder:

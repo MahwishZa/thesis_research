@@ -79,10 +79,27 @@ def main(argv=None) -> int:
         print("dry run: no model loaded, nothing written")
         return 0
 
+    print(f"encoding {len(kept):,} passages "
+          f"(batch size {args.batch_size}, device={args.device or 'cpu'})...")
+    if not args.device:
+        print("  no --device given: running on CPU. If this machine has a "
+              "GPU, pass --device cuda - MedCPT's article encoder is small "
+              "(~0.44 GB) and fits even a 4 GB card, and GPU encoding is "
+              "typically far faster than CPU for a corpus this size.")
+    encode_t0 = time.time()
+
+    def _encode_progress(done: int, total: int, elapsed: float) -> None:
+        rate = done / elapsed if elapsed > 0 else 0
+        remaining = (total - done) / rate if rate > 0 else float("nan")
+        print(f"  ...batch {done:,}/{total:,} "
+              f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
+
     encoder = medcpt_article_encoder(batch_size=args.batch_size,
                                      device=args.device)
     index = build_index(kept, encoder, corpus_snapshot=snapshot,
-                        metadata={"dated_only": not args.include_undated})
+                        metadata={"dated_only": not args.include_undated},
+                        on_progress=_encode_progress)
+    print(f"encoding finished in {time.time() - encode_t0:.0f}s")
     index.save(out)
     print(f"wrote index to {out} ({len(index.passage_ids)} × {index.dim})")
     print(json.dumps({"corpus_snapshot": snapshot,

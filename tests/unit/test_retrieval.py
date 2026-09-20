@@ -270,6 +270,31 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(manifest["encoder_name"], "hashing-stub")
         self.assertEqual(manifest["n_passages"], 10)
 
+    def test_on_progress_is_passed_through_to_an_encoder_that_accepts_it(self):
+        """build_index() must forward on_progress to encoders that support
+        it (MedCPTEncoder), without breaking ones that don't (HashingEncoder,
+        used everywhere else in this test file - hence a dedicated stub
+        here rather than torch, which this suite deliberately avoids)."""
+        calls = []
+
+        class ProgressAwareStub:
+            name = "progress-stub"
+
+            def encode(self, texts, *, on_progress=None):
+                if on_progress is not None:
+                    on_progress(1, 1, 0.01)
+                return np.zeros((len(texts), 4), dtype=np.float32)
+
+        build_index(self.passages, ProgressAwareStub(), corpus_snapshot="s",
+                    on_progress=lambda *a: calls.append(a))
+        self.assertEqual(calls, [(1, 1, 0.01)])
+
+    def test_on_progress_omitted_still_works_with_an_encoder_that_lacks_it(self):
+        """HashingEncoder.encode has no on_progress parameter; build_index()
+        must not pass the keyword unless it was actually given one."""
+        index = build_index(self.passages, self.encoder, corpus_snapshot="s")
+        self.assertEqual(len(index.passage_ids), 10)
+
     def test_empty_corpus_is_refused(self):
         with self.assertRaises(IndexError_):
             build_index((), self.encoder, corpus_snapshot="s")
