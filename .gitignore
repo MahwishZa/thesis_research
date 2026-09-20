@@ -1,2 +1,5 @@
 __pycache__/
 *.py[cod]
+
+# Smoke-test outputs are engineering checks, never research data.
+experiments/outputs/smoke_test_NOT_FINAL/
