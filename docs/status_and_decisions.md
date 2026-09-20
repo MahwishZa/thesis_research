@@ -202,10 +202,12 @@ provenance.
 
 | Blocked on | Blocks | Note |
 |---|---|---|
-| **Human question review** | the final ~100 questions | 123 candidates in `experiments/questions/review.csv` |
+| ~~**Human question review**~~ | ~~the final ~100 questions~~ | **DONE (2026-09-20).** All 123 decided: 90 ACCEPT, 23 REVISE, 10 REJECT — see §3.3. |
+| ~~**Validation/test split**~~ | ~~parameter fitting vs. final evaluation~~ | **DONE (2026-09-21).** `experiments/questions/splits.json` — see §3.3. |
 | **Filter training** | a *trained* RAG² baseline | strategy decided; needs one free-tier GPU session |
 | **Llama-3 licence** | generation | a click-through on Hugging Face, then a read token |
-| **λ/θ/H fitting** | the proposed arm's real configuration | needs a validation split of approved questions |
+| **λ/θ/H fitting** | the proposed arm's real configuration | validation split ready (§3.3); still needs a trained RAG² checkpoint and a GPU session to actually fit on |
+| **23 REVISE questions still need their wording/answer corrected** | the validation and test splits both contain some | the underlying claim is sound (reviewer's own judgement); the wording fix itself has not been done — see §3.3 |
 | **Generation speed** | run planning | **unmeasured**; the timing check produces it |
 | **Identifier verification** | question approval | PMIDs transcribed, not resolved |
 | **PMC licensing gate** | corpus composition (§2.1) | decision, not a bug fix |
@@ -215,11 +217,11 @@ fixture. They block treating any number as a real result.
 
 ### 3.2 Next steps, in order
 
-1. **Finish question review.** ACCEPT / REVISE / REJECT / HOLD per
-   `docs/question_review.md`. Spot-check a sample of PMIDs first. Target ~100
-   accepted, not a fixed count.
-2. **Accept the Llama-3 licence** on Hugging Face; create a read token.
-3. ~~Measure the real corpus's null publication-date rate.~~ **DONE
+1. ~~Finish question review.~~ **DONE (2026-09-20)** — see §3.3.
+2. ~~Split the reviewed questions into validation and test.~~ **DONE
+   (2026-09-21)** — see §3.3.
+3. **Accept the Llama-3 licence** on Hugging Face; create a read token.
+4. ~~Measure the real corpus's null publication-date rate.~~ **DONE
    (2026-09-21).** Read-only pass over the real, local
    `alzheimer_corpus/data/chunks/chunks.jsonl` (4,377,041 chunks, the
    student's own machine — never available in this environment; see §1):
@@ -230,20 +232,70 @@ fixture. They block treating any number as a real result.
    This closes the one open question the 2026-09-20 audit flagged before
    fitting `H`: candidate-set size at N=20 is not threatened by missing
    dates. No corpus action was needed or taken.
-4. Build the index (`python -m experiments.retrieval.build_index`), recording
+5. Build the index (`python -m experiments.retrieval.build_index`), recording
    the corpus snapshot id.
-5. Timing check on the remote GPU — the first real measurement.
-6. Generate filter labels on a subsample; check the label distribution; train
+6. Timing check on the remote GPU — the first real measurement.
+7. Generate filter labels on a subsample; check the label distribution; train
    Flan-T5-large; record validation accuracy in a `CheckpointRecord`.
-7. Freeze evidence for the approved questions.
-8. Fit λ, θ, H on the **validation split only**, then freeze them.
-9. Run every arm over the frozen test manifest with one shared generator
-   (`run_end_to_end.py`, see the specification §17). Include an `H`-sensitivity
-   sweep (2-3 `--half-life` values at the fitted λ) as the ablation study's
-   second configuration — already CLI-supported, no new code.
-10. Score with the standard metrics; report `main_evaluation` (objective 3),
+8. Freeze evidence for the split's questions (validation and test
+   separately — never mix the two manifests).
+9. Fit λ, θ, H on the **validation split only**, then freeze them.
+10. Run every arm over the frozen **test** manifest with one shared generator
+    (`run_end_to_end.py`, see the specification §17). Include an `H`-sensitivity
+    sweep (2-3 `--half-life` values at the fitted λ) as the ablation study's
+    second configuration — already CLI-supported, no new code.
+11. Score with the standard metrics; report `main_evaluation` (objective 3),
     `ablation_study` (objective 2, both configurations), and the
     `temporal_subgroup` breakdown (specification §11.2) separately.
+
+### 3.3 Question review and the validation/test split
+
+**Question review — DONE, 2026-09-20.** The student reviewed all 123
+candidates directly against `docs/question_review.md`'s ACCEPT / REVISE /
+REJECT / HOLD taxonomy, with real source verification (something this
+pipeline's own automated passes could never do — Cochrane Library and
+PubMed are network-egress-blocked in this build environment). Recorded in
+`experiments/questions/review.csv`: **90 ACCEPT, 23 REVISE, 10 REJECT, 0
+HOLD.**
+
+**Validation/test split — DONE, 2026-09-21.** Implemented as
+`experiments/questions/split.py`
+(`python -m experiments.questions.split`), output committed at
+`experiments/questions/splits.json`.
+
+Only two splits, not three: nothing in this thesis trains on the
+123-question pool (the RAG² filter trains on general-medical MedQA,
+specification §10; the generator is used off the shelf). The only thing
+this pool feeds is the manual fit of `λ`, `θ`, `H`, which needs one held-out
+set to fit on and a separate, untouched set to report the final result on —
+a validation/test split, not train/validation/test. A third, unused
+"training" partition would only shrink the two splits that matter, for no
+scientific reason.
+
+REJECT and HOLD questions never enter the split (0 HOLD currently, so only
+the 10 REJECT are excluded). ACCEPT and REVISE both enter it — REVISE's own
+definition in `question_review.md` is that the underlying claim is sound and
+only wording needs fixing, not a REJECT-in-waiting — but every REVISE item
+is flagged `pending_revision: true` in `splits.json`, and **that wording fix
+has not been done yet**: it needs the actual cited source text, which
+requires a human (or an environment with real network access) to pull the
+corrected sentence. Freezing evidence (next-steps step 8) for a REVISE item
+before its wording is fixed would freeze a known-defective reference answer.
+
+Split: **113 usable questions → 23 validation / 90 test** (20%, stratified
+by topic then by `temporal_candidate` within each topic, seed `20260921`,
+fully reproducible — `write_split()` refuses to silently change an existing
+`splits.json` if the reviewed pool has moved since). Both splits contain
+every topic that has ≥2 usable questions, and both contain a comparable mix
+of temporal and non-temporal questions (validation 52% temporal, test 60%)
+so a `λ` fit on validation is not fit against an unrepresentative slice of
+what test will contain. Full per-topic/per-temporal counts and the
+question-by-question assignment are in `splits.json` itself.
+
+`export_review.py` now refuses to overwrite a `review.csv` that already has
+recorded decisions unless `--force` is passed — the export always emits
+blank decision columns, and without this guard a careless re-run would have
+silently erased the completed human review.
 
 Do not add a pilot study, extra metrics, or extra baselines.
 
@@ -256,9 +308,11 @@ python -m experiments.questions.build_pool \
     --medrevqa <path>/MedRevQA.csv --medquad <path>/MedQuAD --retrieved-on 2026-09
 ```
 
-> **Nothing in this pool is final.** Every record is `candidate` or
-> `rejected`. No question has been human-reviewed, and none has been checked
-> against the corpus.
+> This table describes the pool as *built* (2026-09-17), before human review.
+> **Human review is now complete — see §3.3 for the reviewed counts (90
+> ACCEPT / 23 REVISE / 10 REJECT / 0 HOLD) and the validation/test split.**
+> The figures below (e.g. "Approved / final: 0") are the pre-review
+> snapshot and are kept for provenance, not updated in place.
 
 | | |
 |---|---|
@@ -271,11 +325,13 @@ python -m experiments.questions.build_pool \
 | AD-anchored / determinate | 150 / 150 |
 | Temporal candidates / ambiguity candidates | 74 / 47 |
 | Missing provenance | 0 — the schema refuses a record without source, locator and date |
-| **Approved / final** | **0** |
+| **Approved / final (as built, pre-review)** | **0** |
 
 Target is roughly 100 after review; 123 candidates gives room to reject weak
 ones without dropping below it. Rejected records are kept in
-`candidates.jsonl` with their reason, so counts reconcile.
+`candidates.jsonl` with their reason, so counts reconcile. The actual
+post-review outcome landed at 113 usable (90 ACCEPT + 23 REVISE), slightly
+above that informal target — see §3.3.
 
 **Topics:** treatment 79, diagnosis 17, management 17, prevention 9, general
 7, disease_characteristics 6, mechanism 6, disease_course 5, epidemiology 4.
@@ -536,7 +592,12 @@ Neither indicates a defect in the system under test, and neither should be
 | Failing test | Why |
 |---|---|
 | `test_corpus_normalize_pipeline.FixturePathRegressionTests.test_duplicates_registry_matches_and_is_valid_csv` | Compares a freshly-run 10-record fixture `duplicates.csv` against the committed **real** one (2,842 rows from the executed corpus). The committed file is correct; the fixture cannot reproduce it. |
-| `test_review_export.CommittedPoolTests.test_decision_columns_start_empty` | Asserts the committed `review.csv` ships with every reviewer column blank. It now carries `reviewer_id = R1` on all 123 rows — the reviewer has been assigned and review is in progress. `review_decision` is still empty on all 123 rows, so **no question has been decided**; the test's own premise (a pristine export) simply stopped holding once review began. |
+
+`test_review_export.CommittedPoolTests.test_decision_columns_start_empty`
+(asserted the committed `review.csv` shipped with every reviewer column
+blank) was **replaced, not left failing**, once question review actually
+completed (§3.3) — see `test_decision_columns_are_now_fully_recorded` in
+`tests/unit/test_review_export.py`.
 
 **The suite does not write to the corpus's tracked logs.** `tests/__init__.py`
 redirects `ALZHEIMER_CORPUS_LOGS` to a temporary directory for the duration of
@@ -548,6 +609,8 @@ asserts that a *real* run — which never sets the variable — still logs to
 
 | Date | Change |
 |---|---|
+| 2026-09-21c | **Roadmap step 3: validation/test split implemented over the reviewed question pool.** New `experiments/questions/split.py` (`python -m experiments.questions.split`) joins `candidates.jsonl` with the completed `review.csv`, keeps only ACCEPT/REVISE questions (REJECT and HOLD are excluded by construction — `assert_valid` raises if either ever leaks in), and assigns each to a **validation** or **test** split. Two splits, not three: nothing in this thesis trains on the 123-question pool (the RAG² filter trains on general-medical MedQA per specification §10; the generator is used off the shelf, never fine-tuned) — the pool only feeds the manual fit of λ/θ/H, which needs a held-out validation set and a separate, untouched test set, not a training set. Split is stratified by topic, then by `temporal_candidate` within each topic (an earlier version stratified by topic alone and left validation 74% temporal against test's 54%, which would have made a λ fit on validation look better than it generalises); seeded (`20260921`) and fully deterministic — `write_split()` refuses to silently change an on-disk `splits.json` if the reviewed pool has moved since, catching accidental drift. Result, committed at `experiments/questions/splits.json`: **113 usable (90 ACCEPT + 23 REVISE) → 23 validation / 90 test**; every topic with ≥2 usable questions appears in both splits; validation is 52% temporal vs. test's 60%. Every REVISE item is flagged `pending_revision: true` in the split file — the reviewer's own taxonomy treats REVISE as "sound claim, wording needs fixing," not a REJECT-in-waiting, but the wording fix itself has not been performed (it needs the actual cited source text) and evidence must not be frozen for a REVISE item before that happens. **Also fixed a latent hazard found while touching this code**: `export_review.py`'s `run()` always wrote a blank `review.csv`, with nothing stopping a re-run from silently erasing the now-completed human review; it now refuses to overwrite a `review.csv` that already has recorded decisions unless `--force` is passed. 24 new tests (`tests/unit/test_question_split.py`) plus 4 new/updated tests in `test_review_export.py` (the stale `test_decision_columns_start_empty`, which asserted the committed review was blank, was replaced with a check that it is now fully and validly recorded, per the entry below). 499 tests pass; the same 1 pre-existing, unrelated corpus-fixture failure (the second historical failure was this run's own stale test, now fixed, not a persisting defect). |
+| 2026-09-21b | **Question review actually completed by the student, directly on `main`: all 123 questions decided.** Recorded in `experiments/questions/review.csv`: **90 ACCEPT, 23 REVISE, 10 REJECT, 0 HOLD** — real source-checked judgement (Cochrane Library / PubMed), which this pipeline's own automated passes could never perform, since both are network-egress-blocked in this build environment (confirmed by direct test). This supersedes and discards an earlier, explicitly-invalidated automated substitute that had been proposed on a feature branch; that branch's PR was closed without merging once the real review landed, specifically so it could not overwrite it. §3.1's "Human question review" blocker is closed; §3.2 step 1 marked done. |
 | 2026-09-21 | **Corpus date-coverage pre-flight measurement: DONE.** The 2026-09-20 audit flagged that the real corpus's null publication-date rate had never been measured. The student ran a read-only, offline check against the real, local `alzheimer_corpus/data/chunks/chunks.jsonl` (4,377,041 chunks — this file has never existed in this environment; `data/**` is gitignored by design) using a temporary, non-repository script: **100.00% valid `publication_date` (4,377,041/4,377,041), 0 missing, 0 invalid.** No corpus file was read, written, moved, or regenerated by the check itself, and no corpus stage was rerun. §3.2 step 3 marked done; §9's A9 assumption (guideline-vs-XML date coverage specifically) remains open only because no guideline PDF has been curated (0 rows) to compare against — unrelated to this measurement. This closes the last pre-flight question before λ/θ/H fitting: `dated_only()` (specification §15.3) drops nothing, so candidate-set size at N=20 is unaffected by missing dates. |
 | 2026-09-20 | **Renamed "recency" to "Temporal Filter"/"temporal score" throughout the active repository, and archived the machinery that does not belong to the current thesis.** Purely a clarity pass for a beginner MS student — no methodology, formula, or experimental result changed. **Renamed:** `systems/proposed/recency.py` → `temporal.py` (`RecencyPolicy`→`TemporalPolicy`, `RecencyResult`→`TemporalResult`, `RecencyState`→`TemporalState`); `RecencyAwareAdmissionPolicy`→`TemporalFilterPolicy`, `RecencyAwareSystem`→`TemporalFilterSystem` (`admission.py`); `AdmissionScorer.recency_weight`→`temporal_weight`, its `score(recency=...)` parameter →`temporal=`; the proposed arm's `name` constant `"P_RECENCY"`→`"RAG2_TEMPORAL"`. Every doc, docstring, comment, and test updated to match; a repository-wide search for `recency` (case-insensitive) now returns zero hits outside `_archive/` and this document's own historical entries (D-17, D-25, D-26, D-28, E15, K5 — left in their original wording, since they record what was decided *then*; see the terminology note above §1). **Archived** (`_archive/`, see `_archive/README.md`): `experiments/test_pairs/` (the matched old-vs-new evidence pair design, its 8 scripts, and its data directory), `systems/proposed/{contested.py,verifier.py}` (contested-evidence detection and answer verification — both already `SECONDARY`-labelled and off by default), `experiments/configs/stage2_pilot.yaml`, `experiments/outputs/stage2_pilot/` → `_archive/stage2_pilot_outputs/`, and the 5 test files that exercised only that archived code (`test_eligibility.py`, `test_attrition_split.py`, `test_schema.py`, `test_audit_invariants.py`, `test_pilot_pipeline.py`, all moved to `_archive/test_pairs/tests/`). **Closed the one dependency the move would otherwise have created**: `systems/proposed/__init__.py` re-exported `ContestedDetector`/`ClaimVerifier`/etc. from the now-archived files — those re-exports were removed (nothing outside `__init__.py` imported them; verified by grep before removing). `pyproject.toml`'s package list and `OutputState.CONTESTED`/`PassageDecision.contested` (unreachable dead code once `contested.py` left the tree - nothing could ever set `is_contested=True`) were removed with it. Verified with an AST-based repository-wide import scan (`tests/unit/test_scope_invariants.py::test_active_code_does_not_import_the_archive`) that **zero active files import from `_archive/`**. `docs/research_experimental_specification.md` §14 (99 lines detailing the now-archived external-data contract) replaced with a 6-line pointer to the archive. README rewritten around the plain-language research question or **whether a Temporal Filter improves RAG² for Alzheimer's QA** rather than the implementation-first framing it had. 470 tests pass (103 fewer than before this pass — exactly the 5 files moved to `_archive/test_pairs/tests/`, which are no longer discovered under `tests/`); the same 2 pre-existing, unrelated failures. |
 | 2026-09-20 | **Research-realignment audit: re-read the base paper directly (all 15 pages of the NAACL 2025 PDF, not from memory) and re-inspected the repository against it.** Requested because the earlier (now-superseded) admission-asymmetry design had drifted through incremental additions; the finding is that the *current* design (`current_objectives.md`, adopted 2026-09-18) already **is** the minimal "RAG² baseline → temporal filter → controlled experiments → evaluation → ablation → statistics" methodology this audit was asked to (re)establish — confirmed rather than rebuilt. Concrete findings from the re-read and audit: (1) the paper's own evaluation never reports a retrieval-only ranking metric (Recall@K/MRR/nDCG) anywhere, even while sweeping top-k in Figure 3 — it validates retrieval only through downstream accuracy, which the existing `token_f1`/`rouge_l_f1`/`context_precision/recall` already do; formalised as a decision *not* to add ranking metrics, with reasoning, in specification §11.1 (the structural reason: retrieval is frozen and identical across every arm by construction, D-1, so a ranking metric cannot vary with the thing being compared). (2) `systems/proposed/{contested.py,verifier.py}` re-confirmed genuinely isolated — both self-labelled `SECONDARY` in their own docstrings, off by default, not imported anywhere in the critical path (`run_end_to_end.py` mentions them only in a comment listing what is out of scope) — no further pruning needed. (3) **Corpus temporal-metadata mechanics confirmed sound but two things newly found and recorded**: `_parse_pub_date()` picks one of possibly several `<pub-date>` elements by a documented, deterministic priority (`epub > pub > ppub > collection`) and returns "no date" rather than fabricating one - -but `01_pubmed_download.py` **only ever retrieves a PMID list, never abstracts or dates** (self-documented in `04_normalize.py`'s own top-of-file comment); all real corpus text and every real publication date come from PMC's JATS XML, not from the 676 PubMed PMIDs, which serve only to shape the PMC search and contribute no independent content. And: **the real corpus's null-date rate has never been measured** — `dated_only()` (specification §15.3) silently drops undated passages before either arm sees them, which is the correct behaviour, but nobody has run the one cheap count (non-empty `publication_date` across the real `chunks.jsonl`) that would show whether that drop is negligible or material before λ/θ/H are fitted. Recorded as an open pre-flight measurement, not assumed either way. (4) Verified the question pool already gives the temporal question a real, non-trivial contrast to test: 74/150 sourced candidates carry `temporal_candidate=True` (a Cochrane review cited at `.pub2`+, i.e. actually revised over time) — sourced from real, cited records, not invented. **Added, as the one concrete gap the audit found worth closing**: `temporal_candidate` was tracked on every `EvaluationQuestion` and summarised at the pool level but dropped at freezing and never used downstream. It now survives into `FrozenItem` (`from_question()`) and `run_end_to_end.py`'s report gains a `temporal_subgroup` breakdown — the same per-system metrics, split by whether each question's evidence base has actually been revised over time versus not (specification §11.2) — the direct, zero-new-data-collection test of whether the Temporal Filter's effect concentrates where it should matter rather than sitting flat across the pool. On the module's synthetic fixture (not sourced from a real Cochrane republication) the temporal subgroup is honestly empty, not populated to look exercised. (5) Confirmed the ablation study needs no new infrastructure beyond what already existed: `lambda=0` (component removed, mathematically verified correct in the 2026-09-19 session) plus a half-life (`H`) sensitivity sweep answer "does the chosen temporal window matter" using the `--half-life` flag that already exists — both configurations are already runnable, zero new code. 4 new tests (`FrozenItem.temporal_candidate` pass-through, the subgroup-breakdown grouping logic with a genuine mixed contrast, and that the report key is always present). 573 tests pass; the same 2 pre-existing failures. No corpus rerun, no architecture change, no new dataset, no new model. |
