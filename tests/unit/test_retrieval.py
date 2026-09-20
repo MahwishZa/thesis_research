@@ -75,6 +75,36 @@ class CorpusReadingTests(unittest.TestCase):
                 read_passages(tmp)
         self.assertIn("duplicate chunk_id", str(ctx.exception))
 
+    def test_never_reads_the_whole_file_into_memory_at_once(self):
+        """Regression test: ``Path.read_text().splitlines()`` loads the
+        entire chunk file as one string, which raises
+        ``OSError: [Errno 22] Invalid argument`` on Windows once the file
+        exceeds ~2 GB (a real failure hit on the student's machine against
+        the real 4.3M-chunk corpus). ``read_passages`` must stream the file
+        line by line instead - this fails loudly if it ever regresses back
+        to a whole-file read."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            path = Path(tmp)
+
+            original_read_text = Path.read_text
+
+            def _guard(self, *a, **kw):
+                if self.name == "chunks.jsonl":
+                    raise AssertionError(
+                        "read_passages must not read the whole chunk file "
+                        "into memory with Path.read_text() - stream it line "
+                        "by line instead (Windows >2GB OSError regression)"
+                    )
+                return original_read_text(self, *a, **kw)
+
+            Path.read_text = _guard
+            try:
+                passages = read_passages(path)
+            finally:
+                Path.read_text = original_read_text
+        self.assertEqual(len(passages), 5)
+
     def test_snapshot_id_tracks_content_not_a_typed_version(self):
         with TemporaryDirectory() as tmp:
             write_corpus(tmp, [chunk(1)])

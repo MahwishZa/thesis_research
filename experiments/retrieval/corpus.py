@@ -113,28 +113,35 @@ def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
         )
 
     passages: list[CorpusPassage] = []
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise CorpusError(f"{path}:{number}: {exc}")
-        for required in ("chunk_id", "text"):
-            if required not in record:
-                raise CorpusError(f"{path}:{number}: missing {required!r}")
-        claim_classes = record.get("claim_classes") or ()
-        passages.append(CorpusPassage(
-            chunk_id=record["chunk_id"],
-            document_id=record.get("document_id", ""),
-            text=record["text"],
-            retrieval_text=record.get("retrieval_text") or record["text"],
-            publication_date=record.get("publication_date") or None,
-            source_tier=record.get("source_tier", "unknown"),
-            retracted=_as_bool(record.get("retracted")),
-            section=record.get("section") or None,
-            claim_classes=tuple(claim_classes),
-        ))
+    # Streamed line by line, not ``path.read_text().splitlines()``: reading a
+    # multi-GB file as one string hits a real Windows limitation (CPython's
+    # text-mode read raises ``OSError: [Errno 22] Invalid argument`` once the
+    # underlying read exceeds ~2 GB in a single call) - which is exactly the
+    # regime a 4.3M-chunk corpus is in. Iterating the open handle reads in
+    # much smaller pieces and works the same on every platform.
+    with open(path, encoding="utf-8") as handle:
+        for number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise CorpusError(f"{path}:{number}: {exc}")
+            for required in ("chunk_id", "text"):
+                if required not in record:
+                    raise CorpusError(f"{path}:{number}: missing {required!r}")
+            claim_classes = record.get("claim_classes") or ()
+            passages.append(CorpusPassage(
+                chunk_id=record["chunk_id"],
+                document_id=record.get("document_id", ""),
+                text=record["text"],
+                retrieval_text=record.get("retrieval_text") or record["text"],
+                publication_date=record.get("publication_date") or None,
+                source_tier=record.get("source_tier", "unknown"),
+                retracted=_as_bool(record.get("retracted")),
+                section=record.get("section") or None,
+                claim_classes=tuple(claim_classes),
+            ))
 
     if not passages:
         raise CorpusError(f"{path} contains no passages")
