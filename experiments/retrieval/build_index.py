@@ -39,6 +39,16 @@ def main(argv=None) -> int:
     parser.add_argument("--dry-run", action="store_true",
                         help="report what would be indexed and exit without "
                              "loading a model or writing anything")
+    parser.add_argument("--on-duplicate", choices=("raise", "keep_first"),
+                        default="raise",
+                        help="what to do if the corpus has two chunks with "
+                             "the same chunk_id. 'raise' (default) stops "
+                             "immediately, safe for a corpus you haven't "
+                             "diagnosed. 'keep_first' keeps the first "
+                             "occurrence and writes a report of every "
+                             "dropped duplicate to <out>/duplicate_chunks.json "
+                             "- only pass this once you've confirmed what "
+                             "the duplicates actually are.")
     args = parser.parse_args(argv)
 
     out = Path(args.out)
@@ -61,8 +71,8 @@ def main(argv=None) -> int:
     def _progress(n: int) -> None:
         print(f"  ...{n:,} lines read ({time.time() - t0:.0f}s elapsed)")
 
-    passages, snapshot = read_passages_with_snapshot(
-        args.corpus, on_progress=_progress
+    passages, snapshot, duplicates = read_passages_with_snapshot(
+        args.corpus, on_progress=_progress, on_duplicate=args.on_duplicate
     )
     kept = passages if args.include_undated else dated_only(passages)
 
@@ -70,6 +80,21 @@ def main(argv=None) -> int:
     print(f"passages read   : {len(passages)}")
     print(f"passages indexed: {len(kept)}"
           f"{'' if args.include_undated else ' (dated only)'}")
+
+    if duplicates:
+        print(f"duplicate chunk_ids dropped: {len(duplicates)} "
+              f"(kept the first occurrence of each)")
+        if args.dry_run:
+            print("  dry run: report not written (nothing is written in "
+                  "--dry-run)")
+        else:
+            out.mkdir(parents=True, exist_ok=True)
+            report_path = out / "duplicate_chunks.json"
+            report_path.write_text(
+                json.dumps(list(duplicates), indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+            print(f"  full report written to {report_path}")
 
     if not kept:
         print("nothing to index", file=sys.stderr)

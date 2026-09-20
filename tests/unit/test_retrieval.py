@@ -112,10 +112,11 @@ class CorpusReadingTests(unittest.TestCase):
         not the chunking, so these two must always agree."""
         with TemporaryDirectory() as tmp:
             write_corpus(tmp, [chunk(i) for i in range(7)])
-            passages, combined_snapshot = read_passages_with_snapshot(tmp)
+            passages, combined_snapshot, duplicates = read_passages_with_snapshot(tmp)
             standalone_snapshot = snapshot_id(tmp)
         self.assertEqual(combined_snapshot, standalone_snapshot)
         self.assertEqual(len(passages), 7)
+        self.assertEqual(duplicates, ())
 
     def test_combined_reader_also_reads_only_once(self):
         """Same Windows->2GB guard as read_passages, for the function
@@ -136,17 +137,52 @@ class CorpusReadingTests(unittest.TestCase):
 
             Path.read_text = _guard
             try:
-                passages, _ = read_passages_with_snapshot(path)
+                passages, _, _ = read_passages_with_snapshot(path)
             finally:
                 Path.read_text = original_read_text
         self.assertEqual(len(passages), 5)
 
-    def test_combined_reader_still_catches_duplicate_ids(self):
+    def test_combined_reader_still_catches_duplicate_ids_by_default(self):
         with TemporaryDirectory() as tmp:
             write_corpus(tmp, [chunk(1), chunk(1)])
             with self.assertRaises(CorpusError) as ctx:
                 read_passages_with_snapshot(tmp)
         self.assertIn("duplicate chunk_id", str(ctx.exception))
+
+    def test_rejects_an_unknown_on_duplicate_policy(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(1)])
+            with self.assertRaises(CorpusError):
+                read_passages_with_snapshot(tmp, on_duplicate="something_else")
+
+    def test_keep_first_keeps_the_first_occurrence_and_reports_the_rest(self):
+        """The actual policy diagnosed against the real corpus's duplicate
+        chunk_ids (2026-09-21g): keep file order, never drop silently."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [
+                chunk(1, text="first version of the text"),
+                chunk(2),
+                chunk(1, text="second, different version"),  # same chunk_id
+            ])
+            passages, _, duplicates = read_passages_with_snapshot(
+                tmp, on_duplicate="keep_first"
+            )
+        self.assertEqual(len(passages), 2)  # not 3 - the duplicate was dropped
+        self.assertEqual(passages[0].text, "first version of the text")
+        self.assertEqual(len(duplicates), 1)
+        self.assertEqual(duplicates[0]["chunk_id"], "C-001")
+        self.assertEqual(duplicates[0]["kept_line"], 1)
+        self.assertEqual(duplicates[0]["dropped_line"], 3)
+        self.assertIn("second, different version",
+                      duplicates[0]["dropped_text_preview"])
+
+    def test_keep_first_reports_nothing_when_there_are_no_duplicates(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            _, _, duplicates = read_passages_with_snapshot(
+                tmp, on_duplicate="keep_first"
+            )
+        self.assertEqual(duplicates, ())
 
     def test_progress_callback_fires_at_the_configured_interval(self):
         seen = []

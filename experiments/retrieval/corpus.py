@@ -18,7 +18,7 @@ import json
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterator, Optional, Sequence
 
 from systems.interfaces.evidence import Evidence
 
@@ -103,6 +103,22 @@ def _snapshot_id_from_digest(digest: "hashlib._Hash") -> str:
     return f"alzheimer_corpus@{digest.hexdigest()[:16]}"
 
 
+#: What to do when the same ``chunk_id`` appears more than once.
+#: "raise" is the safe default: silently accepting a duplicate would let two
+#: different passages be treated as interchangeable, which is exactly the
+#: circularity risk ``freezing.py`` exists to prevent. "keep_first" is an
+#: explicit opt-in for a known, small, real cause found in the actual
+#: corpus (2026-09-21g): a handful of source documents survived Stage 05's
+#: near-duplicate detection as two slightly different renderings of the
+#: same paper, sharing a document_id, so Stage 06 generated the same
+#: chunk_id for the first chunk of a shared section twice. 515 duplicated
+#: ids / 900 extra lines out of 4,377,041 (~0.02%) in the corpus this was
+#: diagnosed against - a real, bounded, explainable data-quality artifact,
+#: not a pipeline failure, and not something to fix by editing the frozen
+#: corpus file.
+ON_DUPLICATE_POLICIES = ("raise", "keep_first")
+
+
 def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
     """Read every chunk, in file order.
 
@@ -117,8 +133,16 @@ def read_passages_with_snapshot(
     *,
     on_progress: Optional[Callable[[int], None]] = None,
     progress_every: int = 200_000,
-) -> tuple[tuple[CorpusPassage, ...], str]:
+    on_duplicate: str = "raise",
+) -> tuple[tuple[CorpusPassage, ...], str, tuple[dict[str, Any], ...]]:
     """``read_passages`` plus ``snapshot_id``, in one pass over the file.
+
+    Returns ``(passages, snapshot_id, duplicates)``. ``duplicates`` is
+    always populated when duplicate ids are found and ``on_duplicate`` is
+    ``"keep_first"`` - never silent, whichever policy is chosen - listing
+    each dropped chunk_id, the 1-based line it was first seen on, and the
+    line it was dropped from, so every drop is traceable back to the exact
+    corpus lines involved.
 
     ``build_index.py`` used to call ``read_passages`` then ``snapshot_id``
     separately - two full reads of the corpus file. Measured on a 300k-line/
@@ -140,7 +164,20 @@ def read_passages_with_snapshot(
     is indistinguishable from hung to someone watching it for the first
     time. ``build_index.py`` wires this to a printed line; nothing here
     prints on its own, so the function stays quiet for library/test use.
+
+    ``on_duplicate="raise"`` (default) fails immediately on the first
+    duplicate ``chunk_id``, exactly as before - callers who have not
+    thought about this get the safe behaviour. ``on_duplicate="keep_first"``
+    keeps the first occurrence (file order - the same tie-break rule
+    ``DenseIndex`` already uses) and skips later ones, recording every drop
+    in the returned ``duplicates`` tuple rather than silently discarding it.
     """
+    if on_duplicate not in ON_DUPLICATE_POLICIES:
+        raise CorpusError(
+            f"on_duplicate must be one of {ON_DUPLICATE_POLICIES}, "
+            f"got {on_duplicate!r}"
+        )
+
     path = Path(corpus_root) / CHUNKS
     if not path.exists():
         raise CorpusError(
@@ -149,7 +186,8 @@ def read_passages_with_snapshot(
         )
 
     passages: list[CorpusPassage] = []
-    seen: set[str] = set()
+    first_seen_line: dict[str, int] = {}
+    duplicates: list[dict[str, Any]] = []
     digest = hashlib.sha256()
     # Opened in binary mode so the exact on-disk bytes are what get hashed
     # (matching the old block-wise ``snapshot_id``); each line is decoded
@@ -172,12 +210,21 @@ def read_passages_with_snapshot(
                 if required not in record:
                     raise CorpusError(f"{path}:{number}: missing {required!r}")
             chunk_id = record["chunk_id"]
-            if chunk_id in seen:
-                raise CorpusError(
-                    f"duplicate chunk_id {chunk_id!r}; evidence ids must be "
-                    "unique or frozen candidate sets cannot be replayed"
-                )
-            seen.add(chunk_id)
+            if chunk_id in first_seen_line:
+                if on_duplicate == "raise":
+                    raise CorpusError(
+                        f"duplicate chunk_id {chunk_id!r}; evidence ids must "
+                        "be unique or frozen candidate sets cannot be "
+                        "replayed"
+                    )
+                duplicates.append({
+                    "chunk_id": chunk_id,
+                    "kept_line": first_seen_line[chunk_id],
+                    "dropped_line": number,
+                    "dropped_text_preview": record["text"][:200],
+                })
+                continue
+            first_seen_line[chunk_id] = number
             claim_classes = record.get("claim_classes") or ()
             passages.append(CorpusPassage(
                 chunk_id=chunk_id,
@@ -194,7 +241,11 @@ def read_passages_with_snapshot(
     if not passages:
         raise CorpusError(f"{path} contains no passages")
 
-    return tuple(passages), _snapshot_id_from_digest(digest)
+    return (
+        tuple(passages),
+        _snapshot_id_from_digest(digest),
+        tuple(duplicates),
+    )
 
 
 def snapshot_id(corpus_root: str | Path) -> str:
