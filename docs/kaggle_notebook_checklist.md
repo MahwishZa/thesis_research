@@ -26,18 +26,25 @@ Expected: Repository cloned, main branch checked out
 ## Cell 1: Install Dependencies & Authenticate HF
 
 ```python
-# Install dependencies (if not already present in Kaggle)
-!pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-!pip install -q transformers datasets bitsandbytes accelerate
+# CRITICAL: Reinstall torch with CUDA support (Kaggle's default is CPU-only)
+# Use --force-reinstall to override any existing CPU-only installation
+!pip install --upgrade --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+!pip install -q transformers datasets sentencepiece bitsandbytes accelerate
+
+# Verify GPU is actually available before proceeding
+import torch
+print(f"PyTorch version: {torch.__version__}")
+print(f"CUDA available: {torch.cuda.is_available()}")
+assert torch.cuda.is_available(), "ERROR: CUDA not available! Torch was installed as CPU-only. Re-run this cell."
 
 # Authenticate with Hugging Face (required for gated Llama-3-8B-Instruct)
 from huggingface_hub import login
 login(token="<your_hf_token>")  # Replace with your actual token
 
-print("✓ Dependencies installed and HF authenticated")
+print("✓ CUDA-enabled torch installed and HF authenticated")
 ```
 
-**Why:** Kaggle sometimes has outdated torch (CPU-only). This ensures CUDA-enabled version. The `login()` call is **critical** — without it, Llama-3-8B will return 401 Unauthorized.
+**Why:** Kaggle's default torch (if already installed) is CPU-only. The `--force-reinstall` flag ensures the CUDA-enabled wheel is used. The assertion fails immediately if torch is still CPU-only, preventing wasted time downstream. `sentencepiece` is required by Flan-T5's tokenizer. The `login()` call is **critical** — without it, Llama-3-8B will return 401 Unauthorized.
 
 ---
 
@@ -69,15 +76,30 @@ wrote 20 labelled examples to experiments/filter_training/labels/medqa_filter_la
 **Duration:** ~20–25 minutes  
 **Disk space used:** ~1–2 GB (index) + ~50 KB (labels JSON)
 
+**After the command completes, verify the file was created:**
+```python
+import json, os
+from pathlib import Path
+
+labels_path = Path("experiments/filter_training/labels/medqa_filter_labels.json")
+assert labels_path.exists(), f"ERROR: Labels file not found at {labels_path}. Cell 2 may have failed silently."
+labels = json.loads(labels_path.read_text())
+assert len(labels) > 0, f"ERROR: Labels file is empty! Expected >0 records, got {len(labels)}"
+print(f"✓ Cell 2 succeeded: {len(labels)} labels written to {labels_path}")
+```
+
+This validation step will **fail immediately and clearly** if Cell 2 didn't produce labels, instead of silently failing in Cell 4.
+
 **If it fails:**
-- **`401 Unauthorized`**: Go back to Cell 1, add `login()` call
-- **`AssertionError: Torch not compiled with CUDA`**: Re-run Cell 1 (the pip install)
+- **`401 Unauthorized`**: Go back to Cell 1, ensure `login()` call was executed
+- **`AssertionError: Torch not compiled with CUDA`**: Re-run Cell 1 (the pip install with --force-reinstall)
 - **`CUDA out of memory`**: Reduce `--max-new-tokens` to 64, or `--n-textbook-passages` to 1500
 - **`No space on device`**: Delete old checkpoints or kernel and restart with less data
+- **`FileNotFoundError` during Cell 2 validation**: Cell 2 crashed; scroll up to check output for errors (likely OOM or 401 Unauthorized)
 
 ---
 
-## Cell 3: Verify Labels Were Generated
+## Cell 3: Double-Check Labels (Optional, Skip if Cell 2 Validation Passed)
 
 ```python
 import json
@@ -91,7 +113,8 @@ print(f"First label keys: {list(labels[0].keys())}")
 print(f"Label distribution: {[l.get('label') for l in labels[:5]]}")
 ```
 
-Expected: 20 label records, each with fields like `pair_id`, `question`, `label`, etc.
+**Expected:** 20 label records, each with fields like `pair_id`, `question`, `label`, etc.  
+**Purpose:** Secondary verification (Cell 2's validation step already confirmed the file exists and is non-empty). Skip this if Cell 2 validation passed.
 
 ---
 
@@ -120,7 +143,7 @@ Wrote CheckpointRecord to checkpoints/rag2_filter/checkpoint_record.json
 
 ---
 
-## Cell 5: Verify Checkpoint & Download
+## Cell 5: Verify Checkpoint
 
 ```python
 from pathlib import Path
@@ -138,9 +161,14 @@ with open(checkpoint_dir / "checkpoint_record.json") as f:
     print(f"  Epochs: {record['epochs']}")
     print(f"  Labels: {record['label_count']}")
     print(f"  Label distribution: {record['label_distribution']}")
+
+# Copy to output directory for easy download
+!mkdir -p /kaggle/working/checkpoint_output
+!cp -r checkpoints/rag2_filter/* /kaggle/working/checkpoint_output/
+print("✓ Checkpoint copied to /kaggle/working/checkpoint_output/ for download")
 ```
 
-**Then download the entire `checkpoints/rag2_filter/` folder to your local machine.**
+**Then download the entire `checkpoint_output/` folder from Kaggle's "Output" panel (side panel → Files → checkpoint_output) to your local machine.**
 
 ---
 
@@ -173,10 +201,13 @@ git push origin main
 See full details in `docs/step_4_filter_training.md` — this checklist is the quick path.
 
 **Key gotchas:**
-1. **Missing `login(token=...)` → 401 Unauthorized** — Cell 1 must run first
-2. **`pip install` replaces torch with CPU-only → CUDA error** — Re-run the pip line from Cell 1
-3. **Model load failure → OOM** — Use smaller model (document as deviation) or reduce batch size in config
-4. **Timeout → Process killed** — Kaggle has 12-hour per notebook limit; should be fine for 20 questions, but monitor progress
+1. **`CUDA available: False` after Cell 1** — Kaggle's pip installed a CPU-only torch wheel. Cell 1's assertion will catch this. Fix: Re-run Cell 1 exactly as written (the `--force-reinstall` flag is critical). If torch is already installed, pip without `--force-reinstall` skips it silently.
+2. **Missing `login(token=...)` → 401 Unauthorized in Cell 2** — Cell 1 must complete fully. Go back and ensure the `login()` line was executed (check the output)
+3. **`FileNotFoundError` in Cell 4 (labels file not found)** — Cell 2's validation step will catch this immediately. Scroll up to Cell 2's output to see what failed (likely CUDA error or 401 Unauthorized). Do NOT proceed to Cell 4 if Cell 2 validation fails.
+4. **`ValueError: Couldn't instantiate the backend tokenizer` in Cell 4** — sentencepiece is missing. Cell 1 should install it; if this error occurs, the pip install didn't complete. Re-run Cell 1.
+5. **Model load failure → OOM in Cell 2** — If Llama-3-8B fails to load (common on free-tier with <13GB free), reduce `--max-new-tokens 96` to `64` or `--n-textbook-passages 3000` to `1500`. Document the deviation in the checkpoint record.
+6. **Timeout → Process killed** — Kaggle has 12-hour per notebook limit; should be fine for 20 questions (~70 min total), but monitor progress. If >12 hours, use smaller parameters.
+7. **Disk space error in Cell 2 or 4** — Check `!df -h`. If <2 GB free, delete old kernels via Kaggle settings or reduce `--n-textbook-passages`. Temporary files can safely be deleted.
 
 ---
 
