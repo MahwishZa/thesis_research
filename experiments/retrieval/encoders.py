@@ -83,6 +83,40 @@ def _load(model_id: str, kind: str):
     return tokenizer, model
 
 
+def _move_to_device(model, device: str, model_id: str):
+    """``model.to(device)``, but with an error a person can act on.
+
+    The raw failure mode this guards against is real and was hit on a real
+    run (2026-09-21): asking for ``cuda`` when torch itself has no CUDA
+    support raises ``AssertionError: Torch not compiled with CUDA enabled``
+    eight stack frames deep inside torch's own ``Module._apply`` - which
+    says nothing about *why*, and nothing about the actual, very common
+    cause on Colab/Kaggle: a later ``pip install`` (typically pulled in by
+    ``accelerate`` or ``bitsandbytes``) silently replacing the platform's
+    preinstalled CUDA-enabled torch with a CPU-only wheel. Checking
+    ``torch.cuda.is_available()`` first turns a multi-minute failure (after
+    downloading and tokenizing everything) into an immediate, specific one.
+    """
+    import torch
+
+    if "cuda" in device and not torch.cuda.is_available():
+        raise RuntimeError(
+            f"requested device={device!r} for {model_id}, but "
+            f"torch.cuda.is_available() is False (torch {torch.__version__}). "
+            "This usually means a `pip install` after the notebook started "
+            "replaced the platform's preinstalled CUDA-enabled torch with a "
+            "CPU-only build (a common Colab/Kaggle gotcha when installing "
+            "accelerate/bitsandbytes) - check `torch.__version__` for a "
+            "'+cpu' suffix. Fix: reinstall torch from the CUDA wheel index "
+            "matching this machine's CUDA version (check `!nvidia-smi`), "
+            "e.g. `pip install --index-url "
+            "https://download.pytorch.org/whl/cu121 torch --force-reinstall`, "
+            "then verify with `torch.cuda.is_available()` BEFORE re-running "
+            "anything expensive."
+        )
+    model.to(device)
+
+
 class MedCPTEncoder(Encoder):
     """Dense encoder for queries or articles.
 
@@ -106,7 +140,7 @@ class MedCPTEncoder(Encoder):
         if self._model is None:
             self._tokenizer, self._model = _load(self.model_id, "encoder")
             if self.device:
-                self._model.to(self.device)
+                _move_to_device(self._model, self.device, self.model_id)
         return self._tokenizer, self._model
 
     def encode(
@@ -203,7 +237,7 @@ class MedCPTReranker(CrossEncoderReranker):
             self._tokenizer, self._model = _load(
                 self.model_id, "sequence_classification")
             if self.device:
-                self._model.to(self.device)
+                _move_to_device(self._model, self.device, self.model_id)
         return self._tokenizer, self._model
 
     def score(self, query: str, passages: Sequence[str]) -> np.ndarray:
