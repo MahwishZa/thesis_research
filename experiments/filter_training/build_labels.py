@@ -66,9 +66,20 @@ def main(argv=None) -> int:
     ap.add_argument("--model-name", default=DEFAULT_MODEL)
     ap.add_argument("--model-revision", required=True,
                     help="pinned commit sha, not a branch name")
-    ap.add_argument("--quantization", default="nf4",
-                    choices=("nf4", "int8", "none"))
+    ap.add_argument("--quantization", default="auto",
+                    choices=("auto", "nf4", "int8", "none"),
+                    help="'auto' (default): nf4 if CUDA is available, else "
+                         "none - bitsandbytes has no CPU kernel, so nf4/int8 "
+                         "on a CPU-only machine fail fast with a clear "
+                         "message (Llama3RationaleScorer) rather than "
+                         "guessing at a silently-degraded path")
     ap.add_argument("--device", default=None, help="e.g. cuda; omit to auto-pick")
+    ap.add_argument("--max-new-tokens", type=int, default=256,
+                    help="rationale length cap. CPU generation is roughly "
+                         "linear in this - halving it roughly halves "
+                         "per-question time. Lower it (e.g. 96-128) for a "
+                         "CPU-only run; see docs/status_and_decisions.md "
+                         "for the timing math behind that recommendation")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args(argv)
 
@@ -77,6 +88,30 @@ def main(argv=None) -> int:
         print(f"refusing to overwrite existing labels at {out_path}",
               file=sys.stderr)
         return 2
+
+    import torch
+    cuda_available = torch.cuda.is_available()
+    quantization = args.quantization
+    if quantization == "auto":
+        quantization = "nf4" if cuda_available else "none"
+    quantization = None if quantization == "none" else quantization
+
+    if not cuda_available:
+        # CPU generation is slow enough (realistically ~1-2 tok/s for an 8B
+        # model) that running this unattended without the student seeing the
+        # honest estimate first risks hours spent on a run scoped larger
+        # than intended - print the arithmetic instead of a bare warning.
+        est_seconds_per_pair = 2 * args.max_new_tokens / 1.5
+        est_total_hours = args.n_questions * est_seconds_per_pair / 3600
+        print(
+            f"no CUDA device available - running on CPU. At a rough "
+            f"~1.5 tokens/sec, {args.n_questions} questions x 2 generations "
+            f"x {args.max_new_tokens} tokens is approximately "
+            f"{est_total_hours:.1f} hours. Reduce --n-questions and/or "
+            "--max-new-tokens if that is too long; see "
+            "docs/status_and_decisions.md for the reasoning.",
+            file=sys.stderr,
+        )
 
     index, passages = build_textbook_index(
         args.n_textbook_passages, args.seed, args.device
@@ -91,7 +126,7 @@ def main(argv=None) -> int:
     from .rationale import Llama3RationaleScorer
     scorer = Llama3RationaleScorer(
         args.model_name, args.model_revision, device=args.device,
-        quantization=None if args.quantization == "none" else args.quantization,
+        quantization=quantization, max_new_tokens=args.max_new_tokens,
     )
 
     outcomes = []

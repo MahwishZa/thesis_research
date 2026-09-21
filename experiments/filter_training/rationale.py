@@ -79,6 +79,27 @@ class Llama3RationaleScorer:
         if self._tokenizer.pad_token_id is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
+        resolved_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        cuda_available = torch.cuda.is_available()
+
+        if quantization and (not cuda_available or "cuda" not in resolved_device):
+            # bitsandbytes' 4-bit/8-bit kernels are CUDA-only (they call into
+            # custom CUDA ops). Silently going ahead on CPU either raises a
+            # confusing low-level bitsandbytes import/runtime error or, on
+            # some builds, loads a nonsense CPU "fake quantized" tensor - hit
+            # for real (2026-09-21) once GPU access on both Colab and Kaggle
+            # was confirmed unavailable for this run. On CPU there is no
+            # quantized kernel to fall back to, so this refuses rather than
+            # guessing at a silently-degraded path.
+            raise RationaleGenerationError(
+                f"quantization={quantization!r} requires CUDA "
+                f"(bitsandbytes has no CPU kernel), but the resolved device "
+                f"is {resolved_device!r} (torch.cuda.is_available()="
+                f"{cuda_available}). Pass quantization=None to run on CPU - "
+                "this loads the full-precision model instead (slower, more "
+                "RAM, but correct)."
+            )
+
         kwargs: dict = {"revision": revision, "device_map": device or "auto"}
         if quantization:
             from transformers import BitsAndBytesConfig
@@ -96,7 +117,12 @@ class Llama3RationaleScorer:
                     f"unsupported quantization: {quantization!r}"
                 )
         else:
-            kwargs["torch_dtype"] = torch.bfloat16
+            # bf16 compute on CPU is supported by current torch/transformers
+            # (unlike CUDA-only bitsandbytes) but is not universally fast on
+            # older CPUs; float32 is the safe, always-correct default off
+            # CUDA, at roughly double bf16's memory - the RAM budget this
+            # forces is checked by the caller (build_labels.py), not here.
+            kwargs["torch_dtype"] = torch.bfloat16 if cuda_available else torch.float32
 
         self._model = AutoModelForCausalLM.from_pretrained(model_id, **kwargs)
         self._model.eval()
