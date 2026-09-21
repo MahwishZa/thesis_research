@@ -1,0 +1,993 @@
+{
+  "excluded": [
+    {
+      "question_id": "ADQ-35042a0e0518",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-5a47aa491771",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-9fa3d7c73c53",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-a9ce14e62a0c",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-b4429a6e8553",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-b848dd75752e",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-b9c484e060fe",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-e2ca9eeb16e0",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-e4f94f853e3f",
+      "review_decision": "REJECT"
+    },
+    {
+      "question_id": "ADQ-eb389efd27bf",
+      "review_decision": "REJECT"
+    }
+  ],
+  "items": [
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-00c9d3d98a10",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-066cbb988106",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-06bef4f0b87f",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-0973ceb82fdc",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-0b4ae985106f",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-0b9699a5ae80",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-0d06ba3b3c4c",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-0d3b934ecb62",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-12073e0abbd2",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-1b40adeef897",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-1e23066e9721",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-1fc7663325a5",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "epidemiology"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-20f340a68619",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-2471c8c0f154",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-267ce9358a69",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "epidemiology"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-26ca63f167ee",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-2914e16813f7",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-2bd673ac07c4",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-312855c07555",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-31c3005691db",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-35ee11c27606",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-37b7f87b907d",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3bb540a2dd92",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3c429a38313a",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3d7734df06bb",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3d7b98d38025",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3db3412fc3f8",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "disease_course"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3e1770b0f392",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-3f049cd4bc2d",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "mechanism"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-402df5af816d",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "management"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-44d10f70273f",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-48a772fb22fc",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-4ad8a5197cc5",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-4c5ced141d11",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "disease_characteristics"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-4c684b482b73",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-4ecba3717252",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-538943ed5228",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-54ab8afdcbc4",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-57b72f57a492",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-5b40bff463c9",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-68e24e06906f",
+      "review_decision": "REVISE",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "mechanism"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-6b236b38ecb9",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-6cf39cb82e69",
+      "review_decision": "REVISE",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-6d4d6b4a05f1",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-6d6365171bd4",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-6de417cf1fc3",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-6fa252b11b5c",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "general"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-703385fe70e7",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "general"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-72e64932d061",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-7474b2be5720",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "general"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-75a8b9996b8e",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-75f93f8a9cb7",
+      "review_decision": "REVISE",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "disease_characteristics"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-79083820f4f2",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-79e66403c45c",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "mechanism"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-7c94dbae578f",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-7f02400764e8",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-80dba91f533e",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-8198b2f829b0",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-87188406561a",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-892088c1c429",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-8aac0455c4a7",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-8cef76b68a6f",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-8e3b1dcc4781",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "disease_course"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-9031883a8237",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-913109be87ae",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-91c2f07bcd6f",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-97437d71e5f8",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-974d2e694e78",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-9f31485c8786",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-a0ff5baee806",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-a25fc5f4d73e",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-a284d6f2d590",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-a3393701b10e",
+      "review_decision": "REVISE",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-a81ace8fded1",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-ad2a8ab0fa39",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-ad47a118c7c1",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-b255b8b7cecb",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "management"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-b5a40d6439a2",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-b5d49cbb5553",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-b72057cf3101",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": false,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-b8edbd81b12a",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-bcd532d64bbc",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-c00e2dbf3a00",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-c02aaa826d93",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-c2b84aae6dfc",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-c53d5f40b0ba",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "mechanism"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-c8c85ae6f148",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-cb62adb2c14d",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "management"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-cdafa5328f80",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "general"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-cde679d28855",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "disease_characteristics"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-cf1bafd9fcc3",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-d16bbc98799b",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-d1876117fa63",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-d322df9fbd1e",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "epidemiology"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-d34f7396ad2f",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-d6792d7039d1",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "mechanism"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-d7e26f001999",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-db2ec001ac14",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-dd542aa0a7d8",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-dd9b3174047b",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-df1b2e5cbc14",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-e333780537fa",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-ec37e7e55327",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-ed1b1dec0052",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-ee48a2e5fcec",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "diagnosis"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-f16bc92a0eec",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-f24c51261ad5",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "prevention"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-f41e610d5844",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-f50b910f6dd1",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-f978c23543e3",
+      "review_decision": "ACCEPT",
+      "split": "validation",
+      "temporal_candidate": true,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-fa0be438d5cd",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": true,
+      "question_id": "ADQ-fbc28973801a",
+      "review_decision": "REVISE",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "treatment"
+    },
+    {
+      "pending_revision": false,
+      "question_id": "ADQ-fea5e481277a",
+      "review_decision": "ACCEPT",
+      "split": "test",
+      "temporal_candidate": false,
+      "topic": "general"
+    }
+  ],
+  "seed": 20260921,
+  "summary": {
+    "test": {
+      "by_topic": {
+        "diagnosis": 13,
+        "disease_characteristics": 2,
+        "disease_course": 2,
+        "epidemiology": 2,
+        "general": 4,
+        "management": 11,
+        "mechanism": 4,
+        "prevention": 6,
+        "treatment": 46
+      },
+      "count": 90,
+      "non_temporal": 36,
+      "pending_revision": 19,
+      "temporal_candidate": 54
+    },
+    "validation": {
+      "by_topic": {
+        "diagnosis": 3,
+        "disease_characteristics": 1,
+        "epidemiology": 1,
+        "general": 1,
+        "management": 3,
+        "mechanism": 1,
+        "prevention": 2,
+        "treatment": 11
+      },
+      "count": 23,
+      "non_temporal": 11,
+      "pending_revision": 4,
+      "temporal_candidate": 12
+    }
+  },
+  "total_reviewed": 123,
+  "total_usable": 113,
+  "usable_decisions": [
+    "ACCEPT",
+    "REVISE"
+  ],
+  "validation_fraction": 0.2
+}

@@ -9,12 +9,25 @@ inner-product search has no such freedom: for a given matrix and query, the
 top-k is determined.
 
 The affordability argument: RAG² indexes 116.7M passages, where approximation
-is unavoidable. This thesis indexes an Alzheimer's slice, and a domain corpus
-of even a few hundred thousand chunks is a matrix of a few hundred megabytes
-that numpy can scan per query in well under a second. The approximation buys
-nothing here and costs determinism, so it is not used. If the corpus ever grew
-past what a scan can carry, that decision would need revisiting - and it would
-be a change to record, not to make quietly.
+is unavoidable. This thesis indexes an Alzheimer's slice - **checked against
+the actual corpus, not assumed: 4,377,041 chunks** (100% dated, per the
+2026-09-21 corpus date-coverage measurement), not "a few hundred thousand" as
+an earlier version of this note estimated. At MedCPT's 768 dimensions that is
+a ``vectors.npy`` of **~12.8 GB in float32** (4,377,041 × 768 × 4 bytes).
+Per-query search is still one matrix-vector product - fast, milliseconds -
+so the *scan* is not the concern the earlier estimate implied. What the
+earlier estimate got wrong is memory: a 12.8 GB array is a large fraction of
+the documented hardware's 16 GB RAM (`status_and_decisions.md` §5), and
+*building* it (`encoders.py::MedCPTEncoder.encode`) used to briefly hold two
+copies at once - fixed 2026-09-21 by writing each batch into a preallocated
+array instead of collecting a list and ``np.vstack``-ing it, which was the
+actually-risky part, not the exact-vs-approximate choice this section
+argues for. The approximation still buys nothing for correctness/
+reproducibility and is not used; if 12.8 GB turns out not to fit alongside
+everything else running, the documented mitigation is `--include-undated`
+being off by default already narrows the set, and reducing further (e.g. by
+source tier) is the kind of change this docstring says to record, not make
+quietly.
 
 Nothing here writes to ``alzheimer_corpus/``. Index artifacts live under
 ``experiments/outputs/index/``.
@@ -164,16 +177,26 @@ def build_index(
     *,
     corpus_snapshot: str,
     metadata: Optional[dict[str, Any]] = None,
+    on_progress: Optional[Any] = None,
 ) -> DenseIndex:
     """Embed every passage and build the index.
 
     The article encoder is applied to ``retrieval_text`` - the corpus builds
     that field with section headers attached, which is what MedCPT's article
     side is meant to receive.
+
+    ``on_progress``, if given, is passed straight through to the encoder's
+    own ``encode(on_progress=...)`` (currently only ``MedCPTEncoder``
+    supports it; other encoders ignore an unknown keyword at their own
+    call site, not here, so this stays a thin pass-through).
     """
     if not passages:
         raise IndexError_("cannot build an index over zero passages")
-    vectors = encoder.encode([p.retrieval_text for p in passages])
+    texts = [p.retrieval_text for p in passages]
+    if on_progress is not None:
+        vectors = encoder.encode(texts, on_progress=on_progress)
+    else:
+        vectors = encoder.encode(texts)
     if vectors.shape[0] != len(passages):
         raise IndexError_(
             f"encoder returned {vectors.shape[0]} vectors for "

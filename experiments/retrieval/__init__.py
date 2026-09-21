@@ -14,6 +14,7 @@ from .corpus import (
     dated_only,
     parse_publication_date,
     read_passages,
+    read_passages_with_snapshot,
     snapshot_id,
 )
 from .encoders import (
@@ -48,5 +49,5 @@ __all__ = [
     "RetrievalConfig", "RetrievalError", "RetrievalPipeline", "RetrievedSet",
     "build_index", "dated_only", "l2_normalize", "medcpt_article_encoder",
     "medcpt_query_encoder", "parse_publication_date", "read_passages",
-    "snapshot_id",
+    "read_passages_with_snapshot", "snapshot_id",
 ]

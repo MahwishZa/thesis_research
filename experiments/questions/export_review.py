@@ -4,6 +4,13 @@ Reads ``candidates.jsonl`` and writes ``review.csv``. It reads only - the pool
 is never rewritten here - so the reviewer file can be regenerated at any time
 without risk to the candidates or their provenance.
 
+Once a reviewer has actually filled in ``review_decision`` for any row,
+``run()`` refuses to overwrite the file: the export always emits blank
+decision columns, so a careless re-run would silently erase completed human
+review. Pass ``force=True`` (``--force`` on the CLI) once overwriting a
+reviewed file is genuinely intended - e.g. the candidate pool itself changed
+and review must restart.
+
 The export is neutral by construction: it emits exactly
 ``questions.REVIEW_COLUMNS`` and refuses to run if any withheld field would
 reach the file. The point is that a reviewer should judge each candidate from
@@ -134,7 +141,16 @@ def missing_provenance(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return gaps
 
 
-def run(pool_dir: Path = DEFAULT_POOL) -> dict[str, Any]:
+def has_recorded_decisions(review_csv_path: Path) -> bool:
+    """True if any row already carries a non-empty ``review_decision``."""
+    if not review_csv_path.exists():
+        return False
+    with open(review_csv_path, encoding="utf-8", newline="") as handle:
+        return any(row.get("review_decision", "").strip()
+                   for row in csv.DictReader(handle))
+
+
+def run(pool_dir: Path = DEFAULT_POOL, *, force: bool = False) -> dict[str, Any]:
     pool_dir = Path(pool_dir)
     records = load_pool(pool_dir / "candidates.jsonl")
 
@@ -147,6 +163,12 @@ def run(pool_dir: Path = DEFAULT_POOL) -> dict[str, Any]:
     gaps = missing_provenance(rows)
 
     out = pool_dir / "review.csv"
+    if not force and has_recorded_decisions(out):
+        raise ExportError(
+            f"{out} already has recorded review decisions; refusing to "
+            "overwrite them with a blank export. Pass force=True / --force "
+            "once overwriting completed review is genuinely intended."
+        )
     with open(out, "w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(REVIEW_COLUMNS))
         writer.writeheader()
@@ -165,8 +187,10 @@ def run(pool_dir: Path = DEFAULT_POOL) -> dict[str, Any]:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pool-dir", type=Path, default=DEFAULT_POOL)
+    parser.add_argument("--force", action="store_true",
+                         help="overwrite a review.csv that already has recorded decisions")
     args = parser.parse_args(argv)
-    print(json.dumps(run(args.pool_dir), indent=2, sort_keys=True))
+    print(json.dumps(run(args.pool_dir, force=args.force), indent=2, sort_keys=True))
     return 0
 
 

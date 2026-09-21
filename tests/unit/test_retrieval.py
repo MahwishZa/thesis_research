@@ -20,7 +20,7 @@ import numpy as np
 
 from experiments.retrieval.corpus import (
     CorpusError, CorpusPassage, dated_only, parse_publication_date,
-    read_passages, snapshot_id,
+    read_passages, read_passages_with_snapshot, snapshot_id,
 )
 from experiments.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
 from experiments.retrieval.index import (
@@ -74,6 +74,131 @@ class CorpusReadingTests(unittest.TestCase):
             with self.assertRaises(CorpusError) as ctx:
                 read_passages(tmp)
         self.assertIn("duplicate chunk_id", str(ctx.exception))
+
+    def test_never_reads_the_whole_file_into_memory_at_once(self):
+        """Regression test: ``Path.read_text().splitlines()`` loads the
+        entire chunk file as one string, which raises
+        ``OSError: [Errno 22] Invalid argument`` on Windows once the file
+        exceeds ~2 GB (a real failure hit on the student's machine against
+        the real 4.3M-chunk corpus). ``read_passages`` must stream the file
+        line by line instead - this fails loudly if it ever regresses back
+        to a whole-file read."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            path = Path(tmp)
+
+            original_read_text = Path.read_text
+
+            def _guard(self, *a, **kw):
+                if self.name == "chunks.jsonl":
+                    raise AssertionError(
+                        "read_passages must not read the whole chunk file "
+                        "into memory with Path.read_text() - stream it line "
+                        "by line instead (Windows >2GB OSError regression)"
+                    )
+                return original_read_text(self, *a, **kw)
+
+            Path.read_text = _guard
+            try:
+                passages = read_passages(path)
+            finally:
+                Path.read_text = original_read_text
+        self.assertEqual(len(passages), 5)
+
+    def test_combined_reader_matches_the_standalone_snapshot_id(self):
+        """read_passages_with_snapshot hashes the file line by line while
+        parsing; snapshot_id hashes it in 1MB binary blocks. A streaming
+        SHA-256's digest depends only on the byte sequence and its order,
+        not the chunking, so these two must always agree."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(7)])
+            passages, combined_snapshot, duplicates = read_passages_with_snapshot(tmp)
+            standalone_snapshot = snapshot_id(tmp)
+        self.assertEqual(combined_snapshot, standalone_snapshot)
+        self.assertEqual(len(passages), 7)
+        self.assertEqual(duplicates, ())
+
+    def test_combined_reader_also_reads_only_once(self):
+        """Same Windows->2GB guard as read_passages, for the function
+        build_index.py actually calls."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            path = Path(tmp)
+
+            original_read_text = Path.read_text
+
+            def _guard(self, *a, **kw):
+                if self.name == "chunks.jsonl":
+                    raise AssertionError(
+                        "read_passages_with_snapshot must not read the whole "
+                        "chunk file into memory with Path.read_text()"
+                    )
+                return original_read_text(self, *a, **kw)
+
+            Path.read_text = _guard
+            try:
+                passages, _, _ = read_passages_with_snapshot(path)
+            finally:
+                Path.read_text = original_read_text
+        self.assertEqual(len(passages), 5)
+
+    def test_combined_reader_still_catches_duplicate_ids_by_default(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(1), chunk(1)])
+            with self.assertRaises(CorpusError) as ctx:
+                read_passages_with_snapshot(tmp)
+        self.assertIn("duplicate chunk_id", str(ctx.exception))
+
+    def test_rejects_an_unknown_on_duplicate_policy(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(1)])
+            with self.assertRaises(CorpusError):
+                read_passages_with_snapshot(tmp, on_duplicate="something_else")
+
+    def test_keep_first_keeps_the_first_occurrence_and_reports_the_rest(self):
+        """The actual policy diagnosed against the real corpus's duplicate
+        chunk_ids (2026-09-21g): keep file order, never drop silently."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [
+                chunk(1, text="first version of the text"),
+                chunk(2),
+                chunk(1, text="second, different version"),  # same chunk_id
+            ])
+            passages, _, duplicates = read_passages_with_snapshot(
+                tmp, on_duplicate="keep_first"
+            )
+        self.assertEqual(len(passages), 2)  # not 3 - the duplicate was dropped
+        self.assertEqual(passages[0].text, "first version of the text")
+        self.assertEqual(len(duplicates), 1)
+        self.assertEqual(duplicates[0]["chunk_id"], "C-001")
+        self.assertEqual(duplicates[0]["kept_line"], 1)
+        self.assertEqual(duplicates[0]["dropped_line"], 3)
+        self.assertIn("second, different version",
+                      duplicates[0]["dropped_text_preview"])
+
+    def test_keep_first_reports_nothing_when_there_are_no_duplicates(self):
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            _, _, duplicates = read_passages_with_snapshot(
+                tmp, on_duplicate="keep_first"
+            )
+        self.assertEqual(duplicates, ())
+
+    def test_progress_callback_fires_at_the_configured_interval(self):
+        seen = []
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(10)])
+            read_passages_with_snapshot(
+                tmp, on_progress=seen.append, progress_every=3
+            )
+        self.assertEqual(seen, [3, 6, 9])
+
+    def test_no_progress_callback_by_default(self):
+        """The library function stays silent unless a caller opts in -
+        build_index.py wires the printing, not this module."""
+        with TemporaryDirectory() as tmp:
+            write_corpus(tmp, [chunk(i) for i in range(5)])
+            read_passages_with_snapshot(tmp)  # must not raise / require one
 
     def test_snapshot_id_tracks_content_not_a_typed_version(self):
         with TemporaryDirectory() as tmp:
@@ -180,6 +305,31 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(manifest["corpus_snapshot"], "s@1")
         self.assertEqual(manifest["encoder_name"], "hashing-stub")
         self.assertEqual(manifest["n_passages"], 10)
+
+    def test_on_progress_is_passed_through_to_an_encoder_that_accepts_it(self):
+        """build_index() must forward on_progress to encoders that support
+        it (MedCPTEncoder), without breaking ones that don't (HashingEncoder,
+        used everywhere else in this test file - hence a dedicated stub
+        here rather than torch, which this suite deliberately avoids)."""
+        calls = []
+
+        class ProgressAwareStub:
+            name = "progress-stub"
+
+            def encode(self, texts, *, on_progress=None):
+                if on_progress is not None:
+                    on_progress(1, 1, 0.01)
+                return np.zeros((len(texts), 4), dtype=np.float32)
+
+        build_index(self.passages, ProgressAwareStub(), corpus_snapshot="s",
+                    on_progress=lambda *a: calls.append(a))
+        self.assertEqual(calls, [(1, 1, 0.01)])
+
+    def test_on_progress_omitted_still_works_with_an_encoder_that_lacks_it(self):
+        """HashingEncoder.encode has no on_progress parameter; build_index()
+        must not pass the keyword unless it was actually given one."""
+        index = build_index(self.passages, self.encoder, corpus_snapshot="s")
+        self.assertEqual(len(index.passage_ids), 10)
 
     def test_empty_corpus_is_refused(self):
         with self.assertRaises(IndexError_):

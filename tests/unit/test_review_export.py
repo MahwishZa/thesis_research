@@ -136,6 +136,28 @@ class CompletenessTests(unittest.TestCase):
         with self.assertRaises(ex.ExportError):
             ex.assert_complete(rows, ["ADQ-a", "ADQ-b"])
 
+    def test_rerun_with_no_prior_decisions_overwrites_freely(self):
+        with TemporaryDirectory() as tmp:
+            d = write_pool(tmp, [record(question_id="ADQ-a")])
+            ex.run(d)
+            ex.run(d)  # still blank, so a second run is not a hazard
+
+    def test_rerun_after_a_decision_is_recorded_is_refused_without_force(self):
+        with TemporaryDirectory() as tmp:
+            d = write_pool(tmp, [record(question_id="ADQ-a")])
+            ex.run(d)
+            rows = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            rows[0]["review_decision"] = "ACCEPT"
+            with open(d / "review.csv", "w", encoding="utf-8", newline="") as h:
+                w = csv.DictWriter(h, fieldnames=list(REVIEW_COLUMNS))
+                w.writeheader()
+                w.writerows(rows)
+            with self.assertRaises(ex.ExportError):
+                ex.run(d)
+            ex.run(d, force=True)  # explicit override still works
+            after = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            self.assertEqual(after[0]["review_decision"], "")
+
     def test_missing_provenance_is_reported_not_filled(self):
         rows = [{c: "" for c in REVIEW_COLUMNS}]
         rows[0]["question_id"] = "ADQ-a"
@@ -196,11 +218,20 @@ class CommittedPoolTests(unittest.TestCase):
         for field in WITHHELD_FROM_REVIEW:
             self.assertNotIn(field, header)
 
-    def test_decision_columns_start_empty(self):
+    def test_decision_columns_are_now_fully_recorded(self):
+        """review.csv started empty; human review of all 123 is now complete
+        (see docs/status_and_decisions.md). Every row must carry a valid
+        decision and reviewer/date provenance for it."""
         for row in self.rows:
-            for column in ("review_decision", "reviewer_note",
-                           "reviewer_id", "review_date"):
-                self.assertEqual(row[column], "")
+            self.assertIn(row["review_decision"], REVIEW_DECISIONS)
+            self.assertTrue(row["reviewer_id"].strip())
+            self.assertTrue(row["review_date"].strip())
+
+    def test_rerunning_export_refuses_to_erase_recorded_decisions(self):
+        """A blank re-export would silently destroy the completed human
+        review; ex.run() must refuse unless explicitly forced."""
+        with self.assertRaises(ex.ExportError):
+            ex.run(POOL)
 
     def test_internal_flags_are_still_preserved_in_the_pool(self):
         """Neutrality is about the review file, not about losing the metadata."""

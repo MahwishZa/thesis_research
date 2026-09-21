@@ -157,6 +157,24 @@ class FlanT5RAG2Filter(AdmissionFilter):
 
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
+        elif "cuda" in device and not torch.cuda.is_available():
+            # A clear, immediate error instead of torch's own
+            # "AssertionError: Torch not compiled with CUDA enabled" eight
+            # frames deep in Module._apply - hit for real (2026-09-21) after
+            # a pip install silently replaced a Colab/Kaggle notebook's
+            # preinstalled CUDA-enabled torch with a CPU-only build.
+            raise ImportError(
+                f"requested device={device!r}, but torch.cuda.is_available() "
+                f"is False (torch {torch.__version__}). This usually means "
+                "a `pip install` after the notebook started replaced the "
+                "platform's preinstalled CUDA-enabled torch with a CPU-only "
+                "build - check `torch.__version__` for a '+cpu' suffix. Fix: "
+                "reinstall torch from the CUDA wheel index matching this "
+                "machine's CUDA version (check `!nvidia-smi`), e.g. `pip "
+                "install --index-url https://download.pytorch.org/whl/cu121 "
+                "torch --force-reinstall`, then verify with "
+                "`torch.cuda.is_available()` before retrying."
+            )
 
         self._device = torch.device(device)
 
