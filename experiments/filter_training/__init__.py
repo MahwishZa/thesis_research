@@ -2,9 +2,14 @@
 
 The label function is the paper's (``labeling.py``); the hyperparameters are
 the paper's except where a free-tier GPU forces a deviation, and each
-deviation states itself (``config.py``). Nothing here loads a model: the
-expensive half runs on the remote machine, and what lives in the repository is
-the part that has to be correct and reproducible.
+deviation states itself (``config.py``). ``medqa_data.py`` and
+``rationale.py`` do load a model/datasets, but only lazily, inside their
+functions - importing this package still costs nothing on a machine without
+torch/transformers/datasets installed, and the module-level imports below
+stay safe as a result. The expensive half (``build_labels.py``,
+``train.py``, both meant to run on Colab) is kept correct and testable at
+the logic level here; what actually needs a GPU is exercised there, not in
+this repository's unit-test suite.
 
 See ``docs/research_experimental_specification.md`` §10 for the strategy and
 the cost, and ``docs/status_and_decisions.md`` for the status.
@@ -31,11 +36,23 @@ from .labeling import (
     perplexity_threshold,
     write_training_file,
 )
+from .medqa_data import (
+    MEDQA_DATASET_ID,
+    TEXTBOOK_DATASET_ID,
+    MedQADataError,
+    MedQAItem,
+    extract_answer_letter,
+    load_medqa,
+    load_textbook_passages,
+)
 
 __all__ = [
-    "BASE_MODEL", "HELPFUL", "LABEL_TOKENS", "NOT_HELPFUL", "TAU",
+    "BASE_MODEL", "HELPFUL", "LABEL_TOKENS", "MEDQA_DATASET_ID",
+    "NOT_HELPFUL", "TAU", "TEXTBOOK_DATASET_ID",
     "CheckpointRecord", "ConfigError", "FilterTrainingConfig",
-    "LabelledExample", "LabelingError", "PairOutcome", "RationaleOutcome",
-    "label_dataset", "label_distribution", "label_pair",
+    "LabelledExample", "LabelingError", "MedQADataError", "MedQAItem",
+    "PairOutcome", "RationaleOutcome",
+    "extract_answer_letter", "label_dataset", "label_distribution",
+    "label_pair", "load_medqa", "load_textbook_passages",
     "perplexity_threshold", "write_training_file",
 ]
