@@ -11,7 +11,9 @@ import. The test suite and every offline tool must keep working on a machine
 with neither installed, and a top-level import would make retrieval code
 unimportable there.
 
-Determinism: all three models run in ``eval`` mode under ``torch.no_grad()``
+Determinism: all three models run in ``eval`` mode under
+``torch.inference_mode()`` (strictly disables autograd bookkeeping, unlike
+``no_grad()`` which only disables gradient tracking - faster, same numbers)
 with no sampling anywhere. Encoding the same text twice on the same machine
 and build yields the same vector.
 """
@@ -75,7 +77,7 @@ def _load(model_id: str, kind: str):
     else:
         from transformers import AutoModel as Model
 
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
     model = Model.from_pretrained(model_id)
     model.eval()
     return tokenizer, model
@@ -141,7 +143,7 @@ class MedCPTEncoder(Encoder):
         vectors: Optional[np.ndarray] = None
         start_time = time.monotonic()
 
-        with torch.no_grad():
+        with torch.inference_mode():
             for batch_index, start in enumerate(range(0, n, self.batch_size), 1):
                 batch = list(texts[start:start + self.batch_size])
                 encoded = tokenizer(
@@ -209,7 +211,7 @@ class MedCPTReranker(CrossEncoderReranker):
 
         tokenizer, model = self._ensure()
         scores: list[np.ndarray] = []
-        with torch.no_grad():
+        with torch.inference_mode():
             for start in range(0, len(passages), self.batch_size):
                 batch = list(passages[start:start + self.batch_size])
                 encoded = tokenizer(

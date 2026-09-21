@@ -164,7 +164,10 @@ def make_generator(
     return HuggingFaceGenerator(spec, GenerationConfig())
 
 
-def make_rag2_filter(checkpoint: Optional[str], items: list[fz.FrozenItem]):
+def make_rag2_filter(
+    checkpoint: Optional[str], items: list[fz.FrozenItem],
+    *, device: Optional[str] = None,
+):
     """The RAG² baseline's admission filter, and a label saying which one.
 
     With ``--rag2-checkpoint`` this is the real ``FlanT5RAG2Filter`` over the
@@ -179,11 +182,16 @@ def make_rag2_filter(checkpoint: Optional[str], items: list[fz.FrozenItem]):
     "proposed IMPROVES on baseline" verdict against the stand-in is not the
     same claim as one against the paper's classifier, and a reader of
     metrics_report.json must not have to guess which they are looking at.
+
+    ``device`` defaults to ``FlanT5RAG2Filter``'s own auto-pick (cuda if
+    available), which is right for an actual run but can contend with a GPU
+    something else is already using during a readiness check - pass
+    ``"cpu"`` for that case (see ``--rag2-device``).
     """
     if checkpoint:
         from systems.baseline.admission import FlanT5RAG2Filter
         return (
-            FlanT5RAG2Filter(checkpoint),
+            FlanT5RAG2Filter(checkpoint, device=device),
             f"FlanT5RAG2Filter({checkpoint})",
         )
     helpful = {
@@ -389,6 +397,13 @@ def main(argv=None) -> int:
                          "run the baseline arm as the real classifier. "
                          "Without it the baseline runs on a documented "
                          "all-HELPFUL stand-in and the report says so.")
+    ap.add_argument("--rag2-device", default=None,
+                    help="device for --rag2-checkpoint (e.g. cpu, cuda). "
+                         "Omit to auto-pick (cuda if available). Flan-T5 "
+                         "filter inference is small enough to run on CPU - "
+                         "pass 'cpu' to sanity-check a checkpoint without "
+                         "touching a GPU something else is already using "
+                         "(e.g. a concurrent index build).")
     args = ap.parse_args(argv)
 
     lambdas = [float(x) for x in args.ablation_lambdas.split(",") if x.strip()]
@@ -408,7 +423,9 @@ def main(argv=None) -> int:
     items = make_fixture_items(args.n_questions)
     generator = make_generator(args.real_model, args.model_name,
                                args.model_revision, args.quantization)
-    rag2_filter, rag2_filter_label = make_rag2_filter(args.rag2_checkpoint, items)
+    rag2_filter, rag2_filter_label = make_rag2_filter(
+        args.rag2_checkpoint, items, device=args.rag2_device
+    )
     systems = build_systems(generator, lambdas, rag2_filter,
                             theta=args.theta, half_life=args.half_life,
                             budget=args.budget)
