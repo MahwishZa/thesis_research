@@ -1,7 +1,19 @@
 __pycache__/
 *.py[cod]
 
-# Smoke-test outputs are engineering checks, never research data.
-experiments/outputs/
+# Large, regenerable local artifacts - never commit these. Each one has
+# caused an accidental multi-GB commit (rejected by GitHub, since fixed by
+# resetting local history) when added via `git add -A`/the GitHub web
+# upload UI, which does not respect this file the way `git add` does.
+# Regenerate them locally instead of committing them:
+#   - checkpoints/                    -> experiments/filter_training (see docs/status_and_decisions.md)
+#   - alzheimer_corpus_pilot/         -> a local sample of alzheimer_corpus/data/chunks/chunks.jsonl
+#   - experiments/outputs/index_pilot_reduced_scope/ -> experiments/retrieval/build_index.py
+# Small, legitimate result files (experiments/outputs/fit_and_evaluate/,
+# experiments/outputs/real_evaluation_pilot/) are NOT covered by a
+# blanket experiments/outputs/ rule - a real committed result must stay
+# visible to `git status`, not silently ignored alongside the large
+# regenerable folders sitting next to it.
 checkpoints/
 alzheimer_corpus_pilot/
+experiments/outputs/index_pilot_reduced_scope/
