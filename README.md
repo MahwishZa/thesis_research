@@ -58,20 +58,15 @@ A(s) = (1 − λ)·ρ(s)  +  λ·T(s, q, t_q)          admit if A(s) ≥ θ
 context budget — the honest floor a filtering method must clear.
 
 ```mermaid
-flowchart TD
-    Q[Question pool] --> R[Retrieval + rerank<br/>frozen, identical for every arm]
-    R --> B[RAG² baseline]
-    R --> P[RAG² + Temporal Filter]
-    R --> N[No-Filter control]
-    B --> E[Evaluation]
-    P --> E
-    N --> E
-    E --> A[Ablation: λ = 0 vs. fitted λ]
-    A --> S[Paired significance test]
-
-    V[Validation split] -. fits λ, θ, H .-> P
-    T[Held-out test split] -. reported on only .-> E
+flowchart LR
+    A[Frozen retrieval] --> B[Three arms:<br/>baseline · proposed · no-filter]
+    B --> C[Evaluation and<br/>significance test]
 ```
+
+Each arm receives identical retrieved evidence; the admission rule is the
+only thing that differs between them. `λ`, `θ`, `H` are fitted on a
+validation split beforehand and only ever reported on a separate, held-out
+test split.
 
 Retrieval runs once per question and is frozen — every arm sees the exact
 same retrieved passages, so only the admission rule differs between them.
@@ -89,26 +84,12 @@ Whether a difference between systems is real, rather than noise, is decided
 by a **paired significance test** over per-question outcomes — not by the
 size of an average gap.
 
-| Stage | Status |
-|---|---|
-| Evidence corpus (built, verified, frozen) | Complete |
-| Retrieval + reranking pipeline | Implemented, tested, validated end to end |
-| RAG² baseline (implementation) | Implemented, tested |
-| RAG² baseline (trained filter checkpoint) | Reduced-scale checkpoint in place; full training pending |
-| Temporal Filter (implementation) | Implemented, tested |
-| λ / θ / H fitting procedure | Implemented; run once, on a reduced-scale setup |
-| Held-out test evaluation + ablation | Implemented; run once, on a reduced-scale setup |
-| Statistical significance testing | Implemented (paired sign test) |
-| Full-scale retrieval index | Pending |
-| Generative model (in place of the extractive stand-in) | Pending |
-| **Reported comparison (Objective 2)** | **Pending full-scale run** |
-
 The pipeline has been run end to end on real data at a reduced scale (a
 pilot retrieval index, a reduced-scale baseline checkpoint, and an
 extractive stand-in in place of a generative model); that run's output is
-committed under `results/` and demonstrates the pipeline and statistical
-procedure work correctly — it is an engineering checkpoint, not yet the
-reported comparison. See `docs/evaluation.md` §7 and
+committed under `experiments/results/` and demonstrates the pipeline and
+statistical procedure work correctly — it is an engineering checkpoint, not
+yet the reported comparison. See `docs/evaluation.md` §7 and
 `docs/reproducibility.md` §5 for exactly what remains before a result is
 reported here.
 
@@ -137,15 +118,19 @@ research-repository/
 ├── src/
 │   ├── common/            shared interfaces (Evidence, Generator, Retriever, System)
 │   ├── baseline/          RAG² baseline + No-Filter control
-│   ├── proposed/          the Temporal Filter
-│   └── evaluation/        metrics, freezing, the comparison runner, statistics
-├── experiments/
-│   ├── shared/            question pool, retrieval pipeline, runners — used identically by every arm
-│   └── baseline/          RAG² filter training (baseline-specific, not shared)
-├── results/              committed run output
-├── tests/                unit + integration tests
-└── _archive/             superseded/reference material — not part of the active pipeline
+│   └── proposed/          the Temporal Filter
+├── evaluation/            metrics, freezing, the comparison runner, statistics
+│   └── tests/             unit + integration tests for the whole repository
+└── experiments/
+    ├── shared/            question pool, retrieval pipeline, runners — used identically by every arm
+    ├── baseline/          RAG² filter training (baseline-specific, not shared)
+    └── results/           committed run output
 ```
+
+`_archive/` (not shown above — not part of the active pipeline) holds
+superseded/reference material kept for history rather than for use — see
+`_archive/README.md`. Nothing in the active pipeline depends on it (verified
+by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 
 | Document | Read it for |
 |---|---|
@@ -155,16 +140,11 @@ research-repository/
 | [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, evaluation status |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 
-`_archive/` holds material not part of the active methodology, kept for
-history rather than for use — see `_archive/README.md`. Nothing in the
-active pipeline depends on it (verified by an automated import check,
-`tests/unit/test_scope_invariants.py`).
-
 ## How to run
 
 ```bash
 # Run every test (unit + integration)
-python -m unittest discover -s tests -t .
+python -m unittest discover -s evaluation/tests -t .
 
 # Fixture demo: all three arms, evaluation, and the ablation sweep
 python -m experiments.shared.runners.run_end_to_end
