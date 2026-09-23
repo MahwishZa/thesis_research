@@ -7,8 +7,8 @@ Why this is here and not in one test file: ``_common.get_logger()`` resolves
 its log directory from the loaded module's own ``__file__``, so **any** test
 that calls a corpus stage's ``main()`` in-process against a temp corpus
 copy still appends its fixture-scale lines to
-``alzheimer_corpus/logs/*.log``. Those files are the corpus's provenance
-record - the evidence chain in ``docs/status_and_decisions.md`` §2 is read
+``corpus/logs/*.log``. Those files are the corpus's provenance
+record - the evidence chain in ``_archive/docs_legacy/status_and_decisions.md`` §2 is read
 out of them - and a test run must not write to them. This was happening:
 running the suite appended Stage-06 whitespace-tokenizer lines, naming
 ``/tmp`` paths, to the tracked ``quality_control.log``.
