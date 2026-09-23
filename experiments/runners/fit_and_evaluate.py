@@ -94,6 +94,14 @@ HALF_LIFE_GRID_DAYS = [30.0, 90.0, 180.0, 365.0, 730.0, 1825.0]
 #: fitting the ablation, not the thing being ablated against.
 LAMBDA_GRID = [0.25, 0.5, 0.75, 1.0]
 
+#: A currency delta is only reported as a real improvement/harm if it is
+#: at least this fraction of the baseline's own currency score. Without
+#: this, a delta of 1e-5 against a baseline of 1.7e-3 (0.85% relative -
+#: real value observed on the pilot corpus) prints as "IMPROVES" purely
+#: because Python's `>` sees a positive float, which is not a defensible
+#: claim for a supervisor meeting. 0.05 = 5% relative change required.
+MATERIAL_RELATIVE_CHANGE = 0.05
+
 #: A config is only eligible to win the fit if it admits, on average, at
 #: least this fraction of the context budget on temporal_candidate
 #: validation questions. Without this, a config that admits almost
@@ -499,31 +507,57 @@ def main(argv=None) -> int:
     def currency_delta(a: str, b: str) -> float:
         return currency_by_system[a] - currency_by_system[b]
 
+    def currency_verdict(delta_value: float, reference: float, improve_word: str,
+                         hurt_word: str, tie_word: str) -> str:
+        """A delta only counts as real if it is at least
+        MATERIAL_RELATIVE_CHANGE of the reference score's own magnitude -
+        a bare `> 0`/`< 0` check treats floating-point noise (observed:
+        1.4e-05 against a 1.7e-03 baseline, a 0.85% relative change) as a
+        real effect, which is not a defensible claim."""
+        if reference <= 0:
+            return tie_word if delta_value == 0 else (improve_word if delta_value > 0 else hurt_word)
+        relative = delta_value / reference
+        if abs(relative) < MATERIAL_RELATIVE_CHANGE:
+            return tie_word
+        return improve_word if relative > 0 else hurt_word
+
     # PRIMARY verdict: mean currency of admitted evidence on the
     # temporal_candidate subgroup of the held-out test split - the direct
     # measure of what the proposed mechanism is supposed to change.
     # token_f1 is kept as a secondary/diagnostic field, not the verdict:
     # see this module's docstring for why it is insensitive to currency.
+    main_currency_delta = currency_delta(proposed_label, "baseline")
     main_evaluation = {
         "baseline": "baseline", "baseline_filter": rag2_filter_label,
         "proposed": proposed_label,
         "n_temporal_candidate_test_questions": len(test_temporal_ids),
         "baseline_mean_currency": currency_by_system["baseline"],
         "proposed_mean_currency": currency_by_system[proposed_label],
-        "currency_delta": currency_delta(proposed_label, "baseline"),
-        "verdict": ("IMPROVES currency" if currency_delta(proposed_label, "baseline") > 0
-                    else "DOES NOT IMPROVE currency"),
+        "currency_delta": main_currency_delta,
+        "currency_delta_relative_to_baseline": (
+            main_currency_delta / currency_by_system["baseline"]
+            if currency_by_system["baseline"] > 0 else None
+        ),
+        "verdict": currency_verdict(
+            main_currency_delta, currency_by_system["baseline"],
+            "IMPROVES currency", "DOES NOT IMPROVE currency (worse)",
+            f"NO MEANINGFUL DIFFERENCE (<{MATERIAL_RELATIVE_CHANGE:.0%} relative change)",
+        ),
         "secondary_token_f1": {
             "baseline": by_system["baseline"]["token_f1"],
             "proposed": by_system[proposed_label]["token_f1"],
             "delta": delta(proposed_label, "baseline"),
         },
     }
+    ablation_currency_delta = currency_delta(proposed_label, ablated_label)
     ablation_study = {
         "full_proposed": proposed_label, "ablated_proposed": ablated_label,
-        "currency_delta": currency_delta(proposed_label, ablated_label),
-        "verdict": ("COMPONENT HELPS currency" if currency_delta(proposed_label, ablated_label) > 0
-                    else "COMPONENT DOES NOT HELP currency"),
+        "currency_delta": ablation_currency_delta,
+        "verdict": currency_verdict(
+            ablation_currency_delta, currency_by_system[ablated_label],
+            "COMPONENT HELPS currency", "COMPONENT HURTS currency",
+            f"COMPONENT HAS NO MEANINGFUL EFFECT (<{MATERIAL_RELATIVE_CHANGE:.0%} relative change)",
+        ),
         "secondary_token_f1_delta": delta(proposed_label, ablated_label),
     }
 
