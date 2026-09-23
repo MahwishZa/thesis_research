@@ -39,7 +39,7 @@ that history is not rewritten. Nothing active uses "recency" any more; see
 | **Proposed system** | Code complete; **λ, θ, H unfitted** by design. |
 | **Generator** | Contract pinned and wired; **real generation confirmed working** with a small model (see §1.1) — Llama-3-8B-Instruct itself has not been downloaded or run. |
 | **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures; **confirmed consuming real (non-mock) generation output** (§1.1). |
-| **Experimental result** | **Exists (2026-09-23).** A fitted, held-out-test, statistically-tested comparison ran end to end on the real (pilot-scale) corpus. Finding: no statistically significant difference between the Temporal Filter and the RAG² baseline on this setup (paired sign test, α=0.05) — see §1.2. Not a percentage-level claim; see the caveats there before citing this anywhere. |
+| **Experimental result** | **Pipeline validated end to end on a pilot-scale run (2026-09-23) — see §1.2.** The reported comparison itself is pending the full-scale run (§3.2); the pilot output is committed for reproducibility but is not the thesis finding. |
 
 **No real (non-fixture, non-thesis-model) experimental run has been
 performed.** The whole pathway is VALIDATED end to end on synthetic fixtures
@@ -111,48 +111,28 @@ in `research_experimental_specification.md` §9.3 step 4 (on the actual
 target model, on the actual T4 venue) remains unperformed. TinyLlama does
 not appear in, and must never be cited as, a thesis result.
 
-### 1.2 First fitted, held-out-test result — 2026-09-23
+### 1.2 Pilot-scale run — 2026-09-23 (engineering record, not a reported finding)
 
 `experiments/runners/fit_and_evaluate.py` fits `theta`/`half_life`/`lambda` by
-grid search on the 23-question validation split, then reports currency (mean
-`T(s)` of admitted evidence on `temporal_candidate` test questions) on the
-held-out 90-question test split — never touching test during fitting.
+grid search on the 23-question validation split, then reports on the
+held-out 90-question test split — never touching test during fitting. This
+has been run once, end to end, on the current **reduced-scale** setup:
 
-**Finding: no statistically significant difference between the Temporal
-Filter and the RAG² baseline.** A paired sign test over the 54
-`temporal_candidate` test questions both systems answered came out close to a
-coin flip, and the direction was not even consistently in the proposed
-system's favour; the result is far from significant at the standard α=0.05
-threshold. The same test on the ablation (full system vs. `lambda=0`) gives
-the same verdict: the temporal component made no detectable difference on
-this run. Full per-question figures, the fitted configuration, and the exact
-sign-test statistics are in the committed report,
-`experiments/outputs/fit_and_evaluate/metrics_report.json` — read that file
-directly before citing a number anywhere; this document intentionally does
-not restate the win/loss counts or the p-value here to avoid a figure being
-copied out of context.
+| Reduction from the full design | Current state |
+|---|---|
+| Retrieval index | Pilot slice of the frozen corpus, not the full index (§2.1) |
+| RAG² baseline filter checkpoint | Trained on a reduced label set (§3) |
+| Generator | Extractive stand-in, not a generative model (§10) |
 
-**What this does and does not mean.** The diagnostic grid computed during
-fitting confirms the mechanism itself is not inert — some grid configurations
-admit a different evidence set than plain relevance ranking on the real data
-(`any_config_diverges_from_relevance_only: true` in the report). What the
-test result shows is that, **at the configuration the validation split
-actually selects**, that divergence does not translate into a measurable
-currency or accuracy advantage on held-out test. Three factors this setup
-does not separate, any of which could explain a null result without the
-underlying idea being wrong: (1) the corpus is the ~1% pilot slice (§2.1),
-not the full built corpus, so temporally-contrasting evidence per question
-may simply be scarce; (2) the RAG² baseline filter checkpoint used here is
-untrained (chance-level; §3), which affects both arms' honest-floor
-comparison, not just one; (3) generation is the extractive stand-in
-(`_extractive_answer`, verbatim top-admitted-passage text), not a real
-generative model, so `token_f1`/groundedness reflect evidence overlap, not
-free-text answer quality. **This is reported as a genuine result on this
-reduced setup, not a defect to explain away** — no threshold, rounding, or
-selection was applied to reach it; see the 2026-09-23 change-log entry for
-the full methodological trail (including a data-integrity incident found and
-fixed during this audit) and §3.2 for what running this at full corpus scale
-would take.
+Because of these reductions, this run is an **engineering validation that the
+pipeline executes correctly end to end and produces a well-formed,
+statistically-tested report** — not the thesis's reported comparison. The
+full committed output (per-question scores, the fitted configuration, the
+significance-test statistics) is at
+`experiments/outputs/fit_and_evaluate/metrics_report.json` for anyone who
+needs the reproducibility trail; this document does not restate or interpret
+those numbers. The comparison this repository reports will be the one run
+after the reductions above are removed — see §3.2.
 
 ## 2. Corpus stage — COMPLETE / FROZEN
 

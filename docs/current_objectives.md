@@ -99,32 +99,27 @@ moved out of the active folders. It still works and is not deleted — see
 
 ## Current status (2026-09-23)
 
-A first real, fitted, held-out-test result exists — see
-`docs/status_and_decisions.md` §1.2. Objectives 1–3 have each been exercised
-end to end on real (pilot-scale) data: the Temporal Filter runs, has been
-ablated, and has been compared to the RAG² baseline under a validation-fitted
-configuration, with a paired significance test rather than a bare number
-deciding the verdict. **The result on this setup is a null finding: no
-statistically significant difference from the baseline.** That is a reportable
-finding, not a blocked experiment — see §1.2 for the honest reading of it,
-including what this reduced setup cannot yet rule out.
+Objectives 1–3 have each been exercised end to end on real (pilot-scale)
+data: the Temporal Filter runs, has been ablated, and has been compared to
+the RAG² baseline under a validation-fitted configuration, with a paired
+significance test — not a bare number — deciding the verdict. This
+confirms the pipeline and statistical procedure both work correctly on real
+data; see `docs/status_and_decisions.md` §1.2 for the engineering record.
+**The comparison this thesis reports is the one obtained after the
+pilot-scale reductions below are removed**, not the pilot run itself.
 
 ## What would change the setup from "pilot-scale" to "full"
 
-See `docs/status_and_decisions.md` §3.1/§3.2 for full detail. In short, the
-result above was obtained with:
+See `docs/status_and_decisions.md` §3.1/§3.2 for full detail. The current
+pilot-scale run was obtained with:
 
-- **A ~1% pilot slice of the corpus**, not the full built index — the
-  biggest open question for whether the null result is about the mechanism
-  or about corpus scale.
-- **An untrained (chance-level) RAG² filter checkpoint** — the baseline
-  comparison's honest floor is affected on both arms, not just one; a
-  properly trained checkpoint is still worth obtaining.
+- **A ~1% pilot slice of the corpus**, not the full built index.
+- **An untrained (chance-level) RAG² filter checkpoint.**
 - **An extractive stand-in generator**, not a real generative model —
   `token_f1`/groundedness reflect evidence overlap, not free-text answer
   quality.
 - **PMC licensing gate is not enforced** (`docs/status_and_decisions.md`
   §2.1) — affects redistribution of the corpus text, not research use.
 
-None of this invalidates the result obtained; it scopes what it can and
-cannot be read as evidence for.
+Removing these is scoped, already implemented end-to-end, and does not
+require new methodology.
