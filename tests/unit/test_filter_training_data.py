@@ -9,11 +9,11 @@ that model-loading code stays out of the unit-test path.
 
 import unittest
 
-from experiments.filter_training.config import ConfigError
-from experiments.filter_training.medqa_data import (
+from experiments.baseline.filter_training.config import ConfigError
+from experiments.baseline.filter_training.medqa_data import (
     MedQADataError, MedQAItem, extract_answer_letter,
 )
-from experiments.filter_training.train import split_train_val
+from experiments.baseline.filter_training.train import split_train_val
 
 
 def item(**kw):

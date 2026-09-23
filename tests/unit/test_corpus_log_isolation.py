@@ -1,8 +1,8 @@
 """The test suite must never write to the corpus's tracked provenance logs.
 
-``alzheimer_corpus/logs/*.log`` are not scratch output. They are the corpus's
+``corpus/logs/*.log`` are not scratch output. They are the corpus's
 provenance record: the stage-by-stage count reconciliation in
-``docs/status_and_decisions.md`` §2 (114,157 normalized -> 111,315 unique ->
+``_archive/docs_legacy/status_and_decisions.md`` §2 (114,157 normalized -> 111,315 unique ->
 4,377,041 chunks -> all tagged) is read directly out of them, and the corpus
 is marked COMPLETE/FROZEN on that evidence. A tracked file that changes when
 anyone runs ``python -m unittest`` makes that evidence unreliable and buries
@@ -23,8 +23,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_DIR = ROOT / "alzheimer_corpus" / "scripts"
-CORPUS_LOGS = ROOT / "alzheimer_corpus" / "logs"
+SCRIPT_DIR = ROOT / "corpus" / "scripts"
+CORPUS_LOGS = ROOT / "corpus" / "logs"
 
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))

@@ -10,8 +10,8 @@ both corrections.
 import unittest
 from datetime import date
 
-from systems.proposed.admission import AdmissionConfig
-from systems.proposed.scorer import AdmissionScorer
+from src.proposed.admission import AdmissionConfig
+from src.proposed.scorer import AdmissionScorer
 
 
 def config(theta):

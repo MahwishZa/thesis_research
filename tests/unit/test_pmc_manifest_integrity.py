@@ -19,7 +19,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MANIFEST = ROOT / "alzheimer_corpus" / "metadata" / "pmc.csv"
+MANIFEST = ROOT / "corpus" / "metadata" / "pmc.csv"
 
 #: Locked to the verified 2026-09-18 finalization (ledger D-42). A
 #: legitimate re-finalization (e.g. after the corpus grows) will change

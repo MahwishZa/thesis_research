@@ -22,7 +22,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_DIR = ROOT / "alzheimer_corpus" / "scripts"
+SCRIPT_DIR = ROOT / "corpus" / "scripts"
 
 
 def load_module(name="06_chunk.py"):
@@ -446,7 +446,7 @@ class ResumeTests(unittest.TestCase):
 
 class FixtureRegressionTests(unittest.TestCase):
     """Against whatever fixture chunks.jsonl is currently on disk under
-    alzheimer_corpus/data/chunks/ - the same offline path the project
+    corpus/data/chunks/ - the same offline path the project
     already tests everything else through. That file is gitignored (see
     alzheimer_corpus/.gitignore: research data is never committed), so this
     test needs a prior local pipeline run to be meaningful - see the note
@@ -455,8 +455,8 @@ class FixtureRegressionTests(unittest.TestCase):
     def test_matches_the_local_chunks_output_for_the_fixture_corpus(self):
         import shutil, subprocess, sys as _sys
         with TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "alzheimer_corpus"
-            shutil.copytree(ROOT / "alzheimer_corpus", copy,
+            copy = Path(tmp) / "corpus"
+            shutil.copytree(ROOT / "corpus", copy,
                             ignore=shutil.ignore_patterns("__pycache__"))
             # Build the same deduplicated fixture the committed chunks.jsonl
             # was produced from.
@@ -474,7 +474,7 @@ class FixtureRegressionTests(unittest.TestCase):
                     (copy / "data" / "chunks" / "chunks.jsonl")
                     .read_text(encoding="utf-8").splitlines()]
             committed = [json.loads(l) for l in
-                        (ROOT / "alzheimer_corpus" / "data" / "chunks" / "chunks.jsonl")
+                        (ROOT / "corpus" / "data" / "chunks" / "chunks.jsonl")
                         .read_text(encoding="utf-8").splitlines()]
             # Stage 07's claim_classes/claim_confidence/claim_method (topical
             # dimension) and claim_evidence_levels/claim_evidence_confidence

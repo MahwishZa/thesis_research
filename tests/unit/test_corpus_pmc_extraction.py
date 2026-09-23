@@ -9,7 +9,7 @@ are that bridge, and these tests are what stands in for "run it against
 Open Access XML actually uses, run through the real parser.
 
 Nothing here reads or writes the real, already-finalized
-``alzheimer_corpus/metadata/pmc.csv`` except the one test that explicitly
+``corpus/metadata/pmc.csv`` except the one test that explicitly
 says so and only reads it - never writes.
 """
 
@@ -21,8 +21,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "alzheimer_corpus" / "scripts" / "_common.py"
-REAL_MANIFEST = ROOT / "alzheimer_corpus" / "metadata" / "pmc.csv"
+SCRIPT = ROOT / "corpus" / "scripts" / "_common.py"
+REAL_MANIFEST = ROOT / "corpus" / "metadata" / "pmc.csv"
 
 
 def load_module():

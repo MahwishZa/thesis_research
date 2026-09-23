@@ -13,9 +13,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.questions import split as sp
+from experiments.shared.questions import split as sp
 
-POOL = Path("experiments/questions")
+POOL = Path("experiments/shared/questions")
 
 CANDIDATE_FIELDS = ("question_id", "question", "topic", "subtopic",
                      "reference_answer", "reference_source", "reference_date",

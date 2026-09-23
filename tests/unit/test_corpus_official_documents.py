@@ -21,7 +21,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "alzheimer_corpus" / "scripts" / "_common.py"
+SCRIPT = ROOT / "corpus" / "scripts" / "_common.py"
 
 
 def load_module():
@@ -152,14 +152,14 @@ class RegistryReadWriteTests(unittest.TestCase):
                 self.c.read_document_registry(path, self.c.GUIDELINE_REGISTRY_FIELDS)
 
     def test_the_real_committed_guidelines_registry_matches_the_schema(self):
-        real = ROOT / "alzheimer_corpus" / "metadata" / "guidelines.csv"
+        real = ROOT / "corpus" / "metadata" / "guidelines.csv"
         if not real.exists():
             self.skipTest("real guidelines.csv not present")
         rows = self.c.read_document_registry(real, self.c.GUIDELINE_REGISTRY_FIELDS)
         self.assertIsInstance(rows, list)
 
     def test_the_real_committed_textbooks_registry_matches_the_schema(self):
-        real = ROOT / "alzheimer_corpus" / "metadata" / "textbooks.csv"
+        real = ROOT / "corpus" / "metadata" / "textbooks.csv"
         if not real.exists():
             self.skipTest("real textbooks.csv not present")
         rows = self.c.read_document_registry(real, self.c.TEXTBOOK_REGISTRY_FIELDS)

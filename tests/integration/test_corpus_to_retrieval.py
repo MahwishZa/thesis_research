@@ -2,12 +2,12 @@
 retrieval layer - not by schema inspection, but by running the real
 04_normalize -> 05_deduplicate -> 06_chunk -> 07_claim_classification chain
 (offline fixture, no network/real tokenizer needed) and then calling
-experiments/retrieval/corpus.py's real read_passages() against the result.
+experiments/shared/retrieval/corpus.py's real read_passages() against the result.
 
 This is the corpus-completion audit's answer to "can downstream retrieval
 consume the final corpus" for anything code-level can verify without the
 real 4.3M-chunk corpus, which only exists on the machine that built it
-(alzheimer_corpus/data/** is gitignored by design).
+(corpus/data/** is gitignored by design).
 """
 
 import shutil
@@ -20,7 +20,7 @@ from tempfile import TemporaryDirectory
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from experiments.retrieval import corpus as corpus_module  # noqa: E402
+from experiments.shared.retrieval import corpus as corpus_module  # noqa: E402
 
 
 class PipelineToRetrievalTests(unittest.TestCase):
@@ -28,8 +28,8 @@ class PipelineToRetrievalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmpdir = TemporaryDirectory()
-        cls.copy = Path(cls.tmpdir.name) / "alzheimer_corpus"
-        shutil.copytree(ROOT / "alzheimer_corpus", cls.copy,
+        cls.copy = Path(cls.tmpdir.name) / "corpus"
+        shutil.copytree(ROOT / "corpus", cls.copy,
                         ignore=shutil.ignore_patterns("__pycache__"))
 
         def run(script, *args):
@@ -49,7 +49,7 @@ class PipelineToRetrievalTests(unittest.TestCase):
         cls.tmpdir.cleanup()
 
     def test_read_passages_loads_the_real_pipeline_output(self):
-        """The exact function experiments/retrieval/pipeline.py calls to
+        """The exact function experiments/shared/retrieval/pipeline.py calls to
         build a candidate set, pointed at real (not hand-built) pipeline
         output."""
         passages = corpus_module.read_passages(self.copy)

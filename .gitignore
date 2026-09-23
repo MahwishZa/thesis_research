@@ -6,14 +6,14 @@ __pycache__/
 # resetting local history) when added via `git add -A`/the GitHub web
 # upload UI, which does not respect this file the way `git add` does.
 # Regenerate them locally instead of committing them:
-#   - checkpoints/                    -> experiments/filter_training (see docs/status_and_decisions.md)
-#   - alzheimer_corpus_pilot/         -> a local sample of alzheimer_corpus/data/chunks/chunks.jsonl
-#   - experiments/outputs/index_pilot_reduced_scope/ -> experiments/retrieval/build_index.py
-# Small, legitimate result files (experiments/outputs/fit_and_evaluate/,
-# the current result - see docs/status_and_decisions.md SS1.2) are NOT
-# covered by a blanket experiments/outputs/ rule - a real committed
-# result must stay visible to `git status`, not silently ignored
-# alongside the large regenerable folders sitting next to it.
+#   - checkpoints/                 -> experiments/baseline/filter_training (see docs/reproducibility.md)
+#   - corpus_pilot/                -> a local sample of corpus/data/chunks/chunks.jsonl
+#   - results/index_pilot_reduced_scope/ -> experiments/shared/retrieval/build_index.py
+# Small, legitimate result files (results/fit_and_evaluate/, the current
+# committed run - see docs/evaluation.md SS7) are NOT covered by a blanket
+# results/ rule - a real committed result must stay visible to
+# `git status`, not silently ignored alongside the large regenerable
+# folders sitting next to it.
 checkpoints/
-alzheimer_corpus_pilot/
-experiments/outputs/index_pilot_reduced_scope/
+corpus_pilot/
+results/index_pilot_reduced_scope/

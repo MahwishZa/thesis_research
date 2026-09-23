@@ -1,4 +1,4 @@
-"""Integration test for experiments/runners/run_end_to_end.py.
+"""Integration test for experiments/shared/runners/run_end_to_end.py.
 
 This is the test that proves objective 1 ("run the proposed system and
 check its overall performance") is actually satisfiable in this repository:
@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.runners import run_end_to_end as e2e
+from experiments.shared.runners import run_end_to_end as e2e
 
 
 class EndToEndRunnerTests(unittest.TestCase):
@@ -285,7 +285,7 @@ class TemporalSubgroupBreakdownTests(unittest.TestCase):
     fixture (all-False, being synthetic) never exercises."""
 
     def rows_for(self, question_id, system, token_f1):
-        from experiments.evaluation import rag_metrics as rm
+        from src.evaluation import rag_metrics as rm
         return rm.MetricRow(
             question_id=question_id, system=system, exact_match=0.0,
             token_f1=token_f1, rouge_l_f1=0.0, context_precision=None,

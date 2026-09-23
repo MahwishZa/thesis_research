@@ -5,18 +5,18 @@ Two things are locked here:
 
 1. The offline fixture path (--input records.example.jsonl) must keep
    producing byte-identical output to what is currently on disk under
-   alzheimer_corpus/data/ - a rewrite that changes it without anyone
+   corpus/data/ - a rewrite that changes it without anyone
    deciding to would be a silent regression. IMPORTANT: alzheimer_corpus/
    data/** is gitignored by design ("research data is never committed" -
    see alzheimer_corpus/.gitignore), so this is NOT a comparison against a
    git-tracked golden file, despite this module's name. On a fresh clone
-   with no prior local pipeline run, alzheimer_corpus/data/normalized/,
+   with no prior local pipeline run, corpus/data/normalized/,
    deduplicated/ and chunks/ do not exist, and the tests below that read
    `tree=CORPUS` will fail with FileNotFoundError rather than skip. Run
    04_normalize.py --input records.example.jsonl -> 05_deduplicate.py ->
    06_chunk.py --tokenizer whitespace once against the real
    alzheimer_corpus/ tree first (see README.md and
-   docs/status_and_decisions.md) to
+   _archive/docs_legacy/status_and_decisions.md) to
    populate a local baseline before these tests are meaningful; they then
    catch drift within this working copy over time, not against history.
 2. The new real-data path (reading metadata/pmc.csv + XML directly) must
@@ -40,7 +40,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
-CORPUS = ROOT / "alzheimer_corpus"
+CORPUS = ROOT / "corpus"
 
 
 def load_script(name):
@@ -73,7 +73,7 @@ class FixturePathRegressionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmpdir = TemporaryDirectory()
-        cls.copy = Path(cls.tmpdir.name) / "alzheimer_corpus"
+        cls.copy = Path(cls.tmpdir.name) / "corpus"
         shutil.copytree(CORPUS, cls.copy, ignore=shutil.ignore_patterns("__pycache__"))
 
         fixture = "data/raw/pubmed/records.example.jsonl"
@@ -109,7 +109,7 @@ class FixturePathRegressionTests(unittest.TestCase):
 
     def test_chunk_output_differs_only_by_stage_07_fields(self):
         """This copy only runs 04->06 (see setUpClass), while the local
-        reference under alzheimer_corpus/data/ has also had Stage 07 run -
+        reference under corpus/data/ has also had Stage 07 run -
         so only Stage 07's fields (claim_classes/claim_confidence/
         claim_method for the topical dimension, claim_evidence_levels/
         claim_evidence_confidence for the evidence-level dimension) should
@@ -137,7 +137,7 @@ class RealDataPathTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
-        self.copy = Path(self.tmpdir.name) / "alzheimer_corpus"
+        self.copy = Path(self.tmpdir.name) / "corpus"
         shutil.copytree(CORPUS, self.copy, ignore=shutil.ignore_patterns("__pycache__"))
         # Replace the real, finalized manifest/data with a small synthetic
         # one so this test never depends on (or risks) the real corpus.

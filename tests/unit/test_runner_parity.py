@@ -15,21 +15,21 @@ refuses before any answer is written.
 import unittest
 from datetime import date
 
-from experiments.evaluation.runner import (
+from src.evaluation.runner import (
     RunnerError,
     assert_budget_parity,
     assert_generator_parity,
     context_budget,
 )
-from systems.baseline.admission import MockRAG2Filter
-from systems.baseline.no_filter import NoFilterSystem
-from systems.baseline.rag2 import RAG2Config, RAG2System
-from systems.interfaces.generator import CallableGenerator, GenerationResult
-from systems.proposed.admission import (
+from src.baseline.admission import MockRAG2Filter
+from src.baseline.no_filter import NoFilterSystem
+from src.baseline.rag2 import RAG2Config, RAG2System
+from src.common.generator import CallableGenerator, GenerationResult
+from src.proposed.admission import (
     AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.temporal import TemporalPolicy
-from systems.proposed.scorer import AdmissionScorer
+from src.proposed.temporal import TemporalPolicy
+from src.proposed.scorer import AdmissionScorer
 
 TQ = date(2026, 1, 1)
 

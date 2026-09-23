@@ -10,14 +10,14 @@ import unittest
 from dataclasses import replace
 from datetime import date
 
-from experiments.evaluation import freezing as fz
-from experiments.runners.fit_and_evaluate import (
+from src.evaluation import freezing as fz
+from experiments.shared.runners.fit_and_evaluate import (
     MIN_ADMITTED_FRACTION, _mean_currency, fit_on_validation,
 )
-from experiments.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
-from experiments.runners.run_real_evaluation import _extractive_answer
-from systems.interfaces.generator import CallableGenerator
-from systems.proposed.temporal import TemporalPolicy
+from experiments.shared.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
+from experiments.shared.runners.run_real_evaluation import _extractive_answer
+from src.common.generator import CallableGenerator
+from src.proposed.temporal import TemporalPolicy
 
 
 class FitOnValidationTests(unittest.TestCase):

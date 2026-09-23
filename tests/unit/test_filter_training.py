@@ -10,10 +10,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.filter_training.config import (
+from experiments.baseline.filter_training.config import (
     BASE_MODEL, CheckpointRecord, ConfigError, FilterTrainingConfig,
 )
-from experiments.filter_training.labeling import (
+from experiments.baseline.filter_training.labeling import (
     HELPFUL, NOT_HELPFUL, TAU, LabelingError, PairOutcome, RationaleOutcome,
     label_dataset, label_distribution, label_pair, perplexity_threshold,
     write_training_file,

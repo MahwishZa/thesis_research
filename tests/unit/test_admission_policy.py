@@ -8,7 +8,7 @@ main experiment depends on.
 import unittest
 from datetime import date
 
-from systems.baseline import (
+from src.baseline import (
     HELPFUL,
     NOT_HELPFUL,
     MockRAG2Filter,
@@ -16,9 +16,9 @@ from systems.baseline import (
     RAG2Config,
     RAG2System,
 )
-from systems.interfaces.evidence import Candidate, Evidence
-from systems.interfaces.generator import GenerationResult, Generator
-from systems.proposed import (
+from src.common.evidence import Candidate, Evidence
+from src.common.generator import GenerationResult, Generator
+from src.proposed import (
     AdmissionConfig,
     AdmissionScorer,
     OutputState,

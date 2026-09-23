@@ -21,23 +21,23 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.evaluation import freezing as fz
-from experiments.evaluation.questions import EvaluationQuestion
-from experiments.evaluation.runner import (
+from src.evaluation import freezing as fz
+from src.evaluation.questions import EvaluationQuestion
+from src.evaluation.runner import (
     RunConfig, RunnerError, group_by_system, read_results, run_experiment,
 )
-from experiments.retrieval.corpus import CorpusPassage
-from experiments.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
-from experiments.retrieval.index import build_index
-from experiments.retrieval.pipeline import RetrievalConfig, RetrievalPipeline
-from systems.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
-from systems.baseline.rag2 import RAG2Config, RAG2System
-from systems.interfaces.generator import CallableGenerator, GenerationResult
-from systems.proposed.admission import (
+from experiments.shared.retrieval.corpus import CorpusPassage
+from experiments.shared.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
+from experiments.shared.retrieval.index import build_index
+from experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline
+from src.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
+from src.baseline.rag2 import RAG2Config, RAG2System
+from src.common.generator import CallableGenerator, GenerationResult
+from src.proposed.admission import (
     AdmissionConfig, TemporalFilterPolicy, TemporalFilterSystem,
 )
-from systems.proposed.temporal import TemporalPolicy
-from systems.proposed.scorer import AdmissionScorer
+from src.proposed.temporal import TemporalPolicy
+from src.proposed.scorer import AdmissionScorer
 
 TQ = date(2026, 1, 1)
 BUDGET = 5

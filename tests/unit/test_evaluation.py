@@ -5,10 +5,10 @@ import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from experiments.evaluation import annotation as ann
-from experiments.evaluation import freezing as fz
-from experiments.evaluation import questions as qs
-from experiments.evaluation import stats as st
+from src.evaluation import annotation as ann
+from src.evaluation import freezing as fz
+from src.evaluation import questions as qs
+from src.evaluation import stats as st
 
 
 def question(**kw):
@@ -426,14 +426,14 @@ class AbstentionPolicyConfigTests(unittest.TestCase):
     """The policy is configurable and its default preserves cross-arm parity."""
 
     def test_default_is_answer_always(self):
-        from systems.proposed.admission import AbstentionPolicy, AdmissionConfig
+        from src.proposed.admission import AbstentionPolicy, AdmissionConfig
         import datetime
         cfg = AdmissionConfig(admit_threshold=0.5,
                               question_date=datetime.date(2024, 1, 1))
         self.assertIs(cfg.abstention_policy, AbstentionPolicy.ANSWER_ALWAYS)
 
     def test_abstention_remains_available_as_a_declared_condition(self):
-        from systems.proposed.admission import AbstentionPolicy, AdmissionConfig
+        from src.proposed.admission import AbstentionPolicy, AdmissionConfig
         import datetime
         cfg = AdmissionConfig(
             admit_threshold=0.5,
@@ -444,7 +444,7 @@ class AbstentionPolicyConfigTests(unittest.TestCase):
                       AbstentionPolicy.ABSTAIN_WHEN_EMPTY)
 
     def test_policy_is_recorded_in_run_metadata(self):
-        from systems.proposed.admission import AbstentionPolicy
+        from src.proposed.admission import AbstentionPolicy
         self.assertEqual(AbstentionPolicy.ANSWER_ALWAYS.value, "answer_always")
         self.assertEqual(AbstentionPolicy.ABSTAIN_WHEN_EMPTY.value,
                          "abstain_when_empty")
@@ -490,14 +490,14 @@ class FreezeFromQuestionTests(unittest.TestCase):
     def test_shared_fields_are_copied_from_the_question(self):
         q = question(status="approved")
         item = fz.from_question(
-            q, candidates(), corpus_snapshot="alzheimer_corpus@fixture",
+            q, candidates(), corpus_snapshot="corpus@fixture",
         )
         self.assertEqual(item.question_id, q.question_id)
         self.assertEqual(item.question, q.question)
         self.assertEqual(item.reference_answer, q.reference_answer)
         self.assertEqual(item.reference_source, q.reference_source)
         self.assertEqual(item.reference_date, q.reference_date)
-        self.assertEqual(item.corpus_snapshot, "alzheimer_corpus@fixture")
+        self.assertEqual(item.corpus_snapshot, "corpus@fixture")
 
     def test_temporal_candidate_is_carried_from_the_question(self):
         """Diagnostic-only metadata (specification SS13), but it has to
@@ -554,7 +554,7 @@ class RunnerResultsTests(unittest.TestCase):
         ]
 
     def test_read_results_round_trips_jsonl(self):
-        from experiments.evaluation.runner import read_results
+        from src.evaluation.runner import read_results
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "r.jsonl"
             path.write_text("".join(
@@ -563,14 +563,14 @@ class RunnerResultsTests(unittest.TestCase):
         self.assertEqual(back, self.records())
 
     def test_group_by_system_reshapes_for_comparison(self):
-        from experiments.evaluation.runner import group_by_system
+        from src.evaluation.runner import group_by_system
         grouped = group_by_system(self.records())
         self.assertEqual(set(grouped), {"baseline", "proposed"})
         self.assertEqual(set(grouped["baseline"]), {"Q1", "Q2"})
         self.assertEqual(grouped["baseline"]["Q1"]["generated_answer"], "a")
 
     def test_duplicate_answer_for_one_question_is_refused(self):
-        from experiments.evaluation.runner import RunnerError, group_by_system
+        from src.evaluation.runner import RunnerError, group_by_system
         dup = self.records() + [
             {"run_id": "r1", "question_id": "Q1", "system": "baseline",
              "generated_answer": "second"},

@@ -2,7 +2,7 @@
 
 The rest of that script (retrieval, the RAG2 checkpoint, the run itself)
 needs torch, transformers, the real corpus and a built index - none of
-which exist in this sandbox (see docs/current_objectives.md) - so it is
+which exist in this sandbox (see _archive/docs_legacy/current_objectives.md) - so it is
 exercised by the student running it for real, not by this suite. What is
 tested here is the glue this script adds on top of already-tested modules:
 joining the real question files correctly, and the new admitted-recency
@@ -12,12 +12,12 @@ metric's arithmetic.
 import unittest
 from pathlib import Path
 
-from experiments.evaluation.freezing import FrozenCandidate, FrozenItem
-from experiments.runners.run_real_evaluation import (
+from src.evaluation.freezing import FrozenCandidate, FrozenItem
+from experiments.shared.runners.run_real_evaluation import (
     admitted_recency_by_system, load_usable_questions,
 )
 
-QUESTIONS_DIR = Path("experiments/questions")
+QUESTIONS_DIR = Path("experiments/shared/questions")
 
 
 class LoadUsableQuestionsTests(unittest.TestCase):

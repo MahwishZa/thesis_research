@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_DIR = ROOT / "alzheimer_corpus" / "scripts"
+SCRIPT_DIR = ROOT / "corpus" / "scripts"
 
 
 def load_module(name):
@@ -167,7 +167,7 @@ class MainCLITests(unittest.TestCase):
     never in-process: main() calls _common.get_logger(), which resolves its
     log file from the loaded module's own __file__ - in-process, that would
     write test output into the real, tracked
-    alzheimer_corpus/logs/retrieval.log. A subprocess launched with the
+    corpus/logs/retrieval.log. A subprocess launched with the
     isolated copy as its script path has its own __file__ and therefore its
     own, disposable log file.
     """
@@ -175,9 +175,9 @@ class MainCLITests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
-        self.copy = Path(self.tmpdir.name) / "alzheimer_corpus"
+        self.copy = Path(self.tmpdir.name) / "corpus"
         import shutil
-        shutil.copytree(ROOT / "alzheimer_corpus", self.copy,
+        shutil.copytree(ROOT / "corpus", self.copy,
                         ignore=shutil.ignore_patterns("__pycache__"))
 
     def _run(self, *args):
@@ -199,7 +199,7 @@ class MainCLITests(unittest.TestCase):
 
     def test_does_not_touch_the_real_repository(self):
         """The isolated copy is where all writes land, never the real tree."""
-        real_log = ROOT / "alzheimer_corpus" / "logs" / "retrieval.log"
+        real_log = ROOT / "corpus" / "logs" / "retrieval.log"
         before = real_log.stat().st_mtime if real_log.exists() else None
         self._run("--download")
         after = real_log.stat().st_mtime if real_log.exists() else None

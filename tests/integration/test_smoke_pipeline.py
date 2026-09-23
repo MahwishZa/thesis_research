@@ -14,16 +14,16 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.evaluation import annotation as ann
-from experiments.evaluation import freezing as fz
-from experiments.evaluation import stats as st
-from experiments.evaluation.runner import (
+from src.evaluation import annotation as ann
+from src.evaluation import freezing as fz
+from src.evaluation import stats as st
+from src.evaluation.runner import (
     RunConfig, RunnerError, assert_prompt_parity, run_experiment, to_candidates,
 )
-from systems.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
-from systems.baseline.no_filter import NoFilterSystem
-from systems.baseline.rag2 import RAG2Config, RAG2System
-from systems.interfaces.generator import CallableGenerator, GenerationResult
+from src.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter
+from src.baseline.no_filter import NoFilterSystem
+from src.baseline.rag2 import RAG2Config, RAG2System
+from src.common.generator import CallableGenerator, GenerationResult
 
 
 def fake_generate(question, evidence, prompt):

@@ -22,8 +22,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "alzheimer_corpus" / "scripts" / "02_pmc_download.py"
-LOG = ROOT / "alzheimer_corpus" / "logs" / "retrieval.log"
+SCRIPT = ROOT / "corpus" / "scripts" / "02_pmc_download.py"
+LOG = ROOT / "corpus" / "logs" / "retrieval.log"
 
 
 def load_module():

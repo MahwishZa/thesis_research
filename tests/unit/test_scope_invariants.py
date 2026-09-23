@@ -9,41 +9,26 @@ They check documentation, which is unusual for a test suite. That is
 deliberate: in this repository the scope statement is the artifact that
 governs every other decision, and nothing else was checking it.
 
-This file guards ``docs/current_objectives.md`` (adopted 2026-09-18), the
-current canonical scope. It previously guarded ``docs/frozen_scope.md``,
-which current_objectives.md superseded; that history is why
-ROUGE/BLEU/BERTScore, once a forbidden outcome, are now a REQUIRED part of
-the ablation study (``experiments/evaluation/rag_metrics.py``) - the
-opposite invariant. Guarding a superseded document's *old* invariants after
-the scope moved on would itself be the kind of drift this file exists to
-catch, so this file was retargeted rather than left in place.
-
-``frozen_scope.md`` no longer exists: the 2026-09-19 documentation
-consolidation merged its live content into
-``docs/research_experimental_specification.md``.
-
-2026-09-20: the repository was simplified and renamed ("recency" ->
-"temporal", "the proposed system" -> "the Temporal Filter"). The
-superseded-design history that used to live inside current_objectives.md
-moved with the code it explains, to ``_archive/README.md``, when
-``experiments/test_pairs/`` and the other exploratory machinery were moved
-into ``_archive/``. This file's superseded-design guard now points there.
+2026-09-24: the repository was reorganized to a research-paper-friendly
+layout (``systems/``/``experiments/evaluation`` -> ``src/``,
+``alzheimer_corpus/`` -> ``corpus/``, ``experiments/outputs/`` ->
+``results/``) and ``docs/`` was replaced with five topic docs
+(``methodology.md``, ``data.md``, ``research-glossary.md``,
+``evaluation.md``, ``reproducibility.md``). The four previous docs
+(``current_objectives.md``, ``research_experimental_specification.md``,
+``status_and_decisions.md``, ``question_review.md``) were archived to
+``_archive/docs_legacy/`` rather than deleted, and this file's guards were
+retargeted at the new docs and at README.md, which now states the research
+question and objectives directly rather than pointing to a separate
+canonical-scope document.
 """
 
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCOPE = ROOT / "docs" / "current_objectives.md"
+METHODOLOGY = ROOT / "docs" / "methodology.md"
 README = ROOT / "README.md"
-
-#: Load-bearing fragments of the current scope. Wording may be reformatted
-#: around them, so these are phrases rather than whole sentences.
-CURRENT_OBJECTIVES = (
-    "Run it",
-    "Ablate it",
-    "Compare it to RAG",  # the ² is easy to garble in an edit, don't require it literally
-)
 
 #: The three objectives, as headline verbs - each must appear so dropping an
 #: objective silently is caught.
@@ -60,32 +45,10 @@ def text(path):
 
 class CurrentScopeTests(unittest.TestCase):
 
-    def test_current_objectives_states_the_three_objectives(self):
-        body = text(SCOPE)
-        for fragment in CURRENT_OBJECTIVES:
-            self.assertIn(fragment, body,
-                          f"current_objectives.md no longer states: {fragment!r}")
-
-    def test_current_objectives_names_rag2_improvement_as_the_main_contribution(self):
-        body = text(SCOPE).lower()
-        self.assertIn("main contribution", body)
-        self.assertIn("improves rag", body)
-
-    def test_current_objectives_names_the_temporal_filter(self):
-        """"The Temporal Filter" is the one consistent name for the
-        proposed method - dropping it silently back to "recency-aware
-        admission" or similar is exactly the terminology drift the
-        2026-09-20 cleanup was asked to fix."""
-        body = text(SCOPE)
-        self.assertIn("Temporal Filter", body)
-        self.assertNotIn("recency", body.lower())
-
-    def test_current_objectives_does_not_assume_the_answer(self):
-        """The main contribution is to determine improvement experimentally,
-        not to assert it - dropping this framing would silently turn a
-        research question into a foregone conclusion."""
-        body = text(SCOPE).lower()
-        self.assertIn("do not assume the answer", body)
+    def test_readme_states_the_research_objectives(self):
+        body = text(README).lower()
+        self.assertIn("implement and validate the proposed rag system", body)
+        self.assertIn("compared with the baseline model", body)
 
     def test_readme_states_the_three_objectives(self):
         body = text(README)
@@ -93,9 +56,26 @@ class CurrentScopeTests(unittest.TestCase):
             self.assertIn(verb, body.lower(),
                           f"README.md is missing an objective: {verb!r}")
 
-    def test_readme_points_to_current_objectives_as_canonical(self):
+    def test_readme_names_the_temporal_filter(self):
+        """"The Temporal Filter" is the one consistent name for the
+        proposed method - dropping it silently back to "recency-aware
+        admission" or similar is exactly the terminology drift a 2026-09-20
+        cleanup fixed once already."""
         body = text(README)
-        self.assertIn("current_objectives.md", body)
+        self.assertIn("Temporal Filter", body)
+        self.assertNotIn("recency", body.lower())
+
+    def test_readme_does_not_assume_the_answer(self):
+        """The point of the comparison is to determine improvement
+        experimentally, not to assert it - dropping this framing would
+        silently turn a research question into a foregone conclusion."""
+        body = text(README).lower()
+        self.assertIn("does not commit in advance to which one it will report", body)
+
+    def test_methodology_states_what_is_held_constant(self):
+        body = text(METHODOLOGY)
+        self.assertIn("held constant", body.lower())
+        self.assertIn("Temporal Filter", body)
 
 
 class SupersededScopeTests(unittest.TestCase):
@@ -105,8 +85,7 @@ class SupersededScopeTests(unittest.TestCase):
     def test_archive_readme_records_why_the_earlier_work_is_not_current(self):
         """Both earlier research questions must stay *recorded somewhere* -
         deleting the explanation would make _archive/test_pairs/
-        inexplicable. That explanation used to live inside
-        current_objectives.md; it now lives with the code it explains."""
+        inexplicable."""
         archive_readme = ROOT / "_archive" / "README.md"
         self.assertTrue(archive_readme.exists())
         body = text(archive_readme)
@@ -135,18 +114,32 @@ class SupersededScopeTests(unittest.TestCase):
                             hits.append(str(path))
         self.assertEqual(hits, [])
 
-    def test_the_four_authoritative_docs_all_exist(self):
-        """The 2026-09-19 consolidation reduced docs/ to four files and
-        pointed code, tests and README at them. A missing one means a
+    def test_the_five_current_docs_all_exist(self):
+        """The 2026-09-24 reorganization reduced docs/ to five topic files
+        and pointed code, tests and README at them. A missing one means a
         reference in this repository now dangles."""
         docs = ROOT / "docs"
+        expected = {
+            "methodology.md",
+            "data.md",
+            "research-glossary.md",
+            "evaluation.md",
+            "reproducibility.md",
+        }
+        self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
+
+    def test_legacy_docs_are_archived_not_deleted(self):
+        """The four previous docs were replaced, not discarded - they must
+        still be readable for anyone who wants the fuller historical
+        record."""
+        legacy = ROOT / "_archive" / "docs_legacy"
         expected = {
             "current_objectives.md",
             "research_experimental_specification.md",
             "status_and_decisions.md",
             "question_review.md",
         }
-        self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
+        self.assertEqual({p.name for p in legacy.glob("*.md")}, expected)
 
     def test_readme_does_not_state_the_old_question_as_current(self):
         """The old primary/secondary framing (hallucination rate primary,
@@ -165,7 +158,7 @@ class AblationMetricsTests(unittest.TestCase):
     the old one, so it gets its own explicit guard."""
 
     def test_rag_metrics_module_exists_and_implements_standard_metrics(self):
-        from experiments.evaluation import rag_metrics as rm
+        from src.evaluation import rag_metrics as rm
         for name in ("exact_match", "token_f1", "rouge_l_f1", "context_scores",
                     "groundedness"):
             self.assertTrue(hasattr(rm, name), f"rag_metrics.py is missing {name}")
@@ -176,7 +169,7 @@ class AblationMetricsTests(unittest.TestCase):
         docstring) - this just confirms accuracy.py wasn't quietly given an
         automatic scorer of its own, which would duplicate rag_metrics.py
         under a different name."""
-        from experiments.evaluation import accuracy
+        from src.evaluation import accuracy
         source = Path(accuracy.__file__).read_text(encoding="utf-8")
         self.assertNotIn("def rouge", source.lower())
         self.assertNotIn("def bleu", source.lower())

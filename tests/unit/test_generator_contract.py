@@ -1,5 +1,5 @@
 """The generator execution contract
-(docs/research_experimental_specification.md §9).
+(_archive/docs_legacy/research_experimental_specification.md §9).
 
 No model is loaded here and none should ever be: these tests lock the
 reproducibility guarantees around generation, which are configuration
@@ -12,7 +12,7 @@ settings the run did not use.
 
 import unittest
 
-from systems.interfaces.hf_generator import (
+from src.common.hf_generator import (
     FALLBACK_GENERATOR_ID,
     RAG2_GENERATOR_ID,
     GenerationConfig,
@@ -111,9 +111,9 @@ class GeneratorConstructionTests(unittest.TestCase):
 
     def test_one_instance_is_what_both_arms_share(self):
         """Parity is object identity, so the arms must take the same object."""
-        from experiments.evaluation.runner import assert_generator_parity
-        from systems.baseline.admission import MockRAG2Filter
-        from systems.baseline.rag2 import RAG2Config, RAG2System
+        from src.evaluation.runner import assert_generator_parity
+        from src.baseline.admission import MockRAG2Filter
+        from src.baseline.rag2 import RAG2Config, RAG2System
 
         generator = HuggingFaceGenerator(
             ModelSpec(model_id=RAG2_GENERATOR_ID, revision=SHA))

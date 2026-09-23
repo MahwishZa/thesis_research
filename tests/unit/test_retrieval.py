@@ -18,15 +18,15 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 
-from experiments.retrieval.corpus import (
+from experiments.shared.retrieval.corpus import (
     CorpusError, CorpusPassage, dated_only, parse_publication_date,
     read_passages, read_passages_with_snapshot, snapshot_id,
 )
-from experiments.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
-from experiments.retrieval.index import (
+from experiments.shared.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
+from experiments.shared.retrieval.index import (
     DenseIndex, IndexError_, build_index, l2_normalize,
 )
-from experiments.retrieval.pipeline import (
+from experiments.shared.retrieval.pipeline import (
     RetrievalConfig, RetrievalError, RetrievalPipeline,
 )
 

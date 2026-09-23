@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.evaluation import accuracy as acc
+from src.evaluation import accuracy as acc
 
 
 def judgment(**kw):

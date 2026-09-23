@@ -12,12 +12,12 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.evaluation.questions import (
+from src.evaluation.questions import (
     REVIEW_COLUMNS, WITHHELD_FROM_REVIEW, REVIEW_DECISIONS,
 )
-from experiments.questions import export_review as ex
+from experiments.shared.questions import export_review as ex
 
-POOL = Path("experiments/questions")
+POOL = Path("experiments/shared/questions")
 
 
 def record(**kw):
@@ -220,7 +220,7 @@ class CommittedPoolTests(unittest.TestCase):
 
     def test_decision_columns_are_now_fully_recorded(self):
         """review.csv started empty; human review of all 123 is now complete
-        (see docs/status_and_decisions.md). Every row must carry a valid
+        (see _archive/docs_legacy/status_and_decisions.md). Every row must carry a valid
         decision and reviewer/date provenance for it."""
         for row in self.rows:
             self.assertIn(row["review_decision"], REVIEW_DECISIONS)

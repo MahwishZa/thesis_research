@@ -14,21 +14,24 @@ description = "Baseline system and the proposed solution/system for the MS thesi
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6.0"]
 
-# Model backends are optional: the systems package runs, and is testable,
+# Model backends are optional: src/ runs, and is testable,
 # without them. Install when a real checkpoint is available.
 [project.optional-dependencies]
 models = ["torch>=2.0", "transformers>=4.40"]
 
 [tool.setuptools]
 packages = [
-    "systems",
-    "systems.interfaces",
-    "systems.baseline",
-    "systems.proposed",
+    "src",
+    "src.common",
+    "src.baseline",
+    "src.proposed",
+    "src.evaluation",
     "experiments",
-    "experiments.evaluation",
-    "experiments.filter_training",
-    "experiments.questions",
-    "experiments.questions.sources",
-    "experiments.retrieval",
+    "experiments.shared",
+    "experiments.shared.questions",
+    "experiments.shared.questions.sources",
+    "experiments.shared.retrieval",
+    "experiments.shared.runners",
+    "experiments.baseline",
+    "experiments.baseline.filter_training",
 ]

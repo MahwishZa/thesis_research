@@ -22,8 +22,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "alzheimer_corpus" / "scripts" / "07_claim_classification.py"
-REAL_TAXONOMY = ROOT / "alzheimer_corpus" / "config" / "claim_taxonomy.yaml"
+SCRIPT = ROOT / "corpus" / "scripts" / "07_claim_classification.py"
+REAL_TAXONOMY = ROOT / "corpus" / "config" / "claim_taxonomy.yaml"
 
 
 def load_module():
@@ -211,7 +211,7 @@ class RealTaxonomyIntegrationTests(unittest.TestCase):
             self.skipTest("real taxonomy config not present")
         self.m = load_module()
         import sys
-        sys.path.insert(0, str(ROOT / "alzheimer_corpus" / "scripts"))
+        sys.path.insert(0, str(ROOT / "corpus" / "scripts"))
         from _common import load_config
         self.cfg = load_config(str(REAL_TAXONOMY))
 
@@ -343,8 +343,8 @@ class StreamingRewriteTests(unittest.TestCase):
         import sys as _sys
 
         with TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "alzheimer_corpus"
-            shutil.copytree(ROOT / "alzheimer_corpus", copy,
+            copy = Path(tmp) / "corpus"
+            shutil.copytree(ROOT / "corpus", copy,
                             ignore=shutil.ignore_patterns("__pycache__"))
 
             chunks = [
