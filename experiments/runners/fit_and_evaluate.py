@@ -60,6 +60,7 @@ from typing import Any, Optional
 
 from experiments.evaluation import freezing as fz
 from experiments.evaluation import rag_metrics as rm
+from experiments.evaluation.stats import binomial_two_sided_p
 from experiments.evaluation.runner import (
     RunConfig, _parse_date, assert_budget_parity, assert_generator_parity,
     assert_prompt_parity, run_experiment, to_candidates,
@@ -94,12 +95,14 @@ HALF_LIFE_GRID_DAYS = [30.0, 90.0, 180.0, 365.0, 730.0, 1825.0]
 #: fitting the ablation, not the thing being ablated against.
 LAMBDA_GRID = [0.25, 0.5, 0.75, 1.0]
 
-#: A currency delta is only reported as a real improvement/harm if it is
-#: at least this fraction of the baseline's own currency score. Without
-#: this, a delta of 1e-5 against a baseline of 1.7e-3 (0.85% relative -
-#: real value observed on the pilot corpus) prints as "IMPROVES" purely
-#: because Python's `>` sees a positive float, which is not a defensible
-#: claim for a supervisor meeting. 0.05 = 5% relative change required.
+#: SECONDARY diagnostic only - reported alongside the result (as
+#: currency_delta_relative_to_baseline) but no longer what decides the
+#: verdict. It was the sole basis for the verdict in an earlier version of
+#: this module; replaced because a magnitude threshold cannot distinguish
+#: a small, consistent per-question effect from a couple of outliers
+#: dragging the mean, which a paired sign test (see paired_sign_test /
+#: significance_verdict) can. Kept as a human-readable "how big" figure
+#: next to the statistically-grounded "is it real" verdict.
 MATERIAL_RELATIVE_CHANGE = 0.05
 
 #: A config is only eligible to win the fit if it admits, on average, at
@@ -483,23 +486,54 @@ def main(argv=None) -> int:
         half_life_days=fit["fitted_half_life_days"], undated_score=0.0,
     )
 
-    def mean_currency_for(system_label: str) -> float:
-        scores = []
+    def per_item_currency_for(system_label: str) -> dict[str, float]:
+        """question_id -> currency score, for every temporal_candidate test
+        question this system answered. Kept per-item (not just the mean) so
+        a paired significance test can be run - an aggregate delta alone
+        cannot distinguish a small, consistent effect from a couple of
+        outlier questions dragging the average."""
+        scores: dict[str, float] = {}
         for record in records:
             if record["system"] != system_label or record["status"] != "ok":
                 continue
             if record["question_id"] not in test_temporal_ids:
                 continue
             item = items_by_id[record["question_id"]]
-            scores.append(_mean_currency(
+            scores[record["question_id"]] = _mean_currency(
                 record["admitted_evidence_ids"], item, temporal_obj,
                 item.question, question_date,
-            ))
-        return sum(scores) / len(scores) if scores else 0.0
+            )
+        return scores
 
+    per_item_currency = {name: per_item_currency_for(name) for name in by_system}
     currency_by_system = {
-        name: mean_currency_for(name) for name in by_system
+        name: (sum(scores.values()) / len(scores) if scores else 0.0)
+        for name, scores in per_item_currency.items()
     }
+
+    def paired_sign_test(a: str, b: str) -> dict[str, Any]:
+        """Sign test on per-question currency: for each temporal_candidate
+        test question both systems answered, does a score higher, lower, or
+        the same as b? Answers the actual question a bare aggregate delta
+        cannot: whether the direction is consistent across questions, or
+        driven by a handful of outliers - see this function's caller for
+        why the aggregate alone was not enough."""
+        shared = sorted(set(per_item_currency[a]) & set(per_item_currency[b]))
+        wins = losses = ties = 0
+        for qid in shared:
+            diff = per_item_currency[a][qid] - per_item_currency[b][qid]
+            if diff > 0:
+                wins += 1
+            elif diff < 0:
+                losses += 1
+            else:
+                ties += 1
+        decided = wins + losses
+        p_value = binomial_two_sided_p(wins, decided) if decided > 0 else 1.0
+        return {
+            "n_questions": len(shared), "wins": wins, "losses": losses,
+            "ties": ties, "p_value": round(p_value, 6),
+        }
 
     def delta(a: str, b: str) -> float:
         return by_system[a]["token_f1"] - by_system[b]["token_f1"]
@@ -507,26 +541,34 @@ def main(argv=None) -> int:
     def currency_delta(a: str, b: str) -> float:
         return currency_by_system[a] - currency_by_system[b]
 
-    def currency_verdict(delta_value: float, reference: float, improve_word: str,
-                         hurt_word: str, tie_word: str) -> str:
-        """A delta only counts as real if it is at least
-        MATERIAL_RELATIVE_CHANGE of the reference score's own magnitude -
-        a bare `> 0`/`< 0` check treats floating-point noise (observed:
-        1.4e-05 against a 1.7e-03 baseline, a 0.85% relative change) as a
-        real effect, which is not a defensible claim."""
-        if reference <= 0:
-            return tie_word if delta_value == 0 else (improve_word if delta_value > 0 else hurt_word)
-        relative = delta_value / reference
-        if abs(relative) < MATERIAL_RELATIVE_CHANGE:
-            return tie_word
-        return improve_word if relative > 0 else hurt_word
+    #: A sign-test p-value at or below this is treated as a statistically
+    #: distinguishable-from-chance direction. Standard 0.05 - not tuned
+    #: after seeing the result.
+    SIGNIFICANCE_ALPHA = 0.05
 
-    # PRIMARY verdict: mean currency of admitted evidence on the
-    # temporal_candidate subgroup of the held-out test split - the direct
-    # measure of what the proposed mechanism is supposed to change.
-    # token_f1 is kept as a secondary/diagnostic field, not the verdict:
-    # see this module's docstring for why it is insensitive to currency.
+    def significance_verdict(sign_test: dict[str, Any], improve_word: str,
+                             hurt_word: str, tie_word: str) -> str:
+        """PRIMARY basis for the verdict: a paired sign test on per-question
+        currency (see paired_sign_test), not a bare aggregate-magnitude
+        threshold. An aggregate delta - even a "large" one - cannot by
+        itself distinguish a real, consistent per-question effect from one
+        or two outlier questions dragging the mean; the sign test can,
+        because it looks at every question's direction independently."""
+        if sign_test["p_value"] > SIGNIFICANCE_ALPHA:
+            return f"{tie_word} (sign test p={sign_test['p_value']:.4f}, not significant at α={SIGNIFICANCE_ALPHA})"
+        direction = improve_word if sign_test["wins"] > sign_test["losses"] else hurt_word
+        return f"{direction} (sign test p={sign_test['p_value']:.4f}, {sign_test['wins']}W/{sign_test['losses']}L/{sign_test['ties']}T)"
+
+    # PRIMARY verdict: a paired sign test on per-question currency (mean
+    # T(s) of admitted evidence) across the temporal_candidate subgroup of
+    # the held-out test split - the direct measure of what the proposed
+    # mechanism is supposed to change, and the only one of this report's
+    # metrics that can say whether an aggregate difference is a real,
+    # consistent per-question effect or a couple of outliers. token_f1 is
+    # kept as a secondary/diagnostic field, not the verdict: see this
+    # module's docstring for why it is insensitive to currency at all.
     main_currency_delta = currency_delta(proposed_label, "baseline")
+    main_sign_test = paired_sign_test(proposed_label, "baseline")
     main_evaluation = {
         "baseline": "baseline", "baseline_filter": rag2_filter_label,
         "proposed": proposed_label,
@@ -538,10 +580,10 @@ def main(argv=None) -> int:
             main_currency_delta / currency_by_system["baseline"]
             if currency_by_system["baseline"] > 0 else None
         ),
-        "verdict": currency_verdict(
-            main_currency_delta, currency_by_system["baseline"],
-            "IMPROVES currency", "DOES NOT IMPROVE currency (worse)",
-            f"NO MEANINGFUL DIFFERENCE (<{MATERIAL_RELATIVE_CHANGE:.0%} relative change)",
+        "paired_sign_test": main_sign_test,
+        "verdict": significance_verdict(
+            main_sign_test, "IMPROVES currency", "DOES NOT IMPROVE currency (worse)",
+            "NO SIGNIFICANT DIFFERENCE",
         ),
         "secondary_token_f1": {
             "baseline": by_system["baseline"]["token_f1"],
@@ -550,13 +592,14 @@ def main(argv=None) -> int:
         },
     }
     ablation_currency_delta = currency_delta(proposed_label, ablated_label)
+    ablation_sign_test = paired_sign_test(proposed_label, ablated_label)
     ablation_study = {
         "full_proposed": proposed_label, "ablated_proposed": ablated_label,
         "currency_delta": ablation_currency_delta,
-        "verdict": currency_verdict(
-            ablation_currency_delta, currency_by_system[ablated_label],
-            "COMPONENT HELPS currency", "COMPONENT HURTS currency",
-            f"COMPONENT HAS NO MEANINGFUL EFFECT (<{MATERIAL_RELATIVE_CHANGE:.0%} relative change)",
+        "paired_sign_test": ablation_sign_test,
+        "verdict": significance_verdict(
+            ablation_sign_test, "COMPONENT HELPS currency", "COMPONENT HURTS currency",
+            "COMPONENT HAS NO SIGNIFICANT EFFECT",
         ),
         "secondary_token_f1_delta": delta(proposed_label, ablated_label),
     }
@@ -585,6 +628,7 @@ def main(argv=None) -> int:
         "run_summary": summary,
         "metrics_by_system": by_system,
         "currency_by_system": currency_by_system,
+        "per_item_currency": per_item_currency,
         "admitted_recency_by_system": recency,
         "temporal_subgroup": temporal_subgroup_breakdown(rows, temporal_flags(test_items)),
         "main_evaluation": main_evaluation,
@@ -606,13 +650,19 @@ def main(argv=None) -> int:
           f"lambda={fit['fitted_lambda']}")
     print(f"Reported on held-out test (n={len(test_items)}, "
           f"{main_evaluation['n_temporal_candidate_test_questions']} temporal_candidate):")
+    rel = main_evaluation["currency_delta_relative_to_baseline"]
     print(f"  Main evaluation (currency): baseline="
-          f"{main_evaluation['baseline_mean_currency']:.3f} vs proposed="
-          f"{main_evaluation['proposed_mean_currency']:.3f} "
-          f"(delta {main_evaluation['currency_delta']:+.3f}) -> "
-          f"{main_evaluation['verdict']}")
-    print(f"  Ablation (currency): delta {ablation_study['currency_delta']:+.3f} -> "
-          f"{ablation_study['verdict']}")
+          f"{main_evaluation['baseline_mean_currency']:.6e} vs proposed="
+          f"{main_evaluation['proposed_mean_currency']:.6e} "
+          f"(delta {main_evaluation['currency_delta']:+.6e}"
+          f"{f', {rel:+.2%} relative' if rel is not None else ''})")
+    print(f"    sign test ({main_sign_test['n_questions']} paired questions): "
+          f"{main_sign_test['wins']} proposed-wins / {main_sign_test['losses']} "
+          f"baseline-wins / {main_sign_test['ties']} ties, p={main_sign_test['p_value']:.4f}")
+    print(f"    -> {main_evaluation['verdict']}")
+    print(f"  Ablation (currency): sign test {ablation_sign_test['wins']}W/"
+          f"{ablation_sign_test['losses']}L/{ablation_sign_test['ties']}T, "
+          f"p={ablation_sign_test['p_value']:.4f} -> {ablation_study['verdict']}")
     print(f"  [secondary] token_f1 delta vs baseline: "
           f"{main_evaluation['secondary_token_f1']['delta']:+.3f}")
     print(f"\nFull report: {report_path}")
