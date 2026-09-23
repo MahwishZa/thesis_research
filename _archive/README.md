@@ -13,11 +13,14 @@ disease question answering.**
 | `contested.py` | Detects when two passages disagree ("contested evidence"). |
 | `verifier.py` | Post-hoc checking of claims in a generated answer. |
 | `stage2_pilot.yaml`, `stage2_pilot_outputs/` | Config and output from a pilot run of the `test_pairs/` machinery. Already marked "not research data" before the move — a 10-document fixture run, not a result. |
+| `question_pool_audit/` | A 2026-09-21 investigation into the 123-question pool's quality (duplication, unusable answers) that produced an alternative, smaller 82-question pool. **Investigated, not adopted**: the validation/test split actually used for every reported result (`experiments/questions/splits.json`) was built from the original 123-question pool, not this one. Kept for provenance — it documents a real quality check that was done, and its full reasoning is in its own `audit_report.md`. |
+| `superseded_outputs/real_evaluation_pilot/` | A 2026-09-22 real-data run (`run_real_evaluation.py`) that used **unfit placeholder** `theta`/`half_life` (not fitted on a validation split) as a deadline-driven stopgap. Superseded the next day by the properly validation-fitted, held-out-test result in `experiments/outputs/fit_and_evaluate/` (see `docs/status_and_decisions.md` §1.2). Kept for the methodological record — it is part of what showed the fitting step was necessary — not as a citable result. |
 
-All of it is real, working, tested code. None of it is broken. It was moved
-because it answers a different, harder research question than the one this
-thesis now asks, and keeping it in the active folders made the project
-confusing to read.
+All of it is real, working, tested code and real output. None of it is
+broken. It was moved because it answers a different question than the one
+this thesis now asks, or because it was methodologically superseded by later,
+more rigorous work — not because it was wrong — and keeping it in the active
+folders made the project confusing to read.
 
 ## Rules for this folder
 

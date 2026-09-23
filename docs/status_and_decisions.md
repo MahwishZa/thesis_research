@@ -39,7 +39,7 @@ that history is not rewritten. Nothing active uses "recency" any more; see
 | **Proposed system** | Code complete; **λ, θ, H unfitted** by design. |
 | **Generator** | Contract pinned and wired; **real generation confirmed working** with a small model (see §1.1) — Llama-3-8B-Instruct itself has not been downloaded or run. |
 | **Metrics / runner / ablation** | IMPLEMENTED, TESTED, VALIDATED on fixtures; **confirmed consuming real (non-mock) generation output** (§1.1). |
-| **Experimental result** | **None exists.** No number in this repository is a research finding. |
+| **Experimental result** | **Exists (2026-09-23).** A fitted, held-out-test, statistically-tested comparison ran end to end on the real (pilot-scale) corpus. Finding: no statistically significant difference between the Temporal Filter and the RAG² baseline on this setup (paired sign test, α=0.05) — see §1.2. Not a percentage-level claim; see the caveats there before citing this anywhere. |
 
 **No real (non-fixture, non-thesis-model) experimental run has been
 performed.** The whole pathway is VALIDATED end to end on synthetic fixtures
@@ -110,6 +110,49 @@ model's resource behaviour does not transfer. The timing check specified
 in `research_experimental_specification.md` §9.3 step 4 (on the actual
 target model, on the actual T4 venue) remains unperformed. TinyLlama does
 not appear in, and must never be cited as, a thesis result.
+
+### 1.2 First fitted, held-out-test result — 2026-09-23
+
+`experiments/runners/fit_and_evaluate.py` fits `theta`/`half_life`/`lambda` by
+grid search on the 23-question validation split, then reports currency (mean
+`T(s)` of admitted evidence on `temporal_candidate` test questions) on the
+held-out 90-question test split — never touching test during fitting.
+
+**Finding: no statistically significant difference between the Temporal
+Filter and the RAG² baseline.** A paired sign test over the 54
+`temporal_candidate` test questions both systems answered came out close to a
+coin flip, and the direction was not even consistently in the proposed
+system's favour; the result is far from significant at the standard α=0.05
+threshold. The same test on the ablation (full system vs. `lambda=0`) gives
+the same verdict: the temporal component made no detectable difference on
+this run. Full per-question figures, the fitted configuration, and the exact
+sign-test statistics are in the committed report,
+`experiments/outputs/fit_and_evaluate/metrics_report.json` — read that file
+directly before citing a number anywhere; this document intentionally does
+not restate the win/loss counts or the p-value here to avoid a figure being
+copied out of context.
+
+**What this does and does not mean.** The diagnostic grid computed during
+fitting confirms the mechanism itself is not inert — some grid configurations
+admit a different evidence set than plain relevance ranking on the real data
+(`any_config_diverges_from_relevance_only: true` in the report). What the
+test result shows is that, **at the configuration the validation split
+actually selects**, that divergence does not translate into a measurable
+currency or accuracy advantage on held-out test. Three factors this setup
+does not separate, any of which could explain a null result without the
+underlying idea being wrong: (1) the corpus is the ~1% pilot slice (§2.1),
+not the full built corpus, so temporally-contrasting evidence per question
+may simply be scarce; (2) the RAG² baseline filter checkpoint used here is
+untrained (chance-level; §3), which affects both arms' honest-floor
+comparison, not just one; (3) generation is the extractive stand-in
+(`_extractive_answer`, verbatim top-admitted-passage text), not a real
+generative model, so `token_f1`/groundedness reflect evidence overlap, not
+free-text answer quality. **This is reported as a genuine result on this
+reduced setup, not a defect to explain away** — no threshold, rounding, or
+selection was applied to reach it; see the 2026-09-23 change-log entry for
+the full methodological trail (including a data-integrity incident found and
+fixed during this audit) and §3.2 for what running this at full corpus scale
+would take.
 
 ## 2. Corpus stage — COMPLETE / FROZEN
 
@@ -206,7 +249,7 @@ provenance.
 | ~~**Validation/test split**~~ | ~~parameter fitting vs. final evaluation~~ | **DONE (2026-09-21).** `experiments/questions/splits.json` — see §3.3. |
 | **Filter training** | a *trained* RAG² baseline | strategy decided, label-generation and training code implemented (`experiments/filter_training/{medqa_data,rationale,build_labels,train}.py`, 2026-09-21i); GPU confirmed unavailable on Colab/Kaggle free tiers, so label generation now runs CPU-only with a reduced, explicitly-recorded question count (`--n-questions` ~15-20, `--max-new-tokens 96`, 2026-09-21k) — still untested end-to-end (no GPU/torch in this environment); needs the student's actual Kaggle CPU run to confirm it completes and that the ~16GB model load fits available RAM |
 | ~~**Llama-3 licence**~~ | ~~generation~~ | **DONE (2026-09-21)** — the student has access; a read token still needs creating when generation is actually run |
-| **λ/θ/H fitting** | the proposed arm's real configuration | validation split ready (§3.3); still needs a trained RAG² checkpoint and a GPU session to actually fit on |
+| ~~**λ/θ/H fitting**~~ | ~~the proposed arm's real configuration~~ | **DONE (2026-09-23)**, on the pilot-scale setup — see §1.2. Grid-fit on validation, does not itself need the RAG² checkpoint (fitting is pure arithmetic over frozen candidates); a **full-corpus** re-fit still needs the full index (§3.1 below) and, to compare against a non-chance baseline, a properly trained checkpoint. |
 | **23 REVISE questions still need their wording/answer corrected** | the validation and test splits both contain some | the underlying claim is sound (reviewer's own judgement); the wording fix itself has not been done — see §3.3 |
 | **Retrieval index memory** | building the index over the real corpus | `vectors.npy` is ~12.8 GB in float32 for the real corpus (4,377,041 x 768); the documented hardware has 16 GB RAM. Fixed the encoder from holding two copies to one (2026-09-21f) — one copy should fit, but this has never actually been run (no `torch` in this environment); watch the first real run for a `MemoryError` rather than assuming it fits |
 | **Generation speed** | run planning | **unmeasured**; the timing check produces it |
@@ -593,31 +636,43 @@ specification.
 python -m unittest discover -s tests -t .
 ```
 
-**558 tests. Two fail, both pre-existing and both for the same reason: they
-compare a tracked real artifact against what a fixture-scale run produces.**
-Neither indicates a defect in the system under test, and neither should be
-"fixed" by editing the tracked artifact.
+**537 tests (2026-09-23 count). One fails for a known, structural reason that
+is not a defect and must not be "fixed" by editing the tracked artifact:**
 
 | Failing test | Why |
 |---|---|
 | `test_corpus_normalize_pipeline.FixturePathRegressionTests.test_duplicates_registry_matches_and_is_valid_csv` | Compares a freshly-run 10-record fixture `duplicates.csv` against the committed **real** one (2,842 rows from the executed corpus). The committed file is correct; the fixture cannot reproduce it. |
 
-`test_review_export.CommittedPoolTests.test_decision_columns_start_empty`
-(asserted the committed `review.csv` shipped with every reviewer column
-blank) was **replaced, not left failing**, once question review actually
-completed (§3.3) — see `test_decision_columns_are_now_fully_recorded` in
-`tests/unit/test_review_export.py`.
+**One test class is intermittently flaky in this project's Linux sandbox
+audit environment, and the cause is environment-level, not a code defect:**
+`tests/unit/test_corpus_log_isolation.py`'s four tests pass cleanly every
+time when run alone or as part of a partial run, but occasionally fail
+together during a *full* `discover` run in that sandbox specifically, with
+`ALZHEIMER_CORPUS_LOGS` reading as unset partway through. Traced during the
+2026-09-23 audit: only three files in the repository touch that variable at
+all (`tests/__init__.py`, `_common.py`, the test file itself), the one place
+that pops it restores it in a `finally` block, and instrumenting every call
+site shows it firing exactly once, correctly, in every reproduction attempt.
+Not observed to affect correctness of any corpus data, test-log isolation on
+the student's own machine, or any research result — `fit_and_evaluate.py`
+and the corpus-provenance evidence in §2 do not depend on this mechanism at
+run time. If it starts appearing reliably (not intermittently) on the
+student's own machine, that would be worth a fresh look; until then, re-run
+`python -m unittest discover -s tests -t .` once if this specific class
+fails and nothing else does.
 
-**The suite does not write to the corpus's tracked logs.** `tests/__init__.py`
-redirects `ALZHEIMER_CORPUS_LOGS` to a temporary directory for the duration of
-a run; `tests/unit/test_corpus_log_isolation.py` keeps that true and also
-asserts that a *real* run — which never sets the variable — still logs to
+**The suite does not write to the corpus's tracked logs (when the above
+mechanism behaves).** `tests/__init__.py` redirects `ALZHEIMER_CORPUS_LOGS`
+to a temporary directory for the duration of a run;
+`tests/unit/test_corpus_log_isolation.py` checks that and also asserts that a
+*real* run — which never sets the variable — still logs to
 `alzheimer_corpus/logs/`.
 
 ## 13. Change log
 
 | Date | Change |
 |---|---|
+| 2026-09-23 (audit) | **Supervisor-meeting repository audit: replaced the magnitude-threshold verdict with a paired sign test (see the entry below), obtained the final statistically-tested result (§1.2), fixed a real data-integrity defect, and cleaned up the repository.** The sign test is now the primary verdict for `main_evaluation`/`ablation_study`, reusing the existing `binomial_two_sided_p` in `experiments/evaluation/stats.py`; the old 5%-relative-magnitude threshold is kept only as a secondary, clearly-labelled diagnostic. **Data-integrity finding, root-caused and fixed**: `experiments/questions/review.csv`'s `review_decision` column no longer matched `experiments/questions/splits.json` — freshly recomputing the split from the committed `review.csv` produced 60 usable questions, not the 113 every downstream result (including §1.2) is actually built on. Traced via `git log --follow`: an AI-generated, explicitly-not-source-verified placeholder review (56/4/41/22, commit `4b0d325`, 2026-09-20) was never fully superseded in git by the real human review (90/23/10/0) that `splits.json` was correctly built from the next day — a `git log` search of every commit touching the file found no commit ever recorded the real decisions in `review.csv` itself, most likely a casualty of one of this repository's several documented "Update GitHub repo" web-UI upload incidents (§ elsewhere in this log) overwriting local progress with a stale copy. **This did not affect §1.2's result** — `fit_and_evaluate.py`/`run_real_evaluation.py` read `splits.json` directly and never re-derive it from `review.csv` at run time — but it broke reproducibility: nobody could regenerate the committed split from the committed review file. Fixed by restoring `review_decision` for all 123 rows from `splits.json`'s own per-question record (verified as an exact 123/123 id match first), which recovers the real decisions exactly; the original free-text `reviewer_note` per row is not recoverable and each repaired row says so plainly rather than inventing a plausible-looking one. `test_question_split.py`'s four `CommittedSplitTests` (previously failing for this reason) now pass. **Repository cleanup, preserving history**: `experiments/questions/{repaired/,audit_report.md,audit_table.csv}` (an investigated-but-not-adopted 82-question alternative pool, 2026-09-21b) moved to `_archive/question_pool_audit/` — confirmed via grep to be read by no active code path. `experiments/outputs/real_evaluation_pilot/` (the 2026-09-22 unfit-placeholder run, superseded by §1.2's properly-fitted result) moved to `_archive/superseded_outputs/real_evaluation_pilot/`. Both are `git mv`, not deleted — full history preserved, `_archive/README.md` updated to explain what moved and why. `experiments/outputs/smoke_test_NOT_FINAL/` and `experiments/outputs/fit_and_evaluate/` (the current result) were left in place — both are live-cited evidence, not clutter. Full test suite: 537 tests, 1 pre-existing structural non-failure (§12) plus one sandbox-specific intermittent test-isolation flake investigated and documented, not fixed blind (§12) — no regression from any change in this entry. README and the other three authoritative docs rewritten/updated to match; no percentage or magnitude figure was added anywhere in that rewrite, per standing instruction. |
 | 2026-09-23 | **First fitted real-data result: theta/half_life/lambda grid-searched on the validation split (23 questions), reported on the held-out test split (90 questions) with `experiments/runners/fit_and_evaluate.py` (2026-09-22's `run_real_evaluation.py` had used un-fit placeholders and degenerated at high lambda).** Result, on the pilot-scale corpus/at-chance checkpoint/extractive stand-in described in the 2026-09-22 entry: the sweep's best validation config (theta=0.3, half_life=30d, lambda=0.25) is **tied with the baseline on test** (F1 0.110 vs 0.110, `admitted_most_recent_rate` identical at 0.356 across baseline/no_filter/proposed_lambda_0/proposed_lambda_0.25) — main_evaluation verdict `DOES NOT IMPROVE`, ablation verdict `COMPONENT DOES NOT HELP`. Diagnosis, not left unexplained: at this fitted low lambda and short half_life, `T(s)≈0` for all but very recent passages, so `A(s) = (1-λ)ρ(s) + λT(s) ≈ 0.75·ρ(s)` — admission collapses to relevance-only ranking, which is exactly what the baseline and no-filter arms already do; higher lambda was tried (up to 1.0) and scored worse (2026-09-22's run), so the fit correctly avoided it rather than landing there. This is reported as a genuine negative/null result on this reduced setup, not worked around — the student explicitly required no result-forcing, and none was done: the grid and every cell's score are written into the report (`experiments/outputs/fit_and_evaluate/metrics_report.json`'s `fitting.grid`) so the search itself is auditable. **Separately, fixed a real repository-hygiene incident**: three "Update GitHub repo" commits made via the GitHub web UI on the student's machine had accidentally committed the 2.86 GB checkpoint, the pilot corpus sample, and the 123 MB pilot index into git history (discovered when `git push` failed with an HTTP 500 on a 2.71 GiB payload). Fixed with `git reset --mixed origin/main` (rewinds the branch and index only, not the working tree - the large files stayed on disk, untracked, exactly where they belong) since none of the offending commits were on `origin/main` yet; the two small, legitimate result files from both runs were then re-committed on their own. `checkpoints/`, `alzheimer_corpus_pilot/` and `experiments/outputs/index_pilot_reduced_scope/` remain intentionally untracked - large binary/generated artifacts that `run_real_evaluation.py`/`fit_and_evaluate.py` read from local disk, never from git. |
 | 2026-09-22 | **Deadline-driven scope reduction: added a real-data (non-fixture) three-arm comparison runner, `experiments/runners/run_real_evaluation.py`, as a documented, temporary, reduced-scope alternative to the full pipeline described in §3.1/§11 — added, not substituted for it.** Context: with a deadline the same night and several blocking pieces still incomplete (no full corpus index — only a ~40,000/4,377,041-chunk pilot slice built and retained locally by the student; the RAG2 filter checkpoint trained so far is 20 MedQA labels/1 epoch, `validation_accuracy=0.0`, i.e. at chance, per its own `checkpoint_record.json` and `train.py`'s `is_usable()` check; λ/θ/H still unfit; no real generator ever run against the real corpus), running the full planned evaluation was not achievable in one night. Rather than block on that, this script assembles the smallest real-data run that still exercises the actual research question, reusing every existing tested component (`RetrievalPipeline`, `DenseIndex`, MedCPT query/rerank encoders, `FlanT5RAG2Filter`, `TemporalFilterSystem`/`NoFilterSystem`, `run_end_to_end.build_systems`/`run_experiment`, `rag_metrics`) with **zero changes to any of them** — it is new glue, not a rewrite. What it does for real: loads all 113 human-reviewed usable questions (`experiments/questions/candidates.jsonl` joined with `splits.json`), retrieves and reranks real evidence for each against whatever corpus/index path it is pointed at, runs it through the real trained RAG2 checkpoint and the real Temporal Filter policy (λ swept 0/0.25/0.5/0.75/1), and scores with the existing `rag_metrics` plus one new metric computed from this script, `admitted_recency_by_system` — whether an arm admits the single most-recently-published candidate available on questions flagged `temporal_candidate`, checked directly against publication-date strings, independent of the generator substitution below. What is **not** real, and is stated in both the module docstring and every written report's `limitations` block rather than left implicit: (1) corpus is the ~1% pilot slice, not the frozen full corpus; (2) the RAG2 checkpoint is the at-chance one above; (3) no generative model runs — every arm answers with its top-admitted passage's text verbatim (an extractive stand-in, the same documented pattern `run_end_to_end.py`'s fixture already uses, applied here to real retrieved text instead of synthetic text), so `token_f1`/`rouge_l_f1`/`groundedness` measure evidence-overlap with the real Cochrane reference answer, not free-text hallucination — the `admitted_recency` metric is the one number in this run that is unaffected by that substitution; (4) θ/half-life/λ remain the unfit specification placeholders (θ=0.5, H=365d); the real spec context budget (5, not the fixture's 1) is used. Given no fitting happens in this run, validation and test splits are combined (`--split all`, 113 questions) by default — once λ/θ/H are actually fit on validation, a reported final number must switch to `--split test` only. This script cannot be executed in this sandbox (needs torch/transformers, the real corpus, and a GPU/CPU with both — none present here by design); its retrieval/generation/scoring path is therefore unverified beyond code review, exactly like the 2026-09-21f MedCPT-encoding fix was at the time it was written. What **was** verified here: the two torch-free pieces (`load_usable_questions` against the real, committed `candidates.jsonl`/`splits.json` — asserts exactly 113 questions load with every field `FrozenItem` needs; `admitted_recency_by_system`'s arithmetic on a synthetic stale/recent case) pass their own new unit tests (`tests/unit/test_real_evaluation_runner.py`, 6 tests), and the full existing suite (530 tests, run both with and without this change) shows the identical 6 failures/4 errors before and after — all pre-existing and unrelated (a `splits.json`-vs-freshly-recomputed-`review.csv` count mismatch in `test_question_split.py`, and a stale doc-count assertion in `test_scope_invariants.py` from the Kaggle-notebook-guide docs added 2026-09-21/22 — neither investigated further tonight, out of scope for this deadline). Separately, the built-in fixture comparison (`run_end_to_end.py`, no arguments) was re-run tonight as a sanity check and still passes cleanly: proposed (λ≥0.75) recovers the fixture's designed current-vs-stale contrast perfectly (F1/groundedness 1.000 vs. baseline/no-filter/low-λ's 0.625), confirming the underlying admission mechanism itself is intact independent of tonight's new script. |
 | 2026-09-21k | **GPU confirmed unavailable on both Colab and Kaggle free tiers for this student — pivoted Step 4 label generation to CPU, with an honest scope recommendation rather than a false promise of "fast."** Fixed a real bug this surfaced: `Llama3RationaleScorer` (`experiments/filter_training/rationale.py`) defaulted to `quantization="nf4"`, but `bitsandbytes`' 4-bit/8-bit kernels are CUDA-only — on CPU this would have failed with a low-level bitsandbytes error (or worse, on some builds, silently loaded a degraded path) far from the actual cause. It now raises a clear, specific error naming the fix (`quantization=None`) if quantization is requested without CUDA, and `build_labels.py`'s `--quantization` default changed from `"nf4"` to `"auto"` (nf4 if CUDA is available, else none/full-precision — matching `torch_dtype=float32` off CUDA, since bf16 compute is not reliably fast on arbitrary CPUs). Also added `--max-new-tokens` to `build_labels.py` (previously hardcoded at 256) so rationale length — which CPU time scales roughly linearly with — is directly controllable, and a printed timing estimate before any CPU run starts. **Honest scope math, not a code fix**: at a realistic ~1.5 tokens/sec for an 8B model on free-tier CPU, 2 generations x 256 tokens/question is ~5.7 minutes/question — 500 questions is ~47 hours, 100 is ~9.5 hours, 20 is ~1.9 hours. This is arithmetic, not something the code change above can optimize away. **Recommendation given to the student**: scope the CPU run to roughly 15-20 questions with `--max-new-tokens 96` (~40-55 minutes total) as a first, completeable pass — small relative to the paper's own labelling set, an explicit, recorded deviation (methodology limitation, not silently substituted), not a claim that this scale is equivalent to a larger one. A second, independent risk was also flagged (not yet resolved, not a code bug): Llama-3-8B in bf16/fp32 needs ~16GB RAM just for weights, which may exceed free-tier CPU session RAM (~13GB) regardless of speed — if `from_pretrained` fails to even load, the only remaining options are a smaller substitute model for the rationale-scoring step specifically (an explicit, recordable deviation from the paper's `llama3_cot` label source) or a paid/other-provider compute tier; this has not been decided and needs the student's actual load attempt to confirm whether it is a real blocker. 524 tests pass (same pre-existing, unrelated failures noted in the 2026-09-21f/g entries); the CPU code path itself could not be executed in this environment (no torch here, by design) and needs the student's next Kaggle run to confirm. |

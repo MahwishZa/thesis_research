@@ -97,22 +97,34 @@ moved out of the active folders. It still works and is not deleted — see
   They are not meant to agree; they measure different things.
 - **Git:** everything happens on `main`. No feature branches, no PRs.
 
-## What is blocking a real (non-fixture) run
+## Current status (2026-09-23)
 
-See `docs/status_and_decisions.md` §3.1 for full detail. In short:
+A first real, fitted, held-out-test result exists — see
+`docs/status_and_decisions.md` §1.2. Objectives 1–3 have each been exercised
+end to end on real (pilot-scale) data: the Temporal Filter runs, has been
+ablated, and has been compared to the RAG² baseline under a validation-fitted
+configuration, with a paired significance test rather than a bare number
+deciding the verdict. **The result on this setup is a null finding: no
+statistically significant difference from the baseline.** That is a reportable
+finding, not a blocked experiment — see §1.2 for the honest reading of it,
+including what this reduced setup cannot yet rule out.
 
-- **No trained RAG² filter checkpoint yet.** Until one is trained, RAG² runs
-  with an all-HELPFUL stand-in, and the report says so
-  (`baseline_is_trained_rag2`).
-- **`lambda`, `theta`, the half-life are unfit.** They must be chosen on a
-  validation split before a real run. `--proposed-lambda 1.0` is a
-  placeholder.
-- **No approved question set yet.** The 123-question pool is still under
-  human review (`docs/question_review.md`).
-- **No real generator run yet** in this environment — a smaller model has
-  confirmed the pipeline works; Llama-3-8B-Instruct itself has not run here.
+## What would change the setup from "pilot-scale" to "full"
+
+See `docs/status_and_decisions.md` §3.1/§3.2 for full detail. In short, the
+result above was obtained with:
+
+- **A ~1% pilot slice of the corpus**, not the full built index — the
+  biggest open question for whether the null result is about the mechanism
+  or about corpus scale.
+- **An untrained (chance-level) RAG² filter checkpoint** — the baseline
+  comparison's honest floor is affected on both arms, not just one; a
+  properly trained checkpoint is still worth obtaining.
+- **An extractive stand-in generator**, not a real generative model —
+  `token_f1`/groundedness reflect evidence overlap, not free-text answer
+  quality.
 - **PMC licensing gate is not enforced** (`docs/status_and_decisions.md`
   §2.1) — affects redistribution of the corpus text, not research use.
 
-None of this blocks running, checking, or ablating the system against the
-built-in fixture. It blocks treating fixture numbers as a real result.
+None of this invalidates the result obtained; it scopes what it can and
+cannot be read as evidence for.
