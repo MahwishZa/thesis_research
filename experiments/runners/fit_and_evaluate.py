@@ -51,7 +51,7 @@ from typing import Any, Optional
 from experiments.evaluation import freezing as fz
 from experiments.evaluation import rag_metrics as rm
 from experiments.evaluation.runner import (
-    RunConfig, assert_budget_parity, assert_generator_parity,
+    RunConfig, _parse_date, assert_budget_parity, assert_generator_parity,
     assert_prompt_parity, run_experiment, to_candidates,
 )
 from experiments.runners.run_end_to_end import CONTEXT_PROMPT, build_systems
@@ -61,7 +61,9 @@ from experiments.runners.run_real_evaluation import (
     _extractive_answer, load_usable_questions, temporal_flags,
     temporal_subgroup_breakdown, gold_evidence_ids, score_run,
 )
+from systems.interfaces.evidence import Evidence
 from systems.interfaces.generator import CallableGenerator
+from systems.proposed.temporal import TemporalPolicy
 
 #: Kept deliberately small: TemporalFilterPolicy is pure arithmetic (no
 #: model calls), so a much larger grid would still be fast, but a small,
@@ -140,6 +142,42 @@ def _relevance_only_top_budget(item, budget: int) -> set[str]:
     return {c.evidence_id for c in ranked[:budget]}
 
 
+def _mean_currency(
+    evidence_ids, item, temporal: TemporalPolicy, question: str, question_date: date,
+) -> float:
+    """Mean T(s) - the same currency score TemporalFilterPolicy admits
+    on - over one item's admitted evidence. 0.0 for an empty admitted set
+    (nothing was admitted, so there is no currency to report - not the
+    same as "maximally current," which would reward admitting nothing).
+
+    THIS is the metric the research question is actually about: RAG2
+    scores relevance/confidence, the proposed mechanism's whole claim is
+    that it admits more CURRENT evidence. token_f1 (rag_metrics.py) scores
+    textual overlap with a fixed reference sentence, which has no
+    necessary relationship to currency - a correct, current passage can
+    use entirely different wording than an older Cochrane conclusion. This
+    function measures the thing the mechanism is designed to change,
+    directly, independent of the extractive stand-in generator's wording.
+    """
+    if not evidence_ids:
+        return 0.0
+    by_id = {c.evidence_id: c for c in item.candidates}
+    scores = []
+    for eid in evidence_ids:
+        cand = by_id.get(eid)
+        if cand is None:
+            continue
+        evidence = Evidence(
+            evidence_id=cand.evidence_id, text=cand.text,
+            source_tier=str(cand.source_metadata.get("source_tier", "unknown")),
+            persistent_id=cand.source_metadata.get("persistent_id"),
+            publication_date=_parse_date(cand.publication_date),
+        )
+        result = temporal.score(evidence, question=question, question_date=question_date)
+        scores.append(result.score)
+    return sum(scores) / len(scores) if scores else 0.0
+
+
 def _divergence_rate(records, items_by_id: dict, system_label: str, budget: int) -> float:
     """Fraction of items where this system's admitted set differs at all
     from relevance-only top-budget. This is the direct, model-free answer
@@ -172,6 +210,8 @@ def fit_on_validation(
     """
     gold = gold_evidence_ids(val_items)
     items_by_id = {i.question_id: i for i in val_items}
+    flags = temporal_flags(val_items)
+    temporal_ids = {qid for qid, flag in flags.items() if flag}
     grid_results = []
     best = None
 
@@ -193,23 +233,63 @@ def fit_on_validation(
         label = f"proposed_lambda_{lam:g}"
         metrics = agg[label]
         divergence = _divergence_rate(records, items_by_id, label, budget)
+
+        # PRIMARY objective: mean currency gain over relevance-only
+        # admission, restricted to temporal_candidate questions (where the
+        # Cochrane conclusion is actually known to have been revised over
+        # time - the one subgroup where currency should determine
+        # correctness at all). token_f1 measures something else (textual
+        # overlap with a fixed reference) and is recorded only as a
+        # secondary diagnostic below - see this module's docstring.
+        temporal_obj = TemporalPolicy(half_life_days=half_life, undated_score=0.0)
+        gains = []
+        for record in records:
+            if record["system"] != label or record.get("status", "ok") != "ok":
+                continue
+            if record["question_id"] not in temporal_ids:
+                continue
+            item = items_by_id[record["question_id"]]
+            proposed_currency = _mean_currency(
+                record["admitted_evidence_ids"], item, temporal_obj,
+                item.question, question_date,
+            )
+            baseline_ids = _relevance_only_top_budget(item, budget)
+            baseline_currency = _mean_currency(
+                baseline_ids, item, temporal_obj, item.question, question_date,
+            )
+            gains.append(proposed_currency - baseline_currency)
+        currency_gain = sum(gains) / len(gains) if gains else 0.0
+
         grid_results.append({
             "theta": theta, "half_life_days": half_life, "lambda": lam,
+            "currency_gain_temporal_subgroup": currency_gain,
             "token_f1": metrics["token_f1"], "groundedness": metrics["groundedness"],
             "divergence_rate": divergence,
         })
-        key = (metrics["token_f1"], metrics["groundedness"])
+        # Primary: currency gain. Secondary tie-break: token_f1, so that
+        # among configs tied on currency gain (e.g. both 0.0, meaning no
+        # temporal_candidate question was affected) the one that does not
+        # also wreck textual quality is preferred.
+        key = (currency_gain, metrics["token_f1"])
         if best is None or key > best[0]:
             best = (key, theta, half_life, lam)
 
     _, theta, half_life, lam = best
     any_divergence = any(g["divergence_rate"] > 0 for g in grid_results)
     max_divergence = max((g["divergence_rate"] for g in grid_results), default=0.0)
+    best_currency_gain = max(g["currency_gain_temporal_subgroup"] for g in grid_results)
+    winning_cell = next(
+        g for g in grid_results
+        if (g["theta"], g["half_life_days"], g["lambda"]) == (theta, half_life, lam)
+    )
     return {
         "fitted_theta": theta, "fitted_half_life_days": half_life,
         "fitted_lambda": lam,
-        "fitted_validation_token_f1": best[0][0],
-        "fitted_validation_groundedness": best[0][1],
+        "fitted_validation_currency_gain": winning_cell["currency_gain_temporal_subgroup"],
+        "fitted_validation_token_f1": winning_cell["token_f1"],
+        "fitted_validation_groundedness": winning_cell["groundedness"],
+        "best_currency_gain_in_grid": best_currency_gain,
+        "n_temporal_candidate_questions_in_validation": len(temporal_ids),
         "grid": grid_results,
         "grid_size": len(grid_results),
         "any_config_diverges_from_relevance_only": any_divergence,
@@ -326,23 +406,62 @@ def main(argv=None) -> int:
     items_by_id = {i.question_id: i for i in test_items}
     recency = admitted_recency_by_system(records, items_by_id, temporal_flags(test_items))
 
+    test_flags = temporal_flags(test_items)
+    test_temporal_ids = {qid for qid, flag in test_flags.items() if flag}
+    temporal_obj = TemporalPolicy(
+        half_life_days=fit["fitted_half_life_days"], undated_score=0.0,
+    )
+
+    def mean_currency_for(system_label: str) -> float:
+        scores = []
+        for record in records:
+            if record["system"] != system_label or record["status"] != "ok":
+                continue
+            if record["question_id"] not in test_temporal_ids:
+                continue
+            item = items_by_id[record["question_id"]]
+            scores.append(_mean_currency(
+                record["admitted_evidence_ids"], item, temporal_obj,
+                item.question, question_date,
+            ))
+        return sum(scores) / len(scores) if scores else 0.0
+
+    currency_by_system = {
+        name: mean_currency_for(name) for name in by_system
+    }
+
     def delta(a: str, b: str) -> float:
         return by_system[a]["token_f1"] - by_system[b]["token_f1"]
 
+    def currency_delta(a: str, b: str) -> float:
+        return currency_by_system[a] - currency_by_system[b]
+
+    # PRIMARY verdict: mean currency of admitted evidence on the
+    # temporal_candidate subgroup of the held-out test split - the direct
+    # measure of what the proposed mechanism is supposed to change.
+    # token_f1 is kept as a secondary/diagnostic field, not the verdict:
+    # see this module's docstring for why it is insensitive to currency.
     main_evaluation = {
         "baseline": "baseline", "baseline_filter": rag2_filter_label,
         "proposed": proposed_label,
-        "baseline_token_f1": by_system["baseline"]["token_f1"],
-        "proposed_token_f1": by_system[proposed_label]["token_f1"],
-        "token_f1_delta": delta(proposed_label, "baseline"),
-        "verdict": ("IMPROVES" if delta(proposed_label, "baseline") > 0
-                    else "DOES NOT IMPROVE"),
+        "n_temporal_candidate_test_questions": len(test_temporal_ids),
+        "baseline_mean_currency": currency_by_system["baseline"],
+        "proposed_mean_currency": currency_by_system[proposed_label],
+        "currency_delta": currency_delta(proposed_label, "baseline"),
+        "verdict": ("IMPROVES currency" if currency_delta(proposed_label, "baseline") > 0
+                    else "DOES NOT IMPROVE currency"),
+        "secondary_token_f1": {
+            "baseline": by_system["baseline"]["token_f1"],
+            "proposed": by_system[proposed_label]["token_f1"],
+            "delta": delta(proposed_label, "baseline"),
+        },
     }
     ablation_study = {
         "full_proposed": proposed_label, "ablated_proposed": ablated_label,
-        "token_f1_delta": delta(proposed_label, ablated_label),
-        "verdict": ("COMPONENT HELPS" if delta(proposed_label, ablated_label) > 0
-                    else "COMPONENT DOES NOT HELP"),
+        "currency_delta": currency_delta(proposed_label, ablated_label),
+        "verdict": ("COMPONENT HELPS currency" if currency_delta(proposed_label, ablated_label) > 0
+                    else "COMPONENT DOES NOT HELP currency"),
+        "secondary_token_f1_delta": delta(proposed_label, ablated_label),
     }
 
     report = {
@@ -368,6 +487,7 @@ def main(argv=None) -> int:
         },
         "run_summary": summary,
         "metrics_by_system": by_system,
+        "currency_by_system": currency_by_system,
         "admitted_recency_by_system": recency,
         "temporal_subgroup": temporal_subgroup_breakdown(rows, temporal_flags(test_items)),
         "main_evaluation": main_evaluation,
@@ -377,21 +497,27 @@ def main(argv=None) -> int:
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
                            encoding="utf-8")
 
-    print(f"\n{'system':<24}{'n':>4}{'F1':>8}{'ROUGE-L':>9}{'ground':>9}")
+    print(f"\n{'system':<24}{'n':>4}{'currency':>10}{'F1(sec)':>9}{'ground':>9}")
     for name, metrics in sorted(by_system.items()):
-        print(f"{name:<24}{metrics['n']:>4}{metrics['token_f1']:>8.3f}"
-              f"{metrics['rouge_l_f1']:>9.3f}{metrics['groundedness']:>9.3f}")
+        print(f"{name:<24}{metrics['n']:>4}{currency_by_system[name]:>10.3f}"
+              f"{metrics['token_f1']:>9.3f}{metrics['groundedness']:>9.3f}")
+    print("  (currency = mean T(s) of admitted evidence on temporal_candidate "
+          "questions, primary metric; F1 is the secondary/diagnostic score)")
 
     print(f"\nFitted on validation (n={len(val_items)}): theta="
           f"{fit['fitted_theta']}, half_life={fit['fitted_half_life_days']:g}d, "
           f"lambda={fit['fitted_lambda']}")
-    print(f"Reported on held-out test (n={len(test_items)}):")
-    print(f"  Main evaluation: baseline F1={main_evaluation['baseline_token_f1']:.3f} "
-          f"vs proposed F1={main_evaluation['proposed_token_f1']:.3f} "
-          f"(delta {main_evaluation['token_f1_delta']:+.3f}) -> "
+    print(f"Reported on held-out test (n={len(test_items)}, "
+          f"{main_evaluation['n_temporal_candidate_test_questions']} temporal_candidate):")
+    print(f"  Main evaluation (currency): baseline="
+          f"{main_evaluation['baseline_mean_currency']:.3f} vs proposed="
+          f"{main_evaluation['proposed_mean_currency']:.3f} "
+          f"(delta {main_evaluation['currency_delta']:+.3f}) -> "
           f"{main_evaluation['verdict']}")
-    print(f"  Ablation: delta {ablation_study['token_f1_delta']:+.3f} -> "
+    print(f"  Ablation (currency): delta {ablation_study['currency_delta']:+.3f} -> "
           f"{ablation_study['verdict']}")
+    print(f"  [secondary] token_f1 delta vs baseline: "
+          f"{main_evaluation['secondary_token_f1']['delta']:+.3f}")
     print(f"\nFull report: {report_path}")
     return 0
 

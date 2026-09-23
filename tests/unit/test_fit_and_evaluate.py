@@ -7,12 +7,15 @@ fixture (a stale-vs-recent contrast with a known best answer).
 """
 
 import unittest
+from dataclasses import replace
 from datetime import date
 
-from experiments.runners.fit_and_evaluate import fit_on_validation
+from experiments.evaluation import freezing as fz
+from experiments.runners.fit_and_evaluate import _mean_currency, fit_on_validation
 from experiments.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
 from experiments.runners.run_real_evaluation import _extractive_answer
 from systems.interfaces.generator import CallableGenerator
+from systems.proposed.temporal import TemporalPolicy
 
 
 class FitOnValidationTests(unittest.TestCase):
@@ -64,6 +67,48 @@ class FitOnValidationTests(unittest.TestCase):
         far_scores = {(g["theta"], g["half_life_days"], g["lambda"]): g["token_f1"]
                       for g in far["grid"]}
         self.assertNotEqual(near_scores, far_scores)
+
+
+class MeanCurrencyTests(unittest.TestCase):
+
+    def test_recent_evidence_scores_higher_than_stale(self):
+        item = make_fixture_items(1)[0]  # candidates: one 2015-01, one 2025-11
+        stale_id, recent_id = (c.evidence_id for c in item.candidates)
+        temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.0)
+
+        stale_score = _mean_currency([stale_id], item, temporal, item.question, QUESTION_DATE)
+        recent_score = _mean_currency([recent_id], item, temporal, item.question, QUESTION_DATE)
+
+        self.assertGreater(recent_score, stale_score)
+
+    def test_empty_admitted_set_scores_zero_not_maximal(self):
+        item = make_fixture_items(1)[0]
+        temporal = TemporalPolicy(half_life_days=365.0, undated_score=0.0)
+        self.assertEqual(_mean_currency([], item, temporal, item.question, QUESTION_DATE), 0.0)
+
+
+class FitOnValidationCurrencyObjectiveTests(unittest.TestCase):
+    """The stock fixture never sets temporal_candidate=True (it isn't
+    sourced from a real Cochrane republication - see run_end_to_end.py's
+    docstring), so it never exercises the currency-gain objective this
+    module now fits on. These items do."""
+
+    def _temporal_candidate_items(self, n=6):
+        items = make_fixture_items(n)
+        return [replace(item, temporal_candidate=True) for item in items]
+
+    def test_fitting_prefers_a_config_that_improves_currency(self):
+        items = self._temporal_candidate_items()
+        generator = CallableGenerator(_extractive_answer)
+        result = fit_on_validation(items, generator, budget=1,
+                                   question_date=QUESTION_DATE)
+
+        # The fixture is built so recovering the current (not stale)
+        # passage is possible with enough temporal weight; the winning
+        # config must actually find a currency improvement, not just tie
+        # relevance-only ranking at 0.0.
+        self.assertGreater(result["fitted_validation_currency_gain"], 0.0)
+        self.assertGreater(result["fitted_lambda"], 0)
 
 
 if __name__ == "__main__":
