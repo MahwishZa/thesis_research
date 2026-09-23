@@ -58,15 +58,22 @@ A(s) = (1 − λ)·ρ(s)  +  λ·T(s, q, t_q)          admit if A(s) ≥ θ
 context budget — the honest floor a filtering method must clear.
 
 ```mermaid
-flowchart LR
-    A[Frozen retrieval] --> B[Three arms:<br/>baseline · proposed · no-filter]
-    B --> C[Evaluation and<br/>significance test]
+flowchart TD
+    R[Frozen retrieval<br/>same evidence for every arm]
+    R --> A1[RAG² baseline]
+    R --> A2[RAG² + Temporal Filter]
+    R --> A3[No-Filter control]
+    A1 --> E[Evaluation metrics]
+    A2 --> E
+    A3 --> E
+    E --> S[Paired significance test]
 ```
 
 Each arm receives identical retrieved evidence; the admission rule is the
 only thing that differs between them. `λ`, `θ`, `H` are fitted on a
 validation split beforehand and only ever reported on a separate, held-out
-test split.
+test split; the ablation (`λ = 0`) is the Temporal Filter arm run a second
+time with the temporal term switched off, scored the same way.
 
 Retrieval runs once per question and is frozen — every arm sees the exact
 same retrieved passages, so only the admission rule differs between them.
