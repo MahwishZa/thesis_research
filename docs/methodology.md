@@ -20,7 +20,7 @@ Performed once per question and frozen before either system runs:
 question → MedCPT retrieval → MedCPT reranking → candidate set → frozen
 ```
 
-Code: `experiments/shared/retrieval/` builds it, `src/evaluation/freezing.py`
+Code: `experiments/shared/retrieval/` builds it, `evaluation/freezing.py`
 freezes it. The frozen item carries the candidate list, its order, each
 passage's rerank score and rank, publication date, a corpus-snapshot id, and
 an order-sensitive candidate-set hash. Neither system retrieves, re-ranks, or
@@ -105,7 +105,7 @@ the baseline alone.
 | Output schema | all arms return the same result type |
 
 All assertions run before the first item in a run, not after. Code:
-`src/evaluation/runner.py`; tests: `tests/unit/test_runner_parity.py`.
+`evaluation/runner.py`; tests: `evaluation/tests/unit/test_runner_parity.py`.
 
 ## 7. Parameters
 

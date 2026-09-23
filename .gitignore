@@ -8,12 +8,12 @@ __pycache__/
 # Regenerate them locally instead of committing them:
 #   - checkpoints/                 -> experiments/baseline/filter_training (see docs/reproducibility.md)
 #   - corpus_pilot/                -> a local sample of corpus/data/chunks/chunks.jsonl
-#   - results/index_pilot_reduced_scope/ -> experiments/shared/retrieval/build_index.py
-# Small, legitimate result files (results/fit_and_evaluate/, the current
+#   - experiments/results/index_pilot_reduced_scope/ -> experiments/shared/retrieval/build_index.py
+# Small, legitimate result files (experiments/results/fit_and_evaluate/, the current
 # committed run - see docs/evaluation.md SS7) are NOT covered by a blanket
 # results/ rule - a real committed result must stay visible to
 # `git status`, not silently ignored alongside the large regenerable
 # folders sitting next to it.
 checkpoints/
 corpus_pilot/
-results/index_pilot_reduced_scope/
+experiments/results/index_pilot_reduced_scope/

@@ -111,7 +111,7 @@ class GeneratorConstructionTests(unittest.TestCase):
 
     def test_one_instance_is_what_both_arms_share(self):
         """Parity is object identity, so the arms must take the same object."""
-        from src.evaluation.runner import assert_generator_parity
+        from evaluation.runner import assert_generator_parity
         from src.baseline.admission import MockRAG2Filter
         from src.baseline.rag2 import RAG2Config, RAG2System
 

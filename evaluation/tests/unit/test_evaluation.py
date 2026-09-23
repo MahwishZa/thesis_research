@@ -5,10 +5,10 @@ import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from src.evaluation import annotation as ann
-from src.evaluation import freezing as fz
-from src.evaluation import questions as qs
-from src.evaluation import stats as st
+from evaluation import annotation as ann
+from evaluation import freezing as fz
+from evaluation import questions as qs
+from evaluation import stats as st
 
 
 def question(**kw):
@@ -554,7 +554,7 @@ class RunnerResultsTests(unittest.TestCase):
         ]
 
     def test_read_results_round_trips_jsonl(self):
-        from src.evaluation.runner import read_results
+        from evaluation.runner import read_results
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "r.jsonl"
             path.write_text("".join(
@@ -563,14 +563,14 @@ class RunnerResultsTests(unittest.TestCase):
         self.assertEqual(back, self.records())
 
     def test_group_by_system_reshapes_for_comparison(self):
-        from src.evaluation.runner import group_by_system
+        from evaluation.runner import group_by_system
         grouped = group_by_system(self.records())
         self.assertEqual(set(grouped), {"baseline", "proposed"})
         self.assertEqual(set(grouped["baseline"]), {"Q1", "Q2"})
         self.assertEqual(grouped["baseline"]["Q1"]["generated_answer"], "a")
 
     def test_duplicate_answer_for_one_question_is_refused(self):
-        from src.evaluation.runner import RunnerError, group_by_system
+        from evaluation.runner import RunnerError, group_by_system
         dup = self.records() + [
             {"run_id": "r1", "question_id": "Q1", "system": "baseline",
              "generated_answer": "second"},

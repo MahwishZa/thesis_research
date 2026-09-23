@@ -6,7 +6,7 @@ being compared, see `methodology.md`. For running an evaluation, see
 
 ## 1. Metrics
 
-`src/evaluation/rag_metrics.py`, applied identically to every arm.
+`evaluation/rag_metrics.py`, applied identically to every arm.
 
 | Metric | Definition | Role |
 |---|---|---|
@@ -40,7 +40,7 @@ rest — a specific, falsifiable pattern, not just an aggregate number.
 
 ## 4. Statistical procedure
 
-`src/evaluation/stats.py`, standard library only (no SciPy dependency).
+`evaluation/stats.py`, standard library only (no SciPy dependency).
 
 - **Paired sign test** — for each question both systems answered, does one
   score higher, lower, or the same? Decides the main verdict: a consistent
@@ -81,6 +81,6 @@ scoring → ablation → significance testing), including one full pilot-scale
 run. **The reported comparison against Objective 2 is pending completion of
 the full-scale setup** (see `reproducibility.md` for what "full-scale" means
 here and what is currently reduced). Pilot-scale output is committed under
-`results/` for reproducibility; it documents that the pipeline and
+`experiments/results/` for reproducibility; it documents that the pipeline and
 statistical procedure work correctly on real data, not the thesis's
 reported finding.

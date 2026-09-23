@@ -58,10 +58,10 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
-from src.evaluation import freezing as fz
-from src.evaluation import rag_metrics as rm
-from src.evaluation.stats import binomial_two_sided_p
-from src.evaluation.runner import (
+from evaluation import freezing as fz
+from evaluation import rag_metrics as rm
+from evaluation.stats import binomial_two_sided_p
+from evaluation.runner import (
     RunConfig, _parse_date, assert_budget_parity, assert_generator_parity,
     assert_prompt_parity, run_experiment, to_candidates,
 )
@@ -379,7 +379,7 @@ def main(argv=None) -> int:
                          "placeholder (2026-01-01) run_end_to_end.py uses "
                          "for its synthetic demo, which earlier real-data "
                          "runs inherited by mistake.")
-    ap.add_argument("--output-dir", default="results/fit_and_evaluate")
+    ap.add_argument("--output-dir", default="experiments/results/fit_and_evaluate")
     args = ap.parse_args(argv)
     question_date = (date.fromisoformat(args.question_date) if args.question_date
                      else date.today())

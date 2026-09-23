@@ -25,7 +25,7 @@ packages = [
     "src.common",
     "src.baseline",
     "src.proposed",
-    "src.evaluation",
+    "evaluation",
     "experiments",
     "experiments.shared",
     "experiments.shared.questions",

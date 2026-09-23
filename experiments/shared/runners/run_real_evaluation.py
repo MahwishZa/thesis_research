@@ -12,7 +12,7 @@ report this script writes.
 Known, tracked simplifications (see "limitations" in the written report):
 
   1. CORPUS: retrieval runs against whatever index --index points to. The
-     index built so far (results/index_pilot_reduced_scope)
+     index built so far (experiments/results/index_pilot_reduced_scope)
      covers roughly the first 40,000 of the corpus's 4,377,041 chunks -
      about 1% - not the full frozen corpus. Retrieval quality is bounded by
      what that slice actually contains.
@@ -69,9 +69,9 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-from src.evaluation import freezing as fz
-from src.evaluation import rag_metrics as rm
-from src.evaluation.runner import RunConfig, run_experiment
+from evaluation import freezing as fz
+from evaluation import rag_metrics as rm
+from evaluation.runner import RunConfig, run_experiment
 from experiments.shared.retrieval.corpus import dated_only, read_passages_with_snapshot
 from experiments.shared.retrieval.index import DenseIndex
 from experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline, RetrievalError
@@ -83,7 +83,7 @@ from src.common.generator import CallableGenerator, GenerationResult
 
 DEFAULT_QUESTIONS_DIR = Path("experiments/shared/questions")
 DEFAULT_CORPUS = "corpus_pilot"
-DEFAULT_INDEX = "results/index_pilot_reduced_scope"
+DEFAULT_INDEX = "experiments/results/index_pilot_reduced_scope"
 DEFAULT_CHECKPOINT = "checkpoints/rag2_filter/final"
 
 #: Real specification value (_archive/docs_legacy/research_experimental_specification.md
@@ -263,7 +263,7 @@ def main(argv=None) -> int:
                          "Defaults to cpu (recommended tonight - GPU memory "
                          "has been unreliable in this environment); pass "
                          "cuda to try the GPU.")
-    ap.add_argument("--output-dir", default="results/real_evaluation_pilot")
+    ap.add_argument("--output-dir", default="experiments/results/real_evaluation_pilot")
     ap.add_argument("--ablation-lambdas", default="0,0.25,0.5,0.75,1.0")
     ap.add_argument("--proposed-lambda", type=float, default=1.0)
     ap.add_argument("--theta", type=float, default=DEFAULT_THETA)

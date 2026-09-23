@@ -26,7 +26,7 @@ canonical-scope document.
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 METHODOLOGY = ROOT / "docs" / "methodology.md"
 README = ROOT / "README.md"
 
@@ -158,7 +158,7 @@ class AblationMetricsTests(unittest.TestCase):
     the old one, so it gets its own explicit guard."""
 
     def test_rag_metrics_module_exists_and_implements_standard_metrics(self):
-        from src.evaluation import rag_metrics as rm
+        from evaluation import rag_metrics as rm
         for name in ("exact_match", "token_f1", "rouge_l_f1", "context_scores",
                     "groundedness"):
             self.assertTrue(hasattr(rm, name), f"rag_metrics.py is missing {name}")
@@ -169,7 +169,7 @@ class AblationMetricsTests(unittest.TestCase):
         docstring) - this just confirms accuracy.py wasn't quietly given an
         automatic scorer of its own, which would duplicate rag_metrics.py
         under a different name."""
-        from src.evaluation import accuracy
+        from evaluation import accuracy
         source = Path(accuracy.__file__).read_text(encoding="utf-8")
         self.assertNotIn("def rouge", source.lower())
         self.assertNotIn("def bleu", source.lower())

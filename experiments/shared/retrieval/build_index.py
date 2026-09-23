@@ -2,7 +2,7 @@
 
     python -m experiments.shared.retrieval.build_index \
         --corpus corpus \
-        --out results/index
+        --out experiments/results/index
 
 Reads ``corpus/`` and writes nothing into it. Refuses to overwrite an
 existing index, because the frozen evidence records which index it came from
@@ -28,7 +28,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", default="corpus",
                         help="corpus root (read-only)")
-    parser.add_argument("--out", default="results/index",
+    parser.add_argument("--out", default="experiments/results/index",
                         help="directory to write the index into")
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--device", default=None,

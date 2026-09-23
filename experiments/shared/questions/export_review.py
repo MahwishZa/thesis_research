@@ -27,7 +27,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
-from src.evaluation.questions import (
+from evaluation.questions import (
     REVIEW_COLUMNS, WITHHELD_FROM_REVIEW, EvaluationQuestion, review_export,
 )
 

@@ -21,9 +21,9 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.evaluation import freezing as fz
-from src.evaluation.questions import EvaluationQuestion
-from src.evaluation.runner import (
+from evaluation import freezing as fz
+from evaluation.questions import EvaluationQuestion
+from evaluation.runner import (
     RunConfig, RunnerError, group_by_system, read_results, run_experiment,
 )
 from experiments.shared.retrieval.corpus import CorpusPassage

@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "corpus" / "scripts" / "_common.py"
 REAL_MANIFEST = ROOT / "corpus" / "metadata" / "pmc.csv"
 

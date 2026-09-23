@@ -285,7 +285,7 @@ class TemporalSubgroupBreakdownTests(unittest.TestCase):
     fixture (all-False, being synthetic) never exercises."""
 
     def rows_for(self, question_id, system, token_f1):
-        from src.evaluation import rag_metrics as rm
+        from evaluation import rag_metrics as rm
         return rm.MetricRow(
             question_id=question_id, system=system, exact_match=0.0,
             token_f1=token_f1, rouge_l_f1=0.0, context_precision=None,

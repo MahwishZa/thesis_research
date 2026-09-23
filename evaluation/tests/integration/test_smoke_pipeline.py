@@ -14,10 +14,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.evaluation import annotation as ann
-from src.evaluation import freezing as fz
-from src.evaluation import stats as st
-from src.evaluation.runner import (
+from evaluation import annotation as ann
+from evaluation import freezing as fz
+from evaluation import stats as st
+from evaluation.runner import (
     RunConfig, RunnerError, assert_prompt_parity, run_experiment, to_candidates,
 )
 from src.baseline.admission import HELPFUL, NOT_HELPFUL, MockRAG2Filter

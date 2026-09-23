@@ -15,7 +15,7 @@ refuses before any answer is written.
 import unittest
 from datetime import date
 
-from src.evaluation.runner import (
+from evaluation.runner import (
     RunnerError,
     assert_budget_parity,
     assert_generator_parity,

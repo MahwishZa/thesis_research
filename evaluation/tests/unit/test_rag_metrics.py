@@ -1,9 +1,9 @@
-"""Tests for src/evaluation/rag_metrics.py, the standard-metrics
+"""Tests for evaluation/rag_metrics.py, the standard-metrics
 ablation track (current objective 2)."""
 
 import unittest
 
-from src.evaluation import rag_metrics as rm
+from evaluation import rag_metrics as rm
 
 
 class NormalizeTextTests(unittest.TestCase):

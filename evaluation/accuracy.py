@@ -6,7 +6,7 @@ primary under an earlier, superseded scope). It deliberately does not
 decide what "correct" means - it does not run exact match, fuzzy match, or
 any automatic scorer against the reference answer. Automatic string-overlap
 scoring (ROUGE/BLEU/BERTScore and similar) belongs in
-``src/evaluation/rag_metrics.py``, the current objectives' ablation
+``evaluation/rag_metrics.py``, the current objectives' ablation
 study metrics track, not here - inventing a second, bespoke automatic judge
 in this module would duplicate that with an undeclared scoring methodology.
 

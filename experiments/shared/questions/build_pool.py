@@ -19,7 +19,7 @@ from pathlib import Path
 from dataclasses import replace as _replace
 from typing import Any, Optional, Sequence
 
-from src.evaluation.questions import (
+from evaluation.questions import (
     REVIEW_COLUMNS, EvaluationQuestion, find_duplicates, looks_indeterminate,
     review_export, summarise_pool, validate,
 )

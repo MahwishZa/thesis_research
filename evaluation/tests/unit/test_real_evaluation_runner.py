@@ -12,7 +12,7 @@ metric's arithmetic.
 import unittest
 from pathlib import Path
 
-from src.evaluation.freezing import FrozenCandidate, FrozenItem
+from evaluation.freezing import FrozenCandidate, FrozenItem
 from experiments.shared.runners.run_real_evaluation import (
     admitted_recency_by_system, load_usable_questions,
 )

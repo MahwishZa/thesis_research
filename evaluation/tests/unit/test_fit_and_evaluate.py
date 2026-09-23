@@ -10,7 +10,7 @@ import unittest
 from dataclasses import replace
 from datetime import date
 
-from src.evaluation import freezing as fz
+from evaluation import freezing as fz
 from experiments.shared.runners.fit_and_evaluate import (
     MIN_ADMITTED_FRACTION, _mean_currency, fit_on_validation,
 )

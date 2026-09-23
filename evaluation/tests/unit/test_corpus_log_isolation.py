@@ -20,12 +20,12 @@ keep it redirected.
 several earlier audit sessions and wrongly written up at the time as an
 unexplained, sandbox-specific flake, is now root-caused and resolved -
 not a defect in this repository's code at all. ``python -m unittest
-discover -s tests -p "test_*.py"`` **without** ``-t .`` does not reliably
+discover -s evaluation/tests -p "test_*.py"`` **without** ``-t .`` does not reliably
 trigger ``tests/__init__.py``'s package-import side effect (it can leave
 ``ALZHEIMER_CORPUS_LOGS`` unset even before the first test runs, confirmed
 by bisecting with a custom ``TestResult`` that checks the variable in
 ``startTest``), while the documented, correct invocation
-(``python -m unittest discover -s tests -t .``, as README.md and
+(``python -m unittest discover -s evaluation/tests -t .``, as README.md and
 ``docs/reproducibility.md`` §2 both specify) does not exhibit this at all,
 reproduced clean across repeated runs. The earlier "flakiness" was this
 same invocation mistake made inconsistently across sessions, compounded by
@@ -41,7 +41,7 @@ import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_DIR = ROOT / "corpus" / "scripts"
 CORPUS_LOGS = ROOT / "corpus" / "logs"
 

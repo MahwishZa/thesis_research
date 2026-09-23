@@ -38,7 +38,7 @@ for it to answer the three current objectives; see
 _archive/docs_legacy/current_objectives.md for what is/isn't in scope and why nothing was
 deleted.
 
-Every arm's answers are scored with src/evaluation/rag_metrics.py
+Every arm's answers are scored with evaluation/rag_metrics.py
 (exact match, token F1, ROUGE-L, context precision/recall, groundedness) and
 a summary table is printed and written to --output-dir. This is the
 AUTOMATIC-METRICS track; it does not replace the thesis's earlier
@@ -51,7 +51,7 @@ with dated evidence, mirroring the shape of a real frozen candidate set) so
 it is runnable in any environment, including one with no network access and
 no local model - exactly this development sandbox. Pass --questions/--index
 to run against a real frozen candidate set once one exists (see
-src/evaluation/freezing.py), and --real-model to use an actual
+evaluation/freezing.py), and --real-model to use an actual
 Hugging Face generator instead of the deterministic stand-in (requires
 transformers/torch and a downloaded checkpoint - not available in this
 sandbox; see _archive/docs_legacy/research_experimental_specification.md §9 for the target
@@ -81,9 +81,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
-from src.evaluation import freezing as fz
-from src.evaluation import rag_metrics as rm
-from src.evaluation.runner import RunConfig, run_experiment
+from evaluation import freezing as fz
+from evaluation import rag_metrics as rm
+from evaluation.runner import RunConfig, run_experiment
 from src.baseline.admission import HELPFUL, MockRAG2Filter
 from src.baseline.no_filter import NoFilterSystem
 from src.baseline.rag2 import RAG2Config, RAG2System
@@ -352,7 +352,7 @@ def temporal_subgroup_breakdown(
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--output-dir", default="results/end_to_end")
+    ap.add_argument("--output-dir", default="experiments/results/end_to_end")
     ap.add_argument("--n-questions", type=int, default=10)
     ap.add_argument(
         "--ablation-lambdas", default="0,0.25,0.5,0.75,1.0",

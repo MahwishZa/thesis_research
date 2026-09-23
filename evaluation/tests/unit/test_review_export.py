@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.evaluation.questions import (
+from evaluation.questions import (
     REVIEW_COLUMNS, WITHHELD_FROM_REVIEW, REVIEW_DECISIONS,
 )
 from experiments.shared.questions import export_review as ex

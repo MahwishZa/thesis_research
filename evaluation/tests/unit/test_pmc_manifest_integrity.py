@@ -18,7 +18,7 @@ import csv
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "corpus" / "metadata" / "pmc.csv"
 
 #: Locked to the verified 2026-09-18 finalization (ledger D-42). A

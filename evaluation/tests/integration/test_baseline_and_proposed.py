@@ -19,8 +19,8 @@ from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.evaluation import freezing as fz
-from src.evaluation.runner import (
+from evaluation import freezing as fz
+from evaluation.runner import (
     RunConfig, group_by_system, read_results, run_experiment,
 )
 from src.baseline.admission import MockRAG2Filter

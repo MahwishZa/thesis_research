@@ -30,7 +30,7 @@ source tier) is the kind of change this docstring says to record, not make
 quietly.
 
 Nothing here writes to ``corpus/``. Index artifacts live under
-``results/index/``.
+``experiments/results/index/``.
 """
 
 from __future__ import annotations

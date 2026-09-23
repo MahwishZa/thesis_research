@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from src.evaluation.freezing import FrozenCandidate
+from evaluation.freezing import FrozenCandidate
 
 from .corpus import CorpusPassage
 from .index import ORDERING_PRECISION, DenseIndex, Hit
