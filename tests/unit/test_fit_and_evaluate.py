@@ -11,7 +11,9 @@ from dataclasses import replace
 from datetime import date
 
 from experiments.evaluation import freezing as fz
-from experiments.runners.fit_and_evaluate import _mean_currency, fit_on_validation
+from experiments.runners.fit_and_evaluate import (
+    MIN_ADMITTED_FRACTION, _mean_currency, fit_on_validation,
+)
 from experiments.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
 from experiments.runners.run_real_evaluation import _extractive_answer
 from systems.interfaces.generator import CallableGenerator
@@ -109,6 +111,56 @@ class FitOnValidationCurrencyObjectiveTests(unittest.TestCase):
         # relevance-only ranking at 0.0.
         self.assertGreater(result["fitted_validation_currency_gain"], 0.0)
         self.assertGreater(result["fitted_lambda"], 0)
+
+
+def _degenerate_admission_item(n_candidates=6):
+    """One item where only 1 of n_candidates is recent (age ~2 days) and
+    the rest are old (age ~2000 days) - aggressive theta/lambda settings
+    admit only that single recent candidate, regardless of relevance.
+    Built directly (not via make_fixture_items, which only ever produces
+    2 candidates) so there is room for a budget large enough to expose a
+    PARTIAL admission fraction, not just all-or-nothing."""
+    candidates = []
+    for i in range(n_candidates):
+        age_days = 2 if i == 0 else 2000
+        pub_date = date(2026, 1, 1)
+        pub_str = (date.fromordinal(pub_date.toordinal() - age_days)).isoformat()
+        candidates.append(fz.FrozenCandidate(
+            evidence_id=f"C{i}", text=f"passage {i}", retrieval_rank=i + 1,
+            rerank_rank=i + 1, rerank_score=1.0 - i * 0.01,
+            publication_date=pub_str,
+        ))
+    return fz.FrozenItem(
+        question_id="DEG-1", question="q", reference_answer="passage 0",
+        reference_source="s", reference_date="2026-01-01",
+        corpus_snapshot="test@1", temporal_candidate=True,
+        candidates=tuple(candidates),
+    )
+
+
+class DegenerateAdmissionGuardTests(unittest.TestCase):
+
+    def test_near_empty_admission_is_excluded_from_winning_the_fit(self):
+        items = [_degenerate_admission_item()]
+        generator = CallableGenerator(_extractive_answer)
+        budget = 4  # so 1/4 admitted (0.25) is clearly below MIN_ADMITTED_FRACTION
+
+        result = fit_on_validation(items, generator, budget=budget,
+                                   question_date=QUESTION_DATE)
+
+        # At least one grid cell (aggressive theta/lambda/short half_life)
+        # must be flagged ineligible for admitting almost nothing - this is
+        # the exact scenario the standalone arithmetic check found.
+        ineligible = [g for g in result["grid"] if not g["eligible"]]
+        self.assertGreater(len(ineligible), 0)
+        for cell in ineligible:
+            self.assertLess(cell["mean_admitted_fraction_temporal_subgroup"],
+                            MIN_ADMITTED_FRACTION)
+
+        # And the actual winner must respect the guard, whatever it picked.
+        self.assertGreaterEqual(result["fitted_validation_admitted_fraction"],
+                                MIN_ADMITTED_FRACTION)
+        self.assertFalse(result["no_eligible_config_found"])
 
 
 if __name__ == "__main__":

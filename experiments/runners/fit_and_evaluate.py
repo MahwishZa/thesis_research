@@ -20,8 +20,18 @@ Two-phase, real data both phases:
   system ONLY — no model calls are needed for this (TemporalFilterPolicy is
   pure arithmetic over already-retrieved, already-reranked candidates), so
   the sweep is fast and does not touch the RAG2 checkpoint or hit the
-  question set the final number is reported on. Selects the config with the
-  highest mean token_f1 on validation (ties broken by groundedness).
+  question set the final number is reported on. Selects the config with
+  the highest mean CURRENCY GAIN (T(s) of admitted evidence, minus what
+  pure relevance ranking would have admitted) on the temporal_candidate
+  validation subgroup — NOT token_f1, which has no necessary relationship
+  to currency (see _mean_currency's docstring). A config is only eligible
+  to win if it does not admit a degenerate near-empty set to get there
+  (see MIN_ADMITTED_FRACTION below) — an earlier version of this fitting
+  objective had no such guard, so a config that admitted almost nothing
+  except whatever single passage happened to be freshest could score an
+  artificially high currency gain while discarding relevance entirely;
+  that is not the mechanism working, it is the objective being gamed by
+  its own permissiveness.
 
   Phase 2 (report): retrieve real evidence once for the 90 test questions
   (never used in phase 1). Run baseline / no_filter / proposed_lambda_0
@@ -83,6 +93,17 @@ HALF_LIFE_GRID_DAYS = [30.0, 90.0, 180.0, 365.0, 730.0, 1825.0]
 #: not swept here, since fitting "the full system" over lambda=0 would be
 #: fitting the ablation, not the thing being ablated against.
 LAMBDA_GRID = [0.25, 0.5, 0.75, 1.0]
+
+#: A config is only eligible to win the fit if it admits, on average, at
+#: least this fraction of the context budget on temporal_candidate
+#: validation questions. Without this, a config that admits almost
+#: nothing except whichever single passage happens to be freshest can
+#: score a high currency gain while providing essentially no evidence at
+#: all - that is degenerate admission, not the mechanism succeeding, and
+#: it is exactly the failure mode that made high-lambda configs score
+#: badly on token_f1 in the first (pre-currency-metric) run. 0.5 means at
+#: least half the budget must typically be filled.
+MIN_ADMITTED_FRACTION = 0.5
 
 
 def _build_retrieval_pipeline(corpus: str, index: str, device: Optional[str]):
@@ -243,12 +264,14 @@ def fit_on_validation(
         # secondary diagnostic below - see this module's docstring.
         temporal_obj = TemporalPolicy(half_life_days=half_life, undated_score=0.0)
         gains = []
+        admitted_counts = []
         for record in records:
             if record["system"] != label or record.get("status", "ok") != "ok":
                 continue
             if record["question_id"] not in temporal_ids:
                 continue
             item = items_by_id[record["question_id"]]
+            admitted_counts.append(len(record["admitted_evidence_ids"]))
             proposed_currency = _mean_currency(
                 record["admitted_evidence_ids"], item, temporal_obj,
                 item.question, question_date,
@@ -259,13 +282,26 @@ def fit_on_validation(
             )
             gains.append(proposed_currency - baseline_currency)
         currency_gain = sum(gains) / len(gains) if gains else 0.0
+        mean_admitted_fraction = (
+            (sum(admitted_counts) / len(admitted_counts)) / budget
+            if admitted_counts else 0.0
+        )
+        eligible = mean_admitted_fraction >= MIN_ADMITTED_FRACTION
 
         grid_results.append({
             "theta": theta, "half_life_days": half_life, "lambda": lam,
             "currency_gain_temporal_subgroup": currency_gain,
+            "mean_admitted_fraction_temporal_subgroup": mean_admitted_fraction,
+            "eligible": eligible,
             "token_f1": metrics["token_f1"], "groundedness": metrics["groundedness"],
             "divergence_rate": divergence,
         })
+        if not eligible:
+            # Degenerate near-empty admission: excluded from winning the
+            # fit regardless of how high its currency gain looks - see
+            # MIN_ADMITTED_FRACTION's docstring. Still recorded above, so
+            # the exclusion itself is auditable.
+            continue
         # Primary: currency gain. Secondary tie-break: token_f1, so that
         # among configs tied on currency gain (e.g. both 0.0, meaning no
         # temporal_candidate question was affected) the one that does not
@@ -274,10 +310,26 @@ def fit_on_validation(
         if best is None or key > best[0]:
             best = (key, theta, half_life, lam)
 
-    _, theta, half_life, lam = best
+    if best is None:
+        # No config in the grid admits a non-degenerate amount of evidence
+        # on the temporal_candidate subgroup - fall back to the best by
+        # the same key among ALL cells (ineligible ones included) rather
+        # than crashing, but flag it plainly: this means the grid itself
+        # could not find a usable configuration, which is a real, reportable
+        # finding, not a bug to silently route around.
+        fallback = max(grid_results, key=lambda g: (g["currency_gain_temporal_subgroup"], g["token_f1"]))
+        theta, half_life, lam = fallback["theta"], fallback["half_life_days"], fallback["lambda"]
+        no_eligible_config_found = True
+    else:
+        _, theta, half_life, lam = best
+        no_eligible_config_found = False
+
     any_divergence = any(g["divergence_rate"] > 0 for g in grid_results)
     max_divergence = max((g["divergence_rate"] for g in grid_results), default=0.0)
-    best_currency_gain = max(g["currency_gain_temporal_subgroup"] for g in grid_results)
+    eligible_cells = [g for g in grid_results if g["eligible"]]
+    best_currency_gain = max(
+        (g["currency_gain_temporal_subgroup"] for g in eligible_cells), default=0.0,
+    )
     winning_cell = next(
         g for g in grid_results
         if (g["theta"], g["half_life_days"], g["lambda"]) == (theta, half_life, lam)
@@ -288,7 +340,10 @@ def fit_on_validation(
         "fitted_validation_currency_gain": winning_cell["currency_gain_temporal_subgroup"],
         "fitted_validation_token_f1": winning_cell["token_f1"],
         "fitted_validation_groundedness": winning_cell["groundedness"],
+        "fitted_validation_admitted_fraction": winning_cell["mean_admitted_fraction_temporal_subgroup"],
         "best_currency_gain_in_grid": best_currency_gain,
+        "no_eligible_config_found": no_eligible_config_found,
+        "n_eligible_configs": len(eligible_cells),
         "n_temporal_candidate_questions_in_validation": len(temporal_ids),
         "grid": grid_results,
         "grid_size": len(grid_results),
@@ -361,6 +416,14 @@ def main(argv=None) -> int:
               "at all - the result below cannot distinguish 'the idea doesn't "
               "help' from 'this configuration never even tried anything "
               "different.' Treat any verdict below as provisional if so.")
+    print(f"  {fit['n_eligible_configs']}/{fit['grid_size']} configs admit a "
+          f"non-degenerate amount of evidence (>= {MIN_ADMITTED_FRACTION:.0%} "
+          "of budget) on temporal_candidate questions - only those were "
+          "eligible to win the fit.")
+    if fit["no_eligible_config_found"]:
+        print("  ^ WARNING: no config was eligible. Falling back to the best "
+              "by currency gain regardless of admission size - treat the "
+              "result below as unreliable and say so if reporting it.")
 
     print(f"\nLoading RAG2 filter checkpoint from {args.rag2_checkpoint} ...")
     from systems.baseline.admission import FlanT5RAG2Filter
