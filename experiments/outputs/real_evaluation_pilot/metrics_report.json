@@ -1,0 +1,352 @@
+{
+  "ablation_study": {
+    "ablated_proposed": "proposed_lambda_0",
+    "admitted_most_recent_rate_delta_temporal_subgroup": -0.3939393939393939,
+    "full_proposed": "proposed_lambda_1",
+    "token_f1_delta": -0.10826599897895821,
+    "verdict_token_f1": "COMPONENT DOES NOT HELP"
+  },
+  "admitted_recency_by_system": {
+    "all_questions": {
+      "baseline": {
+        "admitted_most_recent_rate": 0.37168141592920356,
+        "n": 113
+      },
+      "no_filter": {
+        "admitted_most_recent_rate": 0.37168141592920356,
+        "n": 113
+      },
+      "proposed_lambda_0": {
+        "admitted_most_recent_rate": 0.37168141592920356,
+        "n": 113
+      },
+      "proposed_lambda_0.25": {
+        "admitted_most_recent_rate": 0.37168141592920356,
+        "n": 113
+      },
+      "proposed_lambda_0.5": {
+        "admitted_most_recent_rate": 0.08849557522123894,
+        "n": 113
+      },
+      "proposed_lambda_0.75": {
+        "admitted_most_recent_rate": 0.0,
+        "n": 113
+      },
+      "proposed_lambda_1": {
+        "admitted_most_recent_rate": 0.0,
+        "n": 113
+      }
+    },
+    "temporal_candidate_questions": {
+      "baseline": {
+        "admitted_most_recent_rate": 0.3939393939393939,
+        "n": 66
+      },
+      "no_filter": {
+        "admitted_most_recent_rate": 0.3939393939393939,
+        "n": 66
+      },
+      "proposed_lambda_0": {
+        "admitted_most_recent_rate": 0.3939393939393939,
+        "n": 66
+      },
+      "proposed_lambda_0.25": {
+        "admitted_most_recent_rate": 0.3939393939393939,
+        "n": 66
+      },
+      "proposed_lambda_0.5": {
+        "admitted_most_recent_rate": 0.09090909090909091,
+        "n": 66
+      },
+      "proposed_lambda_0.75": {
+        "admitted_most_recent_rate": 0.0,
+        "n": 66
+      },
+      "proposed_lambda_1": {
+        "admitted_most_recent_rate": 0.0,
+        "n": 66
+      }
+    }
+  },
+  "limitations": {
+    "corpus": "pilot index, 39999 of 4,377,041 real corpus passages (~1%) - see module docstring (1)",
+    "generator": "extractive stand-in, NOT free-text generation - see module docstring (3). token_f1/rouge_l/groundedness below measure evidence-overlap with the reference answer, not generation quality.",
+    "hyperparameters_fit": false,
+    "n_questions_requested": 113,
+    "n_questions_retrieved": 113,
+    "n_questions_skipped": 0,
+    "question_split_used": "all",
+    "rag2_checkpoint": "FlanT5RAG2Filter(checkpoints/rag2_filter/final) - trained on 20 MedQA labels/1 epoch, validation_accuracy=0.0 (at chance) - see checkpoint_record.json. NOT a validated classifier.",
+    "skipped_question_ids": []
+  },
+  "main_evaluation": {
+    "admitted_most_recent_rate_delta_temporal_subgroup": -0.3939393939393939,
+    "baseline": "baseline",
+    "baseline_filter": "FlanT5RAG2Filter(checkpoints/rag2_filter/final) - trained on 20 MedQA labels/1 epoch, validation_accuracy=0.0 (at chance) - see checkpoint_record.json. NOT a validated classifier.",
+    "proposed": "proposed_lambda_1",
+    "token_f1_delta": -0.10826599897895821,
+    "verdict_token_f1": "DOES NOT IMPROVE"
+  },
+  "metrics_by_system": {
+    "baseline": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0794028164144777,
+      "token_f1": 0.10826599897895821
+    },
+    "no_filter": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0794028164144777,
+      "token_f1": 0.10826599897895821
+    },
+    "proposed_lambda_0": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0794028164144777,
+      "token_f1": 0.10826599897895821
+    },
+    "proposed_lambda_0.25": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0794028164144777,
+      "token_f1": 0.10826599897895821
+    },
+    "proposed_lambda_0.5": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0794028164144777,
+      "token_f1": 0.10826599897895821
+    },
+    "proposed_lambda_0.75": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0,
+      "token_f1": 0.0
+    },
+    "proposed_lambda_1": {
+      "context_f1": null,
+      "context_precision": null,
+      "context_recall": null,
+      "context_scored_n": 0,
+      "exact_match": 0.0,
+      "groundedness": 1.0,
+      "n": 113,
+      "rouge_l_f1": 0.0,
+      "token_f1": 0.0
+    }
+  },
+  "run_summary": {
+    "n_errors": 0,
+    "n_items": 113,
+    "n_records": 791,
+    "n_systems": 7,
+    "output_path": "experiments\\outputs\\real_evaluation_pilot\\results.jsonl",
+    "run_id": "real_evaluation_pilot-001"
+  },
+  "system_config": {
+    "ablation_lambdas": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "context_budget": 5,
+    "half_life_days": 365.0,
+    "proposed_lambda": 1.0,
+    "theta": 0.5
+  },
+  "temporal_subgroup": {
+    "n_other_questions": 47,
+    "n_temporal_candidate_questions": 66,
+    "other_questions": {
+      "baseline": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.08871718236999435,
+        "token_f1": 0.12131508457567494
+      },
+      "no_filter": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.08871718236999435,
+        "token_f1": 0.12131508457567494
+      },
+      "proposed_lambda_0": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.08871718236999435,
+        "token_f1": 0.12131508457567494
+      },
+      "proposed_lambda_0.25": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.08871718236999435,
+        "token_f1": 0.12131508457567494
+      },
+      "proposed_lambda_0.5": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.08871718236999435,
+        "token_f1": 0.12131508457567494
+      },
+      "proposed_lambda_0.75": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.0,
+        "token_f1": 0.0
+      },
+      "proposed_lambda_1": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 47,
+        "rouge_l_f1": 0.0,
+        "token_f1": 0.0
+      }
+    },
+    "temporal_candidate_questions": {
+      "baseline": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.07276985884009464,
+        "token_f1": 0.09897346832675086
+      },
+      "no_filter": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.07276985884009464,
+        "token_f1": 0.09897346832675086
+      },
+      "proposed_lambda_0": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.07276985884009464,
+        "token_f1": 0.09897346832675086
+      },
+      "proposed_lambda_0.25": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.07276985884009464,
+        "token_f1": 0.09897346832675086
+      },
+      "proposed_lambda_0.5": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.07276985884009464,
+        "token_f1": 0.09897346832675086
+      },
+      "proposed_lambda_0.75": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.0,
+        "token_f1": 0.0
+      },
+      "proposed_lambda_1": {
+        "context_f1": null,
+        "context_precision": null,
+        "context_recall": null,
+        "context_scored_n": 0,
+        "exact_match": 0.0,
+        "groundedness": 1.0,
+        "n": 66,
+        "rouge_l_f1": 0.0,
+        "token_f1": 0.0
+      }
+    }
+  }
+}
