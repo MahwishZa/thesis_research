@@ -10,7 +10,7 @@ being compared, see `methodology.md`. For running an evaluation, see
 
 | Metric | Definition | Role |
 |---|---|---|
-| Currency (mean `T(s)` of admitted evidence, on `temporal_candidate` questions) | See `research-glossary.md` | **Primary**, main comparison |
+| Currency (mean `T(s)` of admitted evidence, on `temporal_candidate` questions) | See `glossary.md` | **Primary**, main comparison |
 | Token F1 | SQuAD-style unigram precision/recall/F1 | Secondary / diagnostic |
 | Exact match | Normalised string equality | Secondary |
 | ROUGE-L | F1 over the longest common in-order subsequence | Secondary |
@@ -33,7 +33,7 @@ indirectly and noisily). Currency measures the selection directly.
 ## 3. Temporal-candidate subgroup
 
 Every scored row is split by whether its question is flagged
-`temporal_candidate` (see `research-glossary.md`) and aggregated separately
+`temporal_candidate` (see `glossary.md`) and aggregated separately
 for each system. If the Temporal Filter's mechanism works at all, its
 effect should concentrate on this subgroup and be closer to null on the
 rest — a specific, falsifiable pattern, not just an aggregate number.

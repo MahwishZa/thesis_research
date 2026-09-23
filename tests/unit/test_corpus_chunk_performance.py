@@ -448,7 +448,7 @@ class FixtureRegressionTests(unittest.TestCase):
     """Against whatever fixture chunks.jsonl is currently on disk under
     corpus/data/chunks/ - the same offline path the project
     already tests everything else through. That file is gitignored (see
-    alzheimer_corpus/.gitignore: research data is never committed), so this
+    corpus/.gitignore: research data is never committed), so this
     test needs a prior local pipeline run to be meaningful - see the note
     at the top of test_corpus_normalize_pipeline.py."""
 

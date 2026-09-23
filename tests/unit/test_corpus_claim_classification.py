@@ -334,7 +334,7 @@ class StreamingRewriteTests(unittest.TestCase):
                 self.assertEqual(exp[key], act[key], msg=f"{key} for {exp['chunk_id']}")
 
     def test_end_to_end_streaming_run_matches_reference_and_is_atomic(self):
-        """Runs the real main() against a real (copied) alzheimer_corpus/
+        """Runs the real main() against a real (copied) corpus/
         tree - never the actual one - and checks the streamed output
         equals what the original in-memory algorithm would have produced,
         record for record, plus every report file is written."""

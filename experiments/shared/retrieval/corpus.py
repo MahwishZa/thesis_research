@@ -1,6 +1,6 @@
 """Read the Alzheimer's corpus chunk file into passages, without touching it.
 
-``alzheimer_corpus/`` is built and owned by its own pipeline. This module only
+``corpus/`` is built and owned by its own pipeline. This module only
 reads ``data/chunks/chunks.jsonl`` and maps each record onto the ``Evidence``
 shape the arms already consume. It never writes, moves or reprocesses anything
 under that directory.

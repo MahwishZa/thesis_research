@@ -29,7 +29,7 @@ being off by default already narrows the set, and reducing further (e.g. by
 source tier) is the kind of change this docstring says to record, not make
 quietly.
 
-Nothing here writes to ``alzheimer_corpus/``. Index artifacts live under
+Nothing here writes to ``corpus/``. Index artifacts live under
 ``results/index/``.
 """
 

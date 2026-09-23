@@ -163,7 +163,7 @@ class DownloadRegistryTests(unittest.TestCase):
 class MainCLITests(unittest.TestCase):
     """The --download flag wired into main() and its exit-code contract.
 
-    Run as a subprocess against an isolated temp copy of alzheimer_corpus/,
+    Run as a subprocess against an isolated temp copy of corpus/,
     never in-process: main() calls _common.get_logger(), which resolves its
     log file from the loaded module's own __file__ - in-process, that would
     write test output into the real, tracked

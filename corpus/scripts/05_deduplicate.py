@@ -74,7 +74,7 @@ def main(argv=None) -> int:
                    "similarity_method", "similarity_score", "decision"]
     write_report("deduplication_report.csv", dupes, dupe_fields)
     # Same rows, also kept in metadata/ as the registry copy (tracked
-    # provenance, not a run artefact - see alzheimer_corpus/.gitignore).
+    # provenance, not a run artefact - see corpus/.gitignore).
     # write_report is used here too rather than hand-joining strings: a
     # document_id or title-derived key containing a comma would otherwise
     # silently corrupt this file with no error at write time.

@@ -77,7 +77,7 @@ Retrieval runs once per question and is frozen — every arm sees the exact
 same retrieved passages, so only the admission rule differs between them.
 Full detail, including exactly what is held constant and how that is
 enforced in code: `docs/methodology.md`. Term definitions:
-`docs/research-glossary.md`.
+`docs/glossary.md`.
 
 ## 4. Evaluation and Experimental Design
 
@@ -151,7 +151,7 @@ research-repository/
 |---|---|
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
 | [`docs/data.md`](docs/data.md) | The corpus and question pool — provenance, status, limitations |
-| [`docs/research-glossary.md`](docs/research-glossary.md) | Term definitions used consistently throughout |
+| [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, evaluation status |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 

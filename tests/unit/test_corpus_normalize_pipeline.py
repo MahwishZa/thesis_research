@@ -6,16 +6,16 @@ Two things are locked here:
 1. The offline fixture path (--input records.example.jsonl) must keep
    producing byte-identical output to what is currently on disk under
    corpus/data/ - a rewrite that changes it without anyone
-   deciding to would be a silent regression. IMPORTANT: alzheimer_corpus/
+   deciding to would be a silent regression. IMPORTANT: corpus/
    data/** is gitignored by design ("research data is never committed" -
-   see alzheimer_corpus/.gitignore), so this is NOT a comparison against a
+   see corpus/.gitignore), so this is NOT a comparison against a
    git-tracked golden file, despite this module's name. On a fresh clone
    with no prior local pipeline run, corpus/data/normalized/,
    deduplicated/ and chunks/ do not exist, and the tests below that read
    `tree=CORPUS` will fail with FileNotFoundError rather than skip. Run
    04_normalize.py --input records.example.jsonl -> 05_deduplicate.py ->
    06_chunk.py --tokenizer whitespace once against the real
-   alzheimer_corpus/ tree first (see README.md and
+   corpus/ tree first (see README.md and
    _archive/docs_legacy/status_and_decisions.md) to
    populate a local baseline before these tests are meaningful; they then
    catch drift within this working copy over time, not against history.
@@ -24,7 +24,7 @@ Two things are locked here:
    once in Stage 04 must be the same one that appears on every chunk in
    Stage 06, not a null or a recomputation.
 
-Every test runs against an isolated temporary copy of alzheimer_corpus/ -
+Every test runs against an isolated temporary copy of corpus/ -
 nothing here writes to the real tree. (The `tree=CORPUS` comparison reads
 the real tree; it never writes to it.)
 """
@@ -57,7 +57,7 @@ def run_stage(cwd, script, *args):
 
     Subprocess, not import, because each stage script re-derives its own
     paths from __file__ at import time - running in-process against a copied
-    tree would still resolve to the real alzheimer_corpus/.
+    tree would still resolve to the real corpus/.
     """
     result = subprocess.run(
         [sys.executable, str(cwd / "scripts" / script), *args],

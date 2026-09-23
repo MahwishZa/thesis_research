@@ -13,7 +13,7 @@ governs every other decision, and nothing else was checking it.
 layout (``systems/``/``experiments/evaluation`` -> ``src/``,
 ``alzheimer_corpus/`` -> ``corpus/``, ``experiments/outputs/`` ->
 ``results/``) and ``docs/`` was replaced with five topic docs
-(``methodology.md``, ``data.md``, ``research-glossary.md``,
+(``methodology.md``, ``data.md``, ``glossary.md``,
 ``evaluation.md``, ``reproducibility.md``). The four previous docs
 (``current_objectives.md``, ``research_experimental_specification.md``,
 ``status_and_decisions.md``, ``question_review.md``) were archived to
@@ -122,7 +122,7 @@ class SupersededScopeTests(unittest.TestCase):
         expected = {
             "methodology.md",
             "data.md",
-            "research-glossary.md",
+            "glossary.md",
             "evaluation.md",
             "reproducibility.md",
         }

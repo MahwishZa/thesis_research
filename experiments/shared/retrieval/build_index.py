@@ -4,7 +4,7 @@
         --corpus corpus \
         --out results/index
 
-Reads ``alzheimer_corpus/`` and writes nothing into it. Refuses to overwrite an
+Reads ``corpus/`` and writes nothing into it. Refuses to overwrite an
 existing index, because the frozen evidence records which index it came from
 and silently rebuilding one under the same path breaks that link.
 
