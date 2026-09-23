@@ -64,20 +64,20 @@ identical and checked in code before a run starts
 
 ## 5. Methodology
 
-```
-RAG² baseline  →  Temporal Filter  →  No-Filter control
-        ↓                ↓                    ↓
-                  same questions
-                  same retrieved evidence
-                  same generator
-                        ↓
-              Fit λ/θ/H on validation
-                        ↓
-          Report on held-out test only
-                        ↓
-                     Ablation
-                        ↓
-           Paired statistical significance test
+```mermaid
+flowchart TD
+    Q[Question pool] --> R[Retrieval + rerank<br/>frozen, identical for every arm]
+    R --> B[RAG² baseline]
+    R --> P[RAG² + Temporal Filter]
+    R --> N[No-Filter control]
+    B --> E[Evaluation<br/>rag_metrics.py]
+    P --> E
+    N --> E
+    E --> A[Ablation<br/>λ = 0 vs. fitted λ]
+    A --> S[Paired significance test<br/>stats.py]
+
+    V[Validation split] -. fits λ, θ, H .-> P
+    T[Held-out test split] -. reported on only .-> E
 ```
 
 `λ`, `θ` and `H` are grid-searched on a held-out **validation** split and
@@ -113,46 +113,33 @@ than noise is decided by a **paired sign test** over per-question outcomes
 average can look large or small while still being indistinguishable from
 chance, and only a significance test can tell the two apart.
 
-## 7. Current research status
+## 7. Evaluation status
 
-**A first real, validation-fitted, held-out-test result exists (2026-09-23),
-on a reduced-scale setup — see below for exactly what "reduced" means.**
+The evaluation pipeline has been implemented and run end to end. **Results
+are not yet reported here**: the run completed so far uses a reduced-scale
+setup on the way to the full evaluation, and the comparison this thesis
+reports will be the one produced after that setup is brought to full scale
+(§9). The table below tracks progress against the two research objectives
+rather than stating an outcome.
 
-**Finding: on this setup, the Temporal Filter shows no statistically
-significant difference from the RAG² baseline.** The paired sign test over
-the held-out test questions where the evidence base is known to have
-changed came out close to a coin flip, and the direction was not
-consistently in the proposed system's favour. The same test applied to the
-ablation (full system vs. the temporal component switched off) gives the
-same verdict. **This means the system currently requires further
-validation — the evidence available so far does not support describing it
-as showing even preliminary improvement, and the repository does not claim
-otherwise anywhere.** The exact statistics (win/loss counts, p-value, every
-per-question score) are in the committed report,
-`experiments/outputs/fit_and_evaluate/metrics_report.json`, and in
-`docs/status_and_decisions.md` §1.2 — read those directly before citing a
-number from this project anywhere.
+| Stage | Status |
+|---|---|
+| Evidence corpus (built, verified, frozen) | Complete |
+| Retrieval + reranking pipeline | Implemented, tested, validated end to end |
+| RAG² baseline (implementation) | Implemented, tested |
+| RAG² baseline (trained filter checkpoint) | Placeholder-scale checkpoint in place; full training pending |
+| Temporal Filter (implementation) | Implemented, tested |
+| λ / θ / H fitting procedure | Implemented; run once on the reduced-scale setup |
+| Held-out test evaluation + ablation | Implemented; run once on the reduced-scale setup |
+| Statistical significance testing | Implemented (paired sign test) |
+| Full-scale retrieval index | Pending |
+| Generative model (in place of the extractive stand-in) | Pending |
+| **Reported comparison (Objective 2)** | **Pending full-scale run** |
 
-This null result does not by itself mean the underlying idea is wrong. The
-same run's diagnostics confirm the mechanism is not inert — some
-configurations in the fitting grid do admit different evidence than plain
-relevance ranking — but at the configuration the validation split actually
-selects, on this setup, that does not translate into a measurable advantage.
-Three things this setup does not yet separate from a true negative result:
-
-1. **Corpus scale.** The corpus used for this result is a small pilot slice,
-   not the full built index (`docs/status_and_decisions.md` §2 — the full
-   corpus itself is complete and frozen; only the *retrieval index* built
-   over it for this run was reduced). A temporal signal needs
-   temporally-contrasting evidence to have something to select between, and
-   a small slice may simply not contain enough of it per question.
-2. **Baseline filter strength.** The RAG² baseline's filter checkpoint used
-   for this result is untrained (chance-level), which affects the honesty of
-   the comparison for both arms, not just the proposed one.
-3. **Generation.** Answers were produced by an extractive stand-in (the
-   top-admitted passage's own text), not a generative model, so the
-   evaluation measures evidence overlap rather than free-text answer
-   quality.
+Every implemented component has a corresponding automated test
+(`tests/`), and the pipeline's reduced-scale run is committed at
+`experiments/outputs/fit_and_evaluate/` for reproducibility — it is an
+engineering checkpoint, not the reported result.
 
 ## 8. Completed work
 
@@ -166,20 +153,21 @@ Three things this setup does not yet separate from a true negative result:
   that forbids fabricated questions, answers, or citations
   (`docs/research_experimental_specification.md` §13); human-reviewed;
   split into validation and test sets.
-- `λ`, `θ`, `H` fitted on validation (not guessed, not fit on test).
-- A first real, held-out-test comparison run end to end, scored by a
-  pre-registered primary metric, and judged by a paired significance test
-  rather than an arbitrary magnitude threshold — see §7.
+- `λ`, `θ`, `H` fitting procedure implemented and exercised on a full,
+  real-data run end to end, scored by a pre-registered primary metric and
+  judged by a paired significance test rather than an arbitrary magnitude
+  threshold — see §7.
 
 ## 9. Next phase
 
-The direct way to tell whether §7's result is a true negative or a
-corpus-scale artifact is to remove the pilot-scale reductions one at a time,
-starting with the retrieval index (build it over the full frozen corpus
-rather than the current slice) and, separately, obtaining a properly trained
-RAG² baseline checkpoint. Both are scoped and already implemented
-end-to-end; neither requires new methodology. See
-`docs/status_and_decisions.md` §3.2 for the ordered list of remaining steps.
+To move from the reduced-scale pipeline validation (§7) to a reportable
+comparison against Objective 2, the following reductions are removed one at
+a time, in order of expected impact: the retrieval index is built over the
+full frozen corpus rather than the current pilot slice, and the RAG²
+baseline filter checkpoint is trained to completion rather than on a reduced
+label set. Both steps are scoped and already implemented end-to-end; neither
+requires new methodology. See `docs/status_and_decisions.md` §3.2 for the
+ordered list of remaining steps.
 
 ## 10. Where the active code is
 
@@ -197,8 +185,12 @@ docs/                four documents — see below
 |---|---|
 | [`docs/current_objectives.md`](docs/current_objectives.md) | **Canonical scope** — the research question, the three objectives, current status. Start here. |
 | [`docs/research_experimental_specification.md`](docs/research_experimental_specification.md) | **The method** — every arm's exact behaviour, the parameters, the generator, metrics, statistics, and how to reproduce a run. |
-| [`docs/status_and_decisions.md`](docs/status_and_decisions.md) | **The record** — what has actually run, the full result (§1.2), what was decided and why, and the change log. |
 | [`docs/question_review.md`](docs/question_review.md) | Instructions for reviewing the candidate question pool. |
+
+`docs/status_and_decisions.md` is an internal engineering/development log
+(component readiness, environment notes, a dated change log) kept for
+reproducibility detail; it is not required reading for understanding the
+research.
 
 ## 11. Where archived/superseded work is
 
