@@ -44,6 +44,7 @@ from __future__ import annotations
 import itertools
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
@@ -66,7 +67,15 @@ from systems.interfaces.generator import CallableGenerator
 #: model calls), so a much larger grid would still be fast, but a small,
 #: pre-declared grid is easier to defend as "not tuned until something
 #: looked good" than a suspiciously fine one chosen after seeing results.
-THETA_GRID = [0.3, 0.4, 0.5, 0.6, 0.7]
+#:
+#: theta extends to 0.9 (widened from an earlier 0.3-0.7 pass) because
+#: rho(s) alone (candidate_count=20, rank-normalised) already clears 0.3-0.7
+#: for well over half the candidate set regardless of recency - at those
+#: thresholds the budget cap reproduces relevance-only ranking no matter
+#: what lambda is, so that range cannot show the temporal term doing
+#: anything. Values above ~0.7 are where relevance alone stops being
+#: sufficient and admission can actually depend on T(s).
+THETA_GRID = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9]
 HALF_LIFE_GRID_DAYS = [30.0, 90.0, 180.0, 365.0, 730.0, 1825.0]
 #: lambda=0 is the mandatory ablation arm, handled separately in Phase 2 -
 #: not swept here, since fitting "the full system" over lambda=0 would be
@@ -123,15 +132,46 @@ def _run_in_memory(items, systems: dict[str, Any]) -> list[dict[str, Any]]:
     return records
 
 
+def _relevance_only_top_budget(item, budget: int) -> set[str]:
+    """The evidence ids a pure relevance ranking (no filter at all) would
+    admit for this item - what NoFilterSystem effectively does. Used only
+    as the divergence yardstick below, never to score anything."""
+    ranked = sorted(item.candidates, key=lambda c: c.rerank_rank)
+    return {c.evidence_id for c in ranked[:budget]}
+
+
+def _divergence_rate(records, items_by_id: dict, system_label: str, budget: int) -> float:
+    """Fraction of items where this system's admitted set differs at all
+    from relevance-only top-budget. This is the direct, model-free answer
+    to "can this configuration possibly behave differently from the
+    baseline" - independent of whether that difference helps or hurts
+    token_f1, and independent of the extractive stand-in generator."""
+    total = 0
+    differs = 0
+    for record in records:
+        if record["system"] != system_label or record.get("status", "ok") != "ok":
+            continue
+        item = items_by_id[record["question_id"]]
+        total += 1
+        if set(record["admitted_evidence_ids"]) != _relevance_only_top_budget(item, budget):
+            differs += 1
+    return differs / total if total else 0.0
+
+
 def fit_on_validation(
-    val_items, generator, *, budget: int,
+    val_items, generator, *, budget: int, question_date: date,
 ) -> dict[str, Any]:
     """Phase 1: grid-sweep theta/half_life/lambda on validation only.
 
     Returns the fitted config plus the full grid's scores, so the fitting
-    process itself is auditable (not just the winning cell).
+    process itself is auditable (not just the winning cell). Every cell
+    also records ``divergence_rate`` - whether that configuration ever
+    admits anything different from pure relevance ranking - so a grid that
+    is structurally unable to test the temporal mechanism shows that
+    plainly, rather than only showing tied metrics with no diagnosis.
     """
     gold = gold_evidence_ids(val_items)
+    items_by_id = {i.question_id: i for i in val_items}
     grid_results = []
     best = None
 
@@ -140,7 +180,7 @@ def fit_on_validation(
     ):
         systems = build_systems(
             generator, [lam], rag2_filter=None, theta=theta,
-            half_life=half_life, budget=budget,
+            half_life=half_life, budget=budget, question_date=question_date,
         )
         # build_systems always includes "baseline" (needs a real filter) and
         # "no_filter" too; the sweep only needs the proposed arm - drop the
@@ -152,15 +192,19 @@ def fit_on_validation(
         agg = rm.aggregate_by_system(rows)
         label = f"proposed_lambda_{lam:g}"
         metrics = agg[label]
+        divergence = _divergence_rate(records, items_by_id, label, budget)
         grid_results.append({
             "theta": theta, "half_life_days": half_life, "lambda": lam,
             "token_f1": metrics["token_f1"], "groundedness": metrics["groundedness"],
+            "divergence_rate": divergence,
         })
         key = (metrics["token_f1"], metrics["groundedness"])
         if best is None or key > best[0]:
             best = (key, theta, half_life, lam)
 
     _, theta, half_life, lam = best
+    any_divergence = any(g["divergence_rate"] > 0 for g in grid_results)
+    max_divergence = max((g["divergence_rate"] for g in grid_results), default=0.0)
     return {
         "fitted_theta": theta, "fitted_half_life_days": half_life,
         "fitted_lambda": lam,
@@ -168,6 +212,8 @@ def fit_on_validation(
         "fitted_validation_groundedness": best[0][1],
         "grid": grid_results,
         "grid_size": len(grid_results),
+        "any_config_diverges_from_relevance_only": any_divergence,
+        "max_divergence_rate_in_grid": max_divergence,
     }
 
 
@@ -181,8 +227,16 @@ def main(argv=None) -> int:
     ap.add_argument("--rag2-checkpoint", default=DEFAULT_CHECKPOINT)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--budget", type=int, default=DEFAULT_BUDGET)
+    ap.add_argument("--question-date", default=None,
+                    help="YYYY-MM-DD 'as of' date passage ages are computed "
+                         "against. Defaults to today - NOT the fixture "
+                         "placeholder (2026-01-01) run_end_to_end.py uses "
+                         "for its synthetic demo, which earlier real-data "
+                         "runs inherited by mistake.")
     ap.add_argument("--output-dir", default="experiments/outputs/fit_and_evaluate")
     args = ap.parse_args(argv)
+    question_date = (date.fromisoformat(args.question_date) if args.question_date
+                     else date.today())
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -210,12 +264,23 @@ def main(argv=None) -> int:
           f"{len(THETA_GRID) * len(HALF_LIFE_GRID_DAYS) * len(LAMBDA_GRID)} configs, "
           "no model calls needed for this - pure arithmetic over already-"
           "retrieved candidates)...")
-    fit = fit_on_validation(val_items, generator, budget=args.budget)
+    fit = fit_on_validation(val_items, generator, budget=args.budget,
+                            question_date=question_date)
     print(f"  fitted: theta={fit['fitted_theta']}, "
           f"half_life={fit['fitted_half_life_days']}d, "
           f"lambda={fit['fitted_lambda']}")
     print(f"  validation token_f1 at this config: "
           f"{fit['fitted_validation_token_f1']:.3f}")
+    print(f"  diagnostic: {'YES' if fit['any_config_diverges_from_relevance_only'] else 'NO'} "
+          f"- does ANY of the {fit['grid_size']} grid configs admit a "
+          "different evidence set than pure relevance ranking on at least "
+          "one question? (max divergence rate in grid: "
+          f"{fit['max_divergence_rate_in_grid']:.1%})")
+    if not fit["any_config_diverges_from_relevance_only"]:
+        print("  ^ If this is NO, the mechanism cannot be tested by this grid "
+              "at all - the result below cannot distinguish 'the idea doesn't "
+              "help' from 'this configuration never even tried anything "
+              "different.' Treat any verdict below as provisional if so.")
 
     print(f"\nLoading RAG2 filter checkpoint from {args.rag2_checkpoint} ...")
     from systems.baseline.admission import FlanT5RAG2Filter
@@ -232,7 +297,7 @@ def main(argv=None) -> int:
     systems = build_systems(
         generator, lambdas, rag2_filter,
         theta=fit["fitted_theta"], half_life=fit["fitted_half_life_days"],
-        budget=args.budget,
+        budget=args.budget, question_date=question_date,
     )
     proposed_label = f"proposed_lambda_{fit['fitted_lambda']:g}"
     ablated_label = "proposed_lambda_0"
@@ -297,6 +362,7 @@ def main(argv=None) -> int:
             "half_life_days": fit["fitted_half_life_days"],
             "context_budget": args.budget,
             "proposed_lambda": fit["fitted_lambda"],
+            "question_date": question_date.isoformat(),
             "fitted_on": "validation split (n={}), reported on test split "
                         "(n={}), no overlap".format(len(val_items), len(test_items)),
         },

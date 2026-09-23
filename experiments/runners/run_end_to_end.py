@@ -249,12 +249,18 @@ def build_systems(
     theta: float = DEFAULT_THETA,
     half_life: float = DEFAULT_HALF_LIFE_DAYS,
     budget: int = DEFAULT_BUDGET,
+    question_date: date = QUESTION_DATE,
 ) -> dict[str, object]:
     """baseline (RAG2), no_filter control, and one proposed arm per lambda
     in ``lambdas`` (labelled proposed_lambda_<value>).
 
     ``rag2_filter`` comes from make_rag2_filter() - the real trained
     checkpoint when one is supplied, the documented stand-in otherwise.
+
+    ``question_date`` defaults to this module's fixture placeholder
+    (2026-01-01) so existing fixture-based callers are unaffected; a caller
+    scoring real, dated evidence against a real "as of" date (real-world
+    passage ages, not ages relative to a demo constant) must pass its own.
     """
     systems: dict[str, object] = {
         "no_filter": NoFilterSystem(
@@ -275,7 +281,7 @@ def build_systems(
         temporal = TemporalPolicy(half_life_days=half_life, undated_score=0.0)
         config = AdmissionConfig(
             admit_threshold=theta,
-            question_date=QUESTION_DATE,
+            question_date=question_date,
             max_admitted_passages=budget,
         )
         # Validate up front, so a bad theta/budget fails before any
