@@ -24,9 +24,9 @@ whether it helps.
 
 **Research objectives:**
 
-1. To implement and validate the proposed RAG system using predefined
+1. To implement and validate the proposed system using predefined
    evaluation metrics for retrieval and generation performance.
-2. To determine the extent to which the proposed RAG system improves
+2. To determine the extent to which the proposed system improves
    retrieval and generation performance compared with the baseline model.
 
 Both objectives are addressed by direct comparison, ablation, and a
