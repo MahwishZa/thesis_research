@@ -119,6 +119,142 @@ def _snapshot_id_from_digest(digest: "hashlib._Hash") -> str:
 ON_DUPLICATE_POLICIES = ("raise", "keep_first")
 
 
+class StreamingCorpusReader:
+    """Streams ``CorpusPassage`` records one at a time, in file order,
+    without ever holding more than one line's worth of the corpus in memory.
+
+    Exists for one reason: at the real corpus's scale (4.3M+ chunks, a
+    13 GB file), materializing every passage into a Python list - as
+    ``read_passages_with_snapshot`` below does - holds the full corpus text
+    resident at once. Measured on the real corpus on 16 GB-RAM hardware,
+    that alone (before any model or vectors) pushed free memory to ~0 and
+    caused sustained OS paging (2026-09-24 diagnostic run). This class is
+    the shared, single-parsing-path fix: anything that can consume passages
+    one at a time - like the streaming index build - should iterate this
+    instead of materializing a list.
+
+    Iterate this object to consume passages; each full iteration re-reads
+    the file from the start (cheap and correct, never stateful across
+    iterations). ``snapshot_id`` and ``duplicates`` reflect the most recent
+    completed iteration and raise if none has finished yet - reading them
+    mid-iteration or before any iteration would silently return a partial
+    digest, which is exactly the kind of thing that should fail loudly
+    instead.
+    """
+
+    def __init__(
+        self,
+        corpus_root: str | Path,
+        *,
+        on_progress: Optional[Callable[[int], None]] = None,
+        progress_every: int = 200_000,
+        on_duplicate: str = "raise",
+        dated_only: bool = False,
+    ) -> None:
+        if on_duplicate not in ON_DUPLICATE_POLICIES:
+            raise CorpusError(
+                f"on_duplicate must be one of {ON_DUPLICATE_POLICIES}, "
+                f"got {on_duplicate!r}"
+            )
+        self.path = Path(corpus_root) / CHUNKS
+        if not self.path.exists():
+            raise CorpusError(
+                f"corpus chunk file not found: {self.path}. Step 1 (corpus "
+                "build) must complete before evidence can be retrieved."
+            )
+        self._on_progress = on_progress
+        self._progress_every = progress_every
+        self._on_duplicate = on_duplicate
+        self._dated_only = dated_only
+        self._snapshot_id: Optional[str] = None
+        self._duplicates: Optional[tuple[dict[str, Any], ...]] = None
+        self._n_yielded: int = 0
+
+    def __iter__(self) -> Iterator[CorpusPassage]:
+        self._snapshot_id = None
+        self._duplicates = None
+        self._n_yielded = 0
+        first_seen_line: dict[str, int] = {}
+        duplicates: list[dict[str, Any]] = []
+        digest = hashlib.sha256()
+        # Opened in binary mode so the exact on-disk bytes are what get
+        # hashed (matching the block-wise ``snapshot_id``); each line is
+        # decoded separately for parsing. Streamed rather than read whole -
+        # see the Windows >2GB OSError this avoids (module docstring).
+        with open(self.path, "rb") as handle:
+            for number, raw_line in enumerate(handle, 1):
+                if self._on_progress is not None and number % self._progress_every == 0:
+                    self._on_progress(number)
+                digest.update(raw_line)
+                line = raw_line.decode("utf-8")
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise CorpusError(f"{self.path}:{number}: {exc}")
+                for required in ("chunk_id", "text"):
+                    if required not in record:
+                        raise CorpusError(f"{self.path}:{number}: missing {required!r}")
+                chunk_id = record["chunk_id"]
+                if chunk_id in first_seen_line:
+                    if self._on_duplicate == "raise":
+                        raise CorpusError(
+                            f"duplicate chunk_id {chunk_id!r}; evidence ids "
+                            "must be unique or frozen candidate sets cannot "
+                            "be replayed"
+                        )
+                    duplicates.append({
+                        "chunk_id": chunk_id,
+                        "kept_line": first_seen_line[chunk_id],
+                        "dropped_line": number,
+                        "dropped_text_preview": record["text"][:200],
+                    })
+                    continue
+                first_seen_line[chunk_id] = number
+                claim_classes = record.get("claim_classes") or ()
+                passage = CorpusPassage(
+                    chunk_id=chunk_id,
+                    document_id=record.get("document_id", ""),
+                    text=record["text"],
+                    retrieval_text=record.get("retrieval_text") or record["text"],
+                    publication_date=record.get("publication_date") or None,
+                    source_tier=record.get("source_tier", "unknown"),
+                    retracted=_as_bool(record.get("retracted")),
+                    section=record.get("section") or None,
+                    claim_classes=tuple(claim_classes),
+                )
+                if self._dated_only and not passage.publication_date:
+                    continue
+                self._n_yielded += 1
+                yield passage
+        self._snapshot_id = _snapshot_id_from_digest(digest)
+        self._duplicates = tuple(duplicates)
+
+    @property
+    def snapshot_id(self) -> str:
+        if self._snapshot_id is None:
+            raise CorpusError(
+                "snapshot_id is only available after a full iteration has "
+                "completed"
+            )
+        return self._snapshot_id
+
+    @property
+    def duplicates(self) -> tuple[dict[str, Any], ...]:
+        if self._duplicates is None:
+            raise CorpusError(
+                "duplicates is only available after a full iteration has "
+                "completed"
+            )
+        return self._duplicates
+
+    @property
+    def n_yielded(self) -> int:
+        """Passages yielded by the most recent completed iteration."""
+        return self._n_yielded
+
+
 def read_passages(corpus_root: str | Path) -> tuple[CorpusPassage, ...]:
     """Read every chunk, in file order.
 
@@ -144,20 +280,13 @@ def read_passages_with_snapshot(
     line it was dropped from, so every drop is traceable back to the exact
     corpus lines involved.
 
-    ``build_index.py`` used to call ``read_passages`` then ``snapshot_id``
-    separately - two full reads of the corpus file. Measured on a 300k-line/
-    439 MB synthetic corpus, that redundant second read cost **nothing**
-    (7.75s vs. 7.78s for one pass): the OS page cache made the second read
-    essentially free. So this single-pass version is a real, harmless
-    simplification - one fewer place the file path can be wrong, one fewer
-    thing that could disagree - but **the time for a large real corpus is
-    dominated by parsing that many lines in Python, not by I/O**, and this
-    change does not make that faster. Each raw line is hashed (as bytes,
-    before decoding) into the same running SHA-256 that ``snapshot_id``
-    would have produced reading the file in 1 MB blocks - a streaming
-    hash's digest depends only on the byte sequence and its order, not how
-    it was chunked, so the two are guaranteed identical (locked by
-    ``test_combined_reader_matches_the_standalone_snapshot_id``).
+    A thin wrapper around ``StreamingCorpusReader``: this function still
+    materializes every passage into a tuple (its whole contract is "give me
+    everything"), but the line-by-line parsing, digest and duplicate logic
+    live in exactly one place now, so the streaming index build below and
+    this function can never silently diverge in behaviour. Use
+    ``StreamingCorpusReader`` directly for anything that can consume
+    passages one at a time instead of materializing them all.
 
     ``on_progress(lines_read)`` is called every ``progress_every`` lines, so
     a long real run can show it is alive rather than sitting silent - which
@@ -172,80 +301,16 @@ def read_passages_with_snapshot(
     ``DenseIndex`` already uses) and skips later ones, recording every drop
     in the returned ``duplicates`` tuple rather than silently discarding it.
     """
-    if on_duplicate not in ON_DUPLICATE_POLICIES:
-        raise CorpusError(
-            f"on_duplicate must be one of {ON_DUPLICATE_POLICIES}, "
-            f"got {on_duplicate!r}"
-        )
-
-    path = Path(corpus_root) / CHUNKS
-    if not path.exists():
-        raise CorpusError(
-            f"corpus chunk file not found: {path}. Step 1 (corpus build) "
-            "must complete before evidence can be retrieved."
-        )
-
-    passages: list[CorpusPassage] = []
-    first_seen_line: dict[str, int] = {}
-    duplicates: list[dict[str, Any]] = []
-    digest = hashlib.sha256()
-    # Opened in binary mode so the exact on-disk bytes are what get hashed
-    # (matching the old block-wise ``snapshot_id``); each line is decoded
-    # separately for parsing. Streamed rather than read whole - see
-    # ``read_passages``'s historical note on the Windows >2GB OSError this
-    # avoids.
-    with open(path, "rb") as handle:
-        for number, raw_line in enumerate(handle, 1):
-            if on_progress is not None and number % progress_every == 0:
-                on_progress(number)
-            digest.update(raw_line)
-            line = raw_line.decode("utf-8")
-            if not line.strip():
-                continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise CorpusError(f"{path}:{number}: {exc}")
-            for required in ("chunk_id", "text"):
-                if required not in record:
-                    raise CorpusError(f"{path}:{number}: missing {required!r}")
-            chunk_id = record["chunk_id"]
-            if chunk_id in first_seen_line:
-                if on_duplicate == "raise":
-                    raise CorpusError(
-                        f"duplicate chunk_id {chunk_id!r}; evidence ids must "
-                        "be unique or frozen candidate sets cannot be "
-                        "replayed"
-                    )
-                duplicates.append({
-                    "chunk_id": chunk_id,
-                    "kept_line": first_seen_line[chunk_id],
-                    "dropped_line": number,
-                    "dropped_text_preview": record["text"][:200],
-                })
-                continue
-            first_seen_line[chunk_id] = number
-            claim_classes = record.get("claim_classes") or ()
-            passages.append(CorpusPassage(
-                chunk_id=chunk_id,
-                document_id=record.get("document_id", ""),
-                text=record["text"],
-                retrieval_text=record.get("retrieval_text") or record["text"],
-                publication_date=record.get("publication_date") or None,
-                source_tier=record.get("source_tier", "unknown"),
-                retracted=_as_bool(record.get("retracted")),
-                section=record.get("section") or None,
-                claim_classes=tuple(claim_classes),
-            ))
-
-    if not passages:
-        raise CorpusError(f"{path} contains no passages")
-
-    return (
-        tuple(passages),
-        _snapshot_id_from_digest(digest),
-        tuple(duplicates),
+    reader = StreamingCorpusReader(
+        corpus_root,
+        on_progress=on_progress,
+        progress_every=progress_every,
+        on_duplicate=on_duplicate,
     )
+    passages = tuple(reader)
+    if not passages:
+        raise CorpusError(f"{reader.path} contains no passages")
+    return passages, reader.snapshot_id, reader.duplicates
 
 
 def snapshot_id(corpus_root: str | Path) -> str:
