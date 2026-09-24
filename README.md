@@ -56,7 +56,7 @@ context budget — the honest floor a filtering method must clear.
 
 ```mermaid
 flowchart TD
-    R[Frozen retrieval<br/>same evidence for every arm]
+    R[Frozen retrieval]
     R --> A1[RAG² baseline]
     R --> A2[RAG² + Temporal Filter]
     R --> A3[No-Filter control]
@@ -134,7 +134,7 @@ by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, evaluation status |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
-| [`docs/research_log.md`](docs/research_log.md) | Chronological record of implementation work, decisions, and pilot results |
+| [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
 ## How to run
 

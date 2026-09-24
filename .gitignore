@@ -15,5 +15,4 @@ __pycache__/
 # `git status`, not silently ignored alongside the large regenerable
 # folders sitting next to it.
 checkpoints/
-corpus_pilot/
 experiments/results/index_pilot_reduced_scope/
