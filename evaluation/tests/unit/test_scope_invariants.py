@@ -116,8 +116,8 @@ class SupersededScopeTests(unittest.TestCase):
 
     def test_the_five_current_docs_all_exist(self):
         """The 2026-09-24 reorganization reduced docs/ to five topic files
-        and pointed code, tests and README at them. ``research_log.md`` was
-        added after that reorganization as a sixth, standing doc (the
+        and pointed code, tests and README at them. ``log.md`` was added
+        after that reorganization as a sixth, standing doc (the
         chronological implementation record - see its own header) rather
         than a topic doc describing current state, so it is listed here
         too. A missing expected file means a reference in this repository
@@ -129,7 +129,7 @@ class SupersededScopeTests(unittest.TestCase):
             "glossary.md",
             "evaluation.md",
             "reproducibility.md",
-            "research_log.md",
+            "log.md",
         }
         self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
 
