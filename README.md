@@ -1,8 +1,5 @@
 # Temporal Evidence Filtering in Retrieval-Augmented Generation: Extending RAG² for Alzheimer's Disease Question Answering
 
-MS thesis implementation. **Research code, not a clinical system** — nothing
-here is validated for, or usable in, patient care.
-
 ## 1. Problem Statement
 
 Medical evidence changes over time: a systematic review's conclusion can be
@@ -27,9 +24,9 @@ whether it helps.
 
 **Research objectives:**
 
-1. To implement and validate the proposed RAG system using predefined
+1. To implement and validate the proposed system using predefined
    evaluation metrics for retrieval and generation performance.
-2. To determine the extent to which the proposed RAG system improves
+2. To determine the extent to which the proposed system improves
    retrieval and generation performance compared with the baseline model.
 
 Both objectives are addressed by direct comparison, ablation, and a
@@ -90,15 +87,6 @@ RAG diagnostics (token F1, ROUGE-L, context precision/recall, groundedness).
 Whether a difference between systems is real, rather than noise, is decided
 by a **paired significance test** over per-question outcomes — not by the
 size of an average gap.
-
-The pipeline has been run end to end on real data at a reduced scale (a
-pilot retrieval index, a reduced-scale baseline checkpoint, and an
-extractive stand-in in place of a generative model); that run's output is
-committed under `experiments/results/` and demonstrates the pipeline and
-statistical procedure work correctly — it is an engineering checkpoint, not
-yet the reported comparison. See `docs/evaluation.md` §7 and
-`docs/reproducibility.md` §5 for exactly what remains before a result is
-reported here.
 
 ## 5. Expected Contribution
 
