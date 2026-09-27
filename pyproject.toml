@@ -18,6 +18,21 @@ dependencies = ["PyYAML>=6.0"]
 # without them. Install when a real checkpoint is available.
 [project.optional-dependencies]
 models = ["torch>=2.0", "transformers>=4.40"]
+# experiments/baseline/filter_training/ imports these but they were never
+# declared here (found during the 2026-09-27 audit) - `pip install -e
+# ".[models]"` alone does not get you what filter training needs.
+# Two extras, not one: the hf path (bitsandbytes, CUDA-oriented) and the
+# gguf path (llama-cpp-python, CPU-oriented) pull in different, non-
+# overlapping heavy dependencies - installing both when you only need one
+# is wasted download/disk for no benefit.
+filter-training-hf = [
+    "torch>=2.0", "transformers>=4.40", "datasets>=2.14",
+    "sentencepiece>=0.1.99", "accelerate>=0.30", "bitsandbytes>=0.43",
+]
+filter-training-gguf = [
+    "transformers>=4.40", "datasets>=2.14", "sentencepiece>=0.1.99",
+    "llama-cpp-python>=0.2.60",
+]
 
 [tool.setuptools]
 packages = [

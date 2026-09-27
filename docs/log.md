@@ -283,23 +283,86 @@ obvious from the start.
 
 ---
 
+## Phase 11 — Full-scale index build, and local filter-training tooling (Sep 24 – Sep 27)
+
+- **Full retrieval index built.** The original `build_index.py` held every
+  passage's text and the full ~12.8 GB vector matrix in process memory at
+  once; a diagnostic run on the student's 16 GB-RAM laptop (a live
+  memory-monitor log, not a guess) showed this pushed free RAM to ~0 and
+  caused sustained OS paging before any model or vectors were even
+  involved. Rewritten as a two-pass, memory-bounded, checkpointed build
+  (`streaming_index_build.py`): a cheap planning pass fixes row order and
+  count, then vectors are written directly into a disk-backed memmap
+  instead of a resident array. Verified bit-identical to the original
+  in-memory output. Run for real: **4,376,141 × 768, 12.52 GB**,
+  reload-verified. A related repository-hygiene gap was fixed at the same
+  time: the resulting 12.5 GB directory was untracked but not gitignored,
+  which was both slow (`git status` scanning it) and a real risk of an
+  accidental multi-GB commit.
+- **Filter-training investigation.** The pilot checkpoint (Phase 9) was
+  inspected directly, not assumed: the saved archive contains no model
+  weight file at all, on top of the already-known 18-training-example/
+  0.0-accuracy problem — nothing in it is reusable. The existing label-
+  generation path (`rationale.py`, Llama-3-8B-Instruct via `bitsandbytes`)
+  needs ~5.5–6 GB VRAM (4-bit) or ~16 GB RAM (CPU) — both infeasible on
+  the student's 4 GB VRAM / 15.2 GB RAM laptop. A free-tier remote GPU
+  would trivially satisfy this with zero methodology deviation (the
+  20-label pilot file was almost certainly produced exactly that way,
+  per the student's own earlier Colab notebook), but running anything
+  remotely was ruled out by explicit instruction — the student chose to
+  run the entire remaining pipeline locally.
+- **GGUF/`llama.cpp` adopted for local label generation**, after
+  reassessing (not assuming) that it was necessary: every non-GGUF local
+  alternative either doesn't fit the hardware (the existing HF paths;
+  reducing question count, which doesn't touch peak memory at all) or is
+  a materially larger deviation (swapping to a smaller substitute model
+  changes which model reasons over the label-generation prompts, vs.
+  GGUF only changing the quantization/execution backend for the *same*
+  model). Implemented as `rationale_gguf.py` (`GGUFRationaleScorer`),
+  matching `Llama3RationaleScorer`'s prompt template, chat formatting
+  (via the real HF tokenizer, weights never loaded), greedy decoding, and
+  answer-extraction exactly — the only difference is the execution
+  backend, disclosed via the scorer's recorded `name`. 15 tests, all
+  against fakes (neither `llama_cpp` nor `transformers` is installed in
+  the development environment, by design).
+- **Checkpoint/resume and a calibration mode added to `build_labels.py`**,
+  which previously wrote its whole output in one shot at the end — a real
+  gap given a local CPU-based label-generation run is expected to take
+  hours, unattended. `--calibrate N` scores a small sample, reports
+  measured throughput and an extrapolated full-run estimate, and writes
+  neither an output file nor a checkpoint, so it can be repeated freely
+  before committing to the real run. 10 tests, including a simulated
+  mid-run crash verifying no pair is silently re-scored or dropped on
+  resume.
+- **Packaging gap fixed:** `pyproject.toml` declared no dependencies at
+  all for filter training (`bitsandbytes`, `datasets`, `sentencepiece`,
+  `accelerate` were imported but never listed) — found during audit, not
+  previously known. Split into two installable extras
+  (`filter-training-hf`, `filter-training-gguf`) so installing the local
+  path doesn't pull in `bitsandbytes`, which is CUDA-oriented and useless
+  on this hardware.
+- **Audit correction:** an earlier status summary in this project's
+  working history stated 552/553 tests passing; the actual count was
+  551/552 (537 baseline + 15 new, not 553) — an arithmetic error caught
+  by re-running the suite rather than trusting the prior figure.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
-  tested (536/537 tests passing — the one failure is an expected fixture-
-  vs-real-corpus registry comparison, not a defect), and unchanged in
-  substance since the Phase 4 scope freeze.
+  tested (576/577 tests passing — the one failure is the same expected
+  fixture-vs-real-corpus registry comparison as always, not a defect),
+  unchanged in substance since the Phase 4 scope freeze.
 - **Corpus:** built and frozen (Phase 6); the guideline/textbook source
   (Stage 03) remains empty as a known, non-blocking gap.
 - **Question pool:** 123 questions, fully human-reviewed, split into 23
   validation / 90 test questions (Phase 7).
-- **What is still reduced-scale, pending a full run:** the RAG² baseline
-  checkpoint (needs training on the full label set, not the 20-label/
-  1-epoch pilot checkpoint), the retrieval index (needs building over the
-  full corpus, not the ~1% pilot slice), and the generator (needs a real
-  generative model in place of the extractive stand-in). None of these are
-  methodology changes — see `reproducibility.md` §5 for exactly what each
-  requires.
+- **Retrieval index:** complete — full corpus, 4,376,141 × 768 (Phase 11).
+- **RAG² baseline filter checkpoint:** not yet produced. Label-generation
+  and training tooling for a fully local (GGUF-based) path now exists
+  (Phase 11); a real-scale run has not been performed.
+- **Main-evaluation generator:** still the extractive stand-in.
+  `fit_and_evaluate.py` has no wiring for a real generator yet — this is
+  unimplemented, not merely unrun.
 - **Reported thesis result:** not yet produced. The only real-data result
-  committed so far is the Phase 9 pilot run, which is explicitly a pipeline
-  validation, not the comparison the thesis will report.
+  committed so far is the Phase 9 pilot run, which is explicitly a
+  pipeline validation, not the comparison the thesis will report.

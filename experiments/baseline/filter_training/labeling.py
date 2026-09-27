@@ -115,6 +115,32 @@ class PairOutcome:
         return self.without.perplexity - self.with_evidence.perplexity
 
 
+def outcome_to_dict(outcome: PairOutcome) -> dict[str, Any]:
+    """``PairOutcome`` -> a JSON-safe dict, for checkpointing a partial
+    label-generation run. Kept beside the dataclass it serialises so the
+    two cannot silently drift apart."""
+    return {
+        "pair_id": outcome.pair_id,
+        "question": outcome.question,
+        "evidence": outcome.evidence,
+        "without": {"correct": outcome.without.correct,
+                    "perplexity": outcome.without.perplexity},
+        "with_evidence": {"correct": outcome.with_evidence.correct,
+                          "perplexity": outcome.with_evidence.perplexity},
+    }
+
+
+def outcome_from_dict(data: dict[str, Any]) -> PairOutcome:
+    """Inverse of ``outcome_to_dict``."""
+    return PairOutcome(
+        pair_id=data["pair_id"],
+        question=data["question"],
+        evidence=data["evidence"],
+        without=RationaleOutcome(**data["without"]),
+        with_evidence=RationaleOutcome(**data["with_evidence"]),
+    )
+
+
 @dataclass(frozen=True)
 class LabelledExample:
     """One training example in the released RAG² format."""

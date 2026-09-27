@@ -9,6 +9,9 @@ reduced-scale right now.
 pip install -e .
 # Optional, only needed to run real models (not needed for the test suite):
 pip install -e ".[models]"
+# Optional, only needed for filter-training label generation - pick ONE:
+pip install -e ".[filter-training-gguf]"  # local, CPU, no VRAM requirement
+pip install -e ".[filter-training-hf]"    # needs a real GPU (~6GB VRAM) or ~16GB RAM
 ```
 
 Python ≥ 3.10. `pyproject.toml` is the single source of dependency truth.
@@ -51,27 +54,73 @@ is large in memory at full corpus scale (see §6).
 
 ## 5. What is currently reduced-scale, and why it matters
 
-The committed pilot-scale run under `experiments/results/fit_and_evaluate/` used:
+The committed pilot-scale run under `experiments/results/fit_and_evaluate/` used a
+pilot-scale index, an undertrained filter checkpoint, and an extractive
+stand-in generator. Status as of 2026-09-27:
 
 | Component | Current state | Full-scale requires |
 |---|---|---|
-| Retrieval index | A small pilot slice of the frozen corpus | Building the index over the full corpus (`corpus/data/`, already complete — see `data.md`) |
-| RAG² baseline filter checkpoint | Trained on a reduced label set | Completing filter training per `methodology.md` §3 |
-| Generator | Extractive stand-in (verbatim top-admitted passage) | A real generative model under the contract in `methodology.md` §9 |
+| Retrieval index | **Complete** — full corpus, 4,376,141 × 768, built via the streaming/checkpointed build (§4) | — |
+| RAG² baseline filter checkpoint | Not started. Prior pilot checkpoint (18 training examples, 1 epoch) is unusable — `validation_accuracy = 0.0`, and the saved archive did not even include a model weight file | Real-scale label generation (§4a) + local filter training (§4b) |
+| Generator (main evaluation) | Extractive stand-in (verbatim top-admitted passage) | A real generative model under the contract in `methodology.md` §9. `fit_and_evaluate.py` currently hardcodes the stand-in — wiring in a real generator is unimplemented, not just unrun |
 
-None of these are methodology changes — every step is already implemented
-and tested; what remains is compute time and, for the checkpoint and
-generator, a GPU session.
+None of these are methodology changes in the design sense — but two are not
+"just needs compute time" either: the filter checkpoint needs the
+label-generation and training steps below actually built and run, and the
+real-generator wiring in `fit_and_evaluate.py` needs writing before it can
+be run at all.
+
+## 4a. Generating filter-training labels (local, GGUF)
+
+`experiments/baseline/filter_training/rationale.py`'s HF/`bitsandbytes` path
+needs ~5.5–6 GB VRAM (4-bit) or ~16 GB RAM (CPU fallback) — infeasible on a
+4 GB VRAM / 15.2 GB RAM laptop (verified 2026-09-27, see `log.md`). For that
+hardware, `--scorer gguf` runs the same model (Llama-3-8B-Instruct) 4-bit
+quantized via `llama.cpp` on CPU RAM instead (~6–7 GB) — a disclosed
+execution-backend deviation, not a model or method change; see
+`rationale_gguf.py`'s module docstring for exactly what is and isn't
+identical to the HF path.
+
+**Obtaining a GGUF file.** A widely-used, actively-maintained community
+quantization exists at
+[`bartowski/Meta-Llama-3-8B-Instruct-GGUF`](https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF)
+(`Meta-Llama-3-8B-Instruct-Q4_K_M.gguf`, ~4.92 GB) — a 4-bit k-quant
+conversion of the same model you already have license access to. Record the
+exact file's sha256 alongside your run, the same discipline this project
+already applies to pinned model revisions (§9).
+
+**Always calibrate before a real run:**
+
+```bash
+python -m experiments.baseline.filter_training.build_labels \
+    --scorer gguf --gguf-model-path /path/to/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf \
+    --n-questions 500 --output experiments/baseline/filter_training/labels/medqa_filter_labels.json \
+    --model-revision <pinned-commit-sha> --calibrate 10
+```
+
+Scores 10 pairs, reports measured throughput and an extrapolated estimate
+for the full `--n-questions`, and writes nothing — no output file, no
+checkpoint. Repeat freely; only drop `--calibrate` once the estimate is
+acceptable. The real run is checkpointed automatically
+(`<output>.progress/`) and resumes with `--resume` if interrupted.
+
+## 4b. Filter training (local)
+
+`train.py`'s default (full AdamW fine-tuning of Flan-T5-large) needs ~12 GB,
+tight against 15.2 GB total RAM. Not yet implemented: switching to the
+Adafactor optimizer + gradient checkpointing to bring this inside a
+comfortable local budget — planned, not built as of this writing.
 
 ## 6. Hardware notes
 
 MedCPT encoder/reranker inference and Flan-T5 filter inference are feasible
-on a modest local GPU (a few GB VRAM). Flan-T5 filter *training* and
-Llama-3-8B-Instruct generation both need a GPU session with materially more
-memory than that — a free-tier remote GPU session is the documented venue
-for both. Building the full-corpus retrieval index produces an embedding
-matrix on the order of several GB in memory; watch for memory pressure on
-constrained hardware and prefer building on a machine with headroom.
+on a modest local GPU (a few GB VRAM). Flan-T5 filter *training* needs more
+memory than that — see §4b. Llama-3-8B-Instruct label generation needs a
+real GPU or ~16 GB RAM via the HF path (§4a) — see §4a for the local GGUF
+alternative used on hardware without either. Building the full-corpus
+retrieval index produces an embedding matrix on the order of several GB in
+memory; the streaming build (§4) keeps this off the peak-memory path, but
+watch for memory pressure on constrained hardware regardless.
 
 ## 7. What is gitignored, and why
 
