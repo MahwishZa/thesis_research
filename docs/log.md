@@ -346,10 +346,51 @@ obvious from the start.
   551/552 (537 baseline + 15 new, not 553) — an arithmetic error caught
   by re-running the suite rather than trusting the prior figure.
 
+## Phase 12 — GGUF path exercised on real hardware, and a pre-flight audit (Sep 28)
+
+- **Two real bugs found only by actually running `GGUFRationaleScorer` on
+  the student's laptop** — neither was caught by the fake-based unit
+  tests, because the fakes didn't model the specific behaviour that
+  broke: (1) the `Llama` constructor's `logits_all=False` default made
+  `create_completion(logprobs=...)` raise outright in the installed
+  `llama-cpp-python` version — perplexity computation cannot work
+  without it, so this was a hard blocker, not a degradation; (2)
+  Llama-3's chat template already emits a leading `<|begin_of_text|>`,
+  and llama.cpp adds its own by default, producing a real "duplicate
+  leading" warning and a prompt that wasn't what it was supposed to be.
+  Both fixed; the fakes were then rewritten to mirror the real chat
+  template shape so this specific class of bug would be caught next time
+  without needing a real run.
+- **The textbook retrieval index (50,000 passages) took ~1.8-2 hours to
+  encode on CPU** — measured twice for real (~6624-7518s), not estimated.
+  Every retry of an unrelated later failure (the two bugs above included)
+  was redoing this from scratch. Added a cache keyed on
+  `(n_textbook_passages, seed)`, validated against a freshly (and
+  cheaply) reloaded passage-id list before being trusted, so a mismatched
+  or stale cache rebuilds rather than silently reusing the wrong vectors.
+- **Calibration run, for real** (10 pairs, `--scorer gguf`, CPU-only, 256
+  max tokens): 1092.4s, 109.24s/pair, extrapolating to **~15.2 hours**
+  for the planned 500-question real run. Recorded here as the actual
+  measured figure this project is committing to, not a preliminary
+  guess.
+- **Pre-flight audit before committing to that 15-hour run** surfaced two
+  further gaps, both fixed before any real-scale run started: (1)
+  `load_checkpoint` had no handling for a truncated trailing line in the
+  checkpoint file — a real failure mode for a multi-hour unattended run
+  (power loss, a closed laptop lid), and would have crashed a resume
+  attempt instead of recovering; fixed to drop an incomplete last line
+  and re-score that one pair, while still raising loudly on damage
+  anywhere else in the file (not explainable by an interrupted write).
+  (2) the resume fingerprint checked `scorer_name`/`n_questions`/`seed`/
+  `n_textbook_passages` but not `max_new_tokens` or which model file/
+  revision was in use - a resume with an accidentally different flag on
+  any of those would have silently mixed incompatible pairs into one
+  label set rather than being caught. Both now covered, with tests.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
-  tested (576/577 tests passing — the one failure is the same expected
+  tested (585/586 tests passing — the one failure is the same expected
   fixture-vs-real-corpus registry comparison as always, not a defect),
   unchanged in substance since the Phase 4 scope freeze.
 - **Corpus:** built and frozen (Phase 6); the guideline/textbook source
@@ -358,8 +399,11 @@ obvious from the start.
   validation / 90 test questions (Phase 7).
 - **Retrieval index:** complete — full corpus, 4,376,141 × 768 (Phase 11).
 - **RAG² baseline filter checkpoint:** not yet produced. Label-generation
-  and training tooling for a fully local (GGUF-based) path now exists
-  (Phase 11); a real-scale run has not been performed.
+  tooling for a fully local (GGUF-based) path exists, is bug-fixed
+  against a real run, and has a measured throughput (~15.2h/500
+  questions) — the real-scale run itself has not been started yet
+  (Phase 11-12). Local filter training (`train.py`'s Adafactor/gradient-
+  checkpointing change) remains unbuilt.
 - **Main-evaluation generator:** still the extractive stand-in.
   `fit_and_evaluate.py` has no wiring for a real generator yet — this is
   unimplemented, not merely unrun.

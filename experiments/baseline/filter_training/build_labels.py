@@ -129,10 +129,19 @@ def _progress_paths(output: Path) -> tuple[Path, Path]:
 
 
 def _fingerprint(*, scorer_name: str, n_questions: int, seed: int,
-                  n_textbook_passages: int) -> dict[str, Any]:
+                  n_textbook_passages: int, max_new_tokens: int,
+                  model_revision: str, model_path: str = "") -> dict[str, Any]:
+    """Everything that determines what a resumed run would actually
+    generate. A mismatch on any of these means a resume would silently
+    mix pairs produced under different settings into one label set -
+    max_new_tokens and model_revision/model_path were missing from an
+    earlier version of this fingerprint (found in the 2026-09-28 audit,
+    before the real 500-question run) and would not have been caught."""
     return {
         "scorer_name": scorer_name, "n_questions": n_questions,
         "seed": seed, "n_textbook_passages": n_textbook_passages,
+        "max_new_tokens": max_new_tokens, "model_revision": model_revision,
+        "model_path": model_path,
     }
 
 
@@ -162,9 +171,27 @@ def load_checkpoint(
         )
     outcomes: list[PairOutcome] = []
     if outcomes_path.exists():
-        for line in outcomes_path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
+        lines = [l for l in outcomes_path.read_text(encoding="utf-8").splitlines()
+                if l.strip()]
+        for i, line in enumerate(lines):
+            try:
                 outcomes.append(outcome_from_dict(json.loads(line)))
+            except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                if i == len(lines) - 1:
+                    # A hard interruption (power loss, kill mid-write) can
+                    # leave the last line truncated - that one pair simply
+                    # never finished and is re-scored below, not an error.
+                    print(f"note: dropping an incomplete trailing "
+                          f"checkpoint line ({exc}) - the pair it belonged "
+                          "to will be re-scored", file=sys.stderr)
+                    break
+                raise BuildLabelsError(
+                    f"{outcomes_path} line {i + 1} of {len(lines)} is not "
+                    f"valid ({exc}) and is not the last line - this looks "
+                    "like real corruption, not an interrupted write. "
+                    f"Delete {outcomes_path.parent} to start fresh if you "
+                    "cannot recover it."
+                ) from exc
     return outcomes, {o.pair_id for o in outcomes}
 
 
@@ -359,6 +386,8 @@ def main(argv=None) -> int:
         scorer_name=scorer.name if hasattr(scorer, "name") else args.scorer,
         n_questions=args.n_questions, seed=args.seed,
         n_textbook_passages=args.n_textbook_passages,
+        max_new_tokens=args.max_new_tokens, model_revision=args.model_revision,
+        model_path=args.gguf_model_path or "" if args.scorer == "gguf" else "",
     )
 
     def _report(i: int, total: int, elapsed: float) -> None:

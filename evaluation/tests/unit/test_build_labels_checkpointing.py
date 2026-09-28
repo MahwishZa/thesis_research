@@ -15,6 +15,18 @@ from experiments.baseline.filter_training.build_labels import (
 from experiments.baseline.filter_training.labeling import RationaleOutcome
 
 
+def _fp(**overrides):
+    """_fingerprint with fixed defaults for the fields these tests don't
+    vary, so each call site only names the field it actually cares about -
+    same pattern as write_corpus()/chunk() fixtures elsewhere in this
+    suite."""
+    defaults = dict(scorer_name="fake-scorer", n_questions=3, seed=42,
+                    n_textbook_passages=100, max_new_tokens=64,
+                    model_revision="rev1")
+    defaults.update(overrides)
+    return _fingerprint(**defaults)
+
+
 class FakeItem:
     def __init__(self, i):
         self.item_id = f"Q-{i:03d}"
@@ -57,7 +69,7 @@ def _run(tmp, questions, scorer, **kwargs):
     outcomes = run_labeling(
         questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(), scorer,
         output=output,
-        fingerprint=_fingerprint(scorer_name=scorer.name, n_questions=len(questions),
+        fingerprint=_fp(scorer_name=scorer.name, n_questions=len(questions),
                                  seed=42, n_textbook_passages=100),
         **kwargs,
     )
@@ -95,7 +107,7 @@ class RunLabelingTests(unittest.TestCase):
                 run_labeling(
                     questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
                     FakeScorer(), output=output,
-                    fingerprint=_fingerprint(scorer_name="fake-scorer", n_questions=3,
+                    fingerprint=_fp(scorer_name="fake-scorer", n_questions=3,
                                              seed=42, n_textbook_passages=100),
                 )
         self.assertIn("--resume", str(ctx.exception))
@@ -104,7 +116,7 @@ class RunLabelingTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             questions = [FakeItem(i) for i in range(5)]
             output = Path(tmp) / "labels.json"
-            fingerprint = _fingerprint(scorer_name="crash-then-resume",
+            fingerprint = _fp(scorer_name="crash-then-resume",
                                        n_questions=5, seed=42,
                                        n_textbook_passages=100)
 
@@ -153,7 +165,7 @@ class RunLabelingTests(unittest.TestCase):
                 run_labeling(
                     questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
                     FakeScorer(), output=output,
-                    fingerprint=_fingerprint(scorer_name="fake-scorer", n_questions=3,
+                    fingerprint=_fp(scorer_name="fake-scorer", n_questions=3,
                                              seed=999, n_textbook_passages=100),  # different seed
                     resume=True,
                 )
@@ -167,7 +179,7 @@ class RunLabelingTests(unittest.TestCase):
                 run_labeling(
                     questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
                     FakeScorer(), output=output,
-                    fingerprint=_fingerprint(scorer_name="a-different-scorer",
+                    fingerprint=_fp(scorer_name="a-different-scorer",
                                              n_questions=3, seed=42,
                                              n_textbook_passages=100),
                     resume=True,
@@ -202,7 +214,7 @@ class CalibrationTests(unittest.TestCase):
                 outcomes = run_labeling(
                     questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
                     FakeScorer(), output=output,
-                    fingerprint=_fingerprint(scorer_name="fake-scorer",
+                    fingerprint=_fp(scorer_name="fake-scorer",
                                              n_questions=10, seed=42,
                                              n_textbook_passages=100),
                     calibrate_n=4,
@@ -216,10 +228,71 @@ class LoadCheckpointTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             output = Path(tmp) / "labels.json"
             outcomes, done_ids = load_checkpoint(
-                output, expected=_fingerprint(scorer_name="x", n_questions=1,
+                output, expected=_fp(scorer_name="x", n_questions=1,
                                               seed=1, n_textbook_passages=1))
         self.assertEqual(outcomes, [])
         self.assertEqual(done_ids, set())
+
+    def test_a_truncated_trailing_line_is_dropped_not_crashed_on(self):
+        """A kill mid-write (power loss, closed lid) can leave the last
+        checkpoint line incomplete - a real, expected failure mode for a
+        multi-hour unattended run, not a corner case."""
+        with TemporaryDirectory() as tmp:
+            output = Path(tmp) / "labels.json"
+            fingerprint = _fp()
+            questions = [FakeItem(i) for i in range(3)]
+            _run(tmp, questions, FakeScorer())
+            outcomes_path, _state_path = _progress_paths(output)
+            # Simulate a kill mid-write: append a truncated JSON fragment.
+            with open(outcomes_path, "a", encoding="utf-8") as f:
+                f.write('{"pair_id": "Q-999", "question": "truncated')
+
+            outcomes, done_ids = load_checkpoint(output, expected=fingerprint)
+
+        self.assertEqual(len(outcomes), 3)  # the 3 complete lines, no crash
+        self.assertNotIn("Q-999", done_ids)
+
+    def test_a_corrupted_middle_line_raises_loudly(self):
+        """Unlike a truncated trailing line, damage in the middle of the
+        file is not explained by an interrupted write and must not be
+        silently dropped - it could mean real corruption."""
+        with TemporaryDirectory() as tmp:
+            output = Path(tmp) / "labels.json"
+            fingerprint = _fp()
+            questions = [FakeItem(i) for i in range(3)]
+            _run(tmp, questions, FakeScorer())
+            outcomes_path, _state_path = _progress_paths(output)
+            lines = outcomes_path.read_text(encoding="utf-8").splitlines()
+            lines[0] = "not valid json at all"
+            outcomes_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+            with self.assertRaises(BuildLabelsError) as ctx:
+                load_checkpoint(output, expected=fingerprint)
+        self.assertIn("not the last line", str(ctx.exception))
+
+    def test_resume_refuses_on_max_new_tokens_mismatch(self):
+        with TemporaryDirectory() as tmp:
+            questions = [FakeItem(i) for i in range(3)]
+            output, _ = _run(tmp, questions, FakeScorer())
+            with self.assertRaises(BuildLabelsError) as ctx:
+                run_labeling(
+                    questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
+                    FakeScorer(), output=output,
+                    fingerprint=_fp(max_new_tokens=999), resume=True,
+                )
+        self.assertIn("max_new_tokens", str(ctx.exception))
+
+    def test_resume_refuses_on_model_revision_mismatch(self):
+        with TemporaryDirectory() as tmp:
+            questions = [FakeItem(i) for i in range(3)]
+            output, _ = _run(tmp, questions, FakeScorer())
+            with self.assertRaises(BuildLabelsError) as ctx:
+                run_labeling(
+                    questions, FakeIndex(), [FakePassage(0)], FakeQueryEncoder(),
+                    FakeScorer(), output=output,
+                    fingerprint=_fp(model_revision="a-different-sha"), resume=True,
+                )
+        self.assertIn("model_revision", str(ctx.exception))
 
 
 if __name__ == "__main__":
