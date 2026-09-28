@@ -129,7 +129,10 @@ class GGUFRationaleScorer:
             n_threads=n_threads,
             n_gpu_layers=n_gpu_layers,
             seed=seed,
-            logits_all=False,
+            # Required for create_completion(logprobs=...) to work at all -
+            # confirmed the hard way (ValueError on a real run, 2026-09-28)
+            # rather than assumed from documentation.
+            logits_all=True,
             verbose=False,
         )
 
@@ -172,6 +175,17 @@ class GGUFRationaleScorer:
                 [{"role": "user", "content": prompt}],
                 tokenize=False, add_generation_prompt=True,
             )
+            # Llama-3's chat template starts with a literal "<|begin_of_
+            # text|>" token, and llama.cpp's completion call adds its own
+            # leading BOS token by default - left alone, the prompt sent to
+            # the model would carry it twice (confirmed on a real run,
+            # 2026-09-28: "Detected duplicate leading <|begin_of_text|>").
+            # Stripping the template's copy here, once, is more robust than
+            # relying on a version-specific llama.cpp flag to suppress the
+            # automatic one.
+            bos = self._tokenizer.bos_token
+            if bos and chat_prompt.startswith(bos):
+                chat_prompt = chat_prompt[len(bos):]
 
         completion = self._llm.create_completion(
             chat_prompt,

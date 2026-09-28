@@ -19,9 +19,15 @@ from experiments.baseline.filter_training.rationale import RationaleGenerationEr
 
 
 class FakeTokenizer:
-    """Stand-in for AutoTokenizer.from_pretrained's return value."""
+    """Stand-in for AutoTokenizer.from_pretrained's return value. Mirrors
+    Llama-3's real chat template shape (a leading literal BOS token) so the
+    duplicate-BOS stripping logic is actually exercised, not just assumed
+    correct - this is exactly the class of bug a too-simple fake would
+    have hidden (a real run caught it; the fake below is written to catch
+    it next time without needing a real run)."""
 
     chat_template = None
+    bos_token = "<|begin_of_text|>"
 
     def __init__(self, *, with_chat_template=False):
         if with_chat_template:
@@ -30,7 +36,7 @@ class FakeTokenizer:
 
     def apply_chat_template(self, messages, *, tokenize, add_generation_prompt):
         self.chat_calls.append(messages)
-        return f"<chat>{messages[0]['content']}</chat>"
+        return f"{self.bos_token}<chat>{messages[0]['content']}</chat>"
 
 
 class FakeLlama:
@@ -243,6 +249,33 @@ class GGUFRationaleScorerTests(unittest.TestCase):
         self._make_scorer()
         llama = FakeLlama.instances[-1]
         self.assertEqual(llama.init_kwargs["n_gpu_layers"], 0)
+
+    def test_logits_all_is_enabled(self):
+        """Required for create_completion(logprobs=...) to work at all -
+        a real run without this raised ValueError: 'logprobs is not
+        supported for models created with logits_all=False' (2026-09-28).
+        """
+        self._install_fakes()
+        self._make_scorer()
+        llama = FakeLlama.instances[-1]
+        self.assertTrue(llama.init_kwargs["logits_all"])
+
+    def test_duplicate_leading_bos_token_is_stripped(self):
+        """Llama-3's chat template already starts with a literal BOS
+        token, and llama.cpp adds its own by default - sending both
+        produced a real 'duplicate leading <|begin_of_text|>' warning on
+        an actual run (2026-09-28). The prompt handed to the model must
+        carry the BOS token at most once."""
+        tokenizer = FakeTokenizer(with_chat_template=True)
+        self._install_fakes(tokenizer=tokenizer)
+        scorer = self._make_scorer()
+        llama = FakeLlama.instances[-1]
+        llama.next_completion = _completion("Answer: A", [-0.1])
+
+        scorer.score("Q?", ["a", "b", "c", "d"], "a", evidence=None)
+
+        prompt_sent, _kwargs = llama.completion_calls[0]
+        self.assertEqual(prompt_sent.count(tokenizer.bos_token), 0)
 
     def test_name_is_recorded_for_provenance(self):
         self._install_fakes()
