@@ -68,14 +68,38 @@ class BuildLabelsError(RuntimeError):
     """Raised when label generation cannot proceed safely."""
 
 
+#: Where a textbook index gets cached, keyed by (n_passages, seed) - see
+#: build_textbook_index. Encoding 50,000 passages on CPU took ~2 hours on
+#: a real run (2026-09-28); every retry of a failed later step (e.g. the
+#: scorer) would otherwise redo it from scratch for no reason, since
+#: load_textbook_passages is deterministic given the same n/seed.
+TEXTBOOK_INDEX_CACHE_ROOT = Path("experiments/baseline/filter_training/.textbook_index_cache")
+
+
 def build_textbook_index(n_passages: int, seed: int, device: Optional[str]):
-    from experiments.shared.retrieval.encoders import medcpt_article_encoder
-    from experiments.shared.retrieval.index import build_index
+    from experiments.shared.retrieval.index import DenseIndex, IndexError_
 
     passages = load_textbook_passages(n=n_passages, seed=seed)
     print(f"loaded {len(passages)} textbook passages")
-    encoder = medcpt_article_encoder(device=device)
 
+    cache_dir = TEXTBOOK_INDEX_CACHE_ROOT / f"n{n_passages}_seed{seed}"
+    if (cache_dir / "manifest.json").exists():
+        try:
+            cached = DenseIndex.load(cache_dir)
+        except IndexError_:
+            cached = None
+        if cached is not None and cached.passage_ids == tuple(p.chunk_id for p in passages):
+            print(f"reusing cached textbook index at {cache_dir} "
+                  f"({len(cached.passage_ids)} x {cached.dim}) - "
+                  "skipping re-encoding")
+            return cached, passages
+        print(f"cached index at {cache_dir} does not match this "
+              "n/seed's passage ids - rebuilding")
+
+    from experiments.shared.retrieval.encoders import medcpt_article_encoder
+    from experiments.shared.retrieval.index import build_index
+
+    encoder = medcpt_article_encoder(device=device)
     t0 = time.time()
 
     def _progress(done: int, total: int, elapsed: float) -> None:
@@ -88,6 +112,8 @@ def build_textbook_index(n_passages: int, seed: int, device: Optional[str]):
     )
     print(f"built textbook index: {len(vectors_index.passage_ids)} x "
           f"{vectors_index.dim} in {time.time() - t0:.0f}s")
+    vectors_index.save(cache_dir)
+    print(f"cached to {cache_dir} for future runs")
     return vectors_index, passages
 
 

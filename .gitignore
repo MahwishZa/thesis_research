@@ -10,6 +10,7 @@ __pycache__/
 #   - corpus_pilot/                -> a local sample of corpus/data/chunks/chunks.jsonl
 #   - experiments/results/index_pilot_reduced_scope/ -> experiments/shared/retrieval/build_index.py
 #   - experiments/results/index/   -> the full-scale index (~12.5 GB), same command
+#   - experiments/baseline/filter_training/.textbook_index_cache/ -> build_labels.py, ~150MB
 # Small, legitimate result files (experiments/results/fit_and_evaluate/, the current
 # committed run - see docs/evaluation.md SS7) are NOT covered by a blanket
 # results/ rule - a real committed result must stay visible to
@@ -18,4 +19,5 @@ __pycache__/
 checkpoints/
 experiments/results/index_pilot_reduced_scope/
 experiments/results/index/
+experiments/baseline/filter_training/.textbook_index_cache/
 ram_monitor.csv
