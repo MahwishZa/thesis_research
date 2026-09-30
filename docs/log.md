@@ -413,7 +413,7 @@ Not yet done: training on real Flan-T5-large.
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
-  tested (599/600 tests passing — the one failure is the same expected
+  tested (603/604 tests passing — the one failure is the same expected
   fixture-vs-real-corpus registry comparison as always, not a defect),
   unchanged in substance since the Phase 4 scope freeze.
 - **Corpus:** built and frozen (Phase 6); the guideline/textbook source
