@@ -22,3 +22,5 @@ experiments/results/index/
 experiments/baseline/filter_training/.textbook_index_cache/
 ram_monitor.csv
 experiments/baseline/filter_training/labels/
+models/
+*.egg-info/
