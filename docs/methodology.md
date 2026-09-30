@@ -59,7 +59,7 @@ retrained by this project on general-medical MedQA data (never on the
 thesis's own Alzheimer's questions), using the paper's own label-generation
 recipe (correctness-flip decision tree with a perplexity-differential
 tie-break) and Flan-T5 hyperparameters, with any deviation stated where it
-occurs. Code: `experiments/baseline/filter_training/`.
+occurs. Disclosed local deviations: Llama-3-8B-Instruct Q4_K_M GGUF on CPU for label generation, 500 MedQA questions, 256-token rationales, textbook substitution; Adafactor optimizer, fp32 CPU training, gradient checkpointing (see `docs/reproducibility.md` 4a/4b). Code: `experiments/baseline/filter_training/`.
 
 ## 4. Proposed system — the Temporal Filter
 

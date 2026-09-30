@@ -61,7 +61,7 @@ stand-in generator. Status as of 2026-09-27:
 | Component | Current state | Full-scale requires |
 |---|---|---|
 | Retrieval index | **Complete** — full corpus, 4,376,141 × 768, built via the streaming/checkpointed build (§4) | — |
-| RAG² baseline filter checkpoint | Not started. Prior pilot checkpoint (18 training examples, 1 epoch) is unusable — `validation_accuracy = 0.0`, and the saved archive did not even include a model weight file | Real-scale label generation (§4a) + local filter training (§4b) |
+| RAG² baseline filter checkpoint | Not trained. Tooling ready (§4b). Prior pilot checkpoint (18 training examples, 1 epoch) is unusable — `validation_accuracy = 0.0`, and the saved archive did not even include a model weight file | Real-scale label generation (§4a) + local filter training (§4b) |
 | Generator (main evaluation) | Extractive stand-in (verbatim top-admitted passage) | A real generative model under the contract in `methodology.md` §9. `fit_and_evaluate.py` currently hardcodes the stand-in — wiring in a real generator is unimplemented, not just unrun |
 
 None of these are methodology changes in the design sense — but two are not
@@ -106,10 +106,37 @@ acceptable. The real run is checkpointed automatically
 
 ## 4b. Filter training (local)
 
-`train.py`'s default (full AdamW fine-tuning of Flan-T5-large) needs ~12 GB,
-tight against 15.2 GB total RAM. Not yet implemented: switching to the
-Adafactor optimizer + gradient checkpointing to bring this inside a
-comfortable local budget — planned, not built as of this writing.
+`train.py`'s paper recipe (full AdamW fine-tuning of Flan-T5-large) needs
+~12 GB on CPU, tight against 15.2 GB RAM, and does not fit the 4 GB GPU. The
+implemented local recipe (each switch is recorded as a deviation in the
+checkpoint record):
+
+```
+python -m experiments.baseline.filter_training.train \
+    --labels experiments/baseline/filter_training/labels/medqa_filter_labels.json \
+    --output-dir checkpoints/rag2_filter --epochs N \
+    --cpu --precision fp32 --optimizer adafactor --gradient-checkpointing \
+    --early-stopping-patience 3
+```
+
+* `--calibrate-steps N` runs N optimizer steps, prints s/step and memory, and
+  writes no checkpoint - use it to choose `--epochs`.
+* `--resume` continues an interrupted run; refused if any setting or the
+  labels file (sha256) changed; an incomplete (mid-save) checkpoint is
+  skipped automatically.
+* Validation uses the *deployed* two-way [HELPFUL]/[NOT_HELPFUL] logit rule
+  and reports accuracy, balanced accuracy, and the majority-class baseline.
+  A checkpoint is "usable" only if it beats the majority baseline and has
+  balanced accuracy > 0.5 (labels are ~71% NOT_HELPFUL, so "accuracy > 0.5"
+  alone is satisfied by rejecting everything).
+* Verified offline on a tiny T5 (real torch): calibrate, train, kill
+  mid-run, resume. Not yet run on real Flan-T5-large - that is the
+  student's next step.
+
+Fixed bug (found before any real training): the old validation metric
+compared `generate()` output column 0 - which is the decoder-start id - to the
+label id, so it reported 0.0 accuracy even for a model that had learned the
+task (reproduced: old metric 0.0 vs deployed-rule 0.79).
 
 ## 6. Hardware notes
 

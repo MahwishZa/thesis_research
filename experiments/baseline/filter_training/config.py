@@ -49,8 +49,13 @@ class FilterTrainingConfig:
     #: how much label generation the budget bought.
     epochs: Optional[int] = None
 
-    mixed_precision: str = "bf16"
+    mixed_precision: str = "bf16"   # "bf16" | "fp16" | "fp32"
     seed: int = 42
+
+    #: Engineering switches for a small local machine (no change to the
+    #: objective): recompute activations to save memory, force CPU.
+    gradient_checkpointing: bool = False
+    use_cpu: bool = False
 
     @property
     def effective_batch_size(self) -> int:
@@ -64,15 +69,35 @@ class FilterTrainingConfig:
                 f"{self.per_device_batch_size} vs paper 16; effective batch "
                 f"{self.effective_batch_size} preserved via "
                 f"{self.gradient_accumulation_steps} accumulation steps, "
-                "because a free 16 GB T4 cannot hold batch 16 at seq 512"
+                "because batch 16 at seq 512 does not fit a small local machine"
             )
         if self.epochs is not None and self.epochs != 40:
             out["epochs"] = (
-                f"{self.epochs} vs paper 40; reduced to fit free-tier session "
-                "limits. The count actually run is reported."
+                f"{self.epochs} vs paper 40; reduced to fit local compute "
+                "and time. The count actually run is reported."
             )
         if self.base_model != BASE_MODEL:
             out["base_model"] = f"{self.base_model} vs paper {BASE_MODEL}"
+        if self.optimizer != "adamw":
+            out["optimizer"] = (
+                f"{self.optimizer} vs paper adamw; Adafactor "
+                "(scale_parameter=False, relative_step=False, no momentum) "
+                "keeps optimizer state small enough for a 15 GB laptop. A "
+                "disclosed methodological change: same loss and data, "
+                "different update rule."
+            )
+        if self.mixed_precision == "fp32":
+            out["mixed_precision"] = (
+                "fp32 vs bf16 reference; CPU training has no fast bf16 path. "
+                "Numerically more precise than the reference, not less."
+            )
+        if self.gradient_checkpointing:
+            out["gradient_checkpointing"] = (
+                "on; recomputes activations to save memory. Engineering "
+                "optimisation - mathematically identical gradients."
+            )
+        if self.use_cpu:
+            out["use_cpu"] = "training forced onto CPU (4 GB GPU cannot hold it)"
         return out
 
     def validate(self) -> None:
@@ -85,6 +110,11 @@ class FilterTrainingConfig:
             )
         if self.epochs <= 0:
             raise ConfigError("epochs must be positive")
+        if self.optimizer not in ("adamw", "adafactor"):
+            raise ConfigError(f"unsupported optimizer {self.optimizer!r}")
+        if self.mixed_precision not in ("bf16", "fp16", "fp32"):
+            raise ConfigError(
+                f"unsupported mixed_precision {self.mixed_precision!r}")
         if self.effective_batch_size != 16:
             raise ConfigError(
                 f"effective batch size is {self.effective_batch_size}, not "
@@ -107,6 +137,8 @@ class FilterTrainingConfig:
             "epochs": self.epochs,
             "mixed_precision": self.mixed_precision,
             "seed": self.seed,
+            "gradient_checkpointing": self.gradient_checkpointing,
+            "use_cpu": self.use_cpu,
             "label_tokens": list(LABEL_TOKENS),
             "deviations_from_paper": self.deviations(),
         }
@@ -131,6 +163,10 @@ class CheckpointRecord:
     label_distribution: dict[str, int] = field(default_factory=dict)
     trained_on: str = ""
     notes: str = ""
+    #: Deployed-rule metrics on the filter-val set (see metrics.py). Optional
+    #: so older records still load; when present they tighten is_usable().
+    balanced_accuracy: Optional[float] = None
+    majority_baseline: Optional[float] = None
 
     def validate(self) -> None:
         if not 0.0 <= self.validation_accuracy <= 1.0:
@@ -148,4 +184,16 @@ class CheckpointRecord:
         than a weak one - which changes what a HAR difference means.
         """
         self.validate()
-        return self.validation_accuracy > floor
+        if self.validation_accuracy <= floor:
+            return False
+        # With imbalanced labels, accuracy > 0.5 is met by "reject
+        # everything". When the stronger metrics are recorded, require the
+        # filter to beat the majority-class baseline AND to discriminate
+        # (balanced accuracy above chance).
+        if self.majority_baseline is not None:
+            if self.validation_accuracy <= self.majority_baseline:
+                return False
+        if self.balanced_accuracy is not None:
+            if self.balanced_accuracy <= 0.5:
+                return False
+        return True

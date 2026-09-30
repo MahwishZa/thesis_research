@@ -387,10 +387,33 @@ obvious from the start.
   any of those would have silently mixed incompatible pairs into one
   label set rather than being caught. Both now covered, with tests.
 
+## Phase 13 — Real label generation completed; filter-training tooling fixed (Sep 30)
+
+**Labels.** The student's local GGUF run finished: 500 questions x 2
+generations (no evidence / with evidence), 256 max new tokens, 59,618 s
+(16.6 h vs the 15.2 h calibration estimate). Distribution: 143 HELPFUL / 357
+NOT_HELPFUL (28.6% / 71.4%). Flips: flip_to_wrong (97) > flip_to_correct
+(56) - retrieved evidence hurt Llama-3-8B-Q4 more often than it helped, which
+is what makes a filter worthwhile but also makes the classes imbalanced.
+The labels file embeds textbook passages; back it up outside git.
+
+**train.py audit (real torch, tiny T5, before any real training).**
+(1) Validation metric bug confirmed: old metric 0.0 vs deployed-rule 0.79 on
+the same model (T5 `generate()` starts with the decoder-start id). Replaced by
+the deployed two-way rule at decoder position 0, plus balanced accuracy and
+majority baseline. (2) `is_usable` now requires beating the majority baseline
+and balanced accuracy > 0.5. (3) Added Adafactor / gradient checkpointing /
+CPU / fp32 switches (all reported as deviations), `--calibrate-steps`,
+fingerprinted `--resume`, best-epoch-by-balanced-accuracy, optional early
+stopping, label single-token check. (4) A kill mid-save left a partial
+`checkpoint-N` that HF's `get_last_checkpoint` selected and then crashed on;
+resume now skips incomplete checkpoints (test-proven with a real kill).
+Not yet done: training on real Flan-T5-large.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
-  tested (585/586 tests passing — the one failure is the same expected
+  tested (599/600 tests passing — the one failure is the same expected
   fixture-vs-real-corpus registry comparison as always, not a defect),
   unchanged in substance since the Phase 4 scope freeze.
 - **Corpus:** built and frozen (Phase 6); the guideline/textbook source
