@@ -9,7 +9,7 @@ from experiments.baseline.filter_training.config import (
     BASE_MODEL, CheckpointRecord, ConfigError, FilterTrainingConfig,
 )
 from experiments.baseline.filter_training.metrics import (
-    classification_metrics, two_way_prediction,
+    classification_metrics, prior_only_eval_loss, two_way_prediction,
 )
 from experiments.baseline.filter_training.train import (
     _CHECKPOINT_REQUIRED, check_resume_fingerprint,
@@ -42,6 +42,16 @@ class MetricTests(unittest.TestCase):
     def test_two_way_rule_ties_go_to_helpful(self):
         self.assertTrue(two_way_prediction(1.0, 1.0))
         self.assertFalse(two_way_prediction(0.9, 1.0))
+
+
+class PriorFloorTests(unittest.TestCase):
+
+    def test_matches_the_observed_real_run(self):
+        # 28.6% helpful train, 30% val -> 0.3057; the real run plateaued at 0.320
+        self.assertAlmostEqual(prior_only_eval_loss(0.286, 0.30), 0.3057, places=3)
+
+    def test_a_perfectly_separable_prior_has_no_floor(self):
+        self.assertLess(prior_only_eval_loss(0.5, 0.5), 0.35)
 
 
 class UsabilityTests(unittest.TestCase):

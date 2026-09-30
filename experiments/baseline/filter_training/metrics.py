@@ -49,3 +49,17 @@ def classification_metrics(
 def two_way_prediction(logit_helpful: float, logit_not_helpful: float) -> bool:
     """The deployed rule (``FlanT5RAG2Filter``): ``>=`` -> helpful."""
     return logit_helpful >= logit_not_helpful
+
+
+def prior_only_eval_loss(train_helpful_fraction: float, val_helpful_fraction: float) -> float:
+    """eval_loss a model would get by learning ONLY the class prior.
+
+    The target is two tokens, [label, EOS]; EOS is predicted ~perfectly, so
+    the per-token mean is half the label cross-entropy. An ``eval_loss``
+    at or above this means nothing beyond the prior has been learned - even
+    if it fell a lot from its initial value (~28 for new label tokens).
+    """
+    import math
+    p = min(max(train_helpful_fraction, 1e-9), 1 - 1e-9)
+    q = val_helpful_fraction
+    return -(q * math.log(p) + (1 - q) * math.log(1 - p)) / 2

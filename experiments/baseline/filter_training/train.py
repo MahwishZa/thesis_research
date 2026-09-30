@@ -40,19 +40,21 @@ from pathlib import Path
 
 from .config import LABEL_TOKENS, CheckpointRecord, ConfigError, FilterTrainingConfig
 from .labeling import HELPFUL, NOT_HELPFUL
-from .metrics import classification_metrics
+from .metrics import classification_metrics, prior_only_eval_loss
 
 FINGERPRINT_FILE = "train_fingerprint.json"
 
 
 def training_fingerprint(
     config: FilterTrainingConfig, *, labels_sha256: str, val_fraction: float,
+    best_metric: str = "balanced_accuracy",
 ) -> dict:
     """Everything that must be identical for ``--resume`` to be valid."""
     fp = config.to_dict()
     fp.pop("deviations_from_paper", None)
     fp["labels_sha256"] = labels_sha256
     fp["val_fraction"] = val_fraction
+    fp["best_metric"] = best_metric
     return fp
 
 
@@ -150,6 +152,13 @@ def main(argv=None) -> int:
     ap.add_argument("--cpu", action="store_true", help="force CPU training")
     ap.add_argument("--resume", action="store_true",
                     help="continue an interrupted run in --output-dir")
+    ap.add_argument("--best-metric", choices=("eval_loss", "balanced_accuracy"),
+                    default="eval_loss",
+                    help="metric for best-epoch selection and early stopping. "
+                         "eval_loss (default) is smooth; balanced accuracy on "
+                         "~50 validation examples is constant (0.5) while the "
+                         "model still predicts only the majority class, so "
+                         "early stopping on it can halt before learning starts")
     ap.add_argument("--early-stopping-patience", type=int, default=0,
                     help="stop after N epochs without balanced-accuracy gain "
                          "(0 = off)")
@@ -209,7 +218,7 @@ def main(argv=None) -> int:
 
     fingerprint = training_fingerprint(
         config, labels_sha256=_sha256(labels_path),
-        val_fraction=args.val_fraction)
+        val_fraction=args.val_fraction, best_metric=args.best_metric)
     last_checkpoint = None
     if args.resume:
         fp_path = out_dir / FINGERPRINT_FILE
@@ -318,8 +327,8 @@ def main(argv=None) -> int:
         save_strategy="no" if calibrating else "epoch",
         save_total_limit=2,
         load_best_model_at_end=not calibrating,
-        metric_for_best_model="balanced_accuracy",
-        greater_is_better=True,
+        metric_for_best_model=args.best_metric,
+        greater_is_better=(args.best_metric != "eval_loss"),
         logging_steps=1 if calibrating else 10,
         seed=config.seed,
         report_to=[],
@@ -379,6 +388,12 @@ def main(argv=None) -> int:
           f"recall helpful {m['eval_recall_helpful']:.3f}  "
           f"recall not-helpful {m['eval_recall_not_helpful']:.3f}")
 
+    tr_frac = sum(r["answer"] == HELPFUL for r in train_records) / len(train_records)
+    va_frac = sum(r["answer"] == HELPFUL for r in val_records) / len(val_records)
+    floor_loss = prior_only_eval_loss(tr_frac, va_frac)
+    print(f"eval_loss {m['eval_loss']:.4f} vs prior-only floor {floor_loss:.4f} "
+          f"({'BELOW: some signal learned' if m['eval_loss'] < floor_loss - 0.02 else 'at/above floor: no signal beyond the class prior'})")
+
     final_dir = out_dir / "final"
     trainer.save_model(str(final_dir))
     tokenizer.save_pretrained(str(final_dir))
@@ -399,7 +414,7 @@ def main(argv=None) -> int:
         trained_on="MedQA (general-medical), never the thesis's Alzheimer's "
                    "questions - see experiments/baseline/filter_training/medqa_data.py",
         notes=f"deviations from paper: {config.deviations()}; "
-              f"best epoch by balanced accuracy restored; "
+              f"best epoch by {args.best_metric} restored; "
               f"recall_helpful={m['eval_recall_helpful']:.3f}, "
               f"recall_not_helpful={m['eval_recall_not_helpful']:.3f}",
         balanced_accuracy=balanced,

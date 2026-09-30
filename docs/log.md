@@ -410,6 +410,28 @@ stopping, label single-token check. (4) A kill mid-save left a partial
 resume now skips incomplete checkpoints (test-proven with a real kill).
 Not yet done: training on real Flan-T5-large.
 
+## Phase 14 — First real filter-training run: negative result (Sep 30)
+
+Run 1 (local CPU, Adafactor, fp32, gradient checkpointing, 450 train / 50
+val, 20 epochs planned, early-stopping patience 4 on balanced accuracy):
+calibration 106 s/optimizer step (~50 min/epoch incl. eval). It stopped after
+6 epochs (5 h 1 min). Result: **no usable filter.** Deployed-rule validation:
+accuracy 0.700 = majority baseline 0.700, balanced accuracy 0.538 (2 of 15
+HELPFUL recalled), eval_loss 0.320 vs a prior-only floor of 0.306 - i.e. the
+model learned the class prior (71% NOT_HELPFUL) and nothing else. The
+restored "best" epoch (2) is noise on ~15 validation positives. The record
+correctly says `usable = False`; this checkpoint must not be used.
+
+Causes not yet separated: (a) weak/noisy labels (347 of 500 labels come from
+the perplexity-percentile tie-break; the HELPFUL class is ~61% "top-25% of
+perplexity reduction" by construction; 4-bit labeller, 256-token rationales),
+(b) too little data (450 vs the paper's far larger set), (c) early stopping
+too eager - balanced accuracy is constant 0.5 while the model predicts only
+the majority class, so it cannot signal that learning is about to start (my
+design flaw). Changes made: `--best-metric` (default eval_loss),
+prior-only-floor report, `diagnose_labels.py` (labels by rule; TF-IDF
+learnability probe). The 6-epoch run is kept as a documented negative result.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
