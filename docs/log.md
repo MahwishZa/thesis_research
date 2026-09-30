@@ -432,6 +432,20 @@ design flaw). Changes made: `--best-metric` (default eval_loss),
 prior-only-floor report, `diagnose_labels.py` (labels by rule; TF-IDF
 learnability probe). The 6-epoch run is kept as a documented negative result.
 
+## Phase 15 — Why the filter did not learn: label diagnostics (Sep 30)
+
+Read-only diagnostics on the 500 labels (`diagnose_labels.py`): rationale
+answer correct 334/500 without evidence vs 293/500 with retrieved evidence;
+TF-IDF+LR 5-fold balanced accuracy 0.529 (all labels) and 0.547 (153 flip
+labels) - no lexical signal; MedCPT relevance vs label AUC 0.519 (all), 0.429
+(flips), 0.568 (tie-break); Spearman(relevance, perplexity reduction) +0.095.
+Caveat: retrieved passages are all top-1 (relevance sd 2.1), so this probe has
+little range. Working hypothesis, NOT yet tested: flips reflect prompt
+sensitivity of greedy 4-bit decoding rather than evidence content. Test added:
+`label_noise_control.py` re-scores a seeded 150-question subset with an
+irrelevant (derangement-assigned) passage and compares flip rates; it writes
+no labels. No further filter training until that result is in.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
