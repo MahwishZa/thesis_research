@@ -69,16 +69,30 @@ def main(argv=None) -> int:
         print("scikit-learn not installed - skipping the learnability probe "
               "(pip install scikit-learn to enable)")
         return 0
-    texts = [FILTER_TRAINING_PROMPT.format(evidence=o.evidence, question=o.question)
-             for o in outcomes]
-    y = np.array([e.answer == HELPFUL for e in examples])
-    pipe = make_pipeline(TfidfVectorizer(min_df=2, sublinear_tf=True),
-                         LogisticRegression(max_iter=1000, class_weight="balanced"))
-    pred = cross_val_predict(pipe, texts, y,
-                             cv=StratifiedKFold(5, shuffle=True, random_state=42))
-    print(f"TF-IDF+LR 5-fold: accuracy {np.mean(pred == y):.3f}  "
-          f"balanced {balanced_accuracy_score(y, pred):.3f}  "
-          f"(majority baseline {max(y.mean(), 1 - y.mean()):.3f}, chance balanced 0.500)")
+    def probe(name, idx):
+        texts = [FILTER_TRAINING_PROMPT.format(evidence=outcomes[i].evidence,
+                                               question=outcomes[i].question)
+                 for i in idx]
+        y = np.array([examples[i].answer == HELPFUL for i in idx])
+        if min(y.sum(), (~y).sum()) < 5:
+            print(f"{name}: too few examples in one class, skipped")
+            return
+        pipe = make_pipeline(
+            TfidfVectorizer(min_df=2, sublinear_tf=True),
+            LogisticRegression(max_iter=1000, class_weight="balanced"))
+        pred = cross_val_predict(
+            pipe, texts, y, cv=StratifiedKFold(5, shuffle=True, random_state=42))
+        print(f"TF-IDF+LR 5-fold [{name}, n={len(idx)}]: "
+              f"accuracy {np.mean(pred == y):.3f}  "
+              f"balanced {balanced_accuracy_score(y, pred):.3f}  "
+              f"(majority baseline {max(y.mean(), 1 - y.mean()):.3f}, "
+              "chance balanced 0.500)")
+
+    probe("all labels", list(range(len(examples))))
+    # The flip labels come from an observed change in answer correctness - no
+    # percentile rule - so they are the cleaner subset.
+    probe("correctness-flip labels only",
+          [i for i, e in enumerate(examples) if e.rule.startswith("correctness")])
     return 0
 
 
