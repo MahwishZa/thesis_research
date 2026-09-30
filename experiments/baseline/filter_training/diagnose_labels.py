@@ -24,6 +24,63 @@ from pathlib import Path
 from .labeling import FILTER_TRAINING_PROMPT, HELPFUL, label_dataset, outcome_from_dict
 
 
+def _ranks(x):
+    """Average ranks (ties share the mean rank). numpy only."""
+    import numpy as np
+    x = np.asarray(x, dtype=float)
+    order = np.argsort(x, kind="mergesort")
+    ranks = np.empty(len(x))
+    i = 0
+    while i < len(x):
+        j = i
+        while j + 1 < len(x) and x[order[j + 1]] == x[order[i]]:
+            j += 1
+        ranks[order[i:j + 1]] = (i + j) / 2 + 1
+        i = j + 1
+    return ranks
+
+
+def auc(scores, positive):
+    """P(score of a random positive > score of a random negative); 0.5 =
+    no information. Mann-Whitney form, ties counted half."""
+    import numpy as np
+    y = np.asarray(positive, dtype=bool)
+    n_pos, n_neg = int(y.sum()), int((~y).sum())
+    if n_pos == 0 or n_neg == 0:
+        return float("nan")
+    r = _ranks(scores)
+    return float((r[y].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
+
+
+def spearman(a, b):
+    import numpy as np
+    ra, rb = _ranks(a), _ranks(b)
+    if ra.std() == 0 or rb.std() == 0:
+        return float("nan")
+    return float(np.corrcoef(ra, rb)[0, 1])
+
+
+def relevance_probe(outcomes, examples, device=None) -> None:
+    """Does MedCPT query-passage relevance (the retrieval score itself)
+    predict the labels? If even that is at chance, the labels carry little
+    content signal a filter could learn."""
+    import numpy as np
+    from experiments.shared.retrieval.encoders import (
+        medcpt_article_encoder, medcpt_query_encoder)
+    q = medcpt_query_encoder(device=device).encode([o.question for o in outcomes])
+    a = medcpt_article_encoder(device=device).encode([o.evidence for o in outcomes])
+    rel = np.einsum("ij,ij->i", np.asarray(q), np.asarray(a))
+    helpful = np.array([e.answer == HELPFUL for e in examples])
+    is_flip = np.array([e.rule.startswith("correctness") for e in examples])
+    red = np.array([o.perplexity_reduction for o in outcomes])
+    print(f"relevance mean {rel.mean():.3f} sd {rel.std():.3f}")
+    print(f"AUC(relevance -> HELPFUL): all {auc(rel, helpful):.3f} | "
+          f"flip labels {auc(rel[is_flip], helpful[is_flip]):.3f} | "
+          f"tie-break labels {auc(rel[~is_flip], helpful[~is_flip]):.3f}   "
+          "(0.5 = no information)")
+    print(f"Spearman(relevance, perplexity reduction): {spearman(rel, red):+.3f}")
+
+
 def _load_outcomes(progress_dir: Path):
     path = progress_dir / "outcomes.jsonl"
     if not path.exists():
@@ -40,6 +97,10 @@ def main(argv=None) -> int:
                                  formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--progress", required=True,
                     help="the *.progress_completed directory from build_labels")
+    ap.add_argument("--relevance-probe", action="store_true",
+                    help="also score pairs with the MedCPT encoders (needs the "
+                         "cached models; a few minutes on CPU)")
+    ap.add_argument("--device", default=None)
     args = ap.parse_args(argv)
 
     outcomes = _load_outcomes(Path(args.progress))
@@ -57,6 +118,9 @@ def main(argv=None) -> int:
     without_correct = sum(o.without.correct for o in outcomes)
     print(f"rationale answer correct: without evidence {without_correct}/"
           f"{len(outcomes)}, with evidence {with_correct}/{len(outcomes)}")
+
+    if args.relevance_probe:
+        relevance_probe(outcomes, examples, device=args.device)
 
     try:
         import numpy as np
