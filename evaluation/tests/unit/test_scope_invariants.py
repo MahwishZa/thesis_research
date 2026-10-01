@@ -120,7 +120,9 @@ class SupersededScopeTests(unittest.TestCase):
         after that reorganization as a sixth, standing doc (the
         chronological implementation record - see its own header) rather
         than a topic doc describing current state, so it is listed here
-        too. A missing expected file means a reference in this repository
+        too. ``next_phase_plan.md`` (2026-10-01) is the supervisor-facing
+        proposal for the next experiments, placed in docs/ at the owner's
+        request. A missing expected file means a reference in this repository
         now dangles."""
         docs = ROOT / "docs"
         expected = {
@@ -130,6 +132,7 @@ class SupersededScopeTests(unittest.TestCase):
             "evaluation.md",
             "reproducibility.md",
             "log.md",
+            "next_phase_plan.md",
         }
         self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
 

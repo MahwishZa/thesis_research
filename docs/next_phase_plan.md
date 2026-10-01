@@ -53,8 +53,7 @@ Ask in tiers so a refusal of the first still leaves useful answers:
 Before sending: read the replies on GitHub issues #1 (perplexity calculation, 5
 comments) and #2 (data and models) - they may already answer part of this. The
 replies could not be read by the tool used here, so this is *unverified*. Do not
-let the project wait on a reply; plan as if none comes. Draft:
-`docs/proposals/rag2_authors_email_draft.md`.
+let the project wait on a reply; plan as if none comes. The email text is kept outside the repository.
 
 ## 3. If the checkpoint is unavailable: the strongest practical path
 

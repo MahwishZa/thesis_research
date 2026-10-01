@@ -554,13 +554,12 @@ test-split run. Contact the RAG² authors to request checkpoint/labels.
 
 ## Phase 20 — Next-phase plan: evidence of real improvement (Oct 1) - PROPOSAL
 
-No experiment was run. `docs/proposals/next_phase_plan.md` records: what a
+No experiment was run. `docs/next_phase_plan.md` records: what a
 faithful RAG² baseline needs (only the checkpoint, or the authors' filter
 decisions on our frozen candidates; their README states the checkpoint is "not
 available for distribution", only 5 label examples ship, ids reach 23,600);
 measured costs if artifacts arrive (inference 1.34 s/pair; training ~43 h/epoch
-at 23.6k labels, so 40 epochs ~72 days); a tiered author request
-(`docs/proposals/rag2_authors_email_draft.md`); and the fallback design: verdict
+at 23.6k labels, so 40 epochs ~72 days); a tiered author request; and the fallback design: verdict
 accuracy vs the latest Cochrane verdict as primary outcome (judge sees only the
 answer), blinded human hallucination on a subset, shuffled-date and
 irrelevant-evidence controls, pre-declared settings instead of fitting, decision
