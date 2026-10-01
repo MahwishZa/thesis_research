@@ -446,6 +446,25 @@ sensitivity of greedy 4-bit decoding rather than evidence content. Test added:
 irrelevant (derangement-assigned) passage and compares flip rates; it writes
 no labels. No further filter training until that result is in.
 
+## Phase 16 — Label-noise control result; answer-extraction audit added (Oct 1)
+
+`label_noise_control.py`, n=150 questions, same generator. Accuracy: no
+evidence 0.700, retrieved passage 0.600, irrelevant passage 0.553. Flips:
+retrieved 17 to-correct / 32 to-wrong (rate 32.7%); irrelevant 11 / 33 (rate
+29.3%). An irrelevant passage flips the labeller about as often as the
+retrieved one and lowers accuracy at least as much; the only visible content
+effect is 6 more flips to correct for retrieved passages (17 vs 11), not
+distinguishable from noise at n=150. So most correctness flips here reflect
+the generator's sensitivity to the prompt, not whether the passage helps -
+the label function is mostly noise at this scale, consistent with the
+filter learning only the class prior.
+Candidate mechanism (untested): `correct` is False when no letter is
+extracted, and `extract_answer_letter` takes the last standalone A-D token
+(including the article "A"), so rationales truncated at 256 tokens before
+their "Answer:" line are scored wrong or get a stray letter - and passages
+lengthen rationales. `rationale_audit.py` measures truncation rate, explicit
+"Answer:" rate, and greedy reproducibility on a seeded sample.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
