@@ -495,6 +495,26 @@ accuracy by >= 10 percentage points on the matched triples. Low power (about
 50-70 triples) - a negative result will be reported as "no detectable
 evidence signal", not as proof of none.
 
+## Phase 18 — Repaired-measurement pilot: pre-stated rule NOT met (Oct 1)
+
+`rationale_audit.py --n 80 --max-new-tokens 768 --with-control`, strict
+scoring on matched triples (77 of 80 pairs with an explicit answer in all
+three conditions). Measurement artifact fixed: truncation 0% / 1.25% / 0%
+(without / retrieved / irrelevant); 0 of the 16 retrieved-vs-none flips
+involve a guessed generation. Accuracy: no evidence 0.753, retrieved passage
+0.675, irrelevant passage 0.675. Flips: retrieved 5 to-correct / 11 to-wrong;
+irrelevant 8 / 14. Pre-stated rule (truncation < 5% AND retrieved beats
+irrelevant by >= 10 pp): truncation PASS, accuracy gap 0 pp FAIL.
+Conclusion: with the measurement repaired, the retrieved top-1 passage is
+statistically indistinguishable from an irrelevant one for this labeller
+(Llama-3-8B-Instruct Q4_K_M, textbook-substitute corpus, MedQA); any added
+passage lowers accuracy ~8 pp. Correctness flips therefore do not measure
+passage helpfulness here. Limits: n=77 triples (cannot detect effects much
+under ~10 pp); the perplexity tie-break (69% of labels) was not separately
+controlled - the audit did not store perplexities. Decision: no relabelling and
+no further filter training on this label pipeline; the RAG² baseline arm needs a
+supervisor-level decision (see the options in the session notes).
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
