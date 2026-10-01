@@ -1,7 +1,7 @@
 import unittest
 
 from experiments.baseline.filter_training.rationale_audit import (
-    classify_generation, summarize,
+    classify_generation, strict_flip_summary, summarize,
 )
 
 
@@ -39,6 +39,36 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(s["with_evidence"]["truncated_rate"], 0.5)
         self.assertEqual(s["without"]["explicit_answer_rate"], 1.0)
         self.assertEqual(s["with_evidence"]["no_letter_rate"], 0.5)
+
+
+def _g(text, finish, scored, correct):
+    g = classify_generation(text, finish, scored)
+    g["correct"] = correct
+    return g
+
+
+class StrictFlipTests(unittest.TestCase):
+
+    def rows(self):
+        return [
+            # clean flip to wrong (explicit answers both sides)
+            dict(gold_letter="B", without=_g("Answer: B", "stop", "B", True),
+                 with_evidence=_g("Answer: C", "stop", "C", False)),
+            # lenient flip caused by a guessed (truncated) generation
+            dict(gold_letter="B", without=_g("Answer: B", "stop", "B", True),
+                 with_evidence=_g("A man with", "length", "A", False)),
+            # no flip
+            dict(gold_letter="B", without=_g("Answer: B", "stop", "B", True),
+                 with_evidence=_g("Answer: B", "stop", "B", True)),
+        ]
+
+    def test_counts_flips_and_flags_guess_driven_ones(self):
+        s = strict_flip_summary(self.rows())
+        self.assertEqual(s["lenient_flips"], 2)
+        self.assertEqual(s["lenient_flips_involving_a_guessed_generation"], 1)
+        self.assertEqual(s["strict_scorable_pairs"], 2)
+        self.assertEqual((s["strict_flip_to_correct"], s["strict_flip_to_wrong"]), (0, 1))
+        self.assertEqual(s["strict_flip_rate"], 0.5)
 
 
 if __name__ == "__main__":

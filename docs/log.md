@@ -465,6 +465,22 @@ their "Answer:" line are scored wrong or get a stray letter - and passages
 lengthen rationales. `rationale_audit.py` measures truncation rate, explicit
 "Answer:" rate, and greedy reproducibility on a seeded sample.
 
+## Phase 17 — Answer-extraction audit result (Oct 1)
+
+`rationale_audit.py`, 40 seeded questions, same generator: generations cut
+off at 256 tokens 27.5% without evidence / 25.0% with the retrieved passage;
+explicit "Answer: X" line 72.5% / 75.0%; scored letter a fallback or
+disagreeing with the explicit line 27.5% / 25.0%; no letter at all 7.5% /
+5.0%; greedy regeneration matched the original run 100%. The earlier
+hypothesis that passages lengthen rationales (more truncation with evidence)
+is REFUTED (rates are equal). What the audit does show: about a quarter of
+all generations are scored from a guessed letter, which injects arbitrary
+correct/wrong bits into the labels regardless of evidence. Next:
+`--analyze-only` for how many observed flips involve a guessed generation,
+then a repaired-measurement pilot (larger `--max-new-tokens`, explicit
+"Answer:" only, with the irrelevant-passage control) before any relabelling.
+Any such change is a disclosed deviation.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
