@@ -481,6 +481,20 @@ then a repaired-measurement pilot (larger `--max-new-tokens`, explicit
 "Answer:" only, with the irrelevant-passage control) before any relabelling.
 Any such change is a disclosed deviation.
 
+**Phase 17 follow-up (analysis of the 40-question audit file).** 16 of 40
+pairs flipped under lenient extraction; 9 of those 16 (56%) involved a guessed
+(fallback) generation. Only 25 of 40 pairs had an explicit "Answer:" line in
+both generations; among them 3 flipped to correct and 4 to wrong (28%, wide
+interval at n=25). Measurement artifacts explain over half the flips here,
+but clean pairs still flip. **Repaired-measurement pilot - decision rule fixed
+BEFORE seeing results:** 80 seeded questions, `--max-new-tokens 768`,
+`--with-control`; analysed on matched triples (explicit answer in all three
+conditions) with strict scoring. Labels are treated as repairable only if
+truncation is < 5% AND retrieved-passage accuracy exceeds irrelevant-passage
+accuracy by >= 10 percentage points on the matched triples. Low power (about
+50-70 triples) - a negative result will be reported as "no detectable
+evidence signal", not as proof of none.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,

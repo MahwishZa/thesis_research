@@ -1,7 +1,7 @@
 import unittest
 
 from experiments.baseline.filter_training.rationale_audit import (
-    classify_generation, strict_flip_summary, summarize,
+    classify_generation, strict_flip_summary, strict_triple_summary, summarize,
 )
 
 
@@ -69,6 +69,27 @@ class StrictFlipTests(unittest.TestCase):
         self.assertEqual(s["strict_scorable_pairs"], 2)
         self.assertEqual((s["strict_flip_to_correct"], s["strict_flip_to_wrong"]), (0, 1))
         self.assertEqual(s["strict_flip_rate"], 0.5)
+
+
+class TripleTests(unittest.TestCase):
+
+    def test_matched_pairs_only_and_none_without_control(self):
+        a = lambda L: _g(f"Answer: {L}", "stop", L, False)
+        rows = [
+            dict(gold_letter="B", without=a("B"), with_evidence=a("B"), control=a("C")),
+            dict(gold_letter="B", without=a("C"), with_evidence=a("B"), control=a("C")),
+            dict(gold_letter="B", without=a("B"), with_evidence=a("B"),
+                 control=_g("A man", "length", "A", False)),   # excluded
+        ]
+        s = strict_triple_summary(rows)
+        self.assertEqual(s["matched_pairs"], 2)
+        self.assertEqual(s["accuracy_without"], 0.5)
+        self.assertEqual(s["accuracy_with_evidence"], 1.0)
+        self.assertEqual(s["accuracy_control"], 0.0)
+        self.assertEqual(s["control_flip_to_wrong"], 1)
+        self.assertEqual(s["with_evidence_flip_to_correct"], 1)
+        self.assertIsNone(strict_triple_summary([rows[0]["without"] and
+                          dict(gold_letter="B", without=a("B"), with_evidence=a("B"))]))
 
 
 if __name__ == "__main__":

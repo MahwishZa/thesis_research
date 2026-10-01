@@ -99,6 +99,32 @@ def strict_flip_summary(rows: Sequence[dict], cond: str = "with_evidence") -> di
     }
 
 
+def strict_triple_summary(rows: Sequence[dict]) -> Optional[dict]:
+    """Matched comparison on pairs where ALL of without / retrieved / control
+    carry an explicit 'Answer: X'. Same pairs for every condition, so the
+    retrieved-vs-irrelevant difference is not a denominator artifact."""
+    triples = [r for r in rows if "control" in r
+               and all(r[c]["has_explicit_answer"]
+                       for c in ("without", "with_evidence", "control"))]
+    if not triples:
+        return None
+
+    def ok(r, c):
+        return r[c]["explicit_letter"] == r["gold_letter"]
+
+    n = len(triples)
+    out = {"matched_pairs": n,
+           "total_pairs": len(rows)}
+    for c in ("without", "with_evidence", "control"):
+        out[f"accuracy_{c}"] = sum(ok(r, c) for r in triples) / n
+    for c in ("with_evidence", "control"):
+        out[f"{c}_flip_to_correct"] = sum((not ok(r, "without")) and ok(r, c)
+                                          for r in triples)
+        out[f"{c}_flip_to_wrong"] = sum(ok(r, "without") and not ok(r, c)
+                                        for r in triples)
+    return out
+
+
 def _load_jsonl(path: Path) -> list[dict]:
     rows = []
     if path.exists():
@@ -140,6 +166,7 @@ def main(argv=None) -> int:
         for cond in ("with_evidence", "control"):
             if rows and cond in rows[0]:
                 print(json.dumps(strict_flip_summary(rows, cond), indent=2))
+        print(json.dumps(strict_triple_summary(rows), indent=2))
         return 0
 
     progress = Path(args.progress)
@@ -210,6 +237,7 @@ def main(argv=None) -> int:
     for cond in ("with_evidence", "control"):
         if rows and cond in rows[0]:
             print(json.dumps(strict_flip_summary(rows, cond), indent=2))
+    print(json.dumps(strict_triple_summary(rows), indent=2))
     return 0
 
 
