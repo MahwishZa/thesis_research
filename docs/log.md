@@ -515,6 +515,43 @@ controlled - the audit did not store perplexities. Decision: no relabelling and
 no further filter training on this label pipeline; the RAG² baseline arm needs a
 supervisor-level decision (see the options in the session notes).
 
+## Phase 19 — Publishability review of the evaluation design (Oct 1)
+
+Findings (checked against the repo, the source datasets, and the authors'
+public repository; nothing here is a test-split result):
+1. **RAG² release.** The authors' README states the trained filter checkpoint
+   "is not available for distribution"; only a 5-example sample of the
+   labelled data ships (`5%-train.json`, ids up to `llama3_5%_23600`, which
+   implies a label set far larger than our 450). Reproducing their scale
+   locally would take ~30 days of label generation at the measured 109 s/pair.
+2. **Circular primary metric.** Currency = mean T(s) of admitted evidence, and
+   `fit_and_evaluate.py` selects lambda/theta/H to maximise currency gain on
+   validation. The Temporal Filter therefore wins currency by construction; it
+   shows the mechanism acts as designed, not that answers improve. It must be a
+   manipulation check, not the primary outcome or the fitting objective.
+3. **Few real answer changes.** Only 5 of the 113 usable questions appear in
+   MedChangeQA (verdicts that changed between review versions; exact-text
+   match, so a lower bound). `temporal_candidate` (review revised >= once: 54 of
+   90 test questions) does not imply the verdict changed, so for most of the
+   subgroup older and newer evidence would agree and recency cannot help.
+4. **Power.** Exact two-sided sign test needs a >= 65% win rate among 54
+   non-tied pairs (>= 69% with Holm over 3 comparisons); generators tie on many
+   questions, so effective n is smaller. Only large effects are detectable.
+5. **Novelty.** The admission score is a recency prior interpolated with
+   relevance, close to published time-aware retrieval (e.g. TempRALM, Gade &
+   Jetcheva). The defensible contribution is the domain, the leakage-safe
+   protocol, and an honest finding.
+6. **Source-data headroom.** MedRevQA holds 281 dementia/Alzheimer's-related
+   questions (201 from revised reviews) versus 113 usable in the pool.
+
+Proposed (NOT yet implemented or approved): make answer-level verdict accuracy
+vs the latest Cochrane verdict the primary outcome and fitting objective (with
+a validated judge), keep currency as a manipulation check, add generator
+sensitivity controls (no / irrelevant / admitted evidence), add comparators
+(recency-only, date-window, zero-shot Flan-T5 filter named as such), enlarge the
+pool toward verdict-changed questions, and fix the analysis plan before any
+test-split run. Contact the RAG² authors to request checkpoint/labels.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
