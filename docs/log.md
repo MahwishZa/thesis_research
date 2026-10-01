@@ -552,6 +552,22 @@ sensitivity controls (no / irrelevant / admitted evidence), add comparators
 pool toward verdict-changed questions, and fix the analysis plan before any
 test-split run. Contact the RAG² authors to request checkpoint/labels.
 
+## Phase 20 — Next-phase plan: evidence of real improvement (Oct 1) - PROPOSAL
+
+No experiment was run. `docs/proposals/next_phase_plan.md` records: what a
+faithful RAG² baseline needs (only the checkpoint, or the authors' filter
+decisions on our frozen candidates; their README states the checkpoint is "not
+available for distribution", only 5 label examples ship, ids reach 23,600);
+measured costs if artifacts arrive (inference 1.34 s/pair; training ~43 h/epoch
+at 23.6k labels, so 40 epochs ~72 days); a tiered author request
+(`docs/proposals/rag2_authors_email_draft.md`); and the fallback design: verdict
+accuracy vs the latest Cochrane verdict as primary outcome (judge sees only the
+answer), blinded human hallucination on a subset, shuffled-date and
+irrelevant-evidence controls, pre-declared settings instead of fitting, decision
+gates G0-G3 with thresholds fixed beforehand, and a power table (a 90-question
+test set detects only ~17-20 pp differences; 250 questions ~10-11 pp). GitHub
+issue replies (#1, #2 of dmis-lab/RAG2) could not be read here and are unverified.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
