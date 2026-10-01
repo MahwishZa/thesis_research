@@ -1,208 +1,166 @@
-# Next phase: evidence that the proposed system improves RAG reliability
+# Next phase: an as-of evaluation on real Cochrane verdict changes
 
-**Status: proposal for supervisor review. Nothing in this plan has been run.**
-Written 2026-10-01 after the filter-training negative result (log Phases 13-19).
-Numbers marked *measured* come from this project's own runs; *estimate* means
-derived from a measured figure; *unverified* means not checked.
+**Status (2026-10-01): design fixed, benchmark built, nothing generated.**
+Supersedes the earlier version of this file (author-contact route, dropped).
+*Measured* = computed in this repository; *estimate* = derived from a measured
+figure; *unverified* = not yet checked. Thresholds below were written before any
+result existed and must not be changed after seeing one.
 
-## 0. The question this phase must answer
+## 1. Why the scope changed
 
-> Does the proposed system produce more correct, less hallucinated answers
-> than appropriate existing baselines, measured by an outcome that does not
-> depend on the mechanism under test?
+The Alzheimer's-only design could not produce valid evidence for a temporal
+claim (log Phases 19-21):
 
-It must be able to return a real improvement **or** an honest null. Showing that
-the mechanism changes which passages are admitted (currency, admitted-set
-overlap) is a manipulation check, never the result.
+* only 5 of 113 usable questions are known to have a changed verdict;
+* 55 of the 99 verdict-labelled questions cite reviews from before 2010, while
+  71% of the corpus is from 2020 or later, and every question was asked "as of"
+  the run date. A system preferring current evidence would be graded against
+  15-25-year-old conclusions;
+* 90 test questions detect only ~17-20 pp differences;
+* no answer-level result exists yet (the pilot used an extractive stand-in).
 
-## 1. Faithful RAG² reproduction: what is missing
+MedChangeQA (Vladika et al., EMNLP 2025 Findings) provides Cochrane reviews whose
+verdict changed between published versions. It is the primary dataset;
+Alzheimer's remains a secondary case study.
 
-"Faithful reproduction" has two meanings; only the second is needed here.
+## 2. What the inspection found (all measured)
 
-* **A. Reproduce the paper's own results** (four biomedical corpora, rationale
-  queries, GPU training, MIRAGE-style benchmarks). Not feasible locally and not
-  needed for this thesis.
-* **B. A faithful RAG² filter as a baseline arm** on our frozen candidate sets.
-  Arms differ only in which passages are admitted, so this needs only the
-  trained filter's decisions on our candidates.
+| Check | Result |
+|---|---|
+| Rebuild of MedChangeQA from the release | 512/512 items reproduced with identical labels; the authors' rule (lowest row = newest version) agrees with publication dates in 1,534/1,535 groups |
+| Dates for both versions | recovered for every item (749 day-precision, 13 year-only; year-only cutoffs are conservative) |
+| Gold labels | gpt-4o-mini labels of each abstract's conclusions, not human labels |
+| Label noise | 8 changed pairs have near-identical conclusions (similarity >= 0.85) - excluded; 482 of 512 are substantially rewritten (< 0.6) |
+| Change types (504 usable) | 397 involve NOT ENOUGH INFORMATION (the fuzziest boundary); 114 are decisive SUPPORTED <-> REFUTED flips |
+| Update window | median 9 years between versions; newest versions mostly 2010-2019 |
+| Headroom without retrieval (authors' released answers) | on changed items, current-verdict accuracy 49-50% for Qwen2.5-7B, Llama-3.3-70B, Mistral-24B, GPT-4o-mini and DeepSeek-V3 alike; 25-32% give the outdated verdict. Unchanged items: 54-60%. Model size barely matters, which points to a ceiling from label ambiguity |
+| Alzheimer's within MedChange | 9 changed and 5 unchanged items - far too few for statistics |
+| Evidence availability | **unverified** - PubMed is blocked from the session that built this; G0 below measures it |
 
-| Artifact | Released by the authors? | Needed for | Local cost if obtained |
-|---|---|---|---|
-| Trained Flan-T5 filter checkpoint | **No.** README: "not available for distribution; use `classifier/` to train an equivalent filter on your own labeled data" | B | inference only: 1.34 s/pair *measured* (50 pairs in 67 s) -> 2,260 pairs ~ 50 min |
-| Full labelled set | **No.** 5 examples shipped; ids run to `llama3_5%_23600` (so ~23.6k) | B (by retraining) | 106 s per 16-example step *measured* -> ~43 h/epoch; 40 epochs ~ 72 days; 3 epochs ~ 5.4 days *estimate* |
-| Label generation (CoT prompt, perplexity code, rationale code) | Filter-training and retriever code yes; rationale generation, evaluation code and full prompts reported as not released (per README as read by a fetch tool - *verify by reading the README*) | regenerating labels | ~30 days at the measured 109 s/pair; and our Q4 labeller was shown to produce near-noise labels (log Phases 15-18) |
-| Corpora (PubMed, PMC, CPG, textbooks) | Not hosted (multi-GB, partly licence-restricted) | A only | not needed for B |
-| Retriever (MedCPT query encoder, MIPS, cross-encoder rerank) | Yes | both | already implemented here |
+## 3. Novelty: what can and cannot be claimed
 
-**Conclusion.** The only artifact that makes B realistic is the checkpoint, or the
-filter's decisions on our candidates. Retraining at the authors' scale on a laptop
-is not possible, and regenerating the labels is neither possible nor reliable.
+Recency-aware retrieval and conflict handling in RAG are active areas (e.g.
+TempRALM; AionRAG; FRESCO; ConflictRAG; EvoTrustRAG; "Contradictions in Context /
+Toward Safer RAG in Healthcare", arXiv 2511.06668; DriftMedQA, EMNLP 2025 Findings).
+Adding a time-decay term to an admission score is **not a novel method** and is not
+claimed as one.
 
-## 2. Is contacting the authors worthwhile? Yes - cost ~30 minutes
+What is defensible, if it holds up: a controlled **as-of evaluation on real
+Cochrane verdict changes**, comparing standard, helpfulness-filtered (RAG²-style)
+and recency-aware evidence admission under identical retrieval and generation,
+with a falsification control and an Alzheimer's case study. I found no paper doing
+exactly this, but the search was not exhaustive (*unverified*).
 
-The README states a checkpoint policy, so a bare checkpoint request may be refused.
-Ask in tiers so a refusal of the first still leaves useful answers:
+**Name of the method:** *recency-weighted admission* on top of a RAG²-style
+helpfulness filter - descriptive, not a brand. In text: "a RAG²-style pipeline with
+recency-weighted evidence admission".
 
-1. the checkpoint, for non-commercial research use under any terms they set;
-2. **if they will not distribute it: run their filter on a frozen list of our
-   (question, passage) pairs and return the labels and the two logits.** One run,
-   no distribution, and it is exactly what the baseline arm needs;
-3. at minimum: the CoT prompt, the perplexity computation, and the real size of
-   the `5%` split.
+## 4. Research question
 
-Before sending: read the replies on GitHub issues #1 (perplexity calculation, 5
-comments) and #2 (data and models) - they may already answer part of this. The
-replies could not be read by the tool used here, so this is *unverified*. Do not
-let the project wait on a reply; plan as if none comes. The email text is kept outside the repository.
+On questions whose Cochrane verdict changed, and asked as of the newest review's
+publication date with only evidence published before that date, does
+recency-weighted admission make a local LLM give the current verdict more often
+than standard RAG, a RAG²-style helpfulness filter, and published-style recency
+reranking - without lowering accuracy on questions whose verdict did not change?
 
-## 3. If the checkpoint is unavailable: the strongest practical path
+## 5. Design
 
-### 3.1 What the proposed system can credibly claim
+**As-of protocol.** For each item: t_q = newest version's date; candidates are
+PubMed records published strictly before t_q; all Cochrane Database records are
+excluded (the review and its versions); the gold answer is the newest verdict. The
+system's input is the question only.
 
-The mechanism is recency-aware admission. It can plausibly reduce **temporal /
-outdated-evidence errors**. There is no reason to expect it to reduce hallucination
-in general. A claim of general hallucination reduction would need a different
-mechanism (for example evidence-conditioned abstention or verification) and is out
-of scope here.
+**Benchmark** (`experiments/medchange/`, seed 20261001, splits fixed before any
+generation): 504 usable changed items (154 dev / 358 confirmatory after
+stratification by change type) and 250 unchanged controls (75 / 175). The
+derived text stays local (`experiments/medchange/data/`, gitignored: the release
+states no licence); `manifest.json` holds input hashes, counts and split ids.
 
-### 3.2 Baselines (all runnable locally)
+**Arms** - same candidate pool (top 20, as-of), budget 5, generator, prompt and
+greedy decoding:
 
-| Arm | Role | Status |
+| Arm | Query | Admission | Dates | Role |
+|---|---|---|---|---|
+| B0 | none | none | no | model memory alone (the MedChange setting) |
+| B1 | question | MedCPT rerank top-5 | no | standard medical RAG |
+| B2 | question + model rationale | zero-shot [HELPFUL]/[NOT_HELPFUL] filter with RAG²'s prompt, top-5 by P(helpful) | no | RAG²-style baseline (adapted, untrained; named as such) |
+| B3 | question | relevance + recency (TempRALM-style) | yes | closest published idea |
+| **P** | as B2 | P(helpful) + lambda * recency | yes | proposed |
+| C1 | as P | as P with dates randomly permuted within the pool | fake | falsification: a gain that survives shuffling is not temporal |
+
+B1/B3/B2/P form a 2x2 (helpfulness filter x recency); the interaction tests whether
+the combination adds anything. B3 and P get the same tuning budget on dev, chosen
+by verdict accuracy - never by currency.
+
+## 6. Outcomes
+
+* **Primary: verdict accuracy** - the answer's verdict equals the newest gold
+  verdict. The answer's verdict is read by a judge of a different model family that
+  sees only the question and the answer (not the arm, evidence, dates or gold);
+  validated against >= 150 human-labelled answers (require Cohen's kappa >= 0.7).
+* **Key secondary: outdated-verdict rate** - the answer equals the previous
+  version's verdict.
+* **Safety: verdict accuracy on unchanged items** - non-inferiority, margin 5 pp.
+* **Sensitivity:** the decisive-flip subset (114 items); human re-scoring of the
+  judged subset; excluding non-Cochrane systematic reviews from candidates.
+* **Supporting:** blinded human annotation of claims supported or contradicted
+  by the shared candidate pool (60 items x arms B2, B3, P; existing
+  `evaluation/annotation.py`); coverage and abstention beside every rate.
+* **Manipulation checks only, never outcomes:** share of admitted evidence from
+  the update window, currency, admitted-set overlap.
+
+## 7. Statistics
+
+* Confirmatory family, Holm-corrected: P vs B1, P vs B2, P vs B3 on the primary
+  outcome (exact McNemar), with paired differences and question-resampled
+  bootstrap 95% CIs.
+* Mixed-effects logistic regression `correct ~ filter * recency + (1 | item)`;
+  the interaction coefficient answers whether the combination is the contribution.
+* Changed-vs-unchanged interaction; one-sided non-inferiority on unchanged; C1 vs P.
+* Power (*computed*): 358 confirmatory changed items with ~30% discordance detect
+  ~10 pp at Holm alpha; smaller real effects will read as inconclusive, and are
+  reported with their intervals, not as "no effect".
+* Everything outside this list is exploratory and labelled so.
+
+## 8. Error analysis
+
+Each wrong answer on a changed item is assigned one cause: (1) retrieval miss - no
+update-window evidence among candidates; (2) admission miss - present, not
+admitted; (3) generator override - admitted, answer contradicts it; (4) judge
+error; (5) gold-label error (human check of 100 sampled gold labels). Reported by
+change type, update-window length and arm, with confusion matrices and examples.
+
+## 9. Gates (dev split only; thresholds fixed now)
+
+| Gate | Pass condition | If it fails |
 |---|---|---|
-| No retrieval (generator alone) | Does retrieval help or hurt at all? | new, trivial |
-| No-Filter (top-5 reranked) | standard RAG | exists |
-| Relevance-only (lambda = 0) | does the *temporal term* add anything? | exists |
-| Temporal Filter, 2 pre-declared settings | the proposal | exists |
-| **Temporal Filter with shuffled dates** | specificity control: a gain that survives date shuffling is not temporal | new, small |
-| Hard date window (e.g. last 5 years) | the common practical heuristic | new, small |
-| Zero-shot text-only filter (Flan-T5 or Llama-3), *named as such* | stand-in for "text-only filtering"; **not RAG²** | new, 1-10 h estimate |
-| RAG² via the authors' filter decisions | the intended baseline | only if authors respond |
+| G0 evidence availability (`pubmed_asof.py`) | >= 50% of changed dev items have a trial or systematic review published inside the update window among the as-of candidates (top 200) | the as-of corpus cannot carry the change; redesign retrieval before any generation |
+| G1 judge | kappa >= 0.7 vs human labels | fix the judge or judge by hand |
+| G2 sensitivity | B1 changes >= 20% of verdicts vs B0 on dev | the generator ignores evidence: no admission rule can matter; stop |
+| G3 dev effect | P - B2 >= +5 pp and C1 does not reproduce it | report a null on dev; do not run the confirmatory split |
 
-Self-RAG / CRAG-style systems use different generators and trained critics;
-postpone.
+## 10. Compute (estimates; benchmark in G1 first)
 
-### 3.3 Outcomes: not circular
+PubMed probe and abstract fetch: hours. MedCPT encoding of ~100k abstracts on
+CPU: hours. Helpfulness filter (top-10 x ~760 items): ~20-40 h. Generation (~760
+items x 6 arms, short answers, 1-2 min each): ~75-150 h. Judge: ~15 h. In total
+1-2 weeks of resumable laptop time, dev split first.
 
-* **Primary: verdict accuracy** against the latest Cochrane verdict
-  (SUPPORTED / REFUTED / NOT ENOUGH INFORMATION), available for 99 of the 113
-  usable questions (80 test, 19 validation; the 14 MedQuAD items have none). A
-  separate judge reads **only the answer text** and classifies its verdict - it
-  never sees the arm, the evidence, the dates or the reference. Different model
-  family from the generator where possible; validated against >= 50
-  human-labelled answers (report kappa; if kappa < 0.6, use human judging).
-  Also report balanced accuracy (labels are ~38% NEI / 34% REFUTED / 27% SUPPORTED).
-* **Key secondary: outdated-answer rate** on questions whose verdict changed
-  between review versions (only 5 of 113 are known to be such questions).
-* **Hallucination: blinded human annotation** on a stratified subset (existing
-  `evaluation/annotation.py` blinding and agreement code). Claims are judged
-  against a *common* reference (gold conclusion plus the shared candidate pool), not
-  each arm's own admitted evidence, so an arm cannot win by admitting less.
-  Always reported with abstention/coverage (existing `har` / `coverage`).
-* **Manipulation checks only (never outcomes):** currency, admitted-set overlap,
-  age distribution.
-* **Dropped as evidence:** token F1 / ROUGE against one verbatim sentence and
-  token-overlap "groundedness" (weak validity; arm-dependent).
+## 11. Alzheimer's case study (secondary)
 
-### 3.4 How to avoid winning because the metric was tuned for it
+The 99 verdict-labelled Alzheimer's questions, re-run **time-consistently**
+(t_q = the cited review's date; corpus restricted to earlier passages) with the
+same arms. Descriptive only (detects ~15-18 pp), plus the 14 Alzheimer's-related
+MedChange items reported individually.
 
-1. No fitting on currency. Prefer **no tuning at all**: pre-declare 2 temporal
-   settings, run both, correct for multiplicity (Holm). Sensitivity grids are
-   exploratory, on development data only.
-2. The shuffled-date arm and the irrelevant-evidence control (a gain that does not
-   need dates or relevant text is not the mechanism).
-3. Subgroup prediction written down in advance: effect on verdict-changed /
-   revised questions, none or non-inferior (within 5 pp) on the rest.
-4. Judge prompt frozen on development answers; arm identity hidden; analysis plan
-   committed (git tag) **before** any test-split generation.
-5. Report every pre-declared arm, with confidence intervals, whatever the result.
+## 12. What counts as meaningful evidence
 
-### 3.5 Is the current question pool enough? No
+On the confirmatory split, all of: P beats B1, B2 and B3 on verdict accuracy by
+>= 8 pp (Holm p < .05, CI excluding 0); the outdated-verdict rate falls; P is
+non-inferior on unchanged items; C1 shows no comparable gain; the direction
+holds with a second generator; coverage is matched.
 
-Exact paired test (McNemar), 80% power, *computed*:
-
-| Discordant share | 5 pp | 8 pp | 10 pp | 15 pp | 20 pp |
-|---|---|---|---|---|---|
-| 0.2 (alpha .05) | 626 | 243 | 155 | 68 | 37 |
-| 0.3 (alpha .05) | 940 | 366 | 234 | 103 | 57 |
-| 0.3 (Holm .0167) | 1254 | 489 | 312 | 137 | 76 |
-
-Our pilots saw 20-30% of answers change when any passage was added, so a discordant
-share of ~0.3 is realistic. Consequences:
-
-* 80 test questions detect only differences of ~17-20 pp; 250 questions ~10-11 pp.
-* **A null on this pool is inconclusive**, not "no effect"; report the interval.
-* The temporal subgroup is the weak point: only 5 of 113 questions are known
-  verdict-changed, and `temporal_candidate` only means "review revised".
-* Headroom in the source data: MedRevQA holds 281 dementia/Alzheimer's questions
-  (201 from revised reviews) versus 113 in the pool; MedChangeQA (512
-  verdict-changed questions across medicine) contains only 9 dementia-related
-  ones. If MedChangeQA lists all changes, Alzheimer's alone cannot supply a
-  powered temporal subgroup (*unverified*).
-* **Stage-2 option (needs supervisor decision):** use MedChangeQA's cross-disease
-  verdict-changed questions as the temporal benchmark, with per-question candidate
-  pools from dated PubMed abstracts and a leakage firewall (exclude the Cochrane
-  review and its versions). Larger and more convincing, but it widens the thesis
-  beyond Alzheimer's.
-
-## 4. Minimum experiment before heavy investment (decision gates)
-
-Fix the pass/fail rules before running; they are go/no-go sanity gates, not
-hypothesis tests.
-
-| Gate | What | Cost | Proceed only if |
-|---|---|---|---|
-| G0 | Freeze candidates for all 113 questions on the full index (retrieval only). Headroom: how often do relevance-only and temporal top-5 differ, and by how much age? No generation. | hours, CPU | admitted sets differ on a meaningful share of questions (if they are nearly identical, no answer difference is possible) |
-| G1 | Wire a local (llama.cpp) generator to the existing `Generator` interface; 10-minute speed benchmark with 5-passage prompts. Build and validate the verdict judge on ~50 human-labelled answers. | ~1 day | judge kappa >= 0.6; measured s/answer known |
-| G2 | **Generator sensitivity** on the 23 validation questions: no retrieval / top-5 / irrelevant-5. | 1-2 days | evidence moves answers: >= 20% of verdicts change between none and top-5 **and** top-5 beats irrelevant-5 by >= 5 pp (point estimate). Otherwise stop: no admission rule can matter with this generator/prompt. |
-| G3 | Pilot comparison on the 99 verdict-labelled questions, ~6 arms (section 3.2). Gives effect sizes, variance and the discordant share. | 2-4 days *estimate* | go to Stage 2 if temporal vs relevance-only >= +8 pp **and** the shuffled-date arm does not reproduce it; otherwise report the pilot as an honest null/inconclusive result |
-
-Generation cost *estimate* from the measured ~60 s per label-run generation:
-1.5-3.5 min per 5-passage answer, so 99 questions x 6 arms is ~15-35 h; 250 x 6 is
-~38-88 h. Benchmark in G1 before trusting this.
-
-## 5. What can run locally / what to postpone
-
-**Local (CPU/RAM, resumable):** retrieval and freezing, admission analysis,
-llama.cpp generation (Llama-3-8B Q4; Qwen2.5-7B as second generator), the verdict
-judge, statistics, blinded human annotation packets.
-
-**Postpone:** thesis writing; any filter training or label regeneration; Self-RAG /
-CRAG; pool expansion until G2-G3 show headroom (candidate human review can start in
-parallel because it costs no compute); GPU offload tuning; the as-of-date
-simulation.
-
-## 6. What would justify an international paper
-
-All of the following on **held-out questions not used in the pilot** (>= 200
-questions, or >= 60 verdict-changed ones):
-
-1. Temporal arm beats the **strongest** non-temporal comparator (relevance-only,
-   no-filter, and the text-only filter / RAG² if available) by >= 8-10 pp verdict
-   accuracy, or cuts the blinded human hallucination rate by a comparable margin;
-   exact McNemar with Holm-corrected p < .05 and a bootstrap CI excluding 0;
-2. the shuffled-date control does **not** show a comparable gain (and differs from
-   the real-date arm);
-3. the effect is concentrated in verdict-changed/revised questions and the arm is
-   non-inferior (within 5 pp) on the rest;
-4. it replicates with a second generator;
-5. coverage is matched (no gain from answering fewer questions).
-
-Reviewers will still ask for a second dataset and a trained-filter baseline; the
-MedChangeQA stage and the authors' filter decisions address those. Without them, a
-workshop-level paper is the realistic ceiling.
-
-**A well-powered null is still a valid result.** Report the confidence interval and
-frame the contribution as a measurement of how often medical RAG returns outdated
-conclusions and whether recency-aware admission changes that. That framing is
-weaker as a "method" paper but honest and publishable at workshop level.
-
-## 7. First actions (no long computation)
-
-1. Read GitHub issues #1 and #2 (replies); send the author email.
-2. Supervisor decisions: adopt verdict accuracy as the primary outcome (retiring
-   currency as primary and as the fitting objective - a disclosed methodological
-   change made before any test-split result exists); decide on the MedChangeQA
-   stage.
-3. Commit the analysis plan (arms, outcomes, gates, thresholds) and tag it before
-   G1.
-4. Then implement G0/G1.
+* P beats B1/B2 but not B3: recency helps, but this method adds nothing over
+  existing recency reranking - an evaluation paper, not a method paper.
+* Nothing beats B1: an honest null; the as-of benchmark and the error breakdown
+  are still reportable.

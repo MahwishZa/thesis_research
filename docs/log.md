@@ -567,6 +567,29 @@ gates G0-G3 with thresholds fixed beforehand, and a power table (a 90-question
 test set detects only ~17-20 pp differences; 250 questions ~10-11 pp). GitHub
 issue replies (#1, #2 of dmis-lab/RAG2) could not be read here and are unverified.
 
+## Phase 21 — Scope expanded to MedChangeQA (primary) with Alzheimer's as case study (Oct 1)
+
+Inspection before committing to the expanded scope (all measured):
+* MedChangeQA rebuilt from the release (`AllStudyGroups.csv` + `MedRevQA.csv`):
+  512/512 items identical, so both review versions' dates and PMIDs are known
+  for every item. Gold labels are gpt-4o-mini labels of abstract conclusions.
+* 8 changed pairs with near-identical conclusions excluded as label noise; 397 of
+  504 usable changes involve NOT ENOUGH INFORMATION; 114 are decisive flips.
+* Without retrieval, five released models (7B to DeepSeek-V3) give the current
+  verdict on changed items 49-50% of the time and the outdated one 25-32%.
+* Alzheimer's items in MedChange: 9 changed, 5 unchanged.
+* The current Alzheimer's evaluation is time-inconsistent: 55/99 verdict-labelled
+  questions cite pre-2010 reviews, the corpus is 71% post-2020, and t_q was the
+  run date for every question.
+* Recency-aware RAG is an active area (TempRALM, AionRAG, FRESCO, ConflictRAG,
+  DriftMedQA, arXiv 2511.06668): no novelty is claimed for the time-decay term.
+
+Built (no network, no model): `experiments/medchange/` - benchmark builder that
+verifies itself against the release, headroom script over the authors' released
+answers, and the G0 PubMed as-of availability probe (to run locally; E-utilities
+are blocked in the cloud session). 13 unit tests. Design, gates and thresholds:
+`docs/next_phase_plan.md`. Nothing generated yet.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
