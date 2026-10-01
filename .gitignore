@@ -24,3 +24,4 @@ ram_monitor.csv
 experiments/baseline/filter_training/labels/
 models/
 *.egg-info/
+experiments/medchange/data/
