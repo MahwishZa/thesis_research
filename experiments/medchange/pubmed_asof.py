@@ -76,24 +76,35 @@ _MON = {m: i for i, m in enumerate(
 def date_bounds(text: str) -> Optional[tuple[str, str]]:
     """Earliest and latest ISO date a PubMed date string can mean.
 
-    "2012 Oct 17" -> day; "2012 Oct" -> the whole month; "2012" -> the whole
-    year; "2012 Oct-Dec" -> the whole span. Anything unparsable -> None.
+    "2012 Oct 17" -> that day; "2012 Oct" -> the whole month; "2012" -> the whole
+    year; "2012 Oct-Dec" -> the whole span; "2012 Dec-Jan" (wraps the year) and
+    seasons ("2012 Winter", "2012 Fall-Winter") -> widened to whole years. Anything
+    unparsable -> None. Never raises: one odd string must not stop a long run, and
+    widening only ever makes a record look LATER, so it can be dropped but never
+    wrongly admitted.
     """
-    m = re.match(r"\s*(\d{4})(?:\s+([A-Za-z]{3})(?:-([A-Za-z]{3}))?(?:\s+(\d{1,2}))?)?", text or "")
-    if not m:
+    try:
+        m = re.match(r"\s*(\d{4})(?:\s+([A-Za-z]+)(?:-([A-Za-z]+))?(?:\s+(\d{1,2})(?:-(\d{1,2}))?)?)?", text or "")
+        if not m:
+            return None
+        y = int(m.group(1))
+        if not m.group(2):
+            return f"{y:04d}-01-01", f"{y:04d}-12-31"
+        m1 = _MON.get(m.group(2)[:3].title()) if len(m.group(2)) == 3 else None
+        m2 = (_MON.get(m.group(3)[:3].title()) if m.group(3) and len(m.group(3)) == 3
+              else (m1 if not m.group(3) else None))
+        if m1 is None or m2 is None:           # season words, unknown tokens
+            return f"{y:04d}-01-01", f"{y + (1 if m.group(3) else 0):04d}-12-31"
+        if m2 < m1:                             # "Dec-Jan": spans into the next year
+            return f"{y:04d}-{m1:02d}-01", f"{y + 1:04d}-12-31"
+        if m.group(4) and not m.group(3):
+            lo = dt.date(y, m1, int(m.group(4))).isoformat()
+            hi = dt.date(y, m1, int(m.group(5) or m.group(4))).isoformat()
+            return lo, hi
+        last = (dt.date(y + (m2 == 12), (m2 % 12) + 1, 1) - dt.timedelta(days=1)).day
+        return f"{y:04d}-{m1:02d}-01", f"{y:04d}-{m2:02d}-{last:02d}"
+    except (ValueError, TypeError):
         return None
-    y = int(m.group(1))
-    m1 = _MON.get(m.group(2)) if m.group(2) else None
-    if m.group(2) and not m1:
-        return None
-    m2 = _MON.get(m.group(3)) if m.group(3) else m1
-    if m1 is None:
-        return f"{y:04d}-01-01", f"{y:04d}-12-31"
-    if m.group(4):
-        d = int(m.group(4))
-        return f"{y:04d}-{m1:02d}-{d:02d}", f"{y:04d}-{m1:02d}-{d:02d}"
-    last = (dt.date(y + (m2 == 12), (m2 % 12) + 1, 1) - dt.timedelta(days=1)).day
-    return f"{y:04d}-{m1:02d}-01", f"{y:04d}-{m2:02d}-{last:02d}"
 
 
 def availability(pubdate: str, epubdate: str, sortpubdate: Optional[str]) -> Optional[dict]:

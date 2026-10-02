@@ -200,6 +200,14 @@ class PubMedProbeTests(unittest.TestCase):
         self.assertEqual(date_bounds("2012 Dec"), ("2012-12-01", "2012-12-31"))
         self.assertEqual(date_bounds("2012 Oct-Dec"), ("2012-10-01", "2012-12-31"))
         self.assertEqual(date_bounds("2012"), ("2012-01-01", "2012-12-31"))
+        # forms seen in PubMed that crashed or mis-parsed a first version
+        self.assertEqual(date_bounds("2012 Dec-Jan"), ("2012-12-01", "2013-12-31"))
+        self.assertEqual(date_bounds("2012 Winter"), ("2012-01-01", "2012-12-31"))
+        self.assertEqual(date_bounds("2012 Fall-Winter"), ("2012-01-01", "2013-12-31"))
+        self.assertEqual(date_bounds("2012 Oct-Spr"), ("2012-01-01", "2013-12-31"))
+        self.assertEqual(date_bounds("2012 Oct 1-5"), ("2012-10-01", "2012-10-05"))
+        self.assertIsNone(date_bounds("2012 Feb 30"))
+        self.assertIsNone(date_bounds(None))
         self.assertIsNone(date_bounds("n/a"))
         self.assertIsNone(date_bounds(""))
 

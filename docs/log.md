@@ -602,6 +602,14 @@ admitted) and aborts only if > 15% of a result set cannot be shown to precede it
 conversion of the input CSVs (hashes) and of the manifest itself. Hashes now
 normalise CRLF and the manifest is written with LF. Five tests added (18 total).
 
+**Phase 21 follow-up 2 (Oct 2).** G0 on the first 5 dev items passed (5/5 changed
+items had trials or reviews in the update window among as-of candidates; median
+137 in-window records in the top 200). The full dev run then crashed on a PubMed
+date string the parser did not handle (season/range forms). `date_bounds` now
+never raises: season words, year-wrapping ranges ("Dec-Jan") and day ranges are
+widened to bounds that can only make a record look later, so the worst case is a
+dropped record. Tests for these forms added.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
