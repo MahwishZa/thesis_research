@@ -635,6 +635,15 @@ interleaved arms), `analyze.py` (per-arm accuracy, exact McNemar, bootstrap CI, 
 Settings and gate definitions are fixed in `docs/next_phase_plan.md` section 13 before
 any generation. 18 tests added (40 in `experiments/medchange` total). Nothing generated.
 
+**Phase 21 follow-up 5 (Oct 2): timing measured.** Zero-shot helpfulness scores
+computed for all 226 dev items (27 s/item, 1.33 s/pair, as predicted). First real
+generations (3 changed dev items x B0/B1, Llama-3-8B Q4_K_M, CPU, greedy, 160 tokens):
+18 s per answer without evidence, 66.5 s with 5 passages; 6/6 answers parsed. With one
+no-evidence and five evidence arms that is ~350 s per item: dev (226 items) ~22 h,
+confirmatory (~530 items) ~52 h, ~74 h in total (previous estimate 75-150 h). n = 3 says
+nothing about accuracy. Added `consistency.py` (G1 human check: seeded sample of 50
+answers, arm hidden, Y/N consistency; pass = parse >= 95% and consistency >= 90%).
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
