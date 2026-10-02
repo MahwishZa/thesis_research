@@ -80,7 +80,8 @@ override, parse failure, or gold-label error — and reported by change type, up
 |---|---|
 | Benchmark, dev candidate pools, helpfulness scores, arms, generation harness, analysis script | built; 6 real generations run for timing (n = 3 items, no accuracy conclusion) |
 | Gate G0 (evidence headroom) | passed (94.0% of changed dev items) |
-| Gates G1, G2, G3; any accuracy result | pending: no accuracy result exists yet |
+| Dev run of B0 and B1 (151 changed + 75 unchanged items) | done: accuracy on changed items 41.1% (B0) vs 49.7% (B1), difference +8.6 pp, 95% CI [0.7, 16.6], exact McNemar p = 0.060; unchanged 53.3% vs 60.0%, p = 0.42; 0 unparsed answers; gate G2 passed (B1 changed 35.8% of verdicts) |
+| Gate G1 (human consistency check), gate G3, arms B2, B3, P, C1 | pending; no result for the proposed system exists yet |
 | Confirmatory split (pools, helpfulness, generation) | not started |
 | Human hallucination annotation; error analysis; second generator; Alzheimer's case study | planned |
 

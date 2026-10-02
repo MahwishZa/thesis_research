@@ -140,7 +140,7 @@ by change type, update-window length and arm, with confusion matrices and exampl
 |---|---|---|
 | G0 evidence headroom | ≥ 50% of changed dev items have a trial or review in the update window | **passed** (94.0%) |
 | G1 format validity | ≥ 95% of answers parse AND a human check of 50 answers finds the stated verdict consistent with its justification in ≥ 90% (`consistency.py`) | pending |
-| G2 generator uses evidence | B1 changes the verdict of ≥ 20% of dev items relative to B0 | pending |
+| G2 generator uses evidence | B1 changes the verdict of ≥ 20% of dev items relative to B0 | **passed** (35.8%) |
 | G3 dev effect | on changed dev items P − B2 ≥ +5 pp AND P − C1 ≥ +2.5 pp | pending |
 
 G2 and G3 are small-n sanity gates deciding whether the confirmatory split is run at all; they do not

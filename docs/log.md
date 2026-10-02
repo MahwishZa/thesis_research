@@ -743,3 +743,22 @@ phase.
 * **Known limitations of the design** (see `methodology.md`): the B2/P helpfulness score is an untrained
   stand-in, not RAG²; gold verdicts are model-generated; the generator is a 4-bit 8B model on CPU; the
   decisive-flip subgroup is small (114 items).
+
+## Phase 24 — Dev run of B0 and B1 (Oct 2)
+
+Run on the student's laptop with the pre-audit harness (commit bb89609; no generator-configuration
+record, so this answers file is adopted with a note when extended). 446 new answers plus the 6 timing
+answers = 452 (226 items x B0, B1); 0 unparsed. Mean time per answer 14.6 s (B0) and 60.9 s (B1), faster
+than the earlier estimate (about 320 s per item over six arms: dev about 20 h, confirmatory about 47 h).
+
+| | Changed (n = 151) | Unchanged (n = 75) |
+|---|---|---|
+| B0 accuracy | 41.1% | 53.3% |
+| B1 accuracy | 49.7% | 60.0% |
+| B1 − B0 | +8.6 pp, 95% CI [0.7, 16.6], 27 vs 14 discordant, exact McNemar p = 0.060 | +6.7 pp, CI [−6.7, 20.0], p = 0.42 |
+
+Outdated-verdict rate on changed items: 36.4% (B0), 31.8% (B1). Gate G2 passed: B1 changed the verdict of
+35.8% of items (threshold 20%). Reading: retrieval of as-of evidence appears to help (the lower CI bound is
+barely above zero and the test is not significant at 0.05), so the generator does use evidence; this is a
+dev comparison without correction and says nothing yet about the proposed system. Next: G1 (the student
+fills `consistency_sheet.csv`, then `consistency score`), then B2, B3, P, C1 on dev for G3.
