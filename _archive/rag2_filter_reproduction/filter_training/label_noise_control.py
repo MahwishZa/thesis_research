@@ -17,9 +17,9 @@ Reads the finished run's settings (model path/revision, max_new_tokens, seed)
 from its ``state.json`` so the control uses exactly the same generator.
 Checkpointed (JSONL) and resumable like build_labels.
 
-    python -m experiments.baseline.filter_training.label_noise_control \\
-        --progress experiments/baseline/filter_training/labels/medqa_filter_labels.progress_completed \\
-        --output experiments/baseline/filter_training/labels/noise_control.jsonl \\
+    python -m _archive.rag2_filter_reproduction.filter_training.label_noise_control \\
+        --progress _archive/rag2_filter_reproduction/filter_training/labels/medqa_filter_labels.progress_completed \\
+        --output _archive/rag2_filter_reproduction/filter_training/labels/noise_control.jsonl \\
         --n 150
 """
 

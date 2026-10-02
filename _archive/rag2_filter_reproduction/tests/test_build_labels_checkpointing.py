@@ -8,11 +8,11 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.baseline.filter_training.build_labels import (
+from _archive.rag2_filter_reproduction.filter_training.build_labels import (
     BuildLabelsError, _fingerprint, _progress_paths, load_checkpoint,
     run_labeling,
 )
-from experiments.baseline.filter_training.labeling import RationaleOutcome
+from _archive.rag2_filter_reproduction.filter_training.labeling import RationaleOutcome
 
 
 def _fp(**overrides):

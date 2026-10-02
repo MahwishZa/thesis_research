@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 from evaluation.freezing import FrozenCandidate, FrozenItem
-from experiments.shared.runners.run_real_evaluation import (
+from _archive.alzheimers_pilot_v1.run_real_evaluation import (
     admitted_recency_by_system, load_usable_questions,
 )
 

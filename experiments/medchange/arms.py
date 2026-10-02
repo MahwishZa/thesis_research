@@ -8,6 +8,14 @@ Pool candidates carry ``rank`` (1 = best cross-encoder rerank), ``lower``/``uppe
 (ISO bounds on first public availability) and, once computed, ``helpful`` (a
 zero-shot P(helpful) from ``helpfulness.py``).
 
+The recency term T and the admission score A = (1 - lambda) * rho + lambda * T are NOT
+re-implemented here: they are computed by the project's reference implementation of the
+proposed system, ``src.proposed.temporal.TemporalPolicy`` and
+``src.proposed.scorer.AdmissionScorer``, so the formula exists in exactly one place.
+Here rho is the within-pool rank normalisation of the arm's relevance signal (ties broken
+by cross-encoder rank), and passages are admitted by top-``BUDGET`` score (no theta
+threshold: the MedChange arms are fixed-budget, see docs/experiment_plan.md).
+
 Relevance signal x recency:
 
     | relevance signal         | no recency | recency        |
@@ -24,7 +32,11 @@ import datetime as dt
 import hashlib
 import json
 import random
-from typing import Optional, Sequence
+from typing import Sequence
+
+from src.common.evidence import Candidate, Evidence
+from src.proposed.scorer import AdmissionScorer
+from src.proposed.temporal import TemporalPolicy
 
 BUDGET = 5
 HALF_LIFE_DAYS = 1095.0          # ~3 years, a typical Cochrane update horizon
@@ -47,26 +59,37 @@ def point_date(c: dict) -> dt.date:
     return lo + (hi - lo) / 2
 
 
+def _evidence(c: dict) -> Evidence:
+    return Evidence(evidence_id=c["pmid"], text="", source_tier="pubmed_abstract",
+                    publication_date=point_date(c))
+
+
 def recency(c: dict, cutoff: str, half_life_days: float = HALF_LIFE_DAYS) -> float:
-    """T = 2 ** (-age_days / H), age measured to the question date, clamped at 0."""
-    age = max(0, (_date(cutoff) - point_date(c)).days)
-    return 2.0 ** (-age / half_life_days)
+    """T = 2 ** (-age_days / H), age from the passage to the question date, clamped at 0
+    (``src.proposed.temporal.TemporalPolicy``)."""
+    policy = TemporalPolicy(half_life_days=half_life_days, undated_score=0.0)
+    return policy.score(_evidence(c), question="", question_date=_date(cutoff)).score
 
 
-def rank_normalise(values: Sequence[float]) -> list[float]:
-    """Highest value -> 1.0, lowest -> 0.0, by rank (ties share the better rank)."""
-    n = len(values)
-    if n == 1:
-        return [1.0]
-    order = sorted(range(n), key=lambda i: -values[i])
-    out = [0.0] * n
-    pos = 0
-    for k, i in enumerate(order):
-        if k > 0 and values[i] == values[order[k - 1]]:
-            out[i] = out[order[k - 1]]
-        else:
-            pos = k
-            out[i] = 1.0 - pos / (n - 1)
+def relevance_ranks(values: Sequence[float], pool: Sequence[dict]) -> list[int]:
+    """1-based ranks of ``values`` (highest = 1), ties broken by cross-encoder rank then
+    PMID, so ranks are contiguous 1..N as ``AdmissionScorer`` requires."""
+    order = sorted(range(len(values)), key=lambda i: (-values[i], pool[i]["rank"], pool[i]["pmid"]))
+    ranks = [0] * len(values)
+    for r, i in enumerate(order, 1):
+        ranks[i] = r
+    return ranks
+
+
+def admission_scores(pool: Sequence[dict], relevance: Sequence[float], dates_from: Sequence[dict],
+                     cutoff: str, lam: float) -> list[float]:
+    """A(s) for every passage: relevance rank from ``relevance``, dates from ``dates_from``."""
+    scorer = AdmissionScorer(temporal_weight=lam)
+    ranks = relevance_ranks(relevance, pool)
+    out = []
+    for c, d, r in zip(pool, dates_from, ranks):
+        cand = Candidate(evidence=_evidence(c), rerank_score=0.0, rerank_rank=r)
+        out.append(scorer.score(cand, temporal=recency(d, cutoff), candidate_count=len(pool)).total)
     return out
 
 
@@ -97,12 +120,10 @@ def admit(arm: str, pool: Sequence[dict], cutoff: str, *, item_id: str = "",
     if arm == "B2":
         return _top(pool, [c["helpful"] for c in pool], budget)
     if arm == "B3":
-        rel = rank_normalise([-c["rank"] for c in pool])
-        use = pool
+        rel = [-c["rank"] for c in pool]
+        dates = pool
     else:  # P, C1
-        rel = rank_normalise([c["helpful"] for c in pool])
-        use = shuffle_dates(pool, f"C1|{item_id}") if arm == "C1" else pool
-    lam = LAMBDAS[arm]
-    scores = [(1 - lam) * r + lam * recency(c, cutoff) for r, c in zip(rel, use)]
-    chosen = _top(pool, scores, budget)
-    return chosen
+        rel = [c["helpful"] for c in pool]
+        dates = shuffle_dates(pool, f"C1|{item_id}") if arm == "C1" else pool
+    scores = admission_scores(pool, rel, dates, cutoff, LAMBDAS[arm])
+    return _top(pool, scores, budget)

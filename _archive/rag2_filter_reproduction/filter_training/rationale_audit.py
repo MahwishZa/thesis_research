@@ -14,9 +14,9 @@ records for each generation: stopped by length?, explicit "Answer: X" line?,
 which letter was scored. Writes raw text to a JSONL for inspection; writes no
 labels.
 
-    python -m experiments.baseline.filter_training.rationale_audit \\
-        --progress experiments/baseline/filter_training/labels/medqa_filter_labels.progress_completed \\
-        --output experiments/baseline/filter_training/labels/rationale_audit.jsonl --n 40
+    python -m _archive.rag2_filter_reproduction.filter_training.rationale_audit \\
+        --progress _archive/rag2_filter_reproduction/filter_training/labels/medqa_filter_labels.progress_completed \\
+        --output _archive/rag2_filter_reproduction/filter_training/labels/rationale_audit.jsonl --n 40
 """
 
 from __future__ import annotations

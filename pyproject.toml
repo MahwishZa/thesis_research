@@ -1,35 +1,39 @@
-# Minimal packaging metadata. The file existed but was empty (0 bytes), which
-# is not valid TOML and made `pip install -e .` fail.
+# Packaging metadata. `pip install -e .` makes the active packages importable; the
+# commands in README.md and docs/reproducibility.md are run from the repository root.
 #
-# _archive/ is not listed here: it is not an installable package and the
-# active code has zero imports from it (see _archive/README.md).
+# _archive/ is not listed: it is not an installable package and no active code
+# imports it (enforced by evaluation/tests/unit/test_scope_invariants.py).
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "thesis-research"
-version = "0.1.0"
-description = "Baseline system and the proposed solution/system for the MS thesis on hallucination in retrieval-augmented Alzheimer's question answering."
+version = "0.2.0"
+description = "Does recency-weighted evidence admission make retrieval-augmented medical QA return current rather than outdated conclusions? An as-of evaluation on Cochrane verdict changes (MedChangeQA), with an Alzheimer's disease case study."
 requires-python = ">=3.10"
-dependencies = ["PyYAML>=6.0"]
+# numpy is needed by experiments.shared.retrieval, which the test suite imports.
+dependencies = ["PyYAML>=6.0", "numpy>=1.24"]
 
-# Model backends are optional: src/ runs, and is testable,
-# without them. Install when a real checkpoint is available.
 [project.optional-dependencies]
-models = ["torch>=2.0", "transformers>=4.40"]
-# experiments/baseline/filter_training/ imports these but they were never
-# declared here (found during the 2026-09-27 audit) - `pip install -e
-# ".[models]"` alone does not get you what filter training needs.
-# Two extras, not one: the hf path (bitsandbytes, CUDA-oriented) and the
-# gguf path (llama-cpp-python, CPU-oriented) pull in different, non-
-# overlapping heavy dependencies - installing both when you only need one
-# is wasted download/disk for no benefit.
-filter-training-hf = [
+# Real model backends. Not needed to run the test suite.
+# NOTE: torch 2.4.x was built against numpy 1.x; if numpy 2.x is installed alongside it,
+# pin numpy<2 (see docs/reproducibility.md).
+models = ["torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99"]
+# Everything the MedChange pipeline needs end to end (PubMed probing needs only the
+# standard library; llama-cpp-python is the CPU llama.cpp binding used for generation -
+# on Windows install a prebuilt wheel, see docs/reproducibility.md).
+medchange = [
+    "torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99",
+    "llama-cpp-python>=0.2.60",
+]
+# Used only by the archived RAG2 filter-reproduction attempt
+# (_archive/rag2_filter_reproduction/): pick ONE of the two.
+archive-filter-training-hf = [
     "torch>=2.0", "transformers>=4.40", "datasets>=2.14",
     "sentencepiece>=0.1.99", "accelerate>=0.30", "bitsandbytes>=0.43",
 ]
-filter-training-gguf = [
+archive-filter-training-gguf = [
     "transformers>=4.40", "datasets>=2.14", "sentencepiece>=0.1.99",
     "llama-cpp-python>=0.2.60",
 ]
@@ -42,11 +46,10 @@ packages = [
     "src.proposed",
     "evaluation",
     "experiments",
+    "experiments.medchange",
     "experiments.shared",
     "experiments.shared.questions",
     "experiments.shared.questions.sources",
     "experiments.shared.retrieval",
     "experiments.shared.runners",
-    "experiments.baseline",
-    "experiments.baseline.filter_training",
 ]

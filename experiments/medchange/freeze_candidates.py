@@ -23,7 +23,7 @@ import time
 import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Sequence
 
 import numpy as np
 

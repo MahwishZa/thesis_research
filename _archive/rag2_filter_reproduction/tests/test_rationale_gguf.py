@@ -14,8 +14,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.baseline.filter_training.labeling import RationaleOutcome
-from experiments.baseline.filter_training.rationale import RationaleGenerationError
+from _archive.rag2_filter_reproduction.filter_training.labeling import RationaleOutcome
+from _archive.rag2_filter_reproduction.filter_training.rationale import RationaleGenerationError
 
 
 class FakeTokenizer:
@@ -97,7 +97,7 @@ class GGUFRationaleScorerTests(unittest.TestCase):
         return tokenizer
 
     def _make_scorer(self, **overrides):
-        from experiments.baseline.filter_training.rationale_gguf import GGUFRationaleScorer
+        from _archive.rag2_filter_reproduction.filter_training.rationale_gguf import GGUFRationaleScorer
         kwargs = dict(
             model_path=self.model_path,
             tokenizer_model_id="meta-llama/Meta-Llama-3-8B-Instruct",
@@ -110,7 +110,7 @@ class GGUFRationaleScorerTests(unittest.TestCase):
 
     def test_missing_model_file_is_refused(self):
         self._install_fakes()
-        from experiments.baseline.filter_training.rationale_gguf import GGUFRationaleScorer
+        from _archive.rag2_filter_reproduction.filter_training.rationale_gguf import GGUFRationaleScorer
         with self.assertRaises(RationaleGenerationError) as ctx:
             GGUFRationaleScorer(
                 model_path=Path(self._tmp.name) / "does_not_exist.gguf",
@@ -279,7 +279,7 @@ class GGUFRationaleScorerTests(unittest.TestCase):
 
     def test_name_is_recorded_for_provenance(self):
         self._install_fakes()
-        from experiments.baseline.filter_training.rationale_gguf import GGUFRationaleScorer
+        from _archive.rag2_filter_reproduction.filter_training.rationale_gguf import GGUFRationaleScorer
         self.assertTrue(GGUFRationaleScorer.name)
         self.assertIn("gguf", GGUFRationaleScorer.name.lower())
 

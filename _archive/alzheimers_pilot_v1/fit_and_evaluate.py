@@ -46,7 +46,7 @@ for the full account. This script does not change any of them; it only
 adds the fitting step both prior runs were missing.
 
 Usage:
-    python -m experiments.shared.runners.fit_and_evaluate --device cpu
+    python -m _archive.alzheimers_pilot_v1.fit_and_evaluate --device cpu
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ from evaluation.runner import (
     assert_prompt_parity, run_experiment, to_candidates,
 )
 from experiments.shared.runners.run_end_to_end import CONTEXT_PROMPT, build_systems
-from experiments.shared.runners.run_real_evaluation import (
+from .run_real_evaluation import (
     DEFAULT_BUDGET, DEFAULT_CHECKPOINT, DEFAULT_CORPUS, DEFAULT_INDEX,
     DEFAULT_QUESTIONS_DIR, admitted_recency_by_system, build_frozen_items,
     _extractive_answer, load_usable_questions, temporal_flags,
@@ -379,7 +379,7 @@ def main(argv=None) -> int:
                          "placeholder (2026-01-01) run_end_to_end.py uses "
                          "for its synthetic demo, which earlier real-data "
                          "runs inherited by mistake.")
-    ap.add_argument("--output-dir", default="experiments/results/fit_and_evaluate")
+    ap.add_argument("--output-dir", default="_archive/alzheimers_pilot_v1/results/fit_and_evaluate")
     args = ap.parse_args(argv)
     question_date = (date.fromisoformat(args.question_date) if args.question_date
                      else date.today())

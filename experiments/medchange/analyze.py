@@ -8,6 +8,11 @@ Safety: accuracy on unchanged items. Paired comparisons use the exact McNemar te
 question-resampled bootstrap CI (``evaluation/stats.py``); only arms present in the
 answers file are compared. Gates are the pre-stated ones in docs/next_phase_plan.md:
 
+Retrieval-level metrics (what each arm admitted; manipulation checks, never outcomes):
+share of admitted passages that surely first appeared inside the update window (after the
+previous review version, on or before the newest), items with any such passage, mean
+passage age, and overlap with B1's admitted set.
+
   G2  B1 changes the verdict of >= 20% of dev items relative to B0.
   G3  P - B2 >= +5 pp on changed items AND P - C1 >= +2.5 pp (C1 must not reproduce it).
 """
@@ -88,6 +93,50 @@ def verdict_change_rate(items: dict, answers: dict, a: str, b: str) -> Optional[
     return sum(answers[(i, a)]["verdict"] != answers[(i, b)]["verdict"] for i in keys) / len(keys)
 
 
+def _in_window(c: dict, previous: str, newest: str) -> bool:
+    """Surely first public after the previous version and on or before the newest."""
+    return previous < c["lower"] and c["upper"] <= newest
+
+
+def retrieval_metrics(items: dict, pools: dict, answers: dict, arms: list[str]) -> dict:
+    """Per arm and item kind: what the arm admitted, judged against the frozen pools."""
+    from datetime import date
+    from .arms import point_date
+    out: dict = {}
+    for arm in arms:
+        row = {}
+        for kind in ("changed", "unchanged"):
+            ids = [i for i, it in items.items()
+                   if it["kind"] == kind and (i, arm) in answers and i in pools]
+            if not ids:
+                continue
+            shares, any_window, ages, jac = [], 0, [], []
+            for i in ids:
+                it, cands = items[i], {c["pmid"]: c for c in pools[i]["candidates"]}
+                admitted = [cands[p] for p in answers[(i, arm)]["admitted"] if p in cands]
+                flags = [_in_window(c, it["previous"]["date"], it["newest"]["date"]) for c in admitted]
+                if admitted:
+                    shares.append(sum(flags) / len(admitted))
+                any_window += any(flags)
+                cutoff = date.fromisoformat(it["newest"]["date"])
+                ages += [max(0, (cutoff - point_date(c)).days) / 365.25 for c in admitted]
+                if arm != "B1" and (i, "B1") in answers:
+                    a, b = set(answers[(i, arm)]["admitted"]), set(answers[(i, "B1")]["admitted"])
+                    if a | b:
+                        jac.append(len(a & b) / len(a | b))
+            row[kind] = {
+                "n": len(ids),
+                "mean_admitted": round(sum(len(answers[(i, arm)]["admitted"]) for i in ids) / len(ids), 2),
+                "update_window_share": round(sum(shares) / len(shares), 4) if shares else None,
+                "items_with_update_window_evidence": round(any_window / len(ids), 4),
+                "mean_age_years": round(sum(ages) / len(ages), 2) if ages else None,
+                "jaccard_with_B1": round(sum(jac) / len(jac), 4) if jac else None,
+            }
+        if row:
+            out[arm] = row
+    return out
+
+
 def gates(items: dict, answers: dict) -> dict:
     out = {}
     r = verdict_change_rate(items, answers, "B1", "B0")
@@ -108,6 +157,7 @@ def main(argv=None) -> int:
                                  formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
     ap.add_argument("--answers", default=None)
+    ap.add_argument("--frozen", default=None, help="frozen pools (default data/frozen_<split>.jsonl)")
     args = ap.parse_args(argv)
     d = HERE / "data"
     items = {r["item_id"]: r for r in load_jsonl(d / "benchmark.jsonl")
@@ -119,6 +169,10 @@ def main(argv=None) -> int:
               "paired_changed": [p for a, b in PAIRS if (p := paired(items, answers, a, b))],
               "paired_unchanged": [p for a, b in PAIRS if (p := paired(items, answers, a, b, "unchanged"))],
               "gates": gates(items, answers)}
+    frozen = Path(args.frozen or d / f"frozen_{args.split}.jsonl")
+    if frozen.exists():
+        pools = {r["item_id"]: r for r in load_jsonl(frozen)}
+        report["retrieval"] = retrieval_metrics(items, pools, answers, arms)
     print(json.dumps(report, indent=2))
     return 0
 

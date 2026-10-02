@@ -11,11 +11,11 @@ from dataclasses import replace
 from datetime import date
 
 from evaluation import freezing as fz
-from experiments.shared.runners.fit_and_evaluate import (
+from _archive.alzheimers_pilot_v1.fit_and_evaluate import (
     MIN_ADMITTED_FRACTION, _mean_currency, fit_on_validation,
 )
 from experiments.shared.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
-from experiments.shared.runners.run_real_evaluation import _extractive_answer
+from _archive.alzheimers_pilot_v1.run_real_evaluation import _extractive_answer
 from src.common.generator import CallableGenerator
 from src.proposed.temporal import TemporalPolicy
 

@@ -1,12 +1,11 @@
 """Arms, prompts, resumable generation and the dev gates (no model, no network)."""
 
-import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from experiments.medchange import arms as A
-from experiments.medchange.analyze import correctness, gates, paired, summarize
+from experiments.medchange.analyze import correctness, gates, paired, retrieval_metrics, summarize
 from experiments.medchange.generate_answers import load_jsonl, run
 from experiments.medchange.prompts import build_prompt, parse_verdict
 
@@ -43,7 +42,6 @@ class ArmTests(unittest.TestCase):
         self.assertEqual(len(got), 5)
 
     def test_recency_arms_prefer_newer_passages_than_their_relevance_only_twins(self):
-        newest = lambda arm: max(c["upper"] for c in A.admit(arm, pool(), CUTOFF))
         mean_year = lambda arm: sum(int(c["upper"][:4]) for c in A.admit(arm, pool(), CUTOFF)) / 5
         self.assertGreater(mean_year("B3"), mean_year("B1"))
         self.assertGreater(mean_year("P"), mean_year("B2"))
@@ -57,10 +55,29 @@ class ArmTests(unittest.TestCase):
         # the passages' own (true) dates are what is returned, only selection changed
         self.assertTrue(all(c in p for c in c1))
 
-    def test_rank_normalisation(self):
-        self.assertEqual(A.rank_normalise([3, 1, 2]), [1.0, 0.0, 0.5])
-        self.assertEqual(A.rank_normalise([5]), [1.0])
-        self.assertEqual(A.rank_normalise([2, 2, 1]), [1.0, 1.0, 0.0])
+    def test_relevance_ranks_are_contiguous_and_ties_follow_cross_encoder_rank(self):
+        p = [cand("a", 2, 2000), cand("b", 1, 2000), cand("c", 3, 2000)]
+        self.assertEqual(A.relevance_ranks([5.0, 5.0, 9.0], p), [3, 2, 1])   # c best; tie: b (rank 1) before a
+        self.assertEqual(sorted(A.relevance_ranks([1, 1, 1], p)), [1, 2, 3])
+
+    def test_scores_come_from_the_reference_implementation(self):
+        """The arms must not carry their own copy of the formula: compare with a direct
+        call of src.proposed on the same inputs."""
+        from datetime import date
+        from src.common.evidence import Candidate, Evidence
+        from src.proposed.scorer import AdmissionScorer
+        from src.proposed.temporal import TemporalPolicy
+        p = pool()
+        got = A.admission_scores(p, [-c["rank"] for c in p], p, CUTOFF, 0.5)
+        scorer = AdmissionScorer(0.5)
+        policy = TemporalPolicy(half_life_days=A.HALF_LIFE_DAYS, undated_score=0.0)
+        for c, g in zip(p, got):
+            ev = Evidence(evidence_id=c["pmid"], text="", source_tier="x",
+                          publication_date=A.point_date(c))
+            t = policy.score(ev, question="", question_date=date.fromisoformat(CUTOFF)).score
+            want = scorer.score(Candidate(ev, 0.0, c["rank"]), temporal=t, candidate_count=len(p)).total
+            self.assertAlmostEqual(g, want)
+        self.assertAlmostEqual(got[0], 0.5 * 1.0 + 0.5 * A.recency(p[0], CUTOFF))   # rank 1 -> rho 1
 
     def test_recency_halves_every_half_life_and_clamps_future(self):
         c = cand("1", 1, 2017, month="01")
@@ -205,6 +222,41 @@ class ConsistencyTests(unittest.TestCase):
         self.assertEqual(score_sheet([{"consistent": "Y"}] * 8 + [{"consistent": "N"}] * 2, 1.0)["G1"], "FAIL")
         with self.assertRaises(ValueError):
             score_sheet([{"consistent": "Y"}, {"consistent": ""}], 1.0)
+
+
+class RetrievalMetricTests(unittest.TestCase):
+
+    def setUp(self):
+        # update window: (2010-01-01, 2015-01-01]; question date 2015-01-01
+        self.items = {"x": {"item_id": "x", "kind": "changed", "newest": {"date": "2015-01-01"},
+                            "previous": {"date": "2010-01-01"}}}
+        cands = [cand("old", 1, 2005), cand("in1", 2, 2012), cand("in2", 3, 2014), cand("edge", 4, 2010)]
+        self.pools = {"x": {"candidates": cands}}
+
+    def answers(self, **admitted):
+        return {("x", arm): {"admitted": pm, "verdict": "SUPPORTED", "seconds": 1.0}
+                for arm, pm in admitted.items()}
+
+    def test_window_share_any_evidence_age_and_overlap(self):
+        ans = self.answers(B1=["old", "in1"], P=["in1", "in2"])
+        m = retrieval_metrics(self.items, self.pools, ans, ["B1", "P"])
+        self.assertEqual(m["B1"]["changed"]["update_window_share"], 0.5)       # only in1 of 2
+        self.assertEqual(m["P"]["changed"]["update_window_share"], 1.0)
+        self.assertEqual(m["P"]["changed"]["items_with_update_window_evidence"], 1.0)
+        self.assertEqual(m["P"]["changed"]["jaccard_with_B1"], round(1 / 3, 4))
+        self.assertLess(m["P"]["changed"]["mean_age_years"], m["B1"]["changed"]["mean_age_years"])
+
+    def test_a_passage_dated_exactly_on_the_previous_version_is_not_in_the_window(self):
+        ans = self.answers(B1=["edge"])
+        m = retrieval_metrics(self.items, self.pools, ans, ["B1"])
+        self.assertEqual(m["B1"]["changed"]["update_window_share"], 0.0)
+
+    def test_empty_admission_and_missing_pool_are_handled(self):
+        ans = self.answers(B0=[])
+        m = retrieval_metrics(self.items, self.pools, ans, ["B0"])
+        self.assertIsNone(m["B0"]["changed"]["update_window_share"])
+        self.assertEqual(m["B0"]["changed"]["mean_admitted"], 0.0)
+        self.assertEqual(retrieval_metrics(self.items, {}, ans, ["B0"]), {})
 
 
 if __name__ == "__main__":

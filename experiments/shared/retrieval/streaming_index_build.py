@@ -7,7 +7,7 @@ simple for a small fixture, but on the real corpus (4.3M+ chunks, a 13 GB
 chunk file, a ~12.8 GB vector matrix) it does not fit: a 2026-09-24
 diagnostic run showed that materializing just the passage *text* - before
 any model or vectors were involved - pushed a 16 GB-RAM laptop to ~0 GB
-free and caused sustained OS paging (recorded in ``docs/research_log.md``).
+free and caused sustained OS paging (recorded in ``docs/log.md``).
 
 This module builds the identical index - byte-for-byte the same
 ``vectors.npy``/``manifest.json`` schema, loadable by the unmodified

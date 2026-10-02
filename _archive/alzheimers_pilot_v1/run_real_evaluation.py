@@ -56,7 +56,7 @@ the Temporal Filter is doing what it is meant to.
 Usage (run on a machine with the real corpus, the pilot index, torch and
 transformers installed - not this development sandbox):
 
-    python -m experiments.shared.runners.run_real_evaluation \\
+    python -m _archive.alzheimers_pilot_v1.run_real_evaluation \\
         --rag2-checkpoint checkpoints/rag2_filter/final \\
         --device cpu
 """

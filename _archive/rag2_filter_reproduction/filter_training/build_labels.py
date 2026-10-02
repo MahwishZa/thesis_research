@@ -5,7 +5,7 @@ corpus (never the thesis's Alzheimer's corpus - specification SS10.6),
 scores each (question, passage) pair with a ``RationaleScorer`` twice
 (without and with the passage), applies the paper's label decision tree
 (``labeling.py``), and writes the training file
-``experiments/baseline/filter_training/train.py`` reads.
+``_archive/rag2_filter_reproduction/filter_training/train.py`` reads.
 
 Two scorer backends (``--scorer``), same decision tree, same downstream
 file format either way:
@@ -33,10 +33,10 @@ checkpoint before continuing, refusing rather than silently mixing runs.
 the full ``--n-questions`` run, and writes nothing to ``--output`` or the
 checkpoint - repeatable, and never mistakeable for a real (partial) run.
 
-    python -m experiments.baseline.filter_training.build_labels \\
+    python -m _archive.rag2_filter_reproduction.filter_training.build_labels \\
         --scorer gguf --gguf-model-path /path/to/model.gguf \\
         --n-questions 500 \\
-        --output experiments/baseline/filter_training/labels/medqa_filter_labels.json \\
+        --output _archive/rag2_filter_reproduction/filter_training/labels/medqa_filter_labels.json \\
         --model-revision <pinned-commit-sha> \\
         --calibrate 10
 
@@ -73,7 +73,7 @@ class BuildLabelsError(RuntimeError):
 #: a real run (2026-09-28); every retry of a failed later step (e.g. the
 #: scorer) would otherwise redo it from scratch for no reason, since
 #: load_textbook_passages is deterministic given the same n/seed.
-TEXTBOOK_INDEX_CACHE_ROOT = Path("experiments/baseline/filter_training/.textbook_index_cache")
+TEXTBOOK_INDEX_CACHE_ROOT = Path("_archive/rag2_filter_reproduction/filter_training/.textbook_index_cache")
 
 
 def build_textbook_index(n_passages: int, seed: int, device: Optional[str]):

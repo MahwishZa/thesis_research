@@ -1,6 +1,6 @@
 import unittest
 
-from experiments.baseline.filter_training.rationale_audit import (
+from _archive.rag2_filter_reproduction.filter_training.rationale_audit import (
     classify_generation, strict_flip_summary, strict_triple_summary, summarize,
 )
 

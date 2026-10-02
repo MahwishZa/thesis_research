@@ -18,7 +18,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Callable, Iterable, Optional
+from typing import Callable, Optional
 
 from . import arms as A
 from .prompts import SYSTEM, build_prompt, parse_verdict

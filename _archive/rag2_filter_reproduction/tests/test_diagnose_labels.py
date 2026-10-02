@@ -2,7 +2,7 @@
 
 import unittest
 
-from experiments.baseline.filter_training.diagnose_labels import auc, spearman
+from _archive.rag2_filter_reproduction.filter_training.diagnose_labels import auc, spearman
 
 
 class RankStatTests(unittest.TestCase):

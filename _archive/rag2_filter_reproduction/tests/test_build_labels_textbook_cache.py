@@ -11,7 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
-from experiments.baseline.filter_training import build_labels
+from _archive.rag2_filter_reproduction.filter_training import build_labels
 from experiments.shared.retrieval.corpus import CorpusPassage
 from experiments.shared.retrieval.encoders import HashingEncoder
 

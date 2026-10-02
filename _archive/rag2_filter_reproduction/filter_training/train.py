@@ -7,8 +7,8 @@ matrix, exactly as the released ``classifier/model/token_add.ipynb`` does
 (specification SS10.3) - ``FlanT5RAG2Filter`` refuses a checkpoint that
 skips this.
 
-    python -m experiments.baseline.filter_training.train \\
-        --labels experiments/baseline/filter_training/labels/medqa_filter_labels.json \\
+    python -m _archive.rag2_filter_reproduction.filter_training.train \\
+        --labels _archive/rag2_filter_reproduction/filter_training/labels/medqa_filter_labels.json \\
         --output-dir checkpoints/rag2_filter \\
         --epochs 3
 
@@ -412,7 +412,7 @@ def main(argv=None) -> int:
         epochs_run=epochs_run,
         label_distribution=label_dist,
         trained_on="MedQA (general-medical), never the thesis's Alzheimer's "
-                   "questions - see experiments/baseline/filter_training/medqa_data.py",
+                   "questions - see _archive/rag2_filter_reproduction/filter_training/medqa_data.py",
         notes=f"deviations from paper: {config.deviations()}; "
               f"best epoch by {args.best_metric} restored; "
               f"recall_helpful={m['eval_recall_helpful']:.3f}, "

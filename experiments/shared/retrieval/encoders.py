@@ -91,7 +91,7 @@ def _move_to_device(model, device: str, model_id: str):
     support raises ``AssertionError: Torch not compiled with CUDA enabled``
     eight stack frames deep inside torch's own ``Module._apply`` - which
     says nothing about *why*, and nothing about the actual, very common
-    cause on Colab/Kaggle: a later ``pip install`` (typically pulled in by
+    cause in a shared notebook or virtualenv: a later ``pip install`` (typically pulled in by
     ``accelerate`` or ``bitsandbytes``) silently replacing the platform's
     preinstalled CUDA-enabled torch with a CPU-only wheel. Checking
     ``torch.cuda.is_available()`` first turns a multi-minute failure (after
@@ -105,7 +105,7 @@ def _move_to_device(model, device: str, model_id: str):
             f"torch.cuda.is_available() is False (torch {torch.__version__}). "
             "This usually means a `pip install` after the notebook started "
             "replaced the platform's preinstalled CUDA-enabled torch with a "
-            "CPU-only build (a common Colab/Kaggle gotcha when installing "
+            "CPU-only build (a common gotcha when installing "
             "accelerate/bitsandbytes) - check `torch.__version__` for a "
             "'+cpu' suffix. Fix: reinstall torch from the CUDA wheel index "
             "matching this machine's CUDA version (check `!nvidia-smi`), "

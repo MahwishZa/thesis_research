@@ -9,8 +9,8 @@ Answers two questions before more training time is spent:
      (needs scikit-learn; skipped with a message if absent). Not the T5 filter
      - a lower bound on learnability only.
 
-    python -m experiments.baseline.filter_training.diagnose_labels \\
-        --progress experiments/baseline/filter_training/labels/medqa_filter_labels.progress_completed
+    python -m _archive.rag2_filter_reproduction.filter_training.diagnose_labels \\
+        --progress _archive/rag2_filter_reproduction/filter_training/labels/medqa_filter_labels.progress_completed
 """
 
 from __future__ import annotations

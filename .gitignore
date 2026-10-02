@@ -1,27 +1,31 @@
 __pycache__/
 *.py[cod]
-
-# Large, regenerable local artifacts - never commit these. Each one has
-# caused an accidental multi-GB commit (rejected by GitHub, since fixed by
-# resetting local history) when added via `git add -A`/the GitHub web
-# upload UI, which does not respect this file the way `git add` does.
-# Regenerate them locally instead of committing them:
-#   - checkpoints/                 -> experiments/baseline/filter_training (see docs/reproducibility.md)
-#   - corpus_pilot/                -> a local sample of corpus/data/chunks/chunks.jsonl
-#   - experiments/results/index_pilot_reduced_scope/ -> experiments/shared/retrieval/build_index.py
-#   - experiments/results/index/   -> the full-scale index (~12.5 GB), same command
-#   - experiments/baseline/filter_training/.textbook_index_cache/ -> build_labels.py, ~150MB
-# Small, legitimate result files (experiments/results/fit_and_evaluate/, the current
-# committed run - see docs/evaluation.md SS7) are NOT covered by a blanket
-# results/ rule - a real committed result must stay visible to
-# `git status`, not silently ignored alongside the large regenerable
-# folders sitting next to it.
-checkpoints/
-experiments/results/index_pilot_reduced_scope/
-experiments/results/index/
-experiments/baseline/filter_training/.textbook_index_cache/
-ram_monitor.csv
-experiments/baseline/filter_training/labels/
-models/
 *.egg-info/
+
+# Large, licensed or machine-local artifacts: never commit these. Several have caused an
+# accidental multi-GB commit when added via `git add -A` or the GitHub web upload UI.
+# Regenerate them locally (docs/reproducibility.md) instead.
+# (gitignore has no trailing comments: every comment sits on its own line.)
+
+# Trained model checkpoints (archived RAG2 filter-reproduction attempt).
+checkpoints/
+# Local GGUF model files.
+models/
+ram_monitor.csv
+# Full retrieval index (~12.5 GB): python -m experiments.shared.retrieval.build_index
+experiments/results/index/
+experiments/results/index_pilot_reduced_scope/
+
+# MedChange-derived questions, fetched PubMed abstracts, frozen candidate pools and raw
+# working outputs. The MedChange release states no licence and abstracts are publisher
+# text, so they are rebuilt from the manifest, not redistributed. Results worth keeping
+# are copied to experiments/medchange/results/ (tracked) - see docs/reproducibility.md.
 experiments/medchange/data/
+
+# Archived RAG2 filter-reproduction attempt: labels embed textbook passages.
+_archive/rag2_filter_reproduction/filter_training/labels/
+_archive/rag2_filter_reproduction/filter_training/.textbook_index_cache/
+
+# The same folders at their location BEFORE the 2026-10-02 reorganisation. Nothing is
+# tracked there any more; the entry stays so leftover local files can never be committed.
+experiments/baseline/

@@ -161,7 +161,7 @@ class FlanT5RAG2Filter(AdmissionFilter):
             # A clear, immediate error instead of torch's own
             # "AssertionError: Torch not compiled with CUDA enabled" eight
             # frames deep in Module._apply - hit for real (2026-09-21) after
-            # a pip install silently replaced a Colab/Kaggle notebook's
+            # a pip install silently replaced a notebook environment's
             # preinstalled CUDA-enabled torch with a CPU-only build.
             raise ImportError(
                 f"requested device={device!r}, but torch.cuda.is_available() "
