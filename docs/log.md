@@ -688,6 +688,14 @@ Confirmed and corrected:
   in `analyze.py`. A `DocumentationIntegrityTests` class now fails if a path or `python -m` command named in
   a current document does not exist, and `test_scope_invariants.py` guards the README's objectives, its
   no-novelty statement and its "not a RAG² reproduction" statement.
+* **Answers were not bound to the generator that made them.** Records carried the arm-settings hash and a
+  prompt hash but nothing about the model file, context size, token limit or seed, and `generate_answers`
+  appended to an existing answers file under whatever settings were current, so a 22-hour run resumed with
+  another GGUF file or `--max-new-tokens` would have mixed configurations undetectably. It now writes
+  `answers_<split>.config.json` (model SHA-256, decoding settings, hashes of the arm settings and prompts;
+  thread count, GPU layers and the llama-cpp-python version for information), refuses to extend a file
+  under a different model or result-relevant setting before loading the model, adopts pre-existing
+  answers with a note, and `analyze` copies the record into its saved report. Ten tests added.
 * **Feasibility arithmetic made explicit.** The plan's power claim and the dev gates were re-derived by
   simulation (exact McNemar; ≈ 30% of answers differing between arms is an assumption until dev results
   exist). The confirmatory split (353 changed items) has 84% power at Holm-corrected α for a true 10 pp
@@ -707,7 +715,7 @@ Confirmed and corrected:
 Deliberately not changed: the Alzheimer's corpus, question pool and index; the MedChange protocol and
 settings (fixed before any answer existed); the history in this log.
 
-Verification after the changes: 559 active tests and 125 archived tests pass, also in a fresh virtualenv
+Verification after the changes: 569 active tests and 125 archived tests pass, also in a fresh virtualenv
 holding only the base dependencies with outbound socket connections blocked; both suites leave the
 repository tree unchanged (`check_hermetic`); `pyflakes` reports only an
 intentional availability import in `encoders.py` and unused imports inside archived code; every path and

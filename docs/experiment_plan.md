@@ -193,3 +193,6 @@ RAG²-style arms are untrained stand-ins; confirmatory power is limited to ≈ 1
   cross-encoder rank instead of sharing a normalised score); no outcome existed, so no result is affected.
 * **2026-10-02, audit** — added the simulated power of the confirmatory test (§7) and the operating
   characteristics of G3 (§9); no threshold, setting or rule was changed.
+* **2026-10-02, audit** — `generate_answers` now records the generator configuration (model file hash,
+  context size, token limit, temperature, seed, prompt hashes) beside the answers and refuses to extend an
+  answers file under a different one; no generation setting was changed.

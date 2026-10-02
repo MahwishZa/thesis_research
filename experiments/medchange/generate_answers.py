@@ -8,6 +8,10 @@ frozen pools only. Resumable: one JSON line per (item, arm); finished pairs are 
 and a truncated last line (killed mid-write) is ignored. Items are interleaved across
 arms so an interrupted run leaves a balanced partial set. Records carry the arm-settings
 hash, prompt hash and wall-clock seconds (the G1 speed benchmark).
+
+The generator itself (model file hash, context size, token limit, seed, ...) is recorded once
+per answers file in ``<answers>.config.json``. A resumed run whose result-relevant settings
+differ from the recorded ones is refused, so one answers file never mixes configurations.
 """
 
 from __future__ import annotations
@@ -21,10 +25,15 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from . import arms as A
-from .prompts import SYSTEM, build_prompt, parse_verdict
+from .prompts import SYSTEM, TEMPLATE, build_prompt, parse_verdict
 
 HERE = Path(__file__).resolve().parent
 MAX_NEW_TOKENS = 160
+SEED = 42
+#: Settings whose change makes two answers incomparable. ``n_threads``, ``n_gpu_layers`` and the
+#: llama-cpp-python version are recorded for the record but do not block a resume.
+RESULT_RELEVANT = ("model_sha256", "n_ctx", "max_new_tokens", "temperature", "seed",
+                   "arm_settings", "system_sha256", "template_sha256")
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -77,11 +86,62 @@ def run(items: list[dict], pools: dict[str, dict], helpful: dict[str, dict], arm
     return len(todo)
 
 
+def file_sha256(path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _text_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def run_config(*, model_path, model_sha256: str, n_ctx: int, max_new_tokens: int,
+               n_threads: Optional[int], n_gpu_layers: int, llama_version: str) -> dict:
+    """Everything about the generator that an answers file needs to be reproduced."""
+    return {"model_file": Path(model_path).name, "model_sha256": model_sha256,
+            "n_ctx": n_ctx, "max_new_tokens": max_new_tokens, "temperature": 0.0, "seed": SEED,
+            "arm_settings": A.settings_hash(), "system_sha256": _text_sha256(SYSTEM),
+            "template_sha256": _text_sha256(TEMPLATE),
+            "n_threads": n_threads, "n_gpu_layers": n_gpu_layers,
+            "llama_cpp_python": llama_version}
+
+
+def config_path(answers: Path) -> Path:
+    return answers.with_name(answers.stem + ".config.json")
+
+
+def check_config(answers: Path, config: dict) -> list[str]:
+    """Bind an answers file to the configuration that produced it.
+
+    Records ``config`` next to ``answers`` when nothing is recorded yet and returns the
+    result-relevant fields on which it disagrees with an existing record (empty: compatible).
+    """
+    path = config_path(answers)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(config, indent=2, sort_keys=True) + "\n")
+        return []
+    recorded = json.loads(path.read_text(encoding="utf-8"))
+    return [k for k in RESULT_RELEVANT if recorded.get(k) != config.get(k)]
+
+
+def llama_version() -> str:
+    try:
+        import llama_cpp
+    except ImportError:
+        return "not installed"
+    return getattr(llama_cpp, "__version__", "unknown")
+
+
 def llama_generator(model_path: str, n_ctx: int, n_threads: Optional[int], n_gpu_layers: int,
                     max_new_tokens: int) -> Callable[[str, str], str]:
     from llama_cpp import Llama
     llm = Llama(model_path=model_path, n_ctx=n_ctx, n_threads=n_threads,
-                n_gpu_layers=n_gpu_layers, verbose=False, seed=42)
+                n_gpu_layers=n_gpu_layers, verbose=False, seed=SEED)
 
     def generate(system: str, user: str) -> str:
         r = llm.create_chat_completion(
@@ -120,7 +180,23 @@ def main(argv=None) -> int:
         print("B2/P/C1 need helpfulness scores for every item: run "
               "experiments.medchange.helpfulness first", file=sys.stderr)
         return 2
+    if not Path(args.model_path).is_file():
+        print(f"model file not found: {args.model_path}", file=sys.stderr)
+        return 2
     out = Path(args.out or d / f"answers_{args.split}.jsonl")
+    if out.exists() and not config_path(out).exists():
+        print(f"note: {out.name} has no recorded configuration (made before it was recorded); "
+              "recording the current one.", file=sys.stderr)
+    print("hashing the model file ...", flush=True)
+    differs = check_config(out, run_config(
+        model_path=args.model_path, model_sha256=file_sha256(args.model_path), n_ctx=args.n_ctx,
+        max_new_tokens=args.max_new_tokens, n_threads=args.n_threads,
+        n_gpu_layers=args.n_gpu_layers, llama_version=llama_version()))
+    if differs:
+        print(f"refusing to extend {out.name}: its recorded generator configuration differs in "
+              f"{', '.join(differs)} (see {config_path(out).name}). Use a different --out, or restore "
+              "the original model and settings.", file=sys.stderr)
+        return 2
     gen = llama_generator(args.model_path, args.n_ctx, args.n_threads, args.n_gpu_layers,
                           args.max_new_tokens)
     t0 = time.time()

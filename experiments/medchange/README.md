@@ -13,7 +13,7 @@ code to steps. Commands and measured costs: `docs/reproducibility.md` §3.
 | `helpfulness.py` | zero-shot Flan-T5 P(yes) per pool candidate (untrained; **not RAG²**) | Flan-T5-large | `helpfulness_<split>.jsonl` |
 | `arms.py` | admission rules B0, B1, B2, B3, P, C1 with fixed settings; formula delegated to `src/proposed/` | none | – |
 | `prompts.py` | the one answer prompt and the `VERDICT:` parser | none | – |
-| `generate_answers.py` | one answer per (item, arm) with llama.cpp, resumable | GGUF model | `answers_<split>.jsonl` |
+| `generate_answers.py` | one answer per (item, arm) with llama.cpp, resumable; records the generator configuration and refuses to resume under a different one | GGUF model | `answers_<split>.jsonl`, `answers_<split>.config.json` |
 | `analyze.py` | accuracy, outdated rate, retrieval-level metrics, paired McNemar + Holm, gates G2/G3 | none | stdout or `--out` |
 | `consistency.py` | gate G1 human check of stated verdicts | none | `consistency_sheet.csv` |
 

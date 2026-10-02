@@ -96,7 +96,8 @@ are `test_runner_parity.py` and the integration suite.
 Meta-Llama-3-8B-Instruct, Q4_K_M GGUF (bartowski), run with llama.cpp on CPU on a laptop with 15.2 GB
 RAM and a 4 GB GPU that cannot hold the model. Greedy decoding, no sampling. A quantised model on CPU
 is a disclosed deviation from RAG²'s own full-precision GPU generator. Qwen2.5-7B-Instruct is the
-planned second generator for robustness. Record the GGUF file's SHA-256 with every run.
+planned second generator for robustness. The GGUF file's SHA-256 and the decoding settings are recorded
+automatically beside the answers (`reproducibility.md` §8).
 
 ## 7. Parameters
 

@@ -27,7 +27,7 @@ from typing import Optional
 
 from evaluation.stats import holm, mcnemar, paired_bootstrap_ci
 
-from .generate_answers import load_jsonl
+from .generate_answers import config_path, load_jsonl
 
 HERE = Path(__file__).resolve().parent
 G2_MIN_CHANGE = 0.20
@@ -178,12 +178,15 @@ def main(argv=None) -> int:
              if r["split"] == args.split and not r["likely_label_noise"]}
     rows = load_jsonl(Path(args.answers or d / f"answers_{args.split}.jsonl"))
     answers = {(r["item_id"], r["arm"]): r for r in rows}
+    config = config_path(Path(args.answers or d / f"answers_{args.split}.jsonl"))
     arms = sorted({a for _, a in answers}, key=lambda a: ("B0", "B1", "B2", "B3", "P", "C1").index(a))
     report = {"split": args.split, "n_answers": len(rows), "per_arm": summarize(items, answers, arms),
               "paired_changed": [p for a, b in PAIRS if (p := paired(items, answers, a, b))],
               "paired_unchanged": [p for a, b in PAIRS if (p := paired(items, answers, a, b, "unchanged"))],
               "confirmatory_family_changed": confirmatory_family(items, answers),
               "gates": gates(items, answers)}
+    if config.exists():
+        report["generation_config"] = json.loads(config.read_text(encoding="utf-8"))
     frozen = Path(args.frozen or d / f"frozen_{args.split}.jsonl")
     if frozen.exists():
         pools = {r["item_id"]: r for r in load_jsonl(frozen)}

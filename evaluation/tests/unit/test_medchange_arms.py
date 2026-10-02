@@ -1,16 +1,21 @@
 """Arms, prompts, resumable generation and the dev gates (no model, no network)."""
 
+import hashlib
 import json
 import unittest
+from unittest import mock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from experiments.medchange import arms as A
+from experiments.medchange import generate_answers as generate_cli
 from experiments.medchange import analyze as analyze_cli
 from experiments.medchange.analyze import (
     confirmatory_family, correctness, gates, paired, retrieval_metrics, summarize,
 )
-from experiments.medchange.generate_answers import load_jsonl, run
+from experiments.medchange.generate_answers import (
+    RESULT_RELEVANT, check_config, config_path, file_sha256, load_jsonl, run, run_config,
+)
 from experiments.medchange.prompts import build_prompt, parse_verdict
 
 CUTOFF = "2020-01-01"
@@ -157,6 +162,140 @@ class RunTests(unittest.TestCase):
             run(self.items[:1], self.pools, self.helpful, ["B0", "B1"], out, lambda s, u: "x")
             r = load_jsonl(out)
         self.assertNotEqual(r[0]["prompt_sha256"], r[1]["prompt_sha256"])
+
+
+class RunConfigTests(unittest.TestCase):
+    """An answers file is bound to the generator that produced it: a resumed run with a different
+    model or result-relevant setting is refused instead of silently mixing configurations."""
+
+    KW = dict(model_path="models/m.gguf", model_sha256="a" * 64, n_ctx=4096, max_new_tokens=160,
+              n_threads=8, n_gpu_layers=0, llama_version="0.2.90")
+
+    def test_file_sha256_streams_the_whole_file(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "m.bin"
+            payload = b"x" * (3 * (1 << 20) + 17)
+            path.write_bytes(payload)
+            self.assertEqual(file_sha256(path), hashlib.sha256(payload).hexdigest())
+
+    def test_the_config_records_model_decoding_prompt_and_arm_settings(self):
+        cfg = run_config(**self.KW)
+        self.assertEqual(cfg["model_file"], "m.gguf")
+        self.assertEqual((cfg["temperature"], cfg["seed"]), (0.0, 42))
+        self.assertEqual(cfg["arm_settings"], A.settings_hash())
+        for key in RESULT_RELEVANT:
+            self.assertIn(key, cfg)
+
+    def test_the_first_run_records_the_configuration_and_a_rerun_is_compatible(self):
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "answers_dev.jsonl"
+            self.assertEqual(check_config(out, run_config(**self.KW)), [])
+            self.assertTrue(config_path(out).exists())
+            self.assertEqual(config_path(out).name, "answers_dev.config.json")
+            self.assertEqual(check_config(out, run_config(**self.KW)), [])
+
+    def test_a_different_model_or_result_relevant_setting_is_refused(self):
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "answers_dev.jsonl"
+            check_config(out, run_config(**self.KW))
+            self.assertEqual(check_config(out, run_config(**dict(self.KW, model_sha256="b" * 64))),
+                             ["model_sha256"])
+            self.assertEqual(check_config(out, run_config(**dict(self.KW, n_ctx=2048,
+                                                                 max_new_tokens=256))),
+                             ["n_ctx", "max_new_tokens"])
+
+    def test_threads_gpu_layers_and_library_version_are_recorded_but_do_not_block_a_resume(self):
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "answers_dev.jsonl"
+            check_config(out, run_config(**self.KW))
+            changed = run_config(**dict(self.KW, n_threads=2, n_gpu_layers=10, llama_version="9.9"))
+            self.assertEqual(check_config(out, changed), [])
+            recorded = json.loads(config_path(out).read_text(encoding="utf-8"))
+        self.assertEqual((recorded["n_threads"], recorded["llama_cpp_python"]), (8, "0.2.90"))
+
+    def test_the_saved_analysis_carries_the_generation_config(self):
+        bench = [dict(item("a", "changed", "SUPPORTED"), split="dev", likely_label_noise=False,
+                      previous={"label": "REFUTED", "date": "2010-01-01"})]
+        rows = [{"item_id": "a", "arm": "B0", "verdict": "SUPPORTED", "seconds": 1.0,
+                 "admitted": [], "text": "x"}]
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            for name, data in (("benchmark.jsonl", bench), ("answers_dev.jsonl", rows)):
+                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
+            check_config(d / "answers_dev.jsonl", run_config(**self.KW))
+            out = d / "report.json"
+            analyze_cli.main(["--split", "dev", "--data-dir", str(d), "--out", str(out)])
+            report = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(report["generation_config"]["model_sha256"], "a" * 64)
+
+
+class GenerateCliTests(unittest.TestCase):
+    """``generate_answers.main`` end to end with a stub generator: the configuration is recorded
+    before any answer is written, and a changed setting stops a resume before the model loads."""
+
+    def _data_dir(self, tmp):
+        d = Path(tmp) / "data"
+        d.mkdir()
+        bench = [dict(item("a", "changed", "SUPPORTED"), split="dev", likely_label_noise=False)]
+        pools = [{"item_id": "a", "candidates": pool()}]
+        for name, rows in (("benchmark.jsonl", bench), ("frozen_dev.jsonl", pools)):
+            (d / name).write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+        model = Path(tmp) / "m.gguf"
+        model.write_bytes(b"not a real model")
+        return d, model
+
+    def _main(self, tmp, model, *extra):
+        loaded = []
+
+        def fake_generator(*args):
+            loaded.append(args)
+            return lambda system, user: "VERDICT: SUPPORTED\nok"
+
+        with mock.patch.object(generate_cli, "HERE", Path(tmp)), \
+                mock.patch.object(generate_cli, "llama_generator", fake_generator), \
+                mock.patch("sys.stdout"), mock.patch("sys.stderr"):
+            code = generate_cli.main(["--split", "dev", "--arms", "B0", "B1",
+                                      "--model-path", str(model), *extra])
+        return code, loaded
+
+    def test_the_configuration_is_recorded_and_a_resume_with_the_same_settings_continues(self):
+        with TemporaryDirectory() as tmp:
+            d, model = self._data_dir(tmp)
+            self.assertEqual(self._main(tmp, model)[0], 0)
+            cfg = json.loads((d / "answers_dev.config.json").read_text(encoding="utf-8"))
+            self.assertEqual(cfg["model_sha256"], hashlib.sha256(b"not a real model").hexdigest())
+            self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
+            self.assertEqual(self._main(tmp, model)[0], 0)
+            self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
+
+    def test_a_resume_with_a_different_setting_or_model_is_refused_before_loading_the_model(self):
+        with TemporaryDirectory() as tmp:
+            d, model = self._data_dir(tmp)
+            self._main(tmp, model)
+            code, loaded = self._main(tmp, model, "--max-new-tokens", "320")
+            self.assertEqual((code, loaded), (2, []))
+            other = Path(tmp) / "other.gguf"
+            other.write_bytes(b"a different model")
+            code, loaded = self._main(tmp, other)
+            self.assertEqual((code, loaded), (2, []))
+            self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
+
+    def test_a_missing_model_file_is_reported_not_a_traceback(self):
+        with TemporaryDirectory() as tmp:
+            d, _ = self._data_dir(tmp)
+            code, loaded = self._main(tmp, Path(tmp) / "absent.gguf")
+            self.assertEqual((code, loaded), (2, []))
+            self.assertFalse((d / "answers_dev.jsonl").exists())
+
+    def test_answers_made_before_configurations_were_recorded_are_adopted_not_refused(self):
+        with TemporaryDirectory() as tmp:
+            d, model = self._data_dir(tmp)
+            (d / "answers_dev.jsonl").write_text(
+                json.dumps({"item_id": "a", "arm": "B0", "text": "t", "verdict": "SUPPORTED"}) + "\n",
+                encoding="utf-8")
+            self.assertEqual(self._main(tmp, model)[0], 0)
+            self.assertTrue((d / "answers_dev.config.json").exists())
+            self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
 
 
 def answers(spec):

@@ -23,8 +23,8 @@ time once:
 * **numpy 2.x breaks torch 2.4.x** and TensorFlow 2.17; keep `numpy<2` (and a scipy built for it, e.g.
   `scipy==1.13.1`) in that environment.
 * **Generator model.** Download `Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` (≈ 4.6 GB) from
-  `bartowski/Meta-Llama-3-8B-Instruct-GGUF` into `models/` (gitignored) and record
-  `Get-FileHash models\<file>.gguf -Algorithm SHA256` with every run.
+  `bartowski/Meta-Llama-3-8B-Instruct-GGUF` into `models/` (gitignored). `generate_answers` hashes the
+  file itself and records the SHA-256 beside the answers (§8).
 * **Keep a long run alive on a laptop:** plug in and disable sleep
   (`powercfg /change standby-timeout-ac 0`).
 
@@ -70,7 +70,8 @@ resumable: rerun the same command after an interruption.
 Dev is run first. The confirmatory split (`--split confirm`) is run only after the gates pass, once,
 following the plan frozen in `experiment_plan.md`. For arms B2, P and C1 run step 6 before step 7. The
 full dev run of all six arms is ≈ 22 h and the confirmatory run ≈ 51 h (*estimated* from the measured
-per-answer times). Steps 4 and 5 call NCBI E-utilities and accept an optional `--api-key` (3 requests
+per-answer times); preparing the confirmatory split (steps 4–6 for 528 items) is another ≈ 12 h
+(*estimated* from the per-item dev times of ≈ 6 s, ≈ 49 s and ≈ 27 s). Steps 4 and 5 call NCBI E-utilities and accept an optional `--api-key` (3 requests
 per second without a key, 10 with one), which changes their duration, not their results.
 
 ## 4. Secondary: Alzheimer's corpus, question pool and index
@@ -112,8 +113,8 @@ implemented** (`experiment_plan.md` §11). `run_end_to_end` demonstrates the ori
 | `_archive/rag2_filter_reproduction/filter_training/labels/`, `.textbook_index_cache/` | labels embed textbook passages |
 
 **Results worth keeping are committed.** After a run, copy the files that contain no source text — the
-answers (`answers_<split>.jsonl`: generated text and PMIDs), the helpfulness scores
-(`helpfulness_<split>.jsonl`) and the saved analysis (`python -m experiments.medchange.analyze --split
+answers (`answers_<split>.jsonl`: generated text and PMIDs) with their generator record
+(`answers_<split>.config.json`), the helpfulness scores (`helpfulness_<split>.jsonl`) and the saved analysis (`python -m experiments.medchange.analyze --split
 dev --out experiments\medchange\results\analysis_dev.json`) — into `experiments/medchange/results/` and
 commit them; a 22-hour run must not exist only on one laptop. The frozen pools and abstracts stay
 local and are rebuilt from the manifest.
@@ -138,7 +139,12 @@ up outside the repository.
 ## 8. Reproducing a specific run exactly
 
 Every answer record carries the arm-settings hash, the prompt hash, the admitted PMIDs and the wall-clock
-seconds; every frozen pool carries an order-sensitive hash and the encoder names. A run also needs the
-manifest's input hashes (the MedChange files), the GGUF file's SHA-256, `numpy`/`torch`/`llama-cpp-python`
-versions, and the seed. Output files are never silently overwritten by a different run: collisions are
-refused or resumed, not merged.
+seconds; every frozen pool carries an order-sensitive hash and the encoder names. The generator is recorded
+once per answers file in `answers_<split>.config.json`: the model file's SHA-256, context size, token limit,
+temperature, seed, the arm-settings hash and hashes of the system prompt and template (and, for information,
+thread count, GPU layers and the llama-cpp-python version). `generate_answers` refuses to extend an answers
+file whose recorded model or result-relevant settings differ from the current ones, so one file never mixes
+generator configurations; an answers file made before this record existed (the six timing answers) is
+adopted with a note, its original configuration being unknown. `analyze` copies the record into its saved
+report. A run also needs the manifest's input hashes (the MedChange files) and the `numpy`/`torch` versions.
+Finished (item, arm) pairs are skipped on a resume, never overwritten.
