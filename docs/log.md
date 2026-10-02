@@ -610,6 +610,20 @@ never raises: season words, year-wrapping ranges ("Dec-Jan") and day ranges are
 widened to bounds that can only make a record look later, so the worst case is a
 dropped record. Tests for these forms added.
 
+**Phase 21 follow-up 3 (Oct 2): G0 PASSED on the full dev split.** 151 usable
+changed + 75 unchanged dev items. Changed: 94.0% have a trial or systematic review
+published inside the update window among the as-of PubMed candidates (top 200;
+80.1% within the top 50), median 72 in-window records; unchanged: 93.3% / 65.3%,
+median 50. Pre-stated threshold (>= 50%) met. Caveats: (a) availability is
+necessary, not sufficient - the unchanged controls look the same, so G0 does not
+show the new evidence carries the verdict change; that is what G2/G3 and the error
+analysis test; (b) these are PubMed lexical best-match candidates before MedCPT
+reranking, abstracts only. The manifest `M` on Windows was line-ending noise
+(`git diff` shows no content change; splits identical). Added
+`freeze_candidates.py` (abstracts via efetch, MedCPT dense + cross-encoder
+rerank, frozen pool of 20 with date bounds and an order-sensitive hash; no outcome
+is read) and 4 tests (22 in total).
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,
