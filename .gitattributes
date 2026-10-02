@@ -1,0 +1,10 @@
+# Store text as LF in the repository and check it out as LF on every platform, so that a Windows
+# checkout is byte-identical to a Linux one regardless of core.autocrlf. Binary files are detected
+# automatically. (A file that a Windows program later rewrites with CRLF can still show as modified
+# until it is re-added; the generated manifest is therefore written with LF explicitly.)
+#
+# Four CSV files were committed with CRLF row terminators (Python's csv module writes them).
+# For text=auto git leaves a file alone while its committed copy contains CRLF, so they stay as
+# they are. Do not run "git add --renormalize ." without checking "git diff --cached --stat":
+# it would rewrite those four files.
+* text=auto eol=lf
