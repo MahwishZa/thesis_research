@@ -66,12 +66,12 @@ class CurrentScopeTests(unittest.TestCase):
 
     def test_readme_names_verdict_accuracy_as_the_primary_outcome(self):
         body = text(README)
-        self.assertIn("Primary outcome: verdict accuracy", body)
+        self.assertIn("primary\noutcome is **verdict accuracy**", body)
         self.assertNotIn("Primary | Currency", body)
 
     def test_readme_does_not_present_the_rag2_stand_in_as_a_reproduction(self):
         body = " ".join(text(README).split())
-        self.assertIn("not** a RAG² reproduction", body)
+        self.assertIn("**not** a RAG² reproduction", body)
 
     def test_readme_does_not_assume_the_answer(self):
         """The point of the comparison is to determine improvement
