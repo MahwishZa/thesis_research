@@ -1,4 +1,4 @@
-# Recency-Weighted Evidence Admission in Retrieval-Augmented Medical Question Answering: An As-Of Evaluation on Cochrane Verdict Changes, with an Alzheimer's Disease Case Study
+# Time-Aware Evidence Admission in Retrieval-Augmented Medical Question Answering: Mitigating Outdated Conclusions under Evidence Revision
 
 ## 1. Problem Statement
 
@@ -115,8 +115,9 @@ account of which factors (label quality, generator strength, baseline
 fidelity) would need to change to test the idea more conclusively. Either
 outcome directly answers Objective 2; this repository does not commit in
 advance to which one it will report. Status (2026-10-02): the pipeline is
-built and unit-tested and the first gate has passed; no accuracy result exists
-yet (`docs/log.md`).
+built and unit-tested; gates G0 and G2 have passed. The only accuracy
+evidence so far is the dev comparison of no retrieval (B0) with standard RAG
+(B1); the proposed system has not been run (`docs/log.md`).
 
 ## Repository structure
 
