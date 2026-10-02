@@ -624,6 +624,17 @@ reranking, abstracts only. The manifest `M` on Windows was line-ending noise
 rerank, frozen pool of 20 with date bounds and an order-sensitive hash; no outcome
 is read) and 4 tests (22 in total).
 
+**Phase 21 follow-up 4 (Oct 2).** Dev candidate pools frozen on the student's machine:
+226 items, 0 empty, median pool size 20 (37,375 abstracts fetched; 3 h CPU).
+Generation/analysis harness added before any answer exists: `arms.py` (B0/B1/B2/B3/P/C1
+admission rules with fixed settings), `prompts.py` (explicit `VERDICT:` line, parsed
+deterministically - the earlier plan's judge model is dropped for the primary
+outcome), `helpfulness.py` (zero-shot Flan-T5 P(yes); NOT RAG², and rationale-as-query
+is dropped so arms share one pool), `generate_answers.py` (llama.cpp, resumable,
+interleaved arms), `analyze.py` (per-arm accuracy, exact McNemar, bootstrap CI, G2/G3).
+Settings and gate definitions are fixed in `docs/next_phase_plan.md` section 13 before
+any generation. 18 tests added (40 in `experiments/medchange` total). Nothing generated.
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,

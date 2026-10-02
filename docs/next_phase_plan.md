@@ -164,3 +164,48 @@ holds with a second generator; coverage is matched.
   existing recency reranking - an evaluation paper, not a method paper.
 * Nothing beats B1: an honest null; the as-of benchmark and the error breakdown
   are still reportable.
+
+## 13. Fixed before any generation (2026-10-02) - amendments to sections 5-9
+
+These were decided in code (`experiments/medchange/arms.py`, `prompts.py`,
+`analyze.py`) before a single answer was generated; the arm-settings hash is stored
+in every answer record.
+
+**Two disclosed changes from the earlier design.**
+1. *No judge model for the primary outcome.* The generator must open with
+   `VERDICT: SUPPORTED | REFUTED | NOT ENOUGH INFORMATION`; the primary outcome is that
+   parsed verdict against the gold verdict (the same three-way task the MedChange
+   authors used). Unparsed answers count as wrong and are reported. This removes judge
+   noise and cost. G1 therefore becomes: >= 95% of answers parse AND a human check of 50
+   answers finds the stated verdict consistent with the justification in >= 90%. A judge
+   model is kept only as a sensitivity analysis.
+2. *Pools are built from the question alone and shared by all arms.* RAG²'s
+   rationale-as-query step is dropped, so arms differ only in admission (the repository's
+   core design rule). B2 is therefore "a zero-shot helpfulness filter", **not RAG²**:
+   unmodified Flan-T5-large asked RAG²'s prompt plus "Answer yes or no.", scored as
+   P(yes). B2 and P cannot be described as reproductions of RAG².
+
+**Arm settings (not tuned).** Budget 5 passages; recency T = 2^(-age/H) with H = 1,095
+days, age measured from the question date (the newest review's date) to the midpoint of a
+passage's availability bounds; relevance signal rank-normalised to [0,1] within the pool
+of 20; lambda = 0.5 for B3, P and C1. Passages are shown without dates in every arm.
+Greedy decoding, 160 new tokens, one prompt template.
+
+| Arm | Relevance signal | Recency |
+|---|---|---|
+| B0 | none (no evidence) | - |
+| B1 | MedCPT cross-encoder rank | no |
+| B2 | zero-shot Flan-T5 P(yes) | no |
+| B3 | cross-encoder rank | yes |
+| P | zero-shot Flan-T5 P(yes) | yes |
+| C1 | as P, dates shuffled within the pool | fake |
+
+**Gate definitions (dev split, final).**
+* G0 (passed 2026-10-02): >= 50% of changed dev items have a trial or review in the
+  update window among the as-of candidates. Result 94.0% (n = 151).
+* G1: as above (parse rate >= 95%; human consistency >= 90% on 50 answers).
+* G2: B1 changes the verdict of >= 20% of dev items relative to B0.
+* G3: on changed dev items, P - B2 >= +5 pp AND P - C1 >= +2.5 pp.
+
+G2 and G3 are dev-only sanity gates with small n; they decide whether the confirmatory
+split is run at all, not whether the method works.
