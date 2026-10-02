@@ -590,6 +590,18 @@ answers, and the G0 PubMed as-of availability probe (to run locally; E-utilities
 are blocked in the cloud session). 13 unit tests. Design, gates and thresholds:
 `docs/next_phase_plan.md`. Nothing generated yet.
 
+**Phase 21 follow-up (Oct 2, first run of G0 on the student's machine).** Two
+findings. (1) The probe aborted with "a record postdates the cutoff": PubMed's
+publication-date filter matches the print OR the electronic date, so an article
+e-published before the cutoff but dated to a later print issue passes the search.
+It was available in time. The probe now computes each record's earliest
+availability from `pubdate` and `epubdate` as bounds, keeps only records proven
+to precede the cutoff (uncertain month-boundary records are dropped, never
+admitted) and aborts only if > 15% of a result set cannot be shown to precede it.
+(2) The rebuilt manifest differed on Windows (`M manifest.json`); likely CRLF
+conversion of the input CSVs (hashes) and of the manifest itself. Hashes now
+normalise CRLF and the manifest is written with LF. Five tests added (18 total).
+
 ## Current status (as of this log)
 
 - **Methodology, data pipeline, and software infrastructure:** complete,

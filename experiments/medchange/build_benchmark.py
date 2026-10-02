@@ -55,7 +55,7 @@ def main(argv=None) -> int:
 
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / "benchmark.jsonl", "w", encoding="utf-8") as f:
+    with open(out / "benchmark.jsonl", "w", encoding="utf-8", newline="\n") as f:
         for it in items:
             f.write(json.dumps(it.to_dict(), ensure_ascii=False) + "\n")
 
@@ -81,7 +81,8 @@ def main(argv=None) -> int:
         "splits": {s: sorted(i.item_id for i in items if i.split == s)
                    for s in ("dev", "confirm")},
     }
-    Path(args.manifest).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    with open(args.manifest, "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(summary, indent=2))
     print(json.dumps(summary["counts"], indent=2))
     print(f"wrote {out / 'benchmark.jsonl'} and {args.manifest}")
     return 0

@@ -8,8 +8,13 @@ from experiments.medchange.benchmark import (
     rebuild_medchangeqa, verify_against_release,
 )
 from experiments.medchange.headroom import parse_label, score
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from experiments.medchange.benchmark import file_sha256
 from experiments.medchange.pubmed_asof import (
-    EUtils, build_term, day_before, probe_item, query_terms, summarize, window_counts,
+    EUtils, availability, build_term, date_bounds, day_before, probe_item,
+    query_terms, summarize, window_counts,
 )
 
 
@@ -116,11 +121,23 @@ def search(count, ids):
 
 
 def summ(*recs):
-    return {"result": {p: {"sortpubdate": d, "pubtype": t, "source": "J"} for p, d, t in recs}}
+    """recs: (pmid, pubdate, epubdate, pubtypes)"""
+    return {"result": {p: {"pubdate": pd, "epubdate": ed, "sortpubdate": "", "pubtype": t,
+                           "source": "J"} for p, pd, ed, t in recs}}
 
 
 ITEM = {"item_id": "MC-00001", "question": "Does cranberry juice prevent urinary tract infections?",
         "newest": {"date": "2012-10-17"}, "previous": {"date": "2008-01-23"}}
+
+
+class HashPortabilityTests(unittest.TestCase):
+
+    def test_crlf_checkout_hashes_like_lf(self):
+        with TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.csv", Path(tmp) / "b.csv"
+            a.write_bytes(b"x,y\n1,2\n")
+            b.write_bytes(b"x,y\r\n1,2\r\n")
+            self.assertEqual(file_sha256(a), file_sha256(b))
 
 
 class PubMedProbeTests(unittest.TestCase):
@@ -135,29 +152,68 @@ class PubMedProbeTests(unittest.TestCase):
         self.assertEqual(day_before("2012-10-17"), "2012/10/16")
 
     def test_window_counts_are_half_open(self):
-        recs = [{"date": "2008-01-23", "pubtypes": ["Randomized Controlled Trial"]},
-                {"date": "2010-05-01", "pubtypes": ["Randomized Controlled Trial"]},
-                {"date": "2011-01-01", "pubtypes": ["Meta-Analysis"]},
-                {"date": "2001-01-01", "pubtypes": ["Journal Article"]}]
+        def r(d, t):
+            return {"lower": d, "upper": d, "pubtypes": [t]}
+        recs = [r("2008-01-23", "Randomized Controlled Trial"),   # on the previous date: not after it
+                r("2010-05-01", "Randomized Controlled Trial"),
+                r("2011-01-01", "Meta-Analysis"),
+                r("2001-01-01", "Journal Article"),
+                {"lower": "2012-10-01", "upper": "2012-10-31", "pubtypes": ["Meta-Analysis"]}]  # month straddles cutoff
         self.assertEqual(window_counts(recs, "2008-01-23", "2012-10-17", 50),
                          {"in_window": 2, "trials_in_window": 1, "reviews_in_window": 1})
 
     def test_falls_back_to_or_when_and_query_is_too_narrow(self):
         op = FakeOpener([search(3, ["1"]), search(500, ["1", "2"]),
-                         summ(("1", "2009/03/01 00:00", ["Randomized Controlled Trial"]),
-                              ("2", "1999/01/01 00:00", ["Review"]))])
+                         summ(("1", "2009 Mar 1", "", ["Randomized Controlled Trial"]),
+                              ("2", "1999", "", ["Review"]))])
         res = probe_item(ITEM, EUtils(opener=op, sleep=lambda s: None), retmax=200, min_hits=30)
         self.assertEqual(res["mode"], "or")
         self.assertEqual(res["top200"]["trials_in_window"], 1)
         self.assertTrue(all("maxdate=2012%2F10%2F16" in u for u in op.urls[:2]))
 
-    def test_record_after_cutoff_is_refused_as_leakage(self):
-        op = FakeOpener([search(100, ["1"]), summ(("1", "2013/01/01 00:00", []))])
+    def test_print_date_after_cutoff_but_epub_before_is_kept(self):
+        """PubMed's [dp] filter matches print OR electronic date: this record
+        passes the search, its print issue (2013) is after the cutoff, but it was
+        e-published in 2012-09 - available before 2012-10-17, so it is kept."""
+        op = FakeOpener([search(100, ["1"]), summ(("1", "2013 Jan", "2012 Sep 10", ["Randomized Controlled Trial"]))])
+        res = probe_item(ITEM, EUtils(opener=op, sleep=lambda s: None), retmax=200, min_hits=30)
+        self.assertEqual([r["pmid"] for r in res["records"]], ["1"])
+        self.assertEqual(res["records"][0]["upper"], "2012-09-10")
+
+    def test_record_not_provably_before_cutoff_is_dropped_not_admitted(self):
+        op = FakeOpener([search(100, ["1", "2"]),
+                         summ(("1", "2013 Jan", "", []),         # print 2013, no epub date
+                              ("2", "2012 Oct", "", []))])        # month straddles the cutoff day
+        res = probe_item(ITEM, EUtils(opener=op, sleep=lambda s: None), retmax=200, min_hits=30)
+        self.assertEqual(res["records"], [])
+        self.assertEqual(res["n_dropped"], 2)
+
+    def test_systematic_drops_abort_the_run(self):
+        ids = [str(i) for i in range(30)]
+        op = FakeOpener([search(500, ids), summ(*[(i, "2020 Jan", "", []) for i in ids])])
         with self.assertRaises(RuntimeError):
             probe_item(ITEM, EUtils(opener=op, sleep=lambda s: None), retmax=200, min_hits=30)
 
+    def test_date_bounds(self):
+        self.assertEqual(date_bounds("2012 Oct 17"), ("2012-10-17", "2012-10-17"))
+        self.assertEqual(date_bounds("2012 Oct"), ("2012-10-01", "2012-10-31"))
+        self.assertEqual(date_bounds("2012 Dec"), ("2012-12-01", "2012-12-31"))
+        self.assertEqual(date_bounds("2012 Oct-Dec"), ("2012-10-01", "2012-12-31"))
+        self.assertEqual(date_bounds("2012"), ("2012-01-01", "2012-12-31"))
+        self.assertIsNone(date_bounds("n/a"))
+        self.assertIsNone(date_bounds(""))
+
+    def test_availability_is_the_earliest_known_date(self):
+        self.assertEqual(availability("2013 Jan", "2012 Sep 10", None),
+                         {"lower": "2012-09-10", "upper": "2012-09-10"})
+        self.assertEqual(availability("2013 Jan", "", None),
+                         {"lower": "2013-01-01", "upper": "2013-01-31"})
+        self.assertEqual(availability("", "", "2011-04-02"),
+                         {"lower": "2011-04-02", "upper": "2011-04-02"})
+        self.assertIsNone(availability("", "", None))
+
     def test_retries_transient_failures(self):
-        op = FakeOpener([search(100, []), ], fail_first=2)
+        op = FakeOpener([search(100, [])], fail_first=2)
         res = probe_item(ITEM, EUtils(opener=op, sleep=lambda s: None), retmax=200, min_hits=30)
         self.assertEqual(res["records"], [])
 

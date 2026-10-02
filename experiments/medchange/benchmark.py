@@ -222,8 +222,6 @@ def assign_splits(items: list[Item], *, dev_fraction: float, seed: int) -> None:
 
 
 def file_sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    """SHA-256 of the file with CRLF normalised to LF, so a Windows checkout with
+    git's autocrlf conversion and a Linux checkout of the same release hash alike."""
+    return hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).hexdigest()

@@ -69,9 +69,59 @@ def parse_sortpubdate(s: str) -> Optional[str]:
     return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
 
 
+_MON = {m: i for i, m in enumerate(
+    "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1)}
+
+
+def date_bounds(text: str) -> Optional[tuple[str, str]]:
+    """Earliest and latest ISO date a PubMed date string can mean.
+
+    "2012 Oct 17" -> day; "2012 Oct" -> the whole month; "2012" -> the whole
+    year; "2012 Oct-Dec" -> the whole span. Anything unparsable -> None.
+    """
+    m = re.match(r"\s*(\d{4})(?:\s+([A-Za-z]{3})(?:-([A-Za-z]{3}))?(?:\s+(\d{1,2}))?)?", text or "")
+    if not m:
+        return None
+    y = int(m.group(1))
+    m1 = _MON.get(m.group(2)) if m.group(2) else None
+    if m.group(2) and not m1:
+        return None
+    m2 = _MON.get(m.group(3)) if m.group(3) else m1
+    if m1 is None:
+        return f"{y:04d}-01-01", f"{y:04d}-12-31"
+    if m.group(4):
+        d = int(m.group(4))
+        return f"{y:04d}-{m1:02d}-{d:02d}", f"{y:04d}-{m1:02d}-{d:02d}"
+    last = (dt.date(y + (m2 == 12), (m2 % 12) + 1, 1) - dt.timedelta(days=1)).day
+    return f"{y:04d}-{m1:02d}-01", f"{y:04d}-{m2:02d}-{last:02d}"
+
+
+def availability(pubdate: str, epubdate: str, sortpubdate: Optional[str]) -> Optional[dict]:
+    """When a record first became public, as bounds.
+
+    PubMed's [dp] filter matches the print date OR the electronic date, so a
+    record can pass a "published before X" search while its print date is after
+    X. It was still available if its electronic date is before X: availability
+    is the EARLIEST of the dates we know. ``upper`` is the latest it can have
+    first appeared (used to prove a record precedes the cutoff, so uncertain
+    boundary records are dropped, never admitted); ``lower`` the earliest
+    (used to prove a record is newer than the previous review version).
+    """
+    cands = [b for b in (date_bounds(pubdate), date_bounds(epubdate)) if b]
+    if not cands and sortpubdate:
+        cands = [(sortpubdate, sortpubdate)]
+    if not cands:
+        return None
+    return {"lower": min(c[0] for c in cands), "upper": min(c[1] for c in cands)}
+
+
 def window_counts(records: list[dict], after: str, until: str, top_k: int) -> dict:
-    """Counts among the top_k records published in (after, until]."""
-    win = [r for r in records[:top_k] if r.get("date") and after < r["date"] <= until]
+    """Counts among the top_k records that surely first appeared in
+    (after, until]: earliest possible date after ``after``, latest possible
+    date on or before ``until``. Boundary-ambiguous records are not counted,
+    so the G0 headroom estimate errs low."""
+    win = [r for r in records[:top_k]
+           if r.get("lower") and r.get("upper") and after < r["lower"] and r["upper"] <= until]
     trial = sum(any(t in r["pubtypes"] for t in TRIAL_TYPES) for r in win)
     review = sum(any(t in r["pubtypes"] for t in REVIEW_TYPES) for r in win)
     return {"in_window": len(win), "trials_in_window": trial, "reviews_in_window": review}
@@ -113,7 +163,11 @@ class EUtils:
             res = self._get("esummary.fcgi", {"db": "pubmed", "id": ",".join(batch)})["result"]
             for p in batch:
                 d = res.get(p, {})
-                out.append({"pmid": p, "date": parse_sortpubdate(d.get("sortpubdate", "")),
+                sort = parse_sortpubdate(d.get("sortpubdate", ""))
+                av = availability(d.get("pubdate", ""), d.get("epubdate", ""), sort) or {}
+                out.append({"pmid": p, "pubdate": d.get("pubdate", ""),
+                            "epubdate": d.get("epubdate", ""), "sortpubdate": sort,
+                            "lower": av.get("lower"), "upper": av.get("upper"),
                             "pubtypes": d.get("pubtype", []), "journal": d.get("source", "")})
         return out
 
@@ -126,11 +180,22 @@ def probe_item(item: dict, eu: EUtils, *, retmax: int, min_hits: int) -> dict:
     if count < min_hits:
         mode = "or"
         count, ids = eu.search(build_term(terms, mode="or"), maxdate, retmax)
-    recs = eu.summaries(ids) if ids else []
-    if any(r["date"] and r["date"] > item["newest"]["date"] for r in recs):
-        raise RuntimeError(f"{item['item_id']}: a record postdates the cutoff - leakage")
+    fetched = eu.summaries(ids) if ids else []
+    cutoff = item["newest"]["date"]
+    # Keep only records PROVEN to precede the cutoff; drop (and log) the rest.
+    recs = [r for r in fetched if r["upper"] and r["upper"] <= cutoff]
+    dropped = [{k: r[k] for k in ("pmid", "pubdate", "epubdate")}
+               for r in fetched if not (r["upper"] and r["upper"] <= cutoff)]
+    # A few boundary drops are expected; a large share means the filter or the
+    # date parsing is wrong and the whole run must not be trusted.
+    if len(fetched) >= 20 and len(dropped) > 0.15 * len(fetched):
+        raise RuntimeError(
+            f"{item['item_id']}: {len(dropped)}/{len(fetched)} records cannot be "
+            f"shown to precede {cutoff}; e.g. {dropped[:3]}")
     return {"item_id": item["item_id"], "query_terms": terms, "mode": mode,
             "maxdate": maxdate, "count": count, "records": recs,
+            "dropped_not_provably_before_cutoff": dropped[:25],
+            "n_dropped": len(dropped),
             "top50": window_counts(recs, item["previous"]["date"], item["newest"]["date"], 50),
             "top200": window_counts(recs, item["previous"]["date"], item["newest"]["date"], 200)}
 
