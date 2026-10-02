@@ -230,7 +230,8 @@ class PoolTests(unittest.TestCase):
             pool = list(cochrane.candidates(write_csv(tmp, [row()])))
             screened, _ = build_pool.screen(pool)
             paths = build_pool.write_pool(screened, Path(tmp) / "out")
-            rows = list(csv.DictReader(open(paths["review"], encoding="utf-8")))
+            with open(paths["review"], encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
         self.assertTrue(rows)
         for r in rows:
             self.assertEqual(r["review_decision"], "")

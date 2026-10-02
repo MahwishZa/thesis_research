@@ -13,7 +13,7 @@ them to a concrete set of questions and produced a number. This script is
 that glue.
 
 Three arms are run over the same frozen candidate sets:
-  - baseline : RAG2System            (systems/baseline/rag2.py) - RAG²
+  - baseline : RAG2System            (src/baseline/rag2.py) - RAG²
   - proposed : TemporalFilterSystem, swept across --ablation-lambdas -
                RAG² + the Temporal Filter
   - no_filter: NoFilterSystem        (the admit-everything control)
@@ -24,7 +24,7 @@ separate:
   - main_evaluation (step 3): that arm vs. the RAG² baseline.
   - ablation_study  (step 4): that arm vs. the same system with its key
     component - temporal weighting - removed (lambda=0, pure relevance
-    ranking, systems/proposed/scorer.py's built-in ablation). lambda=0 is
+    ranking, src/proposed/scorer.py's built-in ablation). lambda=0 is
     always included in the sweep for this reason, even if
     --ablation-lambdas omits it.
 The rest of --ablation-lambdas (default also sweeps 0.25/0.5/0.75) is
@@ -154,7 +154,7 @@ def make_generator(
         raise SystemExit(
             "--real-model requires --model-revision, a pinned commit sha "
             "(not a branch name like 'main') so the run is reproducible - "
-            "see systems/interfaces/hf_generator.py's ModelSpec."
+            "see src/common/hf_generator.py's ModelSpec."
         )
     spec = ModelSpec(
         model_id=model_name,

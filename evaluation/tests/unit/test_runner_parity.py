@@ -1,6 +1,6 @@
 """The runner's cross-arm parity gates.
 
-Three controls are declared throughout `systems/`: the arms must share one
+Three controls are declared throughout `src/`: the arms must share one
 context prompt, one context budget, and one generator. Prompt parity was
 already enforced; budget and generator parity were documented but unchecked,
 so an arm configured with a larger budget - or with its own generator - would

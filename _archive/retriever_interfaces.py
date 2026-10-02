@@ -1,13 +1,12 @@
-"""Retriever and reranker interfaces.
+"""Retriever and reranker interfaces, archived from ``src/common/retriever.py`` on 2026-10-02.
 
-**Superseded by `experiments/shared/retrieval/`.** These ABCs and their
-``Passthrough*`` dev stubs were written before the real MedCPT retrieval
-stage existed and are not invoked by any ``System`` or by the runner - the
-frozen candidate set is built upstream, once, by
-``experiments.shared.retrieval.RetrievalPipeline``, and every arm only ever replays
-it. Kept for backward compatibility with anything importing
-``src.common``; new code should use ``experiments.shared.retrieval``
-(``Encoder``, ``CrossEncoderReranker``, ``RetrievalPipeline``) instead.
+Superseded by ``experiments/shared/retrieval/``. These ABCs and their ``Passthrough*`` dev stubs were
+written before the real MedCPT retrieval stage existed and were never invoked by any ``System`` or by
+the runner: the frozen candidate set is built upstream, once, by
+``experiments.shared.retrieval.RetrievalPipeline``, and every arm only replays it. They were kept in
+``src.common`` for backward compatibility until an audit found no use of them in the repository, its
+tests or its documentation. New code should use ``experiments.shared.retrieval`` (``Encoder``,
+``CrossEncoderReranker``, ``RetrievalPipeline``).
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Sequence
 
-from .evidence import Candidate
+from src.common.evidence import Candidate
 
 
 class Retriever(ABC):

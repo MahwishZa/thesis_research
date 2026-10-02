@@ -1,86 +1,89 @@
 # Evaluation and Experimental Design
 
-Answers what is measured and how a difference is judged real. For what is
-being compared, see `methodology.md`. For running an evaluation, see
-`reproducibility.md`.
+What is measured and how a difference is judged real. For what is compared see `methodology.md`; for
+the full protocol, gates and decision rules see `experiment_plan.md`; for how to run an evaluation
+see `reproducibility.md`.
 
-## 1. Metrics
+## 1. Primary outcome: verdict accuracy
 
-`evaluation/rag_metrics.py`, applied identically to every arm.
+The question each system answers is whether a medical hypothesis is SUPPORTED, REFUTED or has NOT
+ENOUGH INFORMATION. **Verdict accuracy** is the share of items whose parsed verdict equals the gold
+verdict of the newest Cochrane review version (`experiments/medchange/analyze.py`).
 
-| Metric | Definition | Role |
+* The generator must open with `VERDICT: <label>`; the verdict is parsed from that line by a regular
+  expression, never inferred from prose. An answer with no parsable verdict counts as wrong and is
+  counted separately (`unparsed`). There is no judge model on the primary path.
+* It is independent of the mechanism under test: the Temporal Filter changes which passages are
+  admitted, while the outcome compares the answer with a gold label that no admission rule sees.
+
+## 2. Supporting outcomes
+
+| Outcome | Definition | Role |
 |---|---|---|
-| Currency (mean `T(s)` of admitted evidence, on `temporal_candidate` questions) | See `glossary.md` | **Primary**, main comparison |
-| Token F1 | SQuAD-style unigram precision/recall/F1 | Secondary / diagnostic |
-| Exact match | Normalised string equality | Secondary |
-| ROUGE-L | F1 over the longest common in-order subsequence | Secondary |
-| Context precision / recall / F1 | Admitted evidence vs. known gold-relevant evidence | Secondary; `None` (not 0.0) when a question carries no gold-evidence annotation, so an unmeasurable case cannot be misread as a measured zero |
-| Groundedness | Fraction of an answer's content tokens present in its admitted evidence | Secondary automatic faithfulness proxy, not an entailment judgement |
+| Outdated-verdict rate | verdict equals the previous version's verdict (changed items) | key secondary: direct measure of outdated answers |
+| Accuracy on unchanged items | as the primary, on controls whose verdict never changed | safety: non-inferiority margin 5 pp |
+| Update-window share | share of admitted passages that surely first appeared after the previous version and on or before the newest | retrieval-level manipulation check |
+| Items with update-window evidence | share of items where any admitted passage is in the window | retrieval-level manipulation check |
+| Mean admitted-passage age; overlap with B1 | years from passage to t_q; Jaccard of admitted sets | retrieval-level manipulation checks |
+| Blinded human hallucination rate | claims unsupported by or contradicting a common reference, on a stratified subset | **planned**; `evaluation/annotation.py`, `stats.har`, `stats.coverage` |
 
-Currency is primary because it is the direct measure of what the proposed
-mechanism is supposed to change; the others are retained as standard RAG
-diagnostics but are not what decides the main verdict.
+**Manipulation checks are never outcomes.** Showing that an arm admits more recent passages
+demonstrates that the mechanism acts as designed; it says nothing about whether answers improve.
+Earlier in the project the primary metric was *currency* (the mean temporal score of admitted
+evidence) and the fitting objective was the same quantity, so the proposed system would have won it
+by construction; that computation survives only in the archived v1 runner
+(`_archive/alzheimers_pilot_v1/`). The active retrieval-level metrics above replace it. Token F1,
+exact match, ROUGE-L, context precision/recall and token-overlap groundedness are implemented in
+`evaluation/rag_metrics.py` as standard RAG diagnostics for the framework's fixture runs; they are not
+evidence of improvement here (a single verbatim reference sentence is a weak target, and groundedness
+depends on each arm's own admitted evidence).
 
-## 2. Why currency, not accuracy, decides the main verdict
+## 3. Statistical procedure (`evaluation/stats.py`, standard library only)
 
-The mechanism under test changes *which evidence is admitted*, not how an
-answer is phrased. A metric that only compares generated text to a
-reference answer can be insensitive to that change entirely (e.g. an
-extractive stand-in generator returns the top-admitted passage's own text,
-so text-overlap metrics can end up measuring evidence selection anyway, but
-indirectly and noisily). Currency measures the selection directly.
+* **Exact McNemar test** on paired discordant verdict outcomes (two-sided exact binomial).
+* **Paired bootstrap 95% CI** on the difference, resampling items as units.
+* **Holm correction** across the confirmatory family: P vs B1, P vs B2, P vs B3.
+* Planned: a mixed-effects logistic model `correct ~ helpfulness × recency + (1 | item)`, the
+  changed-vs-unchanged interaction, one-sided non-inferiority on unchanged items, and P vs the
+  shuffled-date control C1.
 
-## 3. Temporal-candidate subgroup
+A difference is read as real only if the pre-declared test says so at α = 0.05 after correction; an
+average gap alone is not sufficient. If about 30% of answers differ between arms (an assumption until
+dev results exist), 353 confirmatory changed items give 84% power at the corrected α for a true 10 pp
+difference and 61% for 8 pp (simulated; `experiment_plan.md` §7); smaller effects are reported as
+inconclusive with their intervals, not as absence of effect.
 
-Every scored row is split by whether its question is flagged
-`temporal_candidate` (see `glossary.md`) and aggregated separately
-for each system. If the Temporal Filter's mechanism works at all, its
-effect should concentrate on this subgroup and be closer to null on the
-rest — a specific, falsifiable pattern, not just an aggregate number.
+## 4. Controls
 
-## 4. Statistical procedure
+* **B0** (no evidence) shows whether retrieval helps or hurts at all.
+* **C1** (dates shuffled within each pool) tests specificity: a gain that survives shuffling is not
+  temporal.
+* **Unchanged items** test that recency does not hurt where nothing changed.
+* **Generator-sensitivity gate G2** (B1 must change ≥ 20% of dev verdicts relative to B0) tests
+  whether the generator uses evidence at all; if not, no admission rule can matter.
 
-`evaluation/stats.py`, standard library only (no SciPy dependency).
+## 5. Abstention and coverage
 
-- **Paired sign test** — for each question both systems answered, does one
-  score higher, lower, or the same? Decides the main verdict: a consistent
-  per-question direction, not an average that a couple of outliers could
-  produce.
-- **Exact McNemar's test** — on paired discordant binary outcomes, two-sided
-  exact binomial, no normal approximation.
-- **Paired bootstrap 95% CI** — on the absolute difference, resampling
-  *questions* as the unit so each question's paired outcome stays together.
-- **Holm correction** — across the pre-declared comparisons, so multiple
-  tests don't inflate the false-positive rate.
+An arm that admits nothing still produces an answer and is scored on it. Rates are always reported
+with coverage (`stats.coverage`, `stats.har`) so that a high threshold cannot manufacture a good-looking
+result by answering fewer questions.
 
-A result is only read as a real difference if the significance test says
-so at the standard α = 0.05 threshold — an average gap, however large it
-looks, is not by itself sufficient.
+## 6. Error analysis
 
-## 5. Ablation study
+Each wrong answer on a changed item is assigned one cause — retrieval miss, admission miss, generator
+override, parse failure, or gold-label error — and reported by change type, update-window length and arm
+(**planned**; `experiment_plan.md` §8).
 
-Full proposed system vs. the same system with `λ = 0` (temporal term
-switched off), scored and tested identically to the main comparison. This
-isolates whether the *temporal signal specifically* is responsible for any
-observed difference, as opposed to filtering in general (which the
-No-Filter control already addresses separately).
+## 7. Evaluation status (2026-10-02)
 
-## 6. Abstention handling
+| Component | Status |
+|---|---|
+| Benchmark, dev candidate pools, helpfulness scores, arms, generation harness, analysis script | built; 6 real generations run for timing (n = 3 items, no accuracy conclusion) |
+| Gate G0 (evidence headroom) | passed (94.0% of changed dev items) |
+| Gates G1, G2, G3; any accuracy result | pending: no accuracy result exists yet |
+| Confirmatory split (pools, helpfulness, generation) | not started |
+| Human hallucination annotation; error analysis; second generator; Alzheimer's case study | planned |
 
-The proposed system can, in principle, admit nothing if no passage clears
-`θ`. The default policy is to generate from whatever was admitted, including
-nothing, exactly as the baseline does — an answer produced from empty
-evidence is recorded as ungrounded, not silently excluded, so a high
-threshold cannot manufacture a good-looking result by answering fewer
-questions.
-
-## 7. Evaluation status
-
-Implemented and exercised end to end (retrieval → admission → generation →
-scoring → ablation → significance testing), including one full pilot-scale
-run. **The reported comparison against Objective 2 is pending completion of
-the full-scale setup** (see `reproducibility.md` for what "full-scale" means
-here and what is currently reduced). Pilot-scale output is committed under
-`experiments/results/` for reproducibility; it documents that the pipeline and
-statistical procedure work correctly on real data, not the thesis's
-reported finding.
+The only earlier real-data outputs (the Alzheimer's pilot with an extractive stand-in generator and an
+unvalidated baseline checkpoint) are archived in `_archive/alzheimers_pilot_v1/results/`; they showed the
+pipeline ran, not that anything improved.

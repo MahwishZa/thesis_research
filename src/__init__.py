@@ -6,8 +6,6 @@ from .common import (
     ExperimentResult,
     GenerationResult,
     Generator,
-    Reranker,
-    Retriever,
     System,
 )
 
@@ -17,7 +15,5 @@ __all__ = [
     "ExperimentResult",
     "GenerationResult",
     "Generator",
-    "Reranker",
-    "Retriever",
     "System",
 ]

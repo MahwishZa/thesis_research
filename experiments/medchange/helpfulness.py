@@ -30,12 +30,6 @@ def build_inputs(question: str, pool: Sequence[dict]) -> list[str]:
             for c in pool]
 
 
-def attach(pool: list[dict], scores: Sequence[float]) -> list[dict]:
-    if len(pool) != len(scores):
-        raise ValueError("one score per candidate required")
-    return [dict(c, helpful=float(s)) for c, s in zip(pool, scores)]
-
-
 class FlanT5YesNo:
     name = f"{MODEL}/zero-shot-yes-no"
 

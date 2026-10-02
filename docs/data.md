@@ -1,97 +1,98 @@
 # Data
 
-Covers the evidence corpus and the evaluation question pool: what they are,
-where they came from, and their current state. For how retrieval consumes
-the corpus, see `methodology.md`. For how to (re)build any of this, see
+The datasets used, their provenance, what is committed and what is rebuilt locally, and their
+limitations. For how retrieval consumes them see `methodology.md`; for how to rebuild anything see
 `reproducibility.md`.
 
-## 1. The Alzheimer's evidence corpus
+| Dataset | Role | Committed? | Rebuilt by |
+|---|---|---|---|
+| MedChange (MedRevQA, AllStudyGroups, MedChangeQA) | primary evaluation questions and gold verdicts | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` from a clone of `jvladika/MedChange` |
+| PubMed abstracts, as-of candidate pools | primary evidence | no (publisher text) | `pubmed_asof` → `freeze_candidates` |
+| Alzheimer's evidence corpus | secondary evidence | provenance only (metadata, reports, logs) | stages 01–07 in `corpus/scripts/` |
+| Alzheimer's question pool | secondary evaluation questions | yes (`experiments/shared/questions/`) | `build_pool`, human review, `split` |
 
-**Status: complete and frozen.** Built by a seven-stage pipeline
-(`corpus/scripts/01_pubmed_download.py` through `07_claim_classification.py`),
-sourced from PubMed/PMC full text plus government public-health pages, and
-verified end to end by cross-checking each stage's output count against the
-next stage's independently-reported input count — not by trusting any
-stage's self-report in isolation.
+## 1. MedChange benchmark (primary)
+
+**Source.** Vladika, Dhaini and Matthes, *Facts Fade Fast: Evaluating Memorization of Outdated Medical
+Knowledge in Large Language Models* (EMNLP 2025 Findings), repository `github.com/jvladika/MedChange`.
+`MedRevQA` has 16,501 questions derived from Cochrane systematic-review abstracts; each carries a
+verdict label (SUPPORTED, REFUTED or NOT ENOUGH INFORMATION) that gpt-4o-mini assigned to the
+review's authors' conclusions. `AllStudyGroups` groups the versions of one review; `MedChangeQA` lists
+the 512 questions whose verdict changed between versions, with the newest and an outdated label.
+
+**What this project adds** (`experiments/medchange/build_benchmark.py`): the released files do not say
+which versions the labels belong to or when they were published. The builder reproduces MedChangeQA by
+the authors' rule and **refuses to continue unless all 512 items match the release label for label**; it
+then attaches both versions' dates (parsed from the Cochrane citation) and PMIDs, flags 8 changed pairs
+whose conclusions are near-identical text (similarity ≥ 0.85) as label noise and excludes them, samples
+250 unchanged controls, and fixes seeded dev/confirmatory splits stratified by kind and change type.
+Counts are in `experiments/medchange/manifest.json` (input hashes are line-ending-normalised so a
+Windows checkout reproduces them).
+
+**Evidence.** For each question, PubMed records first public strictly before the newest version's date,
+excluding the Cochrane Database, with abstracts fetched through E-utilities; see `experiment_plan.md` §3.
+Abstracts are publisher text and are not redistributed.
+
+**Limitations.** Gold labels are model-generated, not human-verified (a ~100-label human check is
+planned). 397 of 504 usable changes involve NOT ENOUGH INFORMATION, the vaguest boundary. Only 14 items
+(9 changed, 5 unchanged) are Alzheimer's-related. Question text was written by a model from review
+objectives.
+
+## 2. Alzheimer's evidence corpus (secondary)
+
+**Status: built and frozen.** A seven-stage pipeline (`corpus/scripts/01_pubmed_download.py` through
+`07_claim_classification.py`) over PubMed/PMC full text plus government public-health pages.
 
 | Stage | What it does |
 |---|---|
-| 01 PubMed | Retrieves a PMID list (no text or dates — see stage 02) |
-| 02 PMC retrieval + finalisation | Downloads full text from PMC, resolves publication dates from JATS XML |
-| 03 Guidelines / textbooks | Optional; not populated in the current corpus (no document could be independently source-verified in this build environment) |
-| 04 Normalise | Text cleanup, AD-relevance tagging |
-| 05 Deduplicate | Near-duplicate removal (content id + token-Jaccard) |
-| 06 Chunk | Real `ncbi/MedCPT-Article-Encoder` tokenizer, fixed window/stride |
-| 07 Claim classification | Tags every chunk by claim type and evidence level |
+| 01 PubMed | retrieves a PMID list (no text or dates; see stage 02) |
+| 02 PMC retrieval + finalisation | downloads full text from PMC, resolves publication dates from JATS XML |
+| 03 Guidelines / textbooks | optional; not populated (no document could be independently source-verified) |
+| 04 Normalise | text cleanup, Alzheimer's-relevance tagging |
+| 05 Deduplicate | near-duplicate removal (content id + token-Jaccard) |
+| 06 Chunk | real `ncbi/MedCPT-Article-Encoder` tokenizer, 256-token windows with 32-token overlap |
+| 07 Claim classification | tags every chunk by claim type and evidence level |
 
-Every tracked provenance file (`corpus/metadata/*.csv`, `corpus/reports/*.csv`,
-`corpus/logs/*.log`) is well-formed and free of unresolved errors. The full
-corpus text itself (`corpus/data/**`) is **not committed** — it is large,
-built locally, and gitignored by design; only the logs, reports, and
-registries above are tracked provenance.
+Computed from the tracked provenance: 114,256 PMC records in `corpus/metadata/pmc.csv`, of which about
+71% were published in 2020 or later (48% in 2020–24, 23% in 2025 and after); 4,377,041 chunks. The
+dense index holds 4,376,141 chunks × 768: 900 chunks that repeated an id were dropped
+(`keep_first`; see `experiments/shared/retrieval/corpus.py`). Every tracked provenance file
+(`corpus/metadata/*.csv`, `corpus/reports/*.csv`, `corpus/logs/*.log`) is well-formed and free of
+unresolved errors. The corpus text itself (`corpus/data/**`) is not committed: it is large, built
+locally and gitignored by design; only the synthetic offline fixture
+`corpus/data/raw/pubmed/records.example.jsonl` (ten `FIXTURE-*` records) is tracked so a fresh clone can
+run stages 04–07.
 
-**Known, non-blocking gaps**: the guideline/textbook registry (stage 03) is
-implemented but empty (no document was added without independent source
-verification); the PMC redistribution-licence gate is recorded per record
-but not enforced, which affects redistribution of corpus text, not research
-use.
+**Known gaps.** The guideline/textbook source (stage 03) is empty. The PMC redistribution-licence gate
+is recorded per record but not enforced, which affects redistribution of corpus text, not research use.
+The corpus is Alzheimer's-scoped and therefore **not used by the primary experiment**.
 
-## 2. Retrieval index
+## 3. Alzheimer's question pool (secondary)
 
-A retrieval index is built over the corpus for a given run
-(`experiments/shared/retrieval/build_index.py`). **The corpus above and the
-index built over it are not the same thing** — the corpus is complete, but
-an index build can (and, for early runs, does) use a reduced slice of it,
-which is stated wherever it affects a run. Every frozen item records a
-`corpus_snapshot` id so a manifest is traceable to exactly which build
-produced it.
+**Provenance rule.** Every reference answer must be traceable to a real published record; nothing is
+invented or model-authored. Pipeline: external source record → factual proposition → candidate
+question → verbatim reference answer → citation, locator and date → automatic validation and
+deduplication → human review (the only source of approval) → final question.
 
-## 3. Evaluation question pool
+**Sources.** Cochrane systematic reviews via MedRevQA (treatment, diagnosis, prevention, prognosis; 128
+of the 150 candidates) and NIH public-health pages via MedQuAD (22 candidates). **Human review** judged
+every candidate ACCEPT / REVISE / REJECT / HOLD; no code path can produce an approved question.
+Result: 123 reviewed, 113 usable (ACCEPT + REVISE), split by seed 20260921 into 23 validation and 90 test
+questions (`splits.json`), stratified by topic and by whether the cited review was revised.
 
-**Provenance rule**: every reference answer must be traceable to a real,
-external, published record — never authored by this project or by a
-language model. Forbidden: an invented question, answer, or citation; a
-paraphrase presented as a quotation; a search snippet as evidence.
-
-```
-external source record → factual proposition → candidate question
-→ verbatim reference answer → citation + locator + date
-→ automatic validation and deduplication
-→ human review (the only source of approval)
-→ final evaluation question
-```
-
-**Sources**: peer-reviewed systematic reviews (Cochrane) for treatment,
-diagnosis, prevention and prognosis questions; government public-health
-pages (NIH, via MedQuAD) for disease-characteristics, genetics, symptoms
-and epidemiology questions. Where sources conflict, a dated peer-reviewed
-synthesis outranks an undated public-health page.
-
-**Human review** (`docs/reproducibility.md` links the reviewer worksheet):
-every candidate is judged ACCEPT / REVISE / REJECT / HOLD against source
-verification, relevance, clarity, specificity, determinacy and whether the
-reference answer overreaches its source. No code path can produce an
-approved question.
-
-**Validation/test split**: usable (ACCEPT + REVISE) questions are split into
-a validation set (used only to fit `λ`/`θ`/`H`) and a held-out test set
-(used only to report), stratified by topic and by whether the question's
-evidence base is known to have changed over time. Two splits, not three —
-nothing in this thesis trains on this pool; it only feeds parameter fitting,
-which needs a set to fit on and a separate, untouched set to report on.
-
-`temporal_candidate` marks a question whose cited Cochrane review has been
-revised at least once (`.pub2` or higher) — diagnostic only, it does not
-assert that the verdict itself changed. This is the subgroup where a
-temporal signal should matter most if it matters at all.
+**Labels.** 99 of the 113 usable questions carry a verdict label (the 14 MedQuAD items do not). The
+`temporal_candidate` flag means the cited Cochrane review has been revised at least once (`.pub2` or
+higher); it does **not** assert that the verdict changed, and only 5 of the 113 questions are known
+verdict changes. The cited reviews are mostly old: of the 99 verdict-labelled questions, 55 cite reviews
+dated before 2010 and only 17 are from 2018 onward, while 71% of the corpus is from 2020 or later. This
+mismatch is why the Alzheimer's evaluation had to be redone as-of (`experiment_plan.md` §13).
 
 ## 4. Known limitations of the data
 
-1. Identifiers (PMIDs, DOIs) were transcribed from source datasets, not
-   independently resolved in every build environment — flagged per record.
-2. Sources are predominantly Cochrane (~85%); a guideline source would
-   strengthen topic balance.
-3. Some public-health source pages carry no publication date; the retrieval
-   date is recorded and flagged as such rather than treated as a real date.
-4. Reference answers are single verbatim sentences, short by design for
-   copyright and judgeability — not full-paragraph summaries.
+1. Identifiers (PMIDs, DOIs) were transcribed from source datasets and not independently resolved in
+   every build environment; this is flagged per record.
+2. The Alzheimer's pool is predominantly Cochrane (~85%) and short by design: reference answers are single
+   verbatim sentences.
+3. Some public-health pages carry no publication date; the retrieval date is recorded and flagged rather
+   than treated as a real date.
+4. No part of this project trains on any question pool; the pools only evaluate.

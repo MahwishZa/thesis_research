@@ -10,12 +10,6 @@ from .generator import (
     GenerationResult,
     Generator,
 )
-from .retriever import (
-    PassthroughReranker,
-    PassthroughRetriever,
-    Reranker,
-    Retriever,
-)
 from .system import System
 
 __all__ = [
@@ -25,9 +19,5 @@ __all__ = [
     "CallableGenerator",
     "GenerationResult",
     "Generator",
-    "PassthroughReranker",
-    "PassthroughRetriever",
-    "Reranker",
-    "Retriever",
     "System",
 ]

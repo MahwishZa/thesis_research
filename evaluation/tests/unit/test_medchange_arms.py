@@ -1,11 +1,15 @@
 """Arms, prompts, resumable generation and the dev gates (no model, no network)."""
 
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from experiments.medchange import arms as A
-from experiments.medchange.analyze import correctness, gates, paired, retrieval_metrics, summarize
+from experiments.medchange import analyze as analyze_cli
+from experiments.medchange.analyze import (
+    confirmatory_family, correctness, gates, paired, retrieval_metrics, summarize,
+)
 from experiments.medchange.generate_answers import load_jsonl, run
 from experiments.medchange.prompts import build_prompt, parse_verdict
 
@@ -198,6 +202,18 @@ class GateTests(unittest.TestCase):
             spec[(i, "C1")] = "REFUTED"
         self.assertEqual(gates(self.items, answers(spec))["G3"], "PASS")
 
+    def test_confirmatory_family_applies_holm(self):
+        spec = {}
+        for n, i in enumerate(self.items):
+            spec[(i, "P")] = "SUPPORTED"
+            spec[(i, "B1")] = "SUPPORTED" if n < 10 else "REFUTED"      # P better on 10 of 20
+            spec[(i, "B2")] = "REFUTED"                                  # P better on all 20
+        fam = confirmatory_family(self.items, answers(spec))
+        self.assertEqual(set(fam), {"P-B1", "P-B2"})                   # B3 absent -> not invented
+        for v in fam.values():
+            self.assertGreaterEqual(v["holm_p"], v["mcnemar_p"])        # Holm never lowers a p
+        self.assertLess(fam["P-B2"]["holm_p"], 0.001)
+
     def test_paired_needs_minimum_pairs(self):
         spec = {("c0", "P"): "SUPPORTED", ("c0", "B2"): "REFUTED"}
         self.assertIsNone(paired(self.items, answers(spec), "P", "B2"))
@@ -257,6 +273,35 @@ class RetrievalMetricTests(unittest.TestCase):
         self.assertIsNone(m["B0"]["changed"]["update_window_share"])
         self.assertEqual(m["B0"]["changed"]["mean_admitted"], 0.0)
         self.assertEqual(retrieval_metrics(self.items, {}, ans, ["B0"]), {})
+
+
+class AnalyzeCliTests(unittest.TestCase):
+
+    def test_main_writes_a_utf8_json_report_with_all_sections(self):
+        bench = [dict(item("a", "changed", "SUPPORTED"), split="dev", likely_label_noise=False,
+                      previous={"label": "REFUTED", "date": "2010-01-01"}),
+                 dict(item("b", "changed", "REFUTED"), split="dev", likely_label_noise=False,
+                      previous={"label": "SUPPORTED", "date": "2010-01-01"})]
+        pools = [{"item_id": i["item_id"], "candidates": pool()} for i in bench]
+        rows = []
+        for it in bench:
+            for arm, v in (("B0", "SUPPORTED"), ("B1", "REFUTED")):
+                rows.append({"item_id": it["item_id"], "arm": arm, "verdict": v, "seconds": 2.0,
+                             "admitted": [] if arm == "B0" else ["001", "002"], "text": v})
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            for name, data in (("benchmark.jsonl", bench), ("frozen_dev.jsonl", pools),
+                               ("answers_dev.jsonl", rows)):
+                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
+            out = d / "sub" / "report.json"
+            self.assertEqual(analyze_cli.main(["--split", "dev", "--data-dir", str(d), "--out", str(out)]), 0)
+            report = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(report["n_answers"], 4)
+        self.assertEqual(set(report), {"split", "n_answers", "per_arm", "paired_changed",
+                                       "paired_unchanged", "confirmatory_family_changed",
+                                       "gates", "retrieval"})
+        self.assertEqual(report["per_arm"]["B0"]["changed"]["accuracy"], 0.5)
+        self.assertEqual(report["gates"]["G2"], "PASS")        # B1 differs from B0 on both items
 
 
 if __name__ == "__main__":

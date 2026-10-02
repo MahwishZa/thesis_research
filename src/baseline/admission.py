@@ -161,16 +161,15 @@ class FlanT5RAG2Filter(AdmissionFilter):
             # A clear, immediate error instead of torch's own
             # "AssertionError: Torch not compiled with CUDA enabled" eight
             # frames deep in Module._apply - hit for real (2026-09-21) after
-            # a pip install silently replaced a notebook environment's
-            # preinstalled CUDA-enabled torch with a CPU-only build.
+            # a pip install silently replaced a CUDA-enabled torch with a
+            # CPU-only build.
             raise ImportError(
                 f"requested device={device!r}, but torch.cuda.is_available() "
                 f"is False (torch {torch.__version__}). This usually means "
-                "a `pip install` after the notebook started replaced the "
-                "platform's preinstalled CUDA-enabled torch with a CPU-only "
-                "build - check `torch.__version__` for a '+cpu' suffix. Fix: "
+                "a later `pip install` replaced a CUDA-enabled torch with a "
+                "CPU-only build - check `torch.__version__` for a '+cpu' suffix. Fix: "
                 "reinstall torch from the CUDA wheel index matching this "
-                "machine's CUDA version (check `!nvidia-smi`), e.g. `pip "
+                "machine's CUDA version (check `nvidia-smi`), e.g. `pip "
                 "install --index-url https://download.pytorch.org/whl/cu121 "
                 "torch --force-reinstall`, then verify with "
                 "`torch.cuda.is_available()` before retrying."

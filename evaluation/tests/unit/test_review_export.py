@@ -20,6 +20,16 @@ from experiments.shared.questions import export_review as ex
 POOL = Path("experiments/shared/questions")
 
 
+def read_rows(path):
+    with open(path, encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def read_header(path):
+    with open(path, encoding="utf-8") as handle:
+        return handle.readline()
+
+
 def record(**kw):
     base = {
         "question_id": "ADQ-000000000001",
@@ -62,14 +72,14 @@ class NeutralityTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             d = write_pool(tmp, [record()])
             ex.run(d)
-            rows = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            rows = read_rows(d / "review.csv")
         self.assertEqual(list(rows[0]), list(REVIEW_COLUMNS))
 
     def test_internal_classifications_never_appear(self):
         with TemporaryDirectory() as tmp:
             d = write_pool(tmp, [record()])
             ex.run(d)
-            header = open(d / "review.csv", encoding="utf-8").readline()
+            header = read_header(d / "review.csv")
         for field in WITHHELD_FROM_REVIEW:
             self.assertNotIn(field, header)
 
@@ -90,7 +100,7 @@ class NeutralityTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             d = write_pool(tmp, [flagged, plain])
             ex.run(d)
-            rows = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            rows = read_rows(d / "review.csv")
         a, b = ({k: v for k, v in r.items() if k != "question_id"} for r in rows)
         self.assertEqual(a, b)
 
@@ -118,7 +128,7 @@ class CompletenessTests(unittest.TestCase):
                        rejection_reason="near_duplicate_of_earlier_candidate"),
             ])
             result = ex.run(d)
-            rows = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            rows = read_rows(d / "review.csv")
         self.assertEqual(result["reviewable"], 1)
         self.assertEqual([r["question_id"] for r in rows], ["ADQ-a"])
 
@@ -146,7 +156,7 @@ class CompletenessTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             d = write_pool(tmp, [record(question_id="ADQ-a")])
             ex.run(d)
-            rows = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            rows = read_rows(d / "review.csv")
             rows[0]["review_decision"] = "ACCEPT"
             with open(d / "review.csv", "w", encoding="utf-8", newline="") as h:
                 w = csv.DictWriter(h, fieldnames=list(REVIEW_COLUMNS))
@@ -155,7 +165,7 @@ class CompletenessTests(unittest.TestCase):
             with self.assertRaises(ex.ExportError):
                 ex.run(d)
             ex.run(d, force=True)  # explicit override still works
-            after = list(csv.DictReader(open(d / "review.csv", encoding="utf-8")))
+            after = read_rows(d / "review.csv")
             self.assertEqual(after[0]["review_decision"], "")
 
     def test_missing_provenance_is_reported_not_filled(self):
@@ -187,8 +197,7 @@ class CommittedPoolTests(unittest.TestCase):
         cls.pool = [json.loads(l) for l in
                     (POOL / "candidates.jsonl").read_text(
                         encoding="utf-8").splitlines() if l.strip()]
-        cls.rows = list(csv.DictReader(
-            open(POOL / "review.csv", encoding="utf-8")))
+        cls.rows = read_rows(POOL / "review.csv")
 
     def test_all_validated_candidates_present_exactly_once(self):
         expected = [r["question_id"] for r in self.pool
@@ -214,7 +223,7 @@ class CommittedPoolTests(unittest.TestCase):
 
     def test_committed_review_file_is_neutral(self):
         self.assertEqual(list(self.rows[0]), list(REVIEW_COLUMNS))
-        header = open(POOL / "review.csv", encoding="utf-8").readline()
+        header = read_header(POOL / "review.csv")
         for field in WITHHELD_FROM_REVIEW:
             self.assertNotIn(field, header)
 

@@ -14,12 +14,14 @@ chunk_units(), preserved verbatim so the comparison is against what
 actually shipped, not a re-derived approximation of it.
 """
 
+import atexit
 import importlib.util
 import json
 import logging
+import shutil
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 
 from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
 
@@ -27,13 +29,26 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_DIR = ROOT / "corpus" / "scripts"
 
 
+#: The stage script's module-level output paths. ``iter_chunks`` writes a resume marker to
+#: ``PROGRESS_FILE`` after every batch; left at its default that is the real
+#: ``corpus/data/chunks/.chunk_progress.json``, which a genuine interrupted run would rely on.
+_OUTPUT_PATHS = ("SRC", "OUT", "PROGRESS_FILE")
+
+
 def load_module(name="06_chunk.py"):
+    """Load a stage script with its output paths redirected to a throwaway directory, so that no
+    test can write into the real ``corpus/data`` (tests that need a particular path set it)."""
     spec = importlib.util.spec_from_file_location(name.replace(".py", ""),
                                                    SCRIPT_DIR / name)
     module = importlib.util.module_from_spec(spec)
     import sys
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
+    sandbox = Path(mkdtemp(prefix="stage_script_"))
+    atexit.register(shutil.rmtree, sandbox, ignore_errors=True)
+    for attr in _OUTPUT_PATHS:
+        if hasattr(module, attr):
+            setattr(module, attr, sandbox / getattr(module, attr).name)
     return module
 
 

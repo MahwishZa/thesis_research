@@ -1,3 +1,3 @@
 """Time-consistent evaluation benchmark built from MedChange (Vladika et al.,
 EMNLP 2025 Findings): Cochrane reviews whose verdict changed between versions,
-plus unchanged controls. See docs/next_phase_plan.md."""
+plus unchanged controls. See docs/experiment_plan.md."""

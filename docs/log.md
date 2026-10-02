@@ -554,7 +554,8 @@ test-split run. Contact the RAG² authors to request checkpoint/labels.
 
 ## Phase 20 — Next-phase plan: evidence of real improvement (Oct 1) - PROPOSAL
 
-No experiment was run. `docs/next_phase_plan.md` records: what a
+No experiment was run. `docs/next_phase_plan.md` (renamed `docs/experiment_plan.md` in Phase 23)
+records: what a
 faithful RAG² baseline needs (only the checkpoint, or the authors' filter
 decisions on our frozen candidates; their README states the checkpoint is "not
 available for distribution", only 5 label examples ship, ids reach 23,600);
@@ -587,83 +588,150 @@ Inspection before committing to the expanded scope (all measured):
 Built (no network, no model): `experiments/medchange/` - benchmark builder that
 verifies itself against the release, headroom script over the authors' released
 answers, and the G0 PubMed as-of availability probe (to run locally; E-utilities
-are blocked in the cloud session). 13 unit tests. Design, gates and thresholds:
-`docs/next_phase_plan.md`. Nothing generated yet.
+are blocked in the cloud session). 13 unit tests. Design, gates and thresholds: the plan
+(then `docs/next_phase_plan.md`, now `docs/experiment_plan.md`). Nothing generated yet.
 
-**Phase 21 follow-up (Oct 2, first run of G0 on the student's machine).** Two
-findings. (1) The probe aborted with "a record postdates the cutoff": PubMed's
-publication-date filter matches the print OR the electronic date, so an article
-e-published before the cutoff but dated to a later print issue passes the search.
-It was available in time. The probe now computes each record's earliest
-availability from `pubdate` and `epubdate` as bounds, keeps only records proven
-to precede the cutoff (uncertain month-boundary records are dropped, never
-admitted) and aborts only if > 15% of a result set cannot be shown to precede it.
-(2) The rebuilt manifest differed on Windows (`M manifest.json`); likely CRLF
-conversion of the input CSVs (hashes) and of the manifest itself. Hashes now
-normalise CRLF and the manifest is written with LF. Five tests added (18 total).
+## Phase 22 — MedChange pipeline built; first measurements on the student's machine (Oct 2)
 
-**Phase 21 follow-up 2 (Oct 2).** G0 on the first 5 dev items passed (5/5 changed
-items had trials or reviews in the update window among as-of candidates; median
-137 in-window records in the top 200). The full dev run then crashed on a PubMed
-date string the parser did not handle (season/range forms). `date_bounds` now
-never raises: season words, year-wrapping ranges ("Dec-Jan") and day ranges are
-widened to bounds that can only make a record look later, so the worst case is a
-dropped record. Tests for these forms added.
+Built in the cloud session in `experiments/medchange/` and run on the student's laptop (E-utilities and
+the models are not available in the cloud session). Nothing here is an accuracy result.
 
-**Phase 21 follow-up 3 (Oct 2): G0 PASSED on the full dev split.** 151 usable
-changed + 75 unchanged dev items. Changed: 94.0% have a trial or systematic review
-published inside the update window among the as-of PubMed candidates (top 200;
-80.1% within the top 50), median 72 in-window records; unchanged: 93.3% / 65.3%,
-median 50. Pre-stated threshold (>= 50%) met. Caveats: (a) availability is
-necessary, not sufficient - the unchanged controls look the same, so G0 does not
-show the new evidence carries the verdict change; that is what G2/G3 and the error
-analysis test; (b) these are PubMed lexical best-match candidates before MedCPT
-reranking, abstracts only. The manifest `M` on Windows was line-ending noise
-(`git diff` shows no content change; splits identical). Added
-`freeze_candidates.py` (abstracts via efetch, MedCPT dense + cross-encoder
-rerank, frozen pool of 20 with date bounds and an order-sensitive hash; no outcome
-is read) and 4 tests (22 in total).
+1. **G0 probe, first run.** It aborted with "a record postdates the cutoff": PubMed's publication-date
+   filter matches the print OR the electronic date, so an article e-published before the cutoff but dated to
+   a later print issue passes the search. It was available in time. The probe now computes each record's
+   earliest availability from `pubdate` and `epubdate` as bounds, keeps only records proven to precede the
+   cutoff (uncertain month-boundary records are dropped, never admitted) and aborts only if more than 15% of
+   a result set cannot be shown to precede it. The rebuilt manifest also differed on Windows
+   (` M manifest.json`), most likely CRLF conversion of the input CSVs (hashes) and of the manifest itself;
+   hashes now normalise CRLF and the manifest is written with LF. Five tests added (18 in total).
+2. **G0 on five items, then a crash.** 5/5 changed items had trials or reviews inside the update window
+   among the as-of candidates (median 137 in-window records in the top 200). The full dev run then
+   crashed on a PubMed date string the parser did not handle (season and range forms). `date_bounds` now
+   never raises: season words, year-wrapping ranges ("Dec-Jan") and day ranges are widened to bounds that
+   can only make a record look later, so the worst case is a dropped record. Tests for these forms added.
+3. **G0 passed on the full dev split** (151 usable changed + 75 unchanged items). Changed: 94.0% have a
+   trial or systematic review published inside the update window among the as-of PubMed candidates (top 200;
+   80.1% within the top 50), median 72 in-window records; unchanged: 93.3% / 65.3%, median 50. The
+   pre-stated threshold (>= 50%) was met. Caveats: (a) availability is necessary, not sufficient - the
+   unchanged controls look the same, so G0 does not show that the new evidence carries the verdict change;
+   that is what G2/G3 and the error analysis test; (b) these are PubMed lexical best-match candidates before
+   MedCPT reranking, abstracts only. The ` M` on `manifest.json` was line-ending noise (`git diff` showed no
+   content change; the splits were identical). Added `freeze_candidates.py` (abstracts via efetch, MedCPT
+   dense rank and cross-encoder rerank, a frozen pool of 20 with date bounds and an order-sensitive hash;
+   no outcome is read) and 4 tests (22 in total).
+4. **Dev candidate pools frozen:** 226 items, 0 empty, median pool size 20 (37,375 abstracts fetched; about
+   3 h on CPU). The generation and analysis harness was added before any answer existed: `arms.py`
+   (B0/B1/B2/B3/P/C1 admission rules with fixed settings), `prompts.py` (an explicit `VERDICT:` line, parsed
+   deterministically; the earlier plan's judge model is dropped for the primary outcome), `helpfulness.py`
+   (zero-shot Flan-T5 P(yes); NOT RAG², and rationale-as-query is dropped so that all arms share one pool),
+   `generate_answers.py` (llama.cpp, resumable, arms interleaved) and `analyze.py` (per-arm accuracy, exact
+   McNemar, bootstrap CI, gates G2/G3). Settings and gate definitions were fixed in the plan (section 13)
+   before any generation. 18 tests added (40 in `experiments/medchange` in total).
+5. **Timing measured.** Zero-shot helpfulness scores computed for all 226 dev items (27 s per item, 1.33 s
+   per pair, as predicted). First real generations (3 changed dev items x B0 and B1, Llama-3-8B Q4_K_M, CPU,
+   greedy, 160 tokens): 18 s per answer without evidence and 66.5 s with five passages; 6/6 answers parsed.
+   One no-evidence arm plus five evidence arms is about 350 s per item: dev (226 items) about 22 h,
+   confirmatory (528 items) about 51 h, about 73 h in total, against an earlier estimate of 75-150 h. (The
+   first version of this entry said ~52 h and ~74 h, from a rounded ~530-item split; 528 x 350 s is 51.3 h.)
+   n = 3 says nothing about accuracy. Added `consistency.py` (G1 human check: a seeded sample of 50 answers,
+   arm hidden, Y/N consistency; pass = parse >= 95% and consistency >= 90%).
 
-**Phase 21 follow-up 4 (Oct 2).** Dev candidate pools frozen on the student's machine:
-226 items, 0 empty, median pool size 20 (37,375 abstracts fetched; 3 h CPU).
-Generation/analysis harness added before any answer exists: `arms.py` (B0/B1/B2/B3/P/C1
-admission rules with fixed settings), `prompts.py` (explicit `VERDICT:` line, parsed
-deterministically - the earlier plan's judge model is dropped for the primary
-outcome), `helpfulness.py` (zero-shot Flan-T5 P(yes); NOT RAG², and rationale-as-query
-is dropped so arms share one pool), `generate_answers.py` (llama.cpp, resumable,
-interleaved arms), `analyze.py` (per-arm accuracy, exact McNemar, bootstrap CI, G2/G3).
-Settings and gate definitions are fixed in `docs/next_phase_plan.md` section 13 before
-any generation. 18 tests added (40 in `experiments/medchange` total). Nothing generated.
+## Phase 23 — Repository audit and reorganisation (Oct 2)
 
-**Phase 21 follow-up 5 (Oct 2): timing measured.** Zero-shot helpfulness scores
-computed for all 226 dev items (27 s/item, 1.33 s/pair, as predicted). First real
-generations (3 changed dev items x B0/B1, Llama-3-8B Q4_K_M, CPU, greedy, 160 tokens):
-18 s per answer without evidence, 66.5 s with 5 passages; 6/6 answers parsed. With one
-no-evidence and five evidence arms that is ~350 s per item: dev (226 items) ~22 h,
-confirmatory (~530 items) ~52 h, ~74 h in total (previous estimate 75-150 h). n = 3 says
-nothing about accuracy. Added `consistency.py` (G1 human check: seeded sample of 50
-answers, arm hidden, Y/N consistency; pass = parse >= 95% and consistency >= 90%).
+An audit of the GitHub repository and the working clone before any change: every tracked file; the branch
+list; the import graph (to establish what is active and what is obsolete rather than assume it);
+`pyproject.toml`; `.gitignore` behaviour (`git check-ignore`); the test suite and what it touches on disk;
+line endings; and every path and `python -m` command named in the documentation. GitHub holds one branch,
+`main`. The working clone's `main` was at the same commit; the clone also held two local branches from
+earlier sessions, both fully merged into `main`, whose remote counterparts no longer exist.
 
-## Current status (as of this log)
+Confirmed and corrected:
 
-- **Methodology, data pipeline, and software infrastructure:** complete,
-  tested (603/604 tests passing — the one failure is the same expected
-  fixture-vs-real-corpus registry comparison as always, not a defect),
-  unchanged in substance since the Phase 4 scope freeze.
-- **Corpus:** built and frozen (Phase 6); the guideline/textbook source
-  (Stage 03) remains empty as a known, non-blocking gap.
-- **Question pool:** 123 questions, fully human-reviewed, split into 23
-  validation / 90 test questions (Phase 7).
-- **Retrieval index:** complete — full corpus, 4,376,141 × 768 (Phase 11).
-- **RAG² baseline filter checkpoint:** not yet produced. Label-generation
-  tooling for a fully local (GGUF-based) path exists, is bug-fixed
-  against a real run, and has a measured throughput (~15.2h/500
-  questions) — the real-scale run itself has not been started yet
-  (Phase 11-12). Local filter training (`train.py`'s Adafactor/gradient-
-  checkpointing change) remains unbuilt.
-- **Main-evaluation generator:** still the extractive stand-in.
-  `fit_and_evaluate.py` has no wiring for a real generator yet — this is
-  unimplemented, not merely unrun.
-- **Reported thesis result:** not yet produced. The only real-data result
-  committed so far is the Phase 9 pilot run, which is explicitly a
-  pipeline validation, not the comparison the thesis will report.
+* **Tests read machine-local state.** Five test modules copied the whole `corpus/` directory - on a
+  machine holding the real corpus that includes the multi-GB `data/` - and two of them compared a fixture
+  run with the real corpus; one such comparison failed permanently and was recorded as "expected" (603/604)
+  in the previous version of this log's status block. Tests now copy a lean scaffold
+  (`evaluation/tests/corpus_scaffold.py`: `data/` contributes only its empty directories and one fixture
+  file; a test checks that local data is never copied), and the fixture-versus-real-corpus comparisons
+  became determinism tests (two independent scaffolds give identical outputs). The active suite has no
+  standing failure and does not depend on whether the real corpus is present. A before/after snapshot
+  of the whole tree then showed that one more test class still wrote into the real tree: the
+  `iter_chunks` tests overwrote stage 06's resume marker `corpus/data/chunks/.chunk_progress.json`
+  (a genuine interrupted run resumes from it). Stage-script output paths are now redirected to a
+  temporary directory in the test helper, and `python -m evaluation.tests.check_hermetic` repeats the
+  snapshot check on demand (it fails on the old test version and passes on the new one).
+* **Abandoned code sat among active code.** The RAG² filter-reproduction package
+  (`experiments/baseline/filter_training/`) and the superseded Alzheimer's v1 runners and results
+  (`experiments/shared/runners/fit_and_evaluate.py`, `run_real_evaluation.py`, `experiments/results/`
+  pilot outputs, `_archive/superseded_outputs/`), with their 11 test files, were moved with `git mv`
+  (history preserved) to `_archive/rag2_filter_reproduction/` and `_archive/alzheimers_pilot_v1/`. Imports
+  were rewritten; the 125 archived tests still pass (`python -m unittest discover -s _archive -t .`); a guard
+  test checks that no active module imports `_archive`.
+* **The admission formula was implemented twice** (`src/proposed/` and `experiments/medchange/arms.py`).
+  `arms.py` now calls `TemporalPolicy` and `AdmissionScorer`; the arm settings and their hash are unchanged.
+* **`analyze.py` lacked two things the plan states:** the Holm correction over the confirmatory family and
+  the retrieval-level manipulation checks. Both implemented (`confirmatory_family`, `retrieval_metrics`)
+  with tests. `--out` added because PowerShell's `>` redirection writes UTF-16.
+* **Packaging and ignore rules.** `pyproject.toml` described the earlier project and did not package
+  `experiments.medchange`; rewritten (version 0.2.0, extras `models` and `medchange`). It also omitted
+  `requests` and `pypdf`, which `corpus/scripts` imports at module level: with both absent, 90 tests
+  errored on import (the student's machine had both installed, so this was invisible there). Both are now
+  base dependencies. `.gitignore`
+  rewritten and checked with `git check-ignore`: a first draft used trailing comments, which git does not
+  support, so the 4.6 GB `models/` directory was not ignored. `.gitattributes` added (LF in the
+  repository and in checkouts; the four CRLF CSVs are left byte-identical).
+* **Documentation described the abandoned design.** README, methodology, data, evaluation, reproducibility,
+  glossary, the plan (renamed `docs/experiment_plan.md`), `_archive/README.md` and the two results READMEs
+  were rewritten against the code, and `experiments/medchange/README.md` added. Statements that the code
+  did not support were removed, e.g. that currency and a paired sign test are in active code (they exist
+  only in the archived runner); the plan's statement that Holm was built was made true by implementing it
+  in `analyze.py`. A `DocumentationIntegrityTests` class now fails if a path or `python -m` command named in
+  a current document does not exist, and `test_scope_invariants.py` guards the README's objectives, its
+  no-novelty statement and its "not a RAG² reproduction" statement.
+* **Feasibility arithmetic made explicit.** The plan's power claim and the dev gates were re-derived by
+  simulation (exact McNemar; ≈ 30% of answers differing between arms is an assumption until dev results
+  exist). The confirmatory split (353 changed items) has 84% power at Holm-corrected α for a true 10 pp
+  difference, 61% for 8 pp and 33% for 6 pp. Gate G3 on 151 changed dev items has a standard error of
+  ≈ 4.5 pp: the P − B2 ≥ +5 pp condition is met in 13% of runs with no true effect, 50% with a true +5 pp
+  effect and 87% with +10 pp, so G3 is a coarse screen, not a test (plan §7 and §9; no threshold changed).
+* **Dead code and dangling references.** The `Retriever`/`Reranker` interfaces in `src/common/retriever.py`
+  (self-declared superseded, referenced nowhere in code, tests or documents) were archived as
+  `_archive/retriever_interfaces.py`; two unreferenced helpers (`helpfulness.attach`,
+  `retrieval.corpus.iter_texts`) were removed. Six comments and docstrings that cited paths from before
+  the 2026-09-24 reorganisation (`systems/...`, `docs/next_phase_plan.md`) were corrected, and a test now
+  checks every file path cited in a code comment or docstring.
+* **Smaller.** Test files opened files without closing them (ResourceWarnings); a docstring cited a
+  nonexistent `docs/research_log.md`; comments and CUDA error messages referred to Colab/Kaggle notebooks and
+  `!nvidia-smi` (notebook syntax) although the project runs locally.
+
+Deliberately not changed: the Alzheimer's corpus, question pool and index; the MedChange protocol and
+settings (fixed before any answer existed); the history in this log.
+
+Verification after the changes: 559 active tests and 125 archived tests pass, also in a fresh virtualenv
+holding only the base dependencies with outbound socket connections blocked; both suites leave the
+repository tree unchanged (`check_hermetic`); `pyflakes` reports only an
+intentional availability import in `encoders.py` and unused imports inside archived code; every path and
+command named in the current documents exists. No experiment was run and no result was produced in this
+phase.
+
+## Current status (2026-10-02)
+
+* **Research direction:** an as-of evaluation of recency-weighted evidence admission (the Temporal Filter)
+  on MedChangeQA, with the Alzheimer's study as a secondary case study. Protocol: `experiment_plan.md`.
+* **Built and tested:** the MedChange benchmark (504 usable changed and 250 unchanged items, seeded
+  dev/confirmatory splits), the PubMed as-of probe, frozen dev candidate pools (226 items), zero-shot
+  helpfulness scores for the dev pools, the six arms, the generation harness, the analysis (accuracy,
+  retrieval-level checks, McNemar with Holm, gates) and the G1 consistency check. Alzheimer's corpus
+  (114,256 PMC records, 4,377,041 chunks), question pool (113 usable) and dense index (4,376,141 x 768):
+  built, secondary.
+* **Gates:** G0 passed (94.0% of changed dev items). G1, G2 and G3 have not been run on dev; running the
+  arms B0 and B1 on all 226 dev items (about 5.3 h) is the next step.
+* **Results:** none. No accuracy, hallucination or retrieval comparison exists; the only generations
+  made are six timing answers (3 items x 2 arms).
+* **Not built:** frozen pools for the confirmatory split; the human hallucination annotation; a second
+  generator; the Alzheimer's as-of case study.
+* **Abandoned and archived:** the RAG² filter reproduction (the checkpoint is not distributed; local
+  retraining learned only the class prior) and the first Alzheimer's pilot runners (circular primary metric).
+* **Known limitations of the design** (see `methodology.md`): the B2/P helpfulness score is an untrained
+  stand-in, not RAG²; gold verdicts are model-generated; the generator is a 4-bit 8B model on CPU; the
+  decisive-flip subgroup is small (114 items).

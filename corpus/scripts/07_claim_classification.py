@@ -29,7 +29,7 @@ Reads config/claim_taxonomy.yaml's current schema:
                        contradicted? has it been superseded?), which a
                        single passage's keywords cannot determine.
                        Temporal status is the thesis's actual experimental
-                       treatment (systems/proposed/temporal.py scores it from
+                       treatment (src/proposed/temporal.py scores it from
                        publication date at admission time); pre-baking a
                        "current vs superseded" label onto the corpus here
                        would duplicate that treatment with a much weaker

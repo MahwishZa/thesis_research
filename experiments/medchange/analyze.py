@@ -6,7 +6,7 @@ Primary outcome: parsed verdict == gold NEWEST verdict (unparsed counts wrong an
 reported). Key secondary: verdict == PREVIOUS (outdated) verdict, changed items only.
 Safety: accuracy on unchanged items. Paired comparisons use the exact McNemar test and a
 question-resampled bootstrap CI (``evaluation/stats.py``); only arms present in the
-answers file are compared. Gates are the pre-stated ones in docs/next_phase_plan.md:
+answers file are compared. Gates are the pre-stated ones in docs/experiment_plan.md:
 
 Retrieval-level metrics (what each arm admitted; manipulation checks, never outcomes):
 share of admitted passages that surely first appeared inside the update window (after the
@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from evaluation.stats import mcnemar, paired_bootstrap_ci
+from evaluation.stats import holm, mcnemar, paired_bootstrap_ci
 
 from .generate_answers import load_jsonl
 
@@ -33,6 +33,7 @@ HERE = Path(__file__).resolve().parent
 G2_MIN_CHANGE = 0.20
 G3_MIN_GAIN = 0.05
 G3_MIN_OVER_C1 = 0.025
+CONFIRMATORY = (("P", "B1"), ("P", "B2"), ("P", "B3"))
 PAIRS = (("B1", "B0"), ("B2", "B1"), ("B3", "B1"), ("P", "B2"), ("P", "B3"), ("P", "B1"), ("P", "C1"))
 
 
@@ -84,6 +85,16 @@ def paired(items: dict, answers: dict, a: str, b: str, kind: str = "changed") ->
     return {"a": a, "b": b, "kind": kind, "n": len(keys), "diff_a_minus_b": ci["difference"],
             "ci95": [ci["ci_low"], ci["ci_high"]], "a_only_correct": m.proposed_only,
             "b_only_correct": m.baseline_only, "mcnemar_p": round(m.p_value, 4)}
+
+
+def confirmatory_family(items: dict, answers: dict) -> dict:
+    """Primary outcome, changed items, P vs B1/B2/B3: raw exact-McNemar p and Holm-adjusted p."""
+    results = {f"{a}-{b}": paired(items, answers, a, b) for a, b in CONFIRMATORY}
+    results = {k: v for k, v in results.items() if v}
+    if not results:
+        return {}
+    adjusted = holm({k: v["mcnemar_p"] for k, v in results.items()})
+    return {k: dict(v, holm_p=round(adjusted[k], 4)) for k, v in results.items()}
 
 
 def verdict_change_rate(items: dict, answers: dict, a: str, b: str) -> Optional[float]:
@@ -158,8 +169,11 @@ def main(argv=None) -> int:
     ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
     ap.add_argument("--answers", default=None)
     ap.add_argument("--frozen", default=None, help="frozen pools (default data/frozen_<split>.jsonl)")
+    ap.add_argument("--data-dir", default=str(HERE / "data"))
+    ap.add_argument("--out", default=None,
+                    help="write the JSON report to this file (UTF-8, LF) instead of stdout")
     args = ap.parse_args(argv)
-    d = HERE / "data"
+    d = Path(args.data_dir)
     items = {r["item_id"]: r for r in load_jsonl(d / "benchmark.jsonl")
              if r["split"] == args.split and not r["likely_label_noise"]}
     rows = load_jsonl(Path(args.answers or d / f"answers_{args.split}.jsonl"))
@@ -168,12 +182,21 @@ def main(argv=None) -> int:
     report = {"split": args.split, "n_answers": len(rows), "per_arm": summarize(items, answers, arms),
               "paired_changed": [p for a, b in PAIRS if (p := paired(items, answers, a, b))],
               "paired_unchanged": [p for a, b in PAIRS if (p := paired(items, answers, a, b, "unchanged"))],
+              "confirmatory_family_changed": confirmatory_family(items, answers),
               "gates": gates(items, answers)}
     frozen = Path(args.frozen or d / f"frozen_{args.split}.jsonl")
     if frozen.exists():
         pools = {r["item_id"]: r for r in load_jsonl(frozen)}
         report["retrieval"] = retrieval_metrics(items, pools, answers, arms)
-    print(json.dumps(report, indent=2))
+    text = json.dumps(report, indent=2)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text + "\n")
+        print(f"wrote {out}")
+    else:
+        print(text)
     return 0
 
 

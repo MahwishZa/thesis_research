@@ -1,181 +1,144 @@
 # Reproducibility
 
-How to install, test, and run this project, and exactly what is and is not
-reduced-scale right now.
+How to install, test and run this project, what each step costs (measured on the target laptop:
+Windows, 15.2 GB RAM, RTX 2050 with 4 GB VRAM, CPU-only generation), and where results live. Commands
+are run from the repository root; Windows PowerShell paths use `\`, but `python -m ...` commands are
+identical everywhere.
 
 ## 1. Install
 
 ```bash
-pip install -e .
-# Optional, only needed to run real models (not needed for the test suite):
-pip install -e ".[models]"
-# Optional, only needed for filter-training label generation - pick ONE:
-pip install -e ".[filter-training-gguf]"  # local, CPU, no VRAM requirement
-pip install -e ".[filter-training-hf]"    # needs a real GPU (~6GB VRAM) or ~16GB RAM
+pip install -e .                    # tests, framework, corpus scripts: PyYAML, numpy, requests, pypdf
+pip install -e ".[models]"          # torch, transformers, sentencepiece (MedCPT, Flan-T5)
+pip install -e ".[medchange]"       # the models extra plus llama-cpp-python (generation)
 ```
 
-Python ≥ 3.10. `pyproject.toml` is the single source of dependency truth.
+Python ≥ 3.10; `pyproject.toml` is the single source of dependency truth. Environment notes that cost
+time once:
 
-## 2. Run the tests
+* **llama-cpp-python on Windows** has no source build that works without a toolchain; install the
+  prebuilt CPU wheel: `pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu`.
+* **TensorFlow with Keras 3 installed** makes `transformers` fail on import. Training and inference here
+  use PyTorch only: set `USE_TF=0` (PowerShell: `$env:USE_TF = "0"`) instead of installing `tf-keras`.
+* **numpy 2.x breaks torch 2.4.x** and TensorFlow 2.17; keep `numpy<2` (and a scipy built for it, e.g.
+  `scipy==1.13.1`) in that environment.
+* **Generator model.** Download `Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` (≈ 4.6 GB) from
+  `bartowski/Meta-Llama-3-8B-Instruct-GGUF` into `models/` (gitignored) and record
+  `Get-FileHash models\<file>.gguf -Algorithm SHA256` with every run.
+* **Keep a long run alive on a laptop:** plug in and disable sleep
+  (`powercfg /change standby-timeout-ac 0`).
+
+## 2. Tests
 
 ```bash
-python -m unittest discover -s evaluation/tests -t .
+python -m unittest discover -s evaluation -t .      # active suite: no network, no models, no real corpus
+python -m unittest discover -s _archive -t .         # archived work (RAG² filter attempt, v1 pilot runner)
 ```
 
-No network access and no ML stack (`torch`/`transformers`) are required for
-the test suite to pass — model-dependent code paths are exercised through
-interfaces and fixtures, not real weights.
+The active suite needs neither torch nor transformers nor network; model-dependent code is exercised
+through interfaces and fixtures. Checked on 2026-10-02: in a fresh virtualenv holding only the four
+base dependencies, with outbound socket connections blocked, both suites pass (counts: `log.md`,
+Phase 23).
 
-## 3. Run the pipeline
+Tests that run the corpus stage scripts work in a lean scaffold copy
+(`evaluation/tests/corpus_scaffold.py`) that never copies `corpus/data/`, so they behave identically on a
+fresh clone and on a machine holding the multi-GB real corpus, and tests write only to temporary
+directories. `python -m evaluation.tests.check_hermetic` verifies that: it runs both suites and fails if
+any file in the repository, ignored files included, was created, modified or deleted. (It caught tests
+overwriting stage 06's resume marker `corpus/data/chunks/.chunk_progress.json` on 2026-10-02; if that
+file exists with `"documents_done": 10`, it is such an artefact and can be deleted.) The optional static
+check used in the audit is `python -m pyflakes src evaluation experiments corpus/scripts` (`pip install
+pyflakes`; not a project dependency; it flags one intentional availability import in `encoders.py`).
 
-```bash
-# Fixture demo — every arm, evaluation, and the ablation sweep, no real
-# corpus or model needed:
-python -m experiments.shared.runners.run_end_to_end
+## 3. Primary pipeline: MedChange as-of benchmark
 
-# Real data — fit lambda/theta/H on validation, report on held-out test
-# (requires a built retrieval index; see step 4):
-python -m experiments.shared.runners.fit_and_evaluate --device cpu
-```
+All outputs of steps below go to `experiments/medchange/data/` (gitignored). Every long step is
+resumable: rerun the same command after an interruption.
 
-Both print two comparisons: `main_evaluation` (baseline vs. the full
-proposed system) and `ablation_study` (full proposed system vs. `λ = 0`).
-
-## 4. Rebuilding the retrieval index
-
-```bash
-python -m experiments.shared.retrieval.build_index --device cuda
-```
-
-Requires the local corpus (`corpus/data/chunks/chunks.jsonl` — gitignored,
-built locally; see `data.md`). Recommended on GPU: the MedCPT encoder is
-small (~0.44 GB) and fits modest hardware; the resulting embedding matrix
-is large in memory at full corpus scale (see §6).
-
-## 5. What is currently reduced-scale, and why it matters
-
-The committed pilot-scale run under `experiments/results/fit_and_evaluate/` used a
-pilot-scale index, an undertrained filter checkpoint, and an extractive
-stand-in generator. Status as of 2026-09-27:
-
-| Component | Current state | Full-scale requires |
+| # | Command | Cost (measured unless noted) |
 |---|---|---|
-| Retrieval index | **Complete** — full corpus, 4,376,141 × 768, built via the streaming/checkpointed build (§4) | — |
-| RAG² baseline filter checkpoint | Not trained. Tooling ready (§4b). Prior pilot checkpoint (18 training examples, 1 epoch) is unusable — `validation_accuracy = 0.0`, and the saved archive did not even include a model weight file | Real-scale label generation (§4a) + local filter training (§4b) |
-| Generator (main evaluation) | Extractive stand-in (verbatim top-admitted passage) | A real generative model under the contract in `methodology.md` §9. `fit_and_evaluate.py` currently hardcodes the stand-in — wiring in a real generator is unimplemented, not just unrun |
+| 1 | `git clone https://github.com/jvladika/MedChange ..\MedChange` | one-off |
+| 2 | `python -m experiments.medchange.build_benchmark --medchange-dir ..\MedChange` | seconds; refuses unless all 512 items reproduce; afterwards `git status` must show no change to `experiments/medchange/manifest.json` |
+| 3 | `python -m experiments.medchange.headroom --medchange-dir ..\MedChange` (optional) | seconds; released models' answers without retrieval |
+| 4 | `python -m experiments.medchange.pubmed_asof --split dev` | needs network; ≈ 22 min for the 226 dev items; prints the pre-stated G0 verdict |
+| 5 | `python -m experiments.medchange.freeze_candidates --split dev --device cpu` | downloads abstracts (37,375 for dev), then MedCPT dense + cross-encoder; ≈ 50 s per item for encoding and reranking, ≈ 3 h for dev |
+| 6 | `python -m experiments.medchange.helpfulness --split dev --device cpu` | zero-shot Flan-T5 on 20 pairs per item; 5,946 s for 223 items (1.33 s/pair) |
+| 7 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\<file>.gguf` | llama.cpp CPU: ≈ 18 s per B0 answer, ≈ 66 s with five passages; add `--limit 3` for a timing test |
+| 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
+| 9 | `python -m experiments.medchange.consistency export --n 50`, fill the CSV, `... score` | G1 human check of the stated verdicts |
 
-None of these are methodology changes in the design sense — but two are not
-"just needs compute time" either: the filter checkpoint needs the
-label-generation and training steps below actually built and run, and the
-real-generator wiring in `fit_and_evaluate.py` needs writing before it can
-be run at all.
+Dev is run first. The confirmatory split (`--split confirm`) is run only after the gates pass, once,
+following the plan frozen in `experiment_plan.md`. For arms B2, P and C1 run step 6 before step 7. The
+full dev run of all six arms is ≈ 22 h and the confirmatory run ≈ 51 h (*estimated* from the measured
+per-answer times). Steps 4 and 5 call NCBI E-utilities and accept an optional `--api-key` (3 requests
+per second without a key, 10 with one), which changes their duration, not their results.
 
-## 4a. Generating filter-training labels (local, GGUF)
-
-`experiments/baseline/filter_training/rationale.py`'s HF/`bitsandbytes` path
-needs ~5.5–6 GB VRAM (4-bit) or ~16 GB RAM (CPU fallback) — infeasible on a
-4 GB VRAM / 15.2 GB RAM laptop (verified 2026-09-27, see `log.md`). For that
-hardware, `--scorer gguf` runs the same model (Llama-3-8B-Instruct) 4-bit
-quantized via `llama.cpp` on CPU RAM instead (~6–7 GB) — a disclosed
-execution-backend deviation, not a model or method change; see
-`rationale_gguf.py`'s module docstring for exactly what is and isn't
-identical to the HF path.
-
-**Obtaining a GGUF file.** A widely-used, actively-maintained community
-quantization exists at
-[`bartowski/Meta-Llama-3-8B-Instruct-GGUF`](https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF)
-(`Meta-Llama-3-8B-Instruct-Q4_K_M.gguf`, ~4.92 GB) — a 4-bit k-quant
-conversion of the same model you already have license access to. Record the
-exact file's sha256 alongside your run, the same discipline this project
-already applies to pinned model revisions (§9).
-
-**Always calibrate before a real run:**
+## 4. Secondary: Alzheimer's corpus, question pool and index
 
 ```bash
-python -m experiments.baseline.filter_training.build_labels \
-    --scorer gguf --gguf-model-path /path/to/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf \
-    --n-questions 500 --output experiments/baseline/filter_training/labels/medqa_filter_labels.json \
-    --model-revision <pinned-commit-sha> --calibrate 10
+# corpus (queries and configs are versioned in corpus/config/; data is built locally and gitignored)
+python corpus/scripts/01_pubmed_download.py --all        # PMID lists
+python corpus/scripts/02_pmc_download.py                 # full text and dates (then --finalize)
+python corpus/scripts/04_normalize.py                    # reads metadata/pmc.csv + XML
+python corpus/scripts/05_deduplicate.py
+python corpus/scripts/06_chunk.py                        # MedCPT tokenizer, 256 tokens / 32 overlap
+python corpus/scripts/07_claim_classification.py
+python corpus/scripts/04_normalize.py --input data/raw/pubmed/records.example.jsonl   # offline fixture instead
+
+# dense index over corpus/data/chunks/chunks.jsonl (4,376,141 x 768, ~12.5 GB, memory-bounded, resumable)
+python -m experiments.shared.retrieval.build_index --device cuda   # or cpu
+
+# question pool (already built, reviewed and split; committed under experiments/shared/questions/)
+python -m experiments.shared.questions.build_pool --medrevqa <DS_MedRevQA.csv> --medquad <MedQuAD dir> --retrieved-on 2026-09
+python -m experiments.shared.questions.export_review
+python -m experiments.shared.questions.split
+
+# framework demo on synthetic fixtures (no corpus, no model): all arms, evaluation, ablation
+python -m experiments.shared.runners.run_end_to_end
 ```
 
-Scores 10 pairs, reports measured throughput and an extrapolated estimate
-for the full `--n-questions`, and writes nothing — no output file, no
-checkpoint. Repeat freely; only drop `--calibrate` once the estimate is
-acceptable. The real run is checkpointed automatically
-(`<output>.progress/`) and resumes with `--resume` if interrupted.
+The corpus is complete and the index is built; the as-of Alzheimer's case-study run is **not
+implemented** (`experiment_plan.md` §11). `run_end_to_end` demonstrates the original three-arm framework
+(`src/`, `evaluation/runner.py`) on fixtures; it is not the thesis result.
 
-## 4b. Filter training (local)
-
-`train.py`'s paper recipe (full AdamW fine-tuning of Flan-T5-large) needs
-~12 GB on CPU, tight against 15.2 GB RAM, and does not fit the 4 GB GPU. The
-implemented local recipe (each switch is recorded as a deviation in the
-checkpoint record):
-
-```
-python -m experiments.baseline.filter_training.train \
-    --labels experiments/baseline/filter_training/labels/medqa_filter_labels.json \
-    --output-dir checkpoints/rag2_filter --epochs N \
-    --cpu --precision fp32 --optimizer adafactor --gradient-checkpointing \
-    --early-stopping-patience 3
-```
-
-* `--calibrate-steps N` runs N optimizer steps, prints s/step and memory, and
-  writes no checkpoint - use it to choose `--epochs`.
-* `--resume` continues an interrupted run; refused if any setting or the
-  labels file (sha256) changed; an incomplete (mid-save) checkpoint is
-  skipped automatically.
-* Validation uses the *deployed* two-way [HELPFUL]/[NOT_HELPFUL] logit rule
-  and reports accuracy, balanced accuracy, and the majority-class baseline.
-  A checkpoint is "usable" only if it beats the majority baseline and has
-  balanced accuracy > 0.5 (labels are ~71% NOT_HELPFUL, so "accuracy > 0.5"
-  alone is satisfied by rejecting everything).
-* Verified offline on a tiny T5 (real torch): calibrate, train, kill
-  mid-run, resume. Not yet run on real Flan-T5-large - that is the
-  student's next step.
-
-Fixed bug (found before any real training): the old validation metric
-compared `generate()` output column 0 - which is the decoder-start id - to the
-label id, so it reported 0.0 accuracy even for a model that had learned the
-task (reproduced: old metric 0.0 vs deployed-rule 0.79).
-
-## 6. Hardware notes
-
-MedCPT encoder/reranker inference and Flan-T5 filter inference are feasible
-on a modest local GPU (a few GB VRAM). Flan-T5 filter *training* needs more
-memory than that — see §4b. Llama-3-8B-Instruct label generation needs a
-real GPU or ~16 GB RAM via the HF path (§4a) — see §4a for the local GGUF
-alternative used on hardware without either. Building the full-corpus
-retrieval index produces an embedding matrix on the order of several GB in
-memory; the streaming build (§4) keeps this off the peak-memory path, but
-watch for memory pressure on constrained hardware regardless.
-
-## 7. What is gitignored, and why
+## 5. What is gitignored, and results policy
 
 | Path | Why |
 |---|---|
-| `corpus/data/` | The corpus text itself — large, built locally, regenerated by `corpus/scripts/`, never committed |
-| `checkpoints/` | Trained model checkpoints — large, regenerated by `experiments/baseline/filter_training/` |
-| Local pilot/sample corpus and index folders | Large, regenerable, machine-local |
+| `corpus/data/` (except the fixture) | the corpus text: large, built locally |
+| `experiments/results/index/` | the full retrieval index (~12.5 GB) |
+| `experiments/medchange/data/` | MedChange-derived questions, abstracts, frozen pools, raw working files |
+| `models/`, `checkpoints/` | model files |
+| `_archive/rag2_filter_reproduction/filter_training/labels/`, `.textbook_index_cache/` | labels embed textbook passages |
 
-Small, legitimate result files (`experiments/results/fit_and_evaluate/`,
-`experiments/results/smoke_test_NOT_FINAL/`) are committed — they are not covered by any
-blanket ignore rule, so a real committed result stays visible to `git
-status` rather than silently disappearing alongside large regenerable
-artifacts sitting next to it.
+**Results worth keeping are committed.** After a run, copy the files that contain no source text — the
+answers (`answers_<split>.jsonl`: generated text and PMIDs), the helpfulness scores
+(`helpfulness_<split>.jsonl`) and the saved analysis (`python -m experiments.medchange.analyze --split
+dev --out experiments\medchange\results\analysis_dev.json`) — into `experiments/medchange/results/` and
+commit them; a 22-hour run must not exist only on one laptop. The frozen pools and abstracts stay
+local and are rebuilt from the manifest.
 
-## 8. Reviewing the question pool
+## 6. Hardware notes
 
-Instructions for a human reviewer working through
-`experiments/shared/questions/review.csv` are archived at
-`_archive/docs_legacy/question_review.md` (the review itself is complete;
-see `data.md` §3). The worksheet's ACCEPT/REVISE/REJECT/HOLD taxonomy and
-review criteria there are unchanged and still apply if the pool is ever
-re-reviewed or extended.
+MedCPT and Flan-T5 inference are comfortable on CPU (Flan-T5-large: 1.33 s per pair measured). The 8B
+generator cannot run on the 4 GB GPU; llama.cpp on CPU needs ≈ 6–7 GB RAM. Full fine-tuning of Flan-T5-large
+(archived attempt) was ≈ 106 s per 16-example optimiser step on CPU. The streaming index build keeps memory
+bounded at the full corpus scale.
 
-## 9. Reproducing a specific run exactly
+## 7. Archived work
 
-Every run records: the model id and a pinned commit sha (never a branch
-name), quantisation settings, the prompt template, the context budget, the
-fitted `λ`/`θ`/`H`, the baseline filter's identity and whether it is
-trained, and a corpus-snapshot id. An output directory is never silently
-overwritten by a repeated run — a collision is refused rather than merged.
+`_archive/` holds directions that were tried and replaced: the RAG² filter-reproduction attempt
+(`rag2_filter_reproduction/`: label generation with a 4-bit Llama-3, filter training, diagnostics, with its
+tests), the superseded Alzheimer's pilot runners and results (`alzheimers_pilot_v1/`), and earlier
+exploratory work; see `_archive/README.md`. Local files from the filter-reproduction attempt that git does
+not track (`labels/`, `.textbook_index_cache/`) belong in
+`_archive/rag2_filter_reproduction/filter_training/`; the `labels` file is 16.6 hours of compute, so back it
+up outside the repository.
+
+## 8. Reproducing a specific run exactly
+
+Every answer record carries the arm-settings hash, the prompt hash, the admitted PMIDs and the wall-clock
+seconds; every frozen pool carries an order-sensitive hash and the encoder names. A run also needs the
+manifest's input hashes (the MedChange files), the GGUF file's SHA-256, `numpy`/`torch`/`llama-cpp-python`
+versions, and the seed. Output files are never silently overwritten by a different run: collisions are
+refused or resumed, not merged.

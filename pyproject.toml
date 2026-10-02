@@ -13,7 +13,9 @@ version = "0.2.0"
 description = "Does recency-weighted evidence admission make retrieval-augmented medical QA return current rather than outdated conclusions? An as-of evaluation on Cochrane verdict changes (MedChangeQA), with an Alzheimer's disease case study."
 requires-python = ">=3.10"
 # numpy is needed by experiments.shared.retrieval, which the test suite imports.
-dependencies = ["PyYAML>=6.0", "numpy>=1.24"]
+# requests (PubMed/PMC downloads) and pypdf (guideline PDFs) are imported at module level by
+# corpus/scripts, whose functions the test suite exercises; without them 90 tests error on import.
+dependencies = ["PyYAML>=6.0", "numpy>=1.24", "requests>=2.28", "pypdf>=3.0"]
 
 [project.optional-dependencies]
 # Real model backends. Not needed to run the test suite.

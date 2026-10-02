@@ -91,9 +91,9 @@ def _move_to_device(model, device: str, model_id: str):
     support raises ``AssertionError: Torch not compiled with CUDA enabled``
     eight stack frames deep inside torch's own ``Module._apply`` - which
     says nothing about *why*, and nothing about the actual, very common
-    cause in a shared notebook or virtualenv: a later ``pip install`` (typically pulled in by
-    ``accelerate`` or ``bitsandbytes``) silently replacing the platform's
-    preinstalled CUDA-enabled torch with a CPU-only wheel. Checking
+    cause: a later ``pip install`` (typically pulled in by ``accelerate`` or
+    ``bitsandbytes``) silently replacing a CUDA-enabled torch with a
+    CPU-only wheel. Checking
     ``torch.cuda.is_available()`` first turns a multi-minute failure (after
     downloading and tokenizing everything) into an immediate, specific one.
     """
@@ -103,12 +103,12 @@ def _move_to_device(model, device: str, model_id: str):
         raise RuntimeError(
             f"requested device={device!r} for {model_id}, but "
             f"torch.cuda.is_available() is False (torch {torch.__version__}). "
-            "This usually means a `pip install` after the notebook started "
-            "replaced the platform's preinstalled CUDA-enabled torch with a "
-            "CPU-only build (a common gotcha when installing "
+            "This usually means a later `pip install` replaced a "
+            "CUDA-enabled torch with a CPU-only build (a common gotcha "
+            "when installing "
             "accelerate/bitsandbytes) - check `torch.__version__` for a "
             "'+cpu' suffix. Fix: reinstall torch from the CUDA wheel index "
-            "matching this machine's CUDA version (check `!nvidia-smi`), "
+            "matching this machine's CUDA version (check `nvidia-smi`), "
             "e.g. `pip install --index-url "
             "https://download.pytorch.org/whl/cu121 torch --force-reinstall`, "
             "then verify with `torch.cuda.is_available()` BEFORE re-running "

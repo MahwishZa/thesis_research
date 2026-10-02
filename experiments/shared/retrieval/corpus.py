@@ -347,8 +347,3 @@ def dated_only(
     is what makes it identical by construction rather than by agreement.
     """
     return tuple(p for p in passages if p.publication_date)
-
-
-def iter_texts(passages: Sequence[CorpusPassage]) -> Iterator[str]:
-    for passage in passages:
-        yield passage.retrieval_text

@@ -1,6 +1,6 @@
 """The Temporal Filter admission policy, and the three-arm fairness controls.
 
-`systems/` had no committed tests before this file: the earlier checks lived
+`src/` (then named `systems/`) had no committed tests before this file: the earlier checks lived
 in a scratch script and did not survive. These lock the properties the
 main experiment depends on.
 """
