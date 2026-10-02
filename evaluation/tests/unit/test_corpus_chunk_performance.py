@@ -21,6 +21,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_DIR = ROOT / "corpus" / "scripts"
 
@@ -444,57 +446,30 @@ class ResumeTests(unittest.TestCase):
             self.assertTrue(self.m.OUT.exists())
 
 
-class FixtureRegressionTests(unittest.TestCase):
-    """Against whatever fixture chunks.jsonl is currently on disk under
-    corpus/data/chunks/ - the same offline path the project
-    already tests everything else through. That file is gitignored (see
-    corpus/.gitignore: research data is never committed), so this
-    test needs a prior local pipeline run to be meaningful - see the note
-    at the top of test_corpus_normalize_pipeline.py."""
+class FixtureDeterminismTests(unittest.TestCase):
+    """The offline fixture path (04 -> 05 -> 06) must produce identical chunks on every
+    run. Hermetic: two runs in lean scaffold copies; nothing here reads corpus/data/,
+    which is gitignored and, on a machine that has built the real corpus, holds the
+    full multi-GB chunk file."""
 
-    def test_matches_the_local_chunks_output_for_the_fixture_corpus(self):
-        import shutil, subprocess, sys as _sys
+    def test_two_independent_fixture_runs_produce_identical_chunks(self):
+        import subprocess, sys as _sys
+        outputs = []
         with TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "corpus"
-            shutil.copytree(ROOT / "corpus", copy,
-                            ignore=shutil.ignore_patterns("__pycache__"))
-            # Build the same deduplicated fixture the committed chunks.jsonl
-            # was produced from.
-            subprocess.run([_sys.executable, "scripts/04_normalize.py",
-                           "--input", "data/raw/pubmed/records.example.jsonl"],
-                          cwd=copy, check=True, capture_output=True)
-            subprocess.run([_sys.executable, "scripts/05_deduplicate.py"],
-                          cwd=copy, check=True, capture_output=True)
-            result = subprocess.run(
-                [_sys.executable, "scripts/06_chunk.py", "--tokenizer", "whitespace"],
-                cwd=copy, capture_output=True, text=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stderr)
-
-            fresh = [json.loads(l) for l in
-                    (copy / "data" / "chunks" / "chunks.jsonl")
-                    .read_text(encoding="utf-8").splitlines()]
-            committed = [json.loads(l) for l in
-                        (ROOT / "corpus" / "data" / "chunks" / "chunks.jsonl")
-                        .read_text(encoding="utf-8").splitlines()]
-            # Stage 07's claim_classes/claim_confidence/claim_method (topical
-            # dimension) and claim_evidence_levels/claim_evidence_confidence
-            # (evidence-level dimension) differ because Stage 07 hasn't run
-            # in this fresh copy, only in the local reference - same known
-            # diff set as test_corpus_normalize_pipeline.py's equivalent
-            # regression test for this fixture. ad_relevant/ad_relevance_score
-            # are NOT in this set: both sides run the same current Stage 04,
-            # so those fields agree.
-            self.assertEqual(len(fresh), len(committed))
-            diffs = set()
-            for a, b in zip(fresh, committed):
-                for key in set(a) | set(b):
-                    if a.get(key) != b.get(key):
-                        diffs.add(key)
-            self.assertEqual(
-                diffs,
-                {"claim_classes", "claim_confidence", "claim_method",
-                 "claim_evidence_levels", "claim_evidence_confidence"},
-            )
+            for name in ("a", "b"):
+                copy = Path(tmp) / name
+                copy_corpus_scaffold(copy)
+                for script, args in (("04_normalize.py", ("--input", "data/raw/pubmed/records.example.jsonl")),
+                                     ("05_deduplicate.py", ()),
+                                     ("06_chunk.py", ("--tokenizer", "whitespace"))):
+                    r = subprocess.run([_sys.executable, f"scripts/{script}", *args], cwd=copy,
+                                       capture_output=True, text=True, timeout=120)
+                    self.assertEqual(r.returncode, 0, r.stderr)
+                outputs.append([json.loads(l) for l in
+                                (copy / "data" / "chunks" / "chunks.jsonl")
+                                .read_text(encoding="utf-8").splitlines()])
+        self.assertTrue(outputs[0])
+        self.assertEqual(outputs[0], outputs[1])
 
 
 if __name__ == "__main__":

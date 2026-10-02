@@ -10,12 +10,13 @@ real 4.3M-chunk corpus, which only exists on the machine that built it
 (corpus/data/** is gitignored by design).
 """
 
-import shutil
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -29,8 +30,7 @@ class PipelineToRetrievalTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmpdir = TemporaryDirectory()
         cls.copy = Path(cls.tmpdir.name) / "corpus"
-        shutil.copytree(ROOT / "corpus", cls.copy,
-                        ignore=shutil.ignore_patterns("__pycache__"))
+        copy_corpus_scaffold(cls.copy)
 
         def run(script, *args):
             result = subprocess.run(

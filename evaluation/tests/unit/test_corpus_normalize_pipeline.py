@@ -1,32 +1,23 @@
-"""Stages 04-06's real-data path and their regression safety against
-whatever fixture output is currently sitting in the local working tree.
+"""Stages 04-06's real-data path, and the determinism of the offline fixture path.
 
 Two things are locked here:
 
-1. The offline fixture path (--input records.example.jsonl) must keep
-   producing byte-identical output to what is currently on disk under
-   corpus/data/ - a rewrite that changes it without anyone
-   deciding to would be a silent regression. IMPORTANT: corpus/
-   data/** is gitignored by design ("research data is never committed" -
-   see corpus/.gitignore), so this is NOT a comparison against a
-   git-tracked golden file, despite this module's name. On a fresh clone
-   with no prior local pipeline run, corpus/data/normalized/,
-   deduplicated/ and chunks/ do not exist, and the tests below that read
-   `tree=CORPUS` will fail with FileNotFoundError rather than skip. Run
-   04_normalize.py --input records.example.jsonl -> 05_deduplicate.py ->
-   06_chunk.py --tokenizer whitespace once against the real
-   corpus/ tree first (see README.md and
-   _archive/docs_legacy/status_and_decisions.md) to
-   populate a local baseline before these tests are meaningful; they then
-   catch drift within this working copy over time, not against history.
-2. The new real-data path (reading metadata/pmc.csv + XML directly) must
-   produce internally consistent records: the AD-relevance decision made
-   once in Stage 04 must be the same one that appears on every chunk in
-   Stage 06, not a null or a recomputation.
+1. The offline fixture path (``--input records.example.jsonl`` -> 05 -> 06 -> 07) must
+   be deterministic, and Stage 07 must only ADD its claim-classification fields to what
+   Stages 04-06 produced. This is checked hermetically: two independent runs in lean
+   scaffold copies (``evaluation/tests/corpus_scaffold.py``) must agree byte for byte.
+   It deliberately does NOT compare against ``corpus/data/`` or ``corpus/metadata/``:
+   ``corpus/data/**`` is gitignored and on a machine that has built the real corpus
+   holds many GB of unrelated data, and ``corpus/metadata/duplicates.csv`` is the
+   real corpus's committed registry, not a fixture result. (An earlier version of
+   these tests compared against both, so it failed on every clean clone and would
+   have tried to load the real corpus on the researcher's machine.)
+2. The real-data path (reading metadata/pmc.csv + XML directly) must produce
+   internally consistent records: the AD-relevance decision made once in Stage 04
+   must be the same one that appears on every chunk in Stage 06, not a null or a
+   recomputation.
 
-Every test runs against an isolated temporary copy of corpus/ -
-nothing here writes to the real tree. (The `tree=CORPUS` comparison reads
-the real tree; it never writes to it.)
+Every test runs against isolated temporary copies - nothing here writes to the real tree.
 """
 
 import csv
@@ -38,6 +29,8 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
 
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS = ROOT / "corpus"
@@ -66,69 +59,86 @@ def run_stage(cwd, script, *args):
     return result
 
 
-class FixturePathRegressionTests(unittest.TestCase):
-    """04 --input <fixture> -> 05 -> 06 must reproduce the committed output
-    exactly. This is the same offline path the corpus README documents."""
+class FixturePathDeterminismTests(unittest.TestCase):
+    """04 --input <fixture> -> 05 -> 06 (-> 07) twice: identical output, and 07 only adds
+    its own fields. This is the offline path the corpus README documents."""
+
+    CLAIM_FIELDS = {"claim_classes", "claim_confidence", "claim_method",
+                    "claim_evidence_levels", "claim_evidence_confidence"}
+
+    @classmethod
+    def _run_pipeline(cls, root):
+        fixture = "data/raw/pubmed/records.example.jsonl"
+        for script, args in (("04_normalize.py", ("--input", fixture)),
+                             ("05_deduplicate.py", ()),
+                             ("06_chunk.py", ("--tokenizer", "whitespace"))):
+            r = run_stage(root, script, *args)
+            assert r.returncode == 0, f"{script}: {r.stderr}"
 
     @classmethod
     def setUpClass(cls):
         cls.tmpdir = TemporaryDirectory()
-        cls.copy = Path(cls.tmpdir.name) / "corpus"
-        shutil.copytree(CORPUS, cls.copy, ignore=shutil.ignore_patterns("__pycache__"))
-
-        fixture = "data/raw/pubmed/records.example.jsonl"
-        r = run_stage(cls.copy, "04_normalize.py", "--input", fixture)
-        assert r.returncode == 0, r.stderr
-        r = run_stage(cls.copy, "05_deduplicate.py")
-        assert r.returncode == 0, r.stderr
-        r = run_stage(cls.copy, "06_chunk.py", "--tokenizer", "whitespace")
+        base = Path(cls.tmpdir.name)
+        cls.a, cls.b = base / "a", base / "b"
+        for root in (cls.a, cls.b):
+            copy_corpus_scaffold(root)
+            cls._run_pipeline(root)
+        cls.chunks_before_07 = cls._rows_in(cls.a, "data/chunks/chunks.jsonl")
+        r = run_stage(cls.a, "07_claim_classification.py")
         assert r.returncode == 0, r.stderr
 
     @classmethod
     def tearDownClass(cls):
         cls.tmpdir.cleanup()
 
-    def _rows(self, relative_path, tree=None):
-        path = (tree or self.copy) / relative_path
+    @staticmethod
+    def _rows_in(root, relative_path):
+        path = root / relative_path
         return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines()]
 
-    def test_normalized_output_matches_the_committed_fixture_run(self):
-        fresh = self._rows("data/normalized/documents.jsonl")
-        committed = self._rows("data/normalized/documents.jsonl", tree=CORPUS)
-        self.assertEqual(fresh, committed)
+    def test_the_scaffold_does_not_copy_local_corpus_data(self):
+        """Only the committed fixture (plus empty skeleton dirs) may be present."""
+        files = sorted(p.relative_to(self.b).as_posix()
+                       for p in (self.b / "data").rglob("*") if p.is_file()
+                       and p.name != ".gitkeep")
+        self.assertTrue(all(f.startswith("data/raw/pubmed/records.example")
+                            or f.startswith("data/normalized/")
+                            or f.startswith("data/deduplicated/")
+                            or f.startswith("data/chunks/") for f in files), files)
 
-    def test_deduplicated_output_matches_the_committed_fixture_run(self):
-        fresh = self._rows("data/deduplicated/documents.jsonl")
-        committed = self._rows("data/deduplicated/documents.jsonl", tree=CORPUS)
-        self.assertEqual(fresh, committed)
+    def test_normalized_output_is_deterministic_and_nonempty(self):
+        a = self._rows_in(self.a, "data/normalized/documents.jsonl")
+        b = self._rows_in(self.b, "data/normalized/documents.jsonl")
+        self.assertEqual(a, b)
+        self.assertTrue(a and all(str(r.get("document_id", "")).startswith("FIXTURE-") for r in a))
 
-    def test_duplicates_registry_matches_and_is_valid_csv(self):
-        fresh = (self.copy / "metadata" / "duplicates.csv").read_text(encoding="utf-8")
-        committed = (CORPUS / "metadata" / "duplicates.csv").read_text(encoding="utf-8")
-        self.assertEqual(fresh, committed)
+    def test_deduplicated_output_is_deterministic(self):
+        self.assertEqual(self._rows_in(self.a, "data/deduplicated/documents.jsonl"),
+                         self._rows_in(self.b, "data/deduplicated/documents.jsonl"))
 
-    def test_chunk_output_differs_only_by_stage_07_fields(self):
-        """This copy only runs 04->06 (see setUpClass), while the local
-        reference under corpus/data/ has also had Stage 07 run -
-        so only Stage 07's fields (claim_classes/claim_confidence/
-        claim_method for the topical dimension, claim_evidence_levels/
-        claim_evidence_confidence for the evidence-level dimension) should
-        differ; everything Stage 04-06 produce, including ad_relevant/
-        ad_relevance_score, must be identical since both sides run the same
-        current code."""
-        fresh = self._rows("data/chunks/chunks.jsonl")
-        committed = self._rows("data/chunks/chunks.jsonl", tree=CORPUS)
-        self.assertEqual(len(fresh), len(committed))
+    def test_duplicates_registry_is_deterministic_and_valid_csv(self):
+        fa = (self.a / "metadata" / "duplicates.csv").read_text(encoding="utf-8")
+        fb = (self.b / "metadata" / "duplicates.csv").read_text(encoding="utf-8")
+        self.assertEqual(fa, fb)
+        rows = list(csv.reader(fa.splitlines()))
+        self.assertEqual(rows[0][:2], ["canonical_document_id", "duplicate_document_id"])
+        self.assertTrue(all(len(r) == len(rows[0]) for r in rows))
+
+    def test_chunk_output_is_deterministic(self):
+        self.assertEqual(self.chunks_before_07,
+                         self._rows_in(self.b, "data/chunks/chunks.jsonl"))
+
+    def test_stage_07_only_adds_its_claim_fields(self):
+        """Stage 07 (run on copy A only) must change nothing Stages 04-06 produced -
+        including ad_relevant / ad_relevance_score - beyond the claim fields."""
+        after = self._rows_in(self.a, "data/chunks/chunks.jsonl")
+        self.assertEqual(len(after), len(self.chunks_before_07))
         diffs = set()
-        for a, b in zip(fresh, committed):
-            for key in set(a) | set(b):
-                if a.get(key) != b.get(key):
+        for x, y in zip(self.chunks_before_07, after):
+            for key in set(x) | set(y):
+                if x.get(key) != y.get(key):
                     diffs.add(key)
-        self.assertEqual(
-            diffs,
-            {"claim_classes", "claim_confidence", "claim_method",
-             "claim_evidence_levels", "claim_evidence_confidence"},
-        )
+        self.assertEqual(diffs, self.CLAIM_FIELDS)
 
 
 class RealDataPathTests(unittest.TestCase):

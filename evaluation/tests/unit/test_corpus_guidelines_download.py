@@ -12,6 +12,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_DIR = ROOT / "corpus" / "scripts"
 
@@ -176,9 +178,7 @@ class MainCLITests(unittest.TestCase):
         self.tmpdir = TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.copy = Path(self.tmpdir.name) / "corpus"
-        import shutil
-        shutil.copytree(ROOT / "corpus", self.copy,
-                        ignore=shutil.ignore_patterns("__pycache__"))
+        copy_corpus_scaffold(self.copy)
 
     def _run(self, *args):
         import subprocess, sys

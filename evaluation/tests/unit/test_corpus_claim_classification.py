@@ -21,6 +21,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from evaluation.tests.corpus_scaffold import copy_corpus_scaffold
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "corpus" / "scripts" / "07_claim_classification.py"
 REAL_TAXONOMY = ROOT / "corpus" / "config" / "claim_taxonomy.yaml"
@@ -338,14 +340,12 @@ class StreamingRewriteTests(unittest.TestCase):
         tree - never the actual one - and checks the streamed output
         equals what the original in-memory algorithm would have produced,
         record for record, plus every report file is written."""
-        import shutil
         import subprocess
         import sys as _sys
 
         with TemporaryDirectory() as tmp:
             copy = Path(tmp) / "corpus"
-            shutil.copytree(ROOT / "corpus", copy,
-                            ignore=shutil.ignore_patterns("__pycache__"))
+            copy_corpus_scaffold(copy)
 
             chunks = [
                 {"chunk_id": f"C{i}", "document_id": f"D{i}",
