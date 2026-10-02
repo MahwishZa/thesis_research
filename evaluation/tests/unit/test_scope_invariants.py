@@ -65,8 +65,8 @@ class CurrentScopeTests(unittest.TestCase):
         self.assertIn("no novelty is claimed for the formula", body)
 
     def test_readme_names_verdict_accuracy_as_the_primary_outcome(self):
-        body = text(README)
-        self.assertIn("primary\noutcome is **verdict accuracy**", body)
+        body = " ".join(text(README).split())
+        self.assertIn("primary outcome is **verdict accuracy**", body)
         self.assertNotIn("Primary | Currency", body)
 
     def test_readme_does_not_present_the_rag2_stand_in_as_a_reproduction(self):
