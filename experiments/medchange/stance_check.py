@@ -63,6 +63,8 @@ def pilot_report(records: list[dict]) -> dict:
     out = {
         "backend": first[0]["backend"], "n_real_papers": len(real_a), "n_control_papers": len(control),
         "invalid_rate": round(invalid, 4),
+        "invalid_by_group": {name: (round(sum(r["probs"] is None for r in g) / len(g), 4) if g else None)
+                             for name, g in (("wording_A", a), ("wording_B", b), ("control", control))},
         "seconds_per_paper_mean": round(statistics.mean(r["seconds"] for r in allr), 2),
         "seconds_per_paper_median": round(statistics.median(r["seconds"] for r in allr), 2),
         "wording_agreement": None if agreement is None else round(agreement, 4),
