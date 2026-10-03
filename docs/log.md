@@ -890,3 +890,21 @@ analysis (`error_analysis_dev.md`, Phase 26) is on the student's laptop and is n
 `stance_check report`, the researcher's hand check of 40 papers (gate 1), the full dev stance run, `synthesis
 fit` (gate 2), then commit `results/synthesis_model.json` before any confirmatory preparation. G1 (the
 consistency sheet) is still pending.
+
+## Phase 28 — P0 diagnostics on the dev pools (Oct 3)
+
+`diagnostics.py` run on the student's laptop (output `results/diagnostics_dev.md`, no model).
+
+* **Helpfulness truncation confirmed.** 837 of 4,520 stage-1 helpfulness inputs (18.5%) exceed 512 tokens, so
+  the question and the "Answer yes or no" line were cut off for them; 352 of the 1,130 papers B2 admitted
+  (31.1%) were affected. Stage-1 conclusions about recency stand (the compared arms share the scores), but
+  the statement that the zero-shot helpfulness score is a weak selector is confounded by this defect, and B2, P
+  and C1 were partly scored on inputs that did not contain the question. Not fixed: stage 2 does not use these
+  scores, and re-running stage 1 is not planned.
+* **Stance inputs.** Only 36.4% of candidates have labelled RESULTS or CONCLUSIONS sections; the rest
+  contribute their last three sentences (median 89 words, maximum 202). The pilot's hand check will show
+  whether this is good enough.
+* **Study types.** Systematic reviews or meta-analyses are 5.7% of the pool and appear in the top 8 for 41.6% of
+  items (33.6% in B1's admitted five), above the 30% bar, so the study-type weight has material to act on. Gold
+  REFUTED is about as frequent with and without a review in B1's evidence (16 of 76, 33 of 150): no visible
+  signal (descriptive).

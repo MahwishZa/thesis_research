@@ -131,7 +131,8 @@ the interaction asks whether the combination adds anything. **B2 and P are not R
 the local retraining attempt failed (archived; `log.md` Phases 13–18). B2 uses the unmodified
 Flan-T5-large asked RAG²'s prompt plus "Answer yes or no.", scored as P(yes), and ranks by it
 rather than thresholding as RAG² does; RAG²'s rationale-as-query step is also dropped so that all
-arms share one pool. A code-reading finding to be verified (diagnostics step P0, below): the
+arms share one pool. A code-reading finding, **confirmed by the P0 diagnostics on 2026-10-03** (18.5% of the 4,520 dev
+helpfulness inputs and 31.1% of B2's admitted papers exceeded 512 tokens): the
 helpfulness prompt puts the question *after* the abstract and truncates inputs at 512 tokens from the
 end, so for long abstracts the question and the "Answer yes or no" instruction may have been cut off.
 The stage-1 conclusions about recency are unaffected (P − B2, P − C1 and B3 − B1 compare arms that share

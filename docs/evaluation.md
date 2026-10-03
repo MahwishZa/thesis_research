@@ -109,7 +109,8 @@ Gold-label error is not checked.
 | Error analysis, stage 1, dev changed items | done (`log.md` Phase 26) |
 | Gate G1 (human consistency check) | pending (the researcher fills `consistency_sheet.csv`) |
 | Stage 2: stance, pilot checks, diagnostics, synthesis layer, confirmatory analysis | code built and unit-tested (synthetic data); **not yet run on real data** |
-| Stage 2: P0 diagnostics, 40-item pilot (gate 1), hand check, full dev stance + fit (gate 2) | pending |
+| Stage 2: P0 diagnostics | done (2026-10-03): 18.5% of helpfulness inputs over 512 tokens (31.1% of B2's admitted papers); 36.4% of candidates have labelled RESULTS/CONCLUSIONS; a systematic review in the top 8 for 41.6% of items |
+| Stage 2: 40-item pilot (gate 1), hand check, full dev stance + fit (gate 2) | pending |
 | Confirmatory split (pools, B0/B1 answers, stance, frozen-model prediction) | not started; nothing from it has been analysed |
 | Human hallucination annotation; second generator; Alzheimer's case study | planned |
 
