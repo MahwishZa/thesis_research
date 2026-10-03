@@ -798,3 +798,22 @@ would be a post-hoc change, must be labelled exploratory, and needs fresh data. 
 fills `consistency_sheet.csv`), then error analysis on the existing answers (no new generation): is the
 update-window evidence in the pool, is it admitted, does the generator follow it.
 
+## Phase 26 — Error analysis of the dev answers (Oct 3)
+
+`error_analysis.py` on the 151 changed dev items (output saved by the student in
+`experiments/medchange/results/error_analysis_dev.md`).
+
+* The frozen pool contained at least one update-window passage for 100% of changed items; retrieval misses = 0
+  for every arm. Admission misses: B1 13, B3 1, P 2. Nearly every wrong answer (B1 63, B3 81, P 95) is in the
+  group "update-window evidence admitted, answer still wrong". The bottleneck is therefore not retrieval or
+  admission but what the generator does with the evidence (or the gold label itself).
+* B1 accuracy 51.9% when it admitted an update-window passage (n = 131) vs 35.0% when it did not (n = 20); P
+  admitted one in 149 of 151 items and scored 36.2%, so more window evidence is not the same as more useful
+  evidence.
+* Verdict behaviour: without evidence the model says SUPPORTED for 117 of 151 changed items (REFUTED 2, NEI 32).
+  B1 says NEI 60 times, B3 72 times, P 49 times. 116 of the 151 changed items involve NEI, so part of B1's gain is
+  plausibly more appropriate use of NEI rather than reading the newer evidence; this is an interpretation,
+  not tested. On the 35 decisive flips every retrieval arm is at or below B0 (B0 48.6%, B1 45.7%, B3 34.3%,
+  P 37.1%; n is small).
+* Not checked: whether the gold labels (gpt-4o-mini, from abstract conclusions) are right.
+
