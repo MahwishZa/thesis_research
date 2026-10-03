@@ -1,0 +1,14 @@
+{
+  "arm_settings": "bfc6da6de9d7",
+  "llama_cpp_python": "0.3.35",
+  "max_new_tokens": 160,
+  "model_file": "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+  "n_ctx": 4096,
+  "n_gpu_layers": 0,
+  "n_threads": null,
+  "seed": 42,
+  "system_sha256": "2d0b49c4731e8eebef7a3471a047ac316298327a0abb0d6b5ab45970cfda35e8",
+  "temperature": 0.0,
+  "template_sha256": "d80db0af96e4fee6666a55e70d27e12256b1cbbffc40b8ff39791b285780f127"
+}
