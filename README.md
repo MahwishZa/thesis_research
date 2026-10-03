@@ -115,9 +115,10 @@ account of which factors (label quality, generator strength, baseline
 fidelity) would need to change to test the idea more conclusively. Either
 outcome directly answers Objective 2; this repository does not commit in
 advance to which one it will report. Status (2026-10-02): the pipeline is
-built and unit-tested; gates G0 and G2 have passed. The only accuracy
-evidence so far is the dev comparison of no retrieval (B0) with standard RAG
-(B1); the proposed system has not been run (`docs/log.md`).
+built and unit-tested; gates G0 and G2 have passed. On the dev split
+(151 changed questions) the proposed system did not beat its comparators:
+gate G3 failed, and the proposed system was less accurate than standard RAG
+(`docs/log.md`, Phase 25). The confirmatory split has not been run.
 
 ## Repository structure
 
