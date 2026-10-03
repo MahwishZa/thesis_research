@@ -37,8 +37,8 @@ python -m unittest discover -s _archive -t .         # archived work (RAG² filt
 
 The active suite needs neither torch nor transformers nor network; model-dependent code is exercised
 through interfaces and fixtures. Checked on 2026-10-04: in a fresh virtualenv holding only the four
-base dependencies, with outbound socket connections blocked, both suites pass (681 active and 125 archived
-tests; `log.md`, Phase 29).
+base dependencies, with outbound socket connections blocked, both suites pass (679 active and 127 archived
+tests; `log.md`, Phase 30).
 
 Tests that run the corpus stage scripts work in a lean scaffold copy
 (`evaluation/tests/corpus_scaffold.py`) that never copies `corpus/data/`, so they behave identically on a
@@ -66,7 +66,7 @@ an interruption.
 | 6 | `python -m experiments.medchange.helpfulness --split dev --device cpu` | zero-shot Flan-T5 on 20 pairs per item; 5,946 s for 223 items (1.33 s/pair) |
 | 7 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\<file>.gguf` | llama.cpp CPU: ≈ 18 s per B0 answer, ≈ 66 s with five passages; add `--limit 3` for a timing test |
 | 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
-| 9 | *(retired)* `consistency export` / `score`, the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
+| 9 | *(retired, archived in `_archive/medchange_human_checks/`)* the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
 | 10 | `python -m experiments.medchange.error_analysis --split dev --out-dir experiments\medchange\results` | seconds; uses the existing answers and frozen pools, no generation |
 | 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experiment_plan.md` §1 |
 
@@ -76,17 +76,18 @@ optional `--api-key` (3 requests per second without a key, 10 with one), which c
 their results.
 
 **Stage 2 (evidence-synthesis layer; fully automated, no human labelling).** Two one-time preparations: download a
-second-family GGUF for the audits (Qwen2.5-7B-Instruct Q4_K_M, about 4.7 GB, into `models\`) and have the MedChange
+second-family GGUF for the audits (Qwen2.5-7B-Instruct Q4_K_M, about 4.7 GB, into `models\`) with
+`python -c "from huggingface_hub import hf_hub_download; hf_hub_download('bartowski/Qwen2.5-7B-Instruct-GGUF', 'Qwen2.5-7B-Instruct-Q4_K_M.gguf', local_dir='models')"` and have the MedChange
 clone from step 1. Then two commands run everything; each is resumable (rerun the same command after an
 interruption), stops at the first failed step or gate, and with `--commit` commits and pushes the results to `main`.
 
 | # | Command | What it does and costs (*estimated* unless marked measured) |
 |---|---|---|
 | 11 | `python -m experiments.medchange.diagnostics --split dev --out-dir experiments\medchange\results` | P0, **done**: seconds, no model |
-| 12 | `python -m experiments.medchange.stance --split dev --pilot --n-threads 6 --model-path models\<llama>.gguf` | pilot, **done**: 960 papers, 6.76 s per paper (measured, ≈ 1.8 h) |
+| 12 | `python -m experiments.medchange.stance --split dev --pilot --n-threads 6 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` | pilot, **done**: 960 papers, 6.76 s per paper (measured, ≈ 1.8 h) |
 | 13 | `python -m experiments.medchange.stance_check report` | gate 1, machine checks only: **PASS** on the pilot |
-| 14 | `python -m experiments.medchange.pipeline dev --model-path models\<llama>.gguf --judge-path models\<qwen>.gguf --medchange-dir ..\MedChange --commit` | checks gate 1 and integrity; dev label audit (≈ 1 h); automatic consistency check (≈ 0.6 h); stance on all dev papers with both wordings (3,616 papers, ≈ 6.8 h); `synthesis fit` with repeated cross-validation, gate 2 and the frozen model; writes `results\DEV_REPORT.md`; commits and pushes the frozen model. **Stops here** |
-| 15 | read `results\DEV_REPORT.md`; if you agree: `python -m experiments.medchange.pipeline confirm --go --model-path models\<llama>.gguf --judge-path models\<qwen>.gguf --medchange-dir ..\MedChange --commit` | refuses unless the frozen model is on `origin/main` and the generator is the dev one; confirmatory probe and pools (≈ 8 h), B0 and B1 answers (≈ 11 h), stance with both wordings and the frozen-model prediction (≈ 16 h; only if gate 2 passed, otherwise RQ1 only), the after-freeze audits (≈ 2.6 h), the analysis and `results\FINDINGS.md` |
+| 14 | `python -m experiments.medchange.pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ..\MedChange --commit` | checks gate 1 and integrity; dev label audit (≈ 1 h); automatic consistency check (≈ 0.6 h); stance on all dev papers with both wordings (3,616 papers, ≈ 6.8 h); `synthesis fit` with repeated cross-validation, gate 2 and the frozen model; writes `results\DEV_REPORT.md`; commits and pushes the frozen model. **Stops here** |
+| 15 | read `results\DEV_REPORT.md`; if you agree: `python -m experiments.medchange.pipeline confirm --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ..\MedChange --commit` | refuses unless the frozen model is on `origin/main` and the generator is the dev one; confirmatory probe and pools (≈ 8 h), B0 and B1 answers (≈ 11 h), stance with both wordings and the frozen-model prediction (≈ 16 h; only if gate 2 passed, otherwise RQ1 only), the after-freeze audits (≈ 2.6 h), the analysis and `results\FINDINGS.md` |
 | 16 | `python -m experiments.medchange.pipeline status` | which gates passed and which files exist |
 
 Add `--dry-run` to either phase to print its steps without running anything. The individual modules

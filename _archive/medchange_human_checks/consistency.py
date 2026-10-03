@@ -1,12 +1,12 @@
-"""G1 human check: is the stated VERDICT consistent with the justification?
+"""RETIRED 2026-10-04 (archived): G1 human check; is the stated VERDICT consistent with the justification?
 
 Exports a seeded sample of answers (arm hidden) to a CSV; a human reads each answer and
 fills ``consistent`` with Y or N; ``score`` reports the agreement and the parse rate.
 A verdict line that contradicts its own justification (or a justification that hedges
 between verdicts) is N. Pre-stated G1 pass: parse rate >= 95% and consistency >= 90%.
 
-    python -m experiments.medchange.consistency export --n 50
-    python -m experiments.medchange.consistency score
+    python -m _archive.medchange_human_checks.consistency export --n 50
+    python -m _archive.medchange_human_checks.consistency score
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ import random
 import sys
 from pathlib import Path
 
-from .generate_answers import load_jsonl
+from experiments.medchange.generate_answers import load_jsonl
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[2] / "experiments" / "medchange"
 MIN_PARSE, MIN_CONSISTENT = 0.95, 0.90
 
 

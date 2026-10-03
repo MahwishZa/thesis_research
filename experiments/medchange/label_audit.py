@@ -10,7 +10,7 @@ labelers agree on the newest version are "label-stable"; the stage-2 analysis al
 on that subset (descriptive; the primary analysis keeps all items). Agreement is label
 *reproducibility*, not medical truth: two language models can share a bias.
 
-    python -m experiments.medchange.label_audit --split dev --medchange-dir ..\\MedChange --model-path models\\<qwen>.gguf
+    python -m experiments.medchange.label_audit --split dev --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 
 The confirmatory split is audited only after the frozen stage-2 model file exists (so its labels are
 not looked at before the design is frozen).

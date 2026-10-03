@@ -1,9 +1,9 @@
 """One-command, resumable stage-2 pipeline with automatic gates (no human labelling).
 
-    python -m experiments.medchange.pipeline dev --model-path models\\<llama>.gguf ^
-        --judge-path models\\<qwen>.gguf --medchange-dir ..\\MedChange --commit
-    python -m experiments.medchange.pipeline confirm --go --model-path models\\<llama>.gguf ^
-        --judge-path models\\<qwen>.gguf --medchange-dir ..\\MedChange --commit
+    python -m experiments.medchange.pipeline dev --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf ^
+        --judge-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ..\\MedChange --commit
+    python -m experiments.medchange.pipeline confirm --go --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf ^
+        --judge-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ..\\MedChange --commit
     python -m experiments.medchange.pipeline status
 
 ``dev`` checks gate 1 on the pilot, runs the dev audits (label audit, consistency check), the stance step

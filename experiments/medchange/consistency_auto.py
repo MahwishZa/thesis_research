@@ -7,7 +7,7 @@ the explanation of a seeded, arm-balanced sample of answers (the verdict line re
 verdict it supports; we report how often that equals the stated verdict, per arm. A 7B judge makes its
 own mistakes, so the agreement is reported, not thresholded.
 
-    python -m experiments.medchange.consistency_auto --split dev --model-path models\\<qwen>.gguf
+    python -m experiments.medchange.consistency_auto --split dev --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 """
 
 from __future__ import annotations

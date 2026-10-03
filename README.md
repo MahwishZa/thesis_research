@@ -209,6 +209,6 @@ python -m experiments.shared.runners.run_end_to_end
 python -m experiments.medchange.build_benchmark --medchange-dir ../MedChange
 
 # Stage 2, automated: the dev phase (stance, audits, fit, gate 2, report), then, after your go, the confirmatory phase
-python -m experiments.medchange.pipeline dev --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/<qwen>.gguf --medchange-dir ../MedChange --commit
-python -m experiments.medchange.pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/<qwen>.gguf --medchange-dir ../MedChange --commit
+python -m experiments.medchange.pipeline dev --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ../MedChange --commit
+python -m experiments.medchange.pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/Qwen2.5-7B-Instruct-Q4_K_M.gguf --medchange-dir ../MedChange --commit
 ```

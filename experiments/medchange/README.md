@@ -17,7 +17,6 @@ Commands and costs: `docs/reproducibility.md` §3.
 | `generate_answers.py` | one answer per (item, arm) with llama.cpp, resumable; records the generator configuration and refuses to resume under a different one | GGUF model | `answers_<split>.jsonl`, `answers_<split>.config.json` |
 | `analyze.py` | accuracy, outdated rate, retrieval-level metrics, paired McNemar + Holm, gates G2/G3 | none | stdout or `--out` |
 | `error_analysis.py` | where wrong answers on changed items go wrong: retrieval miss, admission miss, evidence admitted but still wrong; accuracy with/without update-window evidence | none | `results/error_analysis_<split>.json`, `.md` |
-| `consistency.py` | **retired** human check of stated verdicts (kept for history) | none | `consistency_sheet.csv` |
 | `label_audit.py` | independent re-labelling of every gold label with the authors' rubric by a second-family model (agreement, kappa, label-stable items); confirmatory split only after the frozen model exists | second GGUF model | `label_audit_<split>.jsonl`; `results/label_audit_<split>.json`, `.md` |
 | `consistency_auto.py` | parse-rate gate and an independent judge's agreement with the stated verdict on a seeded sample | second GGUF model | `consistency_auto_<split>.jsonl`; `results/consistency_auto_<split>.*` |
 | `findings.py` | writes `results/DEV_REPORT.md` and `results/FINDINGS.md` in plain language from the computed results | none | `results/DEV_REPORT.md`, `results/FINDINGS.md` |

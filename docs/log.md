@@ -948,3 +948,16 @@ data: the audits (need a second GGUF model), the dev stance run of both wordings
 
 **Next:** `pipeline dev` (about 8.4 h), read `results/DEV_REPORT.md`, then `pipeline confirm --go` (about 38 h; about
 22 h if gate 2 fails); commands in `reproducibility.md` §3.
+
+## Phase 30 — Repository audit and cleanup (Oct 4)
+
+Whole-repository audit (local working tree and `origin/main`, both at the same commit; only `main` exists on GitHub).
+Changes: the retired human consistency check (`consistency.py`, never run) and its tests moved to
+`_archive/medchange_human_checks/`; `experiments/medchange/results/README.md` rewritten (it had a broken sentence and
+listed the committed diagnostics and error-analysis files as uncommitted); placeholder model paths in the run
+commands replaced by the real file names, with the Qwen download command. First real run of `pipeline dev` on the
+student's laptop passed all six integrity checks and stopped, as designed, because the audit model was not yet
+downloaded. Verification: 679 active and 127 archived tests pass (also in a fresh virtualenv with only the base
+dependencies and network blocked); the suites leave the tree unchanged; `pyflakes` reports only the intentional
+import in `encoders.py`. No experiment was run and no result changed in this phase.
+
