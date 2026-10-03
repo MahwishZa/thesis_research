@@ -81,7 +81,9 @@ override, parse failure, or gold-label error — and reported by change type, up
 | Benchmark, dev candidate pools, helpfulness scores, arms, generation harness, analysis script | built; 6 real generations run for timing (n = 3 items, no accuracy conclusion) |
 | Gate G0 (evidence headroom) | passed (94.0% of changed dev items) |
 | Dev run of B0 and B1 (151 changed + 75 unchanged items) | done: accuracy on changed items 41.1% (B0) vs 49.7% (B1), difference +8.6 pp, 95% CI [0.7, 16.6], exact McNemar p = 0.060; unchanged 53.3% vs 60.0%, p = 0.42; 0 unparsed answers; gate G2 passed (B1 changed 35.8% of verdicts) |
-| Gate G1 (human consistency check), gate G3, arms B2, B3, P, C1 | pending; no result for the proposed system exists yet |
+| Dev run of B2, B3, P, C1 (changed items, accuracy; difference vs B1 with exact McNemar p) | B2 37.1% (−12.6 pp, p = 0.001), B3 45.7% (−4.0 pp, p = 0.38), P 35.8% (−13.9 pp, p = 0.0008), C1 37.7%; P − B2 = −1.3 pp, P − C1 = −2.0 pp, P − B3 = −9.9 pp (p = 0.017); unchanged items 58.7–61.3% for all arms, no significant differences; 0 unparsed |
+| Gate G3 | **failed** (needs P − B2 ≥ +5 pp and P − C1 ≥ +2.5 pp; observed −1.3 and −2.0) |
+| Gate G1 (human consistency check) | pending (the researcher fills `consistency_sheet.csv`) |
 | Confirmatory split (pools, helpfulness, generation) | not started |
 | Human hallucination annotation; error analysis; second generator; Alzheimer's case study | planned |
 

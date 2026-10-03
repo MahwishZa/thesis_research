@@ -732,10 +732,11 @@ phase.
   retrieval-level checks, McNemar with Holm, gates) and the G1 consistency check. Alzheimer's corpus
   (114,256 PMC records, 4,377,041 chunks), question pool (113 usable) and dense index (4,376,141 x 768):
   built, secondary.
-* **Gates:** G0 passed (94.0% of changed dev items). G1, G2 and G3 have not been run on dev; running the
-  arms B0 and B1 on all 226 dev items (about 5.3 h) is the next step.
-* **Results:** none. No accuracy, hallucination or retrieval comparison exists; the only generations
-  made are six timing answers (3 items x 2 arms).
+* **Gates (updated through Phase 25):** G0 passed; G2 passed; **G3 failed** (P − B2 = −1.3 pp, P − C1 =
+  −2.0 pp); G1 pending the student's manual check.
+* **Results:** dev split only, all six arms (Phases 24-25): standard RAG (B1) is the most accurate arm on
+  changed items (49.7%); the proposed system P is 13.9 pp lower (p = 0.0008). The confirmatory split has not
+  been run and, per the plan, is not run for P as designed.
 * **Not built:** frozen pools for the confirmatory split; the human hallucination annotation; a second
   generator; the Alzheimer's as-of case study.
 * **Abandoned and archived:** the RAG² filter reproduction (the checkpoint is not distributed; local
@@ -762,3 +763,38 @@ Outdated-verdict rate on changed items: 36.4% (B0), 31.8% (B1). Gate G2 passed: 
 barely above zero and the test is not significant at 0.05), so the generator does use evidence; this is a
 dev comparison without correction and says nothing yet about the proposed system. Next: G1 (the student
 fills `consistency_sheet.csv`, then `consistency score`), then B2, B3, P, C1 on dev for G3.
+
+## Phase 25 — Dev run of all six arms; gate G3 failed (Oct 2-3)
+
+904 further answers (B2, B3, P, C1 x 226 items) on the student's laptop with the current harness
+(`answers_dev.config.json`: Llama-3-8B-Instruct Q4_K_M, SHA-256 8ba9baf3..., n_ctx 4096, 160 tokens, greedy,
+seed 42, llama-cpp-python 0.3.35); 0 unparsed answers. Committed in `experiments/medchange/results/`.
+
+Accuracy on changed items (n = 151), with exact McNemar against B1 (uncorrected unless stated):
+
+| Arm | Accuracy | Outdated-verdict rate | vs B1 | Update-window share of admitted passages |
+|---|---|---|---|---|
+| B0 no evidence | 41.1% | 36.4% | | 0 |
+| B1 cross-encoder | 49.7% | 31.8% | | 51.0% |
+| B2 helpfulness | 37.1% | 38.4% | −12.6 pp, p = 0.001 | 51.7% |
+| B3 cross-encoder + recency | 45.7% | 33.1% | −4.0 pp, p = 0.38 | 74.3% |
+| P helpfulness + recency | 35.8% | 40.4% | −13.9 pp, p = 0.0008 (Holm 0.0024) | 74.7% |
+| C1 P with shuffled dates | 37.7% | 39.1% | | |
+
+P − B2 = −1.3 pp (p = 0.80); P − C1 = −2.0 pp (p = 0.65); P − B3 = −9.9 pp (p = 0.017, Holm 0.033). On
+unchanged items all arms score 53-61% with no significant difference. **Gate G3 failed** (needs +5 pp and
++2.5 pp). G2 had passed (B1 changed 35.8% of verdicts relative to B0).
+
+What this does and does not show. (1) The mechanism works as designed: recency raised the share of admitted
+passages from the update window from about 51% to about 74% and cut mean passage age from 10.7 to 6.3
+years. (2) It did not make answers more correct: adding recency to the helpfulness ranking changed nothing
+(P about B2 about C1), and adding it to the cross-encoder ranking was slightly, not significantly, worse
+(B3 below B1). (3) The zero-shot Flan-T5 helpfulness score is a worse selector than the cross-encoder: B2 shares
+only 21% of its passages with B1 and loses 12.6 pp. The most damaging factor for P is therefore its relevance
+component, not its recency component. (4) Dev has 151 changed items (standard error about 4.5 pp), so small
+effects cannot be excluded, but a gain of the pre-stated size is not there. (5) Per the plan, the confirmatory
+split is not run for P as designed. Any redesigned variant (for example recency on top of the cross-encoder)
+would be a post-hoc change, must be labelled exploratory, and needs fresh data. Next: gate G1 (the student
+fills `consistency_sheet.csv`), then error analysis on the existing answers (no new generation): is the
+update-window evidence in the pool, is it admitted, does the generator follow it.
+

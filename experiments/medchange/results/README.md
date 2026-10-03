@@ -7,4 +7,4 @@ and saved analyses (`analysis_<split>.json`, written by `analyze --out`). Copy t
 commit them; the frozen pools and abstracts stay in the gitignored `../data/`. See
 `docs/reproducibility.md` §5.
 
-Nothing has been committed here yet. The dev B0/B1 answers exist only on the researcher's machine and should be copied here (`docs/evaluation.md` §7).
+Committed: `answers_dev.jsonl`, `answers_dev.config.json` and `analysis_dev.json` (all six arms, dev split; `docs/log.md` Phase 25).
