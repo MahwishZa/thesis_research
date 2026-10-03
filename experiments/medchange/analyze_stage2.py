@@ -120,7 +120,64 @@ def _family(results: dict) -> dict:
     return out
 
 
-def stage2_report(items: dict, answers: dict, primary: str, split: str) -> dict:
+def stable_difference(items: dict, answers: dict, a: str, b: str, stable_ids: Sequence[str]) -> Optional[dict]:
+    """Accuracy of arm ``a`` minus arm ``b`` over the label-stable items (descriptive; no test)."""
+    keep = {i: it for i, it in items.items() if i in set(stable_ids)}
+    ca = correct_map(keep, answers, a, ("changed", "unchanged"))
+    cb = correct_map(keep, answers, b, ("changed", "unchanged"))
+    ids = sorted(set(ca) & set(cb))
+    if not ids:
+        return None
+    return {"n": len(ids), "diff_a_minus_b": round(sum(ca[i] - cb[i] for i in ids) / len(ids), 4)}
+
+
+def decide(rep: dict, stable: Optional[dict] = None) -> dict:
+    """The pre-declared reading of a stage-2 report (``docs/experiment_plan.md`` §10).
+
+    A *genuine positive* needs ALL of: RQ2 confirmed against B1R; the hybrid also confirmed against
+    the raw B1 answer (B1R is slightly weaker than B1 on dev, so beating it alone is not enough);
+    macro-F1 not below B1R's (the gain is not just more abstaining); a non-negative difference on the
+    label-stable items; and, when the selected hybrid uses recency weights, a confirmed win over its
+    date-shuffled control. RQ2 confirmed without all of these is a *fragile positive*."""
+    primary = rep["primary_arm"]
+    pf, sf, per = rep["primary_family"], rep["secondary_family"], rep["per_arm"]
+    rq1 = pf.get("RQ1 B1 vs B0", {})
+    if primary not in per:                      # gate 2 failed on dev: the synthesis arm was not run
+        return {"RQ1": "confirmed" if rq1.get("confirmed") else "not confirmed", "RQ1_note": None,
+                "RQ2_tier": "not run", "criteria": {}, "missing_inputs": []}
+    rq2 = pf.get(f"RQ2 {primary} vs B1R", {})
+    vs_b1 = sf.get(f"{primary} vs B1", {})
+    control = {"H1": "H1C", "H3": "H3C"}.get(primary)
+    f1 = lambda arm: per.get(arm, {}).get("macro_f1")
+    criteria = {
+        "RQ2 confirmed against B1R": bool(rq2.get("confirmed")),
+        "hybrid confirmed against raw B1": bool(vs_b1.get("confirmed")),
+        "macro-F1 not below B1R": f1(primary) is not None and f1("B1R") is not None and f1(primary) >= f1("B1R"),
+        "label-stable difference not negative": None if stable is None else stable["diff_a_minus_b"] >= 0,
+    }
+    if control:
+        criteria[f"recency earned: confirmed against {control}"] = bool(sf.get(f"{primary} vs {control}", {}).get("confirmed"))
+    unknown = [k for k, v in criteria.items() if v is None]
+    if criteria["RQ2 confirmed against B1R"] and all(v for v in criteria.values() if v is not None) and not unknown:
+        tier = "genuine positive"
+    elif criteria["RQ2 confirmed against B1R"]:
+        tier = "fragile positive"
+    else:
+        tier = "not confirmed"
+    def dec(arm):
+        rc = per.get(arm, {}).get("recall", {})
+        vals = [rc.get("SUPPORTED"), rc.get("REFUTED")]
+        return None if any(v is None for v in vals) else sum(vals) / 2
+    note = None
+    if rq1.get("confirmed") and dec("B1") is not None and dec("B0") is not None:
+        note = ("the retrieval gain comes mostly through abstention (average SUPPORTED/REFUTED recall did not rise)"
+                if dec("B1") <= dec("B0") else
+                "the retrieval gain is accompanied by higher SUPPORTED/REFUTED recall, not only more abstention")
+    return {"RQ1": "confirmed" if rq1.get("confirmed") else "not confirmed", "RQ1_note": note,
+            "RQ2_tier": tier, "criteria": criteria, "missing_inputs": unknown}
+
+
+def stage2_report(items: dict, answers: dict, primary: str, split: str, stable_ids: Optional[Sequence[str]] = None) -> dict:
     both = ("changed", "unchanged")
     arms = [a for a in ARM_ORDER if any((i, a) in answers for i in items)]
     control = {"H1": "H1C", "H3": "H3C"}.get(primary)
@@ -134,9 +191,13 @@ def stage2_report(items: dict, answers: dict, primary: str, split: str) -> dict:
         secondary[f"{primary} vs H0"] = paired(items, answers, primary, "H0", both)
     if control:
         secondary[f"{primary} vs {control}"] = paired(items, answers, primary, control, both)
-    return {"split": split, "status": "confirmatory" if split == "confirm" else "exploratory (dev; hybrids are out-of-fold)",
-            "primary_arm": primary, "n_items": len(items), "per_arm": summarize(items, answers, arms),
-            "primary_family": primary_family, "secondary_family": _family(secondary)}
+    rep = {"split": split, "status": "confirmatory" if split == "confirm" else "exploratory (dev; hybrids are out-of-fold)",
+           "primary_arm": primary, "n_items": len(items), "per_arm": summarize(items, answers, arms),
+           "primary_family": primary_family, "secondary_family": _family(secondary)}
+    stable = None if stable_ids is None else stable_difference(items, answers, primary, "B1R", stable_ids)
+    rep["label_stable"] = stable
+    rep["reading"] = decide(rep, stable)
+    return rep
 
 
 def _pct(x) -> str:
@@ -164,6 +225,14 @@ def to_markdown(rep: dict) -> str:
             lines.append(f"| {name} | {100 * v['diff_a_minus_b']:+.1f} | {100 * v['ci95'][0]:+.1f} to {100 * v['ci95'][1]:+.1f} | "
                          f"{v['a_only_correct']} / {v['b_only_correct']} | {v['mcnemar_p']:.4f} | {v['holm_p']:.4f} | "
                          f"{'yes' if v['confirmed'] else 'no'} |")
+    r = rep["reading"]
+    lines += ["", "## Pre-declared reading", "", f"* RQ1 (retrieval vs no evidence): **{r['RQ1']}**"
+              + (f" ({r['RQ1_note']})" if r["RQ1_note"] else ""),
+              f"* RQ2 (synthesis layer): **{r['RQ2_tier']}**"]
+    lines += [f"  * {'met' if v else ('not met' if v is False else 'not assessed')}: {k}" for k, v in r["criteria"].items()]
+    if rep.get("label_stable"):
+        lines.append(f"* Label-stable items: n = {rep['label_stable']['n']}, "
+                     f"{rep['primary_arm']} minus B1R = {100 * rep['label_stable']['diff_a_minus_b']:+.1f} pp")
     lines += ["", "A result is *confirmed* only if the Holm-adjusted p is below .05, the 95% interval excludes 0 and "
               "the difference is positive. Everything else is an estimate with an interval, not a finding."]
     return "\n".join(lines) + "\n"
@@ -176,9 +245,15 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default=str(HERE / "results" / "synthesis_model.json"))
     ap.add_argument("--primary", default=None, help="selected hybrid (default: from the frozen model file)")
     ap.add_argument("--out-dir", default=None, help="write stage2_analysis_<split>.json/.md here")
+    ap.add_argument("--rq1-only", action="store_true",
+                    help="confirmatory run without the synthesis arms (gate 2 failed on dev): RQ1 only")
+    ap.add_argument("--label-audit", default=None,
+                    help="label_audit_<split>.json (its stable_item_ids define the label-stable subset)")
     args = ap.parse_args(argv)
     data = Path(args.data_dir)
     primary = args.primary
+    if primary is None and args.rq1_only:
+        primary = "H0"                           # placeholder name; no synthesis arm exists in this mode
     if primary is None:
         model = Path(args.model)
         if not model.is_file():
@@ -188,7 +263,7 @@ def main(argv=None) -> int:
     items = {r["item_id"]: r for r in load_jsonl(data / "benchmark.jsonl")
              if r["split"] == args.split and not r["likely_label_noise"]}
     answers = load_arms(data, args.split)
-    needed = ("B0", "B1", "B1R", primary)
+    needed = ("B0", "B1") if args.rq1_only else ("B0", "B1", "B1R", primary)
     missing = [a for a in needed if not any((i, a) in answers for i in items)]
     if missing:
         print(f"missing arms for {args.split}: {', '.join(missing)}", file=sys.stderr)
@@ -197,7 +272,10 @@ def main(argv=None) -> int:
     if args.split == "confirm" and incomplete:
         print(f"the confirmatory analysis needs every item for: {', '.join(incomplete)}", file=sys.stderr)
         return 2
-    rep = stage2_report(items, answers, primary, args.split)
+    stable_ids = None
+    if args.label_audit and Path(args.label_audit).is_file():
+        stable_ids = json.loads(Path(args.label_audit).read_text(encoding="utf-8")).get("stable_item_ids")
+    rep = stage2_report(items, answers, primary, args.split, stable_ids)
     text = to_markdown(rep)
     if args.out_dir:
         out = Path(args.out_dir)

@@ -48,13 +48,15 @@ def make_world(n_per_class=30, seed=5, informative=True, n_cands=10, split="dev"
     return items, pools, probs, b1
 
 
-def write_world(directory: Path, world, split, wording="A", backend="fake:test"):
+def write_world(directory: Path, world, split, wording="both", backend="fake:test"):
     items, pools, probs, b1 = world
+    wordings = ("A", "B") if wording == "both" else (wording,)
     rows = {
         "benchmark.jsonl": items,
         f"frozen_{split}.jsonl": list(pools.values()),
-        f"stance_{split}.jsonl": [{"item_id": i, "pmid": p, "wording": wording, "control": False, "backend": backend,
-                                   "probs": list(v), "argmax": "supports", "rank": 1} for (i, p), v in probs.items()],
+        f"stance_{split}.jsonl": [{"item_id": i, "pmid": p, "wording": w, "control": False, "backend": backend,
+                                   "probs": list(v), "argmax": "supports", "rank": 1}
+                                  for (i, p), v in probs.items() for w in wordings],
         f"answers_{split}.jsonl": [{"item_id": i, "arm": "B1", "verdict": v, "admitted": [], "seconds": 1.0}
                                    for i, v in b1.items()],
     }
@@ -131,6 +133,18 @@ class WeightAndFeatureTests(unittest.TestCase):
                 {"item_id": "i", "pmid": "4", "wording": "B", "control": False, "probs": [1, 0, 0]}]
         self.assertEqual(S.load_stance_probs(rows, "A"),
                          {("i", "1"): (0.5, 0.3, 0.2), ("i", "2"): (0.0, 0.0, 1.0)})
+
+
+    def test_both_wordings_are_averaged_and_a_half_ensemble_is_left_out(self):
+        rows = [{"item_id": "i", "pmid": "1", "wording": "A", "control": False, "probs": [0.8, 0.1, 0.1]},
+                {"item_id": "i", "pmid": "1", "wording": "B", "control": False, "probs": [0.4, 0.3, 0.3]},
+                {"item_id": "i", "pmid": "2", "wording": "A", "control": False, "probs": [1.0, 0.0, 0.0]},
+                {"item_id": "i", "pmid": "3", "wording": "A", "control": False, "probs": [0.1, 0.1, 0.8]},
+                {"item_id": "i", "pmid": "3", "wording": "B", "control": False, "probs": None}]
+        got = S.load_stance_probs(rows, "both")
+        self.assertEqual(set(got), {("i", "1"), ("i", "3")})            # paper 2 lacks wording B
+        self.assertTrue(all(abs(a - b) < 1e-9 for a, b in zip(got[("i", "1")], (0.6, 0.2, 0.2))))
+        self.assertTrue(all(abs(a - b) < 1e-9 for a, b in zip(got[("i", "3")], (0.05, 0.05, 0.9))))  # invalid = neither
 
 
 class FittedLayerTests(unittest.TestCase):
@@ -241,7 +255,6 @@ class FreezeAndPredictTests(unittest.TestCase):
 
     def _fit(self, d, out):
         write_world(d, make_world(20, seed=7), "dev")
-        (d / "stance_choice.json").write_text(json.dumps({"wording": "A"}), encoding="utf-8")
         with mock.patch("sys.stdout"):
             return S.main(["fit", "--data-dir", str(d), "--out-dir", str(out), "--repeats", "2"])
 
@@ -254,20 +267,19 @@ class FreezeAndPredictTests(unittest.TestCase):
             arms = [json.loads(l) for l in (d / "synthesis_dev.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertTrue((out / "synthesis_cv_dev.md").exists())
         self.assertEqual(model["fit_split"], "dev")
-        self.assertEqual(model["stance"]["wording"], "A")
+        self.assertEqual(model["stance"]["wording"], "both")
         self.assertIn(model["selected"], S.HYBRIDS)
         self.assertEqual(set(model["models"]), set(S.VARIANTS))
         self.assertEqual(len(arms), 60 * len(S.VARIANTS))
         self.assertEqual({r["arm"] for r in arms}, set(S.VARIANTS))
 
-    def test_fit_needs_a_chosen_wording_and_complete_inputs(self):
+    def test_fit_needs_complete_inputs_and_both_wordings(self):
         with TemporaryDirectory() as tmp:
             d, out = Path(tmp) / "data", Path(tmp) / "results"
             d.mkdir()
-            write_world(d, make_world(5, seed=7), "dev")
+            write_world(d, make_world(5, seed=7), "dev", wording="A")
             with mock.patch("sys.stderr"):
                 self.assertEqual(S.main(["fit", "--data-dir", str(d), "--out-dir", str(out)]), 2)
-                (d / "stance_choice.json").write_text(json.dumps({"wording": "A"}), encoding="utf-8")
                 (d / "stance_dev.jsonl").write_text("", encoding="utf-8")
                 self.assertEqual(S.main(["fit", "--data-dir", str(d), "--out-dir", str(out)]), 2)
 
@@ -309,6 +321,57 @@ def analysis_world(n_changed=80, n_unchanged=40, b0_correct=0.4, b1_boost=30):
         for arm, verdict in (("B0", b0), ("B1", b1), ("B1R", b1), ("H0", b1), ("S0", wrong), ("H1C", b1)):
             answers[(iid, arm)] = {"item_id": iid, "arm": arm, "verdict": verdict, "seconds": 1.0, "admitted": []}
     return items, answers
+
+
+class DecisionTests(unittest.TestCase):
+    """The pre-declared reading: a genuine positive needs every criterion, not only RQ2."""
+
+    @staticmethod
+    def report(rq2=True, vs_b1=True, f1_h=0.5, f1_r=0.45, primary="H0", control_ok=True, rq1=True,
+               rec_b1=(0.6, 0.2), rec_b0=(0.8, 0.0)):
+        def arm(f1, rec):
+            return {"macro_f1": f1, "recall": {"SUPPORTED": rec[0], "REFUTED": rec[1], "NOT ENOUGH INFORMATION": 0.5}}
+        sec = {f"{primary} vs B1": {"confirmed": vs_b1}}
+        if primary in ("H1", "H3"):
+            sec[f"{primary} vs {primary}C"] = {"confirmed": control_ok}
+        return {"primary_arm": primary,
+                "primary_family": {"RQ1 B1 vs B0": {"confirmed": rq1}, f"RQ2 {primary} vs B1R": {"confirmed": rq2}},
+                "secondary_family": sec,
+                "per_arm": {primary: arm(f1_h, (0.7, 0.3)), "B1R": arm(f1_r, (0.7, 0.2)),
+                            "B1": arm(0.4, rec_b1), "B0": arm(0.3, rec_b0)}}
+
+    def test_all_criteria_met_is_a_genuine_positive(self):
+        out = AN.decide(self.report(), {"n": 100, "diff_a_minus_b": 0.02})
+        self.assertEqual(out["RQ2_tier"], "genuine positive")
+
+    def test_each_missing_criterion_downgrades_to_fragile(self):
+        stable = {"n": 100, "diff_a_minus_b": 0.02}
+        for kw in ({"vs_b1": False}, {"f1_h": 0.40}, {"primary": "H1", "control_ok": False}):
+            self.assertEqual(AN.decide(self.report(**kw), stable)["RQ2_tier"], "fragile positive", kw)
+        self.assertEqual(AN.decide(self.report(), {"n": 100, "diff_a_minus_b": -0.01})["RQ2_tier"], "fragile positive")
+        self.assertEqual(AN.decide(self.report())["RQ2_tier"], "fragile positive")      # label audit not supplied
+
+    def test_unconfirmed_rq2_is_not_confirmed_whatever_else_holds(self):
+        self.assertEqual(AN.decide(self.report(rq2=False), {"n": 9, "diff_a_minus_b": 0.1})["RQ2_tier"], "not confirmed")
+
+    def test_the_retrieval_gain_is_labelled_abstention_when_decisive_recall_did_not_rise(self):
+        self.assertIn("abstention", AN.decide(self.report())["RQ1_note"])
+        self.assertIn("higher", AN.decide(self.report(rec_b1=(0.9, 0.4), rec_b0=(0.8, 0.0)))["RQ1_note"])
+        self.assertIsNone(AN.decide(self.report(rq1=False))["RQ1_note"])
+
+    def test_a_missing_synthesis_arm_is_reported_as_not_run(self):
+        rep = self.report()
+        del rep["per_arm"]["H0"]
+        out = AN.decide(rep)
+        self.assertEqual((out["RQ2_tier"], out["RQ1"]), ("not run", "confirmed"))
+
+    def test_stable_difference_is_computed_on_the_stable_items_only(self):
+        items = {"a": {"kind": "changed", "newest": {"label": "SUPPORTED"}},
+                 "b": {"kind": "changed", "newest": {"label": "SUPPORTED"}}}
+        ans = {("a", "H0"): {"verdict": "SUPPORTED"}, ("a", "B1R"): {"verdict": "REFUTED"},
+               ("b", "H0"): {"verdict": "REFUTED"}, ("b", "B1R"): {"verdict": "SUPPORTED"}}
+        self.assertEqual(AN.stable_difference(items, ans, "H0", "B1R", ["a"]), {"n": 1, "diff_a_minus_b": 1.0})
+        self.assertIsNone(AN.stable_difference(items, ans, "H0", "B1R", []))
 
 
 class AnalysisTests(unittest.TestCase):

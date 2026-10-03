@@ -20,11 +20,11 @@ answer.
 
 | | Primary: MedChange as-of benchmark | Secondary: Alzheimer's disease case study |
 |---|---|---|
-| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); `experiments/medchange/` | 113 usable human-reviewed questions (99 with a verdict label); `experiments/shared/questions/` |
+| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); `experiments/medchange/` | 113 usable questions reviewed earlier by the researcher (99 with a verdict label; not extended, see `experiment_plan.md` §11); `experiments/shared/questions/` |
 | Question date t_q | the newest review's publication date | the cited review's date (**planned**; the earlier pilot used the run date) |
 | Evidence | PubMed abstracts first public strictly before t_q, fetched per question | local Alzheimer's corpus restricted to passages before t_q (**planned**) |
 | Retrieval | PubMed best match → MedCPT dense rank → MedCPT cross-encoder rerank | MedCPT dense retrieval over the 4.4M-chunk local index → rerank |
-| Status | benchmark, dev pools, six stage-1 arms and the dev run done; stage-2 code built, pilot pending; confirmatory pools not built | corpus, question pool and index built; as-of case-study run **not implemented** |
+| Status | benchmark, dev pools, six stage-1 arms and the dev run done; stage-2 code built, pilot passed, dev run pending; confirmatory pools not built | corpus, question pool and index built; as-of case-study run **not implemented** |
 
 The primary setting exists because the Alzheimer's pool alone cannot test a temporal claim (only 5 of
 113 questions are known verdict changes) or reach useful power; see `experiment_plan.md` §13.
@@ -97,7 +97,7 @@ TempRALM (Gade & Jetcheva). The proposed arm's only difference from B3 is the re
 RESULTS and CONCLUSIONS sections (at most 200 words; an abstract without labelled sections gives its last
 three sentences) and answers with one letter: supports / contradicts / neither. The three probabilities come
 from the first output token's distribution over the three letters. Two wordings with different letter
-orders exist; the hand check picks the better one. This replaces reading five abstracts at once (which is
+orders exist; both are run and their probabilities averaged (no human chooses). This replaces reading five abstracts at once (which is
 sensitive to order: the same five papers in another order change 14% of verdicts) by eight independent,
 order-free judgements.
 
@@ -149,7 +149,7 @@ validation split by maximising currency, which made its primary metric circular;
 §13.) **Stage 2:** the logistic layer's coefficients are fitted on the dev split (226 items) and frozen
 before any confirmatory stance output exists; its penalty (5.0), the top-k (8), the snippet length, the
 half-life (1,095 days) and the study-type weights (3 / 2 / 1) are fixed in advance and not tuned. The only
-data-dependent choices are the stance wording (hand check) and which of H0–H3 is selected (dev
+data-dependent choice is which of H0–H3 is selected (dev
 cross-validation, 1.0 pp margin).
 
 ## 8. Ablation
@@ -170,7 +170,7 @@ step reads the paper rather than the question.
 | Fixed-budget top-5, no θ | original Temporal Filter | removes a tuning degree of freedom | none among the arms |
 | 4-bit GGUF generator on CPU | RAG²'s generator | hardware | applies to all arms alike |
 | PubMed abstracts, as-of | local full-text corpus | per-question as-of retrieval across medicine | the local corpus is used only for the case study |
-| Model-generated gold labels | human-verified labels | the MedChange release | ~100 labels to be human-checked |
-| Stance judged paper by paper by the same 4-bit 8B model, from title + RESULTS + CONCLUSIONS | holistic reading of five full abstracts | removes order sensitivity; conclusion-focused inputs are much shorter than full abstracts (measured in the P0 diagnostics) | stage 2 only; quality checked by a 40-paper hand check by a non-expert |
+| Model-generated gold labels | human-verified labels | the MedChange release | reproducibility of the labels measured by an independent model (`label_audit.py`); clinician validation unavailable (stated limitation) |
+| Stance judged paper by paper by the same 4-bit 8B model, from title + RESULTS + CONCLUSIONS | holistic reading of five full abstracts | removes order sensitivity; conclusion-focused inputs are much shorter than full abstracts (measured in the P0 diagnostics) | stage 2 only; quality checked by machine checks, a negative control and its predictive value on dev (no human validation) |
 | Logistic layer fitted on dev and frozen | fixed-rule admission (stage 1) | combines stance with the RAG answer | learns the dev class mix; B1R receives the same fitting |
 | Pooled all-items primary outcome | changed-items-only primary (stage 1) | power: 528 instead of 353 items | key secondary reports changed items alone |

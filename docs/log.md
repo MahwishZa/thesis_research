@@ -734,18 +734,20 @@ phase.
   dev/confirmatory splits), the PubMed as-of probe, frozen dev candidate pools (226 items), zero-shot
   helpfulness scores for the dev pools, the six stage-1 arms, the generation harness, the analysis (accuracy,
   retrieval-level checks, McNemar with Holm, gates), the G1 consistency check and the dev error analysis.
-  Stage 2 (Phase 27): `diagnostics.py`, `stance.py`, `stance_check.py`, `synthesis.py`, `analyze_stage2.py`,
-  unit-tested on synthetic data only. Alzheimer's corpus (114,256 PMC records, 4,377,041 chunks), question
+  Stage 2 (Phases 27 and 29): `diagnostics.py`, `stance.py`, `stance_check.py`, `synthesis.py`, `analyze_stage2.py`,
+  `label_audit.py`, `consistency_auto.py`, `findings.py`, `pipeline.py`, unit-tested on synthetic data (the pilot and
+  diagnostics have also run on real data). Alzheimer's corpus (114,256 PMC records, 4,377,041 chunks), question
   pool (113 usable) and dense index (4,376,141 x 768): built, secondary.
-* **Gates (updated through Phase 27):** stage 1: G0 passed; G2 passed; **G3 failed** (P − B2 = −1.3 pp, P − C1 =
-  −2.0 pp); G1 pending the student's manual check. Stage 2: the P0 diagnostics, the stance pilot with its
-  hand check (gate 1) and the full dev stance run with the fitted layer (gate 2) are pending.
+* **Gates (updated through Phase 29):** stage 1: G0 passed; G2 passed; **G3 failed** (P − B2 = −1.3 pp, P − C1 =
+  −2.0 pp); G1: parse rate 100% on dev, the human consistency sheet retired. Stage 2: P0 diagnostics done; gate 1
+  (stance pilot, machine checks) **passed**; gate 2 (full dev stance with the fitted layer) pending.
 * **Results:** dev split only, all six stage-1 arms (Phases 24-25): standard RAG (B1) is the most accurate arm
   on changed items (49.7%); the proposed Temporal Filter P is 13.9 pp lower (p = 0.0008). No stage-2 result
   exists. The confirmatory split (528 items) has not been built, run or analysed; it is run once, after the
   frozen model file is committed.
-* **Not built:** frozen pools for the confirmatory split; any real stance output; the human hallucination
-  annotation; a second generator; the Alzheimer's as-of case study.
+* **Not built:** frozen pools for the confirmatory split; the full dev stance output; the automatic faithfulness
+  proxies; a second generator; the automatic Alzheimer's case study. The human hallucination annotation and all
+  human labelling steps are dropped (Phase 29).
 * **Abandoned and archived:** the RAG² filter reproduction (the checkpoint is not distributed; local
   retraining learned only the class prior) and the first Alzheimer's pilot runners (circular primary metric).
 * **Known limitations of the design** (see `methodology.md`): the B2/P helpfulness score is an untrained
@@ -908,3 +910,41 @@ consistency sheet) is still pending.
   items (33.6% in B1's admitted five), above the 30% bar, so the study-type weight has material to act on. Gold
   REFUTED is about as frequent with and without a review in B1's evidence (16 of 76, 33 of 150): no visible
   signal (descriptive).
+
+## Phase 29 — Pilot result, removal of every human-labelling step, and the automated pipeline (Oct 3-4)
+
+**Pilot (run on the student's laptop, 40 dev items x 8 papers, both wordings, plus the irrelevant-paper control: 960
+papers, 6.76 s per paper on average, 6 threads).** Wording agreement 85.3% (needs 80%), irrelevant control papers
+rated "neither" 97.8% (needs 70%), mean 6.76 s (needs 10 s), invalid outputs 2.5% pooled with control papers: wording A
+0.3% and B 0% on real papers, 7.2% on control papers. Real-paper class shares: supports 22%, contradicts 17%, no clear
+stance 62%. The human hand check was never run (see below).
+
+**Decision (the researcher's, 2026-10-04).** The researcher is not a medical expert, has no access to clinicians and will
+not label, review or validate medical content; human involvement is limited to research decisions, approving
+predefined changes, running commands and interpreting results. Every human judgement step was therefore audited
+(read-only, whole repository including the archive) and removed or replaced: the stance hand check and the human
+consistency sheet (retired), the planned ~100-label human check of the gold labels (replaced by an independent-model
+label audit with a label-stable sensitivity analysis), the planned blinded human hallucination annotation (dropped),
+and the human-reviewed Alzheimer's question pool (kept as history, not extended; case study redesigned to be
+automatic). The existing Alzheimer's review turned out to be weaker than it looked: all 123 decisions are by the
+researcher, the free-text notes were lost in an overwrite and the decisions restored from a split file, 23 of the
+113 usable questions are flagged `pending_revision` and were never fixed. Clinician validation of the gold labels
+cannot be automated and is a stated limitation. Amendments are in `experiment_plan.md` §13 (items 9-14).
+
+**Checked and not adopted: changing the answer prompt to the labelling rubric.** The authors' labelling prompt tells
+gpt-4o-mini to answer NOT ENOUGH INFORMATION only when too few studies were found, but their own answering prompt
+(`Code/answer_questions.ipynb`) defines the labels as loosely as ours, so our prompt follows the benchmark's evaluation
+protocol; all stage-2 comparisons are within one prompt and the fitted layer absorbs calibration. Changing it would have
+required regenerating dev B1 and B0 (about 4.7 h) and broken comparability with stage 1. Kept as a stated limitation.
+
+**Built (unit-tested on synthetic data; 681 active tests).** `stance` runs both wordings and `synthesis` averages them
+(the stance wording is no longer chosen by a person); `stance_check` is machine-only with the invalid-output rule on real
+papers; `analyze_stage2.decide` implements the pre-declared genuine-positive reading (also better than raw B1, macro-F1
+not lower, label-stable direction, recency earned) and an RQ1-only mode for a failed gate 2; `label_audit.py`,
+`consistency_auto.py`, `findings.py` (DEV_REPORT.md, FINDINGS.md) and `pipeline.py` (one resumable command per phase,
+integrity checks, the frozen-model-on-origin/main guard, a same-generator check between dev and confirmatory runs,
+optional commit and push). Nothing from the confirmatory split has been generated or analysed. Not yet run on real
+data: the audits (need a second GGUF model), the dev stance run of both wordings and everything after it.
+
+**Next:** `pipeline dev` (about 8.4 h), read `results/DEV_REPORT.md`, then `pipeline confirm --go` (about 38 h; about
+22 h if gate 2 fails); commands in `reproducibility.md` §3.

@@ -104,14 +104,25 @@ def stance_features(probs: Sequence[Sequence[float]], weights: Sequence[float]) 
     return [(sup - con) / total, nei / total, 2.0 * min(sup, con) / total, float(np.log1p(sup + con))]
 
 
+WORDINGS_USED = {"A": ("A",), "B": ("B",), "both": ("A", "B")}
+
+
 def load_stance_probs(records: Sequence[dict], wording: str) -> dict:
-    """{(item_id, pmid): (p_sup, p_con, p_nei)} for one wording; an invalid output counts as "neither"."""
-    out = {}
+    """{(item_id, pmid): (p_sup, p_con, p_nei)}; an invalid output counts as "neither".
+
+    ``wording`` is "A", "B" or "both". With "both" the two wordings' probabilities are averaged
+    (the pre-declared stance measure: it removes the choice of a wording and reduces the order
+    sensitivity of a single prompt); a paper missing under either wording is left out, so the
+    caller's missing-stance check fails loudly instead of silently using half an ensemble."""
+    wanted = WORDINGS_USED[wording]
+    seen: dict = {}
     for r in records:
-        if r.get("control") or r["wording"] != wording:
+        if r.get("control") or r["wording"] not in wanted:
             continue
-        out[(r["item_id"], r["pmid"])] = tuple(r["probs"]) if r["probs"] else (0.0, 0.0, 1.0)
-    return out
+        seen.setdefault((r["item_id"], r["pmid"]), {})[r["wording"]] = (
+            tuple(r["probs"]) if r["probs"] else (0.0, 0.0, 1.0))
+    return {key: tuple(sum(v[w][k] for w in wanted) / len(wanted) for k in range(3))
+            for key, v in seen.items() if all(w in v for w in wanted)}
 
 
 def item_features(item_id: str, pool: dict, cutoff: str, probs: dict, *, recency: bool, design: bool,
@@ -372,13 +383,6 @@ def to_markdown(report: dict) -> str:
 def cmd_fit(args) -> int:
     data, out_dir = Path(args.data_dir), Path(args.out_dir)
     wording = args.wording
-    if wording == "auto":
-        choice = data / "stance_choice.json"
-        if not choice.exists():
-            print("no wording chosen yet (run the stance pilot and stance_check score, or pass --wording)",
-                  file=sys.stderr)
-            return 2
-        wording = json.loads(choice.read_text(encoding="utf-8"))["wording"]
     try:
         items, pools, probs, b1 = load_inputs(data, "dev", wording)
         report = fit_report(items, pools, probs, b1, repeats=args.repeats)
@@ -445,7 +449,8 @@ def main(argv=None) -> int:
     ap.add_argument("mode", choices=("fit", "predict"))
     ap.add_argument("--split", default="confirm", choices=("confirm",),
                     help="predict only; dev predictions come from the out-of-fold pass inside fit")
-    ap.add_argument("--wording", default="auto", choices=("auto", "A", "B"), help="fit only")
+    ap.add_argument("--wording", default="both", choices=("both", "A", "B"),
+                    help="fit only; both = the average of the two wordings (pre-declared)")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--out-dir", default=str(HERE / "results"), help="fit: model and report")
     ap.add_argument("--model", default=str(HERE / "results" / "synthesis_model.json"), help="predict only")

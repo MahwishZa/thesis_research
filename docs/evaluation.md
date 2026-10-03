@@ -29,8 +29,9 @@ verdict of the newest Cochrane review version (`experiments/medchange/analyze.py
 | Items with update-window evidence | share of items where any admitted passage is in the window | retrieval-level manipulation check |
 | Mean admitted-passage age; overlap with B1 | years from passage to t_q; Jaccard of admitted sets | retrieval-level manipulation checks |
 | Recall of each gold class; macro-F1; share of NOT ENOUGH INFORMATION answers | per-class recall over all items, mean F1 of the three classes, how often an arm abstains | stage 2: the main behaviour retrieval changes (SUPPORTED recall falls, abstention rises) and the one a layer can correct |
-| Stance hand-check accuracy; wording agreement; irrelevant-paper control | researcher's labels of 40 papers against the model's stance; agreement of the two wordings; share of control papers rated "neither" | stage-2 pilot (gate 1), `stance_check.py` |
-| Blinded human hallucination rate | claims unsupported by or contradicting a common reference, on a stratified subset | **planned**; `evaluation/annotation.py`, `stats.har`, `stats.coverage` |
+| Wording agreement; irrelevant-paper control; invalid-output rate; stance-direction AUC against the gold labels (dev) | agreement of the two wordings; share of control papers rated "neither"; share of unusable outputs on real papers; how well the signed stance separates gold SUPPORTED from REFUTED | stage-2 pilot (gate 1), `stance_check.py` |
+| Label reproducibility; stated-verdict consistency | agreement and kappa of an independent model's re-labelling with the gold labels (`label_audit.py`); agreement of an independent judge with the stated verdict on a sample (`consistency_auto.py`) | **built**, not yet run; replace the human checks |
+| Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional, not built; the human hallucination annotation is dropped (`evaluation/annotation.py` stays as dormant framework code) |
 
 **Manipulation checks are never outcomes.** Showing that an arm admits more recent passages
 demonstrates that the mechanism acts as designed; it says nothing about whether answers improve.
@@ -107,12 +108,13 @@ Gold-label error is not checked.
 | Dev run of B2, B3, P, C1 (changed items, accuracy; difference vs B1 with exact McNemar p) | B2 37.1% (−12.6 pp, p = 0.001), B3 45.7% (−4.0 pp, p = 0.38), P 35.8% (−13.9 pp, p = 0.0008), C1 37.7%; P − B2 = −1.3 pp, P − C1 = −2.0 pp, P − B3 = −9.9 pp (p = 0.017); unchanged items 58.7–61.3% for all arms, no significant differences; 0 unparsed |
 | Gate G3 | **failed** (needs P − B2 ≥ +5 pp and P − C1 ≥ +2.5 pp; observed −1.3 and −2.0) |
 | Error analysis, stage 1, dev changed items | done (`log.md` Phase 26) |
-| Gate G1 (human consistency check) | pending (the researcher fills `consistency_sheet.csv`) |
-| Stage 2: stance, pilot checks, diagnostics, synthesis layer, confirmatory analysis | code built and unit-tested (synthetic data); **not yet run on real data** |
+| Gate G1 (format validity) | parse rate 100% on dev (0 of 1,356 unparsed); the human consistency sheet is retired and replaced by the automatic check (`consistency_auto.py`, built, not yet run) |
+| Stage 2: stance, pilot checks, diagnostics, synthesis layer, confirmatory analysis, label audit, consistency check, pipeline | code built and unit-tested (synthetic data) |
+| Stage 2 pilot (gate 1, machine checks, 40 dev items, 960 papers) | **PASS**: wording agreement 85.3%, control papers "neither" 97.8%, invalid 0.16% on real papers (2.5% pooled with control papers), 6.76 s per paper |
 | Stage 2: P0 diagnostics | done (2026-10-03): 18.5% of helpfulness inputs over 512 tokens (31.1% of B2's admitted papers); 36.4% of candidates have labelled RESULTS/CONCLUSIONS; a systematic review in the top 8 for 41.6% of items |
-| Stage 2: 40-item pilot (gate 1), hand check, full dev stance + fit (gate 2) | pending |
+| Stage 2: full dev stance (both wordings) + fit (gate 2) | pending (`pipeline dev`) |
 | Confirmatory split (pools, B0/B1 answers, stance, frozen-model prediction) | not started; nothing from it has been analysed |
-| Human hallucination annotation; second generator; Alzheimer's case study | planned |
+| Second generator; automatic Alzheimer's case study | planned |
 
 The only earlier real-data outputs (the Alzheimer's pilot with an extractive stand-in generator and an
 unvalidated baseline checkpoint) are archived in `_archive/alzheimers_pilot_v1/results/`; they showed the

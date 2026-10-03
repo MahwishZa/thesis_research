@@ -36,9 +36,9 @@ python -m unittest discover -s _archive -t .         # archived work (RAG² filt
 ```
 
 The active suite needs neither torch nor transformers nor network; model-dependent code is exercised
-through interfaces and fixtures. Checked on 2026-10-03: in a fresh virtualenv holding only the four
-base dependencies, with outbound socket connections blocked, both suites pass (649 active and 125 archived
-tests; `log.md`, Phase 27).
+through interfaces and fixtures. Checked on 2026-10-04: in a fresh virtualenv holding only the four
+base dependencies, with outbound socket connections blocked, both suites pass (681 active and 125 archived
+tests; `log.md`, Phase 29).
 
 Tests that run the corpus stage scripts work in a lean scaffold copy
 (`evaluation/tests/corpus_scaffold.py`) that never copies `corpus/data/`, so they behave identically on a
@@ -66,7 +66,7 @@ an interruption.
 | 6 | `python -m experiments.medchange.helpfulness --split dev --device cpu` | zero-shot Flan-T5 on 20 pairs per item; 5,946 s for 223 items (1.33 s/pair) |
 | 7 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\<file>.gguf` | llama.cpp CPU: ≈ 18 s per B0 answer, ≈ 66 s with five passages; add `--limit 3` for a timing test |
 | 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
-| 9 | `python -m experiments.medchange.consistency export --n 50`, fill the CSV, `... score` | G1 human check of the stated verdicts |
+| 9 | *(retired)* `consistency export` / `score`, the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
 | 10 | `python -m experiments.medchange.error_analysis --split dev --out-dir experiments\medchange\results` | seconds; uses the existing answers and frozen pools, no generation |
 | 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experiment_plan.md` §1 |
 
@@ -75,29 +75,26 @@ Dev is run first. For arms B2, P and C1 run step 6 before step 7. The full dev r
 optional `--api-key` (3 requests per second without a key, 10 with one), which changes their duration, not
 their results.
 
-**Stage 2 (evidence-synthesis layer; code built and unit-tested, every step below still pending).** The order
-matters: the gates are checked in order, each step stops the chain if it fails, and the frozen model file is
-committed before any confirmatory stance output exists (`experiment_plan.md` §9). Costs marked *estimated*
-assume 5–8 s per stance judgement, which the pilot replaces by a measurement.
+**Stage 2 (evidence-synthesis layer; fully automated, no human labelling).** Two one-time preparations: download a
+second-family GGUF for the audits (Qwen2.5-7B-Instruct Q4_K_M, about 4.7 GB, into `models\`) and have the MedChange
+clone from step 1. Then two commands run everything; each is resumable (rerun the same command after an
+interruption), stops at the first failed step or gate, and with `--commit` commits and pushes the results to `main`.
 
-| # | Command | Cost and what it decides |
+| # | Command | What it does and costs (*estimated* unless marked measured) |
 |---|---|---|
-| 11 | `python -m experiments.medchange.diagnostics --split dev --out-dir experiments\medchange\results` | P0, seconds, no model (add `--no-tokenizer` offline): is the helpfulness input truncated, how many abstracts have labelled RESULTS / CONCLUSIONS, how many systematic reviews are in the top 8 |
-| 12 | `python -m experiments.medchange.stance --split dev --pilot --model-path models\<file>.gguf` | pilot: 40 items × 8 papers × 2 wordings + the irrelevant-paper control = 960 judgements, ≈ 1.3–2.1 h (*estimated*); if log-probabilities fail, repeat with `--hard-labels` |
-| 13 | `python -m experiments.medchange.stance_check report` | seconds: the machine checks of gate 1 (invalid outputs, seconds per paper, wording agreement, control) |
-| 14 | `python -m experiments.medchange.stance_check export`, fill `stance_handcheck.csv` (S, C or N for 40 papers), then `... score` | ≈ 30 min of reading by the researcher (*estimated*); picks the wording and finishes gate 1 |
-| 15 | `python -m experiments.medchange.stance --split dev --model-path models\<file>.gguf` | gate 1 passed first; 226 × 8 = 1,808 judgements ≈ 2.5–4 h (*estimated*) |
-| 16 | `python -m experiments.medchange.synthesis fit` | seconds to minutes: repeated cross-validation, gate 2, the selected hybrid; writes `results\synthesis_model.json` and `results\synthesis_cv_dev.md`. **Commit both before step 19** |
-| 17 | `python -m experiments.medchange.pubmed_asof --split confirm`, then `freeze_candidates --split confirm --device cpu` | confirmatory preparation, needed for RQ1 whatever gate 2 says; ≈ 8 h (*estimated* from the dev per-item times of ≈ 6 s and ≈ 49 s); helpfulness (step 6) is **not** needed |
-| 18 | `python -m experiments.medchange.generate_answers --split confirm --arms B0 B1 --model-path models\<file>.gguf` | ≈ 2.1 h + ≈ 8.9 h (*estimated* from 14.6 s and 60.9 s per answer) |
-| 19 | `python -m experiments.medchange.stance --split confirm --model-path models\<file>.gguf` | only if gate 2 passed and step 16's files are committed; 528 × 8 = 4,224 judgements ≈ 6–9 h (*estimated*) |
-| 20 | `python -m experiments.medchange.synthesis predict --split confirm`, then `python -m experiments.medchange.analyze_stage2 --split confirm --out-dir experiments\medchange\results` | seconds; `predict` refuses to run without the frozen model and records its hash; the analysis refuses an incomplete confirmatory run |
+| 11 | `python -m experiments.medchange.diagnostics --split dev --out-dir experiments\medchange\results` | P0, **done**: seconds, no model |
+| 12 | `python -m experiments.medchange.stance --split dev --pilot --n-threads 6 --model-path models\<llama>.gguf` | pilot, **done**: 960 papers, 6.76 s per paper (measured, ≈ 1.8 h) |
+| 13 | `python -m experiments.medchange.stance_check report` | gate 1, machine checks only: **PASS** on the pilot |
+| 14 | `python -m experiments.medchange.pipeline dev --model-path models\<llama>.gguf --judge-path models\<qwen>.gguf --medchange-dir ..\MedChange --commit` | checks gate 1 and integrity; dev label audit (≈ 1 h); automatic consistency check (≈ 0.6 h); stance on all dev papers with both wordings (3,616 papers, ≈ 6.8 h); `synthesis fit` with repeated cross-validation, gate 2 and the frozen model; writes `results\DEV_REPORT.md`; commits and pushes the frozen model. **Stops here** |
+| 15 | read `results\DEV_REPORT.md`; if you agree: `python -m experiments.medchange.pipeline confirm --go --model-path models\<llama>.gguf --judge-path models\<qwen>.gguf --medchange-dir ..\MedChange --commit` | refuses unless the frozen model is on `origin/main` and the generator is the dev one; confirmatory probe and pools (≈ 8 h), B0 and B1 answers (≈ 11 h), stance with both wordings and the frozen-model prediction (≈ 16 h; only if gate 2 passed, otherwise RQ1 only), the after-freeze audits (≈ 2.6 h), the analysis and `results\FINDINGS.md` |
+| 16 | `python -m experiments.medchange.pipeline status` | which gates passed and which files exist |
 
-The confirmatory split is run once, in this order, with no setting changed after step 16. The confirmatory
-run needs about 11 h of B0/B1 generation, 8 h of preparation and, if gate 2 passes, 6–9 h of stance (all
-*estimated*); the six-arm confirmatory run of stage 1 (≈ 51 h) is no longer planned. `analyze_stage2` on
-`--split dev` gives an exploratory dev version from the out-of-fold predictions of step 16 (needs the
-dev B0, B1 answers and `synthesis_dev.jsonl`).
+Add `--dry-run` to either phase to print its steps without running anything. The individual modules
+(`stance`, `synthesis fit`, `synthesis predict`, `label_audit`, `consistency_auto`, `analyze_stage2`) can also be
+run by hand with the flags shown in their docstrings. The confirmatory split is run once, in this order, with no
+setting changed after the frozen model is committed. In total about 46 h of unattended laptop time (≈ 30 h if gate 2
+fails); the six-arm confirmatory run of stage 1 (≈ 51 h) is no longer planned. `analyze_stage2 --split dev` gives an
+exploratory dev version from the out-of-fold predictions.
 
 ## 4. Secondary: Alzheimer's corpus, question pool and index
 
@@ -142,13 +139,12 @@ answers (`answers_<split>.jsonl`: generated text and PMIDs) with their generator
 (`answers_<split>.config.json`), the helpfulness scores (`helpfulness_<split>.jsonl`) and the saved analysis (`python -m experiments.medchange.analyze --split
 dev --out experiments\medchange\results\analysis_dev.json`) — into `experiments/medchange/results/` and
 commit them; a 22-hour run must not exist only on one laptop. The frozen pools and abstracts stay
-local and are rebuilt from the manifest. Stage 2 adds the same kind of files: `stance_pilot.jsonl`,
-`stance_dev.jsonl` and `stance_confirm.jsonl` with their `.config.json` records, `stance_choice.json` (the
-hand-check result and the chosen wording), `synthesis_dev.jsonl` and `synthesis_confirm.jsonl` (the arms'
+local and are rebuilt from the manifest. Stage 2 adds the same kind of files (the pipeline copies them): `stance_pilot.jsonl`,
+`stance_dev.jsonl` and `stance_confirm.jsonl` with their `.config.json` records, the label-audit and consistency files, `synthesis_dev.jsonl` and `synthesis_confirm.jsonl` (the arms'
 verdicts and probabilities), and the reports `diagnostics_dev.*`, `synthesis_cv_dev.md`, `stage2_analysis_*.json/.md`
 (written straight into `results/` by `--out-dir`). `synthesis_model.json` is the frozen model and is
 committed **before** any confirmatory stance run, so the history shows that it preceded the confirmatory
-data. `stance_handcheck.csv` shows paper text and stays local. The dev error analysis
+data. The dev error analysis
 (`error_analysis_dev.md`, `.json`) is committed the same way when it is saved with `--out-dir`.
 
 ## 6. Hardware notes

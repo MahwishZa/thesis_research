@@ -4,9 +4,9 @@ Outputs of real runs that contain **no source text** and are expensive to regene
 (`answers_<split>.jsonl`, with admitted PMIDs, and its generator record `answers_<split>.config.json`), zero-shot
 helpfulness scores (`helpfulness_<split>.jsonl`), saved analyses (`analysis_<split>.json`, written by
 `analyze --out`) and, for stage 2, the per-paper stance records (`stance_*.jsonl` with `.config.json`), the
-stance wording choice (`stance_choice.json`), the synthesis predictions (`synthesis_<split>.jsonl`) and the
+the synthesis predictions (`synthesis_<split>.jsonl`) and the
 reports below. Copy them here after a run and commit them; the frozen pools and abstracts stay in the
-gitignored `../data/`, and `stance_handcheck.csv` (it shows paper text) stays there too. See
+gitignored `../data/`. See
 `docs/reproducibility.md` §5.
 
 Committed: `answers_dev.jsonl`, `answers_dev.config.json` and `analysis_dev.json` (all six arms, dev split; `docs/log.md` Phase 25), and

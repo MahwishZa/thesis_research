@@ -75,7 +75,7 @@ carries both versions' dates and PMIDs, which the released CSV lacks.
 | Change types | 397 involve NOT ENOUGH INFORMATION; 114 are decisive SUPPORTED ↔ REFUTED reversals |
 | Unchanged controls | 250 sampled (seeded) from groups whose versions all share one label |
 | Splits (seeded 20261001, stratified by kind × change type) | dev 151 changed + 75 unchanged = **226**; confirmatory 353 + 175 = **528** (usable) |
-| Gold labels | gpt-4o-mini labels of each abstract's conclusions: model labels, not human; ~100 to be human-checked |
+| Gold labels | gpt-4o-mini labels of each abstract's conclusions: model labels, not human; their reproducibility is measured automatically by an independent model (§8, `label_audit.py`), not certified |
 | Dates | both versions dated for every item; 13 newest versions are year-only (cutoff set to Jan 1: conservative) |
 | Alzheimer's-related | 9 changed + 5 unchanged: descriptive only |
 
@@ -155,8 +155,10 @@ and CONCLUSIONS sections (an abstract without labelled sections contributes its 
 most 200 words, conclusion-biased), and answers one letter: the study supports the claim, contradicts it
 (no benefit, harm or an opposite effect), or says nothing clear. The three probabilities p_sup, p_con,
 p_nei come from the model's first-token distribution over the three letters (a hard-label fallback exists).
-Two wordings with different letter orders exist for the pilot; the full runs use the one with the higher
-hand-check accuracy (ties: wording A).
+Two wordings with different letter orders exist; **both are run on every paper and their probabilities are
+averaged** (the pre-declared stance measure: it removes the need to choose a wording and reduces the order
+sensitivity of a single prompt; in the pilot the two wordings gave the same answer for 85.3% of papers).
+Wording A alone and wording B alone are reported on dev as descriptive checks, never selected between.
 
 *Four features.* With paper weights w_i and W = Σ w_i:
 f1 = Σ w_i (p_sup − p_con) / W (weighted signed stance);
@@ -190,9 +192,8 @@ robustness check.
 Stage 2 reuses these generations: B0 and B1 are generated once on the confirmatory split (≈ 2.1 h and
 ≈ 8.9 h, *estimated*). The stance step uses the same Llama-3-8B-Instruct Q4_K_M model with a context of
 1,536 tokens, temperature 0, one output token and the top-20 log-probabilities of that token
-(`logits_all`, ≈ 0.5 GB extra memory); its cost per paper is *not measured* — about 5–8 s is expected
-(≈ 250 prompt tokens at a prompt-processing speed of ≈ 40 tokens/s inferred from the B1 timings, plus overhead) — and is replaced by the pilot's
-measurement. One declared fallback exists: if the pilot fails, the same pilot is repeated once with
+(`logits_all`, ≈ 0.5 GB extra memory); its cost per paper was **measured in the pilot at 6.76 s on average** (median 5.9 s; 960 papers,
+6 threads), so the dev run of both wordings is ≈ 6.8 h and the confirmatory run ≈ 16 h (*estimated* from that mean). One declared fallback exists: if the pilot fails, the same pilot is repeated once with
 Flan-T5-large (≈ 1 s per pair on CPU) as the stance model; a second failure ends stage 2's synthesis arm.
 
 ## 6. Outcomes
@@ -205,15 +206,16 @@ Flan-T5-large (≈ 1 s per pair on CPU) as the stance model; a second failure en
   key secondary.
 * **Key secondary: outdated-verdict rate** — the verdict equals the previous version's (changed items).
 * **Stage 2 diagnostics:** recall for each gold class, macro-F1 and the NOT ENOUGH INFORMATION rate (the
-  main behaviour retrieval changes); the stance step's hand-checked accuracy, wording agreement and
-  irrelevant-paper control (§9).
+  main behaviour retrieval changes); the stance step's wording agreement and
+  irrelevant-paper control (§9), the label audit and the automatic consistency check (§8).
 * **Safety: accuracy on unchanged items** — non-inferiority margin 5 pp.
 * **Retrieval-level (manipulation checks, never outcomes; built, `analyze.py`):** share of admitted
   passages that surely first appeared inside the update window, items with any such passage, mean
   passage age, overlap with B1's admitted set.
-* **Hallucination / faithfulness (planned):** blinded human annotation of claims against a common
-  reference (gold conclusion plus the shared pool) on a stratified subset, using
-  `evaluation/annotation.py`; reported with coverage.
+* **Hallucination / faithfulness:** the human annotation planned earlier is **dropped** (the researcher is not
+  a medical expert and the outcome is verdict accuracy). Automatic proxies only, optional and secondary: citations
+  must point to admitted passages, and entailment of answer sentences by the admitted passages checked by a
+  second-family model. Not built.
 * Sensitivity (planned): the 114 decisive-flip items alone; an LLM judge on a sample; excluding
   non-Cochrane systematic reviews from candidates.
 
@@ -247,7 +249,7 @@ reported with their intervals, not as "no effect". Anything outside these lists 
 
 Each wrong answer on a changed item gets one cause: (1) retrieval miss — no update-window evidence in
 the pool; (2) admission miss — present but not admitted; (3) generator override — admitted, answer
-contradicts it; (4) parse/format failure; (5) gold-label error (human check of ~100 labels). Stage 1,
+contradicts it; (4) parse/format failure; (5) gold-label error, handled by the automatic label audit below (no human check). Stage 1,
 dev, changed items (`error_analysis.py`; `log.md` Phase 26): retrieval misses 0 for every arm; admission
 misses B1 13, B3 1, P 2; "evidence admitted, answer still wrong" B1 63, B3 81, P 95 — the bottleneck is how
 the generator uses evidence (or the gold label), not retrieval. Stage 2 adds, on dev and on the
@@ -256,6 +258,14 @@ predicted class for every arm. **Planned**, not built: confusion matrices; stanc
 decisive flips; stance of update-window versus older papers (diagnostic only, using the oracle window); and
 the conflict feature against gold NOT ENOUGH INFORMATION. Gold-label error (cause 5) is not checked.
 
+*Automatic label audit and consistency check (built, not yet run).* `label_audit.py`: an independent second-family
+model (Qwen2.5-7B-Instruct) re-labels every item's conclusions with the authors' own labelling rubric; agreement,
+Cohen's kappa and the share of label changes reproduced are reported, and items on which both labelers agree on the newest
+version are "label-stable"; every headline result is also reported on that subset (descriptive; the primary analysis
+keeps all items). Run on dev first; on the confirmatory split only after the frozen model is committed. Agreement is
+label reproducibility, not medical truth. `consistency_auto.py`: the same kind of independent model reads only the
+explanation of a seeded, arm-balanced sample of answers and says which verdict it supports (diagnostic, not a gate).
+
 ## 9. Gates and decision rules (dev split only; thresholds fixed in advance)
 
 **Stage 1 gates.**
@@ -263,7 +273,7 @@ the conflict feature against gold NOT ENOUGH INFORMATION. Gold-label error (caus
 | Gate | Pass condition | Status |
 |---|---|---|
 | G0 evidence headroom | ≥ 50% of changed dev items have a trial or review in the update window | **passed** (94.0%) |
-| G1 format validity | ≥ 95% of answers parse AND a human check of 50 answers finds the stated verdict consistent with its justification in ≥ 90% (`consistency.py`) | pending |
+| G1 format validity | ≥ 95% of answers parse (computed). The human consistency sheet is **retired**; an independent second-family model reads the explanation of a seeded sample and its agreement with the stated verdict is reported, not thresholded (`consistency_auto.py`) | parse rate 100% on dev (0 unparsed); automatic check **built**, not yet run |
 | G2 generator uses evidence | B1 changes the verdict of ≥ 20% of dev items relative to B0 | **passed** (35.8%) |
 | G3 dev effect | on changed dev items P − B2 ≥ +5 pp AND P − C1 ≥ +2.5 pp | **failed** (−1.3 pp and −2.0 pp) |
 
@@ -282,13 +292,14 @@ cannot confirm a small one, and a real 5 pp effect fails it about as often as it
 | Step | What | Pass condition |
 |---|---|---|
 | P0 diagnostics (no model) | on dev pools: share of helpfulness inputs over 512 tokens; share of abstracts with labelled RESULTS/CONCLUSIONS; study-type composition; B1 verdicts by composition | informational: decides whether the stage-1 helpfulness caveat is confirmed, and whether the study-type weight has anything to act on (a systematic review in the top 8 for at least 30% of items) |
-| P1 pilot (Gate 1) | 40 seeded dev items × top-8 papers, both wordings, plus an irrelevant-paper control (each question scored against papers of another pilot item); the researcher hand-labels 40 papers | **all of:** hand-check accuracy ≥ 70% (40 papers); wording agreement ≥ 80%; ≥ 70% of control papers rated "neither"; invalid outputs ≤ 2%; ≤ 10 s per paper (Llama) or ≤ 4 s (Flan-T5) |
-| P2 full dev stance + fit (Gate 2) | all 226 dev items × top-8, the chosen wording; repeated 5-fold CV (50 repeats, seed 20261003) | **all of:** stance-direction AUC (signed score S0, gold SUPPORTED vs REFUTED) ≥ 0.60; selected hybrid CV accuracy ≥ B1R CV accuracy + 1.0 pp; S0 CV accuracy above the constant-prior CV accuracy |
+| P1 pilot (Gate 1) | 40 seeded dev items × top-8 papers, both wordings, plus an irrelevant-paper control (each question scored against papers of another pilot item); no human labelling | **all of (machine checks only):** wording agreement ≥ 80%; ≥ 70% of control papers rated "neither"; invalid outputs ≤ 2% **on real papers**; ≤ 10 s per paper (Llama) or ≤ 4 s (Flan-T5). *Pilot result:* agreement 85.3%, control "neither" 97.8%, invalid 0.16% on real papers (pooled with control papers 2.5%), 6.76 s: **PASS** |
+| P2 full dev stance + fit (Gate 2) | all 226 dev items × top-8, both wordings averaged; repeated 5-fold CV (50 repeats, seed 20261003) | **all of:** stance-direction AUC (signed score S0, gold SUPPORTED vs REFUTED) ≥ 0.60; selected hybrid CV accuracy ≥ B1R CV accuracy + 1.0 pp; S0 CV accuracy above the constant-prior CV accuracy; invalid outputs ≤ 2% on the real dev papers |
 | Confirmatory preparation | probe, candidate freezing for the 528 confirmatory items (no helpfulness) | none; run for RQ1 whatever Gate 2 says |
 | Confirmatory run | B0 and B1 answers; stance for the top-8 of every pool; frozen model applied | stance run only if Gate 2 passed; RQ1 is run regardless |
 
-*Operating characteristics* (computed). Hand-check, 40 papers, pass at ≥ 28 correct: a stance step that is
-truly 60% accurate passes 13% of the time, 70% accurate 58%, 80% accurate 96%. Gate 2 (b), standard error
+*Operating characteristics* (computed). The AUC criterion of Gate 2 (154 dev items with gold SUPPORTED or
+REFUTED; simulated): a stance score with no signal passes 2% of the time, a true AUC of 0.55 15%, 0.60 49%, 0.65
+86%, 0.70 98%. (The retired 40-paper hand check would have passed a 60%-accurate stance step 13% of the time.) Gate 2 (b), standard error
 ≈ 2.8 pp (226 items, ≈ 18% differing): with no true gain it passes 36% of the time, with a true +1 pp 50%,
 +3 pp 76%, +5 pp 92%. The gates therefore screen out clear failures; they do not confirm anything. They
 are lenient on purpose: after Gate 2 the extra cost of the synthesis arm is only the confirmatory stance run
@@ -296,11 +307,19 @@ are lenient on purpose: after Gate 2 the extra cost of the synthesis arm is only
 
 *Data hygiene rules.* (1) The confirmatory labels and outcomes are not analysed before the frozen model
 file is committed. (2) Every design choice made after seeing dev data is listed in §13. (3) At most the
-declared variants, two stance wordings and one stage-model swap exist; anything else is a new fork and must
+declared variants, the two averaged stance wordings and one stage-model swap exist; anything else is a new fork and must
 be added to the §13 list with its date. (4) Prediction on the confirmatory split refuses to run without
 the frozen model file, and records that file's hash.
 
 ## 10. Evidence that would justify an international paper
+
+*Pre-declared reading of the confirmatory result (computed by `analyze_stage2.decide`, written to `FINDINGS.md`).*
+A **genuine positive** needs ALL of: RQ2 confirmed against B1R; the hybrid also confirmed against the raw B1
+answer (B1R is about 1 pp weaker than B1 on dev — 52.2% vs 53.1% — so beating it alone is not enough); macro-F1 not
+below B1R's (the gain is not only more abstaining); a non-negative difference on the label-stable items; and, if the
+selected hybrid uses recency weights, a confirmed win over its date-shuffled control. RQ2 confirmed without all of
+these is a **fragile positive** and is reported as such. RQ1 confirmed is reported as a retrieval finding, and as
+"mostly through abstention" when the average SUPPORTED/REFUTED recall did not rise.
 
 Stage 2, confirmatory split, run once. **Strongest outcome:** RQ1 and RQ2 both confirmed (Holm p < .05, CI
 excluding 0), the selected hybrid beats its date-shuffled control where it uses recency, the outdated-verdict
@@ -316,12 +335,14 @@ suggestive, never as an improvement.
 
 ## 11. Alzheimer's disease case study (secondary, **planned — not implemented**)
 
-The 99 verdict-labelled Alzheimer's questions (80 test, 19 validation; `experiments/shared/questions/`)
-re-run time-consistently — t_q = the cited review's date, passages restricted to earlier ones — with the
-same arms. Descriptive only (≈ 15–18 pp detectable). Needed before it can run: an as-of freezing step
-over the local 4.4M-chunk index (the earlier pilot used the run date as t_q for every question; see
-`_archive/alzheimers_pilot_v1/`) and an adapter for questions that have no previous-version verdict.
-The 14 Alzheimer's-related MedChange items are reported individually.
+Redesigned on 2026-10-04 to need no human review. The human-reviewed pool (`experiments/shared/questions/`: 123
+decisions, all by the researcher on 2026-09-20; free-text notes lost in an overwrite and decisions restored from a split
+file; 23 of the 113 usable questions flagged `pending_revision` and never fixed) is kept as history and **not extended**.
+The automatic design: select reviews from MedRevQA that are not in the 754-item benchmark by rule (PubMed MeSH
+headings Alzheimer Disease or Dementia, newest review dated 2010 or later; a crude keyword rule finds about 100–130),
+run them through the same as-of pipeline with the frozen dev-fitted model (no refitting), after the confirmatory result,
+descriptive only (≈ 15 pp detectable). The local Alzheimer's corpus is not used by this design (an as-of search over
+its index would be new untested code). The 14 Alzheimer's-related MedChange items are reported individually.
 
 ## 12. Known limitations
 
@@ -330,7 +351,7 @@ items), a vague boundary; abstracts only (no full text); one generator family at
 bitwise reproducible (identical prompts gave different wording in 9 of 17 pairs, with the same verdict);
 PubMed best-match candidate generation is lexical; the RAG²-style arms are untrained stand-ins and may have
 been scored on truncated inputs (§4); the stance step is a zero-shot judgement by a 4-bit 8B model whose
-quality is checked only by a 40-paper hand check by a non-expert (confidence interval about ±14 pp);
+quality is checked only by machine checks, a negative control and its predictive value for the gold labels on dev (no human validated it; clinician validation is unavailable and is a stated limitation);
 the fitted layer learns the benchmark's class mix from dev (SUPPORTED 46%, REFUTED 22%, NOT ENOUGH
 INFORMATION 32%), which may not transfer to other distributions; confirmatory power is limited to
 ≈ 5 pp (RQ2) to ≈ 8 pp (two unrelated methods).
@@ -368,3 +389,22 @@ INFORMATION 32%), which may not transfer to other distributions; confirmatory po
   clarified in §5: the six-arm confirmatory cost is not planned (the protocol already excluded B2, P and C1
   from the confirmatory split) and the status labels of the stage-2 components now read "built" where code
   and tests exist (no run exists for any of them).
+* **2026-10-04, automation amendment, before any confirmatory pool, answer or stance output** — the researcher is
+  not a medical expert, has no access to clinicians and will not label or review medical content, so every human
+  judgement step was removed or replaced; clinician validation is a documented limitation. Decisions (added to the
+  forking-path ledger as items 9–14; all taken after seeing dev data and the pilot's machine checks, none after seeing
+  any stance-quality or confirmatory outcome): (9) the 40-paper hand check and the human consistency sheet are retired and
+  replaced by machine checks, the automatic consistency check and gate 2's objective stance-vs-gold test; (10) gate 1's
+  invalid-output criterion applies to real papers (pooled with control papers the pilot gave 2.5%, real papers 0.16%,
+  control papers 7.2%; control papers never enter an analysis and an invalid real paper counts as "no clear stance"); the
+  same ≤ 2% is applied to the real papers of the full dev run; this was decided after the pooled number failed, which is
+  disclosed here; (11) the stance wording is not chosen: both wordings are averaged; (12) the genuine-positive rule of §10;
+  (13) the automatic label audit and label-stable sensitivity analysis replace the planned human label check; (14) the
+  human hallucination annotation is dropped and the Alzheimer's case study redesigned (§11). **Considered and not
+  adopted:** changing the answer prompt to the labelling rubric's definitions. The benchmark authors' own answering
+  prompt (`Code/answer_questions.ipynb` of the release) defines the three labels as loosely as ours, so the current
+  prompt follows the benchmark's evaluation protocol; all stage-2 comparisons are made within one prompt, and the fitted
+  layer absorbs label-rubric calibration (B1R isolates it). Changing it would have required regenerating dev B1 (the
+  layer is fitted on it) and dev B0, and would have broken comparability with the stage-1 results; the mismatch between
+  the labelling rubric and the answering prompt is a stated limitation. An automatic cross-check was added: the
+  confirmatory generator must be the same model file with the same result-relevant settings as on dev (`pipeline.py`).

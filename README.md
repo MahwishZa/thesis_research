@@ -79,9 +79,9 @@ one local LLM, one prompt, greedy decoding):
 | **P** | helpfulness + recency | stage-1 proposed system |
 | C1 | as P with dates shuffled | falsification control |
 
-**Stage 2 — the evidence-synthesis layer (pre-specified; pilot pending)**: the
+**Stage 2 — the evidence-synthesis layer (pre-specified; pilot passed, dev run pending)**: the
 generator still reads the same five passages (B1). In addition, the first eight
-candidates of the pool are judged one paper at a time (does this study's result
+candidates of the pool are judged one paper at a time, twice with two differently worded prompts whose answers are averaged (does this study's result
 support the claim, contradict it, or say nothing clear?), the eight judgements are
 condensed into four numbers (signed stance, share without a clear stance,
 conflict, amount of informative evidence) with optional recency and study-type
@@ -132,7 +132,7 @@ decided by a **paired significance test** (exact McNemar, Holm-corrected) over
 per-question outcomes — not by the size of an average gap.
 
 Stage 2 is tested once, on a held-out confirmatory split (528 questions that
-informed no design decision), after a pilot and a dev check with pre-stated
+informed no design decision), after a pilot and a dev check, both machine-evaluated, with pre-stated
 pass/fail gates. The primary family is RQ1 (B1 vs B0) and RQ2 (the selected
 hybrid vs B1R); a result counts as confirmed only if the corrected p is below
 .05 and the interval excludes zero. With 528 questions only effects of about
@@ -158,7 +158,7 @@ more conclusively. Either outcome directly answers Objective 2; this
 repository does not commit in advance to which one it will report. Status
 (2026-10-03): the pipeline, the stage-1 dev study (gate G3 failed; standard RAG
 was the most accurate arm) and the stage-2 code are built and unit-tested; the
-stage-2 pilot has not been run and the confirmatory split has not been
+stage-2 pilot passed its machine checks (no human labelling is used anywhere: gold-label reliability and answer consistency are audited by an independent model), the dev run has not been done and the confirmatory split has not been
 touched (`docs/log.md`, Phases 25–27).
 
 ## Repository structure
@@ -208,7 +208,7 @@ python -m experiments.shared.runners.run_end_to_end
 # Primary pipeline (MedChange as-of benchmark); steps and costs: docs/reproducibility.md
 python -m experiments.medchange.build_benchmark --medchange-dir ../MedChange
 
-# Stage 2, first steps after the dev pools exist (no generation, then the 40-item pilot)
-python -m experiments.medchange.diagnostics --split dev
-python -m experiments.medchange.stance --split dev --pilot --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf
+# Stage 2, automated: the dev phase (stance, audits, fit, gate 2, report), then, after your go, the confirmatory phase
+python -m experiments.medchange.pipeline dev --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/<qwen>.gguf --medchange-dir ../MedChange --commit
+python -m experiments.medchange.pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/<qwen>.gguf --medchange-dir ../MedChange --commit
 ```

@@ -7,8 +7,8 @@ output token's distribution over the three letters; ``synthesis.py`` turns them 
 
 Input to the model per paper: the question (read as a claim), the paper's title and its RESULTS
 and CONCLUSIONS sections (an abstract without labelled sections contributes its last three
-sentences), at most 200 words. Two wordings with different letter orders exist (A, B); the pilot
-runs both, the full runs use the one that scored higher in the hand check.
+sentences), at most 200 words. Two wordings with different letter orders exist (A, B); both are run and
+their probabilities averaged (no human check chooses between them).
 
     python -m experiments.medchange.stance --split dev --pilot --model-path models\\<file>.gguf
     python -m experiments.medchange.stance --split dev --model-path models\\<file>.gguf
@@ -359,18 +359,13 @@ def stance_config(scorer, top_k: int) -> dict:
             "n_ctx": scorer.n_ctx, "temperature": 0.0, "seed": SEED}
 
 
-def load_choice(data_dir: Path) -> Optional[dict]:
-    path = data_dir / "stance_choice.json"
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
-
-
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
     ap.add_argument("--backend", default="llama", choices=("llama", "flan"))
     ap.add_argument("--model-path", default=None, help="GGUF file (llama backend)")
-    ap.add_argument("--wording", default="auto", choices=("auto", "A", "B"),
-                    help="auto = the wording chosen by the pilot hand check (stance_choice.json)")
+    ap.add_argument("--wording", default="both", choices=("both", "A", "B"),
+                    help="both = run wordings A and B (their probabilities are averaged downstream)")
     ap.add_argument("--top", type=int, default=TOP_K)
     ap.add_argument("--pilot", action="store_true",
                     help="40 seeded dev items, both wordings, plus the irrelevant-paper control")
@@ -394,14 +389,7 @@ def main(argv=None) -> int:
     if args.backend == "llama" and not Path(args.model_path).is_file():
         print(f"model file not found: {args.model_path}", file=sys.stderr)
         return 2
-    wordings = ["A", "B"] if args.pilot else [args.wording]
-    if wordings == ["auto"]:
-        choice = load_choice(data)
-        if not choice:
-            print("no wording chosen yet: run the pilot and its hand check first "
-                  "(stance_check score), or pass --wording A or B", file=sys.stderr)
-            return 2
-        wordings = [choice["wording"]]
+    wordings = ["A", "B"] if (args.pilot or args.wording == "both") else [args.wording]
 
     bench = [r for r in load_jsonl(data / "benchmark.jsonl")
              if r["split"] == args.split and not r["likely_label_noise"]]

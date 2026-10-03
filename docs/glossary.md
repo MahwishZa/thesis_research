@@ -48,12 +48,13 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Dev / confirmatory split** | Seeded split of the MedChange items. Dev is used for gates; the confirmatory split is run once. |
 | **Gate (G0–G3)** | A pre-stated pass/fail check on the dev split that decides whether to continue (`experiment_plan.md` §9). |
 | **RQ1, RQ2** | The two pre-specified stage-2 questions. RQ1: does as-of retrieved evidence (B1) make verdicts more accurate than none (B0)? RQ2: does the selected hybrid beat B1R? Tested once, on the confirmatory split. |
-| **P0, P1 (gate 1), P2 (gate 2)** | The stage-2 dev checks, in order: P0 diagnostics (no model), the 40-item stance pilot with a hand check (gate 1), the full dev stance run with the fitted layer (gate 2). Thresholds are in `experiment_plan.md` §9. |
-| **Hand check** | The researcher's own S / C / N labels of 40 pilot papers, compared with the model's stance (gate 1); it also picks the wording. A sanity check, about ±14 pp wide, not a gold standard. |
+| **P0, P1 (gate 1), P2 (gate 2)** | The stage-2 dev checks, in order: P0 diagnostics (no model), the 40-item stance pilot with machine checks (gate 1), the full dev stance run with the fitted layer (gate 2). Thresholds are in `experiment_plan.md` §9. |
+| **Label audit / label-stable item** | An independent second-family model re-labels every item's conclusions with the authors' rubric; items on which it agrees with the gold label are label-stable. Measures reproducibility, not medical truth. |
+| **Genuine positive** | The pre-declared strict reading of a confirmed RQ2: also better than raw B1, macro-F1 not lower, label-stable direction, recency earned (`experiment_plan.md` §10). |
 | **Irrelevant-paper control** | Each pilot question judged against papers belonging to another item; a stance step that reads the paper should say "neither". |
-| **Frozen model** | `results/synthesis_model.json`: the coefficients, selected hybrid and stance wording fitted on dev, committed before any confirmatory stance run. |
+| **Frozen model** | `results/synthesis_model.json`: the coefficients, selected hybrid and stance setting fitted on dev, committed before any confirmatory stance run. |
 | **Forking-path ledger** | The dated list in `experiment_plan.md` §13 of every design decision taken after seeing dev data. |
-| **Question pool (Alzheimer's)** | The 113 usable human-reviewed Alzheimer's questions, split into validation (23) and test (90). |
+| **Question pool (Alzheimer's)** | The 113 usable Alzheimer's questions reviewed earlier by the researcher (not extended), split into validation (23) and test (90). |
 | **`temporal_candidate`** | Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
 | **Provenance firewall** | The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |
 | **Corpus snapshot** | An id identifying exactly which corpus/index build a frozen item was produced against. |

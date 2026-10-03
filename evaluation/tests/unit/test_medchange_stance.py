@@ -1,6 +1,5 @@
 """Stage-2 stance step, its pilot checks and the P0 diagnostics (no model, no network)."""
 
-import csv
 import json
 import math
 import sys
@@ -290,16 +289,19 @@ class StanceCliTests(unittest.TestCase):
                                        "--data-dir", str(d)])
                 self.assertEqual(again, 2)
 
-    def test_a_full_run_needs_a_chosen_wording_and_then_uses_it(self):
+    def test_a_full_run_scores_both_wordings_by_default_or_one_on_request(self):
         with TemporaryDirectory() as tmp:
             d, model = write_data_dir(tmp, 2, 2)
             with mock.patch.object(ST, "LlamaStance", lambda *a, **k: FakeScorer()):
-                self.assertEqual(self._run(["--split", "dev", "--model-path", str(model), "--data-dir", str(d)]), 2)
-                (d / "stance_choice.json").write_text(json.dumps({"wording": "B"}), encoding="utf-8")
                 self.assertEqual(self._run(["--split", "dev", "--model-path", str(model), "--data-dir", str(d)]), 0)
-            rows = [json.loads(l) for l in (d / "stance_dev.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual({r["wording"] for r in rows}, {"B"})
-        self.assertEqual(len(rows), 4)
+                rows = [json.loads(l) for l in (d / "stance_dev.jsonl").read_text(encoding="utf-8").splitlines()]
+                self.assertEqual({r["wording"] for r in rows}, {"A", "B"})
+                self.assertEqual(len(rows), 8)
+                self.assertEqual(self._run(["--split", "dev", "--wording", "B", "--model-path", str(model),
+                                            "--data-dir", str(d), "--out", str(d / "only_b.jsonl")]), 0)
+            only = [json.loads(l) for l in (d / "only_b.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual({r["wording"] for r in only}, {"B"})
+        self.assertEqual(len(only), 4)
 
     def test_a_missing_model_file_is_reported(self):
         with TemporaryDirectory() as tmp:
@@ -341,92 +343,51 @@ class PilotReportTests(unittest.TestCase):
         self.assertEqual(rep["seconds_per_paper_mean"], 5.0)
         self.assertGreater(rep["mean_side_strength_real"], rep["mean_side_strength_control"])
 
-    def test_gate_is_incomplete_until_the_hand_check_is_scored_then_passes_or_fails(self):
+    def test_gate_is_machine_only_and_passes_a_clean_pilot(self):
         rep = SC.pilot_report(pilot_records())
-        self.assertEqual(SC.gate1(rep, None)["gate1"], "INCOMPLETE")
-        self.assertEqual(SC.gate1(rep, {"chosen_accuracy": 0.75})["gate1"], "PASS")
-        self.assertEqual(SC.gate1(rep, {"chosen_accuracy": 0.65})["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(rep)["gate1"], "PASS")
+        self.assertNotIn("hand_check_accuracy>=0.70", SC.gate1(rep)["checks"])
 
     def test_each_pre_stated_threshold_can_fail_the_gate(self):
-        ok = {"chosen_accuracy": 0.9}
         disagree = SC.pilot_report(pilot_records(agree=False))
-        self.assertEqual(SC.gate1(disagree, ok)["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(disagree)["gate1"], "FAIL")
         leaky = SC.pilot_report(pilot_records(control_neither=0.5))
-        self.assertEqual(SC.gate1(leaky, ok)["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(leaky)["gate1"], "FAIL")
         slow = SC.pilot_report(pilot_records(seconds=11.0))
-        self.assertEqual(SC.gate1(slow, ok)["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(slow)["gate1"], "FAIL")
         flan_fast = SC.pilot_report(pilot_records(backend="flan:google/flan-t5-large", seconds=3.0))
-        self.assertEqual(SC.gate1(flan_fast, ok)["gate1"], "PASS")
+        self.assertEqual(SC.gate1(flan_fast)["gate1"], "PASS")
         flan_slow = SC.pilot_report(pilot_records(backend="flan:google/flan-t5-large", seconds=5.0))
-        self.assertEqual(SC.gate1(flan_slow, ok)["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(flan_slow)["gate1"], "FAIL")
         broken = pilot_records()
         for r in broken[:3]:
             r["probs"], r["argmax"] = None, "neither"
-        self.assertEqual(SC.gate1(SC.pilot_report(broken), ok)["gate1"], "FAIL")
+        self.assertEqual(SC.gate1(SC.pilot_report(broken))["gate1"], "FAIL")
+
+    def test_invalid_control_papers_do_not_fail_the_real_paper_rule_but_are_still_reported(self):
+        rows = pilot_records(n=40)
+        for r in [r for r in rows if r["control"]][:3]:
+            r["probs"], r["argmax"] = None, "neither"
+        rep = SC.pilot_report(rows)
+        self.assertGreater(rep["invalid_rate"], 0.02)
+        self.assertEqual(rep["invalid_rate_real"], 0.0)
+        self.assertGreater(rep["invalid_by_group"]["control"], 0.0)
+        self.assertEqual(SC.gate1(rep)["gate1"], "PASS")
 
 
-class HandCheckTests(unittest.TestCase):
+class StanceCheckCliTests(unittest.TestCase):
 
-    def test_export_hides_the_model_answer_and_score_compares_both_wordings(self):
-        items = {"MC-0": {"question": "Does it work?"}, "MC-1": {"question": "Is it safe?"}}
-        pools = {k: {"candidates": [cand(f"p{i}", 1) for i in range(10)]} for k in items}
-        records = [r for r in pilot_records(n=10) if not r.get("control")]
-        with TemporaryDirectory() as tmp:
-            sheet, key = Path(tmp) / "sheet.csv", Path(tmp) / "key.json"
-            n = SC.export_handcheck(records, pools, items, 6, 3, sheet, key)
-            text = sheet.read_text(encoding="utf-8-sig")
-            self.assertEqual(n, 6)
-            self.assertNotIn("contradicts", text.lower())
-            self.assertNotIn("argmax", text.lower())
-            with open(sheet, encoding="utf-8-sig", newline="") as f:
-                rows = list(csv.DictReader(f))
-            self.assertEqual(list(rows[0]), ["row", "question", "study_text", "your_label"])
-            keys = json.loads(key.read_text(encoding="utf-8"))
-            for row in rows:                       # the researcher agrees with wording A everywhere
-                row["your_label"] = "s"
-            result = SC.score_handcheck(rows, keys)
-        self.assertEqual(result["n_checked"], 6)
-        self.assertEqual(result["accuracy"]["A"], 1.0)
-        self.assertEqual(result["accuracy"]["B"], 1.0)
-        self.assertEqual(result["chosen_wording"], "A")
-
-    def test_wording_b_is_chosen_only_when_it_scores_strictly_higher(self):
-        keys = {"1": {"A": "supports", "B": "contradicts"}, "2": {"A": "neither", "B": "contradicts"}}
-        rows = [{"row": "1", "your_label": "C"}, {"row": "2", "your_label": "C"}]
-        result = SC.score_handcheck(rows, keys)
-        self.assertEqual(result["chosen_wording"], "B")
-        self.assertEqual(result["chosen_accuracy"], 1.0)
-
-    def test_an_unlabelled_or_invalid_row_is_refused_with_its_row_number(self):
-        with self.assertRaisesRegex(ValueError, "row 2"):
-            SC.score_handcheck([{"row": "1", "your_label": "S"}, {"row": "2", "your_label": ""}],
-                               {"1": {"A": "supports"}, "2": {"A": "supports"}})
-
-    def test_cli_report_export_and_score_round_trip(self):
+    def test_report_prints_the_machine_gate_and_can_save_it(self):
         with TemporaryDirectory() as tmp:
             d = Path(tmp)
-            items = [{"item_id": f"MC-{i}", "question": f"Q{i}?", "split": "dev", "likely_label_noise": False,
-                      "kind": "changed", "newest": {"label": "SUPPORTED", "date": "2020-01-01"}} for i in range(2)]
-            pools = [{"item_id": f"MC-{i}", "candidates": [cand(f"p{k}", 1) for k in range(10)]} for i in range(2)]
-            (d / "benchmark.jsonl").write_text("\n".join(map(json.dumps, items)) + "\n", encoding="utf-8")
-            (d / "frozen_dev.jsonl").write_text("\n".join(map(json.dumps, pools)) + "\n", encoding="utf-8")
-            (d / "stance_pilot.jsonl").write_text("\n".join(map(json.dumps, pilot_records(n=10))) + "\n", encoding="utf-8")
+            (d / "stance_pilot.jsonl").write_text("\n".join(map(json.dumps, pilot_records(n=10))) + "\n",
+                                                  encoding="utf-8")
             with mock.patch("sys.stdout"):
-                self.assertEqual(SC.main(["report", "--data-dir", str(d)]), 0)
-                self.assertEqual(SC.main(["export", "--data-dir", str(d), "--n", "8"]), 0)
-            with open(d / "stance_handcheck.csv", encoding="utf-8-sig", newline="") as f:
-                rows = list(csv.DictReader(f))
-            for row in rows:
-                row["your_label"] = "S"
-            with open(d / "stance_handcheck.csv", "w", encoding="utf-8-sig", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=list(rows[0]))
-                w.writeheader()
-                w.writerows(rows)
-            with mock.patch("sys.stdout"):
-                self.assertEqual(SC.main(["score", "--data-dir", str(d)]), 0)
-            choice = json.loads((d / "stance_choice.json").read_text(encoding="utf-8"))
-        self.assertEqual(choice["wording"], "A")
-        self.assertEqual(choice["gate1"], "PASS")
+                self.assertEqual(SC.main(["report", "--data-dir", str(d), "--out", str(d / "gate1.json")]), 0)
+            saved = json.loads((d / "gate1.json").read_text(encoding="utf-8"))
+            self.assertEqual(saved["gate"]["gate1"], "PASS")
+            with mock.patch("sys.stderr"):
+                self.assertEqual(SC.main(["report", "--data-dir", str(d / "none")]), 2)
 
 
 class DiagnosticsTests(unittest.TestCase):
