@@ -722,28 +722,37 @@ intentional availability import in `encoders.py` and unused imports inside archi
 command named in the current documents exists. No experiment was run and no result was produced in this
 phase.
 
-## Current status (2026-10-02)
+## Current status (2026-10-03)
 
-* **Research direction:** an as-of evaluation of recency-weighted evidence admission (the Temporal Filter)
-  on MedChangeQA, with the Alzheimer's study as a secondary case study. Protocol: `experiment_plan.md`.
+* **Research direction:** two stages on MedChangeQA, asked as of each newest Cochrane review's date. Stage 1,
+  the Temporal Filter (recency in evidence admission), is done on the dev split and negative (Phase 25).
+  Stage 2, an evidence-synthesis layer (one stance judgement per retrieved paper, combined with the RAG
+  answer by a small logistic regression fitted on dev and frozen), is pre-specified in `experiment_plan.md`
+  with two questions: RQ1, does as-of retrieval (B1) beat no evidence (B0); RQ2, does the selected hybrid beat
+  the same RAG answer put through the same fitting (B1R). The Alzheimer's study stays a secondary case study.
 * **Built and tested:** the MedChange benchmark (504 usable changed and 250 unchanged items, seeded
   dev/confirmatory splits), the PubMed as-of probe, frozen dev candidate pools (226 items), zero-shot
-  helpfulness scores for the dev pools, the six arms, the generation harness, the analysis (accuracy,
-  retrieval-level checks, McNemar with Holm, gates) and the G1 consistency check. Alzheimer's corpus
-  (114,256 PMC records, 4,377,041 chunks), question pool (113 usable) and dense index (4,376,141 x 768):
-  built, secondary.
-* **Gates (updated through Phase 25):** G0 passed; G2 passed; **G3 failed** (P − B2 = −1.3 pp, P − C1 =
-  −2.0 pp); G1 pending the student's manual check.
-* **Results:** dev split only, all six arms (Phases 24-25): standard RAG (B1) is the most accurate arm on
-  changed items (49.7%); the proposed system P is 13.9 pp lower (p = 0.0008). The confirmatory split has not
-  been run and, per the plan, is not run for P as designed.
-* **Not built:** frozen pools for the confirmatory split; the human hallucination annotation; a second
-  generator; the Alzheimer's as-of case study.
+  helpfulness scores for the dev pools, the six stage-1 arms, the generation harness, the analysis (accuracy,
+  retrieval-level checks, McNemar with Holm, gates), the G1 consistency check and the dev error analysis.
+  Stage 2 (Phase 27): `diagnostics.py`, `stance.py`, `stance_check.py`, `synthesis.py`, `analyze_stage2.py`,
+  unit-tested on synthetic data only. Alzheimer's corpus (114,256 PMC records, 4,377,041 chunks), question
+  pool (113 usable) and dense index (4,376,141 x 768): built, secondary.
+* **Gates (updated through Phase 27):** stage 1: G0 passed; G2 passed; **G3 failed** (P − B2 = −1.3 pp, P − C1 =
+  −2.0 pp); G1 pending the student's manual check. Stage 2: the P0 diagnostics, the stance pilot with its
+  hand check (gate 1) and the full dev stance run with the fitted layer (gate 2) are pending.
+* **Results:** dev split only, all six stage-1 arms (Phases 24-25): standard RAG (B1) is the most accurate arm
+  on changed items (49.7%); the proposed Temporal Filter P is 13.9 pp lower (p = 0.0008). No stage-2 result
+  exists. The confirmatory split (528 items) has not been built, run or analysed; it is run once, after the
+  frozen model file is committed.
+* **Not built:** frozen pools for the confirmatory split; any real stance output; the human hallucination
+  annotation; a second generator; the Alzheimer's as-of case study.
 * **Abandoned and archived:** the RAG² filter reproduction (the checkpoint is not distributed; local
   retraining learned only the class prior) and the first Alzheimer's pilot runners (circular primary metric).
 * **Known limitations of the design** (see `methodology.md`): the B2/P helpfulness score is an untrained
-  stand-in, not RAG²; gold verdicts are model-generated; the generator is a 4-bit 8B model on CPU; the
-  decisive-flip subgroup is small (114 items).
+  stand-in, not RAG², and may have been scored on truncated inputs (unverified; the P0 diagnostics measure
+  it); gold verdicts are model-generated; the generator is a 4-bit 8B model on CPU; the stance step is a
+  zero-shot judgement checked only by a 40-paper hand check by a non-expert; the decisive-flip subgroup is
+  small (114 items); the 528 confirmatory items can confirm only effects of about 5 pp or more.
 
 ## Phase 24 — Dev run of B0 and B1 (Oct 2)
 
@@ -817,3 +826,67 @@ update-window evidence in the pool, is it admitted, does the generator follow it
   P 37.1%; n is small).
 * Not checked: whether the gold labels (gpt-4o-mini, from abstract conclusions) are right.
 
+
+## Phase 27 — Audit of the dev results, stage-2 design and code (Oct 3)
+
+**Why.** Gate G3 had failed (Phase 25) and the error analysis (Phase 26) located the bottleneck in how the
+generator uses evidence, not in retrieval. Before choosing a next step the dev results were audited once more
+and a redesign was checked for feasibility; no repository file changed during the audit.
+
+**Audit findings** (computed on the 226 dev items from the committed answers; no new generation; recomputed
+by the committed `experiments/medchange/dev_audit.py`, output `results/dev_audit.md`).
+
+* Always answering SUPPORTED scores 44.4% on changed items (the best arm, B1, scores 49.7%); recall of
+  REFUTED is 0-11% for every arm. Accuracy here depends largely on how readily the model says SUPPORTED
+  rather than NOT ENOUGH INFORMATION.
+* B1's gain over B0 comes with a change in behaviour: NOT ENOUGH INFORMATION answers rise from 21% to 40% of
+  answers (recall 15% to 53%) while SUPPORTED recall falls from 81% to 69%.
+* Reading five abstracts at once is noisy: two arms that admitted the same five papers in a different order
+  gave the same verdict in 86.1% of 72 pairs (14% flips); partial overlaps agree 80.1% (overlap 0.25-0.66,
+  1,515 pairs) and 63.9% (overlap below 0.25, 656 pairs); identical lists in identical order gave identical
+  generated text in only 8 of 17 pairs (the same verdict in all 17), so greedy decoding is not bitwise
+  reproducible.
+* Evidence age carries no visible signal: the mean age of B1's evidence is 10.6, 11.4 and 10.7 years for gold
+  SUPPORTED, REFUTED and NOT ENOUGH INFORMATION; adding age features to a refit of B1's verdict lowers
+  cross-validated accuracy (52.2% to 49.6%). Refitting the hard verdict alone (52.2% against 53.1% raw) and a
+  majority vote of B1, B2 and B3 (47.0% against 49.7%) do not help.
+* Correction recorded: these figures were first computed with one-off scripts that were not saved. The
+  committed script reproduces every figure exactly except the two cross-validated accuracies, which moved by
+  0.5 pp (52.7% to 52.2%, 50.1% to 49.6%) because it uses the stage-2 fitting; no conclusion changed.
+
+**Decision (the researcher's).** Stage 2: an evidence-synthesis layer instead of further work on recency.
+Two pre-specified questions: RQ1, does as-of retrieval (B1) beat no evidence (B0), a replication of the dev
+difference (+8.6 pp, p = 0.06) and the most likely positive result; RQ2, does the selected hybrid beat B1 put
+through the same fitting (B1R). Recency and study-type weights are ablations only. The protocol was written
+and committed first (`experiment_plan.md`, commit 26984cf: arms, features, fixed settings, stage gates P0 / gate
+1 / gate 2 with their operating characteristics, Holm families, data-hygiene rules, and the forking-path
+ledger of eight decisions taken after seeing dev data), then the code, before any confirmatory pool, answer
+or stance output existed. Judgement recorded there, not computed fact: RQ1 is confirmed with probability about
+58%, RQ2 about 15% (range 8-25%); the 528 confirmatory items can confirm only effects of about 5 pp or more.
+
+**Built** (unit-tested on synthetic data only; 649 active and 125 archived tests pass, also in a fresh
+virtualenv holding only the four base dependencies with outbound socket connections blocked; the suites leave
+the repository tree unchanged, `check_hermetic`; `pyflakes` reports only the intentional availability import
+in `encoders.py`).
+`experiments/medchange/diagnostics.py` (P0, no model); `stance.py` (one stance letter per paper for the first
+eight pool candidates, two wordings, first-token probabilities, the irrelevant-paper control, resumable,
+configuration recorded; Flan-T5-large as the one declared fallback); `stance_check.py` (gate 1: machine checks,
+the 40-paper hand-check sheet, scoring and the wording choice); `synthesis.py` (four features, paper weights,
+regularised multinomial logistic regression fitted on dev and frozen, repeated cross-validation, selection rule,
+gate 2, prediction that refuses to run without the frozen model); `analyze_stage2.py` (RQ1 and RQ2 as one Holm
+family, a secondary family, per-class recall); `dev_audit.py`. `generate_answers.check_config` was generalised so
+that stance and synthesis files carry the same configuration record as answers.
+
+**Not done, and not verified.** Nothing has been run on real data: the llama-cpp log-probability path was
+written from the library source and has not met a real model (`--hard-labels` is the fallback); the cost per
+stance judgement (expected 5-8 s) is unmeasured; the confirmatory split has no pools yet. A code-reading
+suspicion, unconfirmed: `helpfulness.py` puts the question after the abstract and truncates at 512 tokens from
+the end, so for long abstracts the question and the "Answer yes or no" line may have been cut off. This
+leaves the stage-1 recency conclusions unchanged (the compared arms share the scores) but weakens the
+statement that the helpfulness score is a weak selector; the P0 diagnostics measure it. The saved dev error
+analysis (`error_analysis_dev.md`, Phase 26) is on the student's laptop and is not yet committed.
+
+**Next** (`reproducibility.md` §3, steps 11-20): pull, P0 diagnostics, the 40-item stance pilot with
+`stance_check report`, the researcher's hand check of 40 papers (gate 1), the full dev stance run, `synthesis
+fit` (gate 2), then commit `results/synthesis_model.json` before any confirmatory preparation. G1 (the
+consistency sheet) is still pending.

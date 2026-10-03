@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "thesis-research"
 version = "0.2.0"
-description = "Does recency-weighted evidence admission make retrieval-augmented medical QA return current rather than outdated conclusions? An as-of evaluation on Cochrane verdict changes (MedChangeQA), with an Alzheimer's disease case study."
+description = "Evidence-aware synthesis for retrieval-augmented medical question answering: does a stance-based synthesis layer, with optional recency and study-type weighting, improve verdicts on questions whose Cochrane conclusion changed? An as-of evaluation on MedChangeQA, with an Alzheimer's disease case study."
 requires-python = ">=3.10"
 # numpy is needed by experiments.shared.retrieval, which the test suite imports.
 # requests (PubMed/PMC downloads) and pypdf (guideline PDFs) are imported at module level by

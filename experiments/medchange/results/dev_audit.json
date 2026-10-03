@@ -1,0 +1,246 @@
+{
+  "constant": {
+    "changed": {
+      "n": 151,
+      "accuracy_if_always": {
+        "SUPPORTED": 0.44370860927152317,
+        "REFUTED": 0.24503311258278146,
+        "NOT ENOUGH INFORMATION": 0.31125827814569534
+      },
+      "counts": {
+        "SUPPORTED": 67,
+        "REFUTED": 37,
+        "NOT ENOUGH INFORMATION": 47
+      }
+    },
+    "all": {
+      "n": 226,
+      "accuracy_if_always": {
+        "SUPPORTED": 0.4646017699115044,
+        "REFUTED": 0.2168141592920354,
+        "NOT ENOUGH INFORMATION": 0.3185840707964602
+      },
+      "counts": {
+        "SUPPORTED": 105,
+        "REFUTED": 49,
+        "NOT ENOUGH INFORMATION": 72
+      }
+    }
+  },
+  "arms": {
+    "B0": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.4105960264900662,
+        "recall": {
+          "SUPPORTED": 0.8059701492537313,
+          "REFUTED": 0.02702702702702703,
+          "NOT ENOUGH INFORMATION": 0.14893617021276595
+        },
+        "nei_share": 0.2119205298013245
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.5333333333333333,
+        "recall": {
+          "SUPPORTED": 0.8157894736842105,
+          "REFUTED": 0.08333333333333333,
+          "NOT ENOUGH INFORMATION": 0.32
+        },
+        "nei_share": 0.24
+      }
+    },
+    "B1": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.4966887417218543,
+        "recall": {
+          "SUPPORTED": 0.6865671641791045,
+          "REFUTED": 0.10810810810810811,
+          "NOT ENOUGH INFORMATION": 0.5319148936170213
+        },
+        "nei_share": 0.3973509933774834
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.6,
+        "recall": {
+          "SUPPORTED": 0.8157894736842105,
+          "REFUTED": 0.08333333333333333,
+          "NOT ENOUGH INFORMATION": 0.52
+        },
+        "nei_share": 0.36
+      }
+    },
+    "B2": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.3708609271523179,
+        "recall": {
+          "SUPPORTED": 0.7313432835820896,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.14893617021276595
+        },
+        "nei_share": 0.2251655629139073
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.6133333333333333,
+        "recall": {
+          "SUPPORTED": 0.9210526315789473,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.44
+        },
+        "nei_share": 0.25333333333333335
+      }
+    },
+    "B3": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.45695364238410596,
+        "recall": {
+          "SUPPORTED": 0.582089552238806,
+          "REFUTED": 0.08108108108108109,
+          "NOT ENOUGH INFORMATION": 0.574468085106383
+        },
+        "nei_share": 0.4768211920529801
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.5866666666666667,
+        "recall": {
+          "SUPPORTED": 0.7631578947368421,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.6
+        },
+        "nei_share": 0.37333333333333335
+      }
+    },
+    "P": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.3576158940397351,
+        "recall": {
+          "SUPPORTED": 0.6268656716417911,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.2553191489361702
+        },
+        "nei_share": 0.32450331125827814
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.5866666666666667,
+        "recall": {
+          "SUPPORTED": 0.868421052631579,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.44
+        },
+        "nei_share": 0.24
+      }
+    },
+    "C1": {
+      "changed": {
+        "n": 151,
+        "accuracy": 0.37748344370860926,
+        "recall": {
+          "SUPPORTED": 0.6716417910447762,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.2553191489361702
+        },
+        "nei_share": 0.31788079470198677
+      },
+      "unchanged": {
+        "n": 75,
+        "accuracy": 0.6133333333333333,
+        "recall": {
+          "SUPPORTED": 0.868421052631579,
+          "REFUTED": 0.0,
+          "NOT ENOUGH INFORMATION": 0.52
+        },
+        "nei_share": 0.28
+      }
+    }
+  },
+  "order": {
+    "categories": {
+      "overlap below 0.25": {
+        "pairs": 656,
+        "same_verdict": 0.6387195121951219
+      },
+      "overlap 0.25 to 0.66": {
+        "pairs": 1515,
+        "same_verdict": 0.8013201320132013
+      },
+      "same papers, different order": {
+        "pairs": 72,
+        "same_verdict": 0.8611111111111112
+      },
+      "identical list": {
+        "pairs": 17,
+        "same_verdict": 1.0
+      }
+    },
+    "identical_list_identical_text": {
+      "identical": 8,
+      "pairs": 17
+    }
+  },
+  "age_by_gold_B1": {
+    "SUPPORTED": {
+      "n": 105,
+      "mean_age_years": 10.633270102017535
+    },
+    "REFUTED": {
+      "n": 49,
+      "mean_age_years": 11.394633253712163
+    },
+    "NOT ENOUGH INFORMATION": {
+      "n": 72,
+      "mean_age_years": 10.722693740968895
+    }
+  },
+  "recalibration": {
+    "n": 226,
+    "n_changed": 151,
+    "raw_B1_accuracy": 0.5309734513274337,
+    "raw_B1_accuracy_changed": 0.4966887417218543,
+    "variants": {
+      "constant prior": {
+        "accuracy": 0.4646017699115044,
+        "accuracy_changed": 0.44370860927152317
+      },
+      "B1 verdict": {
+        "accuracy": 0.5216814159292036,
+        "accuracy_changed": 0.4862251655629139
+      },
+      "B1 verdict + evidence age": {
+        "accuracy": 0.49601769911504423,
+        "accuracy_changed": 0.4713907284768212
+      },
+      "evidence age only": {
+        "accuracy": 0.4488495575221239,
+        "accuracy_changed": 0.42013245033112584
+      }
+    }
+  },
+  "vote": {
+    "changed": {
+      "arms": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "n": 151,
+      "accuracy": 0.47019867549668876
+    },
+    "unchanged": {
+      "arms": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "n": 75,
+      "accuracy": 0.6266666666666667
+    }
+  }
+}

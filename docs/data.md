@@ -8,6 +8,9 @@ limitations. For how retrieval consumes them see `methodology.md`; for how to re
 |---|---|---|---|
 | MedChange (MedRevQA, AllStudyGroups, MedChangeQA) | primary evaluation questions and gold verdicts | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` from a clone of `jvladika/MedChange` |
 | PubMed abstracts, as-of candidate pools | primary evidence | no (publisher text) | `pubmed_asof` → `freeze_candidates` |
+| Per-paper stance records (`stance_<split>.jsonl`, `stance_pilot.jsonl`), P0 diagnostics | stage-2 judgements of the first eight pool papers; checks of the inputs | yes, copied to `results/` after a run (PMIDs, ranks, probabilities and timings only; no source text) | `stance`, `diagnostics` |
+| Hand-check sheet (`stance_handcheck.csv`) | the researcher's labels of 40 papers (stage-2 gate 1) | no (it shows paper text); the choice it produces (`stance_choice.json`) is copied to `results/` | `stance_check export` / `score` |
+| Frozen synthesis model (`synthesis_model.json`) | the fitted stage-2 layer: coefficients, standardisation, selected hybrid, stance wording | yes, and **before** any confirmatory stance run | `synthesis fit` (dev only) |
 | Alzheimer's evidence corpus | secondary evidence | provenance only (metadata, reports, logs) | stages 01–07 in `corpus/scripts/` |
 | Alzheimer's question pool | secondary evaluation questions | yes (`experiments/shared/questions/`) | `build_pool`, human review, `split` |
 
@@ -31,12 +34,23 @@ Windows checkout reproduces them).
 
 **Evidence.** For each question, PubMed records first public strictly before the newest version's date,
 excluding the Cochrane Database, with abstracts fetched through E-utilities; see `experiment_plan.md` §3.
-Abstracts are publisher text and are not redistributed.
+Abstracts are publisher text and are not redistributed. Stage 2 reads the first eight candidates of each
+frozen pool one at a time, from the title and the RESULTS and CONCLUSIONS sections of the abstract (the
+last three sentences when an abstract has no labelled sections); the records it writes contain only PMIDs,
+ranks, probabilities, timings and a hash of the snippet, so they can be committed.
+
+**Splits.** Seeded 20261001, stratified by kind and change type: dev 151 changed + 75 unchanged = 226 items
+(gold labels SUPPORTED 105, REFUTED 49, NOT ENOUGH INFORMATION 72), confirmatory 353 + 175 = 528 items. No
+review group or Cochrane ID appears in both splits (computed: 0 of 762) and the median newest-review year is
+2014 in both. The confirmatory labels have not been analysed, and their class mix is deliberately not
+inspected (it should be close to dev's because of the stratification).
 
 **Limitations.** Gold labels are model-generated, not human-verified (a ~100-label human check is
 planned). 397 of 504 usable changes involve NOT ENOUGH INFORMATION, the vaguest boundary. Only 14 items
 (9 changed, 5 unchanged) are Alzheimer's-related. Question text was written by a model from review
-objectives.
+objectives. For stage 2, the share of abstracts that have labelled RESULTS and CONCLUSIONS sections and the
+mix of study types among the first eight candidates are not yet known; the P0 diagnostics
+(`experiments/medchange/diagnostics.py`) measure them on dev.
 
 ## 2. Alzheimer's evidence corpus (secondary)
 
@@ -95,4 +109,11 @@ mismatch is why the Alzheimer's evaluation had to be redone as-of (`experiment_p
    verbatim sentences.
 3. Some public-health pages carry no publication date; the retrieval date is recorded and flagged rather
    than treated as a real date.
-4. No part of this project trains on any question pool; the pools only evaluate.
+4. No part of this project trains on any question pool; the pools only evaluate. The one exception is the
+   stage-2 logistic layer, which has a few dozen coefficients fitted on the 226 dev items and then frozen; it
+   never sees the confirmatory split before prediction.
+5. The stage-2 stance quality is checked against 40 labels written by the researcher, who is not a medical
+   expert; with 40 papers the 95% interval around an accuracy is about ±14 percentage points, so the hand check
+   is a sanity check, not a validated gold standard.
+6. The fitted layer learns the dev class mix (SUPPORTED 46%, REFUTED 22%, NOT ENOUGH INFORMATION 32%), which
+   may not match another benchmark or the confirmatory split.

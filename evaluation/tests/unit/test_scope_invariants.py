@@ -27,6 +27,11 @@ canonical-scope document.
 attempt and the first Alzheimer's pilot runners moved to ``_archive/``. The guards below
 were retargeted accordingly, and ``DocumentationIntegrityTests`` was added so that a path or
 command named in the documentation can no longer silently stop existing.
+
+2026-10-03: stage 1 (the Temporal Filter) failed its dev gate, and the study gained a stage 2, an
+evidence-synthesis layer with two pre-specified questions (RQ1, RQ2) tested once on the confirmatory
+split. The README guards below keep those questions, and the stated limit of what 528 items can
+confirm, from drifting; the plan guard keeps the list of decisions taken after seeing dev data.
 """
 
 import re
@@ -79,6 +84,20 @@ class CurrentScopeTests(unittest.TestCase):
         silently turn a research question into a foregone conclusion."""
         body = " ".join(text(README).lower().split())
         self.assertIn("does not commit in advance to which one it will report", body)
+
+    def test_readme_states_the_stage_2_questions_and_their_limits(self):
+        """Stage 2 is two pre-specified questions tested once on a held-out split. Dropping the
+        questions, or the sentence that says how small an effect the benchmark can confirm, would
+        turn a hedged design into an unqualified claim."""
+        body = " ".join(text(README).split())
+        for needle in ("RQ1", "RQ2", "evidence-synthesis layer", "tested once",
+                       "only effects of about 5 percentage points or more can be confirmed"):
+            self.assertIn(needle, body)
+
+    def test_plan_lists_the_decisions_taken_after_seeing_dev_data(self):
+        body = " ".join(text(ROOT / "docs" / "experiment_plan.md").split())
+        self.assertIn("Decisions taken after seeing dev data", body)
+        self.assertIn("forking-path ledger", body)
 
     def test_methodology_states_what_is_held_constant(self):
         body = text(METHODOLOGY)

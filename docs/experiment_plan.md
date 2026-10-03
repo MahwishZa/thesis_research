@@ -24,19 +24,19 @@ passages from the update window from 51% to 74%) but did not improve verdicts (g
 P − B2 = −1.3 pp, P − C1 = −2.0 pp; B3 − B1 = −4.0 pp, p = 0.38). This result is kept in the thesis
 as a first finding; it is not re-tested on the confirmatory split.
 
-**Why stage 2** (all *computed* on the 226 dev items, from the committed answers; see `log.md`
-Phase 27). (a) Verdict accuracy here mostly measures how readily the model says SUPPORTED versus NOT
-ENOUGH INFORMATION: always answering SUPPORTED scores 44.4% on changed items against 49.7% for the best
-arm, and recall of REFUTED is 0–11% for every arm. (b) Retrieval's gain comes with a shift towards NOT
-ENOUGH INFORMATION (recall 15% for B0, 53% for B1) at the cost of SUPPORTED recall (81% → 69%). (c)
-Reading five abstracts at once is noisy: the same five papers in a different order change 14% of
-verdicts (86.1% agreement, 72 pairs). (d) Recency carries no information about the gold verdict in this
-data: the mean age of B1's evidence is 10.6, 11.4 and 10.7 years for gold SUPPORTED, REFUTED and NOT
-ENOUGH INFORMATION, and adding age features to the verdict lowers cross-validated accuracy (52.7% →
-50.1%). (e) Recalibrating hard verdicts (52.7% vs 53.1% raw) and majority voting over evidence sets
-(47.0% vs 49.7%) gave no gain.
+**Why stage 2** (all *computed* on the 226 dev items from the committed answers by
+`experiments/medchange/dev_audit.py`, output in `results/dev_audit.md`; see `log.md` Phase 27). (a) Verdict
+accuracy here mostly measures how readily the model says SUPPORTED versus NOT ENOUGH INFORMATION: always
+answering SUPPORTED scores 44.4% on changed items against 49.7% for the best arm, and recall of REFUTED is
+0–11% for every arm. (b) Retrieval's gain comes with a shift towards NOT ENOUGH INFORMATION (recall 15% for
+B0, 53% for B1) at the cost of SUPPORTED recall (81% → 69%). (c) Reading five abstracts at once is noisy:
+the same five papers in a different order change 14% of verdicts (86.1% agreement, 72 pairs). (d) Recency
+shows no sign of carrying information about the gold verdict in this data: the mean age of B1's evidence is 10.6, 11.4 and
+10.7 years for gold SUPPORTED, REFUTED and NOT ENOUGH INFORMATION, and adding age features to the verdict
+lowers cross-validated accuracy (52.2% → 49.6%). (e) Recalibrating hard verdicts (52.2% cross-validated vs
+53.1% raw) and majority voting over evidence sets (47.0% vs 49.7%) gave no gain.
 
-**Stage 2 (planned; two pre-specified questions, each tested once on the confirmatory split).**
+**Stage 2 (code built, not yet run; two pre-specified questions, each tested once on the confirmatory split).**
 
 > **RQ1.** Does giving a small local LLM as-of retrieved evidence (standard RAG, B1) make its verdicts
 > more accurate than giving it none (B0)?
@@ -86,7 +86,7 @@ both splits (computed: 0 of 762) and each review contributes one item; the media
 is 2014 in both splits. The newest reviews pre-date the generator's training data, so memorisation of
 their conclusions is possible (*unverified*; it affects every arm alike).
 
-## 3. As-of protocol and candidate pools (**done** for dev; **planned** for confirmatory)
+## 3. As-of protocol and candidate pools (**done** for dev; confirmatory: code **built**, run pending)
 
 For each item the question date t_q is the newest review's publication date. The system's only
 input is the question. Candidates are PubMed records first public **strictly before** t_q
@@ -137,7 +137,7 @@ end, so for long abstracts the question and the "Answer yes or no" instruction m
 The stage-1 conclusions about recency are unaffected (P − B2, P − C1 and B3 − B1 compare arms that share
 the same scores), but the statement that the helpfulness score is a weak selector is confounded by it.
 
-**Stage 2 arms (planned).** The evidence-synthesis layer works on the first 8 candidates of each
+**Stage 2 arms (built; not yet run).** The evidence-synthesis layer works on the first 8 candidates of each
 frozen pool in cross-encoder order and never changes what the generator reads.
 
 | Arm | What it is |
@@ -181,8 +181,9 @@ committed **before** any confirmatory stance run.
 Llama-3-8B-Instruct, Q4_K_M GGUF (bartowski), llama.cpp on CPU, greedy decoding, 160 new tokens,
 one prompt (`prompts.py`). The model must open with `VERDICT: SUPPORTED | REFUTED | NOT ENOUGH
 INFORMATION` followed by at most three sentences. Measured on the target laptop: ≈ 18 s per answer
-without evidence and ≈ 66 s with five passages, so ≈ 350 s per item over six arms: dev ≈ 22 h,
-confirmatory ≈ 51 h (*estimated*). A second generator (Qwen2.5-7B-Instruct) is **planned** as a
+without evidence and ≈ 66 s with five passages, so ≈ 350 s per item over six arms: dev ≈ 22 h
+(*estimated*; the six-arm confirmatory run of stage 1, ≈ 51 h, is not planned, because B2, P and C1 are not
+run on the confirmatory split). A second generator (Qwen2.5-7B-Instruct) is **planned** as a
 robustness check.
 
 Stage 2 reuses these generations: B0 and B1 are generated once on the confirmatory split (≈ 2.1 h and
@@ -215,7 +216,7 @@ Flan-T5-large (≈ 1 s per pair on CPU) as the stance model; a second failure en
 * Sensitivity (planned): the 114 decisive-flip items alone; an LLM judge on a sample; excluding
   non-Cochrane systematic reviews from candidates.
 
-## 7. Statistics (**built**: `analyze.py`, `evaluation/stats.py`)
+## 7. Statistics (**built**: `analyze.py`, `analyze_stage2.py`, `evaluation/stats.py`)
 
 **Stage 1 (dev, exploratory).** Family, Holm-corrected: P vs B1, P vs B2, P vs B3 on the primary
 outcome — exact McNemar with a question-resampled bootstrap 95% CI.
@@ -241,7 +242,7 @@ effect N(+5.5, 3.5) pp, 29% differing); RQ2 is confirmed with probability ≈ 15
 weights 50% no effect, 25% +1 pp, 15% +3 pp, 10% +5 pp). Smaller effects will read as inconclusive and are
 reported with their intervals, not as "no effect". Anything outside these lists is exploratory and labelled so.
 
-## 8. Error analysis (stage 1 **done** on dev; stage 2 **planned**)
+## 8. Error analysis (stage 1 **done** on dev; stage 2 **partly built**)
 
 Each wrong answer on a changed item gets one cause: (1) retrieval miss — no update-window evidence in
 the pool; (2) admission miss — present but not admitted; (3) generator override — admitted, answer
@@ -249,9 +250,10 @@ contradicts it; (4) parse/format failure; (5) gold-label error (human check of ~
 dev, changed items (`error_analysis.py`; `log.md` Phase 26): retrieval misses 0 for every arm; admission
 misses B1 13, B3 1, P 2; "evidence admitted, answer still wrong" B1 63, B3 81, P 95 — the bottleneck is how
 the generator uses evidence (or the gold label), not retrieval. Stage 2 adds, on dev and on the
-confirmatory split: per-class recall and confusion matrices for every arm; stance accuracy on the 35 (dev)
-decisive flips; stance of update-window versus older papers (diagnostic only, using the oracle window);
-and the conflict feature against gold NOT ENOUGH INFORMATION. Gold-label error (cause 5) is not checked.
+confirmatory split, **built** (`analyze_stage2.py`): per-class recall, macro-F1 and the share of each
+predicted class for every arm. **Planned**, not built: confusion matrices; stance accuracy on the 35 (dev)
+decisive flips; stance of update-window versus older papers (diagnostic only, using the oracle window); and
+the conflict feature against gold NOT ENOUGH INFORMATION. Gold-label error (cause 5) is not checked.
 
 ## 9. Gates and decision rules (dev split only; thresholds fixed in advance)
 
@@ -274,7 +276,7 @@ in 13% of runs when the true effect is zero, 50% when it is +5 pp and 87% when i
 P − C1 ≥ +2.5 pp condition in 30%, 73% and 96%. G3 therefore screens out a clearly absent effect; it
 cannot confirm a small one, and a real 5 pp effect fails it about as often as it passes.
 
-**Stage 2 steps and gates (planned; thresholds fixed here, before any stage-2 result).**
+**Stage 2 steps and gates (code built, steps pending; thresholds fixed here, before any stage-2 result).**
 
 | Step | What | Pass condition |
 |---|---|---|
@@ -356,3 +358,12 @@ INFORMATION 32%), which may not transfer to other distributions; confirmatory po
   B1R as the fairness control; (4) a pooled all-items primary outcome; (5) the top-8, snippet, feature and
   weight definitions; (6) the four-variant selection rule and its 1.0 pp margin; (7) the gate thresholds in
   §9; (8) the single-stance-wording rule. Nothing about the confirmatory data informed any of them.
+* **2026-10-03, correction, before any confirmatory data** — the audit figures in §1 were first computed with
+  one-off scripts that are not in the repository. They were recomputed with the committed
+  `experiments/medchange/dev_audit.py`: every figure reproduced exactly except the two cross-validated
+  accuracies, which moved by 0.5 pp because the committed script uses the stage-2 fitting instead of the
+  one-off gradient-descent fit (52.7% → 52.2% for the recalibrated verdict, 50.1% → 49.6% with age
+  features). The conclusions are unchanged and no decision, threshold or setting was affected. Also
+  clarified in §5: the six-arm confirmatory cost is not planned (the protocol already excluded B2, P and C1
+  from the confirmatory split) and the status labels of the stage-2 components now read "built" where code
+  and tests exist (no run exists for any of them).
