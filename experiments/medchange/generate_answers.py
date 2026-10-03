@@ -113,11 +113,11 @@ def config_path(answers: Path) -> Path:
     return answers.with_name(answers.stem + ".config.json")
 
 
-def check_config(answers: Path, config: dict) -> list[str]:
-    """Bind an answers file to the configuration that produced it.
+def check_config(answers: Path, config: dict, relevant=RESULT_RELEVANT) -> list[str]:
+    """Bind an output file to the configuration that produced it.
 
     Records ``config`` next to ``answers`` when nothing is recorded yet and returns the
-    result-relevant fields on which it disagrees with an existing record (empty: compatible).
+    ``relevant`` fields on which it disagrees with an existing record (empty: compatible).
     """
     path = config_path(answers)
     if not path.exists():
@@ -126,7 +126,7 @@ def check_config(answers: Path, config: dict) -> list[str]:
             handle.write(json.dumps(config, indent=2, sort_keys=True) + "\n")
         return []
     recorded = json.loads(path.read_text(encoding="utf-8"))
-    return [k for k in RESULT_RELEVANT if recorded.get(k) != config.get(k)]
+    return [k for k in relevant if recorded.get(k) != config.get(k)]
 
 
 def llama_version() -> str:
