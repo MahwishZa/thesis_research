@@ -66,6 +66,7 @@ resumable: rerun the same command after an interruption.
 | 7 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\<file>.gguf` | llama.cpp CPU: ≈ 18 s per B0 answer, ≈ 66 s with five passages; add `--limit 3` for a timing test |
 | 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
 | 9 | `python -m experiments.medchange.consistency export --n 50`, fill the CSV, `... score` | G1 human check of the stated verdicts |
+| 10 | `python -m experiments.medchange.error_analysis --split dev --out-dir experiments\medchange\results` | seconds; uses the existing answers and frozen pools, no generation |
 
 Dev is run first. The confirmatory split (`--split confirm`) is run only after the gates pass, once,
 following the plan frozen in `experiment_plan.md`. For arms B2, P and C1 run step 6 before step 7. The

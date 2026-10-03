@@ -15,6 +15,7 @@ code to steps. Commands and measured costs: `docs/reproducibility.md` §3.
 | `prompts.py` | the one answer prompt and the `VERDICT:` parser | none | – |
 | `generate_answers.py` | one answer per (item, arm) with llama.cpp, resumable; records the generator configuration and refuses to resume under a different one | GGUF model | `answers_<split>.jsonl`, `answers_<split>.config.json` |
 | `analyze.py` | accuracy, outdated rate, retrieval-level metrics, paired McNemar + Holm, gates G2/G3 | none | stdout or `--out` |
+| `error_analysis.py` | where wrong answers on changed items go wrong: retrieval miss, admission miss, evidence admitted but still wrong; accuracy with/without update-window evidence | none | `results/error_analysis_<split>.json`, `.md` |
 | `consistency.py` | gate G1 human check of stated verdicts | none | `consistency_sheet.csv` |
 
 `data/` is gitignored because the MedChange release states no licence and abstracts are publisher text.

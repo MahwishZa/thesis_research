@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from experiments.medchange import arms as A
 from experiments.medchange import generate_answers as generate_cli
 from experiments.medchange import analyze as analyze_cli
+from experiments.medchange import error_analysis as EA
 from experiments.medchange.analyze import (
     confirmatory_family, correctness, gates, paired, retrieval_metrics, summarize,
 )
@@ -296,6 +297,55 @@ class GenerateCliTests(unittest.TestCase):
             self.assertEqual(self._main(tmp, model)[0], 0)
             self.assertTrue((d / "answers_dev.config.json").exists())
             self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
+
+
+class ErrorAnalysisTests(unittest.TestCase):
+
+    def setUp(self):
+        self.item = dict(item("a", "changed", "SUPPORTED", previous="REFUTED"), change_type="REFUTED -> SUPPORTED")
+        self.item["previous"] = {"label": "REFUTED", "date": "2010-01-01"}
+        self.item["newest"] = {"label": "SUPPORTED", "date": "2020-01-01"}
+        self.window = {"pmid": "w", "lower": "2015-01-01", "upper": "2015-01-01"}
+        self.old = {"pmid": "o", "lower": "2005-01-01", "upper": "2005-01-01"}
+
+    def test_every_cause_is_assigned_in_order(self):
+        win = {"w"}
+        c = lambda **k: EA.classify(self.item, k, win)
+        self.assertEqual(c(verdict="SUPPORTED", admitted=[]), "correct")
+        self.assertEqual(c(verdict=None, admitted=["w"]), "parse_failure")
+        self.assertEqual(EA.classify(self.item, {"verdict": "REFUTED", "admitted": ["o"]}, set()), "retrieval_miss")
+        self.assertEqual(c(verdict="REFUTED", admitted=["o"]), "admission_miss")
+        self.assertEqual(c(verdict="REFUTED", admitted=["w", "o"]), "followed_or_ignored_evidence")
+
+    def test_window_membership_uses_the_update_window_only(self):
+        pool = {"candidates": [self.window, self.old]}
+        self.assertEqual(EA.window_pmids(self.item, pool), {"w"})
+
+    def test_report_counts_groups_and_splits_accuracy_by_admitted_window_evidence(self):
+        items = {"a": self.item}
+        pools = {"a": {"candidates": [self.window, self.old]}}
+        answers = {("a", "B1"): {"verdict": "REFUTED", "admitted": ["w"]},
+                   ("a", "P"): {"verdict": "SUPPORTED", "admitted": ["o"]}}
+        rep = EA.analyse(items, pools, answers, ["B1", "P"])
+        self.assertEqual(rep["per_arm"]["B1"]["groups"]["followed_or_ignored_evidence"], 1)
+        self.assertEqual(rep["per_arm"]["B1"]["accuracy_with_admitted_update_window_evidence"], {"n": 1, "accuracy": 0.0})
+        self.assertEqual(rep["per_arm"]["P"]["accuracy_without"], {"n": 1, "accuracy": 1.0})
+        self.assertEqual(rep["per_arm"]["B1"]["outdated_verdict_rate"], 1.0)
+        self.assertIn("| B1 |", EA.to_markdown("dev", rep))
+
+    def test_cli_writes_both_files(self):
+        bench = [dict(self.item, split="dev", likely_label_noise=False)]
+        pools = [{"item_id": "a", "candidates": [self.window]}]
+        rows = [{"item_id": "a", "arm": "B1", "verdict": "SUPPORTED", "admitted": ["w"]}]
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            for name, data in (("benchmark.jsonl", bench), ("frozen_dev.jsonl", pools), ("answers_dev.jsonl", rows)):
+                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
+            with mock.patch("sys.stdout"):
+                code = EA.main(["--data-dir", str(d), "--out-dir", str(d / "out")])
+            self.assertEqual(code, 0)
+            self.assertTrue((d / "out" / "error_analysis_dev.md").exists())
+            self.assertEqual(json.loads((d / "out" / "error_analysis_dev.json").read_text())["n_changed_items"], 1)
 
 
 def answers(spec):
