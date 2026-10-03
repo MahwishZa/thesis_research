@@ -1,0 +1,62 @@
+{
+  "helpfulness_inputs": {
+    "limit_tokens": 512,
+    "inputs": 4520,
+    "over_limit": 837,
+    "share_over_limit": 0.1852,
+    "median_tokens": 379.0,
+    "b2_admitted_papers": 1130,
+    "b2_admitted_over_limit": 352,
+    "b2_admitted_share_over_limit": 0.3115
+  },
+  "stance_text": {
+    "candidates": 4520,
+    "with_results_or_conclusions": 0.3637,
+    "snippet_words_median": 89.0,
+    "snippet_words_max": 202
+  },
+  "study_types": {
+    "items": 226,
+    "pool_composition": {
+      "SR/MA": 0.0571,
+      "RCT": 0.2254,
+      "other": 0.7175
+    },
+    "top8_composition": {
+      "SR/MA": 0.0774,
+      "RCT": 0.2163,
+      "other": 0.7063
+    },
+    "items_with_sr_ma_in_top8": 0.4159,
+    "items_with_sr_ma_in_b1_admitted": 0.3363,
+    "study_type_weight_has_material": true,
+    "b1_by_sr_ma": {
+      "with_sr_ma_in_b1": {
+        "n": 76,
+        "b1_verdicts": {
+          "SUPPORTED": 46,
+          "NOT ENOUGH INFORMATION": 25,
+          "REFUTED": 5
+        },
+        "gold": {
+          "SUPPORTED": 36,
+          "NOT ENOUGH INFORMATION": 24,
+          "REFUTED": 16
+        }
+      },
+      "without_sr_ma_in_b1": {
+        "n": 150,
+        "b1_verdicts": {
+          "REFUTED": 4,
+          "SUPPORTED": 84,
+          "NOT ENOUGH INFORMATION": 62
+        },
+        "gold": {
+          "REFUTED": 33,
+          "SUPPORTED": 69,
+          "NOT ENOUGH INFORMATION": 48
+        }
+      }
+    }
+  }
+}

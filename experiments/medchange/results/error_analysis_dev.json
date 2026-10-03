@@ -1,0 +1,216 @@
+{
+  "n_changed_items": 151,
+  "items_whose_pool_has_update_window_evidence": 1.0,
+  "per_arm": {
+    "B0": {
+      "n": 151,
+      "groups": {
+        "correct": 62,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 89,
+        "followed_or_ignored_evidence": 0
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 0,
+        "accuracy": null
+      },
+      "accuracy_without": {
+        "n": 151,
+        "accuracy": 0.4106
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.4857
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.3879
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 117,
+        "REFUTED": 2,
+        "NOT ENOUGH INFORMATION": 32,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.3642
+    },
+    "B1": {
+      "n": 151,
+      "groups": {
+        "correct": 75,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 13,
+        "followed_or_ignored_evidence": 63
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 131,
+        "accuracy": 0.5191
+      },
+      "accuracy_without": {
+        "n": 20,
+        "accuracy": 0.35
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.4571
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.5086
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 84,
+        "REFUTED": 7,
+        "NOT ENOUGH INFORMATION": 60,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.3179
+    },
+    "B2": {
+      "n": 151,
+      "groups": {
+        "correct": 56,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 12,
+        "followed_or_ignored_evidence": 83
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 134,
+        "accuracy": 0.3806
+      },
+      "accuracy_without": {
+        "n": 17,
+        "accuracy": 0.2941
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.4
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.3621
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 116,
+        "REFUTED": 1,
+        "NOT ENOUGH INFORMATION": 34,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.3841
+    },
+    "B3": {
+      "n": 151,
+      "groups": {
+        "correct": 69,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 1,
+        "followed_or_ignored_evidence": 81
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 149,
+        "accuracy": 0.4564
+      },
+      "accuracy_without": {
+        "n": 2,
+        "accuracy": 0.5
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.3429
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.4914
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 73,
+        "REFUTED": 6,
+        "NOT ENOUGH INFORMATION": 72,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.3311
+    },
+    "P": {
+      "n": 151,
+      "groups": {
+        "correct": 54,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 2,
+        "followed_or_ignored_evidence": 95
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 149,
+        "accuracy": 0.3624
+      },
+      "accuracy_without": {
+        "n": 2,
+        "accuracy": 0.0
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.3714
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.3534
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 100,
+        "REFUTED": 2,
+        "NOT ENOUGH INFORMATION": 49,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.404
+    },
+    "C1": {
+      "n": 151,
+      "groups": {
+        "correct": 57,
+        "parse_failure": 0,
+        "retrieval_miss": 0,
+        "admission_miss": 11,
+        "followed_or_ignored_evidence": 83
+      },
+      "accuracy_with_admitted_update_window_evidence": {
+        "n": 135,
+        "accuracy": 0.3852
+      },
+      "accuracy_without": {
+        "n": 16,
+        "accuracy": 0.3125
+      },
+      "accuracy_by_change_type": {
+        "decisive_flip": {
+          "n": 35,
+          "accuracy": 0.3714
+        },
+        "involves_NEI": {
+          "n": 116,
+          "accuracy": 0.3793
+        }
+      },
+      "predicted_verdicts": {
+        "SUPPORTED": 103,
+        "REFUTED": 0,
+        "NOT ENOUGH INFORMATION": 48,
+        "none": 0
+      },
+      "outdated_verdict_rate": 0.3907
+    }
+  }
+}
