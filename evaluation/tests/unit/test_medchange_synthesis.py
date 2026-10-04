@@ -429,7 +429,7 @@ class AnalysisTests(unittest.TestCase):
                                           "--out-dir", str(d / "out")]), 0)
                 self.assertTrue((d / "out" / "stage2_analysis_dev.md").exists())
                 self.assertEqual(AN.main(["--split", "dev", "--data-dir", str(d), "--primary", "H3"]), 2)
-                self.assertEqual(AN.main(["--split", "dev", "--data-dir", str(d)]), 2)       # no frozen model
+                self.assertEqual(AN.main(["--split", "dev", "--data-dir", str(d), "--model", str(d / "absent.json")]), 2)  # no frozen model
                 confirm_items = {k: dict(v, split="confirm") for k, v in items.items()}
                 (d / "benchmark.jsonl").write_text("\n".join(json.dumps(i) for i in confirm_items.values()) + "\n",
                                                    encoding="utf-8")
