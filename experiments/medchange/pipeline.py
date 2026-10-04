@@ -32,7 +32,7 @@ from .stance import TOP_K
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-ANSWER_BUDGET = 5   # passages B1 admits; the minimum a pool needs when stance does not run
+ANSWER_BUDGET = 1   # a pool needs one candidate when stance does not run; B1 admits up to 5 and takes fewer if fewer exist
 EXPECTED_ITEMS = {"dev": 226, "confirm": 528}
 FROZEN = "/".join(("experiments", "medchange", "results", "synthesis_model.json"))   # written by synthesis fit
 SHARE = ("stance_pilot.jsonl", "stance_pilot.config.json", "stance_dev.jsonl", "stance_dev.config.json",
@@ -165,7 +165,7 @@ def dev_plan(a, data: Path, results: Path) -> list[Step]:
 
 
 def confirm_plan(a, data: Path, results: Path, gate2: str) -> list[Step]:
-    need = TOP_K if gate2 == "PASS" else ANSWER_BUDGET   # stance reads TOP_K papers; B1 admits ANSWER_BUDGET
+    need = TOP_K if gate2 == "PASS" else ANSWER_BUDGET   # stance reads TOP_K papers; B1 admits up to 5
     steps: list[Step] = [
         ("confirmatory candidate probe", py("pubmed_asof", "--split", "confirm")),
         ("confirmatory frozen pools", py("freeze_candidates", "--split", "confirm", "--device", "cpu")),

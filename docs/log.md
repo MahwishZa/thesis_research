@@ -994,3 +994,6 @@ The confirmatory run built all 528 pools and then stopped at the preflight: one 
 8-candidate minimum exists only for the stance step, which is skipped because gate 2 failed. `pipeline.py` now requires
 8 only when stance will run and 5 (the B1 budget) otherwise; the short pool stays in the evaluation. Decided after seeing
 pool sizes, before any confirmatory answer or label was generated or analysed; recorded in `experiment_plan.md` §13.
+
+The short pool is MC-00372 (4 candidates), so the minimum for the RQ1-only run was lowered again from 5 to 1; the item
+stays in the evaluation (see `experiment_plan.md` §13). Still decided before any confirmatory answer or label was generated.
