@@ -194,6 +194,7 @@ by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 | [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, evaluation status |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 | [`docs/experiment_plan.md`](docs/experiment_plan.md) | The protocol: benchmark, arms, settings, gates, decision rules |
+| [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout (dev split, exploratory; confirmatory pending) |
 | [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
 ## How to run

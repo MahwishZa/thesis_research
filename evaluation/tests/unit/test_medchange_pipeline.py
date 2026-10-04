@@ -168,11 +168,11 @@ class PlanTests(unittest.TestCase):
     def test_dev_plan_has_the_audits_only_when_a_judge_is_given_and_stops_after_the_report(self):
         full = P.dev_plan(args(), Path("d"), Path("r"))
         self.assertEqual(names(full)[:3], ["preflight (dev)", "label audit (dev)", "consistency check (dev)"])
-        self.assertEqual(names(full)[-2:], ["dev report", "commit and push"])
+        self.assertEqual(names(full)[-3:], ["dev report", "tables and figures (dev)", "commit and push"])
         self.assertFalse(any("confirm" in n for n in names(full)))
         lean = P.dev_plan(args(judge_path=None, commit=False), Path("d"), Path("r"))
         self.assertNotIn("label audit (dev)", names(lean))
-        self.assertEqual(names(lean)[-1], "dev report")
+        self.assertEqual(names(lean)[-1], "tables and figures (dev)")
         stance = dict(full)["stance, both wordings (dev)"]
         self.assertIn("both", stance)
 
@@ -181,7 +181,7 @@ class PlanTests(unittest.TestCase):
         self.assertLess(n.index("B0 and B1 answers (confirm)"), n.index("stance, both wordings (confirm)"))
         self.assertLess(n.index("frozen-model prediction"), n.index("label audit (confirm, after freeze)"))
         self.assertLess(n.index("label audit (confirm, after freeze)"), n.index("analysis"))
-        self.assertEqual(n[-2:], ["findings", "commit and push"])
+        self.assertEqual(n[-3:], ["findings", "tables and figures (confirm)", "commit and push"])
 
     def test_confirm_plan_with_gate_2_fail_is_rq1_only(self):
         steps = P.confirm_plan(args(commit=False), Path("d"), Path("r"), "FAIL")

@@ -140,6 +140,12 @@ def commit_and_push(message: str, repo: Path = ROOT) -> tuple[bool, str]:
     return True, "committed and pushed to main"
 
 
+def report_step(a, split: str) -> Step:
+    """Paper-style tables and figures from the results of ``split`` (figures need matplotlib; tables do not)."""
+    args = ["--split", split] + (["--medchange-dir", a.medchange_dir] if a.medchange_dir else [])
+    return (f"tables and figures ({split})", py("report", *args))
+
+
 def dev_plan(a, data: Path, results: Path) -> list[Step]:
     steps: list[Step] = [("preflight (dev)", lambda: _checks(preflight(data, "dev")))]
     if a.judge_path and a.medchange_dir:
@@ -150,7 +156,8 @@ def dev_plan(a, data: Path, results: Path) -> list[Step]:
                                                  "--model-path", a.model_path, "--n-threads", a.n_threads)),
               ("fit, cross-validation, gate 2, freeze", py("synthesis", "fit")),
               ("publish outputs", lambda: publish(data, results)),
-              ("dev report", lambda: (True, f"gate 2: {findings.write_dev_report(results, gate1_from_pilot(data))}"))]
+              ("dev report", lambda: (True, f"gate 2: {findings.write_dev_report(results, gate1_from_pilot(data))}")),
+              report_step(a, "dev")]
     if a.commit:
         steps.append(("commit and push", lambda: commit_and_push("Dev run: stance, frozen model, audits, dev report")))
     return steps
@@ -177,7 +184,8 @@ def confirm_plan(a, data: Path, results: Path, gate2: str) -> list[Step]:
                 "--label-audit", results / "label_audit_confirm.json"]
     steps += [("analysis", py(*analysis, *([] if gate2 == "PASS" else ["--rq1-only"]))),
               ("publish outputs", lambda: publish(data, results)),
-              ("findings", lambda: (findings.write_findings(results) or True, "wrote FINDINGS.md"))]
+              ("findings", lambda: (findings.write_findings(results) or True, "wrote FINDINGS.md")),
+              report_step(a, "confirm")]
     if a.commit:
         steps.append(("commit and push", lambda: commit_and_push("Confirmatory run: answers, stance, analysis, findings")))
     return steps

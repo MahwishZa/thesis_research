@@ -114,6 +114,7 @@ Gold-label error is not checked.
 | Stage 2: P0 diagnostics | done (2026-10-03): 18.5% of helpfulness inputs over 512 tokens (31.1% of B2's admitted papers); 36.4% of candidates have labelled RESULTS/CONCLUSIONS; a systematic review in the top 8 for 41.6% of items |
 | Stage 2: full dev stance (both wordings) + fit (gate 2) | pending (`pipeline dev`) |
 | Confirmatory split (pools, B0/B1 answers, stance, frozen-model prediction) | not started; nothing from it has been analysed |
+| Result tables and figures in the base paper's layout (`report.py`; dev split, exploratory) | **done** for dev (`results/report/REPORT.md`); the confirmatory version is produced by `pipeline confirm` |
 | Second generator; automatic Alzheimer's case study | planned |
 
 The only earlier real-data outputs (the Alzheimer's pilot with an extractive stand-in generator and an

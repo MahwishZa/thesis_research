@@ -18,6 +18,8 @@ requires-python = ">=3.10"
 dependencies = ["PyYAML>=6.0", "numpy>=1.24", "requests>=2.28", "pypdf>=3.0"]
 
 [project.optional-dependencies]
+# Figures of experiments/medchange/report.py (the tables need nothing extra).
+report = ["matplotlib>=3.7"]
 # Real model backends. Not needed to run the test suite.
 # NOTE: torch 2.4.x was built against numpy 1.x; if numpy 2.x is installed alongside it,
 # pin numpy<2 (see docs/reproducibility.md).

@@ -1,0 +1,1131 @@
+{
+  "split": "dev",
+  "status": "exploratory",
+  "n": {
+    "changed": 151,
+    "unchanged": 75,
+    "all": 226
+  },
+  "systems": [
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:qwen25-7b",
+      "name": "Qwen2.5-7B",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 42,
+        "accuracy": 0.56,
+        "ci": [
+          0.4475,
+          0.6667
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 117,
+        "accuracy": 0.5176991150442478,
+        "ci": [
+          0.4528,
+          0.582
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:llama33-70b",
+      "name": "Llama-3.3-70B",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 40,
+        "accuracy": 0.5333333333333333,
+        "ci": [
+          0.4216,
+          0.6418
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 115,
+        "accuracy": 0.5088495575221239,
+        "ci": [
+          0.4441,
+          0.5733
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:mistral-24b",
+      "name": "Mistral-24B",
+      "changed": {
+        "n": 151,
+        "correct": 79,
+        "accuracy": 0.5231788079470199,
+        "ci": [
+          0.4439,
+          0.6013
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 42,
+        "accuracy": 0.56,
+        "ci": [
+          0.4475,
+          0.6667
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 121,
+        "accuracy": 0.5353982300884956,
+        "ci": [
+          0.4703,
+          0.5993
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:gpt4o-mini",
+      "name": "GPT-4o-mini",
+      "changed": {
+        "n": 151,
+        "correct": 73,
+        "accuracy": 0.48344370860927155,
+        "ci": [
+          0.4051,
+          0.5626
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 41,
+        "accuracy": 0.5466666666666666,
+        "ci": [
+          0.4345,
+          0.6543
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 114,
+        "accuracy": 0.504424778761062,
+        "ci": [
+          0.4397,
+          0.569
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:deepsek-v3",
+      "name": "DeepSeek-V3",
+      "changed": {
+        "n": 151,
+        "correct": 77,
+        "accuracy": 0.5099337748344371,
+        "ci": [
+          0.4309,
+          0.5884
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 47,
+        "accuracy": 0.6266666666666667,
+        "ci": [
+          0.5135,
+          0.7274
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 124,
+        "accuracy": 0.5486725663716814,
+        "ci": [
+          0.4835,
+          0.6122
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B0",
+      "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",
+      "changed": {
+        "n": 151,
+        "correct": 62,
+        "accuracy": 0.4105960264900662,
+        "ci": [
+          0.3353,
+          0.4903
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 40,
+        "accuracy": 0.5333333333333333,
+        "ci": [
+          0.4216,
+          0.6418
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 102,
+        "accuracy": 0.45132743362831856,
+        "ci": [
+          0.3878,
+          0.5165
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B1",
+      "name": "B1: + MedCPT retrieval, top-5 (standard RAG)",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 45,
+        "accuracy": 0.6,
+        "ci": [
+          0.4869,
+          0.7034
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 120,
+        "accuracy": 0.5309734513274337,
+        "ci": [
+          0.4659,
+          0.595
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B2",
+      "name": "B2: + zero-shot helpfulness filter (untrained RAG\u00b2-style stand-in)",
+      "changed": {
+        "n": 151,
+        "correct": 56,
+        "accuracy": 0.3708609271523179,
+        "ci": [
+          0.2979,
+          0.4502
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 46,
+        "accuracy": 0.6133333333333333,
+        "ci": [
+          0.5002,
+          0.7154
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 102,
+        "accuracy": 0.45132743362831856,
+        "ci": [
+          0.3878,
+          0.5165
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B3",
+      "name": "B3: + recency re-ranking (TempRALM-style)",
+      "changed": {
+        "n": 151,
+        "correct": 69,
+        "accuracy": 0.45695364238410596,
+        "ci": [
+          0.3796,
+          0.5365
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 44,
+        "accuracy": 0.5866666666666667,
+        "ci": [
+          0.4737,
+          0.6912
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 113,
+        "accuracy": 0.5,
+        "ci": [
+          0.4354,
+          0.5646
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "P",
+      "name": "P: + helpfulness + recency (stage-1 Temporal Filter)",
+      "changed": {
+        "n": 151,
+        "correct": 54,
+        "accuracy": 0.3576158940397351,
+        "ci": [
+          0.2856,
+          0.4367
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 44,
+        "accuracy": 0.5866666666666667,
+        "ci": [
+          0.4737,
+          0.6912
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 98,
+        "accuracy": 0.4336283185840708,
+        "ci": [
+          0.3707,
+          0.4988
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "C1",
+      "name": "C1: + helpfulness + shuffled dates (control)",
+      "changed": {
+        "n": 151,
+        "correct": 57,
+        "accuracy": 0.37748344370860926,
+        "ci": [
+          0.3041,
+          0.4569
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 46,
+        "accuracy": 0.6133333333333333,
+        "ci": [
+          0.5002,
+          0.7154
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 103,
+        "accuracy": 0.4557522123893805,
+        "ci": [
+          0.3921,
+          0.5209
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "B1R",
+      "name": "B1R: B1 verdict through the same fitting",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 45,
+        "accuracy": 0.6,
+        "ci": [
+          0.4869,
+          0.7034
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 120,
+        "accuracy": 0.5309734513274337,
+        "ci": [
+          0.4659,
+          0.595
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "S0",
+      "name": "S0: stance only",
+      "changed": {
+        "n": 151,
+        "correct": 62,
+        "accuracy": 0.4105960264900662,
+        "ci": [
+          0.3353,
+          0.4903
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 37,
+        "accuracy": 0.49333333333333335,
+        "ci": [
+          0.3833,
+          0.604
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 99,
+        "accuracy": 0.43805309734513276,
+        "ci": [
+          0.3749,
+          0.5032
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H0",
+      "name": "H0: hybrid: B1 verdict + stance",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 43,
+        "accuracy": 0.5733333333333334,
+        "ci": [
+          0.4605,
+          0.679
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 118,
+        "accuracy": 0.5221238938053098,
+        "ci": [
+          0.4572,
+          0.5863
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H1",
+      "name": "H1: hybrid + recency weights",
+      "changed": {
+        "n": 151,
+        "correct": 72,
+        "accuracy": 0.4768211920529801,
+        "ci": [
+          0.3987,
+          0.5561
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 43,
+        "accuracy": 0.5733333333333334,
+        "ci": [
+          0.4605,
+          0.679
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 115,
+        "accuracy": 0.5088495575221239,
+        "ci": [
+          0.4441,
+          0.5733
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H2",
+      "name": "H2: hybrid + study-type weights",
+      "changed": {
+        "n": 151,
+        "correct": 73,
+        "accuracy": 0.48344370860927155,
+        "ci": [
+          0.4051,
+          0.5626
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 43,
+        "accuracy": 0.5733333333333334,
+        "ci": [
+          0.4605,
+          0.679
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 116,
+        "accuracy": 0.5132743362831859,
+        "ci": [
+          0.4484,
+          0.5777
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H3",
+      "name": "H3: hybrid + both weights",
+      "changed": {
+        "n": 151,
+        "correct": 74,
+        "accuracy": 0.4900662251655629,
+        "ci": [
+          0.4116,
+          0.5691
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 43,
+        "accuracy": 0.5733333333333334,
+        "ci": [
+          0.4605,
+          0.679
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 117,
+        "accuracy": 0.5176991150442478,
+        "ci": [
+          0.4528,
+          0.582
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H1C",
+      "name": "H1C: H1 with shuffled dates (control)",
+      "changed": {
+        "n": 151,
+        "correct": 74,
+        "accuracy": 0.4900662251655629,
+        "ci": [
+          0.4116,
+          0.5691
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 42,
+        "accuracy": 0.56,
+        "ci": [
+          0.4475,
+          0.6667
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 116,
+        "accuracy": 0.5132743362831859,
+        "ci": [
+          0.4484,
+          0.5777
+        ]
+      }
+    },
+    {
+      "group": "Evidence-synthesis layer (stage 2; out-of-fold on dev)",
+      "arm": "H3C",
+      "name": "H3C: H3 with shuffled dates (control)",
+      "changed": {
+        "n": 151,
+        "correct": 73,
+        "accuracy": 0.48344370860927155,
+        "ci": [
+          0.4051,
+          0.5626
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 42,
+        "accuracy": 0.56,
+        "ci": [
+          0.4475,
+          0.6667
+        ]
+      },
+      "all": {
+        "n": 226,
+        "correct": 115,
+        "accuracy": 0.5088495575221239,
+        "ci": [
+          0.4441,
+          0.5733
+        ]
+      }
+    }
+  ],
+  "filtering": [
+    {
+      "arm": "B1",
+      "name": "+ MedCPT retrieval, top-5 (standard RAG)",
+      "changed": {
+        "n": 151,
+        "correct": 75,
+        "accuracy": 0.4966887417218543,
+        "ci": [
+          0.418,
+          0.5755
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 45,
+        "accuracy": 0.6,
+        "ci": [
+          0.4869,
+          0.7034
+        ]
+      },
+      "diff_vs_baseline": null
+    },
+    {
+      "arm": "B2",
+      "name": "+ zero-shot helpfulness filter (untrained RAG\u00b2-style stand-in)",
+      "changed": {
+        "n": 151,
+        "correct": 56,
+        "accuracy": 0.3708609271523179,
+        "ci": [
+          0.2979,
+          0.4502
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 46,
+        "accuracy": 0.6133333333333333,
+        "ci": [
+          0.5002,
+          0.7154
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "B2",
+        "b": "B1",
+        "items": "changed",
+        "n": 151,
+        "diff_a_minus_b": -0.125828,
+        "ci95": [
+          -0.198675,
+          -0.05298
+        ],
+        "a_only_correct": 7,
+        "b_only_correct": 26,
+        "mcnemar_p": 0.0013
+      }
+    },
+    {
+      "arm": "B3",
+      "name": "+ recency re-ranking (TempRALM-style)",
+      "changed": {
+        "n": 151,
+        "correct": 69,
+        "accuracy": 0.45695364238410596,
+        "ci": [
+          0.3796,
+          0.5365
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 44,
+        "accuracy": 0.5866666666666667,
+        "ci": [
+          0.4737,
+          0.6912
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "B3",
+        "b": "B1",
+        "items": "changed",
+        "n": 151,
+        "diff_a_minus_b": -0.039735,
+        "ci95": [
+          -0.112583,
+          0.033113
+        ],
+        "a_only_correct": 13,
+        "b_only_correct": 19,
+        "mcnemar_p": 0.3771
+      }
+    },
+    {
+      "arm": "P",
+      "name": "+ helpfulness + recency (stage-1 Temporal Filter)",
+      "changed": {
+        "n": 151,
+        "correct": 54,
+        "accuracy": 0.3576158940397351,
+        "ci": [
+          0.2856,
+          0.4367
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 44,
+        "accuracy": 0.5866666666666667,
+        "ci": [
+          0.4737,
+          0.6912
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "P",
+        "b": "B1",
+        "items": "changed",
+        "n": 151,
+        "diff_a_minus_b": -0.139073,
+        "ci95": [
+          -0.218543,
+          -0.066225
+        ],
+        "a_only_correct": 8,
+        "b_only_correct": 29,
+        "mcnemar_p": 0.0008
+      }
+    },
+    {
+      "arm": "C1",
+      "name": "+ helpfulness + shuffled dates (control)",
+      "changed": {
+        "n": 151,
+        "correct": 57,
+        "accuracy": 0.37748344370860926,
+        "ci": [
+          0.3041,
+          0.4569
+        ]
+      },
+      "unchanged": {
+        "n": 75,
+        "correct": 46,
+        "accuracy": 0.6133333333333333,
+        "ci": [
+          0.5002,
+          0.7154
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "C1",
+        "b": "B1",
+        "items": "changed",
+        "n": 151,
+        "diff_a_minus_b": -0.119205,
+        "ci95": [
+          -0.198675,
+          -0.039735
+        ],
+        "a_only_correct": 10,
+        "b_only_correct": 28,
+        "mcnemar_p": 0.0051
+      }
+    }
+  ],
+  "classes": [
+    {
+      "arm": "B0",
+      "name": "no retrieval",
+      "recall": {
+        "SUPPORTED": 0.806,
+        "REFUTED": 0.027,
+        "NOT ENOUGH INFORMATION": 0.1489
+      },
+      "macro_f1": 0.2718,
+      "nei_share": 0.2119205298013245
+    },
+    {
+      "arm": "B1",
+      "name": "+ MedCPT retrieval, top-5 (standard RAG)",
+      "recall": {
+        "SUPPORTED": 0.6866,
+        "REFUTED": 0.1081,
+        "NOT ENOUGH INFORMATION": 0.5319
+      },
+      "macro_f1": 0.4195,
+      "nei_share": 0.3973509933774834
+    },
+    {
+      "arm": "B2",
+      "name": "+ zero-shot helpfulness filter (untrained RAG\u00b2-style stand-in)",
+      "recall": {
+        "SUPPORTED": 0.7313,
+        "REFUTED": 0.0,
+        "NOT ENOUGH INFORMATION": 0.1489
+      },
+      "macro_f1": 0.2361,
+      "nei_share": 0.2251655629139073
+    },
+    {
+      "arm": "B3",
+      "name": "+ recency re-ranking (TempRALM-style)",
+      "recall": {
+        "SUPPORTED": 0.5821,
+        "REFUTED": 0.0811,
+        "NOT ENOUGH INFORMATION": 0.5745
+      },
+      "macro_f1": 0.3835,
+      "nei_share": 0.4768211920529801
+    },
+    {
+      "arm": "P",
+      "name": "+ helpfulness + recency (stage-1 Temporal Filter)",
+      "recall": {
+        "SUPPORTED": 0.6269,
+        "REFUTED": 0.0,
+        "NOT ENOUGH INFORMATION": 0.2553
+      },
+      "macro_f1": 0.251,
+      "nei_share": 0.32450331125827814
+    },
+    {
+      "arm": "C1",
+      "name": "+ helpfulness + shuffled dates (control)",
+      "recall": {
+        "SUPPORTED": 0.6716,
+        "REFUTED": 0.0,
+        "NOT ENOUGH INFORMATION": 0.2553
+      },
+      "macro_f1": 0.2607,
+      "nei_share": 0.31788079470198677
+    },
+    {
+      "arm": "H0",
+      "name": "hybrid H0",
+      "recall": {
+        "SUPPORTED": 0.6866,
+        "REFUTED": 0.1351,
+        "NOT ENOUGH INFORMATION": 0.5106
+      },
+      "macro_f1": 0.4282,
+      "nei_share": 0.36423841059602646
+    }
+  ],
+  "constant": {
+    "changed": {
+      "SUPPORTED": 0.44370860927152317,
+      "REFUTED": 0.24503311258278146,
+      "NOT ENOUGH INFORMATION": 0.31125827814569534
+    },
+    "unchanged": {
+      "SUPPORTED": 0.5066666666666667,
+      "REFUTED": 0.16,
+      "NOT ENOUGH INFORMATION": 0.3333333333333333
+    },
+    "all": {
+      "SUPPORTED": 0.4646017699115044,
+      "REFUTED": 0.2168141592920354,
+      "NOT ENOUGH INFORMATION": 0.3185840707964602
+    }
+  },
+  "retrieval": {
+    "B0": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 0.0,
+        "update_window_share": null,
+        "items_with_update_window_evidence": 0.0,
+        "mean_age_years": null,
+        "jaccard_with_B1": 0.0
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 0.0,
+        "update_window_share": null,
+        "items_with_update_window_evidence": 0.0,
+        "mean_age_years": null,
+        "jaccard_with_B1": 0.0
+      }
+    },
+    "B1": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.5099,
+        "items_with_update_window_evidence": 0.8675,
+        "mean_age_years": 10.66,
+        "jaccard_with_B1": null
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.3787,
+        "items_with_update_window_evidence": 0.76,
+        "mean_age_years": 11.39,
+        "jaccard_with_B1": null
+      }
+    },
+    "B2": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.5166,
+        "items_with_update_window_evidence": 0.8874,
+        "mean_age_years": 10.62,
+        "jaccard_with_B1": 0.2116
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.3867,
+        "items_with_update_window_evidence": 0.7733,
+        "mean_age_years": 11.46,
+        "jaccard_with_B1": 0.2278
+      }
+    },
+    "B3": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.743,
+        "items_with_update_window_evidence": 0.9868,
+        "mean_age_years": 6.31,
+        "jaccard_with_B1": 0.5245
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.6053,
+        "items_with_update_window_evidence": 0.8933,
+        "mean_age_years": 7.13,
+        "jaccard_with_B1": 0.5633
+      }
+    },
+    "P": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.747,
+        "items_with_update_window_evidence": 0.9868,
+        "mean_age_years": 6.25,
+        "jaccard_with_B1": 0.1847
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.6107,
+        "items_with_update_window_evidence": 0.8933,
+        "mean_age_years": 7.5,
+        "jaccard_with_B1": 0.2147
+      }
+    },
+    "C1": {
+      "changed": {
+        "n": 151,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.4954,
+        "items_with_update_window_evidence": 0.894,
+        "mean_age_years": 10.94,
+        "jaccard_with_B1": 0.186
+      },
+      "unchanged": {
+        "n": 75,
+        "mean_admitted": 5.0,
+        "update_window_share": 0.4027,
+        "items_with_update_window_evidence": 0.8,
+        "mean_age_years": 11.44,
+        "jaccard_with_B1": 0.2204
+      }
+    }
+  },
+  "cv": {
+    "folds": 5,
+    "l2": 5.0,
+    "prior_accuracy": 0.4646,
+    "repeats": 50,
+    "seed": 20261003,
+    "variants": {
+      "B1R": {
+        "accuracy": 0.5217,
+        "accuracy_changed": 0.4862,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.5186,
+          "REFUTED": 0.069,
+          "SUPPORTED": 0.735
+        }
+      },
+      "H0": {
+        "accuracy": 0.5177,
+        "accuracy_changed": 0.4898,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4656,
+          "REFUTED": 0.1057,
+          "SUPPORTED": 0.7457
+        }
+      },
+      "H1": {
+        "accuracy": 0.5051,
+        "accuracy_changed": 0.4707,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4472,
+          "REFUTED": 0.0927,
+          "SUPPORTED": 0.7373
+        }
+      },
+      "H1C": {
+        "accuracy": 0.5176,
+        "accuracy_changed": 0.4906,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4697,
+          "REFUTED": 0.0955,
+          "SUPPORTED": 0.7474
+        }
+      },
+      "H2": {
+        "accuracy": 0.5118,
+        "accuracy_changed": 0.4796,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4417,
+          "REFUTED": 0.1102,
+          "SUPPORTED": 0.7472
+        }
+      },
+      "H3": {
+        "accuracy": 0.5102,
+        "accuracy_changed": 0.4764,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4547,
+          "REFUTED": 0.1012,
+          "SUPPORTED": 0.739
+        }
+      },
+      "H3C": {
+        "accuracy": 0.5135,
+        "accuracy_changed": 0.4834,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.4514,
+          "REFUTED": 0.1,
+          "SUPPORTED": 0.749
+        }
+      },
+      "S0": {
+        "accuracy": 0.4356,
+        "accuracy_changed": 0.4078,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.0481,
+          "REFUTED": 0.0588,
+          "SUPPORTED": 0.8771
+        }
+      },
+      "S1": {
+        "accuracy": 0.4385,
+        "accuracy_changed": 0.4159,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.0561,
+          "REFUTED": 0.0216,
+          "SUPPORTED": 0.8952
+        }
+      },
+      "S2": {
+        "accuracy": 0.4294,
+        "accuracy_changed": 0.3943,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.0739,
+          "REFUTED": 0.0518,
+          "SUPPORTED": 0.8493
+        }
+      },
+      "S3": {
+        "accuracy": 0.4433,
+        "accuracy_changed": 0.4238,
+        "recall": {
+          "NOT ENOUGH INFORMATION": 0.0583,
+          "REFUTED": 0.0278,
+          "SUPPORTED": 0.9011
+        }
+      }
+    }
+  },
+  "gate2": {
+    "checks": {
+      "S0_cv_accuracy>constant_prior": false,
+      "selected_hybrid_minus_B1R>=+1.0pp": false,
+      "stance_auc>=0.60": true
+    },
+    "gate2": "FAIL"
+  },
+  "label_audit": {
+    "agreement": 0.8319,
+    "kappa": 0.7422,
+    "n_items": 226,
+    "n_stable": 188,
+    "label_change_reproduced": 0.6821,
+    "per_gold_class": {
+      "SUPPORTED": {
+        "n": 105,
+        "agreement": 0.8762
+      },
+      "REFUTED": {
+        "n": 49,
+        "agreement": 0.9592
+      },
+      "NOT ENOUGH INFORMATION": {
+        "n": 72,
+        "agreement": 0.6806
+      }
+    }
+  }
+}

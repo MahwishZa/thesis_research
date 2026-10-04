@@ -1,0 +1,34 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+System & Changed & Unchanged & All \\
+\midrule
+\multicolumn{4}{l}{\emph{Closed-book LLMs, released answers (existing work)}} \\
+Qwen2.5-7B & 49.7 & 56.0 & 51.8 \\
+Llama-3.3-70B & 49.7 & 53.3 & 50.9 \\
+Mistral-24B & \textbf{52.3} & 56.0 & 53.5 \\
+GPT-4o-mini & 48.3 & 54.7 & 50.4 \\
+DeepSeek-V3 & 51.0 & \textbf{62.7} & \textbf{54.9} \\
+\multicolumn{4}{l}{\emph{Llama-3-8B-Instruct, local (this thesis, stage 1)}} \\
+B0: Llama-3-8B-Instruct (Q4\_K\_M), no retrieval & 41.1 & 53.3 & 45.1 \\
+B1: + MedCPT retrieval, top-5 (standard RAG) & 49.7 & 60.0 & 53.1 \\
+B2: + zero-shot helpfulness filter (untrained RAG$^2$-style stand-in) & 37.1 & 61.3 & 45.1 \\
+B3: + recency re-ranking (TempRALM-style) & 45.7 & 58.7 & 50.0 \\
+P: + helpfulness + recency (stage-1 Temporal Filter) & 35.8 & 58.7 & 43.4 \\
+C1: + helpfulness + shuffled dates (control) & 37.7 & 61.3 & 45.6 \\
+\multicolumn{4}{l}{\emph{Evidence-synthesis layer (stage 2; out-of-fold on dev)}} \\
+B1R: B1 verdict through the same fitting & 49.7 & 60.0 & 53.1 \\
+S0: stance only & 41.1 & 49.3 & 43.8 \\
+H0: hybrid: B1 verdict + stance & 49.7 & 57.3 & 52.2 \\
+H1: hybrid + recency weights & 47.7 & 57.3 & 50.9 \\
+H2: hybrid + study-type weights & 48.3 & 57.3 & 51.3 \\
+H3: hybrid + both weights & 49.0 & 57.3 & 51.8 \\
+H1C: H1 with shuffled dates (control) & 49.0 & 56.0 & 51.3 \\
+H3C: H3 with shuffled dates (control) & 48.3 & 56.0 & 50.9 \\
+\bottomrule
+\end{tabular}
+\caption{Verdict accuracy (\\%) on the MedChange dev split (exploratory); not comparable with multiple-choice benchmarks.}
+\label{tab:systems-dev}
+\end{table}

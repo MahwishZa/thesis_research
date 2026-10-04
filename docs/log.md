@@ -961,3 +961,29 @@ downloaded. Verification: 679 active and 127 archived tests pass (also in a fres
 dependencies and network blocked); the suites leave the tree unchanged; `pyflakes` reports only the intentional
 import in `encoders.py`. No experiment was run and no result changed in this phase.
 
+## Phase 31 — Can the base paper's results be matched? Result tables and figures (Oct 4)
+
+**Feasibility of results comparable to the base paper (RAG², Sohn et al., NAACL 2025): no, for four reasons that are
+facts, not assumptions.** (1) Different task: they report multiple-choice accuracy on MedQA, MedMCQA and MMLU-Med (their
+Llama-3-8B-Instruct goes from 57.7 to 64.6 on MedQA); this thesis measures as-of verdict accuracy against model-generated
+Cochrane labels that another model reproduces only 83.2% of the time (Phase 29), so the headroom is of a different kind.
+(2) Their gain comes from a Flan-T5 filter trained on perplexity-based labels for MedQA/MedMCQA training questions, rationale
+queries and balanced retrieval over a 564 GB index of four corpora, with training on one H100 GPU; the checkpoint is not
+distributed and the local retraining attempt (archived, Phases 13-18) learned only the class prior. (3) The thesis runs on a
+CPU laptop with a 4-bit 8B model. (4) The measured stage-1 and stage-2 results are negative: the untrained helpfulness stand-in
+is 12.6 points below standard retrieval (and its inputs were truncated for 18.5% of papers), recency re-ranking is
+not better, and the evidence-synthesis layer failed gate 2. What is comparable is the design of their Tables 2 and 3.
+
+**Built.** `report.py` produces those tables from the committed results with nothing typed in: Table 1 (systems, in the
+layout of their Table 2) adds the benchmark authors' released closed-book answers for five LLMs scored on the same
+questions, which gives the comparison with existing work on identical inputs; Table 2 (one generator, different admission
+methods, in the layout of their Table 3); per-class recall; the dev cross-validation of the layer; a LaTeX table; and four
+figures (accuracy by system, per-class recall, the layer's cross-validation, mechanism against outcome). `pipeline`
+runs it at the end of each phase; `pip install -e ".[report]"` adds matplotlib for the figures.
+
+**What the dev tables show (exploratory, n = 226, intervals about ±6 to ±8 points).** Standard retrieval with the 8B model
+(B1, 53.1% on all items) is within noise of the much larger closed-book models on the same questions (50.4% to 54.9%), and
+8.6 points above the same model without retrieval on changed items (49.7% vs 41.1%); the temporal mechanism worked (update-window
+share 51% to 74%) but did not raise accuracy; no stage-2 variant beat B1R. Confirmatory results do not exist yet; nothing
+from the confirmatory split has been generated or analysed.
+
