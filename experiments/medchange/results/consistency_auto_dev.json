@@ -1,0 +1,26 @@
+{
+  "parse_rate": 1.0,
+  "parse_gate": "PASS",
+  "n_judged": 391,
+  "n_unparsed_by_judge": 5,
+  "agreement": 0.9898,
+  "agreement_by_arm": {
+    "B0": 0.9692,
+    "B1": 1.0,
+    "B2": 0.9848,
+    "B3": 0.9846,
+    "C1": 1.0,
+    "P": 1.0
+  },
+  "disagreements": {
+    "SUPPORTED->REFUTED": 1,
+    "SUPPORTED->NOT ENOUGH INFORMATION": 0,
+    "REFUTED->SUPPORTED": 0,
+    "REFUTED->NOT ENOUGH INFORMATION": 0,
+    "NOT ENOUGH INFORMATION->SUPPORTED": 0,
+    "NOT ENOUGH INFORMATION->REFUTED": 3
+  },
+  "split": "dev",
+  "judge": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+  "judge_sha256": "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423"
+}

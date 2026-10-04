@@ -1,0 +1,377 @@
+{"item_id": "MC-00004", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "06d8f7a7f849c029"}
+{"item_id": "MC-00004", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "503a966a4e20e652"}
+{"item_id": "MC-00009", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f4fd7a976c361af4"}
+{"item_id": "MC-00009", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "368d527e91e4e972"}
+{"item_id": "MC-00012", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b5d36faa6db841df"}
+{"item_id": "MC-00012", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c5b8066679647638"}
+{"item_id": "MC-00017", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "fa2bd6579e747d4f"}
+{"item_id": "MC-00017", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "89f1afebd79efd23"}
+{"item_id": "MC-00034", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "bdcb6407e37d7929"}
+{"item_id": "MC-00034", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0f4b9e4a1b629b15"}
+{"item_id": "MC-00036", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "dea5f9976d344cf6"}
+{"item_id": "MC-00036", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "23aadbe531b5a22c"}
+{"item_id": "MC-00037", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7f3c8471a6bb2b39"}
+{"item_id": "MC-00037", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d51329dac18f201f"}
+{"item_id": "MC-00050", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0d9ea3f1e794d44d"}
+{"item_id": "MC-00050", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ed692cf164316861"}
+{"item_id": "MC-00055", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "38f13d9d0361cd35"}
+{"item_id": "MC-00055", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "68749e192cb24e72"}
+{"item_id": "MC-00056", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "24741731ceb20888"}
+{"item_id": "MC-00056", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e961770ca4530e53"}
+{"item_id": "MC-00058", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2b681d84ed9e165d"}
+{"item_id": "MC-00058", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f581621ec7d3d168"}
+{"item_id": "MC-00064", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "83a7583a9a4c303f"}
+{"item_id": "MC-00064", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4e4848e35dba7857"}
+{"item_id": "MC-00076", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "160bb92499ad9d68"}
+{"item_id": "MC-00076", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "612031eff95e38a2"}
+{"item_id": "MC-00084", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "478232157faedd8a"}
+{"item_id": "MC-00084", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "40fadb7d6142b297"}
+{"item_id": "MC-00113", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "40f5b5a431b77bcb"}
+{"item_id": "MC-00113", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "23c04cd20f74a304"}
+{"item_id": "MC-00116", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "24ec5f0b7fb9057d"}
+{"item_id": "MC-00116", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ae80ac2c36bd4098"}
+{"item_id": "MC-00117", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1f66f3024a6aa1de"}
+{"item_id": "MC-00117", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "5163d1991c5331cf"}
+{"item_id": "MC-00127", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "abc67c8fa3de3288"}
+{"item_id": "MC-00127", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c6fd6ee1ef9256a0"}
+{"item_id": "MC-00141", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f1885ec5738f1a42"}
+{"item_id": "MC-00141", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "88aaca6ae6fb86fe"}
+{"item_id": "MC-00154", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b1dda735437dd25c"}
+{"item_id": "MC-00154", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a18a6d8f8f216ba3"}
+{"item_id": "MC-00159", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f2e75142c4b5eb9b"}
+{"item_id": "MC-00159", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8dc1952cf5b62ef1"}
+{"item_id": "MC-00174", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-00174", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "97540c4e53d0c89f"}
+{"item_id": "MC-00184", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "70f2f8bb12ee8ed5"}
+{"item_id": "MC-00184", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b33439c88a74552c"}
+{"item_id": "MC-00187", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1138aa896804dfe6"}
+{"item_id": "MC-00187", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6bab8ffdeceb8bb0"}
+{"item_id": "MC-00198", "which": "newest", "gold": "REFUTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8de5edd3cf91a244"}
+{"item_id": "MC-00198", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "eba83762a08e6462"}
+{"item_id": "MC-00216", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "63a56d75ec1f151f"}
+{"item_id": "MC-00216", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7f014ca76347c27f"}
+{"item_id": "MC-00227", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c6727e27bdcbbd5a"}
+{"item_id": "MC-00227", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ae5077611b386a4c"}
+{"item_id": "MC-00229", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6eb2b08f6c9e1ed6"}
+{"item_id": "MC-00229", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "311c73ac576d0a11"}
+{"item_id": "MC-00236", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2abc6a866b0dc11b"}
+{"item_id": "MC-00236", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "1b70ae0a1f5bce55"}
+{"item_id": "MC-00240", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "daa3e89b3d36b297"}
+{"item_id": "MC-00240", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8441bc171e821075"}
+{"item_id": "MC-00269", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "183a9c1087e1d9a0"}
+{"item_id": "MC-00269", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "f18d0399c1fae2e2"}
+{"item_id": "MC-00271", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b4e2b686fc925e2f"}
+{"item_id": "MC-00271", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f92082b108ced2e0"}
+{"item_id": "MC-00272", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "bde8fddf9b7455b1"}
+{"item_id": "MC-00272", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "69c8e3fbcf480665"}
+{"item_id": "MC-00287", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bc0824a534a54e0b"}
+{"item_id": "MC-00287", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c05669c95b06ea56"}
+{"item_id": "MC-00288", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "930696bfc7e302b3"}
+{"item_id": "MC-00288", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "5cf8239f6c60c1b2"}
+{"item_id": "MC-00290", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "04239b28cda80e39"}
+{"item_id": "MC-00290", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "37a199983f070176"}
+{"item_id": "MC-00291", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1138aa896804dfe6"}
+{"item_id": "MC-00291", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7961ca81ce83730d"}
+{"item_id": "MC-00295", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d43defc7e022de5a"}
+{"item_id": "MC-00295", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5d168fe485e0b44d"}
+{"item_id": "MC-00296", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "1737fe326efebbc4"}
+{"item_id": "MC-00296", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6e0fe3c7d6ee0501"}
+{"item_id": "MC-00297", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "78e1b78f3865b10d"}
+{"item_id": "MC-00297", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b509891f23c3c63b"}
+{"item_id": "MC-00309", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-00309", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "12a836ed48dcf894"}
+{"item_id": "MC-00318", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1138aa896804dfe6"}
+{"item_id": "MC-00318", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "231696d4bf72de36"}
+{"item_id": "MC-00319", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-00319", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6c3dcef30eaf45c8"}
+{"item_id": "MC-00323", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "784b373a01c12c41"}
+{"item_id": "MC-00323", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "eacf4bd774504ad9"}
+{"item_id": "MC-00325", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d398a840f45f171d"}
+{"item_id": "MC-00325", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "31705ab332f4d179"}
+{"item_id": "MC-00342", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "a73d293f6bd74ea2"}
+{"item_id": "MC-00342", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2ce2e3762712ca77"}
+{"item_id": "MC-00344", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0667f0308e93e1f6"}
+{"item_id": "MC-00344", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c60b78dabab1a82d"}
+{"item_id": "MC-00349", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "8c4b4718f00bd2e0"}
+{"item_id": "MC-00349", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "64c548243939e28c"}
+{"item_id": "MC-00352", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "fe4858f48e22689b"}
+{"item_id": "MC-00352", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6ce86a2b50092111"}
+{"item_id": "MC-00354", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "4db8dfe78cbf5c5e"}
+{"item_id": "MC-00354", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "54cbe0d0ba9d78d1"}
+{"item_id": "MC-00360", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "876bf449f5f51198"}
+{"item_id": "MC-00360", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "f7fbc6516073a329"}
+{"item_id": "MC-00391", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "06125ef53b040721"}
+{"item_id": "MC-00391", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a8333dc6f29346c5"}
+{"item_id": "MC-00400", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9be1dcec8098867e"}
+{"item_id": "MC-00400", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3f8e5ef8de044cb0"}
+{"item_id": "MC-00401", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "dce61f9a917fce62"}
+{"item_id": "MC-00401", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b5b97cf8d1dc2bfc"}
+{"item_id": "MC-00403", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "306194d04d6bd60f"}
+{"item_id": "MC-00403", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "161f41a148ea91ce"}
+{"item_id": "MC-00419", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "512c5c960ee6c3e8"}
+{"item_id": "MC-00419", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "58d76f3152024b1b"}
+{"item_id": "MC-00424", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ca9dcb9c1e0e0149"}
+{"item_id": "MC-00424", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0c8a579f998b0159"}
+{"item_id": "MC-00455", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6e8d7c8f48b3dc23"}
+{"item_id": "MC-00455", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4cd402fb5c6b7c21"}
+{"item_id": "MC-00493", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8e92dd2df82e50a0"}
+{"item_id": "MC-00493", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7f683ed8bc0c51ba"}
+{"item_id": "MC-00501", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e51992695b547e65"}
+{"item_id": "MC-00501", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "135c1c0244aaec11"}
+{"item_id": "MC-00521", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0c1b0bbaddb43397"}
+{"item_id": "MC-00521", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2eb25a3f05014c4a"}
+{"item_id": "MC-00530", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "cc10911594845524"}
+{"item_id": "MC-00530", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "056aabd01294efa7"}
+{"item_id": "MC-00537", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3c94f03ec76bb46d"}
+{"item_id": "MC-00537", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "2937d10ee8dbebc8"}
+{"item_id": "MC-00560", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "73feccb94cc2a383"}
+{"item_id": "MC-00560", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3bcd72f7d8206929"}
+{"item_id": "MC-00561", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "9059e54022161a2e"}
+{"item_id": "MC-00561", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f204d1cd3e2b6e1f"}
+{"item_id": "MC-00564", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "247e4f3a9adcf7f3"}
+{"item_id": "MC-00564", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "422e98e52e8b561c"}
+{"item_id": "MC-00574", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "af3ebce4d071404d"}
+{"item_id": "MC-00574", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "30ffa8458b2b1570"}
+{"item_id": "MC-00597", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "adcd57e951926afa"}
+{"item_id": "MC-00597", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "59a779fc8e3137dd"}
+{"item_id": "MC-00611", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "92e375fab2aae364"}
+{"item_id": "MC-00611", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b945ac43290a5637"}
+{"item_id": "MC-00627", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0588382bbae8b8b9"}
+{"item_id": "MC-00627", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6fbe5eb1924f51de"}
+{"item_id": "MC-00629", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "9788bafd4cef9a83"}
+{"item_id": "MC-00629", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d845bb5713f8dd2a"}
+{"item_id": "MC-00630", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3cd00b7140b3d43f"}
+{"item_id": "MC-00630", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "946b6a1fe22fd207"}
+{"item_id": "MC-00669", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7b37b96c532759b3"}
+{"item_id": "MC-00669", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "91c4257342fff043"}
+{"item_id": "MC-00676", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "690f1ad9eb943ca3"}
+{"item_id": "MC-00676", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d41e55fc72514422"}
+{"item_id": "MC-00682", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "a38503f25e1df74e"}
+{"item_id": "MC-00682", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "64fe55be40db1250"}
+{"item_id": "MC-00689", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b674328266fb43c4"}
+{"item_id": "MC-00689", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f2b187aed7f26ba6"}
+{"item_id": "MC-00696", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "10e8594dcab555b7"}
+{"item_id": "MC-00696", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "5c44cc6c3bba9378"}
+{"item_id": "MC-00697", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-00697", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "1efc1ff164ed5f7c"}
+{"item_id": "MC-00713", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "5d210a17a42033b9"}
+{"item_id": "MC-00713", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b67d3da0c128b64b"}
+{"item_id": "MC-00721", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5b8ae241f0ffbe61"}
+{"item_id": "MC-00721", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e3bd5bfffcc1c394"}
+{"item_id": "MC-00723", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "159071081ba44e64"}
+{"item_id": "MC-00723", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "377c759f0f08a3c7"}
+{"item_id": "MC-00765", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4fff5cc04f1f9d05"}
+{"item_id": "MC-00765", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "36812d7135653bd5"}
+{"item_id": "MC-00794", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "52f693f9deac0e09"}
+{"item_id": "MC-00794", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "39d5d6e41799135e"}
+{"item_id": "MC-00800", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3e77bde6bb985d17"}
+{"item_id": "MC-00800", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6f9e66ea5f970130"}
+{"item_id": "MC-00805", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "69f33461916c6c9b"}
+{"item_id": "MC-00805", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "57b1e5570984c813"}
+{"item_id": "MC-00810", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "00ebef9aa96d32b8"}
+{"item_id": "MC-00810", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e3751934b3dc87ab"}
+{"item_id": "MC-00821", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "20487e862df6bdc3"}
+{"item_id": "MC-00821", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "dbabdbe5a7052508"}
+{"item_id": "MC-00824", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "89d97536fe0535c7"}
+{"item_id": "MC-00824", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "bb0e5e68466bacfb"}
+{"item_id": "MC-00828", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "4481b9b931ae9b97"}
+{"item_id": "MC-00828", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "12a4c5b75ba0bba2"}
+{"item_id": "MC-00839", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9a051ebec7382de3"}
+{"item_id": "MC-00839", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6197f6ef26f1fd52"}
+{"item_id": "MC-00840", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "cb3ca82f66b42fcd"}
+{"item_id": "MC-00840", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7473c35fcb6f56a3"}
+{"item_id": "MC-00844", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "bbdbc73a1aec27d9"}
+{"item_id": "MC-00844", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "d00c6139e209dccc"}
+{"item_id": "MC-00854", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "12a80821b38cc108"}
+{"item_id": "MC-00854", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9c5e39c63d694ce8"}
+{"item_id": "MC-00878", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "588faf0862253513"}
+{"item_id": "MC-00878", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3c37c7cf13e92527"}
+{"item_id": "MC-00890", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "58a82c98572312d2"}
+{"item_id": "MC-00890", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8ebbff846afb8027"}
+{"item_id": "MC-00892", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "82df7486c31bf779"}
+{"item_id": "MC-00892", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1fd2af56610ae772"}
+{"item_id": "MC-00901", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-00901", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b31e6d22832f190f"}
+{"item_id": "MC-00919", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "39c70ab0b0efa864"}
+{"item_id": "MC-00919", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a18f6d5468ac27f7"}
+{"item_id": "MC-00920", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ecc3309e034e2e53"}
+{"item_id": "MC-00920", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "64586c601c9ecd76"}
+{"item_id": "MC-00932", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "421f075085541654"}
+{"item_id": "MC-00932", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "40d17742b296cee1"}
+{"item_id": "MC-00983", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a3689de9479e68ae"}
+{"item_id": "MC-00983", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f2e32a3ddd501332"}
+{"item_id": "MC-00988", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "dcbb286ebcd1110d"}
+{"item_id": "MC-00988", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "96377229e850467f"}
+{"item_id": "MC-01009", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "36cc22fda5ed2cd5"}
+{"item_id": "MC-01009", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c40781e92a873432"}
+{"item_id": "MC-01013", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "f071e99730caab63"}
+{"item_id": "MC-01013", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7a08c1be20ba3fda"}
+{"item_id": "MC-01027", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "edaf948d76174b65"}
+{"item_id": "MC-01027", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "457bca2d8e568f3c"}
+{"item_id": "MC-01044", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "411406bc97a93382"}
+{"item_id": "MC-01044", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "2b8a54b4b3b4092e"}
+{"item_id": "MC-01057", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7492d0ba9cc2219f"}
+{"item_id": "MC-01057", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1e15be5fe60fa5c8"}
+{"item_id": "MC-01069", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b856414eba11a9a0"}
+{"item_id": "MC-01069", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ab2ac9f94b19d7fd"}
+{"item_id": "MC-01084", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "dde53de21531b295"}
+{"item_id": "MC-01084", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "5dfe85f907c60551"}
+{"item_id": "MC-01085", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1138aa896804dfe6"}
+{"item_id": "MC-01085", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2a1b446d1155d935"}
+{"item_id": "MC-01103", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "d2b0f38806776a96"}
+{"item_id": "MC-01103", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "02e03444ffc61ab7"}
+{"item_id": "MC-01126", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-01126", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b4d6413cb6ad13e1"}
+{"item_id": "MC-01134", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b5feb0ee499f06c9"}
+{"item_id": "MC-01134", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4f30e2ec3de0f964"}
+{"item_id": "MC-01145", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f10c054b64e7a4bf"}
+{"item_id": "MC-01145", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a3bccda2816666a6"}
+{"item_id": "MC-01161", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8d3f50ddf05a22b9"}
+{"item_id": "MC-01161", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "dc8ce50f05c2e3bc"}
+{"item_id": "MC-01171", "which": "newest", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8b2215c4445e38b6"}
+{"item_id": "MC-01171", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "74543db57bdc60ee"}
+{"item_id": "MC-01187", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "5f5807ea9e2ecd81"}
+{"item_id": "MC-01187", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "324cdfe616f21c1d"}
+{"item_id": "MC-01193", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b8e9031a72016f25"}
+{"item_id": "MC-01193", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "867ab8df7c815c60"}
+{"item_id": "MC-01196", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-01196", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "36a0f1c8d3724533"}
+{"item_id": "MC-01197", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "a162682126cb5883"}
+{"item_id": "MC-01197", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3164ff4df29b0690"}
+{"item_id": "MC-01198", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3a1c635b4bc3ad55"}
+{"item_id": "MC-01198", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "57f960f1885043fc"}
+{"item_id": "MC-01215", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f34f1b9458931e91"}
+{"item_id": "MC-01215", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "262b031e300fc7a1"}
+{"item_id": "MC-01225", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5935484ee57e82d4"}
+{"item_id": "MC-01225", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "8a4e52f512e26646"}
+{"item_id": "MC-01230", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c7c3d40b475b4327"}
+{"item_id": "MC-01230", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "33134a0070149f3c"}
+{"item_id": "MC-01231", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ad00cf455d703598"}
+{"item_id": "MC-01231", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "bc50b0d0621781db"}
+{"item_id": "MC-01240", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4ba35dbe9477e376"}
+{"item_id": "MC-01240", "which": "previous", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c0fbebd3267a0629"}
+{"item_id": "MC-01241", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3d9a8996af93a640"}
+{"item_id": "MC-01241", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ffb49ccdcacf0e23"}
+{"item_id": "MC-01246", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f05c15e197cc40f4"}
+{"item_id": "MC-01246", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7f202234ed1fb0ee"}
+{"item_id": "MC-01253", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "176af312808bc758"}
+{"item_id": "MC-01253", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "0961c07f77ebe449"}
+{"item_id": "MC-01255", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-01255", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "23fe08cbe3838132"}
+{"item_id": "MC-01259", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "24a982fbff3de896"}
+{"item_id": "MC-01259", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ef77bff187e9b953"}
+{"item_id": "MC-01263", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "2f650dae60dede7f"}
+{"item_id": "MC-01263", "which": "previous", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e9860e49c7e92025"}
+{"item_id": "MC-01275", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "faf3eb0e83d80506"}
+{"item_id": "MC-01275", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7e9e97076f8ef70b"}
+{"item_id": "MC-01286", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5984a4595f930e48"}
+{"item_id": "MC-01286", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7ca641d73b2b3ae1"}
+{"item_id": "MC-01306", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b898377ff56193d5"}
+{"item_id": "MC-01306", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "09e2d494f4abe020"}
+{"item_id": "MC-01311", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "4367e7d66655a854"}
+{"item_id": "MC-01311", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9e966105baa6a71d"}
+{"item_id": "MC-01330", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "a8bfff6b7b044d19"}
+{"item_id": "MC-01330", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d62e02bf74cf36eb"}
+{"item_id": "MC-01364", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "87d0d65bee7a7db1"}
+{"item_id": "MC-01364", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "725bc1dda4745636"}
+{"item_id": "MC-01384", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-01384", "which": "previous", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7486653242310e60"}
+{"item_id": "MC-01440", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9149a1aefc57f912"}
+{"item_id": "MC-01440", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4d618e302f860161"}
+{"item_id": "MC-01455", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a3f2baa19d3544fb"}
+{"item_id": "MC-01455", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4571b3b6d00167b8"}
+{"item_id": "MC-01457", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e6c8b97d153cc588"}
+{"item_id": "MC-01457", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "98d2d625a76a2a70"}
+{"item_id": "MC-01462", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7275f966c287efee"}
+{"item_id": "MC-01462", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d86548a9fc7e5011"}
+{"item_id": "MC-01469", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "08c221ab5ec77500"}
+{"item_id": "MC-01469", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4a54df0cbe5a4c24"}
+{"item_id": "MC-01483", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7b1a6397b89295ff"}
+{"item_id": "MC-01483", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "af9f7c5c9c363d44"}
+{"item_id": "MC-01496", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "51e41586f5bc0e29"}
+{"item_id": "MC-01496", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "4382a3f1315f1660"}
+{"item_id": "MC-01500", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "31c81156202c0264"}
+{"item_id": "MC-01500", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "db0a80c0b1f00986"}
+{"item_id": "MC-01501", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "37a5c322c75d507c"}
+{"item_id": "MC-01501", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2f5c4cf05afd4bf3"}
+{"item_id": "MC-01505", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0218411b4052ccae"}
+{"item_id": "MC-01505", "which": "previous", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f659b93a68800b2a"}
+{"item_id": "MC-01527", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3ff173ebd521a6b3"}
+{"item_id": "MC-01527", "which": "previous", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "41cdbb4dbc1a1489"}
+{"item_id": "MC-01531", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "344fed1415cb2136"}
+{"item_id": "MC-01531", "which": "previous", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "df763d5079ed9a9c"}
+{"item_id": "MC-00077", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ab0914178bc2be96"}
+{"item_id": "MC-00103", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "07e602d07a77f98c"}
+{"item_id": "MC-00115", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "272df5c5b0ed3f7f"}
+{"item_id": "MC-00193", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ea3fd644128a850e"}
+{"item_id": "MC-00206", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "57454c6d5922a46f"}
+{"item_id": "MC-00218", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2eb0fc79209d4c22"}
+{"item_id": "MC-00231", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "50aa0a4429f6880e"}
+{"item_id": "MC-00235", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "89f1b581aee26679"}
+{"item_id": "MC-00262", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "e1929380dba8af88"}
+{"item_id": "MC-00280", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b74359b1152ef0bc"}
+{"item_id": "MC-00281", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "bae73df801bcd316"}
+{"item_id": "MC-00332", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b0b9adee1986a683"}
+{"item_id": "MC-00339", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "8f78a4bfec2c7991"}
+{"item_id": "MC-00345", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3ce6a1fc67be54f6"}
+{"item_id": "MC-00368", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8a0c68060fed0bc4"}
+{"item_id": "MC-00371", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2986226a58ead442"}
+{"item_id": "MC-00393", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6e1886c2dd3a8eaa"}
+{"item_id": "MC-00404", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "cdb4392cf2f9f86b"}
+{"item_id": "MC-00427", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "08fc25d2807c3291"}
+{"item_id": "MC-00430", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3c89f271f6c9d785"}
+{"item_id": "MC-00445", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "07db07a2f7b8a192"}
+{"item_id": "MC-00449", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "babbb5ca0d917b52"}
+{"item_id": "MC-00469", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9a345780bea403a7"}
+{"item_id": "MC-00544", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "95e955657f504986"}
+{"item_id": "MC-00547", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "29ec1a3a634abe11"}
+{"item_id": "MC-00591", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b3d4ada8574e7516"}
+{"item_id": "MC-00593", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "593ed38b65de4ba1"}
+{"item_id": "MC-00628", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "546684ff93c8958f"}
+{"item_id": "MC-00652", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7ee830e21d9395a7"}
+{"item_id": "MC-00668", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "764cfb2c8e1edc45"}
+{"item_id": "MC-00671", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3dcc3b0a74e5b8c7"}
+{"item_id": "MC-00736", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "548357b6a1700d97"}
+{"item_id": "MC-00741", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6f336152e47477c8"}
+{"item_id": "MC-00743", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1f87e848a0dad2df"}
+{"item_id": "MC-00749", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "983535a3f9096ee2"}
+{"item_id": "MC-00754", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "7da66b3eb0596f74"}
+{"item_id": "MC-00758", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c055980725aea55f"}
+{"item_id": "MC-00766", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "fbef8e12d735defa"}
+{"item_id": "MC-00779", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c5f9f8e7efa80c84"}
+{"item_id": "MC-00785", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b8c95945cc7a7102"}
+{"item_id": "MC-00797", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "fd05b0ec5c8ab81c"}
+{"item_id": "MC-00838", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4d467741fc90849e"}
+{"item_id": "MC-00850", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9e1c165915621f1f"}
+{"item_id": "MC-00873", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c97684688edfdde7"}
+{"item_id": "MC-00879", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "341e486cfe102eb5"}
+{"item_id": "MC-00883", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "030277a3b9e0dd0f"}
+{"item_id": "MC-00886", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "396937f32e6e20c1"}
+{"item_id": "MC-00929", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "312f694c8b367cc4"}
+{"item_id": "MC-00946", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0e6d5131507256d7"}
+{"item_id": "MC-00984", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d438ed25a0780519"}
+{"item_id": "MC-01003", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "477d6667f5effd70"}
+{"item_id": "MC-01039", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f65bf9fce948fdf8"}
+{"item_id": "MC-01040", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "d3d503bd9a91ad39"}
+{"item_id": "MC-01055", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a42b959a39825d02"}
+{"item_id": "MC-01072", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "24b3db5510ef8631"}
+{"item_id": "MC-01095", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "fc499b485e2d8f43"}
+{"item_id": "MC-01098", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "003a2dbc70fff851"}
+{"item_id": "MC-01128", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "bdb6ee9d54936028"}
+{"item_id": "MC-01142", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "dbdbb525ebafc141"}
+{"item_id": "MC-01149", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b249225d8b5d76e6"}
+{"item_id": "MC-01177", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4d15dcca06240abc"}
+{"item_id": "MC-01182", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ea18bbe92af31530"}
+{"item_id": "MC-01238", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "329c804edc4a3656"}
+{"item_id": "MC-01243", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "240d32f9093bce66"}
+{"item_id": "MC-01273", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2e33da8db477d928"}
+{"item_id": "MC-01274", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "a403a0a62d96e50e"}
+{"item_id": "MC-01351", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ca80e938aa1d7b15"}
+{"item_id": "MC-01399", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3ea5484d6f80cef1"}
+{"item_id": "MC-01412", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1138aa896804dfe6"}
+{"item_id": "MC-01423", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "59103c8d147f59d6"}
+{"item_id": "MC-01443", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a601d5694c0ab900"}
+{"item_id": "MC-01446", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5f83fd64b1aeebb7"}
+{"item_id": "MC-01448", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "84ed1b8031d01804"}
+{"item_id": "MC-01485", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6164ebdbd47dd0f1"}
+{"item_id": "MC-01488", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8a7bb689175c1d77"}

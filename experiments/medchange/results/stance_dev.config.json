@@ -1,0 +1,12 @@
+{
+  "backend": "llama-logprobs:Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "max_snippet_words": 200,
+  "model_sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+  "n_ctx": 1536,
+  "seed": 42,
+  "system_sha256": "cc5194a9ed11cc6110892858543bc7f51b073c17e84230e10f4a9d353f272896",
+  "temperature": 0.0,
+  "top_k": 8,
+  "wording_sha256_A": "6854cd4f85f09456dc99bdd561b8019d6c3264fc5e777327e4bd68df07a3b608",
+  "wording_sha256_B": "1c2a4836644b4c651774d5aac6a28a87842f05fcea213adfe307c0b7373edeba"
+}
