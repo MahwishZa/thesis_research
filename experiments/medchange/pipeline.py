@@ -32,6 +32,7 @@ from .stance import TOP_K
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+ANSWER_BUDGET = 5   # passages B1 admits; the minimum a pool needs when stance does not run
 EXPECTED_ITEMS = {"dev": 226, "confirm": 528}
 FROZEN = "/".join(("experiments", "medchange", "results", "synthesis_model.json"))   # written by synthesis fit
 SHARE = ("stance_pilot.jsonl", "stance_pilot.config.json", "stance_dev.jsonl", "stance_dev.config.json",
@@ -49,7 +50,7 @@ def py(module: str, *args) -> list[str]:
 # Checks
 # --------------------------------------------------------------------------------------
 
-def preflight(data: Path, split: str) -> list[tuple[str, bool, str]]:
+def preflight(data: Path, split: str, min_candidates: int = TOP_K) -> list[tuple[str, bool, str]]:
     """Integrity checks on the benchmark, the frozen pools and (when present) the answers."""
     out: list[tuple[str, bool, str]] = []
     bench = [r for r in load_jsonl(data / "benchmark.jsonl") if not r["likely_label_noise"]]
@@ -61,8 +62,8 @@ def preflight(data: Path, split: str) -> list[tuple[str, bool, str]]:
     pools = {r["item_id"]: r for r in load_jsonl(data / f"frozen_{split}.jsonl")}
     missing = [i for i in items if i not in pools]
     out.append(("every item has a frozen pool", not missing, f"{len(missing)} missing"))
-    short = [i for i in items if i in pools and len(pools[i]["candidates"]) < TOP_K]
-    out.append((f"every pool has at least {TOP_K} candidates", not short, f"{len(short)} short"))
+    short = [i for i in items if i in pools and len(pools[i]["candidates"]) < min_candidates]
+    out.append((f"every pool has at least {min_candidates} candidates", not short, f"{len(short)} short"))
     leaks = [i for i, it in items.items() if i in pools and
              {c["pmid"] for c in pools[i]["candidates"]} & {it["newest"].get("pmid"), it["previous"].get("pmid")} - {None}]
     out.append(("no pool contains its own review", not leaks, f"{len(leaks)} leaks"))
@@ -164,13 +165,14 @@ def dev_plan(a, data: Path, results: Path) -> list[Step]:
 
 
 def confirm_plan(a, data: Path, results: Path, gate2: str) -> list[Step]:
+    need = TOP_K if gate2 == "PASS" else ANSWER_BUDGET   # stance reads TOP_K papers; B1 admits ANSWER_BUDGET
     steps: list[Step] = [
         ("confirmatory candidate probe", py("pubmed_asof", "--split", "confirm")),
         ("confirmatory frozen pools", py("freeze_candidates", "--split", "confirm", "--device", "cpu")),
-        ("preflight (confirm)", lambda: _checks(preflight(data, "confirm"))),
+        ("preflight (confirm)", lambda: _checks(preflight(data, "confirm", need))),
         ("B0 and B1 answers (confirm)", py("generate_answers", "--split", "confirm", "--arms", "B0", "B1",
                                            "--model-path", a.model_path, "--n-threads", a.n_threads)),
-        ("preflight (confirm, with answers)", lambda: _checks(preflight(data, "confirm")))]
+        ("preflight (confirm, with answers)", lambda: _checks(preflight(data, "confirm", need)))]
     if gate2 == "PASS":
         steps += [("stance, both wordings (confirm)", py("stance", "--split", "confirm", "--wording", "both",
                                                          "--model-path", a.model_path, "--n-threads", a.n_threads)),

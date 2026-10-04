@@ -56,6 +56,8 @@ class PreflightTests(unittest.TestCase):
             d = self._data(tmp, n=5)                                          # a short pool
             failed = {name for name, ok, _ in P.preflight(d, "dev") if not ok}
             self.assertIn("every pool has at least 8 candidates", failed)
+            relaxed = {name for name, ok, _ in P.preflight(d, "dev", P.ANSWER_BUDGET) if not ok}
+            self.assertEqual(relaxed, set())                                  # 5 candidates suffice without stance
             write(d / "frozen_dev.jsonl", [pool("MC-0"), pool("MC-1", pmids=["R1"] + [f"x{i}" for i in range(7)])])
             self.assertIn("no pool contains its own review", {n for n, ok, _ in P.preflight(d, "dev") if not ok})
             write(d / "frozen_dev.jsonl", [pool("MC-0")])

@@ -987,3 +987,10 @@ runs it at the end of each phase; `pip install -e ".[report]"` adds matplotlib f
 share 51% to 74%) but did not raise accuracy; no stage-2 variant beat B1R. Confirmatory results do not exist yet; nothing
 from the confirmatory split has been generated or analysed.
 
+
+## Phase 32 — Confirmatory preflight relaxed for the RQ1-only run (Oct 4)
+
+The confirmatory run built all 528 pools and then stopped at the preflight: one pool has fewer than 8 candidates. The
+8-candidate minimum exists only for the stance step, which is skipped because gate 2 failed. `pipeline.py` now requires
+8 only when stance will run and 5 (the B1 budget) otherwise; the short pool stays in the evaluation. Decided after seeing
+pool sizes, before any confirmatory answer or label was generated or analysed; recorded in `experiment_plan.md` §13.
