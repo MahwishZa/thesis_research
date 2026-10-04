@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import sys
 import time
@@ -71,7 +72,7 @@ def fetch_abstracts(eu: EUtils, pmids: Sequence[str]) -> dict[str, dict]:
             try:
                 out.update(parse_efetch_xml(eu._open(url).decode("utf-8")))
                 break
-            except (ET.ParseError, TimeoutError, OSError) as exc:
+            except (ET.ParseError, TimeoutError, OSError, http.client.HTTPException) as exc:
                 if attempt == 4:
                     raise RuntimeError(f"efetch failed after 5 attempts: {exc}") from exc
                 eu._sleep(2 ** attempt)

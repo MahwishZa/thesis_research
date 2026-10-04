@@ -110,6 +110,25 @@ def git(repo, *args):
                           capture_output=True, text=True, check=True)
 
 
+class NetworkRetryTests(unittest.TestCase):
+    """A connection cut in the middle of a download (IncompleteRead) is retried, not fatal."""
+
+    def test_efetch_retries_an_incomplete_read(self):
+        import http.client
+        from experiments.medchange import freeze_candidates as FC
+        calls = []
+
+        def opener(url):
+            calls.append(url)
+            if len(calls) == 1:
+                raise http.client.IncompleteRead(b"partial")
+            return b"<PubmedArticleSet></PubmedArticleSet>"
+
+        eu = types.SimpleNamespace(api_key=None, delay=0, _sleep=lambda s: None, _open=opener)
+        self.assertEqual(FC.fetch_abstracts(eu, ["1"]), {})
+        self.assertEqual(len(calls), 2)
+
+
 class FrozenGuardTests(unittest.TestCase):
 
     def test_the_frozen_model_must_match_origin_main(self):

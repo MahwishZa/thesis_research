@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import http.client
 import json
 import re
 import sys
@@ -155,7 +156,7 @@ class EUtils:
             self._sleep(self.delay)
             try:
                 return json.loads(self._open(url))
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, http.client.HTTPException) as exc:
                 if attempt == 4:
                     raise RuntimeError(f"E-utilities failed after 5 attempts: {exc}") from exc
                 self._sleep(2 ** attempt)
