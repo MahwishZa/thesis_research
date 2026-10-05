@@ -109,6 +109,8 @@ and the B0/B1 answers. Protocol: `docs/experiment_plan.md`.
 | 20 | `python -m experiments.medchange.rag2_pipeline status` | which phase is done and whether the design record is pushed |
 | 21 | `python -m experiments.medchange.rag2_run answers --split dev --limit 3 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` | a timing test of one step on three questions (each step: `rationale`, `lists`, `filter`, `answers`, `judge`) |
 | 22 | `python -m experiments.medchange.analyze_rag2 --split dev` | the analysis alone, printed |
+| 23 | `python -m experiments.medchange.ad_benchmark --medchange-dir ..\MedChange` | seconds; appends the 212 Alzheimer's/dementia questions to `benchmark.jsonl` as split `ad` (rerunnable); `experiments/medchange/manifest_ad.json` must show no change in `git status` |
+| 24 | after step 19: `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | same guards as step 19; as-of PubMed records and abstracts (network, ≈ 3 h), B0/B1 (≈ 4.5 h), R2, R2C, R2V (≈ 21 h), analysis, `RAG2_FINDINGS_AD.md` |
 
 ## 4. Secondary: Alzheimer's corpus, question pool and index
 

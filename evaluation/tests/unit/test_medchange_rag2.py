@@ -514,3 +514,78 @@ class PipelineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------------------
+# The Alzheimer's/dementia secondary test set
+# --------------------------------------------------------------------------------------
+
+from experiments.medchange import ad_benchmark as AD  # noqa: E402
+
+
+def medrev_row(k, question, label=S, date="2015 Mar 2"):
+    return {"": str(k), "Question": question, "objectives": "", "Label": label, "PMID": f"https://pubmed/{9000 + k}",
+            "DOI_Date": f"Cochrane Database Syst Rev. {date};1:CD{100000 + k:06d}. doi: x"}
+
+
+class AlzheimersBenchmarkTests(unittest.TestCase):
+    def _world(self):
+        rows = {1: medrev_row(1, "Does donepezil help people with Alzheimer's disease?"),
+                2: medrev_row(2, "Does donepezil help people with Alzheimer's disease?", F_, "2010 Jan 1"),
+                3: medrev_row(3, "Does exercise slow cognitive decline in older adults?", N),
+                4: medrev_row(4, "Does exercise slow cognitive decline in older adults?", N),   # duplicate question
+                5: medrev_row(5, "Do acetylcholinesterase inhibitors improve autism?"),           # off topic
+                6: medrev_row(6, "Is music therapy effective for dementia?", F_),
+                7: medrev_row(7, "Is music therapy effective for dementia?", F_, "2009 May 5")}
+        groups = {10: [1, 2], 11: [6, 7], 12: [8]}
+        rows[8] = medrev_row(8, "Does aspirin prevent dementia?")
+        return rows, groups
+
+    def test_selection(self):
+        rows, groups = self._world()
+        items = AD.build_ad_items(rows, groups, used_groups={12})
+        by_id = {i["item_id"]: i for i in items}
+        self.assertEqual(set(by_id), {"AD-00001", "AD-00003", "AD-00006"})
+        self.assertEqual(by_id["AD-00001"]["kind"], "changed")           # unused multi-version review, label changed
+        self.assertEqual(by_id["AD-00006"]["kind"], "unchanged")
+        single = by_id["AD-00003"]
+        self.assertEqual(single["previous"], single["newest"])
+        self.assertTrue(single["notes"])
+        self.assertTrue(all(i["split"] == "ad" and i["ad_related"] for i in items))
+
+    def test_cli_appends_once_and_keeps_the_main_benchmark(self):
+        rows, groups = self._world()
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "Datasets").mkdir()
+            import csv
+            with open(d / "Datasets" / "MedRevQA.csv", "w", newline="", encoding="utf-8") as h:
+                w = csv.DictWriter(h, fieldnames=["", "Question", "objectives", "Label", "PMID", "DOI_Date"])
+                w.writeheader()
+                for k in sorted(rows):
+                    w.writerow(rows[k])
+            with open(d / "Datasets" / "AllStudyGroups.csv", "w", newline="", encoding="utf-8") as h:
+                w = csv.writer(h)
+                w.writerow(["Group_ID", "Study_ID"])
+                for gid, keys in groups.items():
+                    for j, k in enumerate(keys):
+                        w.writerow([gid if j == 0 else "", k])
+            write(d / "benchmark.jsonl", [dict(item("MC-1"), group_id=12)])
+            args = ["--medchange-dir", tmp, "--data-dir", tmp, "--manifest", str(d / "m.json")]
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(AD.main(args), 0)
+                self.assertEqual(AD.main(args), 0)                        # a rerun replaces, never duplicates
+            bench = [json.loads(l) for l in (d / "benchmark.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([r["split"] for r in bench], ["dev", "ad", "ad", "ad"])
+            self.assertEqual(json.loads((d / "m.json").read_text(encoding="utf-8"))["items"], 3)
+
+    def test_requirement_is_read_on_the_ad_split_and_the_phase_is_guarded(self):
+        primary = {"diff_a_minus_b": 0.02, "ci95": [-0.01, 0.05], "mcnemar_p": 0.2, "confirmed": False}
+        self.assertEqual(A.requirement_reading(primary, "ad"), "met as a point estimate, not confirmed")
+        args = mock.Mock(model_path="m.gguf", judge_path=None, n_threads="6", commit=False)
+        names = [n for n, _ in RP.ad_plan(args, Path("data"), Path("results"))]
+        self.assertIn("B0 and B1 answers (ad)", names)
+        self.assertIn("answers (ad): R2 R2C R2V", names)
+        self.assertEqual(names[-1], "findings (ad)")
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(RP.main(["ad", "--model-path", "m.gguf", "--dry-run"]), 2)   # no --go

@@ -33,7 +33,8 @@ date labels, and (R2V, R2V-ND) R2's answer as a draft to check.
 
 The primary setting exists because the Alzheimer's pool alone cannot test a temporal claim (only 5 of
 113 questions are known verdict changes) or reach useful power (`log.md` Phase 21). The realigned study
-reports the Alzheimer's items of MedChange (9 changed, 5 unchanged) as a descriptive case study.
+adds a separate Alzheimer's/dementia test set built the same way from MedRevQA (212 questions, 163 reviews, none in
+dev or confirm; `experiment_plan.md` §11), run once after the freeze as a secondary evaluation.
 
 ## 3. Shared upstream (identical by construction)
 

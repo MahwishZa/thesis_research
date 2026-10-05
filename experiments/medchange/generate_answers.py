@@ -154,7 +154,7 @@ def llama_generator(model_path: str, n_ctx: int, n_threads: Optional[int], n_gpu
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
     ap.add_argument("--arms", nargs="+", default=list(A.ARMS), choices=list(A.ARMS))
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--out", default=None)

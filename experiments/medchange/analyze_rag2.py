@@ -12,7 +12,8 @@ Pre-declared (docs/experiment_plan.md §7): the primary comparison is R2V - R2 o
 paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
 p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
 *not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
-everything is exploratory and the requirement is never read as met.
+everything is exploratory and the requirement is never read as met. The Alzheimer's/dementia split ("ad") is a
+secondary held-out test, run once after the freeze; the requirement is read on it in the same way.
 """
 
 from __future__ import annotations
@@ -196,7 +197,7 @@ def requirement_reading(primary: Optional[dict], split: str) -> str:
     """The pre-declared reading of the +1.0 pp requirement (docs/experiment_plan.md §7)."""
     if primary is None:
         return "not run"
-    if split != "confirm":
+    if split not in ("confirm", "ad"):
         return "dev estimate only (exploratory; the requirement is read on the confirmatory split)"
     if primary["diff_a_minus_b"] * 100 < REQUIREMENT_PP:
         return "not met"
@@ -268,7 +269,7 @@ def _comparison_table(rows: dict, family: bool) -> list[str]:
 
 
 def to_markdown(rep: dict) -> str:
-    kind = "confirmatory" if rep["split"] == "confirm" else "exploratory"
+    kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's/dementia"}.get(rep["split"], "exploratory")
     L = [f"# Adapted RAG² and evidence-criteria verification, {rep['split']} split ({kind})", "",
          f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experiment_plan.md`.", "",
          "## Generation: verdict accuracy", "",
@@ -331,7 +332,7 @@ def to_markdown(rep: dict) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--out-dir", default=None, help="write rag2_analysis_<split>.json/.md here")
     ap.add_argument("--label-audit", default=None, help="label_audit_<split>.jsonl (label-stable subset)")

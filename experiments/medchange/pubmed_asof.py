@@ -242,7 +242,7 @@ def main(argv=None) -> int:
     ap.add_argument("--retmax", type=int, default=200)
     ap.add_argument("--min-hits", type=int, default=30)
     ap.add_argument("--limit", type=int, default=None, help="first N items only (smoke test)")
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "all"),
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "all"),
                     help="G0 is a dev-split gate by default")
     args = ap.parse_args(argv)
 

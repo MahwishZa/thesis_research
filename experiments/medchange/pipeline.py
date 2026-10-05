@@ -33,7 +33,7 @@ from .stance import TOP_K
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 ANSWER_BUDGET = 1   # a pool needs one candidate when stance does not run; B1 admits up to 5 and takes fewer if fewer exist
-EXPECTED_ITEMS = {"dev": 226, "confirm": 528}
+EXPECTED_ITEMS = {"dev": 226, "confirm": 528, "ad": 212}
 FROZEN = "/".join(("experiments", "medchange", "results", "synthesis_model.json"))   # written by synthesis fit
 SHARE = ("stance_pilot.jsonl", "stance_pilot.config.json", "stance_dev.jsonl", "stance_dev.config.json",
          "synthesis_dev.jsonl", "stance_confirm.jsonl", "stance_confirm.config.json", "synthesis_confirm.jsonl",

@@ -13,6 +13,7 @@ limitations. For how retrieval consumes them see `methodology.md`; for how to re
 | Frozen synthesis model (`synthesis_model.json`) | the fitted stage-2 layer: coefficients, standardisation, selected hybrid, stance wording | yes, and **before** any confirmatory stance run | `synthesis fit` (dev only) |
 | Realigned study: rationales, candidate lists, filter judgements, answers, directness judgements (`rag2_*_<split>.jsonl`) | the adapted RAG² baseline and the verification arms | yes, copied to `results/` by `rag2_pipeline` (model text, PMIDs, ranks, scores, dates; the candidate lists without titles or abstracts) | `rag2_run` |
 | Design record (`rag2_design.json`) | every setting and prompt hash of the realigned systems and the generator file's hash | yes, and **before** the held-out run, which refuses to start otherwise | `rag2_pipeline dev` |
+| Alzheimer's/dementia test set (split `ad`) | a fresh secondary held-out set for the realigned study: 212 MedRevQA questions on dementia and Alzheimer's disease from 163 reviews outside dev and confirm | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` after `build_benchmark` |
 | Alzheimer's evidence corpus | secondary evidence | provenance only (metadata, reports, logs) | stages 01–07 in `corpus/scripts/` |
 | Alzheimer's question pool | secondary evaluation questions | yes (`experiments/shared/questions/`) | `build_pool`, human review (done 2026-09-20; not extended), `split` |
 

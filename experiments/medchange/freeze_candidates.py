@@ -141,7 +141,7 @@ def main(argv=None) -> int:
     ap.add_argument("--probe-dir", default=str(HERE / "data" / "pubmed_g0"))
     ap.add_argument("--abstract-cache", default=str(HERE / "data" / "abstracts.jsonl"))
     ap.add_argument("--out", default=None)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "all"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "all"))
     ap.add_argument("--dense-k", type=int, default=50)
     ap.add_argument("--pool-size", type=int, default=20)
     ap.add_argument("--api-key", default=None)

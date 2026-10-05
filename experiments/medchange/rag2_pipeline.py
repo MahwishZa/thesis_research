@@ -2,6 +2,7 @@
 
     python -m experiments.medchange.rag2_pipeline dev --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
     python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
+    python -m experiments.medchange.rag2_pipeline ad --go --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
     python -m experiments.medchange.rag2_pipeline status
 
 ``dev``: integrity checks; rationales; candidate lists; filter; answers R2, R2C, R2V and R2V-ND (with
@@ -13,6 +14,9 @@ shareable outputs; with ``--commit``, commit and push to main.
 origin/main equals the current design (settings, prompts, model file). Then the same steps on the confirmatory
 split for R2, R2C, R2V and R2V-ND (``--no-temporal-ablation`` leaves R2V-ND out, decided before the run),
 analysis, findings, publishing and, with ``--commit``, commit and push.
+
+``ad`` (once, same guards as ``confirm``): the Alzheimer's/dementia secondary test set built by ``ad_benchmark``:
+as-of PubMed records and abstracts (network), B0 and B1 answers, then R2, R2C and R2V, analysis, findings.
 
 Every step is resumable: after an interruption, rerun the same command.
 """
@@ -35,6 +39,8 @@ DESIGN = "/".join(("experiments", "medchange", "results", "rag2_design.json"))  
 SHARE = ("rag2_rationales", "rag2_filter", "rag2_answers", "rag2_directness")
 DEV_ARMS = ("R2", "R2C", "R2V", "R2V-ND")
 ABLATION_ARMS = ("R2-NF", "R2-RQ", "R2-BR")
+AD_ARMS = ("R2", "R2C", "R2V")
+FINDINGS = {"confirm": "RAG2_FINDINGS.md", "ad": "RAG2_FINDINGS_AD.md"}
 MAX_UNPARSED = 0.05
 MIN_VALID = 0.95
 BASELINE_FLOOR_PP = 5.0
@@ -126,12 +132,13 @@ def write_dev_report(results: Path) -> tuple[bool, str]:
     return True, f"dev check: {check['status']}"
 
 
-def write_findings(results: Path) -> tuple[bool, str]:
-    rep = _analysis(results, "confirm")
+def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
+    rep = _analysis(results, split)
     if rep is None:
-        return False, "no confirmatory analysis"
+        return False, f"no {split} analysis"
     p = rep["primary"]
-    lines = ["# Findings of the realigned study (confirmatory split, run once)", "",
+    title = {"confirm": "confirmatory split", "ad": "Alzheimer's/dementia secondary test set"}[split]
+    lines = [f"# Findings of the realigned study ({title}, run once)", "",
              "Each conclusion follows the rules fixed in `docs/experiment_plan.md` before the run.", "",
              "## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)", ""]
     if p:
@@ -145,16 +152,17 @@ def write_findings(results: Path) -> tuple[bool, str]:
         lines.append(f"* {name}: {100 * r['diff_a_minus_b']:+.1f} pp (95% CI {100 * r['ci95'][0]:+.1f} to "
                      f"{100 * r['ci95'][1]:+.1f}; Holm p = {r['holm_p']:.4f}) — "
                      f"{'confirmed' if r['confirmed'] else 'not confirmed'}")
-    lines += ["", "Full tables: `rag2_analysis_confirm.md`."]
-    (results / "RAG2_FINDINGS.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return True, "wrote RAG2_FINDINGS.md"
+    lines += ["", f"Full tables: `rag2_analysis_{split}.md`."]
+    (results / FINDINGS[split]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True, f"wrote {FINDINGS[split]}"
 
 
 def publish(data: Path, results: Path, split: str) -> tuple[bool, str]:
     """Copy the outputs without publisher text to results/; the candidate lists without titles/abstracts."""
     results.mkdir(parents=True, exist_ok=True)
     copied = 0
-    for stem in SHARE:
+    stems = SHARE + (("answers",) if split == "ad" else ())      # B0/B1 of the new split
+    for stem in stems:
         for name in (f"{stem}_{split}.jsonl", f"{stem}_{split}.config.json"):
             if (data / name).is_file():
                 shutil.copyfile(data / name, results / name)
@@ -218,6 +226,23 @@ def confirm_plan(a, data: Path, results: Path) -> list:
     return steps
 
 
+def ad_plan(a, data: Path, results: Path) -> list:
+    count = lambda: _checks([preflight(data, "ad")[0]])
+    steps = [("Alzheimer's items present (run ad_benchmark first)", count),
+             ("as-of PubMed records (ad)", py("pubmed_asof", "--split", "ad")),
+             ("candidate pools and abstracts (ad)", py("freeze_candidates", "--split", "ad", "--device", "cpu")),
+             ("B0 and B1 answers (ad)", py("generate_answers", "--split", "ad", "--arms", "B0", "B1",
+                                           "--model-path", a.model_path, "--n-threads", a.n_threads)),
+             ("preflight (ad)", lambda: _checks(preflight(data, "ad")))]
+    steps += run_steps(a, "ad", AD_ARMS, ("R2",))
+    steps += [("analysis (ad)", py("analyze_rag2", "--split", "ad", "--out-dir", results)),
+              ("publish outputs (ad)", lambda: publish(data, results, "ad")),
+              ("findings (ad)", lambda: write_findings(results, "ad"))]
+    if a.commit:
+        steps.append(("commit and push", lambda: commit_and_push("Realigned study: Alzheimer's/dementia test set")))
+    return steps
+
+
 def status(data: Path, results: Path) -> int:
     dev = _analysis(results, "dev")
     pushed = frozen_is_pushed(rel=DESIGN)[0] if (results / "rag2_design.json").is_file() else False
@@ -225,13 +250,15 @@ def status(data: Path, results: Path) -> int:
                       "dev_check": dev_check(dev)["status"] if dev else None,
                       "design_record_pushed": pushed,
                       "confirm_answers": len(load_jsonl(data / "rag2_answers_confirm.jsonl")),
-                      "findings": (results / "RAG2_FINDINGS.md").is_file()}, indent=2))
+                      "findings": (results / "RAG2_FINDINGS.md").is_file(),
+                      "ad_answers": len(load_jsonl(data / "rag2_answers_ad.jsonl")),
+                      "ad_findings": (results / "RAG2_FINDINGS_AD.md").is_file()}, indent=2))
     return 0
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("phase", choices=("dev", "confirm", "status"))
+    ap.add_argument("phase", choices=("dev", "confirm", "ad", "status"))
     ap.add_argument("--model-path", help="the generator GGUF (Meta-Llama-3-8B-Instruct Q4_K_M)")
     ap.add_argument("--judge-path", default=None, help="optional second-family GGUF for the directness judge")
     ap.add_argument("--n-threads", default="6")
@@ -255,7 +282,7 @@ def main(argv=None) -> int:
     if a.phase == "dev":
         return execute(dev_plan(a, data, results), a.dry_run)
     if not a.go:
-        print("the confirmatory run needs your explicit go: read results/RAG2_DEV_REPORT.md, then add --go",
+        print(f"the {a.phase} run needs your explicit go: read results/RAG2_DEV_REPORT.md, then add --go",
               file=sys.stderr)
         return 2
     if not a.dry_run:
@@ -271,7 +298,8 @@ def main(argv=None) -> int:
             print("refusing to start: the current design differs from the frozen record in "
                   + ", ".join(differs), file=sys.stderr)
             return 2
-    return execute(confirm_plan(a, data, results), a.dry_run)
+    plan = confirm_plan if a.phase == "confirm" else ad_plan
+    return execute(plan(a, data, results), a.dry_run)
 
 
 if __name__ == "__main__":

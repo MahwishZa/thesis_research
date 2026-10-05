@@ -243,4 +243,19 @@ Details: `docs/evaluation.md` §7–§8 and `experiments/medchange/results/`.
 
 ## 11. Amendments
 
-None yet. Any change after 2026-10-05 is added here with its date and the data seen before it.
+**2026-10-05, Alzheimer's/dementia secondary test set** (decided before the dev run; the only realigned output
+that existed was a three-question smoke test of the pipeline on dev, whose answers were not analysed). The
+research proposal named Alzheimer's disease as the domain, and the 14 Alzheimer's items of the main benchmark
+are too few for any test. A second held-out set is therefore added: every MedRevQA question whose text names
+dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from a Cochrane review that is not
+in the dev or confirmatory split, exact duplicates removed (`experiments/medchange/ad_benchmark.py`; counts in
+`experiments/medchange/manifest_ad.json`): **212 questions from 163 reviews** (gold: 89 NOT ENOUGH INFORMATION, 69
+REFUTED, 54 SUPPORTED); 206 come from reviews with a single version, so the outdated-verdict rate and the
+update-window metrics do not apply to them, and none has a changed verdict. It is a fresh set: no item, label or
+answer of it has been seen. It is run **once, after the freeze**, with the frozen design (B0, B1, R2, R2C, R2V; no
+ablations), by `rag2_pipeline ad --go`, which has the same guards as the confirmatory phase. The requirement is
+read on it with the same rule (§7) as a **secondary** result; the confirmatory split stays primary. With 212
+questions the standard error of R2V − R2 is about 2–3 pp, so only effects of roughly 7–9 pp can be confirmed.
+Several questions can come from one review (212 questions, 163 reviews); the paired tests treat questions as
+independent, which slightly understates the uncertainty, and the thesis states it. Compute (*estimated*): records
+and abstracts ≈ 3 h (network), B0/B1 ≈ 4.5 h, the realigned arms ≈ 21 h.

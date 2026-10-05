@@ -1048,3 +1048,15 @@ aggregates seen beforehand are disclosed in the plan's ledger.
 **Built.** `rag2.py`, `rag2_run.py`, `analyze_rag2.py`, `rag2_pipeline.py` and 34 tests on synthetic data; the
 README, methodology, evaluation, data, reproducibility and glossary describe the realigned study, and the README
 guard test was retargeted to it. No realigned output exists yet; nothing was run on any real data in this phase.
+
+## Phase 36 — Alzheimer's/dementia secondary test set (Oct 5)
+
+The proposal named Alzheimer's disease as the domain; the main benchmark holds only 14 such items. Checked first:
+MedRevQA has 212 distinct questions naming dementia, Alzheimer's disease, mild cognitive impairment or cognitive
+decline from 163 Cochrane reviews outside the dev and confirmatory splits (computed; gold 89 NOT ENOUGH
+INFORMATION, 69 REFUTED, 54 SUPPORTED; 206 from single-version reviews, so no changed verdicts). The main
+benchmark was rebuilt in the cloud from a fresh MedChange clone and matched `manifest.json` exactly before the new
+set was appended. Built: `ad_benchmark.py`, split `ad` in the existing tools, the `rag2_pipeline ad --go` phase
+(same freeze guards as confirm), tests, and the dated amendment in `experiment_plan.md` §11 (made before the dev
+run; only a three-question smoke test existed). It is a secondary, fresh held-out test run once after the freeze;
+with 212 questions only effects of about 7–9 pp can be confirmed.
