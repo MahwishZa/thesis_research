@@ -2,7 +2,7 @@
 
 What is compared, how, and under what conditions. For the research question and objectives see
 the root `README.md`; for the exact protocol, gates and statistics see `experiment_plan.md`; for
-data provenance see `data.md`; for metrics see `evaluation.md`; for how to run things see
+data provenance see `data.md`; for metrics, statistics and results see `experiment_plan.md` §6–§7 and §12–§14; for how to run things see
 `reproducibility.md`.
 
 ## 1. The comparison in one line
@@ -96,7 +96,7 @@ TempRALM (Gade & Jetcheva). The proposed arm's only difference from B3 is the re
 
 **Stage 2 arms and the evidence-synthesis layer.** Stage 2 was pre-specified in the stage-2 protocol (in
 the repository history, commit 92e3aaf) and run on dev (`stance.py`, `synthesis.py`); gate 2 failed, so it was
-not run on the held-out split (`evaluation.md` §7).
+not run on the held-out split (`experiment_plan.md` §13).
 
 | Arm | What it is |
 |---|---|

@@ -33,6 +33,11 @@ evidence-synthesis layer with two pre-specified questions (RQ1, RQ2) tested once
 split. The README guards below keep those questions, and the stated limit of what 528 items can
 confirm, from drifting; the plan guard keeps the list of decisions taken after seeing dev data.
 
+2026-10-05: ``docs/evaluation.md`` was merged into ``docs/experiment_plan.md`` (one document for the protocol
+and the evaluation; its section numbers are cited from the code and stay stable), so ``docs/`` now holds the
+topic docs ``methodology.md``, ``data.md``, ``glossary.md`` and ``reproducibility.md``, the chronological record
+``log.md`` and ``experiment_plan.md``.
+
 2026-10-05: the study was realigned around an adapted RAG² baseline and an evidence-criteria
 verification extension, with a supervisor requirement of +1 percentage point. The stage-2 guard was
 retargeted to the realigned question; it keeps the "tested once" rule and the statement of what 528
@@ -151,9 +156,9 @@ class SupersededScopeTests(unittest.TestCase):
         self.assertEqual(hits, [])
 
     def test_the_current_docs_all_exist(self):
-        """docs/ holds five topic docs (methodology, data, glossary,
-        evaluation, reproducibility), the chronological record ``log.md``, and
-        ``experiment_plan.md``, the protocol fixed before any result existed.
+        """docs/ holds four topic docs (methodology, data, glossary,
+        reproducibility), the chronological record ``log.md``, and
+        ``experiment_plan.md``, the protocol and evaluation fixed before any result existed.
         A missing expected file means a reference in this repository now
         dangles; an unexpected one means the docs set drifted."""
         docs = ROOT / "docs"
@@ -161,7 +166,6 @@ class SupersededScopeTests(unittest.TestCase):
             "methodology.md",
             "data.md",
             "glossary.md",
-            "evaluation.md",
             "reproducibility.md",
             "log.md",
             "experiment_plan.md",
@@ -211,7 +215,7 @@ class ArchiveLayoutTests(unittest.TestCase):
 
 #: Documentation that must describe the CURRENT repository exactly. ``log.md`` is a dated
 #: record of what was true when written and is deliberately excluded.
-CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md", "docs/evaluation.md",
+CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md",
                 "docs/reproducibility.md", "docs/glossary.md", "docs/experiment_plan.md",
                 "experiments/medchange/README.md", "experiments/medchange/results/README.md",
                 "experiments/results/README.md", "_archive/README.md")

@@ -1060,3 +1060,12 @@ set was appended. Built: `ad_benchmark.py`, split `ad` in the existing tools, th
 (same freeze guards as confirm), tests, and the dated amendment in `experiment_plan.md` §11 (made before the dev
 run; only a three-question smoke test existed). It is a secondary, fresh held-out test run once after the freeze;
 with 212 questions only effects of about 7–9 pp can be confirmed.
+
+## Phase 37 — Evaluation and experiment plan merged into one document (Oct 5)
+
+At the researcher's request, `docs/evaluation.md` was merged into `docs/experiment_plan.md`, now "Evaluation and
+experiment plan". The plan's §1–§11 keep their numbers (the code and the other documents cite them); the former
+evaluation sections moved to §6 (primary outcome, supporting outcomes, retrieval metrics), §7 (statistical
+procedure, controls, abstention and coverage) and §12–§14 (error analysis, development-split results,
+confirmatory results). No result, rule or threshold was changed. References in the README, `methodology.md` and
+the documentation guard tests were updated; earlier entries of this log still name `evaluation.md` as it was then.
