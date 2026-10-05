@@ -26,7 +26,7 @@ date labels, and (R2V, R2V-ND) R2's answer as a draft to check.
 
 | | Primary: MedChange as-of benchmark | Secondary: Alzheimer's/dementia test set (split `ad`) |
 |---|---|---|
-| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); dev 226, held-out ("confirm") 528; `experiments/medchange/` | 212 MedRevQA questions that name dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from 163 reviews that are in neither dev nor confirm; **all 212 are unchanged-verdict questions** (206 have a single review version); `experiments/medchange/ad_benchmark.py` |
+| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); dev 226, held-out ("confirm") 528; `experiments/medchange/` | 208 MedRevQA questions that name dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from 159 reviews that are in neither dev nor confirm; **all 208 are unchanged-verdict questions** (202 have a single review version); `experiments/medchange/ad_benchmark.py` |
 | Question date t_q | the newest review's publication date | the same |
 | Evidence | PubMed abstracts first public strictly before t_q, fetched per question | the same |
 | Retrieval | PubMed best match → MedCPT dense rank → MedCPT cross-encoder rerank | the same |
