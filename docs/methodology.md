@@ -16,17 +16,24 @@ of the same pool in cross-encoder order, judges each paper separately, and combi
 B1's verdict (§4). Every stage-2 arm is therefore a function of the same frozen pool and the same B1
 answer.
 
+The realigned study (`experiment_plan.md`) changes one thing at a time. The adapted RAG² baseline (R2)
+changes retrieval only: a rationale as the dense query, balancing across evidence types and a zero-shot
+LLM filter, then the same answer prompt as B0 and B1. R2C, R2V (proposed) and R2V-ND admit exactly R2's
+evidence for every question and change only how it is read: with explicit evidence criteria, design and
+date labels, and (R2V, R2V-ND) R2's answer as a draft to check.
+
 ## 2. Two evaluation settings
 
 | | Primary: MedChange as-of benchmark | Secondary: Alzheimer's disease case study |
 |---|---|---|
-| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); `experiments/medchange/` | 113 usable questions reviewed earlier by the researcher (99 with a verdict label; not extended, see `experiment_plan.md` §11); `experiments/shared/questions/` |
+| Questions | 754 usable Cochrane questions (504 whose verdict changed between review versions, 250 unchanged controls); `experiments/medchange/` | 113 usable questions reviewed earlier by the researcher (99 with a verdict label; not extended); `experiments/shared/questions/` |
 | Question date t_q | the newest review's publication date | the cited review's date (**planned**; the earlier pilot used the run date) |
 | Evidence | PubMed abstracts first public strictly before t_q, fetched per question | local Alzheimer's corpus restricted to passages before t_q (**planned**) |
 | Retrieval | PubMed best match → MedCPT dense rank → MedCPT cross-encoder rerank | MedCPT dense retrieval over the 4.4M-chunk local index → rerank |
 
 The primary setting exists because the Alzheimer's pool alone cannot test a temporal claim (only 5 of
-113 questions are known verdict changes) or reach useful power; see `experiment_plan.md` §13.
+113 questions are known verdict changes) or reach useful power (`log.md` Phase 21). The realigned study
+reports the Alzheimer's items of MedChange (9 changed, 5 unchanged) as a descriptive case study.
 
 ## 3. Shared upstream (identical by construction)
 
@@ -41,6 +48,12 @@ MedCPT is used at both stages (dual encoder for similarity, cross-encoder for re
 the arms nor the generator retrieves, reranks or re-scores anything afterwards. The as-of rule
 (only records provably public before t_q; the source review and its versions excluded) is what makes
 the comparison leakage-safe.
+
+The realigned systems start one step earlier, from the same as-of candidate records (up to 200 per
+question, cached locally): R2 ranks them by MedCPT similarity to the rationale, takes up to 8 of each
+evidence type (systematic review or meta-analysis, trial, other design, from PubMed publication types),
+re-ranks that union with the MedCPT cross-encoder against the question and keeps the top 8 for the
+filter (`rag2.build_lists`). B0 and B1 keep the frozen pool of 20, so their committed answers are reused.
 
 ## 4. Arms
 
@@ -80,8 +93,9 @@ fixture demo and tests.
 TempRALM (Gade & Jetcheva). The proposed arm's only difference from B3 is the relevance signal; the
 2 × 2 of helpfulness × recency is what the comparison can legitimately say about.
 
-**Stage 2 arms and the evidence-synthesis layer.** Stage 2 is pre-specified in `experiment_plan.md` (§1,
-§4–§10) and its code is built (`stance.py`, `synthesis.py`); no real stance output exists yet.
+**Stage 2 arms and the evidence-synthesis layer.** Stage 2 was pre-specified in the stage-2 protocol (in
+the repository history, commit 92e3aaf) and run on dev (`stance.py`, `synthesis.py`); gate 2 failed, so it was
+not run on the held-out split (`evaluation.md` §7).
 
 | Arm | What it is |
 |---|---|
@@ -111,6 +125,31 @@ fitted on the 226 dev items and frozen; no feature uses an item's kind, change t
 label. The selected hybrid is H0 unless a weighted variant's dev cross-validated accuracy is at least 1.0
 pp higher.
 
+**Realigned systems: adapted RAG² and evidence-criteria verification** (`rag2.py`, `rag2_run.py`).
+
+| Arm | What it reads | How it answers |
+|---|---|---|
+| R2 (baseline) | the rationale-ranked, type-balanced, re-ranked top 8, filtered: abstracts with P(yes) ≥ 0.5 in cross-encoder order, at most 5 | the standard verdict prompt (`prompts.build_prompt`) |
+| R2-RQ / R2-BR / R2-NF | as R2 with the question as the dense query / without balancing / without the filter (top 5) | as R2 |
+| R2C | R2's admitted abstracts, labelled with design and year | one pass with the evidence criteria; three lines ending in FINAL VERDICT |
+| R2V (proposed) | the same, plus R2's answer as a draft | checks the draft against the criteria; same three lines |
+| R2V-ND | as R2V without years | criteria without the currency clause |
+
+*Filter.* The generator is asked whether the abstract (title, results and conclusions, ≤ 200 words) contains
+information that helps answer the question; P(yes) is the first token's probability renormalised over Yes and
+No. An invalid judgement (Yes + No probability < 0.5) keeps the paper; if nothing passes, R2 answers without
+evidence and the criteria arms keep R2's answer.
+
+*Evidence criteria* (verbatim in `rag2.CRITERIA`): directness (only studies of the question's intervention,
+population and outcome count; other interventions, populations and surrogate measures do not); design weight
+(randomised trials and systematic reviews first); SUPPORTED when the direct studies show at least partial
+benefit even with low certainty; REFUTED when they show no benefit, an effect similar to placebo or the
+comparison, or harm; NOT ENOUGH INFORMATION only without direct studies; when direct studies disagree, the
+weight of the direct randomised evidence, and (dated version) newer evidence takes precedence over older
+evidence it may have superseded. The class definitions restate the benchmark's labelling rubric; R2C measures
+what they achieve without verification. A verification output without a FINAL VERDICT line keeps the draft
+verdict and is counted as invalid.
+
 ## 5. What is held constant, and how it is enforced
 
 | Held constant | Enforced by |
@@ -124,6 +163,8 @@ pp higher.
 | Stance prompt, wording and decoding (stage 2) | `stance.build_messages`; one output token, temperature 0; the model file's SHA-256, wording hashes and settings are recorded beside the stance file and a resume under a different configuration is refused |
 | Stance inputs (stage 2) | the first 8 pool candidates by cross-encoder rank; `stance.study_snippet` (title, RESULTS, CONCLUSIONS, ≤ 200 words) |
 | The fitted layer (stage 2) | one frozen model file written by `synthesis fit` on dev; `synthesis predict` refuses to run without it and records its hash with the confirmatory predictions |
+| Evidence of R2, R2C, R2V, R2V-ND | `rag2_run.answer_one` admits for every criteria arm through R2's list and R2's filter judgements, so the four arms read the same abstracts in the same order |
+| Realigned settings and prompts | `rag2.SETTINGS` and every prompt text are hashed into each output file's configuration; a resume under a different configuration is refused; the design record (`results/rag2_design.json`) must be on origin/main and equal to the current design before the held-out run starts |
 
 The original three-arm framework (`src/`, `evaluation/runner.py`) enforces parity with assertions
 that run before the first item (candidate-set hash, budget, prompt, generator identity); its tests
@@ -133,8 +174,11 @@ are `test_runner_parity.py` and the integration suite.
 
 Meta-Llama-3-8B-Instruct, Q4_K_M GGUF (bartowski), run with llama.cpp on CPU on a laptop with 15.2 GB
 RAM and a 4 GB GPU that cannot hold the model. Greedy decoding, no sampling. A quantised model on CPU
-is a disclosed deviation from RAG²'s own full-precision GPU generator. Qwen2.5-7B-Instruct is the
-planned second generator for robustness. The GGUF file's SHA-256 and the decoding settings are recorded
+is a disclosed deviation from RAG²'s own full-precision GPU generator. Qwen2.5-7B-Instruct, a different
+model family, is used only as an independent judge (label audit, consistency check, optional directness of
+admitted evidence), never as a generator. In the realigned study the same Llama file writes the rationales
+(1,024-token context, 128 new tokens), judges the filter (1,536-token context, one token, top-20
+log-probabilities) and writes the answers and verifications (6,144-token context, 160 new tokens). The GGUF file's SHA-256 and the decoding settings are recorded
 automatically beside the answers (`reproducibility.md` §8). The stage-2 stance step uses the same GGUF
 file with a 1,536-token context, one output token and the top-20 log-probabilities of that token
 (llama-cpp-python needs `logits_all`, ≈ 0.5 GB extra memory; a hard-label mode skips it). One declared
@@ -144,12 +188,13 @@ fallback exists: the same pilot with Flan-T5-large as the stance model.
 
 **Stage 1:** nothing is fitted. λ, H and the budget are fixed (`arms.py`) and recorded in every answer. A
 grid, if ever run, is exploratory and on dev data only. (The superseded pilot fitted λ, θ and H on a
-validation split by maximising currency, which made its primary metric circular; see `experiment_plan.md`
-§13.) **Stage 2:** the logistic layer's coefficients are fitted on the dev split (226 items) and frozen
+validation split by maximising currency, which made its primary metric circular; see `log.md` Phase 19.) **Stage 2:** the logistic layer's coefficients are fitted on the dev split (226 items) and frozen
 before any confirmatory stance output exists; its penalty (5.0), the top-k (8), the snippet length, the
 half-life (1,095 days) and the study-type weights (3 / 2 / 1) are fixed in advance and not tuned. The only
 data-dependent choice is which of H0–H3 is selected (dev
-cross-validation, 1.0 pp margin).
+cross-validation, 1.0 pp margin). **Realigned study:** nothing is fitted. The quota (8 per evidence type),
+the re-ranked list (8), the budget (5), the filter threshold (0.5), the rationale length (128 new tokens) and
+the answer length (160) are fixed in `rag2.SETTINGS` before any output exists.
 
 ## 8. Ablation
 
@@ -158,14 +203,21 @@ the helpfulness signal) and B1 (for the cross-encoder signal), and C1 tests whet
 on the dates being real. In stage 2: S0 against S1/S2/S3 and H0 against H1/H2/H3 isolate the recency and
 study-type weights; H1C and H3C test whether real dates matter; B1R against H0 isolates what the stance
 features add beyond the same fitting; and an irrelevant-paper control in the pilot checks that the stance
-step reads the paper rather than the question.
+step reads the paper rather than the question. In the realigned study: R2-RQ, R2-BR and R2-NF each remove one
+RAG² component from the baseline; R2C removes the draft from the verification (criteria only); R2V-ND removes
+the dates and the currency criterion.
 
 ## 9. Deviation register
 
 | Deviation | From | Reason | Effect on comparability |
 |---|---|---|---|
 | Untrained zero-shot Flan-T5 helpfulness instead of RAG²'s trained filter | RAG² | checkpoint unavailable; local retraining failed | B2/P are not a RAG² reproduction |
-| No rationale-as-query | RAG² | one shared pool per question | arms isolate admission |
+| No rationale-as-query (stages 1 and 2) | RAG² | one shared pool per question | arms isolate admission; R2 restores it |
+| Rationale ranks the question's as-of PubMed candidates (≤ 200), not a 564 GB index | RAG² | compute; as-of dating is available for PubMed only | R2 is an adapted, not a reproduced, RAG² |
+| Balance across evidence types, not across four corpora | RAG² | one dated corpus | keeps RAG²'s purpose (no dominant source crowds out the rest) |
+| Zero-shot filter by the local 8B generator instead of the trained Flan-T5 filter | RAG² | checkpoint unavailable; local retraining failed; RAG² reports a GPT-4o filter matched its trained one | a weaker judge than GPT-4o; reported as a substitute |
+| Three-way verdict task instead of four-option exam questions | RAG² | the benchmark's task; the only dated medical benchmark available | results are not comparable with RAG²'s accuracies |
+| Class definitions in the criteria arms restate the benchmark's labelling rubric | the benchmark's answering prompt | the dev errors show the two definitions differ | measured separately by R2C |
 | Fixed-budget top-5, no θ | original Temporal Filter | removes a tuning degree of freedom | none among the arms |
 | 4-bit GGUF generator on CPU | RAG²'s generator | hardware | applies to all arms alike |
 | PubMed abstracts, as-of | local full-text corpus | per-question as-of retrieval across medicine | the local corpus is used only for the case study |

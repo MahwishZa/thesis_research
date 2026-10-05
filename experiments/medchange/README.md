@@ -1,7 +1,8 @@
 # `experiments/medchange/` — the primary pipeline
 
-An as-of evaluation, on Cochrane questions whose verdict changed between review versions, of evidence
-admission (stage 1) and of an evidence-synthesis layer (stage 2).
+An as-of evaluation, on Cochrane questions whose verdict changed between review versions, of an adapted
+RAG² baseline and an evidence-criteria verification extension (the realigned study), with the earlier
+stages kept as results of record: evidence admission (stage 1) and an evidence-synthesis layer (stage 2).
 The protocol, settings and gates are fixed in `docs/experiment_plan.md`; this file maps code to steps.
 Commands and costs: `docs/reproducibility.md` §3.
 
@@ -27,6 +28,10 @@ Commands and costs: `docs/reproducibility.md` §3.
 | `stance.py` | one stance judgement (supports / contradicts / neither) per paper for the first 8 pool candidates, from title + RESULTS + CONCLUSIONS; two wordings; first-token probabilities; `--pilot` = 40 dev items, both wordings and the irrelevant-paper control; resumable, refuses a changed configuration | GGUF model (or Flan-T5-large as the declared fallback) | `stance_<split>.jsonl`, `stance_pilot.jsonl`, with `.config.json` |
 | `stance_check.py` | gate 1 of the pilot: `report` (machine checks only: wording agreement, control papers, invalid rate on real papers, speed; gate verdict) | none | (`--out` for the saved report) |
 | `synthesis.py` | the evidence-synthesis layer: features (signed stance, no-stance share, conflict, informative mass), paper weights, regularised multinomial logistic regression; `fit` = repeated cross-validation on dev, gate 2, selection, frozen model; `predict` = apply the frozen model to the confirmatory split (refuses without it) | none | `results/synthesis_model.json`, `results/synthesis_cv_dev.md`, `synthesis_<split>.jsonl` |
+| `rag2.py` | realigned study, pure logic: the rationale prompt, balanced retrieval across evidence types, cross-encoder re-ranking, the filter's P(yes) and admission, the evidence criteria and verification prompts, the `FINAL VERDICT:` parser, the unsupported-answer indicators, the design record | none | – |
+| `rag2_run.py` | realigned study, resumable steps: `rationale`, `lists`, `filter`, `answers` (R2, R2-RQ, R2-BR, R2-NF, R2C, R2V, R2V-ND), optional `judge` (directness); records each step's configuration and refuses to resume under a different one | GGUF model; MedCPT for `lists`; no network | `rag2_rationales_<split>.jsonl`, `rag2_lists_<split>.jsonl`, `rag2_filter_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` |
+| `analyze_rag2.py` | realigned analysis: accuracy, per-class recall, macro-F1, outdated rate, unsupported-answer indicators, verifier behaviour, retrieval metrics, the primary test and the pre-declared reading of the +1 pp requirement, secondary and ablation families with Holm, label-stable subset, Alzheimer's items | none | `results/rag2_analysis_<split>.*` |
+| `rag2_pipeline.py` | one resumable command per phase of the realigned study (`dev`, `confirm --go`, `status`): integrity checks, steps, dev check, design record, findings, publishing, optional commit and push; refuses the held-out run unless the design record on origin/main equals the current design | as the steps | `results/RAG2_DEV_REPORT.md`, `results/rag2_design.json`, `results/RAG2_FINDINGS.md` |
 | `analyze_stage2.py` | stage-2 analysis: accuracy with Wilson intervals, per-class recall, macro-F1, NOT ENOUGH INFORMATION share; primary family RQ1 (B1 vs B0) and RQ2 (selected hybrid vs B1R) with Holm; secondary family | none | `results/stage2_analysis_<split>.json`, `.md` |
 
 `data/` is gitignored because the MedChange release states no licence and abstracts are publisher text.
@@ -37,4 +42,6 @@ that rebuild `data/benchmark.jsonl` identically.
 Tests: `evaluation/tests/unit/test_medchange_benchmark.py`, `test_medchange_arms.py`,
 `test_medchange_stance.py` (stance, pilot checks, diagnostics, fakes in place of the model),
 `test_medchange_synthesis.py` (features, weights, fitting, selection, gate 2, the confirmatory analysis and its pre-declared reading),
-`test_medchange_dev_audit.py`, `test_medchange_audits.py`, `test_medchange_report.py` and `test_medchange_pipeline.py`; all use synthetic data.
+`test_medchange_dev_audit.py`, `test_medchange_audits.py`, `test_medchange_report.py`, `test_medchange_pipeline.py` and
+`test_medchange_rag2.py` (the realigned study: retrieval lists, filter, criteria prompts and parsers, the runner with
+fakes, the analysis and its reading of the requirement, the pipeline's checks and guards); all use synthetic data.

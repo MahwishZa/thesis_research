@@ -18,6 +18,11 @@ verdict of the newest Cochrane review version (`experiments/medchange/analyze.py
 * In stage 2 the primary outcome is accuracy over **all confirmatory items** (353 changed + 175 unchanged),
   chosen before any confirmatory data existed because pooling raises power; accuracy on the changed items alone
   is the key secondary. For the hybrid arms the verdict is the layer's prediction, not generated text.
+* In the realigned study (`experiment_plan.md`) the primary outcome is the same accuracy over all items of the
+  held-out split, compared between the proposed R2V and the adapted RAG² baseline R2. The criteria arms (R2C,
+  R2V, R2V-ND) answer in three lines and their verdict is parsed from the `FINAL VERDICT:` line by a regular
+  expression (`rag2.parse_final_verdict`); a verification output without one keeps the draft verdict and is
+  counted as invalid; an R2C output without one is unparsed and counted wrong.
 
 ## 2. Supporting outcomes
 
@@ -32,6 +37,10 @@ verdict of the newest Cochrane review version (`experiments/medchange/analyze.py
 | Wording agreement; irrelevant-paper control; invalid-output rate; stance-direction AUC against the gold labels (dev) | agreement of the two wordings; share of control papers rated "neither"; share of unusable outputs on real papers; how well the signed stance separates gold SUPPORTED from REFUTED | stage-2 pilot (gate 1), `stance_check.py` |
 | Label reproducibility; stated-verdict consistency | agreement and kappa of an independent model's re-labelling with the gold labels (`label_audit.py`); agreement of an independent judge with the stated verdict on a sample (`consistency_auto.py`) | independent-model audits that replace the human checks |
 | Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional; outside the primary analysis; the human hallucination annotation is dropped (`evaluation/annotation.py` stays as dormant framework code) |
+| Anachronism rate (realigned study) | the answer mentions a year later than the question date's year; no admitted study, all published before the question date, can support it (approximate: a four-digit count is read as a year) | indicator of unsupported, parametric or future knowledge |
+| Unsupported decisive verdict (realigned study) | SUPPORTED or REFUTED while citing none of the admitted studies ("[n]" in a standard answer; the DIRECT STUDIES line in the three-line format) | indicator of unsupported answers; questions without admitted evidence are excluded |
+| Verifier behaviour (realigned study) | share of valid outputs; share of verdicts changed from R2's; changes that fixed or broke an answer, and their direction | mechanism of the proposed component |
+| Retrieval metrics (realigned study) | number admitted and share of questions with none; evidence-type mix (systematic review or meta-analysis / trial / other); update-window share; mean age; overlap with B1; optional directness@k (share of admitted abstracts an independent second-family model judges to test the question's intervention and outcome) | retrieval evaluated separately from generation; descriptive |
 
 **Manipulation checks are never outcomes.** Showing that an arm admits more recent passages
 demonstrates that the mechanism acts as designed; it says nothing about whether answers improve.
@@ -62,10 +71,19 @@ depends on each arm's own admitted evidence).
 A difference is read as real only if the pre-declared test says so at α = 0.05 after correction; an
 average gap alone is not sufficient. If about 30% of answers differ between arms (an assumption until
 dev results exist), 353 confirmatory changed items give 84% power at the corrected α for a true 10 pp
-difference and 61% for 8 pp (simulated; `experiment_plan.md` §7); smaller effects are reported as
+difference and 61% for 8 pp (simulated in the stage-1 protocol); smaller effects are reported as
 inconclusive with their intervals, not as absence of effect. For stage 2 (528 items; a hybrid that differs from
 the RAG answer it refines on 15–25% of items) a true +3 pp is detected 26–38% of the time, +4 pp 42–62% and
 +5 pp 61–82%: the benchmark can confirm only effects of about 5 pp or more.
+
+* **Realigned study** (`experiment_plan.md` §7): one primary test, R2V − R2 over all held-out items (exact
+  McNemar and a paired bootstrap 95% interval); a secondary family Holm-corrected among themselves (R2 − B1,
+  R2V − B1, R2C − R2, R2V − R2C, R2V − R2V-ND, R2V − R2 on changed items); an ablation family on dev only
+  (R2 − R2-RQ, R2 − R2-BR, R2 − R2-NF). The +1 pp requirement is read in advance: *met and confirmed*
+  (difference ≥ 1.0 pp, p < .05, interval above 0), *met as a point estimate, not confirmed* (≥ 1.0 pp
+  otherwise) or *not met*. With 528 questions and 10–25% of them answered correctly by only one of the two
+  systems, the standard error of the difference is 1.4–2.2 pp: an observed +1 pp arises by chance alone
+  23–32% of the time, and confirming a real +1 pp would need about 3,800–9,600 questions (computed).
 
 ## 4. Controls
 
@@ -79,6 +97,10 @@ the RAG answer it refines on 15–25% of items) a true +3 pp is detected 26–38
   (each question judged against papers of another item) checks that the stance step reads the paper.
 * **Generator-sensitivity gate G2** (B1 must change ≥ 20% of dev verdicts relative to B0) tests
   whether the generator uses evidence at all; if not, no admission rule can matter.
+* **Realigned study.** R2C (the criteria without a draft) separates what the evidence criteria achieve from
+  what verifying a draft adds; R2V-ND (no dates, no currency clause) isolates the temporal criterion; R2-RQ,
+  R2-BR and R2-NF remove one RAG² component each; B1 shows whether the adapted RAG² retrieval beats standard
+  retrieval; the label-stable subset checks that a difference is not carried by unreliable labels.
 
 ## 5. Abstention and coverage
 
@@ -92,7 +114,7 @@ and a method that merely says it more often is shown as such by the per-class re
 
 Each wrong answer on a changed item is assigned one cause — retrieval miss, admission miss, generator
 override, parse failure, or gold-label error — and reported by change type, update-window length and arm.
-Stage 1, dev, changed items (`error_analysis.py`; `experiment_plan.md` §8, `log.md` Phase 26):
+Stage 1, dev, changed items (`error_analysis.py`; `log.md` Phase 26):
 no retrieval misses for any arm; nearly all wrong answers are "evidence admitted, still wrong". Stage 2 adds
 per-class recall, macro-F1 and predicted-class shares (`analyze_stage2.py`); confusion matrices,
 stance accuracy on decisive flips and the conflict feature against gold NOT ENOUGH INFORMATION are optional additions outside the primary analysis.
@@ -123,7 +145,7 @@ pipeline ran, not that anything improved.
 ## 8. Confirmatory results (528 items, run once)
 
 The confirmatory split was run once, after the stage-2 model was frozen, with the analysis rules of
-`experiment_plan.md` §9–§10. Gate 2 had failed on dev, so only RQ1 was tested and RQ2 was not run
+§9–§10 of the stage-2 protocol (commit 92e3aaf). Gate 2 had failed on dev, so only RQ1 was tested and RQ2 was not run
 (`results/FINDINGS.md`, `results/stage2_analysis_confirm.md`, `results/report/REPORT.md`).
 
 | Item | Result |

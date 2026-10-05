@@ -19,6 +19,11 @@ Terms as used consistently throughout this repository, code and documentation.
 | **B1R** | B1's verdict passed through the same logistic fitting as the hybrids: the fairness control that separates "stance helps" from "any fitting on dev helps". |
 | **S0–S3, H0–H3** | Stage-2 arms. S: stance features only. H (hybrid): B1's verdict plus the stance features. Index: 0 no weights, 1 recency weights, 2 study-type weights, 3 both. |
 | **H1C, H3C** | H1 and H3 with publication dates shuffled within each pool; falsification controls for the recency weights. |
+| **Adapted RAG² (R2)** | The realigned baseline: RAG²'s three components adapted to this setting — the model's rationale as the dense query, retrieval balanced across evidence types (systematic review or meta-analysis / trial / other), and a zero-shot filter by the generator itself — answering with the standard verdict prompt. Not a RAG² reproduction. |
+| **Evidence-criteria verification (R2V)** | The realigned proposed system: the same model checks R2's answer against the admitted evidence, labelled with study design and year, using fixed evidence criteria, and gives a final verdict. |
+| **Evidence criteria** | Directness, design weight, the meaning of each verdict (the benchmark's labelling rubric restated) and, in the dated version, currency (newer evidence takes precedence over older evidence it may have superseded); verbatim in `rag2.CRITERIA`. |
+| **R2C, R2V-ND, R2-RQ, R2-BR, R2-NF** | Realigned controls and ablations: criteria without a draft; R2V without dates and the currency clause; R2 with the question as the dense query; without balancing; without the filter. |
+| **Rationale query** | A short closed-book rationale written by the generator (population, intervention, comparison, outcome, then what is known), used instead of the question as the MedCPT dense query. |
 | **Selected hybrid** | H0 unless a weighted variant's dev cross-validated accuracy is at least 1.0 pp higher; recorded in the frozen model file before any confirmatory stance run. |
 
 ## Scoring
@@ -46,14 +51,17 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Update window** | The interval after the previous review version and up to the newest: when the evidence that could have changed the verdict appeared. |
 | **Frozen pool** | The 20 candidates retained for one item, with date bounds and an order-sensitive hash, replayed identically to every arm. |
 | **Dev / confirmatory split** | Seeded split of the MedChange items. Dev is used for gates; the confirmatory split is run once. |
-| **Gate (G0–G3)** | A pre-stated pass/fail check on the dev split that decides whether to continue (`experiment_plan.md` §9). |
+| **Gate (G0–G3)** | A pre-stated pass/fail check on the dev split that decided whether stage 1 continued (stage-1 protocol, in the repository history). |
+| **Dev check (realigned)** | The pre-declared check of the realigned dev run: every arm parses ≥ 95% and the verifier is valid ≥ 95%; R2 ≥ B1 − 5 pp; R2V − R2 ≥ 0 (`experiment_plan.md` §8). |
+| **Requirement reading** | The pre-declared reading of the supervisor's +1 pp requirement on the held-out split: met and confirmed / met as a point estimate, not confirmed / not met (`experiment_plan.md` §7). |
+| **Design record** | `results/rag2_design.json`: every realigned setting, prompt hash and the generator file's hash, committed before the held-out run, which refuses to start if the current design differs. |
 | **RQ1, RQ2** | The two pre-specified stage-2 questions. RQ1: does as-of retrieved evidence (B1) make verdicts more accurate than none (B0)? RQ2: does the selected hybrid beat B1R? Tested once, on the confirmatory split. |
 | **P0, P1 (gate 1), P2 (gate 2)** | The stage-2 dev checks, in order: P0 diagnostics (no model), the 40-item stance pilot with machine checks (gate 1), the full dev stance run with the fitted layer (gate 2). Thresholds are in `experiment_plan.md` §9. |
 | **Label audit / label-stable item** | An independent second-family model re-labels every item's conclusions with the authors' rubric; items on which it agrees with the gold label are label-stable. Measures reproducibility, not medical truth. |
-| **Genuine positive** | The pre-declared strict reading of a confirmed RQ2: also better than raw B1, macro-F1 not lower, label-stable direction, recency earned (`experiment_plan.md` §10). |
+| **Genuine positive** | The pre-declared strict reading of a confirmed RQ2: also better than raw B1, macro-F1 not lower, label-stable direction, recency earned (stage-2 protocol, in the repository history). |
 | **Irrelevant-paper control** | Each pilot question judged against papers belonging to another item; a stance step that reads the paper should say "neither". |
 | **Frozen model** | `results/synthesis_model.json`: the coefficients, selected hybrid and stance setting fitted on dev, committed before any confirmatory stance run. |
-| **Forking-path ledger** | The dated list in `experiment_plan.md` §13 of every design decision taken after seeing dev data. |
+| **Forking-path ledger** | The dated list in `experiment_plan.md` §9 of every design decision taken after seeing data. |
 | **Question pool (Alzheimer's)** | The 113 usable Alzheimer's questions reviewed earlier by the researcher (not extended), split into validation (23) and test (90). |
 | **`temporal_candidate`** | Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
 | **Provenance firewall** | The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |
@@ -64,7 +72,10 @@ Terms as used consistently throughout this repository, code and documentation.
 
 | Term | Meaning |
 |---|---|
-| **Verdict accuracy** | Share of items whose parsed `VERDICT:` equals the gold newest verdict. The primary outcome. |
+| **Verdict accuracy** | Share of items whose parsed `VERDICT:` (or, for the criteria arms, `FINAL VERDICT:`) equals the gold newest verdict. The primary outcome. |
+| **Anachronism rate** | Share of answers that mention a year later than the question date's year: a claim no admitted evidence can support. |
+| **Unsupported decisive verdict** | SUPPORTED or REFUTED while citing none of the admitted studies; counted only for answers that had evidence. |
+| **Directness@k** | Share of an arm's admitted abstracts that an independent second-family model judges to test the question's intervention and outcome (optional). |
 | **Outdated-verdict rate** | Share of changed items whose verdict equals the previous version's. |
 | **Per-class recall, macro-F1, NOT ENOUGH INFORMATION share** | Recall of each gold class; the mean F1 of the three classes; how often an arm answers NOT ENOUGH INFORMATION. They show whether an arm gains accuracy by reading evidence or only by abstaining more. |
 | **Manipulation check** | A measure of what the mechanism does (update-window share, passage age, overlap with B1); never an outcome. |

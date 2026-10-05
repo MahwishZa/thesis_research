@@ -1,7 +1,7 @@
 """Plain-language reports written by the pipeline: ``DEV_REPORT.md`` (before the go/no-go) and
 ``FINDINGS.md`` (after the confirmatory run). They only restate what the pre-declared rules say.
 
-The wording of every conclusion is fixed in advance in ``docs/experiment_plan.md`` §10; this module
+The wording of every conclusion is fixed in advance in §10 of the stage-2 protocol (``docs/experiment_plan.md`` at commit 92e3aaf); this module
 chooses between the pre-written sentences according to the computed results and never adds
 interpretation of its own.
 """

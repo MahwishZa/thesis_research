@@ -11,6 +11,8 @@ limitations. For how retrieval consumes them see `methodology.md`; for how to re
 | Per-paper stance records (`stance_<split>.jsonl`, `stance_pilot.jsonl`), P0 diagnostics | stage-2 judgements of the first eight pool papers; checks of the inputs | yes, copied to `results/` after a run (PMIDs, ranks, probabilities and timings only; no source text) | `stance`, `diagnostics` |
 | Label-audit and consistency outputs (`label_audit_<split>`, `consistency_auto_<split>`) | an independent model's re-labelling of the gold labels and judgement of stated verdicts | yes (ids, labels and agreement only) | `label_audit`, `consistency_auto` |
 | Frozen synthesis model (`synthesis_model.json`) | the fitted stage-2 layer: coefficients, standardisation, selected hybrid, stance wording | yes, and **before** any confirmatory stance run | `synthesis fit` (dev only) |
+| Realigned study: rationales, candidate lists, filter judgements, answers, directness judgements (`rag2_*_<split>.jsonl`) | the adapted RAG² baseline and the verification arms | yes, copied to `results/` by `rag2_pipeline` (model text, PMIDs, ranks, scores, dates; the candidate lists without titles or abstracts) | `rag2_run` |
+| Design record (`rag2_design.json`) | every setting and prompt hash of the realigned systems and the generator file's hash | yes, and **before** the held-out run, which refuses to start otherwise | `rag2_pipeline dev` |
 | Alzheimer's evidence corpus | secondary evidence | provenance only (metadata, reports, logs) | stages 01–07 in `corpus/scripts/` |
 | Alzheimer's question pool | secondary evaluation questions | yes (`experiments/shared/questions/`) | `build_pool`, human review (done 2026-09-20; not extended), `split` |
 
@@ -33,7 +35,8 @@ Counts are in `experiments/medchange/manifest.json` (input hashes are line-endin
 Windows checkout reproduces them).
 
 **Evidence.** For each question, PubMed records first public strictly before the newest version's date,
-excluding the Cochrane Database, with abstracts fetched through E-utilities; see `experiment_plan.md` §3.
+excluding the Cochrane Database, with abstracts fetched through E-utilities (`log.md` Phases 21–22). The
+realigned study reuses these cached records and abstracts; it needs no new network access.
 Abstracts are publisher text and are not redistributed. Stage 2 reads the first eight candidates of each
 frozen pool one at a time, from the title and the RESULTS and CONCLUSIONS sections of the abstract (the
 last three sentences when an abstract has no labelled sections); the records it writes contain only PMIDs,
@@ -99,7 +102,7 @@ questions (`splits.json`), stratified by topic and by whether the cited review w
 higher); it does **not** assert that the verdict changed, and only 5 of the 113 questions are known
 verdict changes. The cited reviews are mostly old: of the 99 verdict-labelled questions, 55 cite reviews
 dated before 2010 and only 17 are from 2018 onward, while 71% of the corpus is from 2020 or later. This
-mismatch is why the Alzheimer's evaluation had to be redone as-of (`experiment_plan.md` §13).
+mismatch is why the Alzheimer's evaluation had to be redone as-of (`log.md` Phase 21).
 
 ## 4. Known limitations of the data
 

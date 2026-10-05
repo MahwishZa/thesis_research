@@ -32,6 +32,11 @@ command named in the documentation can no longer silently stop existing.
 evidence-synthesis layer with two pre-specified questions (RQ1, RQ2) tested once on the confirmatory
 split. The README guards below keep those questions, and the stated limit of what 528 items can
 confirm, from drifting; the plan guard keeps the list of decisions taken after seeing dev data.
+
+2026-10-05: the study was realigned around an adapted RAG² baseline and an evidence-criteria
+verification extension, with a supervisor requirement of +1 percentage point. The stage-2 guard was
+retargeted to the realigned question; it keeps the "tested once" rule and the statement of what 528
+questions can and cannot confirm, so the requirement cannot silently turn into an unqualified claim.
 """
 
 import re
@@ -85,13 +90,15 @@ class CurrentScopeTests(unittest.TestCase):
         body = " ".join(text(README).lower().split())
         self.assertIn("does not commit in advance to which one it will report", body)
 
-    def test_readme_states_the_stage_2_questions_and_their_limits(self):
-        """Stage 2 is two pre-specified questions tested once on a held-out split. Dropping the
-        questions, or the sentence that says how small an effect the benchmark can confirm, would
-        turn a hedged design into an unqualified claim."""
+    def test_readme_states_the_realigned_question_and_its_limits(self):
+        """The realigned study tests one proposed component against an adapted RAG² baseline, once, on
+        a held-out split, under a +1 pp requirement read by a pre-declared rule. Dropping the question,
+        the rule, or the sentence that says a 1-point difference cannot be confirmed at this sample size
+        would turn a hedged design into an unqualified claim."""
         body = " ".join(text(README).split())
-        for needle in ("RQ1", "RQ2", "evidence-synthesis layer", "tested once",
-                       "only effects of about 5 percentage points or more can be confirmed"):
+        for needle in ("adapted RAG²", "evidence-criteria verification", "tested once",
+                       "at least 1 percentage point", "met as a point estimate, not confirmed",
+                       "A 1-point difference cannot be confirmed with 528 questions"):
             self.assertIn(needle, body)
 
     def test_plan_lists_the_decisions_taken_after_seeing_dev_data(self):
@@ -211,6 +218,7 @@ CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md", "docs/evalua
 #: Paths named in the docs that are generated or machine-local and may be absent.
 GENERATED_PREFIXES = (
     "experiments/medchange/data", "experiments/medchange/results/analysis_",
+    "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/helpfulness_",
     "experiments/results/index", "corpus/data/chunks", "corpus/data/normalized",
     "corpus/data/deduplicated", "corpus/data/raw/pmc", "corpus/data/raw/guidelines",

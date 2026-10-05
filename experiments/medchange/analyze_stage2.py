@@ -132,7 +132,7 @@ def stable_difference(items: dict, answers: dict, a: str, b: str, stable_ids: Se
 
 
 def decide(rep: dict, stable: Optional[dict] = None) -> dict:
-    """The pre-declared reading of a stage-2 report (``docs/experiment_plan.md`` §10).
+    """The pre-declared reading of a stage-2 report (§10 of the stage-2 protocol, ``docs/experiment_plan.md`` at commit 92e3aaf).
 
     A *genuine positive* needs ALL of: RQ2 confirmed against B1R; the hybrid also confirmed against
     the raw B1 answer (B1R is slightly weaker than B1 on dev, so beating it alone is not enough);

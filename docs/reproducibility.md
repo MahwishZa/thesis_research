@@ -98,6 +98,18 @@ setting changed after the frozen model is committed. In total about 46 h of unat
 fails); the six-arm confirmatory run of stage 1 (≈ 51 h) is no longer planned. `analyze_stage2 --split dev` gives an
 exploratory dev version from the out-of-fold predictions.
 
+**Realigned study (adapted RAG² + evidence-criteria verification; no network, no human labelling).** It reuses
+the benchmark, the as-of PubMed records and abstracts from steps 2–5 (`data\pubmed_g0\`, `data\abstracts.jsonl`)
+and the B0/B1 answers. Protocol: `docs/experiment_plan.md`.
+
+| # | Command | What it does and costs (*estimated* from measured per-step times) |
+|---|---|---|
+| 18 | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | integrity checks; rationales (≈ 25 s per question); candidate lists with MedCPT (≈ 45 s); filter (≈ 55 s); answers R2, R2C, R2V, R2V-ND (≈ 4.5 min); analysis; dev report with the pre-declared dev check; design record; commit and push. ≈ 26 h for the 226 dev questions. `--ablations` adds R2-RQ, R2-BR and R2-NF (≈ +14 h); `--judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` adds the directness judge (≈ +3 h) |
+| 19 | read `results\RAG2_DEV_REPORT.md`; if the dev check says READY: `python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | refuses to start unless the design record on origin/main equals the current design; then the same steps on the 528 held-out questions for R2, R2C, R2V and R2V-ND, analysis, `RAG2_FINDINGS.md`; ≈ 60 h (≈ 49 h with `--no-temporal-ablation`, decided before the run) |
+| 20 | `python -m experiments.medchange.rag2_pipeline status` | which phase is done and whether the design record is pushed |
+| 21 | `python -m experiments.medchange.rag2_run answers --split dev --limit 3 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` | a timing test of one step on three questions (each step: `rationale`, `lists`, `filter`, `answers`, `judge`) |
+| 22 | `python -m experiments.medchange.analyze_rag2 --split dev` | the analysis alone, printed |
+
 ## 4. Secondary: Alzheimer's corpus, question pool and index
 
 ```bash

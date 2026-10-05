@@ -1019,3 +1019,32 @@ run because gate 2 failed on dev. The dev effect of +8.6 pp on changed items did
 The `docs/` folder had been deleted from `main` by the researcher (commit 608f94b) while the run was in progress.
 This folder was rebuilt from the repository history (`608f94b^`, plus the status-removal edits of Phase 33) with the
 confirmatory results added; no protocol rule, threshold or earlier result was changed.
+
+## Phase 35 — Diagnosis and realignment: adapted RAG² + evidence-criteria verification (Oct 5)
+
+**Requirement.** The supervisor requires the proposed system to beat the selected baseline (an adapted RAG²
+system) by at least 1 percentage point of verdict accuracy, genuinely and reproducibly.
+
+**Diagnosis (computed from committed files; item-level inspection on dev only).** (1) The bottleneck is the
+verdict decision: no dev error of any arm was a retrieval miss. (2) The answering prompt and the gold labels
+define the classes differently: the benchmark's labelling rubric keeps NOT ENOUGH INFORMATION for "not enough
+studies found" and calls placebo-like results REFUTED; B1's REFUTED recall was 10% on dev (5 of 49) and 8.7% on
+the confirmatory aggregate; 44 of B1's 106 dev errors are gold-REFUTED items. (3) Indirect evidence (other
+interventions, other outcomes, surrogate measures, non-randomised designs) is read as support (dev examples
+MC-00127, MC-00272, MC-00354, MC-00036). (4) Date-based admission had nothing to act on: update-window evidence
+exists for 94.0% of changed and 93.3% of unchanged dev items (93.8% / 92.6% confirmatory), and old trials are
+not outdated. (5) The pipeline had no working RAG² baseline (B2 was an untrained, truncated stand-in). (6) With
+528 questions only effects of about 4–6 pp can be confirmed; an observed +1 pp arises by chance 23–32% of the
+time. (7) Recalibrating B1's verdict, per-paper stance and order voting had each shown little to gain on dev.
+
+**Decision.** Realign to an adapted RAG² baseline (R2: rationale query, balanced retrieval across evidence
+types, zero-shot LLM filter) and one proposed component, evidence-criteria verification (R2V), with a criteria
+control (R2C), a temporal ablation (R2V-ND) and component ablations; MedChange stays the primary benchmark,
+Alzheimer's a descriptive case study. The protocol, written before any realigned output, replaces the stage-2
+protocol in `docs/experiment_plan.md` (the researcher had deleted the old file, commit aa2c62b; its text stays in
+the history at commit 92e3aaf). The confirmatory split is reused once for the new comparison; the reuse and the
+aggregates seen beforehand are disclosed in the plan's ledger.
+
+**Built.** `rag2.py`, `rag2_run.py`, `analyze_rag2.py`, `rag2_pipeline.py` and 34 tests on synthetic data; the
+README, methodology, evaluation, data, reproducibility and glossary describe the realigned study, and the README
+guard test was retargeted to it. No realigned output exists yet; nothing was run on any real data in this phase.
