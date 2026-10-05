@@ -1,6 +1,9 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+# Output of `pip install .` (pip builds in the source tree).
+build/
+dist/
 
 # Large, licensed or machine-local artifacts: never commit these. Several have caused an
 # accidental multi-GB commit when added via `git add -A` or the GitHub web upload UI.
@@ -12,9 +15,18 @@ checkpoints/
 # Local GGUF model files.
 models/
 ram_monitor.csv
-# Full retrieval index (~12.5 GB): python -m experiments.shared.retrieval.build_index
+# Full retrieval index (~12.5 GB) of the archived framework, at its old and its new location.
 experiments/results/index/
 experiments/results/index_pilot_reduced_scope/
+_archive/alzheimers_framework/experiments/results/index/
+_archive/alzheimers_framework/experiments/results/index_pilot_reduced_scope/
+_archive/alzheimers_framework/experiments/results/end_to_end/
+
+# The corpus directory at its location BEFORE the 2026-10-05 reorganisation (it is now
+# _archive/alzheimers_framework/corpus/, which has its own .gitignore). Nothing is tracked at the old
+# place any more, but a machine that built the corpus still holds multi-GB data there and
+# `git add -A` must never pick it up. The leading slash anchors the rule to the repository root.
+/corpus/
 
 # MedChange-derived questions, fetched PubMed abstracts, frozen candidate pools and raw
 # working outputs. The MedChange release states no licence and abstracts are publisher
