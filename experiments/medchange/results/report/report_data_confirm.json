@@ -1,0 +1,332 @@
+{
+  "split": "confirm",
+  "status": "confirmatory",
+  "n": {
+    "changed": 353,
+    "unchanged": 175,
+    "all": 528
+  },
+  "systems": [
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:qwen25-7b",
+      "name": "Qwen2.5-7B",
+      "changed": {
+        "n": 353,
+        "correct": 175,
+        "accuracy": 0.49575070821529743,
+        "ci": [
+          0.4439,
+          0.5477
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 104,
+        "accuracy": 0.5942857142857143,
+        "ci": [
+          0.5203,
+          0.6643
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 279,
+        "accuracy": 0.5284090909090909,
+        "ci": [
+          0.4858,
+          0.5706
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:llama33-70b",
+      "name": "Llama-3.3-70B",
+      "changed": {
+        "n": 353,
+        "correct": 172,
+        "accuracy": 0.48725212464589235,
+        "ci": [
+          0.4355,
+          0.5393
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 96,
+        "accuracy": 0.5485714285714286,
+        "ci": [
+          0.4746,
+          0.6205
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 268,
+        "accuracy": 0.5075757575757576,
+        "ci": [
+          0.465,
+          0.55
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:mistral-24b",
+      "name": "Mistral-24B",
+      "changed": {
+        "n": 353,
+        "correct": 173,
+        "accuracy": 0.49008498583569404,
+        "ci": [
+          0.4383,
+          0.5421
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 95,
+        "accuracy": 0.5428571428571428,
+        "ci": [
+          0.4689,
+          0.615
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 268,
+        "accuracy": 0.5075757575757576,
+        "ci": [
+          0.465,
+          0.55
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:gpt4o-mini",
+      "name": "GPT-4o-mini",
+      "changed": {
+        "n": 353,
+        "correct": 178,
+        "accuracy": 0.5042492917847026,
+        "ci": [
+          0.4523,
+          0.5561
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 101,
+        "accuracy": 0.5771428571428572,
+        "ci": [
+          0.5031,
+          0.6479
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 279,
+        "accuracy": 0.5284090909090909,
+        "ci": [
+          0.4858,
+          0.5706
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:deepsek-v3",
+      "name": "DeepSeek-V3",
+      "changed": {
+        "n": 353,
+        "correct": 172,
+        "accuracy": 0.48725212464589235,
+        "ci": [
+          0.4355,
+          0.5393
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 104,
+        "accuracy": 0.5942857142857143,
+        "ci": [
+          0.5203,
+          0.6643
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 276,
+        "accuracy": 0.5227272727272727,
+        "ci": [
+          0.4801,
+          0.565
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B0",
+      "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",
+      "changed": {
+        "n": 353,
+        "correct": 148,
+        "accuracy": 0.4192634560906516,
+        "ci": [
+          0.3689,
+          0.4713
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 98,
+        "accuracy": 0.56,
+        "ci": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 246,
+        "accuracy": 0.4659090909090909,
+        "ci": [
+          0.4238,
+          0.5086
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B1",
+      "name": "B1: + MedCPT retrieval, top-5 (standard RAG)",
+      "changed": {
+        "n": 353,
+        "correct": 159,
+        "accuracy": 0.45042492917847027,
+        "ci": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 95,
+        "accuracy": 0.5428571428571428,
+        "ci": [
+          0.4689,
+          0.615
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 254,
+        "accuracy": 0.4810606060606061,
+        "ci": [
+          0.4387,
+          0.5237
+        ]
+      }
+    }
+  ],
+  "filtering": [
+    {
+      "arm": "B1",
+      "name": "+ MedCPT retrieval, top-5 (standard RAG)",
+      "changed": {
+        "n": 353,
+        "correct": 159,
+        "accuracy": 0.45042492917847027,
+        "ci": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 95,
+        "accuracy": 0.5428571428571428,
+        "ci": [
+          0.4689,
+          0.615
+        ]
+      },
+      "diff_vs_baseline": null
+    }
+  ],
+  "classes": [
+    {
+      "arm": "B0",
+      "name": "no retrieval",
+      "recall": {
+        "SUPPORTED": 0.8344,
+        "REFUTED": 0.033,
+        "NOT ENOUGH INFORMATION": 0.1712
+      },
+      "macro_f1": 0.2869,
+      "nei_share": 0.18696883852691218
+    },
+    {
+      "arm": "B1",
+      "name": "+ MedCPT retrieval, top-5 (standard RAG)",
+      "recall": {
+        "SUPPORTED": 0.6689,
+        "REFUTED": 0.0879,
+        "NOT ENOUGH INFORMATION": 0.4505
+      },
+      "macro_f1": 0.3762,
+      "nei_share": 0.37393767705382436
+    }
+  ],
+  "constant": {
+    "changed": {
+      "SUPPORTED": 0.42776203966005666,
+      "REFUTED": 0.2577903682719547,
+      "NOT ENOUGH INFORMATION": 0.31444759206798867
+    },
+    "unchanged": {
+      "SUPPORTED": 0.4742857142857143,
+      "REFUTED": 0.2,
+      "NOT ENOUGH INFORMATION": 0.32571428571428573
+    },
+    "all": {
+      "SUPPORTED": 0.4431818181818182,
+      "REFUTED": 0.23863636363636365,
+      "NOT ENOUGH INFORMATION": 0.3181818181818182
+    }
+  },
+  "retrieval": {},
+  "cv": null,
+  "gate2": {
+    "checks": {
+      "S0_cv_accuracy>constant_prior": false,
+      "selected_hybrid_minus_B1R>=+1.0pp": false,
+      "stance_auc>=0.60": true
+    },
+    "gate2": "FAIL"
+  },
+  "label_audit": {
+    "agreement": 0.8144,
+    "kappa": 0.7161,
+    "n_items": 528,
+    "n_stable": 430,
+    "label_change_reproduced": 0.7252,
+    "per_gold_class": {
+      "SUPPORTED": {
+        "n": 234,
+        "agreement": 0.8675
+      },
+      "REFUTED": {
+        "n": 126,
+        "agreement": 0.9127
+      },
+      "NOT ENOUGH INFORMATION": {
+        "n": 168,
+        "agreement": 0.6667
+      }
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "split": "confirm",
+  "status": "confirmatory",
+  "primary_arm": "H0",
+  "n_items": 528,
+  "per_arm": {
+    "B0": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4659,
+        "wilson95": [
+          0.4238,
+          0.5086
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4193,
+        "wilson95": [
+          0.3689,
+          0.4713
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.56,
+        "wilson95": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.8504,
+        "REFUTED": 0.0317,
+        "NOT ENOUGH INFORMATION": 0.256
+      },
+      "macro_f1": 0.329,
+      "predicted_share": {
+        "SUPPORTED": 0.7633,
+        "REFUTED": 0.017,
+        "NOT ENOUGH INFORMATION": 0.2197
+      },
+      "outdated_verdict_rate_changed": 0.3258,
+      "unparsed": 0
+    },
+    "B1": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4811,
+        "wilson95": [
+          0.4387,
+          0.5237
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4504,
+        "wilson95": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.5429,
+        "wilson95": [
+          0.4689,
+          0.615
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7009,
+        "REFUTED": 0.0873,
+        "NOT ENOUGH INFORMATION": 0.4702
+      },
+      "macro_f1": 0.3952,
+      "predicted_share": {
+        "SUPPORTED": 0.5833,
+        "REFUTED": 0.0436,
+        "NOT ENOUGH INFORMATION": 0.3731
+      },
+      "outdated_verdict_rate_changed": 0.3286,
+      "unparsed": 0
+    }
+  },
+  "primary_family": {
+    "RQ1 B1 vs B0": {
+      "a": "B1",
+      "b": "B0",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": 0.015152,
+      "ci95": [
+        -0.028409,
+        0.060606
+      ],
+      "a_only_correct": 74,
+      "b_only_correct": 66,
+      "mcnemar_p": 0.5543,
+      "holm_p": 0.5543,
+      "confirmed": false
+    }
+  },
+  "secondary_family": {
+    "RQ1 B1 vs B0, changed items": {
+      "a": "B1",
+      "b": "B0",
+      "items": "changed",
+      "n": 353,
+      "diff_a_minus_b": 0.031161,
+      "ci95": [
+        -0.025496,
+        0.084986
+      ],
+      "a_only_correct": 55,
+      "b_only_correct": 44,
+      "mcnemar_p": 0.3149,
+      "holm_p": 0.3149,
+      "confirmed": false
+    }
+  },
+  "label_stable": null,
+  "reading": {
+    "RQ1": "not confirmed",
+    "RQ1_note": null,
+    "RQ2_tier": "not run",
+    "criteria": {},
+    "missing_inputs": []
+  }
+}
