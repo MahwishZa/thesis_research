@@ -24,7 +24,7 @@ Filter) and then a per-paper evidence-synthesis layer (stage 2). Both were
 tested before being believed, and neither beat standard retrieval on the
 development split; on the held-out split, retrieval itself raised accuracy
 by only +1.5 points, which could not be distinguished from no effect. A
-diagnosis of those results (`docs/experiment_plan.md` §2) found the bottleneck
+diagnosis of those results (`docs/experimentation.md` §2) found the bottleneck
 in the verdict decision, not in retrieval: the model's notion of the three
 verdicts differs from the benchmark's definitions, and indirect evidence is read
 as support. Date-based admission had nothing to act on, because newer studies
@@ -108,7 +108,7 @@ flowchart TD
 The earlier stages remain part of the record. Stage 1, the Temporal Filter,
 added a recency term to a relevance score; recency-aware retrieval is an
 established idea (e.g. TempRALM), so no novelty is claimed for the formula, and
-it did not beat standard retrieval (`docs/experiment_plan.md` §13). Stage 2's
+it did not beat standard retrieval (`docs/experimentation.md` §13). Stage 2's
 evidence-synthesis layer failed its development check and was not run on the
 held-out split. Verification, criteria prompting and self-checking are
 established techniques too; the contribution claimed is their adaptation to
@@ -117,7 +117,7 @@ to an adapted RAG² baseline.
 
 ## 4. Evaluation and Experimental Design
 
-Every arm is scored on the same metrics (`docs/experiment_plan.md` §6–§7). The primary
+Every arm is scored on the same metrics (`docs/experimentation.md` §6–§7). The primary
 outcome is **verdict accuracy**: the answer's verdict (SUPPORTED / REFUTED /
 NOT ENOUGH INFORMATION), parsed from a fixed verdict line with no judge model,
 against the newest Cochrane review's verdict. Generation is also measured by
@@ -143,7 +143,7 @@ percentage points or more can, so the point estimate is reported with its
 interval. The same rule is applied, as a secondary result, to the 212
 Alzheimer's/dementia questions, where only effects of about 7–9 points can be
 confirmed. Settings, prompts and decision rules are fixed before any result in
-`docs/experiment_plan.md`.
+`docs/experimentation.md`.
 
 ## 5. Expected Contribution
 
@@ -162,7 +162,7 @@ advance to which one it will report.
 
 ## Results
 
-Results of record (`docs/experiment_plan.md` §13–§14): on the development split,
+Results of record (`docs/experimentation.md` §13–§14): on the development split,
 neither recency-aware admission (the Temporal Filter) nor the evidence-synthesis
 layer beat standard retrieval. On the held-out split, run once, standard
 retrieval raised verdict accuracy by +1.5 points over no evidence (95% CI −2.8
@@ -203,7 +203,7 @@ by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 | [`docs/data.md`](docs/data.md) | The corpus and question pool — provenance, limitations |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
-| [`docs/experiment_plan.md`](docs/experiment_plan.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
+| [`docs/experimentation.md`](docs/experimentation.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
 | [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout (dev split, exploratory) |
 | [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
