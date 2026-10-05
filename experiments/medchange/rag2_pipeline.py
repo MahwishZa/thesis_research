@@ -1,4 +1,4 @@
-"""One command per phase of the realigned study (docs/experiment_plan.md §8).
+"""One command per phase of the realigned study (docs/experimentation.md §8).
 
     python -m experiments.medchange.rag2_pipeline dev --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
     python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
@@ -83,7 +83,7 @@ def write_design(results: Path, model_path: str) -> tuple[bool, str]:
 
 
 def dev_check(rep: dict) -> dict:
-    """The pre-declared dev check (docs/experiment_plan.md §8)."""
+    """The pre-declared dev check (docs/experimentation.md §8)."""
     gen, ver = rep["generation"], rep["verification"]
     parse = {arm: (row["unparsed"] / row["all"]["n"]) <= MAX_UNPARSED
              for arm, row in gen.items() if row.get("all")}
@@ -125,7 +125,7 @@ def write_dev_report(results: Path) -> tuple[bool, str]:
              f"Status: **{check['status']}**. "]
     lines.append({"READY": "Freeze the design (it is written and committed with --commit) and, after reading this "
                            "report, run the confirmatory phase once with --go.",
-                  "DEFECT": "A defect: fix its cause, record it in docs/experiment_plan.md §9 and rerun the dev phase.",
+                  "DEFECT": "A defect: fix its cause, record it in docs/experimentation.md §9 and rerun the dev phase.",
                   "REVISE ONCE": "The plan allows one recorded revision of the verification prompt on dev; then the "
                                  "design is frozen whatever dev shows."}[check["status"]])
     (results / "RAG2_DEV_REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -139,7 +139,7 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
     p = rep["primary"]
     title = {"confirm": "confirmatory split", "ad": "Alzheimer's/dementia secondary test set"}[split]
     lines = [f"# Findings of the realigned study ({title}, run once)", "",
-             "Each conclusion follows the rules fixed in `docs/experiment_plan.md` before the run.", "",
+             "Each conclusion follows the rules fixed in `docs/experimentation.md` before the run.", "",
              "## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)", ""]
     if p:
         lines += [f"R2V − R2 = {100 * p['diff_a_minus_b']:+.1f} pp (95% CI {100 * p['ci95'][0]:+.1f} to "

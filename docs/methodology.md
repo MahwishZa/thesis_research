@@ -1,8 +1,8 @@
 # Methodology
 
 What is compared, how, and under what conditions. For the research question and objectives see
-the root `README.md`; for the exact protocol, gates and statistics see `experiment_plan.md`; for
-data provenance see `data.md`; for metrics, statistics and results see `experiment_plan.md` §6–§7 and §12–§14; for how to run things see
+the root `README.md`; for the exact protocol, gates and statistics see `experimentation.md`; for
+data provenance see `data.md`; for metrics, statistics and results see `experimentation.md` §6–§7 and §12–§14; for how to run things see
 `reproducibility.md`.
 
 ## 1. The comparison in one line
@@ -16,7 +16,7 @@ of the same pool in cross-encoder order, judges each paper separately, and combi
 B1's verdict (§4). Every stage-2 arm is therefore a function of the same frozen pool and the same B1
 answer.
 
-The realigned study (`experiment_plan.md`) changes one thing at a time. The adapted RAG² baseline (R2)
+The realigned study (`experimentation.md`) changes one thing at a time. The adapted RAG² baseline (R2)
 changes retrieval only: a rationale as the dense query, balancing across evidence types and a zero-shot
 LLM filter, then the same answer prompt as B0 and B1. R2C, R2V (proposed) and R2V-ND admit exactly R2's
 evidence for every question and change only how it is read: with explicit evidence criteria, design and
@@ -34,7 +34,7 @@ date labels, and (R2V, R2V-ND) R2's answer as a draft to check.
 The primary setting exists because the Alzheimer's pool alone cannot test a temporal claim (only 5 of
 113 questions are known verdict changes) or reach useful power (`log.md` Phase 21). The realigned study
 adds a separate Alzheimer's/dementia test set built the same way from MedRevQA (212 questions, 163 reviews, none in
-dev or confirm; `experiment_plan.md` §11), run once after the freeze as a secondary evaluation.
+dev or confirm; `experimentation.md` §11), run once after the freeze as a secondary evaluation.
 
 ## 3. Shared upstream (identical by construction)
 
@@ -96,7 +96,7 @@ TempRALM (Gade & Jetcheva). The proposed arm's only difference from B3 is the re
 
 **Stage 2 arms and the evidence-synthesis layer.** Stage 2 was pre-specified in the stage-2 protocol (in
 the repository history, commit 92e3aaf) and run on dev (`stance.py`, `synthesis.py`); gate 2 failed, so it was
-not run on the held-out split (`experiment_plan.md` §13).
+not run on the held-out split (`experimentation.md` §13).
 
 | Arm | What it is |
 |---|---|

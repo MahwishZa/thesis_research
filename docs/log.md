@@ -1069,3 +1069,13 @@ evaluation sections moved to §6 (primary outcome, supporting outcomes, retrieva
 procedure, controls, abstention and coverage) and §12–§14 (error analysis, development-split results,
 confirmatory results). No result, rule or threshold was changed. References in the README, `methodology.md` and
 the documentation guard tests were updated; earlier entries of this log still name `evaluation.md` as it was then.
+
+## Phase 38 — `experiment_plan.md` renamed `experimentation.md` (Oct 5)
+
+At the researcher's request the merged protocol and evaluation document was renamed from
+`docs/experiment_plan.md` to `docs/experimentation.md`; its content and section numbers are unchanged. Current
+references (README, `methodology.md`, `glossary.md`, `reproducibility.md`, the medchange READMEs, the realigned
+modules and the documentation guard tests) point to the new name. References to the old stage-1/stage-2 protocol
+still name the file `experiment_plan.md`, because that is its name at commit 92e3aaf. Committed run outputs
+(`results/FINDINGS.md`) keep the text they were generated with, which names the old file. Earlier entries of this
+log use the names that were current when they were written.

@@ -52,16 +52,16 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Frozen pool** | The 20 candidates retained for one item, with date bounds and an order-sensitive hash, replayed identically to every arm. |
 | **Dev / confirmatory split** | Seeded split of the MedChange items. Dev is used for gates; the confirmatory split is run once. |
 | **Gate (G0–G3)** | A pre-stated pass/fail check on the dev split that decided whether stage 1 continued (stage-1 protocol, in the repository history). |
-| **Dev check (realigned)** | The pre-declared check of the realigned dev run: every arm parses ≥ 95% and the verifier is valid ≥ 95%; R2 ≥ B1 − 5 pp; R2V − R2 ≥ 0 (`experiment_plan.md` §8). |
-| **Requirement reading** | The pre-declared reading of the supervisor's +1 pp requirement on the held-out split: met and confirmed / met as a point estimate, not confirmed / not met (`experiment_plan.md` §7). |
+| **Dev check (realigned)** | The pre-declared check of the realigned dev run: every arm parses ≥ 95% and the verifier is valid ≥ 95%; R2 ≥ B1 − 5 pp; R2V − R2 ≥ 0 (`experimentation.md` §8). |
+| **Requirement reading** | The pre-declared reading of the supervisor's +1 pp requirement on the held-out split: met and confirmed / met as a point estimate, not confirmed / not met (`experimentation.md` §7). |
 | **Design record** | `results/rag2_design.json`: every realigned setting, prompt hash and the generator file's hash, committed before the held-out run, which refuses to start if the current design differs. |
 | **RQ1, RQ2** | The two pre-specified stage-2 questions. RQ1: does as-of retrieved evidence (B1) make verdicts more accurate than none (B0)? RQ2: does the selected hybrid beat B1R? Tested once, on the confirmatory split. |
-| **P0, P1 (gate 1), P2 (gate 2)** | The stage-2 dev checks, in order: P0 diagnostics (no model), the 40-item stance pilot with machine checks (gate 1), the full dev stance run with the fitted layer (gate 2). Thresholds are in `experiment_plan.md` §9. |
+| **P0, P1 (gate 1), P2 (gate 2)** | The stage-2 dev checks, in order: P0 diagnostics (no model), the 40-item stance pilot with machine checks (gate 1), the full dev stance run with the fitted layer (gate 2). Thresholds were in §9 of the stage-2 protocol (the file `experimentation.md` at commit 92e3aaf). |
 | **Label audit / label-stable item** | An independent second-family model re-labels every item's conclusions with the authors' rubric; items on which it agrees with the gold label are label-stable. Measures reproducibility, not medical truth. |
 | **Genuine positive** | The pre-declared strict reading of a confirmed RQ2: also better than raw B1, macro-F1 not lower, label-stable direction, recency earned (stage-2 protocol, in the repository history). |
 | **Irrelevant-paper control** | Each pilot question judged against papers belonging to another item; a stance step that reads the paper should say "neither". |
 | **Frozen model** | `results/synthesis_model.json`: the coefficients, selected hybrid and stance setting fitted on dev, committed before any confirmatory stance run. |
-| **Forking-path ledger** | The dated list in `experiment_plan.md` §9 of every design decision taken after seeing data. |
+| **Forking-path ledger** | The dated list in `experimentation.md` §9 of every design decision taken after seeing data. |
 | **Question pool (Alzheimer's)** | The 113 usable Alzheimer's questions reviewed earlier by the researcher (not extended), split into validation (23) and test (90). |
 | **`temporal_candidate`** | Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
 | **Provenance firewall** | The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |

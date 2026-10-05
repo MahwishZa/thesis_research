@@ -34,9 +34,10 @@ split. The README guards below keep those questions, and the stated limit of wha
 confirm, from drifting; the plan guard keeps the list of decisions taken after seeing dev data.
 
 2026-10-05: ``docs/evaluation.md`` was merged into ``docs/experiment_plan.md`` (one document for the protocol
-and the evaluation; its section numbers are cited from the code and stay stable), so ``docs/`` now holds the
-topic docs ``methodology.md``, ``data.md``, ``glossary.md`` and ``reproducibility.md``, the chronological record
-``log.md`` and ``experiment_plan.md``.
+and the evaluation; its section numbers are cited from the code and stay stable), and that file was then renamed
+``docs/experimentation.md``. ``docs/`` now holds the topic docs ``methodology.md``, ``data.md``, ``glossary.md``
+and ``reproducibility.md``, the chronological record ``log.md`` and ``experimentation.md``. Citations of the
+old stage-1/stage-2 protocol name the file ``experiment_plan.md`` as it was at commit 92e3aaf.
 
 2026-10-05: the study was realigned around an adapted RAG² baseline and an evidence-criteria
 verification extension, with a supervisor requirement of +1 percentage point. The stage-2 guard was
@@ -107,7 +108,7 @@ class CurrentScopeTests(unittest.TestCase):
             self.assertIn(needle, body)
 
     def test_plan_lists_the_decisions_taken_after_seeing_dev_data(self):
-        body = " ".join(text(ROOT / "docs" / "experiment_plan.md").split())
+        body = " ".join(text(ROOT / "docs" / "experimentation.md").split())
         self.assertIn("Decisions taken after seeing dev data", body)
         self.assertIn("forking-path ledger", body)
 
@@ -158,7 +159,7 @@ class SupersededScopeTests(unittest.TestCase):
     def test_the_current_docs_all_exist(self):
         """docs/ holds four topic docs (methodology, data, glossary,
         reproducibility), the chronological record ``log.md``, and
-        ``experiment_plan.md``, the protocol and evaluation fixed before any result existed.
+        ``experimentation.md``, the protocol and evaluation fixed before any result existed.
         A missing expected file means a reference in this repository now
         dangles; an unexpected one means the docs set drifted."""
         docs = ROOT / "docs"
@@ -168,7 +169,7 @@ class SupersededScopeTests(unittest.TestCase):
             "glossary.md",
             "reproducibility.md",
             "log.md",
-            "experiment_plan.md",
+            "experimentation.md",
         }
         self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
 
@@ -216,7 +217,7 @@ class ArchiveLayoutTests(unittest.TestCase):
 #: Documentation that must describe the CURRENT repository exactly. ``log.md`` is a dated
 #: record of what was true when written and is deliberately excluded.
 CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md",
-                "docs/reproducibility.md", "docs/glossary.md", "docs/experiment_plan.md",
+                "docs/reproducibility.md", "docs/glossary.md", "docs/experimentation.md",
                 "experiments/medchange/README.md", "experiments/medchange/results/README.md",
                 "experiments/results/README.md", "_archive/README.md")
 #: Paths named in the docs that are generated or machine-local and may be absent.

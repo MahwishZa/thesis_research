@@ -14,7 +14,7 @@ proposed system, ``src.proposed.temporal.TemporalPolicy`` and
 ``src.proposed.scorer.AdmissionScorer``, so the formula exists in exactly one place.
 Here rho is the within-pool rank normalisation of the arm's relevance signal (ties broken
 by cross-encoder rank), and passages are admitted by top-``BUDGET`` score (no theta
-threshold: the MedChange arms are fixed-budget, see docs/experiment_plan.md).
+threshold: the MedChange arms are fixed-budget, see the stage-1 protocol, the file experiment_plan.md at commit 92e3aaf).
 
 Relevance signal x recency:
 

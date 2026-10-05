@@ -68,7 +68,7 @@ an interruption.
 | 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
 | 9 | *(retired, archived in `_archive/medchange_human_checks/`)* the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
 | 10 | `python -m experiments.medchange.error_analysis --split dev --out-dir experiments\medchange\results` | seconds; uses the existing answers and frozen pools, no generation |
-| 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experiment_plan.md` §1 |
+| 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experimentation.md` §2 |
 
 Dev is run first. For arms B2, P and C1 run step 6 before step 7. The full dev run of all six arms is
 ≈ 22 h (*estimated* from the measured per-answer times). Steps 4 and 5 call NCBI E-utilities and accept an
@@ -100,7 +100,7 @@ exploratory dev version from the out-of-fold predictions.
 
 **Realigned study (adapted RAG² + evidence-criteria verification; no network, no human labelling).** It reuses
 the benchmark, the as-of PubMed records and abstracts from steps 2–5 (`data\pubmed_g0\`, `data\abstracts.jsonl`)
-and the B0/B1 answers. Protocol: `docs/experiment_plan.md`.
+and the B0/B1 answers. Protocol: `docs/experimentation.md`.
 
 | # | Command | What it does and costs (*estimated* from measured per-step times) |
 |---|---|---|
@@ -137,7 +137,7 @@ python -m experiments.shared.runners.run_end_to_end
 ```
 
 The corpus is complete and the index is built; the as-of Alzheimer's case-study run is **not
-implemented** (`experiment_plan.md` §11). `run_end_to_end` demonstrates the original three-arm framework
+implemented** (`experimentation.md` §11). `run_end_to_end` demonstrates the original three-arm framework
 (`src/`, `evaluation/runner.py`) on fixtures; it is not the thesis result.
 
 ## 5. What is gitignored, and results policy

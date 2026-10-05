@@ -12,7 +12,7 @@ Arms written (``data/synthesis_<split>.jsonl``): B1R (B1's verdict through the s
 control), S0-S3 (stance features only; weights none / recency / study type / both), H0-H3 (B1's
 verdict plus the stance features), H1C and H3C (H1/H3 with dates shuffled; falsification controls).
 Nothing is tuned: the penalty, top-k, half-life and study-type weights are fixed in the plan
-(§4 of the stage-2 protocol, ``docs/experiment_plan.md`` at commit 92e3aaf); the only data-dependent choice is which of H0-H3 is *selected*,
+(§4 of the stage-2 protocol, the file ``experiment_plan.md`` at commit 92e3aaf); the only data-dependent choice is which of H0-H3 is *selected*,
 by the pre-stated rule (H0 unless another variant's dev cross-validated accuracy is >= 1.0 pp higher).
 No feature uses an item's kind, change type, previous-version date or label.
 """

@@ -3,7 +3,7 @@
 An as-of evaluation, on Cochrane questions whose verdict changed between review versions, of an adapted
 RAG² baseline and an evidence-criteria verification extension (the realigned study), with the earlier
 stages kept as results of record: evidence admission (stage 1) and an evidence-synthesis layer (stage 2).
-The protocol, settings and gates are fixed in `docs/experiment_plan.md`; this file maps code to steps.
+The protocol, settings and gates are fixed in `docs/experimentation.md`; this file maps code to steps.
 Commands and costs: `docs/reproducibility.md` §3.
 
 | Module | Step | Network / models | Writes (`data/`, gitignored) |

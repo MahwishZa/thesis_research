@@ -12,7 +12,7 @@ field repeats ``newest`` and update-window metrics do not apply to them.
 The items are appended to ``data/benchmark.jsonl`` with ``split = "ad"`` (earlier "ad" rows are replaced, so a
 rerun gives the same file) and summarised in ``experiments/medchange/manifest_ad.json`` (tracked): counts,
 labels, the item-id hash and the input-file hashes. No label is used to choose items; the set is used once,
-after the realigned design is frozen (docs/experiment_plan.md §11).
+after the realigned design is frozen (docs/experimentation.md §11).
 """
 
 from __future__ import annotations

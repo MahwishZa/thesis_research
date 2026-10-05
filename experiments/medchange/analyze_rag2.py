@@ -8,7 +8,7 @@ Inputs (``--data-dir``): ``benchmark.jsonl``, ``answers_<split>.jsonl`` (B0, B1)
 ``rag2_directness_<split>.jsonl`` (independent directness judgements) and the label audit
 (``--label-audit``, for the label-stable subset). Output: ``rag2_analysis_<split>.json`` and ``.md``.
 
-Pre-declared (docs/experiment_plan.md §7): the primary comparison is R2V - R2 over all items (exact McNemar,
+Pre-declared (docs/experimentation.md §7): the primary comparison is R2V - R2 over all items (exact McNemar,
 paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
 p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
 *not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
@@ -194,7 +194,7 @@ def primary_result(items: dict, answers: dict) -> Optional[dict]:
 
 
 def requirement_reading(primary: Optional[dict], split: str) -> str:
-    """The pre-declared reading of the +1.0 pp requirement (docs/experiment_plan.md §7)."""
+    """The pre-declared reading of the +1.0 pp requirement (docs/experimentation.md §7)."""
     if primary is None:
         return "not run"
     if split not in ("confirm", "ad"):
@@ -271,7 +271,7 @@ def _comparison_table(rows: dict, family: bool) -> list[str]:
 def to_markdown(rep: dict) -> str:
     kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's/dementia"}.get(rep["split"], "exploratory")
     L = [f"# Adapted RAG² and evidence-criteria verification, {rep['split']} split ({kind})", "",
-         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experiment_plan.md`.", "",
+         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experimentation.md`.", "",
          "## Generation: verdict accuracy", "",
          "| Arm | all (95% CI) | changed | unchanged | recall S / R / NEI | macro-F1 | answers NEI | outdated rate |",
          "|---|---|---|---|---|---|---|---|"]
@@ -326,7 +326,7 @@ def to_markdown(rep: dict) -> str:
               + ", ".join(f"{a} {k}" for a, k in cs["correct"].items()) + "."]
     L += ["", "A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval "
           "excludes 0 and the difference is positive. With about 500 questions only differences of roughly 4–6 pp "
-          "can be confirmed (docs/experiment_plan.md §7)."]
+          "can be confirmed (docs/experimentation.md §7)."]
     return "\n".join(L) + "\n"
 
 

@@ -1,6 +1,6 @@
 """Adapted RAG² baseline and evidence-criteria verification: the pure logic (no model, no network).
 
-The realigned study (docs/experiment_plan.md) compares, on the same as-of candidate records:
+The realigned study (docs/experimentation.md) compares, on the same as-of candidate records:
 
 * ``R2``     adapted RAG²: a rationale as the dense query, retrieval balanced over evidence types, a
              zero-shot LLM filter, and the standard answer prompt of ``prompts.py``. The baseline.

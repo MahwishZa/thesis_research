@@ -10,7 +10,7 @@ papers are rated "neither"; <= 2% invalid outputs on REAL papers; <= 10 s per pa
 removed on 2026-10-03 because the researcher is not a domain expert and the quantity that matters, whether
 stance predicts the gold verdict, is tested objectively in gate 2 (``synthesis fit``). The invalid-rate
 criterion is applied to real papers because control papers never enter any analysis and an invalid real
-paper is treated as "no clear stance"; the pooled rate is still reported (§13 of the stage-2 protocol, ``docs/experiment_plan.md`` at commit 92e3aaf).
+paper is treated as "no clear stance"; the pooled rate is still reported (§13 of the stage-2 protocol, the file ``experiment_plan.md`` at commit 92e3aaf).
 """
 
 from __future__ import annotations
