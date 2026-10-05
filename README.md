@@ -1,4 +1,4 @@
-# Evidence-Aware Synthesis for Retrieval-Augmented Medical Question Answering: An As-Of Evaluation on Cochrane Verdict Changes
+# Improving Retrieval-Augmented Medical Question Answering
 
 ## 1. Problem Statement
 
