@@ -108,7 +108,7 @@ flowchart TD
 The earlier stages remain part of the record. Stage 1, the Temporal Filter,
 added a recency term to a relevance score; recency-aware retrieval is an
 established idea (e.g. TempRALM), so no novelty is claimed for the formula, and
-it did not beat standard retrieval (`docs/evaluation.md` §7). Stage 2's
+it did not beat standard retrieval (`docs/experiment_plan.md` §13). Stage 2's
 evidence-synthesis layer failed its development check and was not run on the
 held-out split. Verification, criteria prompting and self-checking are
 established techniques too; the contribution claimed is their adaptation to
@@ -117,7 +117,7 @@ to an adapted RAG² baseline.
 
 ## 4. Evaluation and Experimental Design
 
-Every arm is scored on the same metrics (`docs/evaluation.md`). The primary
+Every arm is scored on the same metrics (`docs/experiment_plan.md` §6–§7). The primary
 outcome is **verdict accuracy**: the answer's verdict (SUPPORTED / REFUTED /
 NOT ENOUGH INFORMATION), parsed from a fixed verdict line with no judge model,
 against the newest Cochrane review's verdict. Generation is also measured by
@@ -162,7 +162,7 @@ advance to which one it will report.
 
 ## Results
 
-Results of record (`docs/evaluation.md` §7–§8): on the development split,
+Results of record (`docs/experiment_plan.md` §13–§14): on the development split,
 neither recency-aware admission (the Temporal Filter) nor the evidence-synthesis
 layer beat standard retrieval. On the held-out split, run once, standard
 retrieval raised verdict accuracy by +1.5 points over no evidence (95% CI −2.8
@@ -178,7 +178,7 @@ any accuracy here can mean. The realigned study writes its tables to
 research-repository/
 ├── README.md
 ├── pyproject.toml
-├── docs/                methodology, data, glossary, evaluation, reproducibility
+├── docs/                experiment plan and evaluation, methodology, data, glossary, reproducibility, log
 ├── corpus/               the evidence corpus: data/ config/ logs/ metadata/ reports/ scripts/
 ├── src/
 │   ├── common/            shared interfaces (Evidence, Generator, Retriever, System)
@@ -202,9 +202,8 @@ by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
 | [`docs/data.md`](docs/data.md) | The corpus and question pool — provenance, limitations |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
-| [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, development-split results |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
-| [`docs/experiment_plan.md`](docs/experiment_plan.md) | The protocol: benchmark, arms, settings, gates, decision rules |
+| [`docs/experiment_plan.md`](docs/experiment_plan.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
 | [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout (dev split, exploratory) |
 | [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
