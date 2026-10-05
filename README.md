@@ -37,8 +37,10 @@ baseline's answer against the evidence using explicit evidence criteria
 (directness, study design, the meaning of each verdict, and the currency of the
 evidence) — achieves that. The test bed is MedChangeQA (Vladika et al., EMNLP
 2025 Findings): Cochrane questions asked as of the newest review's date with
-only earlier evidence available. Alzheimer's disease, the original domain, is
-retained as a descriptive case study.
+only earlier evidence available. Alzheimer's disease, the domain of the
+research proposal, has its own held-out test set: 212 Cochrane questions on
+Alzheimer's disease and dementia, built the same way and run once after the
+design is frozen, as a secondary evaluation.
 
 **Research objectives:**
 
@@ -138,7 +140,9 @@ improvement is at least 1 percentage point and the test separates it from zero,
 test cannot separate it from zero, and *not met* otherwise. A 1-point
 difference cannot be confirmed with 528 questions: only effects of about 4–6
 percentage points or more can, so the point estimate is reported with its
-interval. Settings, prompts and decision rules are fixed before any result in
+interval. The same rule is applied, as a secondary result, to the 212
+Alzheimer's/dementia questions, where only effects of about 7–9 points can be
+confirmed. Settings, prompts and decision rules are fixed before any result in
 `docs/experiment_plan.md`.
 
 ## 5. Expected Contribution
@@ -219,6 +223,9 @@ python -m experiments.medchange.build_benchmark --medchange-dir ../MedChange
 # Realigned study (adapted RAG² + evidence-criteria verification): the dev phase, then, after your go, the held-out phase
 python -m experiments.medchange.rag2_pipeline dev --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 python -m experiments.medchange.rag2_pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
+# Alzheimer's/dementia secondary test set: build it once, then run it once after the freeze
+python -m experiments.medchange.ad_benchmark --medchange-dir ../MedChange
+python -m experiments.medchange.rag2_pipeline ad --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 
 # Earlier stages (results of record): python -m experiments.medchange.pipeline status
 ```
