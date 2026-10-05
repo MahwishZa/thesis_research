@@ -69,21 +69,21 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-from evaluation import freezing as fz
-from evaluation import rag_metrics as rm
-from evaluation.runner import RunConfig, run_experiment
-from experiments.shared.retrieval.corpus import dated_only, read_passages_with_snapshot
-from experiments.shared.retrieval.index import DenseIndex
-from experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline, RetrievalError
-from experiments.shared.runners.run_end_to_end import (
+from _archive.alzheimers_framework.evaluation import freezing as fz
+from _archive.alzheimers_framework.evaluation import rag_metrics as rm
+from _archive.alzheimers_framework.evaluation.runner import RunConfig, run_experiment
+from _archive.alzheimers_framework.experiments.shared.retrieval.corpus import dated_only, read_passages_with_snapshot
+from _archive.alzheimers_framework.experiments.shared.retrieval.index import DenseIndex
+from _archive.alzheimers_framework.experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline, RetrievalError
+from _archive.alzheimers_framework.experiments.shared.runners.run_end_to_end import (
     CONTEXT_PROMPT, build_systems, gold_evidence_ids, score_run,
     temporal_flags, temporal_subgroup_breakdown,
 )
-from src.common.generator import CallableGenerator, GenerationResult
+from _archive.alzheimers_framework.src.common.generator import CallableGenerator, GenerationResult
 
-DEFAULT_QUESTIONS_DIR = Path("experiments/shared/questions")
+DEFAULT_QUESTIONS_DIR = Path("_archive/alzheimers_framework/experiments/shared/questions")
 DEFAULT_CORPUS = "corpus_pilot"
-DEFAULT_INDEX = "experiments/results/index_pilot_reduced_scope"
+DEFAULT_INDEX = "_archive/alzheimers_framework/experiments/results/index_pilot_reduced_scope"
 DEFAULT_CHECKPOINT = "checkpoints/rag2_filter/final"
 
 #: Real specification value (_archive/docs_legacy/research_experimental_specification.md
@@ -296,7 +296,7 @@ def main(argv=None) -> int:
     index = DenseIndex.load(args.index)
     print(f"  {len(index.passage_ids)} x {index.dim} ({index.encoder_name})")
 
-    from experiments.shared.retrieval.encoders import medcpt_query_encoder, MedCPTReranker
+    from experiments.medchange.encoders import medcpt_query_encoder, MedCPTReranker
     query_encoder = medcpt_query_encoder(device=args.device)
     reranker = MedCPTReranker(device=args.device)
     retrieval_config = RetrievalConfig()  # spec defaults: depth=50, count=20
@@ -314,7 +314,7 @@ def main(argv=None) -> int:
         return 1
 
     print(f"Loading RAG2 filter checkpoint from {args.rag2_checkpoint} ...")
-    from src.baseline.admission import FlanT5RAG2Filter
+    from _archive.alzheimers_framework.src.baseline.admission import FlanT5RAG2Filter
     rag2_filter = FlanT5RAG2Filter(args.rag2_checkpoint, device=args.device)
     rag2_filter_label = (
         f"FlanT5RAG2Filter({args.rag2_checkpoint}) - trained on 20 MedQA "

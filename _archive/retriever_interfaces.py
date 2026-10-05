@@ -3,9 +3,9 @@
 Superseded by ``experiments/shared/retrieval/``. These ABCs and their ``Passthrough*`` dev stubs were
 written before the real MedCPT retrieval stage existed and were never invoked by any ``System`` or by
 the runner: the frozen candidate set is built upstream, once, by
-``experiments.shared.retrieval.RetrievalPipeline``, and every arm only replays it. They were kept in
+``_archive.alzheimers_framework.experiments.shared.retrieval.RetrievalPipeline``, and every arm only replays it. They were kept in
 ``src.common`` for backward compatibility until an audit found no use of them in the repository, its
-tests or its documentation. New code should use ``experiments.shared.retrieval`` (``Encoder``,
+tests or its documentation. New code should use ``_archive.alzheimers_framework.experiments.shared.retrieval`` (``Encoder``,
 ``CrossEncoderReranker``, ``RetrievalPipeline``).
 """
 

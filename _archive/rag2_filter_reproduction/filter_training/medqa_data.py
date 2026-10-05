@@ -45,7 +45,7 @@ import string
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
-from experiments.shared.retrieval.corpus import CorpusPassage
+from _archive.alzheimers_framework.experiments.shared.retrieval.corpus import CorpusPassage
 
 #: Recorded choice - see the module docstring. Change and note in
 #: _archive/docs_legacy/status_and_decisions.md if a different MedQA release is used.

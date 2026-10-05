@@ -65,7 +65,7 @@ def relevance_probe(outcomes, examples, device=None) -> None:
     predict the labels? If even that is at chance, the labels carry little
     content signal a filter could learn."""
     import numpy as np
-    from experiments.shared.retrieval.encoders import (
+    from experiments.medchange.encoders import (
         medcpt_article_encoder, medcpt_query_encoder)
     q = medcpt_query_encoder(device=device).encode([o.question for o in outcomes])
     a = medcpt_article_encoder(device=device).encode([o.evidence for o in outcomes])

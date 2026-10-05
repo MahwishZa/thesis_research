@@ -38,9 +38,10 @@ baseline's answer against the evidence using explicit evidence criteria
 evidence) — achieves that. The test bed is MedChangeQA (Vladika et al., EMNLP
 2025 Findings): Cochrane questions asked as of the newest review's date with
 only earlier evidence available. Alzheimer's disease, the domain of the
-research proposal, has its own held-out test set: 212 Cochrane questions on
-Alzheimer's disease and dementia, built the same way and run once after the
-design is frozen, as a secondary evaluation.
+research proposal, has its own held-out test set: 208 Cochrane questions on
+Alzheimer's disease and dementia from reviews that are in neither development
+nor held-out split, built the same way and run once after the design is frozen,
+as a secondary evaluation. None of its questions has a changed verdict.
 
 **Research objectives:**
 
@@ -140,8 +141,8 @@ improvement is at least 1 percentage point and the test separates it from zero,
 test cannot separate it from zero, and *not met* otherwise. A 1-point
 difference cannot be confirmed with 528 questions: only effects of about 4–6
 percentage points or more can, so the point estimate is reported with its
-interval. The same rule is applied, as a secondary result, to the 212
-Alzheimer's/dementia questions, where only effects of about 7–9 points can be
+interval. The same rule is applied, as a secondary result, to the 208
+Alzheimer's/dementia questions, where only effects of about 6–10 points can be
 confirmed. Settings, prompts and decision rules are fixed before any result in
 `docs/experimentation.md`.
 
@@ -178,43 +179,40 @@ any accuracy here can mean. The realigned study writes its tables to
 research-repository/
 ├── README.md
 ├── pyproject.toml
-├── docs/                experiment plan and evaluation, methodology, data, glossary, reproducibility, log
-├── corpus/               the evidence corpus: data/ config/ logs/ metadata/ reports/ scripts/
+├── docs/                 protocol and evaluation, methodology, data, glossary, reproducibility, dated log
 ├── src/
-│   ├── common/            shared interfaces (Evidence, Generator, Retriever, System)
-│   ├── baseline/          RAG² baseline + No-Filter control
-│   └── proposed/          the Temporal Filter
-├── evaluation/            metrics, freezing, the comparison runner, statistics
-│   └── tests/             unit + integration tests for the whole repository
-└── experiments/
-    ├── medchange/         primary pipeline: as-of benchmark, adapted RAG², verification, earlier stages, analysis
-    ├── shared/            question pool, retrieval pipeline, framework demo runner
-    └── results/           gitignored retrieval indexes
+│   ├── common/           the Evidence / Candidate record types
+│   └── temporal_filter/  the Temporal Filter formula (stage 1, a result of record)
+├── evaluation/
+│   ├── stats.py          exact McNemar, paired bootstrap interval, Holm correction
+│   └── tests/            the active test suite and the hermetic-run check
+├── experiments/
+│   └── medchange/        the pipeline: as-of benchmark, adapted RAG², verification, earlier stages, analysis,
+│                         and results/ (the committed outputs)
+└── _archive/             superseded work, kept for history and not used by the pipeline
 ```
 
-`_archive/` (not shown above — not part of the active pipeline) holds
-superseded/reference material kept for history rather than for use — see
-`_archive/README.md`. Nothing in the active pipeline depends on it (verified
-by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
+`_archive/` holds the first, Alzheimer's-specific design (`_archive/alzheimers_framework/`: a local corpus, a
+reviewed question pool and a three-arm runner) and other abandoned directions, kept as the record of how the
+study got here — see `_archive/README.md`. Nothing in the active pipeline depends on it (verified by an
+automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
 
 | Document | Read it for |
 |---|---|
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
-| [`docs/data.md`](docs/data.md) | The corpus and question pool — provenance, limitations |
+| [`docs/data.md`](docs/data.md) | The datasets — the MedChange benchmark, the Alzheimer's/dementia test set, the archived corpus and pool: provenance, limitations |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 | [`docs/experimentation.md`](docs/experimentation.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
-| [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout (dev split, exploratory) |
+| [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout, for the held-out split of the stage-1/2 run (the development version's data is `report_data_dev.json` beside it) |
 | [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
 ## How to run
 
 ```bash
-# Run every test (unit + integration)
+# Install (numpy only; the model backends come with the extras, see docs/reproducibility.md) and run every active test
+pip install -e .
 python -m unittest discover -s evaluation -t .
-
-# Fixture demo: all three arms, evaluation, and the ablation sweep
-python -m experiments.shared.runners.run_end_to_end
 
 # Primary pipeline (MedChange as-of benchmark); steps and costs: docs/reproducibility.md
 python -m experiments.medchange.build_benchmark --medchange-dir ../MedChange

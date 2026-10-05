@@ -25,8 +25,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import shutil
+import subprocess
 import sys
+from datetime import datetime, timezone
+from importlib import metadata
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -66,6 +70,48 @@ def preflight(data: Path, split: str) -> list[tuple[str, bool, str]]:
     return rows
 
 
+def _write(path: Path, text: str) -> None:
+    """UTF-8 with LF line endings on every platform (a Windows checkout must stay byte-identical)."""
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+
+
+PACKAGES = ("numpy", "torch", "transformers", "sentencepiece", "llama-cpp-python", "matplotlib")
+
+
+def _git(*args: str, repo: Optional[Path] = None) -> Optional[str]:
+    try:
+        done = subprocess.run(["git", *args], cwd=repo or HERE.parents[1], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def environment_record(phase: str, model_path: str, judge_path: Optional[str] = None) -> dict:
+    """What a rerun needs to know about the machine and the code: versions, the git commit the code was at and
+    whether tracked code differed from it (``results/`` excluded, because the run itself writes there).
+    Informational only: nothing compares it, so a different machine never blocks a run."""
+    versions = {}
+    for package in PACKAGES:
+        try:
+            versions[package] = metadata.version(package)
+        except metadata.PackageNotFoundError:
+            versions[package] = None
+    changed = _git("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)experiments/medchange/results")
+    return {"phase": phase, "recorded_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "python": platform.python_version(), "platform": platform.platform(), "machine": platform.machine(),
+            "packages": versions, "git_commit": _git("rev-parse", "HEAD"),
+            "tracked_code_modified": bool(changed) if changed is not None else None,
+            "generator_file": Path(model_path).name, "judge_file": Path(judge_path).name if judge_path else None}
+
+
+def write_environment(results: Path, phase: str, model_path: str, judge_path: Optional[str] = None) -> tuple[bool, str]:
+    results.mkdir(parents=True, exist_ok=True)
+    rec = environment_record(phase, model_path, judge_path)
+    _write(results / f"rag2_environment_{phase}.json", json.dumps(rec, indent=2, sort_keys=True) + "\n")
+    return True, f"recorded the environment (commit {str(rec['git_commit'])[:8]})"
+
+
 def design_differences(results: Path, model_path: str) -> list[str]:
     path = results / "rag2_design.json"
     if not path.is_file():
@@ -77,8 +123,8 @@ def design_differences(results: Path, model_path: str) -> list[str]:
 
 def write_design(results: Path, model_path: str) -> tuple[bool, str]:
     results.mkdir(parents=True, exist_ok=True)
-    (results / "rag2_design.json").write_text(
-        json.dumps(R.design_record(file_sha256(model_path)), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write(results / "rag2_design.json",
+           json.dumps(R.design_record(file_sha256(model_path)), indent=2, sort_keys=True) + "\n")
     return True, "wrote the design record"
 
 
@@ -128,7 +174,7 @@ def write_dev_report(results: Path) -> tuple[bool, str]:
                   "DEFECT": "A defect: fix its cause, record it in docs/experimentation.md §9 and rerun the dev phase.",
                   "REVISE ONCE": "The plan allows one recorded revision of the verification prompt on dev; then the "
                                  "design is frozen whatever dev shows."}[check["status"]])
-    (results / "RAG2_DEV_REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _write(results / "RAG2_DEV_REPORT.md", "\n".join(lines) + "\n")
     return True, f"dev check: {check['status']}"
 
 
@@ -153,7 +199,7 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
                      f"{100 * r['ci95'][1]:+.1f}; Holm p = {r['holm_p']:.4f}) — "
                      f"{'confirmed' if r['confirmed'] else 'not confirmed'}")
     lines += ["", f"Full tables: `rag2_analysis_{split}.md`."]
-    (results / FINDINGS[split]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _write(results / FINDINGS[split], "\n".join(lines) + "\n")
     return True, f"wrote {FINDINGS[split]}"
 
 
@@ -207,7 +253,8 @@ def dev_plan(a, data: Path, results: Path) -> list:
                                     "--label-audit", results / "label_audit_dev.jsonl")),
               ("publish outputs (dev)", lambda: publish(data, results, "dev")),
               ("dev report", lambda: write_dev_report(results)),
-              ("design record", lambda: write_design(results, a.model_path))]
+              ("design record", lambda: write_design(results, a.model_path)),
+              ("environment record", lambda: write_environment(results, "dev", a.model_path, a.judge_path))]
     if a.commit:
         steps.append(("commit and push", lambda: commit_and_push("Realigned study: dev run, dev report, design record")))
     return steps
@@ -220,7 +267,8 @@ def confirm_plan(a, data: Path, results: Path) -> list:
     steps += [("analysis (confirm)", py("analyze_rag2", "--split", "confirm", "--out-dir", results,
                                         "--label-audit", results / "label_audit_confirm.jsonl")),
               ("publish outputs (confirm)", lambda: publish(data, results, "confirm")),
-              ("findings", lambda: write_findings(results))]
+              ("findings", lambda: write_findings(results)),
+              ("environment record", lambda: write_environment(results, "confirm", a.model_path, a.judge_path))]
     if a.commit:
         steps.append(("commit and push", lambda: commit_and_push("Realigned study: confirmatory run and findings")))
     return steps
@@ -237,7 +285,8 @@ def ad_plan(a, data: Path, results: Path) -> list:
     steps += run_steps(a, "ad", AD_ARMS, ("R2",))
     steps += [("analysis (ad)", py("analyze_rag2", "--split", "ad", "--out-dir", results)),
               ("publish outputs (ad)", lambda: publish(data, results, "ad")),
-              ("findings (ad)", lambda: write_findings(results, "ad"))]
+              ("findings (ad)", lambda: write_findings(results, "ad")),
+              ("environment record", lambda: write_environment(results, "ad", a.model_path, a.judge_path))]
     if a.commit:
         steps.append(("commit and push", lambda: commit_and_push("Realigned study: Alzheimer's/dementia test set")))
     return steps

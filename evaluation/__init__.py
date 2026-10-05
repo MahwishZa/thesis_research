@@ -1,6 +1,7 @@
-"""Corpus-independent evaluation infrastructure.
+"""Statistics shared by the analysis scripts (``evaluation/stats.py``) and the repository's tests.
 
-Everything here runs and is tested without the Alzheimer's corpus, so the
-evaluation set, the freezing contract, the annotation workflow and the
-analysis can be built while the corpus is still being assembled.
+The evaluation of the study itself (metrics, families of tests, the reading of the +1 point requirement) is
+specified in ``docs/experimentation.md`` and implemented in ``experiments/medchange/analyze_rag2.py``. The
+original corpus-independent evaluation framework (question schema, freezing contract, annotation workflow,
+hallucination-rate accounting) is archived in ``_archive/alzheimers_framework/evaluation/``.
 """

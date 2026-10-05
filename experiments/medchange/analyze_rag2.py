@@ -81,6 +81,16 @@ def hallucination_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
     return out
 
 
+def truncation_rows(answers: dict, arms: Sequence[str]) -> dict:
+    """Answers written after the abstracts were shortened because the prompt did not fit the context window."""
+    out = {}
+    for arm in arms:
+        n = sum(1 for (_, a), r in answers.items() if a == arm and r.get("context_truncated"))
+        if n:
+            out[arm] = n
+    return out
+
+
 def verifier_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
     """For the criteria arms: valid outputs, how often the verdict differs from R2's, and whether a change
     fixed or broke the answer."""
@@ -231,6 +241,7 @@ def report(items: dict, answers: dict, split: str, frozen: Optional[dict] = None
     rep = {"split": split, "items": len(items), "arms": arms,
            "generation": summarize(items, answers, arms),
            "unsupported_answers": hallucination_rows(items, answers, arms),
+           "context_truncated": truncation_rows(answers, arms),
            "verification": verifier_rows(items, answers, arms),
            "retrieval": retrieval_rows(items, answers, arms, frozen or {}, directness),
            "primary": primary, "requirement": requirement_reading(primary, split),
@@ -300,6 +311,9 @@ def to_markdown(rep: dict) -> str:
     for arm, row in rep["unsupported_answers"].items():
         L.append(f"| {arm} | {_pct(row['anachronism_rate'])} | {_pct(row['unsupported_decisive_rate'])} "
                  f"({row['answers_with_evidence']}) |")
+    if rep.get("context_truncated"):
+        L += ["", "Answers written after the abstracts were shortened because the prompt did not fit the context window: "
+              + ", ".join(f"{a} {n}" for a, n in rep["context_truncated"].items()) + "."]
     if rep["verification"]:
         L += ["", "## What the criteria arms changed (questions with evidence)", "",
               "| Arm | valid output | verdict differs from R2 | changes that fixed / broke an answer |", "|---|---|---|---|"]
@@ -352,8 +366,10 @@ def main(argv=None) -> int:
     if a.out_dir:
         out = Path(a.out_dir)
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"rag2_analysis_{a.split}.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8")
-        (out / f"rag2_analysis_{a.split}.md").write_text(text, encoding="utf-8")
+        for name, body in ((f"rag2_analysis_{a.split}.json", json.dumps(rep, indent=2) + "\n"),
+                           (f"rag2_analysis_{a.split}.md", text)):
+            with open(out / name, "w", encoding="utf-8", newline="\n") as h:
+                h.write(body)
         print(f"wrote {out / f'rag2_analysis_{a.split}.md'}")
     print(text)
     return 0

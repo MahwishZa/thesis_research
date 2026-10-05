@@ -193,7 +193,7 @@ supporting outcomes.
 | Recall of each gold class; macro-F1; share of NOT ENOUGH INFORMATION answers | per-class recall over all items, mean F1 of the three classes, how often an arm abstains | stage 2: the main behaviour retrieval changes (SUPPORTED recall falls, abstention rises) and the one a layer can correct |
 | Wording agreement; irrelevant-paper control; invalid-output rate; stance-direction AUC against the gold labels (dev) | agreement of the two wordings; share of control papers rated "neither"; share of unusable outputs on real papers; how well the signed stance separates gold SUPPORTED from REFUTED | stage-2 pilot (gate 1), `stance_check.py` |
 | Label reproducibility; stated-verdict consistency | agreement and kappa of an independent model's re-labelling with the gold labels (`label_audit.py`); agreement of an independent judge with the stated verdict on a sample (`consistency_auto.py`) | independent-model audits that replace the human checks |
-| Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional; outside the primary analysis; the human hallucination annotation is dropped (`evaluation/annotation.py` stays as dormant framework code) |
+| Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional; outside the primary analysis; the human hallucination annotation is dropped (its code is archived in `_archive/alzheimers_framework/evaluation/annotation.py`) |
 | Anachronism rate (realigned study) | the answer mentions a year later than the question date's year; no admitted study, all published before the question date, can support it (approximate: a four-digit count is read as a year) | indicator of unsupported, parametric or future knowledge |
 | Unsupported decisive verdict (realigned study) | SUPPORTED or REFUTED while citing none of the admitted studies ("[n]" in a standard answer; the DIRECT STUDIES line in the three-line format) | indicator of unsupported answers; questions without admitted evidence are excluded |
 | Verifier behaviour (realigned study) | share of valid outputs; share of verdicts changed from R2's; changes that fixed or broke an answer, and their direction | mechanism of the proposed component |
@@ -212,10 +212,11 @@ Earlier in the project the primary metric was *currency* (the mean temporal scor
 evidence) and the fitting objective was the same quantity, so the proposed system would have won it
 by construction; that computation survives only in the archived v1 runner
 (`_archive/alzheimers_pilot_v1/`). The active retrieval-level metrics above replace it. Token F1,
-exact match, ROUGE-L, context precision/recall and token-overlap groundedness are implemented in
-`evaluation/rag_metrics.py` as standard RAG diagnostics for the framework's fixture runs; they are not
-evidence of improvement here (a single verbatim reference sentence is a weak target, and groundedness
-depends on each arm's own admitted evidence).
+exact match, ROUGE-L, context precision/recall and token-overlap groundedness are implemented only in the archived
+framework (`_archive/alzheimers_framework/evaluation/rag_metrics.py`, standard RAG diagnostics for its fixture
+runs); the current pipeline does not compute them, because a single verbatim reference sentence is a weak target
+and groundedness depends on each arm's own admitted evidence. Generation is measured here by verdict accuracy,
+per-class recall, macro-F1 and the unsupported-answer indicators above.
 
 ## 7. Statistical analysis and the reading of the requirement
 
@@ -320,7 +321,12 @@ and a method that merely says it more often is shown as such by the per-class re
 judgement and ≈ 50 s per question for MedCPT encoding and re-ranking on this laptop): rationale ≈ 25 s, candidate
 lists ≈ 45 s, filter ≈ 55 s, each evidence answer or verification ≈ 60–75 s per question, about 7 minutes per
 question in all. Dev ≈ 26 h (+ ≈ 14 h with the ablations); confirmatory ≈ 60 h (≈ 49 h without R2V-ND); the
-optional directness judge ≈ 3 h (dev) and 7 h (confirmatory). Every step is resumable. R2V-ND may be left out of the confirmatory run for time, decided
+optional directness judge ≈ 3 h (dev) and 7 h (confirmatory); the Alzheimer's/dementia set ≈ 28 h (§11). A
+three-question smoke test of the realigned steps on the target laptop (2026-10-05; its output was not committed)
+measured a rationale at ≈ 20 s, candidate lists at ≈ 89 s (which includes one load of the encoders, so an upper
+bound), the filter at ≈ 59 s and each answer at ≈ 60 s, about 6.8 minutes per question for the four answers: in
+line with the estimate above. The totals stay estimates until the dev run's own timings exist. Every step is
+resumable. R2V-ND may be left out of the confirmatory run for time, decided
 before the run starts (`--no-temporal-ablation`); then no confirmatory claim is made about the currency
 criterion.
 
@@ -356,17 +362,35 @@ that existed was a three-question smoke test of the pipeline on dev, whose answe
 research proposal named Alzheimer's disease as the domain, and the 14 Alzheimer's items of the main benchmark
 are too few for any test. A second held-out set is therefore added: every MedRevQA question whose text names
 dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from a Cochrane review that is not
-in the dev or confirmatory split, exact duplicates removed (`experiments/medchange/ad_benchmark.py`; counts in
-`experiments/medchange/manifest_ad.json`): **212 questions from 163 reviews** (gold: 89 NOT ENOUGH INFORMATION, 69
-REFUTED, 54 SUPPORTED); 206 come from reviews with a single version, so the outdated-verdict rate and the
-update-window metrics do not apply to them, and none has a changed verdict. It is a fresh set: no item, label or
-answer of it has been seen. It is run **once, after the freeze**, with the frozen design (B0, B1, R2, R2C, R2V; no
-ablations), by `rag2_pipeline ad --go`, which has the same guards as the confirmatory phase. The requirement is
-read on it with the same rule (§7) as a **secondary** result; the confirmatory split stays primary. With 212
-questions the standard error of R2V − R2 is about 2–3 pp, so only effects of roughly 7–9 pp can be confirmed.
-Several questions can come from one review (212 questions, 163 reviews); the paired tests treat questions as
-independent, which slightly understates the uncertainty, and the thesis states it. Compute (*estimated*): records
-and abstracts ≈ 3 h (network), B0/B1 ≈ 4.5 h, the realigned arms ≈ 21 h.
+in the dev or confirmatory split (by study group **and** by Cochrane ID), exact duplicates removed
+(`experiments/medchange/ad_benchmark.py`; counts in `experiments/medchange/manifest_ad.json`): **208 questions from
+159 reviews** (gold: 88 NOT ENOUGH INFORMATION, 68 REFUTED, 52 SUPPORTED); 202 come from reviews with a single
+version, so the outdated-verdict rate and the update-window metrics do not apply to them, and none has a changed
+verdict (computed). By the wording of the question, 48 name Alzheimer's disease and 156 dementia (15 name both) and
+19 name neither (cognitive impairment after stroke, in Parkinson's disease or vascular disease, mild cognitive
+impairment, delirium), so this is a dementia and cognitive-impairment set in which fewer than a quarter of the
+questions name Alzheimer's disease, and the thesis should call it that. Its reviews are older than the main
+benchmark's: 48 of the 208 are dated before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year
+only (read as 1 January) and the earliest is 2000. As-of evidence will therefore be thinner for many of them; the
+pools have not been built, so their sizes are not known. It is a fresh set: no item, label or answer of it
+has been seen. It is run **once, after the freeze**, with the frozen design (B0, B1, R2, R2C, R2V; no ablations),
+by `rag2_pipeline ad --go`, which has the same guards as the confirmatory phase. The requirement is read on it with
+the same rule (§7) as a **secondary** result; the confirmatory split stays primary. With 208 questions the
+standard error of R2V − R2 is about 2–3.5 pp depending on how often the two systems disagree (the normal
+approximation of §7.3), so only effects of roughly 6–10 pp can be confirmed, and an observed +1 pp arises by chance
+alone 32–39% of the time. Several questions
+can come from one review (208 questions, 159 reviews); the paired tests treat questions as independent, which
+slightly understates the uncertainty, and the thesis states it. Compute (*estimated*): as-of records ≈ 0.4 h
+(network) and frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h, the realigned arms ≈ 20.5 h; about 28 h in all.
+
+*Correction, 2026-10-05, before any output of this set existed.* The first build contained **212** questions from
+163 reviews (89 / 69 / 54). The audit that reproduced it found four questions (AD-14453, AD-15149, AD-15568,
+AD-15979) that are 2000–2003 versions of reviews whose newer versions are in the confirmatory split: they sit in
+`MedRevQA` as ungrouped rows, so excluding by study group alone let them through. The builder now also excludes
+by Cochrane ID; these four are the only difference. The rule is about review membership, not labels or results,
+and a regression test and a manifest-consistency test cover it. The 212-question manifest was reproduced
+hash-for-hash from the released files before the change; after it the builder gives the 208-question set, which
+shares no Cochrane ID, study group, question text or review PMID with dev or confirm (computed).
 
 ## 12. Error analysis
 
@@ -394,7 +418,7 @@ All numbers are from the 226 dev items; none is a confirmatory result.
 | Stage 2 P0 diagnostics | 18.5% of helpfulness inputs over 512 tokens (31.1% of B2's admitted papers); 36.4% of candidates have labelled RESULTS/CONCLUSIONS; a systematic review in the top 8 for 41.6% of items |
 | Stage 2 dev fit (gate 2) | **FAIL**: stance-direction AUC 0.624 (passes ≥ 0.60), but the selected hybrid H0 reaches 51.8% against 52.2% for B1R (needs +1.0 pp) and S0 reaches 43.6% against a constant-guess 46.5%; the confirmatory run therefore tests RQ1 only (`results/DEV_REPORT.md`) |
 | Label audit (independent model, dev) | agreement 83.2%, kappa 0.7422; 188 of 226 items label-stable |
-| Result tables and figures in the base paper's layout | `results/report/REPORT.md` (dev split, exploratory) |
+| Result tables and figures in the base paper's layout | `results/report/report_data_dev.json` (the data of the dev version); `REPORT.md` is rewritten by each run of `report`, and the committed one is the confirmatory version (§14) |
 
 The only earlier real-data outputs (the Alzheimer's pilot with an extractive stand-in generator and an
 unvalidated baseline checkpoint) are archived in `_archive/alzheimers_pilot_v1/results/`; they showed the

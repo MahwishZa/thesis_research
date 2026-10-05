@@ -10,14 +10,14 @@ import unittest
 from dataclasses import replace
 from datetime import date
 
-from evaluation import freezing as fz
+from _archive.alzheimers_framework.evaluation import freezing as fz
 from _archive.alzheimers_pilot_v1.fit_and_evaluate import (
     MIN_ADMITTED_FRACTION, _mean_currency, fit_on_validation,
 )
-from experiments.shared.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
+from _archive.alzheimers_framework.experiments.shared.runners.run_end_to_end import QUESTION_DATE, make_fixture_items
 from _archive.alzheimers_pilot_v1.run_real_evaluation import _extractive_answer
-from src.common.generator import CallableGenerator
-from src.proposed.temporal import TemporalPolicy
+from _archive.alzheimers_framework.src.common.generator import CallableGenerator
+from src.temporal_filter.temporal import TemporalPolicy
 
 
 class FitOnValidationTests(unittest.TestCase):

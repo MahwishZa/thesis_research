@@ -16,7 +16,7 @@ from experiments.medchange import pipeline as P
 from experiments.medchange import rag2 as R
 from experiments.medchange import rag2_pipeline as RP
 from experiments.medchange import rag2_run as RR
-from experiments.shared.retrieval.encoders import HashingEncoder, LexicalOverlapReranker
+from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
 
 S, F_, N = "SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"
 TYPES = {"SR/MA": ["Systematic Review"], "RCT": ["Randomized Controlled Trial"], "other": ["Journal Article"]}
@@ -512,9 +512,6 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("rag2_run rationale", out.getvalue())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 # --------------------------------------------------------------------------------------
 # The Alzheimer's/dementia secondary test set
@@ -553,6 +550,37 @@ class AlzheimersBenchmarkTests(unittest.TestCase):
         self.assertTrue(single["notes"])
         self.assertTrue(all(i["split"] == "ad" and i["ad_related"] for i in items))
 
+    def test_an_older_version_of_a_review_already_in_dev_or_confirm_is_excluded(self):
+        """MedRevQA can hold an old version of a review as an ungrouped row of its own, so excluding by study
+        group alone lets a review through that dev or confirm already holds (four such questions were in the
+        first build of the set). The Cochrane ID closes that gap; a missing ID cannot exclude anything."""
+        rows, groups = self._world()
+        rows[9] = medrev_row(9, "Does donepezil improve well-being in mild Alzheimer's disease?", S, "2001 Jan 1")
+        rows[9]["DOI_Date"] = rows[9]["DOI_Date"].replace("CD100009", "CD100008")   # same review as row 8
+        rows[10] = medrev_row(10, "Does memantine help in dementia?", S, "2002 Jan 1")
+        rows[10]["DOI_Date"] = "Cochrane Database Syst Rev. 2002 Jan 1;1:no-id. doi: x"      # a date, no CD id
+        before = {i["item_id"] for i in AD.build_ad_items(rows, groups, used_groups={12})}
+        self.assertIn("AD-00009", before)                                   # the group check alone keeps it
+        main = [dict(item("MC-1"), group_id=12,
+                     newest={"cochrane_id": "CD100008", "row": 8}, previous={"cochrane_id": "CD100008", "row": 8})]
+        used = AD.used_review_ids(main)
+        self.assertEqual(used, frozenset({"CD100008"}))
+        after = {i["item_id"] for i in AD.build_ad_items(rows, groups, used_groups={12}, used_reviews=used)}
+        self.assertNotIn("AD-00009", after)
+        self.assertIn("AD-00010", after)                                    # no ID: nothing to match, kept
+        self.assertEqual(after, before - {"AD-00009"})
+
+    def test_expected_item_counts_equal_the_committed_manifests(self):
+        """``pipeline.EXPECTED_ITEMS`` is what the preflight of both pipelines demands. It is a hand-typed copy
+        of the manifests' counts, and it went stale once (212, against the corrected 208)."""
+        base = Path(P.__file__).resolve().parent
+        main = json.loads((base / "manifest.json").read_text(encoding="utf-8"))["counts"]
+        ad = json.loads((base / "manifest_ad.json").read_text(encoding="utf-8"))
+        self.assertEqual(P.EXPECTED_ITEMS["dev"] + P.EXPECTED_ITEMS["confirm"],
+                         main["items"] - main["likely_label_noise_excluded"])
+        self.assertEqual(P.EXPECTED_ITEMS["ad"], ad["items"])
+        self.assertEqual(ad["kinds"], {"unchanged": ad["items"]})          # no changed verdict can be in this set
+
     def test_cli_appends_once_and_keeps_the_main_benchmark(self):
         rows, groups = self._world()
         with TemporaryDirectory() as tmp:
@@ -586,6 +614,232 @@ class AlzheimersBenchmarkTests(unittest.TestCase):
         names = [n for n, _ in RP.ad_plan(args, Path("data"), Path("results"))]
         self.assertIn("B0 and B1 answers (ad)", names)
         self.assertIn("answers (ad): R2 R2C R2V", names)
-        self.assertEqual(names[-1], "findings (ad)")
+        self.assertEqual(names[-2:], ["findings (ad)", "environment record"])
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(RP.main(["ad", "--model-path", "m.gguf", "--dry-run"]), 2)   # no --go
+
+
+# --------------------------------------------------------------------------------------
+# Robustness, traceability and wiring (added by the 2026-10-05 audit)
+# --------------------------------------------------------------------------------------
+
+class ContextOverflowTests(unittest.TestCase):
+    """A prompt that does not fit the context window must shorten the abstracts, not stop a multi-day run."""
+
+    def _lists(self):
+        lists = lists_for()
+        for cands in lists.values():
+            for c in cands:
+                c["abstract"] = "word " * 400
+        return lists
+
+    def test_overflow_is_retried_once_with_shortened_abstracts_and_recorded(self):
+        calls = []
+
+        def generate(system, user):
+            calls.append(len(user))
+            if len(user) > 7000:
+                raise ValueError("Requested tokens (7000) exceed context window of 6144")
+            return "VERDICT: SUPPORTED\nStudy [1] shows benefit."
+        lists = self._lists()
+        rec = RR.answer_one(item("MC-1"), "R2", lists, scores_for(lists), {}, generate)
+        self.assertTrue(rec["context_truncated"])
+        self.assertEqual(rec["verdict"], S)
+        self.assertEqual(len(calls), 2)
+        self.assertLess(calls[1], calls[0])
+        self.assertLessEqual(len(RR.shorten_abstracts([{"abstract": "w " * 500}])[0]["abstract"].split()),
+                             RR.OVERFLOW_ABSTRACT_WORDS)
+
+    def test_criteria_arms_use_the_same_fallback(self):
+        def generate(system, user):
+            if len(user) > 9000:
+                raise ValueError("Requested tokens (9000) exceed context window of 6144")
+            return ("VERDICT: SUPPORTED [1]" if "Draft answer" not in user and "Evidence criteria" not in user
+                    else "DIRECT STUDIES: 1\nFINDINGS: x.\nFINAL VERDICT: REFUTED")
+        lists = self._lists()
+        existing = {("MC-1", "R2"): {"verdict": S, "text": "VERDICT: SUPPORTED [1]"}}
+        rec = RR.answer_one(item("MC-1"), "R2V", lists, scores_for(lists), existing, generate)
+        self.assertTrue(rec["context_truncated"])
+        self.assertEqual(rec["verdict"], F_)
+
+    def test_an_answer_that_fits_carries_no_flag_and_other_errors_are_not_swallowed(self):
+        lists = lists_for()
+        rec = RR.answer_one(item("MC-1"), "R2", lists, scores_for(lists), {}, fake_generate)
+        self.assertNotIn("context_truncated", rec)
+
+        def broken(system, user):
+            raise ValueError("something else went wrong")
+        with self.assertRaises(ValueError):
+            RR.answer_one(item("MC-1"), "R2", lists, scores_for(lists), {}, broken)
+
+    def test_the_analysis_reports_truncated_answers(self):
+        items, answers = world(n=6)
+        answers[("MC-000", "R2")]["context_truncated"] = True
+        rep = A.report(items, answers, "confirm")
+        self.assertEqual(rep["context_truncated"], {"R2": 1})
+        self.assertIn("shortened", A.to_markdown(rep))
+
+
+class TraceabilityTests(unittest.TestCase):
+    def test_environment_record_has_versions_and_the_code_commit_and_is_written_with_lf(self):
+        rec = RP.environment_record("dev", "models/Meta-Llama.gguf", "models/Qwen.gguf")
+        self.assertEqual(set(rec["packages"]), set(RP.PACKAGES))
+        self.assertEqual(rec["generator_file"], "Meta-Llama.gguf")
+        self.assertEqual(rec["judge_file"], "Qwen.gguf")
+        self.assertRegex(rec["python"], r"^3\.")
+        with TemporaryDirectory() as tmp:
+            ok, message = RP.write_environment(Path(tmp), "dev", "m.gguf")
+            self.assertTrue(ok)
+            raw = (Path(tmp) / "rag2_environment_dev.json").read_bytes()
+        self.assertNotIn(b"\r", raw)
+        self.assertEqual(json.loads(raw)["phase"], "dev")
+
+    def test_environment_record_survives_a_machine_without_git(self):
+        with mock.patch.object(RP.subprocess, "run", side_effect=OSError("no git")):
+            rec = RP.environment_record("confirm", "m.gguf")
+        self.assertIsNone(rec["git_commit"])
+        self.assertIsNone(rec["tracked_code_modified"])
+
+    def test_files_the_study_writes_use_lf_line_endings(self):
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            RP._write(d / "a.md", "x\ny\n")
+            RP.write_design(d, str(d / "m.gguf")) if (d / "m.gguf").write_bytes(b"m") else None
+            for path in d.iterdir():
+                self.assertNotIn(b"\r", path.read_bytes(), path.name)
+
+
+class PipelineWiringTests(unittest.TestCase):
+    """The commands the pipeline launches must only use flags that their module declares."""
+
+    @staticmethod
+    def _declared(module: str) -> set[str]:
+        import ast
+        path = Path(*module.split(".")).with_suffix(".py")
+        flags = set()
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument":
+                flags.update(a.value for a in node.args if isinstance(a, ast.Constant) and str(a.value).startswith("--"))
+        return flags
+
+    def test_every_flag_of_every_planned_command_is_declared(self):
+        args = mock.Mock(model_path="m.gguf", judge_path="j.gguf", n_threads="6", ablations=True,
+                         no_temporal_ablation=False, commit=True)
+        plans = (RP.dev_plan(args, Path("data"), Path("results")), RP.confirm_plan(args, Path("data"), Path("results")),
+                 RP.ad_plan(args, Path("data"), Path("results")))
+        checked = 0
+        for plan in plans:
+            for name, action in plan:
+                if not isinstance(action, list):
+                    continue
+                module = action[2]
+                flags = {x for x in map(str, action[3:]) if x.startswith("--")}
+                if module.endswith("rag2_run"):                   # rag2_run declares its flags per sub-command
+                    module_flags = self._declared(module)
+                else:
+                    module_flags = self._declared(module)
+                self.assertLessEqual(flags, module_flags, f"{name}: {flags - module_flags} is not declared by {module}")
+                checked += 1
+        self.assertGreater(checked, 15)
+
+
+class EndToEndFlowTests(unittest.TestCase):
+    """Every step of a phase, with fake models, on synthetic data: wiring, files, analysis, report, design record."""
+
+    def test_dev_phase_end_to_end(self):
+        import argparse
+        S_, F__, N_ = S, F_, N
+        with TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            data, results = tmp / "data", tmp / "results"
+            (data / "pubmed_g0").mkdir(parents=True)
+            results.mkdir()
+            items = [item(f"MC-{i}", kind="changed" if i % 2 else "unchanged", gold=[S_, F__, N_][i % 3]) for i in range(6)]
+            for it in items:
+                it["newest"].update(pmid=f"N{it['item_id']}", row=1, cochrane_id="CD1")
+                it["previous"].update(pmid=f"O{it['item_id']}", row=2)
+            write(data / "benchmark.jsonl", items)
+            abstract_rows = []
+            for it in items:
+                recs = records(n_per_type=6, upper="2011-12-31", lower="2011-01-01")
+                for r in recs:
+                    r["pmid"] = f"{it['item_id']}-{r['pmid']}"
+                    abstract_rows.append({"pmid": r["pmid"], "title": f"Trial {r['pmid']} of drug pain",
+                                          "abstract": "RESULTS: pain fell. CONCLUSIONS: the drug reduces pain. " * 6})
+                (data / "pubmed_g0" / f"{it['item_id']}.json").write_text(json.dumps({"records": recs}), encoding="utf-8")
+            write(data / "abstracts.jsonl", abstract_rows)
+            write(data / "answers_dev.jsonl", [
+                {"item_id": it["item_id"], "arm": arm, "verdict": N_ if arm == "B0" else it["newest"]["label"],
+                 "admitted": [], "admitted_upper": [], "text": "VERDICT: x"} for it in items for arm in ("B0", "B1")])
+            write(data / "frozen_dev.jsonl", [{"item_id": it["item_id"], "candidates": []} for it in items])
+            write(results / "label_audit_dev.jsonl", [{"item_id": it["item_id"], "which": "newest",
+                                                       "gold": it["newest"]["label"], "relabel": it["newest"]["label"]}
+                                                      for it in items])
+            model = tmp / "m.gguf"
+            model.write_bytes(b"fake model file")
+
+            class Scorer:
+                def __init__(self, *a, **k):
+                    self.name, self.model_sha256, self.n_ctx = "fake", "0", 1
+
+                def score(self, question, study):
+                    return 0.8, 0.95
+
+            def ns(**kw):
+                base = dict(split="dev", limit=None, out=None, model_path=str(model), n_threads=1, device="cpu",
+                            variants=["R2"], arms=["R2", "R2C", "R2V", "R2V-ND"])
+                base.update(kw)
+                return argparse.Namespace(**base)
+            patches = [mock.patch.object(RR, "llama_generator", lambda *a, **k: fake_generate),
+                       mock.patch.object(RR, "LlamaYesNo", Scorer),
+                       mock.patch("experiments.medchange.encoders.medcpt_query_encoder", lambda **k: HashingEncoder()),
+                       mock.patch("experiments.medchange.encoders.medcpt_article_encoder", lambda **k: HashingEncoder()),
+                       mock.patch("experiments.medchange.encoders.MedCPTReranker", lambda **k: LexicalOverlapReranker())]
+            for patch in patches:
+                patch.start()
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    codes = [RR.cmd_rationale(ns(), data), RR.cmd_lists(ns(), data), RR.cmd_filter(ns(), data),
+                             RR.cmd_answers(ns(), data), RR.cmd_judge(ns(), data)]
+                    analysis = A.main(["--split", "dev", "--data-dir", str(data), "--out-dir", str(results),
+                                       "--label-audit", str(results / "label_audit_dev.jsonl")])
+            finally:
+                for patch in patches:
+                    patch.stop()
+            self.assertEqual(codes, [0, 0, 0, 0, 0])
+            self.assertEqual(analysis, 0)
+            for step in ("rationales", "lists", "filter", "answers", "directness"):
+                self.assertTrue((data / f"rag2_{step}_dev.jsonl").is_file(), step)
+                self.assertTrue((data / f"rag2_{step}_dev.config.json").is_file(), step)
+            self.assertTrue(RP.publish(data, results, "dev")[0])
+            self.assertTrue((results / "rag2_lists_dev.ids.jsonl").is_file())
+            self.assertNotIn("abstract", (results / "rag2_lists_dev.ids.jsonl").read_text(encoding="utf-8"))
+            self.assertTrue(RP.write_dev_report(results)[0])
+            self.assertTrue(RP.write_design(results, str(model))[0])
+            self.assertTrue(RP.write_environment(results, "dev", str(model))[0])
+            self.assertEqual(RP.design_differences(results, str(model)), [])
+            rep = json.loads((results / "rag2_analysis_dev.json").read_text(encoding="utf-8"))
+            self.assertEqual(rep["arms"], ["B0", "B1", "R2", "R2C", "R2V", "R2V-ND"])
+            self.assertEqual(rep["requirement"].split(" (")[0], "dev estimate only")
+            self.assertIn("label_stable", rep)
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                RP.status(data, results)
+            self.assertEqual(json.loads(out.getvalue())["dev_answers"], 24)
+            # a rerun of every step finds everything finished and writes nothing new
+            before = {p.name: p.read_bytes() for p in data.glob("rag2_*")}
+            for patch in patches:
+                patch.start()
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    RR.cmd_rationale(ns(), data)
+                    RR.cmd_lists(ns(), data)
+                    RR.cmd_filter(ns(), data)
+                    RR.cmd_answers(ns(), data)
+            finally:
+                for patch in patches:
+                    patch.stop()
+            self.assertEqual(before, {p.name: p.read_bytes() for p in data.glob("rag2_*")})
+
+
+if __name__ == "__main__":
+    unittest.main()

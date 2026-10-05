@@ -1,18 +1,18 @@
 {
   "split": "ad",
-  "items": 212,
+  "items": 208,
   "kinds": {
-    "unchanged": 212
+    "unchanged": 208
   },
   "labels": {
-    "NOT ENOUGH INFORMATION": 89,
-    "REFUTED": 69,
-    "SUPPORTED": 54
+    "NOT ENOUGH INFORMATION": 88,
+    "REFUTED": 68,
+    "SUPPORTED": 52
   },
-  "reviews": 163,
-  "single_version": 206,
+  "reviews": 159,
+  "single_version": 202,
   "question_filter": "dementia|alzheimer|mild cognitive impairment|cognitive decline|cognitively impaired|cognitive impairment",
-  "item_ids_sha256": "d37658e60467e45d9d68fe171cf702f6b986b35a738c11307fa8c0c45b742e65",
+  "item_ids_sha256": "054c4dc3e1390b8dd779cb1b0ba3ba8b5d63a0c4e8e02c0eedea744b3cc6774c",
   "inputs": {
     "MedRevQA.csv": "3141c6f189ed22522cdb5ffba363669f5115774f2c53a2ce1d358f7af6c8a51a",
     "AllStudyGroups.csv": "a211ce152f36ebeb89ef6ad2b0ba9df298c2e0a71e7d217445b633b1c1d06b4e"

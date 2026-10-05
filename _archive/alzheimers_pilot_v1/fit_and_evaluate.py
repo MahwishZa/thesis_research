@@ -58,14 +58,14 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
-from evaluation import freezing as fz
-from evaluation import rag_metrics as rm
+from _archive.alzheimers_framework.evaluation import freezing as fz
+from _archive.alzheimers_framework.evaluation import rag_metrics as rm
 from evaluation.stats import binomial_two_sided_p
-from evaluation.runner import (
+from _archive.alzheimers_framework.evaluation.runner import (
     RunConfig, _parse_date, assert_budget_parity, assert_generator_parity,
     assert_prompt_parity, run_experiment, to_candidates,
 )
-from experiments.shared.runners.run_end_to_end import CONTEXT_PROMPT, build_systems
+from _archive.alzheimers_framework.experiments.shared.runners.run_end_to_end import CONTEXT_PROMPT, build_systems
 from .run_real_evaluation import (
     DEFAULT_BUDGET, DEFAULT_CHECKPOINT, DEFAULT_CORPUS, DEFAULT_INDEX,
     DEFAULT_QUESTIONS_DIR, admitted_recency_by_system, build_frozen_items,
@@ -73,8 +73,8 @@ from .run_real_evaluation import (
     temporal_subgroup_breakdown, gold_evidence_ids, score_run,
 )
 from src.common.evidence import Evidence
-from src.common.generator import CallableGenerator
-from src.proposed.temporal import TemporalPolicy
+from _archive.alzheimers_framework.src.common.generator import CallableGenerator
+from src.temporal_filter.temporal import TemporalPolicy
 
 #: Kept deliberately small: TemporalFilterPolicy is pure arithmetic (no
 #: model calls), so a much larger grid would still be fast, but a small,
@@ -118,10 +118,10 @@ MIN_ADMITTED_FRACTION = 0.5
 
 
 def _build_retrieval_pipeline(corpus: str, index: str, device: Optional[str]):
-    from experiments.shared.retrieval.corpus import dated_only, read_passages_with_snapshot
-    from experiments.shared.retrieval.encoders import MedCPTReranker, medcpt_query_encoder
-    from experiments.shared.retrieval.index import DenseIndex
-    from experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline
+    from _archive.alzheimers_framework.experiments.shared.retrieval.corpus import dated_only, read_passages_with_snapshot
+    from experiments.medchange.encoders import MedCPTReranker, medcpt_query_encoder
+    from _archive.alzheimers_framework.experiments.shared.retrieval.index import DenseIndex
+    from _archive.alzheimers_framework.experiments.shared.retrieval.pipeline import RetrievalConfig, RetrievalPipeline
 
     passages, snapshot, _ = read_passages_with_snapshot(corpus, on_duplicate="keep_first")
     passages = dated_only(passages)
@@ -437,7 +437,7 @@ def main(argv=None) -> int:
               "result below as unreliable and say so if reporting it.")
 
     print(f"\nLoading RAG2 filter checkpoint from {args.rag2_checkpoint} ...")
-    from src.baseline.admission import FlanT5RAG2Filter
+    from _archive.alzheimers_framework.src.baseline.admission import FlanT5RAG2Filter
     rag2_filter = FlanT5RAG2Filter(args.rag2_checkpoint, device=args.device)
     rag2_filter_label = (
         f"FlanT5RAG2Filter({args.rag2_checkpoint}) - trained on 20 MedQA "

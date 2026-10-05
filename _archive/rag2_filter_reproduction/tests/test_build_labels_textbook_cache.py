@@ -12,8 +12,8 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from _archive.rag2_filter_reproduction.filter_training import build_labels
-from experiments.shared.retrieval.corpus import CorpusPassage
-from experiments.shared.retrieval.encoders import HashingEncoder
+from _archive.alzheimers_framework.experiments.shared.retrieval.corpus import CorpusPassage
+from experiments.medchange.encoders import HashingEncoder
 
 
 class _FakeEncoder:
@@ -67,7 +67,7 @@ class TextbookIndexCacheTests(unittest.TestCase):
 
     def test_builds_and_caches_on_first_call(self):
         with mock.patch(
-            "experiments.shared.retrieval.encoders.medcpt_article_encoder",
+            "experiments.medchange.encoders.medcpt_article_encoder",
             return_value=_FakeEncoder(),
         ):
             index, passages = build_labels.build_textbook_index(5, seed=42, device=None)
@@ -78,7 +78,7 @@ class TextbookIndexCacheTests(unittest.TestCase):
 
     def test_second_call_reuses_the_cache_without_encoding(self):
         with mock.patch(
-            "experiments.shared.retrieval.encoders.medcpt_article_encoder",
+            "experiments.medchange.encoders.medcpt_article_encoder",
             return_value=_FakeEncoder(),
         ):
             first_index, _ = build_labels.build_textbook_index(5, seed=42, device=None)
@@ -87,7 +87,7 @@ class TextbookIndexCacheTests(unittest.TestCase):
             raise AssertionError("encoding must not run on a cache hit")
 
         with mock.patch(
-            "experiments.shared.retrieval.encoders.medcpt_article_encoder",
+            "experiments.medchange.encoders.medcpt_article_encoder",
             side_effect=_must_not_run,
         ):
             second_index, passages = build_labels.build_textbook_index(
@@ -99,7 +99,7 @@ class TextbookIndexCacheTests(unittest.TestCase):
 
     def test_different_seed_does_not_reuse_a_mismatched_cache(self):
         with mock.patch(
-            "experiments.shared.retrieval.encoders.medcpt_article_encoder",
+            "experiments.medchange.encoders.medcpt_article_encoder",
             return_value=_FakeEncoder(),
         ):
             build_labels.build_textbook_index(5, seed=1, device=None)

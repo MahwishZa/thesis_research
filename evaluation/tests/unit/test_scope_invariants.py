@@ -43,6 +43,14 @@ old stage-1/stage-2 protocol name the file ``experiment_plan.md`` as it was at c
 verification extension, with a supervisor requirement of +1 percentage point. The stage-2 guard was
 retargeted to the realigned question; it keeps the "tested once" rule and the statement of what 528
 questions can and cannot confirm, so the requirement cannot silently turn into an unqualified claim.
+
+2026-10-05 (repository audit): the superseded Alzheimer's-specific framework (the local corpus, the question
+pool, the three-arm runner, the human annotation workflow) moved to ``_archive/alzheimers_framework/``, the
+MedCPT encoders to ``experiments/medchange/encoders.py`` and the Temporal Filter formula to
+``src/temporal_filter/``. The layout guards below were retargeted. Two deliberate choices: the active tree is
+checked by named *files*, not directories, because a laptop that pulls this change still holds the
+gitignored ``corpus/data/`` and ``experiments/results/index/`` folders; and the documentation check refuses
+any current document that names moved code by its old path.
 """
 
 import re
@@ -198,14 +206,58 @@ class SupersededScopeTests(unittest.TestCase):
 
 class ArchiveLayoutTests(unittest.TestCase):
 
+    #: Files (not folders: see the module docstring) that were active before 2026-10-05 and now live only
+    #: in the archive. The first group is the abandoned filter-reproduction and pilot work, the second the
+    #: Alzheimer's-specific framework.
+    MOVED_OUT_OF_THE_ACTIVE_TREE = (
+        "experiments/baseline", "experiments/shared/runners/fit_and_evaluate.py",
+        "experiments/shared/runners/run_real_evaluation.py", "experiments/results/fit_and_evaluate",
+        "corpus/scripts/01_pubmed_download.py", "corpus/config/search_queries.yaml",
+        "corpus/metadata/pmc.csv", "src/baseline/admission.py", "src/proposed/scorer.py",
+        "src/common/generator.py", "src/common/system.py", "evaluation/runner.py",
+        "evaluation/freezing.py", "evaluation/questions.py", "evaluation/rag_metrics.py",
+        "experiments/shared/questions/build_pool.py", "experiments/shared/retrieval/pipeline.py",
+        "experiments/shared/retrieval/encoders.py", "experiments/shared/runners/run_end_to_end.py",
+        "evaluation/tests/integration/test_end_to_end_runner.py", "evaluation/tests/corpus_scaffold.py",
+        "evaluation/tests/unit/test_runner_parity.py",
+    )
+    #: Where they are now (and the active files that replaced the shared ones).
+    NOW_IN_THE_ARCHIVE = (
+        "_archive/rag2_filter_reproduction/filter_training", "_archive/alzheimers_pilot_v1/fit_and_evaluate.py",
+        "_archive/alzheimers_framework/corpus/scripts/01_pubmed_download.py",
+        "_archive/alzheimers_framework/corpus/metadata/pmc.csv",
+        "_archive/alzheimers_framework/src/baseline/admission.py",
+        "_archive/alzheimers_framework/evaluation/runner.py",
+        "_archive/alzheimers_framework/experiments/shared/questions/splits.json",
+        "_archive/alzheimers_framework/experiments/shared/retrieval/pipeline.py",
+        "_archive/alzheimers_framework/tests/unit",
+    )
+    STAYED_ACTIVE = ("experiments/medchange/encoders.py", "src/temporal_filter/scorer.py",
+                     "src/temporal_filter/temporal.py", "src/common/evidence.py", "evaluation/stats.py")
+
     def test_abandoned_work_lives_in_the_archive_not_in_the_active_tree(self):
-        for moved in ("experiments/baseline", "experiments/shared/runners/fit_and_evaluate.py",
-                      "experiments/shared/runners/run_real_evaluation.py",
-                      "experiments/results/fit_and_evaluate"):
+        for moved in self.MOVED_OUT_OF_THE_ACTIVE_TREE:
             self.assertFalse((ROOT / moved).exists(), f"{moved} should live under _archive/")
-        for archived in ("_archive/rag2_filter_reproduction/filter_training",
-                         "_archive/alzheimers_pilot_v1/fit_and_evaluate.py"):
+        for archived in self.NOW_IN_THE_ARCHIVE + self.STAYED_ACTIVE:
             self.assertTrue((ROOT / archived).exists(), archived)
+
+    def test_every_active_package_is_listed_for_installation_and_nothing_else_is(self):
+        """``pip install -e .`` must make exactly the active packages importable. The list in
+        ``pyproject.toml`` is hand-maintained, and moving a package (as the 2026-10-05 reorganisation did)
+        leaves a stale entry that no test notices, because every test runs from the repository root and
+        never needs the installed package."""
+        body = text(ROOT / "pyproject.toml")
+        listed = set(re.findall(r'^\s*"([\w.]+)",?\s*$', body.split("packages = [", 1)[1].split("]", 1)[0],
+                                flags=re.MULTILINE))
+        found = set()
+        for init in ROOT.rglob("__init__.py"):
+            parts = init.relative_to(ROOT).parts[:-1]
+            # build output (``pip install .`` builds in the source tree: build/lib/...) is not a package
+            if (not parts or parts[0] in ("_archive", "build", "dist") or parts[0].endswith(".egg-info")
+                    or "__pycache__" in parts or "tests" in parts or parts[:3] == ("experiments", "medchange", "data")):
+                continue
+            found.add(".".join(parts))
+        self.assertEqual(listed, found)
 
     def test_archive_readme_lists_every_archived_folder(self):
         body = text(ROOT / "_archive" / "README.md")
@@ -218,20 +270,31 @@ class ArchiveLayoutTests(unittest.TestCase):
 #: record of what was true when written and is deliberately excluded.
 CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md",
                 "docs/reproducibility.md", "docs/glossary.md", "docs/experimentation.md",
-                "experiments/medchange/README.md", "experiments/medchange/results/README.md",
-                "experiments/results/README.md", "_archive/README.md")
+                "experiments/medchange/README.md", "experiments/medchange/results/README.md")
+#: The archive's own READMEs. They name old locations on purpose (a "was here, is there now" table), so only the
+#: ``_archive/...`` paths and commands they give are checked, and the moved-code check does not apply.
+ARCHIVE_DOCS = ("_archive/README.md", "_archive/alzheimers_framework/README.md")
 #: Paths named in the docs that are generated or machine-local and may be absent.
 GENERATED_PREFIXES = (
     "experiments/medchange/data", "experiments/medchange/results/analysis_",
     "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/helpfulness_",
-    "experiments/results/index", "corpus/data/chunks", "corpus/data/normalized",
-    "corpus/data/deduplicated", "corpus/data/raw/pmc", "corpus/data/raw/guidelines",
-    "corpus/data/raw/textbooks", "corpus/data/raw/currency_pack",
+    "_archive/alzheimers_framework/experiments/results/index",
+    "_archive/alzheimers_framework/corpus/data/chunks", "_archive/alzheimers_framework/corpus/data/normalized",
+    "_archive/alzheimers_framework/corpus/data/deduplicated", "_archive/alzheimers_framework/corpus/data/raw/pmc",
     "_archive/rag2_filter_reproduction/filter_training/labels",
     "_archive/rag2_filter_reproduction/filter_training/.textbook_index_cache",
     "experiments/baseline",
 )
+#: Code that moved on 2026-10-05, by its old active path. A current document that names one of these is
+#: pointing at a path that no longer exists; the archive path (``_archive/alzheimers_framework/...``) is fine,
+#: because the lookbehind rejects a match preceded by ``/``.
+MOVED_CODE = re.compile(
+    r"(?<![\w./-])(?:experiments/shared|experiments/results|src/baseline|src/proposed"
+    r"|src/common/(?:generator|hf_generator|system)"
+    r"|evaluation/(?:runner|freezing|questions|accuracy|rag_metrics|annotation)\.py"
+    r"|evaluation/tests/(?:integration|corpus_scaffold)"
+    r"|corpus/(?:scripts|config|metadata|reports|data|logs))")
 
 
 class DocumentationIntegrityTests(unittest.TestCase):
@@ -246,11 +309,18 @@ class DocumentationIntegrityTests(unittest.TestCase):
         for rel in CURRENT_DOCS:
             yield rel, text(ROOT / rel)
 
+    def _archive_docs(self):
+        for rel in ARCHIVE_DOCS:
+            yield rel, text(ROOT / rel)
+
     def test_named_paths_exist(self):
         missing = []
-        for rel, body in self._docs():
+        for rel, body, only_archive in ([(r, b, False) for r, b in self._docs()]
+                                        + [(r, b, True) for r, b in self._archive_docs()]):
             for m in self.PATH.finditer(body):
                 path = m.group(1).rstrip("/.,:;")
+                if only_archive and not path.startswith("_archive/"):
+                    continue                            # an archive README names old locations on purpose
                 if any(c in path for c in "*<>{}") or path.startswith(GENERATED_PREFIXES):
                     continue
                 if not (ROOT / path).exists():
@@ -259,7 +329,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
 
     def test_named_commands_exist(self):
         missing = []
-        for rel, body in self._docs():
+        for rel, body in list(self._docs()) + list(self._archive_docs()):
             for m in self.COMMAND.finditer(body):
                 module = m.group(1)
                 if module in ("unittest", "pyflakes"):
@@ -301,36 +371,21 @@ class DocumentationIntegrityTests(unittest.TestCase):
                  "experiments.shared.runners.run_real_evaluation", "next_phase_plan")
         offenders = []
         for rel, body in self._docs():
-            if rel == "_archive/README.md":
-                continue
             for term in stale:
                 if term in body:
                     offenders.append(f"{rel}: {term}")
         self.assertEqual(offenders, [])
 
-
-class AblationMetricsTests(unittest.TestCase):
-    """ROUGE/BLEU-style automatic metrics were forbidden under the old
-    scope and are REQUIRED under the current one (objective 2, the ablation
-    study) - this is the current scope's most easily-missed inversion of
-    the old one, so it gets its own explicit guard."""
-
-    def test_rag_metrics_module_exists_and_implements_standard_metrics(self):
-        from evaluation import rag_metrics as rm
-        for name in ("exact_match", "token_f1", "rouge_l_f1", "context_scores",
-                    "groundedness"):
-            self.assertTrue(hasattr(rm, name), f"rag_metrics.py is missing {name}")
-
-    def test_accuracy_module_still_excludes_automatic_scoring_from_its_own_judgement(self):
-        """rag_metrics.py owns automatic metrics now; accuracy.py's separate
-        decision not to compute them itself still stands (see its
-        docstring) - this just confirms accuracy.py wasn't quietly given an
-        automatic scorer of its own, which would duplicate rag_metrics.py
-        under a different name."""
-        from evaluation import accuracy
-        source = Path(accuracy.__file__).read_text(encoding="utf-8")
-        self.assertNotIn("def rouge", source.lower())
-        self.assertNotIn("def bleu", source.lower())
+    def test_current_docs_name_moved_code_only_by_its_archive_path(self):
+        """The 2026-10-05 move left ``corpus/``, ``experiments/shared/``, ``src/baseline/`` and the like
+        in the archive. A current document that still gives the old path points at nothing (on a laptop
+        that holds the gitignored ``corpus/data/`` it would even look as if it worked)."""
+        offenders = []
+        for rel, body in self._docs():
+            for number, line in enumerate(body.splitlines(), 1):
+                for m in MOVED_CODE.finditer(line):
+                    offenders.append(f"{rel}:{number}: {m.group(0)}")
+        self.assertEqual(offenders, [])
 
 
 if __name__ == "__main__":

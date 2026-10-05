@@ -7,7 +7,7 @@ Terms as used consistently throughout this repository, code and documentation.
 | Term | Meaning |
 |---|---|
 | **RAG²** | Sohn et al., NAACL 2025: a retrieval-augmented medical QA method whose core is a Flan-T5 filter, trained on perplexity-derived labels, that decides which retrieved passages the LLM sees from text alone. Its checkpoint is not distributed. |
-| **Temporal Filter** | The stage-1 proposed system: admission by A(s) = (1 − λ)·ρ(s) + λ·T(s, q, t_q), i.e. relevance plus how recent a passage is relative to the question date. Short name for "recency-weighted evidence admission"; not a claim of a new method. Negative result on the dev split. |
+| **Temporal Filter** | The stage-1 system (a result of record; since the realignment no longer the proposed system, which is R2V): admission by A(s) = (1 − λ)·ρ(s) + λ·T(s, q, t_q), i.e. relevance plus how recent a passage is relative to the question date. Short name for "recency-weighted evidence admission"; not a claim of a new method. Negative result on the dev split. |
 | **Admission rule** | The function that decides which retrieved passages reach the generator. The one thing that differs between arms. |
 | **Arm** | One system in the comparison: B0, B1, B2, B3, P (stage-1 proposed) or C1; in stage 2 also B1R, S0–S3, H0–H3, H1C and H3C. See `methodology.md` §4. |
 | **Helpfulness signal** | P(yes) from the unmodified Flan-T5-large asked RAG²'s prompt plus "Answer yes or no." An untrained stand-in for RAG²'s filter. |
@@ -34,8 +34,8 @@ Terms as used consistently throughout this repository, code and documentation.
 | **T(s, q, t_q)** | Temporal score 2^(−age_days / H): 1.0 for a passage published on the question date, halving every H days; age is clamped at zero. |
 | **λ** | Weight on the temporal term, 0 to 1 (0.5 in the experiments; fixed, not fitted). |
 | **H** | Half-life in days (1,095 in the experiments). |
-| **θ** | Admission threshold used by the framework's threshold-and-budget policy; **not used** by the MedChange arms. |
-| **A(s)** | The admission score (1 − λ)·ρ(s) + λ·T(s, q, t_q), computed by `src/proposed/`. |
+| **θ** | Admission threshold of the archived framework's threshold-and-budget policy; **not used** by the MedChange arms. |
+| **A(s)** | The admission score (1 − λ)·ρ(s) + λ·T(s, q, t_q), computed by `src/temporal_filter/`. |
 | **Paper weight w** | Stage 2: the weight of one paper in the four features: 1 (none), 2^(−age/H) (recency, age to t_q), 3 / 2 / 1 for a systematic review or meta-analysis / a controlled trial / anything else (study type), or the product. |
 | **Signed stance, no-stance share, conflict, informative mass** | The four stage-2 features: weighted mean of p(supports) − p(contradicts); weighted mean of p(neither); twice the smaller of the weighted supports and contradicts totals over the total weight; ln(1 + weighted supports + contradicts). |
 
@@ -51,6 +51,7 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Update window** | The interval after the previous review version and up to the newest: when the evidence that could have changed the verdict appeared. |
 | **Frozen pool** | The 20 candidates retained for one item, with date bounds and an order-sensitive hash, replayed identically to every arm. |
 | **Dev / confirmatory split** | Seeded split of the MedChange items. Dev is used for gates; the confirmatory split is run once. |
+| **`ad` split (Alzheimer's/dementia test set)** | 208 MedRevQA questions on dementia, Alzheimer's disease and cognitive impairment from reviews in neither dev nor confirm (by study group and by Cochrane ID); all unchanged-verdict; run once after the freeze as a secondary evaluation (`experimentation.md` §11). |
 | **Gate (G0–G3)** | A pre-stated pass/fail check on the dev split that decided whether stage 1 continued (stage-1 protocol, in the repository history). |
 | **Dev check (realigned)** | The pre-declared check of the realigned dev run: every arm parses ≥ 95% and the verifier is valid ≥ 95%; R2 ≥ B1 − 5 pp; R2V − R2 ≥ 0 (`experimentation.md` §8). |
 | **Requirement reading** | The pre-declared reading of the supervisor's +1 pp requirement on the held-out split: met and confirmed / met as a point estimate, not confirmed / not met (`experimentation.md` §7). |
@@ -62,11 +63,11 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Irrelevant-paper control** | Each pilot question judged against papers belonging to another item; a stance step that reads the paper should say "neither". |
 | **Frozen model** | `results/synthesis_model.json`: the coefficients, selected hybrid and stance setting fitted on dev, committed before any confirmatory stance run. |
 | **Forking-path ledger** | The dated list in `experimentation.md` §9 of every design decision taken after seeing data. |
-| **Question pool (Alzheimer's)** | The 113 usable Alzheimer's questions reviewed earlier by the researcher (not extended), split into validation (23) and test (90). |
-| **`temporal_candidate`** | Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
-| **Provenance firewall** | The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |
-| **Corpus snapshot** | An id identifying exactly which corpus/index build a frozen item was produced against. |
-| **Frozen candidate set / `FrozenItem`** | The framework's cached retrieval record for one question (`evaluation/freezing.py`). |
+| **Question pool (Alzheimer's)** | *Archived framework.* The 113 usable Alzheimer's questions reviewed earlier by the researcher (not extended), split into validation (23) and test (90). Not the `ad` split. |
+| **`temporal_candidate`** | *Archived framework.* Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
+| **Provenance firewall** | *Archived framework.* The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |
+| **Corpus snapshot** | *Archived framework.* An id identifying exactly which corpus/index build a frozen item was produced against. |
+| **Frozen candidate set / `FrozenItem`** | *Archived framework.* The framework's cached retrieval record for one question (`_archive/alzheimers_framework/evaluation/freezing.py`). The current pipeline's analogue is the frozen pool of `freeze_candidates.py`. |
 
 ## Outcomes
 
@@ -80,7 +81,7 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Per-class recall, macro-F1, NOT ENOUGH INFORMATION share** | Recall of each gold class; the mean F1 of the three classes; how often an arm answers NOT ENOUGH INFORMATION. They show whether an arm gains accuracy by reading evidence or only by abstaining more. |
 | **Manipulation check** | A measure of what the mechanism does (update-window share, passage age, overlap with B1); never an outcome. |
 | **Currency** | Historical: the mean temporal score of admitted evidence, formerly the primary metric. Circular for this system, so retired; survives only in `_archive/alzheimers_pilot_v1/`. |
-| **Groundedness** | Fraction of an answer's content tokens present in its admitted evidence; a diagnostic, not an entailment judgement. |
-| **Context precision / recall** | Admitted evidence against known gold-relevant evidence where annotated; `None`, never 0.0, when unannotated. |
+| **Groundedness** | *Archived framework* (`_archive/alzheimers_framework/evaluation/rag_metrics.py`). Fraction of an answer's content tokens present in its admitted evidence; a diagnostic, not an entailment judgement. The current pipeline uses the two indicators under "Anachronism rate" and "Unsupported decisive verdict". |
+| **Context precision / recall** | *Archived framework.* Admitted evidence against known gold-relevant evidence where annotated; `None`, never 0.0, when unannotated. |
 | **Paired McNemar / bootstrap** | The exact test on discordant paired outcomes and the item-resampled confidence interval used to judge differences. |
-| **Extractive stand-in generator** | Historical placeholder that returned the top passage verbatim; used only by the superseded pilot and the fixture demo. |
+| **Extractive stand-in generator** | Historical placeholder that returned the top passage verbatim; used only by the superseded pilot and the archived fixture demo. |

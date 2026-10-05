@@ -187,7 +187,7 @@ def main(argv=None) -> int:
                 h.flush()
                 print(f"  abstracts {min(i + 500, len(need))}/{len(need)}", flush=True)
 
-    from experiments.shared.retrieval.encoders import (
+    from experiments.medchange.encoders import (
         MedCPTReranker, medcpt_article_encoder, medcpt_query_encoder)
     qe = medcpt_query_encoder(device=args.device)
     ae = medcpt_article_encoder(device=args.device)

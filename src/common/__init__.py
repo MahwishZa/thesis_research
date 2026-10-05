@@ -1,23 +1,5 @@
-"""Shared system interfaces."""
+"""Evidence types shared by the stage-1 arms."""
 
-from .evidence import (
-    Candidate,
-    Evidence,
-    ExperimentResult,
-)
-from .generator import (
-    CallableGenerator,
-    GenerationResult,
-    Generator,
-)
-from .system import System
+from .evidence import Candidate, Evidence, ExperimentResult
 
-__all__ = [
-    "Candidate",
-    "Evidence",
-    "ExperimentResult",
-    "CallableGenerator",
-    "GenerationResult",
-    "Generator",
-    "System",
-]
+__all__ = ["Candidate", "Evidence", "ExperimentResult"]

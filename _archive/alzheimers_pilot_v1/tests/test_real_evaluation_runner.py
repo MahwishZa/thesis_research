@@ -12,12 +12,12 @@ metric's arithmetic.
 import unittest
 from pathlib import Path
 
-from evaluation.freezing import FrozenCandidate, FrozenItem
+from _archive.alzheimers_framework.evaluation.freezing import FrozenCandidate, FrozenItem
 from _archive.alzheimers_pilot_v1.run_real_evaluation import (
     admitted_recency_by_system, load_usable_questions,
 )
 
-QUESTIONS_DIR = Path("experiments/shared/questions")
+QUESTIONS_DIR = Path("_archive/alzheimers_framework/experiments/shared/questions")
 
 
 class LoadUsableQuestionsTests(unittest.TestCase):

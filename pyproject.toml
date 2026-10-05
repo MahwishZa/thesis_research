@@ -1,26 +1,26 @@
 # Packaging metadata. `pip install -e .` makes the active packages importable; the
 # commands in README.md and docs/reproducibility.md are run from the repository root.
 #
-# _archive/ is not listed: it is not an installable package and no active code
-# imports it (enforced by evaluation/tests/unit/test_scope_invariants.py).
+# The base install is numpy only: that is all the active code and the active test suite import at
+# module level (checked by an import analysis on 2026-10-05). The heavy backends are imported lazily
+# and come with the extras below. _archive/ is not listed: it is not an installable package and no
+# active code imports it (enforced by evaluation/tests/unit/test_scope_invariants.py, which also
+# checks that the package list below matches the active packages).
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "thesis-research"
-version = "0.2.0"
-description = "Evidence-aware synthesis for retrieval-augmented medical question answering: does a stance-based synthesis layer, with optional recency and study-type weighting, improve verdicts on questions whose Cochrane conclusion changed? An as-of evaluation on MedChangeQA, with an Alzheimer's disease case study."
+version = "0.3.0"
+description = "Retrieval-augmented medical question answering evaluated as of a date: an adapted RAG2 baseline and an evidence-criteria verification extension, on MedChangeQA (Cochrane questions whose verdict changed) with a held-out Alzheimer's disease and dementia test set."
 requires-python = ">=3.10"
-# numpy is needed by experiments.shared.retrieval, which the test suite imports.
-# requests (PubMed/PMC downloads) and pypdf (guideline PDFs) are imported at module level by
-# corpus/scripts, whose functions the test suite exercises; without them 90 tests error on import.
-dependencies = ["PyYAML>=6.0", "numpy>=1.24", "requests>=2.28", "pypdf>=3.0"]
+dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
 # Figures of experiments/medchange/report.py (the tables need nothing extra).
 report = ["matplotlib>=3.7"]
-# Real model backends. Not needed to run the test suite.
+# MedCPT encoders and the Flan-T5 helpfulness/stance fallbacks. Not needed to run the test suite.
 # NOTE: torch 2.4.x was built against numpy 1.x; if numpy 2.x is installed alongside it,
 # pin numpy<2 (see docs/reproducibility.md).
 models = ["torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99"]
@@ -31,6 +31,9 @@ medchange = [
     "torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99",
     "llama-cpp-python>=0.2.60",
 ]
+# Needed only to run the archived work (_archive/): the corpus scripts of the Alzheimer's framework
+# (PyYAML, requests, pypdf) and the matched-pair scripts. The archived tests import these at module level.
+archive = ["PyYAML>=6.0", "requests>=2.28", "pypdf>=3.0"]
 # Used only by the archived RAG2 filter-reproduction attempt
 # (_archive/rag2_filter_reproduction/): pick ONE of the two.
 archive-filter-training-hf = [
@@ -46,14 +49,8 @@ archive-filter-training-gguf = [
 packages = [
     "src",
     "src.common",
-    "src.baseline",
-    "src.proposed",
+    "src.temporal_filter",
     "evaluation",
     "experiments",
     "experiments.medchange",
-    "experiments.shared",
-    "experiments.shared.questions",
-    "experiments.shared.questions.sources",
-    "experiments.shared.retrieval",
-    "experiments.shared.runners",
 ]

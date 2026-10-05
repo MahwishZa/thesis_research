@@ -77,7 +77,7 @@ TEXTBOOK_INDEX_CACHE_ROOT = Path("_archive/rag2_filter_reproduction/filter_train
 
 
 def build_textbook_index(n_passages: int, seed: int, device: Optional[str]):
-    from experiments.shared.retrieval.index import DenseIndex, IndexError_
+    from _archive.alzheimers_framework.experiments.shared.retrieval.index import DenseIndex, IndexError_
 
     passages = load_textbook_passages(n=n_passages, seed=seed)
     print(f"loaded {len(passages)} textbook passages")
@@ -96,8 +96,8 @@ def build_textbook_index(n_passages: int, seed: int, device: Optional[str]):
         print(f"cached index at {cache_dir} does not match this "
               "n/seed's passage ids - rebuilding")
 
-    from experiments.shared.retrieval.encoders import medcpt_article_encoder
-    from experiments.shared.retrieval.index import build_index
+    from experiments.medchange.encoders import medcpt_article_encoder
+    from _archive.alzheimers_framework.experiments.shared.retrieval.index import build_index
 
     encoder = medcpt_article_encoder(device=device)
     t0 = time.time()
@@ -376,7 +376,7 @@ def main(argv=None) -> int:
     index, passages = build_textbook_index(
         args.n_textbook_passages, args.seed, args.device
     )
-    from experiments.shared.retrieval.encoders import medcpt_query_encoder
+    from experiments.medchange.encoders import medcpt_query_encoder
     query_encoder = medcpt_query_encoder(device=args.device)
 
     questions = load_medqa(n=args.n_questions, seed=args.seed)

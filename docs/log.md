@@ -1079,3 +1079,88 @@ modules and the documentation guard tests) point to the new name. References to 
 still name the file `experiment_plan.md`, because that is its name at commit 92e3aaf. Committed run outputs
 (`results/FINDINGS.md`) keep the text they were generated with, which names the old file. Earlier entries of this
 log use the names that were current when they were written.
+
+## Phase 39 — Repository audit, reorganisation and corrections (Oct 5)
+
+At the researcher's request the whole repository, local and GitHub, was audited before anything was changed.
+
+**Inspected.** Git: local `main` and `origin/main` were identical (`fa4cb61`); GitHub holds one branch, seven pull
+requests from September that are all closed and unmerged, and no tags. Structure and imports: an AST-based
+analysis of every Python file, with third-party imports classified as module-level or lazy. Documents against code
+and files: every named path, command, count and cross-reference. Packaging: `pyproject.toml` against what is
+imported. Both test suites, including a fresh virtualenv with only numpy and sockets blocked. The two benchmark
+manifests, rebuilt from the released MedChange files.
+
+**Reorganised (nothing deleted; Git history keeps everything; recovery point: the commit `fa4cb61`).** The import
+analysis showed that the realigned pipeline imports nothing of the Alzheimer's-specific framework of the first
+design. That framework moved to `_archive/alzheimers_framework/` with its tests: the local corpus (33 tracked
+files), the question pool, dense retrieval and index build, the three-arm runner with its freezing contract, the
+annotation workflow, the RAG metrics, the hallucination-rate statistics (`evaluation/stats.py` was split: the
+active file keeps the exact McNemar test, the paired bootstrap and Holm, now with their own `test_stats.py`; the
+hallucination-rate accounting is `har_stats.py` in the archive), the RAG² baseline slot and the
+threshold-and-budget admission.
+Kept active: `src/common/evidence.py`, `evaluation/stats.py`, the MedCPT encoders (moved to
+`experiments/medchange/encoders.py`, where the pipeline uses them) and the Temporal Filter formula (renamed
+`src/proposed/` → `src/temporal_filter/`: it is a stage-1 result of record, no longer the proposed system). Test
+accounting by class and method name: 730 active and 127 archived tests before, 280 and 592 after, none lost, 15
+added by this audit. The package list in `pyproject.toml` was brought to the new layout and is now checked by a
+test; the base dependencies were cut from four to numpy, which is all the active code and tests import at module
+level (checked by the import analysis), and an `archive` extra was added for PyYAML, requests and pypdf.
+
+**Corrected (each confirmed by a check, not assumed).**
+
+1. *The Alzheimer's/dementia set contained four questions it should not have.* Rebuilding it from the released
+   files reproduced the 212-question manifest hash for hash, and also showed that four questions were 2000–2003
+   versions of reviews whose newer versions are in the confirmatory split (ungrouped rows in `AllStudyGroups`, so
+   the exclusion by study group missed them). The builder now also excludes by Cochrane ID: **208 questions from 159
+   reviews**. This was done before any output of the set existed and is recorded in `experimentation.md` §11. The
+   preflight's expected counts were a hand-typed copy of the manifests; a test now ties them together.
+2. *A prompt longer than the context window would have stopped the run.* llama.cpp raises an error for it. The
+   answer step now retries once with each abstract cut to 200 words, never touches a prompt that fits, marks the
+   answer `context_truncated` and the analysis counts them. Not observed in the three-question smoke test.
+3. *Files the study writes now use LF line endings on every platform* (a Windows run would otherwise write CRLF
+   into committed results and the manifest).
+4. *Traceability:* each phase now writes `rag2_environment_<phase>.json` (package versions, Python, platform, the
+   code's commit and whether tracked code was modified); informational, nothing compares it.
+5. *Documents that contradicted the repository:* `data.md` said the confirmatory labels had not been analysed
+   (they were, in the stage-1/2 run) and gave no class mix; three documents called the committed `REPORT.md` a dev
+   report although the confirmatory run had overwritten it; the AD set was described as Alzheimer's questions
+   although fewer than a quarter name Alzheimer's disease (most name dementia); the results README said confirmatory
+   files existed only after the command ran; `_archive/README.md` cited a section that now holds something else
+   and hid why the `test_pairs` tests cannot run (they import a path that no longer exists). Also removed: a dead
+   function in `rag2.py` and the fixture-demo command from the README (the demo is archived). The per-step compute
+   figures were reconciled with the three-question smoke test (≈ 6.8 minutes per question for four answers).
+6. *Hygiene:* `.gitignore` now ignores `build/` and `dist/` (pip builds in the source tree), the archived index
+   and the old `corpus/` location at the repository root, so `git add -A` is safe on a computer that still holds
+   the multi-GB corpus text and index from before the move.
+
+**Guards added or retargeted** (`test_scope_invariants.py`): the layout is checked by named files, not folders (a
+computer that pulls this change still holds the ignored `corpus/data/` and `experiments/results/index/`); a
+current document may name moved code only by its archive path; the package list must equal the active packages;
+the archive's READMEs are checked for the `_archive/...` paths and commands they give.
+
+**Verified.** Active suite 280 tests and archived suite 592 tests pass; in a fresh virtualenv with only numpy,
+sockets blocked, the active suite passes (one figure test skipped: matplotlib is optional), the archived suite
+passes with the `archive` extra, and all 38 active modules import from the installed package outside the
+repository; `check_hermetic` reports both suites leave the tree unchanged; pyflakes reports one intentional import
+in the active code (and seven cosmetic notes in archived code, left as written).
+
+**Not changed.** The realigned design (settings and prompts are hashed into `rag2_design.json` after the dev
+phase), every committed result and every committed answer file. Archived code was moved, not edited, apart from
+import paths and the files named above.
+
+**Risks identified (not defects; *confirmed* = computed or read from a file, *assumed* = not yet measured).**
+*Confirmed:* a 1-point difference cannot be confirmed with 528 questions (only about 4–6 points can) or 208 (about
+6–10); a true effect of exactly zero still shows +1 point or more in 23–32% of runs (32–39% with 208), which the pre-declared
+three-way reading of the requirement accounts for. The gold labels are model-generated and an independent model
+reproduces 81.4% of the confirmatory ones, which bounds what any accuracy can mean. The confirmatory split's labels
+and its B0/B1 results were seen before the realigned design was fixed (declared in §9), so only the `ad` set is
+untouched, and it is secondary. The verification criteria restate the benchmark's labelling rubric; R2C measures
+that. The `ad` set has no changed verdicts and is old (48 of 208 reviews before 2005). Compute is about 114 h
+(dev ≈ 26, held-out ≈ 60, `ad` ≈ 28, *estimated*); no dependency is pinned (the environment record captures
+versions); llama.cpp output is not bit-for-bit reproducible across machines; MedChange states no licence, so its
+data are rebuilt, not redistributed. *Assumed:* that the as-of pools of the old `ad` questions are large enough
+(unmeasured until the pools are built); that MedCPT encoding can use the 4 GB GPU (never tried; `--device cuda`).
+
+**Still to do (researcher).** Pull this change; run `rag2_pipeline dev` (≈ 26 h by the estimate) and read
+`RAG2_DEV_REPORT.md`; the held-out and `ad` phases follow only after that report, each once.

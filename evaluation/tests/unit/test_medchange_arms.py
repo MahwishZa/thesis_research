@@ -75,8 +75,8 @@ class ArmTests(unittest.TestCase):
         call of src.proposed on the same inputs."""
         from datetime import date
         from src.common.evidence import Candidate, Evidence
-        from src.proposed.scorer import AdmissionScorer
-        from src.proposed.temporal import TemporalPolicy
+        from src.temporal_filter.scorer import AdmissionScorer
+        from src.temporal_filter.temporal import TemporalPolicy
         p = pool()
         got = A.admission_scores(p, [-c["rank"] for c in p], p, CUTOFF, 0.5)
         scorer = AdmissionScorer(0.5)
