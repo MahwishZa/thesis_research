@@ -1,7 +1,7 @@
 # `experiments/medchange/` — the primary pipeline
 
 An as-of evaluation, on Cochrane questions whose verdict changed between review versions, of evidence
-admission (stage 1, done on dev) and of an evidence-synthesis layer (stage 2, code built, pilot passed, dev run pending).
+admission (stage 1) and of an evidence-synthesis layer (stage 2).
 The protocol, settings and gates are fixed in `docs/experiment_plan.md`; this file maps code to steps.
 Commands and costs: `docs/reproducibility.md` §3.
 
@@ -37,4 +37,4 @@ that rebuild `data/benchmark.jsonl` identically.
 Tests: `evaluation/tests/unit/test_medchange_benchmark.py`, `test_medchange_arms.py`,
 `test_medchange_stance.py` (stance, pilot checks, diagnostics, fakes in place of the model),
 `test_medchange_synthesis.py` (features, weights, fitting, selection, gate 2, the confirmatory analysis and its pre-declared reading),
-`test_medchange_dev_audit.py`, `test_medchange_audits.py`, `test_medchange_report.py` and `test_medchange_pipeline.py`; all use synthetic data. **Status:** the diagnostics and the stance pilot have been run on real pools; everything else in stage 2 has been run only on synthetic data.
+`test_medchange_dev_audit.py`, `test_medchange_audits.py`, `test_medchange_report.py` and `test_medchange_pipeline.py`; all use synthetic data.
