@@ -2,7 +2,7 @@
 
 Outputs of real runs that contain **no source text** and are expensive to regenerate. The frozen pools and
 abstracts stay in the gitignored `../data/` and are rebuilt from the manifest (`docs/reproducibility.md` §5).
-`pipeline.py` copies the stage-2 outputs here and, with `--commit`, commits and pushes them.
+`pipeline.py` copies the stage-2 outputs here and, with `--commit`, commits them (you push by hand).
 
 | File | Produced by | Notes |
 |---|---|---|
