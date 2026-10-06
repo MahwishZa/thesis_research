@@ -2,8 +2,8 @@
 
 The datasets used, their provenance, what is committed and what is rebuilt locally, and their
 limitations. For how retrieval consumes them see `methodology.md`; for how to rebuild anything see
-`reproducibility.md`. The Alzheimer's-specific corpus and question pool of the first design are archived
-and described in §3.
+`reproducibility.md`. The Alzheimer's-specific corpus and question pool of the first design were removed
+from the repository (§3).
 
 | Dataset | Role | Committed? | Rebuilt by |
 |---|---|---|---|
@@ -15,8 +15,8 @@ and described in §3.
 | Realigned study: rationales, candidate lists, filter judgements, answers, directness judgements (`rag2_*_<split>.jsonl`) | the adapted RAG² baseline and the verification arms | yes, copied to `results/` by `rag2_pipeline` (model text, PMIDs, ranks, scores, dates; the candidate lists without titles or abstracts) | `rag2_run` |
 | Design record (`rag2_design.json`) | every setting and prompt hash of the realigned systems and the generator file's hash | yes, and **before** the held-out run, which refuses to start otherwise | `rag2_pipeline dev` |
 | Alzheimer's/dementia test set (split `ad`) | a fresh secondary held-out set for the realigned study: 208 MedRevQA questions on dementia, Alzheimer's disease and cognitive impairment from 159 reviews outside dev and confirm | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` after `build_benchmark` |
-| Alzheimer's evidence corpus | *archived*; not used by the current study | provenance only (metadata, reports, logs) in `_archive/alzheimers_framework/corpus/` | stages 01–07 in `_archive/alzheimers_framework/corpus/scripts/` |
-| Alzheimer's question pool (113 usable) | *archived*; not used by the current study | yes (`_archive/alzheimers_framework/experiments/shared/questions/`) | `build_pool`, human review (done 2026-09-20; not extended), `split` |
+| Alzheimer's evidence corpus | *removed 2026-10-06*; not used by the current study | only in Git history (commit `5e03540`) | – |
+| Alzheimer's question pool (113 usable) | *removed 2026-10-06*; not used by the current study | only in Git history (commit `5e03540`) | – |
 
 ## 1. MedChange benchmark (primary)
 
@@ -92,52 +92,27 @@ only effects of about 6–10 points can be confirmed (`experimentation.md` §11)
 four were older versions of reviews that the confirmatory split already holds, and were removed before any use
 (`experimentation.md` §11, "Correction").
 
-## 3. Archived: the Alzheimer's evidence corpus and question pool
+## 3. Removed: the Alzheimer's evidence corpus and question pool
 
-Both belong to the first design (`_archive/alzheimers_framework/README.md`) and are **not used by the current
-study**. They are kept because they are the record of the work the thesis started from.
+Both belonged to the first design and are **not used by the current study**. The folder that held them was removed
+on 2026-10-06; everything is in Git history (commit `5e03540`, the `alzheimers_framework` subfolder of the `_archive` folder). The facts
+below are what was computed from them before removal.
 
-**The corpus.** A seven-stage pipeline (`_archive/alzheimers_framework/corpus/scripts/01_pubmed_download.py` through
-`07_claim_classification.py`) over PubMed/PMC full text plus government public-health pages.
-
-| Stage | What it does |
-|---|---|
-| 01 PubMed | retrieves a PMID list (no text or dates; see stage 02) |
-| 02 PMC retrieval + finalisation | downloads full text from PMC, resolves publication dates from JATS XML |
-| 03 Guidelines / textbooks | optional; not populated (no document could be independently source-verified) |
-| 04 Normalise | text cleanup, Alzheimer's-relevance tagging |
-| 05 Deduplicate | near-duplicate removal (content id + token-Jaccard) |
-| 06 Chunk | real `ncbi/MedCPT-Article-Encoder` tokenizer, 256-token windows with 32-token overlap |
-| 07 Claim classification | tags every chunk by claim type and evidence level |
-
-Computed from the tracked provenance: 114,256 PMC records in
-`_archive/alzheimers_framework/corpus/metadata/pmc.csv`, of which 70.9% were published in 2020 or later (48.2%
-in 2020–24, 22.6% in 2025 and after); 4,377,041 chunks. The dense index held 4,376,141 chunks × 768: 900 chunks
-that repeated an id were dropped (`keep_first`; see
-`_archive/alzheimers_framework/experiments/shared/retrieval/corpus.py`). Every tracked provenance file (the
-`metadata/*.csv`, `reports/*.csv` and `logs/*.log` of the corpus folder) is well-formed and free of unresolved
-errors. The corpus text itself is not committed: it is large, built locally and gitignored by design; only the
-synthetic offline fixture `_archive/alzheimers_framework/corpus/data/raw/pubmed/records.example.jsonl` (ten
-`FIXTURE-*` records) is tracked so a fresh clone can run stages 04–07. Known gaps: the guideline/textbook source
-(stage 03) is empty, and the PMC redistribution-licence gate is recorded per record but not enforced, which
-affects redistribution of corpus text, not research use.
+**The corpus.** A seven-stage pipeline over PubMed/PMC full text plus government public-health pages: PMID lists,
+PMC full text and dates, normalisation with Alzheimer's-relevance tagging, near-duplicate removal, chunking with the
+MedCPT tokenizer (256-token windows, 32 overlap) and claim-type tagging. It held 114,256 PMC records, of which 70.9%
+were published in 2020 or later (48.2% in 2020–24, 22.6% in 2025 and after), and 4,377,041 chunks; the dense index
+held 4,376,141 chunks × 768 (900 repeated ids dropped). The corpus text was never committed (large, built locally).
+The guideline/textbook source was empty, and the PMC redistribution-licence gate was recorded but not enforced.
 
 **Why it could not serve the current study.** 71% of the corpus is from 2020 or later, while the Alzheimer's
-questions mostly cite older reviews, so the corpus cannot support an as-of test (`log.md` Phase 21).
+questions mostly cite older reviews, so it cannot support an as-of test (`log.md` Phase 21).
 
-**The question pool.** *Provenance rule:* every reference answer must be traceable to a real published record;
-nothing is invented or model-authored. Pipeline: external source record → factual proposition → candidate
-question → verbatim reference answer → citation, locator and date → automatic validation and deduplication →
-human review (the only source of approval) → final question. *Sources:* Cochrane systematic reviews via MedRevQA
-(treatment, diagnosis, prevention, prognosis; 128 of the 150 candidates) and NIH public-health pages via MedQuAD
-(22 candidates). Human review judged every candidate ACCEPT / REVISE / REJECT / HOLD; no code path can produce an
-approved question. Result: 123 reviewed, 113 usable (ACCEPT + REVISE), split by seed 20260921 into 23 validation
-and 90 test questions (`splits.json`), stratified by topic and by whether the cited review was revised.
-*Labels:* 99 of the 113 usable questions carry a verdict label (the 14 MedQuAD items do not). The
-`temporal_candidate` flag means the cited Cochrane review has been revised at least once (`.pub2` or higher); it
-does **not** assert that the verdict changed, and only 5 of the 113 questions are known verdict changes. The cited
-reviews are mostly old: of the 99 verdict-labelled questions, 55 cite reviews dated before 2010 and only 17 are
-from 2018 onward. The `ad` set (§2) replaces this pool as the Alzheimer's evaluation.
+**The question pool.** Every reference answer had to be traceable to a real published record, with human review as
+the only source of approval. Sources: Cochrane reviews via MedRevQA (128 of 150 candidates) and NIH pages via
+MedQuAD (22). Result: 123 reviewed, 113 usable, split by seed 20260921 into 23 validation and 90 test questions. 99
+of the 113 carried a verdict label; only 5 were known verdict changes; of the 99, 55 cited reviews dated before 2010
+and only 17 were from 2018 onward. The `ad` set (§2) replaces this pool as the Alzheimer's evaluation.
 
 ## 4. Known limitations of the data
 

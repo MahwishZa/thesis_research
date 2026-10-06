@@ -34,7 +34,7 @@ Terms as used consistently throughout this repository, code and documentation.
 | **T(s, q, t_q)** | Temporal score 2^(−age_days / H): 1.0 for a passage published on the question date, halving every H days; age is clamped at zero. |
 | **λ** | Weight on the temporal term, 0 to 1 (0.5 in the experiments; fixed, not fitted). |
 | **H** | Half-life in days (1,095 in the experiments). |
-| **θ** | Admission threshold of the archived framework's threshold-and-budget policy; **not used** by the MedChange arms. |
+| **θ** | Admission threshold of the removed original framework's threshold-and-budget policy; **not used** by the MedChange arms. |
 | **A(s)** | The admission score (1 − λ)·ρ(s) + λ·T(s, q, t_q), computed by `src/temporal_filter/`. |
 | **Paper weight w** | Stage 2: the weight of one paper in the four features: 1 (none), 2^(−age/H) (recency, age to t_q), 3 / 2 / 1 for a systematic review or meta-analysis / a controlled trial / anything else (study type), or the product. |
 | **Signed stance, no-stance share, conflict, informative mass** | The four stage-2 features: weighted mean of p(supports) − p(contradicts); weighted mean of p(neither); twice the smaller of the weighted supports and contradicts totals over the total weight; ln(1 + weighted supports + contradicts). |
@@ -67,7 +67,7 @@ Terms as used consistently throughout this repository, code and documentation.
 | **`temporal_candidate`** | *Archived framework.* Alzheimer's-pool flag: the cited Cochrane review has been revised at least once. Does not assert that the verdict changed. |
 | **Provenance firewall** | *Archived framework.* The rule (and automated check) that a question's reference evidence never appears among its retrieval candidates. |
 | **Corpus snapshot** | *Archived framework.* An id identifying exactly which corpus/index build a frozen item was produced against. |
-| **Frozen candidate set / `FrozenItem`** | *Archived framework.* The framework's cached retrieval record for one question (`_archive/alzheimers_framework/evaluation/freezing.py`). The current pipeline's analogue is the frozen pool of `freeze_candidates.py`. |
+| **Frozen candidate set / `FrozenItem`** | *Removed framework.* The original framework's cached retrieval record for one question. The current pipeline's analogue is the frozen pool of `freeze_candidates.py`. |
 
 ## Outcomes
 
@@ -80,8 +80,8 @@ Terms as used consistently throughout this repository, code and documentation.
 | **Outdated-verdict rate** | Share of changed items whose verdict equals the previous version's. |
 | **Per-class recall, macro-F1, NOT ENOUGH INFORMATION share** | Recall of each gold class; the mean F1 of the three classes; how often an arm answers NOT ENOUGH INFORMATION. They show whether an arm gains accuracy by reading evidence or only by abstaining more. |
 | **Manipulation check** | A measure of what the mechanism does (update-window share, passage age, overlap with B1); never an outcome. |
-| **Currency** | Historical: the mean temporal score of admitted evidence, formerly the primary metric. Circular for this system, so retired; survives only in `_archive/alzheimers_pilot_v1/`. |
-| **Groundedness** | *Archived framework* (`_archive/alzheimers_framework/evaluation/rag_metrics.py`). Fraction of an answer's content tokens present in its admitted evidence; a diagnostic, not an entailment judgement. The current pipeline uses the two indicators under "Anachronism rate" and "Unsupported decisive verdict". |
+| **Currency** | Historical: the mean temporal score of admitted evidence, formerly the primary metric. Circular for this system, so retired; it survived only in the first pilot, now removed (Git history). |
+| **Groundedness** | *Removed framework* (`rag_metrics.py`, Git history). Fraction of an answer's content tokens present in its admitted evidence; a diagnostic, not an entailment judgement. The current pipeline uses the two indicators under "Anachronism rate" and "Unsupported decisive verdict". |
 | **Context precision / recall** | *Archived framework.* Admitted evidence against known gold-relevant evidence where annotated; `None`, never 0.0, when unannotated. |
 | **Paired McNemar / bootstrap** | The exact test on discordant paired outcomes and the item-resampled confidence interval used to judge differences. |
-| **Extractive stand-in generator** | Historical placeholder that returned the top passage verbatim; used only by the superseded pilot and the archived fixture demo. |
+| **Extractive stand-in generator** | Historical placeholder that returned the top passage verbatim; used only by the superseded pilot and the fixture demo, both removed. |

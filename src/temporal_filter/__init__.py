@@ -6,8 +6,8 @@ Admission by a relevance score plus a recency term, instead of relevance alone.
     scorer.py     A(s) = (1 - lambda) * rho(s) + lambda * T(s), the combined admission score
 
 ``experiments/medchange/arms.py`` calls both, so the formula exists in exactly one place. The threshold-and-budget
-form of the policy (``admission.py``) belonged to the archived framework and lives in
-``_archive/alzheimers_framework/src/temporal_filter/``. Since 2026-10-05 the proposed system of the thesis is the
+form of the policy (``admission.py``) belonged to the original framework, removed on 2026-10-06 (Git history,
+commit 5e03540). Since 2026-10-05 the proposed system of the thesis is the
 evidence-criteria verification of ``experiments/medchange/rag2.py``, not this package.
 """
 

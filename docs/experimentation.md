@@ -61,7 +61,7 @@ All figures are computed from committed files; item-level inspection used the de
    which is a reading task, not an admission rule.
 5. **There is no working RAG² baseline in the pipeline.** B1 is standard retrieval; B2 is an untrained
    Flan-T5 stand-in whose input was cut for 31% of the papers it admitted, and it lost 12.6 pp against B1.
-   RAG²'s trained filter is not distributed and a local retraining learned only the class prior (archived).
+   RAG²'s trained filter is not distributed and a local retraining learned only the class prior (`log.md` Phases 13–18).
 6. **The evaluation cannot confirm 1 point.** With 528 paired questions the smallest effect detectable with
    80% power is about 4–6 pp (§7). Earlier gains measured on 226 dev items did not replicate (retrieval: +8.6
    pp on dev changed items, +3.1 pp on the confirmatory changed items, not significant).
@@ -193,7 +193,7 @@ supporting outcomes.
 | Recall of each gold class; macro-F1; share of NOT ENOUGH INFORMATION answers | per-class recall over all items, mean F1 of the three classes, how often an arm abstains | stage 2: the main behaviour retrieval changes (SUPPORTED recall falls, abstention rises) and the one a layer can correct |
 | Wording agreement; irrelevant-paper control; invalid-output rate; stance-direction AUC against the gold labels (dev) | agreement of the two wordings; share of control papers rated "neither"; share of unusable outputs on real papers; how well the signed stance separates gold SUPPORTED from REFUTED | stage-2 pilot (gate 1), `stance_check.py` |
 | Label reproducibility; stated-verdict consistency | agreement and kappa of an independent model's re-labelling with the gold labels (`label_audit.py`); agreement of an independent judge with the stated verdict on a sample (`consistency_auto.py`) | independent-model audits that replace the human checks |
-| Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional; outside the primary analysis; the human hallucination annotation is dropped (its code is archived in `_archive/alzheimers_framework/evaluation/annotation.py`) |
+| Automatic faithfulness proxies | citations point to admitted passages; entailment by a second-family model | optional; outside the primary analysis; the human hallucination annotation is dropped (its code was removed with the original framework, 2026-10-06; Git history) |
 | Anachronism rate (realigned study) | the answer mentions a year later than the question date's year; no admitted study, all published before the question date, can support it (approximate: a four-digit count is read as a year) | indicator of unsupported, parametric or future knowledge |
 | Unsupported decisive verdict (realigned study) | SUPPORTED or REFUTED while citing none of the admitted studies ("[n]" in a standard answer; the DIRECT STUDIES line in the three-line format) | indicator of unsupported answers; questions without admitted evidence are excluded |
 | Verifier behaviour (realigned study) | share of valid outputs; share of verdicts changed from R2's; changes that fixed or broke an answer, and their direction | mechanism of the proposed component |
@@ -210,11 +210,9 @@ judges to directly test the question's intervention and outcome.
 demonstrates that the mechanism acts as designed; it says nothing about whether answers improve.
 Earlier in the project the primary metric was *currency* (the mean temporal score of admitted
 evidence) and the fitting objective was the same quantity, so the proposed system would have won it
-by construction; that computation survives only in the archived v1 runner
-(`_archive/alzheimers_pilot_v1/`). The active retrieval-level metrics above replace it. Token F1,
-exact match, ROUGE-L, context precision/recall and token-overlap groundedness are implemented only in the archived
-framework (`_archive/alzheimers_framework/evaluation/rag_metrics.py`, standard RAG diagnostics for its fixture
-runs); the current pipeline does not compute them, because a single verbatim reference sentence is a weak target
+by construction; that computation survived only in the first pilot's runner (removed 2026-10-06; Git history). The active retrieval-level metrics above replace it. Token F1,
+exact match, ROUGE-L, context precision/recall and token-overlap groundedness are implemented only in the original
+framework (removed 2026-10-06; Git history; standard RAG diagnostics for its fixture runs); the current pipeline does not compute them, because a single verbatim reference sentence is a weak target
 and groundedness depends on each arm's own admitted evidence. Generation is measured here by verdict accuracy,
 per-class recall, macro-F1 and the unsupported-answer indicators above.
 
@@ -421,7 +419,7 @@ All numbers are from the 226 dev items; none is a confirmatory result.
 | Result tables and figures in the base paper's layout | `results/report/report_data_dev.json` (the data of the dev version); `REPORT.md` is rewritten by each run of `report`, and the committed one is the confirmatory version (§14) |
 
 The only earlier real-data outputs (the Alzheimer's pilot with an extractive stand-in generator and an
-unvalidated baseline checkpoint) are archived in `_archive/alzheimers_pilot_v1/results/`; they showed the
+unvalidated baseline checkpoint) were in the first pilot's results folder (removed 2026-10-06; Git history); they showed the
 pipeline ran, not that anything improved.
 
 ## 14. Results: confirmatory split (528 items, run once)

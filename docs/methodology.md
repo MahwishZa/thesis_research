@@ -34,7 +34,7 @@ date labels, and (R2V, R2V-ND) R2's answer as a draft to check.
 The Alzheimer's-specific design that preceded this one (a local Alzheimer's corpus and a 113-question reviewed
 pool) could not test a temporal claim or reach useful power: only 5 of its 113 questions are known verdict changes
 and 71% of the corpus is from 2020 or later while the questions cite mostly older reviews (`log.md` Phase 21). It
-is archived (`_archive/alzheimers_framework/`) and not used. The realigned study replaces it with the `ad` set,
+was removed on 2026-10-06 (Git history, commit `5e03540`) and is not used. The realigned study replaces it with the `ad` set,
 built by the same rules as the main benchmark, run once after the freeze (`experimentation.md` §11). Because every
 `ad` question is an unchanged-verdict question, changed-question and update-window results cannot be computed for
 it; the secondary reading is on its overall verdict accuracy.
@@ -77,10 +77,9 @@ half-life. The formula and the decay live in **one place**, `src/temporal_filter
 `TemporalPolicy`), which the MedChange arms call; `λ = 0` recovers pure relevance. In the MedChange
 experiment λ = 0.5 and H = 1,095 days are **fixed, not fitted**, and passages are admitted by top-5
 score with no θ threshold. The threshold-and-budget form (admit if A ≥ θ, then cap at the budget)
-is archived with the Alzheimer's framework it served
-(`_archive/alzheimers_framework/src/temporal_filter/admission.py`, still tested there); the validation-split
-fitting of λ, θ and H belonged to the superseded Alzheimer's pilot (`_archive/alzheimers_pilot_v1/`) and is not
-part of the current experiments. Since the realignment the Temporal Filter is a stage-1 result of record, not the
+belonged to the Alzheimer's framework it served and was removed with it on 2026-10-06 (Git history, commit
+`5e03540`); the validation-split fitting of λ, θ and H belonged to the superseded Alzheimer's pilot, removed at the
+same time, and is not part of the current experiments. Since the realignment the Temporal Filter is a stage-1 result of record, not the
 proposed system: the proposed system is R2V (below).
 
 **What the RAG²-inspired arms are and are not.** RAG² (Sohn et al., NAACL 2025) trains a Flan-T5
@@ -88,12 +87,12 @@ filter on perplexity-derived labels, keeps passages labelled [HELPFUL], and caps
 Its checkpoint is not distributed (the authors' README says so) and only a 5-example sample of its
 labels is released. A local retraining attempt (500 labels from a 4-bit Llama-3-8B on CPU) learned only
 the class prior, and control experiments showed the labels carry almost no passage-specific signal at
-that scale (archived: `_archive/rag2_filter_reproduction/`, `log.md` Phases 13–18). B2 and P therefore use
+that scale (removed 2026-10-06; `log.md` Phases 13–18). B2 and P therefore use
 the **unmodified Flan-T5-large** asked RAG²'s prompt plus "Answer yes or no.", scored as P(yes) and
 used as a ranking, not a threshold. They are untrained, text-only, helpfulness-ranked stand-ins and
 must be described that way. The faithful RAG² admission slot (`FlanT5RAG2Filter`, which needs an externally
-trained checkpoint) was part of the archived framework (`_archive/alzheimers_framework/src/baseline/`) and has
-never been run on real data.
+trained checkpoint) was part of the original framework (removed 2026-10-06; Git history, commit `5e03540`) and
+was never run on real data.
 
 **Relation to published work.** B3 corresponds to adding a temporal score to a retriever's ranking, as in
 TempRALM (Gade & Jetcheva). The proposed arm's only difference from B3 is the relevance signal; the
@@ -172,10 +171,9 @@ verdict and is counted as invalid.
 | Evidence of R2, R2C, R2V, R2V-ND | `rag2_run.answer_one` admits for every criteria arm through R2's list and R2's filter judgements, so the four arms read the same abstracts in the same order |
 | Realigned settings and prompts | `rag2.SETTINGS` and every prompt text are hashed into each output file's configuration; a resume under a different configuration is refused; the design record (`results/rag2_design.json`) must be on origin/main and equal to the current design before the held-out run starts |
 
-The original three-arm framework (archived: `_archive/alzheimers_framework/evaluation/runner.py`) enforced
-parity with assertions that ran before the first item (candidate-set hash, budget, prompt, generator identity);
-its tests are `_archive/alzheimers_framework/tests/unit/test_runner_parity.py` and the integration suite beside
-it. The current pipeline enforces the same properties through the table above.
+The original three-arm framework (removed 2026-10-06; Git history, commit `5e03540`) enforced parity with
+assertions that ran before the first item (candidate-set hash, budget, prompt, generator identity). The current
+pipeline enforces the same properties through the table above.
 
 ## 6. Generator
 
@@ -227,7 +225,7 @@ the dates and the currency criterion.
 | Class definitions in the criteria arms restate the benchmark's labelling rubric | the benchmark's answering prompt | the dev errors show the two definitions differ | measured separately by R2C |
 | Fixed-budget top-5, no θ | original Temporal Filter | removes a tuning degree of freedom | none among the arms |
 | 4-bit GGUF generator on CPU | RAG²'s generator | hardware | applies to all arms alike |
-| PubMed abstracts, as-of | local full-text Alzheimer's corpus | per-question as-of retrieval across medicine | the local corpus is archived and not used |
+| PubMed abstracts, as-of | local full-text Alzheimer's corpus | per-question as-of retrieval across medicine | the local corpus was removed and is not used |
 | Model-generated gold labels | human-verified labels | the MedChange release | reproducibility of the labels measured by an independent model (`label_audit.py`); clinician validation unavailable (stated limitation) |
 | Stance judged paper by paper by the same 4-bit 8B model, from title + RESULTS + CONCLUSIONS | holistic reading of five full abstracts | removes order sensitivity; conclusion-focused inputs are much shorter than full abstracts (measured in the P0 diagnostics) | stage 2 only; quality checked by machine checks, a negative control and its predictive value on dev (no human validation) |
 | Logistic layer fitted on dev and frozen | fixed-rule admission (stage 1) | combines stance with the RAG answer | learns the dev class mix; B1R receives the same fitting |

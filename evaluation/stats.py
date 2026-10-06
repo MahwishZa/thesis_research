@@ -9,7 +9,7 @@ beside the interval, not instead of it.
 * ``holm``: Holm adjustment of the p-values of one pre-declared family.
 
 Standard library only, so no SciPy dependency. (The hallucination-rate accounting of the original design,
-``har``, ``coverage`` and ``compare_systems``, lives in ``_archive/alzheimers_framework/evaluation/har_stats.py``.)
+``har``, ``coverage`` and ``compare_systems``, was removed on 2026-10-06 with the original framework: Git history, commit 5e03540.)
 """
 
 from __future__ import annotations

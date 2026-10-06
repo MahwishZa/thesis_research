@@ -10,33 +10,26 @@ dist/
 # Regenerate them locally (docs/reproducibility.md) instead.
 # (gitignore has no trailing comments: every comment sits on its own line.)
 
-# Trained model checkpoints (archived RAG2 filter-reproduction attempt).
+# Trained model checkpoints (the removed RAG2 filter-reproduction attempt).
 checkpoints/
 # Local GGUF model files.
 models/
 ram_monitor.csv
-# Full retrieval index (~12.5 GB) of the archived framework, at its old and its new location.
+# Local leftovers of the first design, removed from the repository on 2026-10-06: the retrieval index
+# (~12.5 GB), the corpus text (multi-GB, at the repository root) and, inside the removed _archive folder,
+# the filter-training labels (16.6 h of compute) and the corpus data. A computer that built them still holds
+# them after a `git pull`, and `git add -A` must never pick them up. The leading slash anchors /corpus/ to the
+# repository root.
 experiments/results/index/
 experiments/results/index_pilot_reduced_scope/
-_archive/alzheimers_framework/experiments/results/index/
-_archive/alzheimers_framework/experiments/results/index_pilot_reduced_scope/
-_archive/alzheimers_framework/experiments/results/end_to_end/
-
-# The corpus directory at its location BEFORE the 2026-10-05 reorganisation (it is now
-# _archive/alzheimers_framework/corpus/, which has its own .gitignore). Nothing is tracked at the old
-# place any more, but a machine that built the corpus still holds multi-GB data there and
-# `git add -A` must never pick it up. The leading slash anchors the rule to the repository root.
 /corpus/
+_archive/
 
 # MedChange-derived questions, fetched PubMed abstracts, frozen candidate pools and raw
 # working outputs. The MedChange release states no licence and abstracts are publisher
 # text, so they are rebuilt from the manifest, not redistributed. Results worth keeping
 # are copied to experiments/medchange/results/ (tracked) - see docs/reproducibility.md.
 experiments/medchange/data/
-
-# Archived RAG2 filter-reproduction attempt: labels embed textbook passages.
-_archive/rag2_filter_reproduction/filter_training/labels/
-_archive/rag2_filter_reproduction/filter_training/.textbook_index_cache/
 
 # The same folders at their location BEFORE the 2026-10-02 reorganisation. Nothing is
 # tracked there any more; the entry stays so leftover local files can never be committed.

@@ -51,6 +51,10 @@ MedCPT encoders to ``experiments/medchange/encoders.py`` and the Temporal Filter
 checked by named *files*, not directories, because a laptop that pulls this change still holds the
 gitignored ``corpus/data/`` and ``experiments/results/index/`` folders; and the documentation check refuses
 any current document that names moved code by its old path.
+
+2026-10-06: the ``_archive`` folder itself was removed (nothing active imported it; Git history, commit 5e03540,
+keeps it). The archive-specific guards went with it. Kept: no active code may import ``_archive``, and the
+``.gitignore`` keeps the local leftovers of the first design out of Git.
 """
 
 import re
@@ -130,16 +134,6 @@ class SupersededScopeTests(unittest.TestCase):
     """The old (hallucination-rate-primary) question may be remembered as
     history, never asserted as current."""
 
-    def test_archive_readme_records_why_the_earlier_work_is_not_current(self):
-        """Both earlier research questions must stay *recorded somewhere* -
-        deleting the explanation would make _archive/test_pairs/
-        inexplicable."""
-        archive_readme = ROOT / "_archive" / "README.md"
-        self.assertTrue(archive_readme.exists())
-        body = text(archive_readme)
-        self.assertIn("not part of the current", body.lower())
-        self.assertIn("test_pairs", body)
-
     def test_active_code_does_not_import_the_archive(self):
         """The archive move is only real isolation if nothing active
         depends on it - the one thing this whole cleanup could get wrong
@@ -181,19 +175,6 @@ class SupersededScopeTests(unittest.TestCase):
         }
         self.assertEqual({p.name for p in docs.glob("*.md")}, expected)
 
-    def test_legacy_docs_are_archived_not_deleted(self):
-        """The four previous docs were replaced, not discarded - they must
-        still be readable for anyone who wants the fuller historical
-        record."""
-        legacy = ROOT / "_archive" / "docs_legacy"
-        expected = {
-            "current_objectives.md",
-            "research_experimental_specification.md",
-            "status_and_decisions.md",
-            "question_review.md",
-        }
-        self.assertEqual({p.name for p in legacy.glob("*.md")}, expected)
-
     def test_readme_does_not_state_the_old_question_as_current(self):
         """The old primary/secondary framing (hallucination rate primary,
         QA accuracy secondary, no third objective) must not reappear as if
@@ -206,9 +187,8 @@ class SupersededScopeTests(unittest.TestCase):
 
 class ArchiveLayoutTests(unittest.TestCase):
 
-    #: Files (not folders: see the module docstring) that were active before 2026-10-05 and now live only
-    #: in the archive. The first group is the abandoned filter-reproduction and pilot work, the second the
-    #: Alzheimer's-specific framework.
+    #: Files (not folders: see the module docstring) that were active before 2026-10-05 and are gone: the
+    #: abandoned filter-reproduction and pilot work, and the Alzheimer's-specific framework.
     MOVED_OUT_OF_THE_ACTIVE_TREE = (
         "experiments/baseline", "experiments/shared/runners/fit_and_evaluate.py",
         "experiments/shared/runners/run_real_evaluation.py", "experiments/results/fit_and_evaluate",
@@ -221,24 +201,13 @@ class ArchiveLayoutTests(unittest.TestCase):
         "evaluation/tests/integration/test_end_to_end_runner.py", "evaluation/tests/corpus_scaffold.py",
         "evaluation/tests/unit/test_runner_parity.py",
     )
-    #: Where they are now (and the active files that replaced the shared ones).
-    NOW_IN_THE_ARCHIVE = (
-        "_archive/rag2_filter_reproduction/filter_training", "_archive/alzheimers_pilot_v1/fit_and_evaluate.py",
-        "_archive/alzheimers_framework/corpus/scripts/01_pubmed_download.py",
-        "_archive/alzheimers_framework/corpus/metadata/pmc.csv",
-        "_archive/alzheimers_framework/src/baseline/admission.py",
-        "_archive/alzheimers_framework/evaluation/runner.py",
-        "_archive/alzheimers_framework/experiments/shared/questions/splits.json",
-        "_archive/alzheimers_framework/experiments/shared/retrieval/pipeline.py",
-        "_archive/alzheimers_framework/tests/unit",
-    )
     STAYED_ACTIVE = ("experiments/medchange/encoders.py", "src/temporal_filter/scorer.py",
                      "src/temporal_filter/temporal.py", "src/common/evidence.py", "evaluation/stats.py")
 
-    def test_abandoned_work_lives_in_the_archive_not_in_the_active_tree(self):
+    def test_abandoned_work_is_gone_from_the_active_tree(self):
         for moved in self.MOVED_OUT_OF_THE_ACTIVE_TREE:
-            self.assertFalse((ROOT / moved).exists(), f"{moved} should live under _archive/")
-        for archived in self.NOW_IN_THE_ARCHIVE + self.STAYED_ACTIVE:
+            self.assertFalse((ROOT / moved).exists(), f"{moved} should no longer exist in the active tree")
+        for archived in self.STAYED_ACTIVE:
             self.assertTrue((ROOT / archived).exists(), archived)
 
     def test_every_active_package_is_listed_for_installation_and_nothing_else_is(self):
@@ -259,36 +228,20 @@ class ArchiveLayoutTests(unittest.TestCase):
             found.add(".".join(parts))
         self.assertEqual(listed, found)
 
-    def test_archive_readme_lists_every_archived_folder(self):
-        body = text(ROOT / "_archive" / "README.md")
-        for child in sorted(p.name for p in (ROOT / "_archive").iterdir()
-                            if p.is_dir() and p.name != "__pycache__"):
-            self.assertIn(child, body, f"_archive/{child} is not described in _archive/README.md")
-
-
 #: Documentation that must describe the CURRENT repository exactly. ``log.md`` is a dated
 #: record of what was true when written and is deliberately excluded.
 CURRENT_DOCS = ("README.md", "docs/methodology.md", "docs/data.md",
                 "docs/reproducibility.md", "docs/glossary.md", "docs/experimentation.md",
                 "experiments/medchange/README.md", "experiments/medchange/results/README.md")
-#: The archive's own READMEs. They name old locations on purpose (a "was here, is there now" table), so only the
-#: ``_archive/...`` paths and commands they give are checked, and the moved-code check does not apply.
-ARCHIVE_DOCS = ("_archive/README.md", "_archive/alzheimers_framework/README.md")
 #: Paths named in the docs that are generated or machine-local and may be absent.
 GENERATED_PREFIXES = (
     "experiments/medchange/data", "experiments/medchange/results/analysis_",
     "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/helpfulness_",
-    "_archive/alzheimers_framework/experiments/results/index",
-    "_archive/alzheimers_framework/corpus/data/chunks", "_archive/alzheimers_framework/corpus/data/normalized",
-    "_archive/alzheimers_framework/corpus/data/deduplicated", "_archive/alzheimers_framework/corpus/data/raw/pmc",
-    "_archive/rag2_filter_reproduction/filter_training/labels",
-    "_archive/rag2_filter_reproduction/filter_training/.textbook_index_cache",
     "experiments/baseline",
 )
 #: Code that moved on 2026-10-05, by its old active path. A current document that names one of these is
-#: pointing at a path that no longer exists; the archive path (``_archive/alzheimers_framework/...``) is fine,
-#: because the lookbehind rejects a match preceded by ``/``.
+#: pointing at a path that no longer exists; a path inside another path (preceded by ``/``) is not matched.
 MOVED_CODE = re.compile(
     r"(?<![\w./-])(?:experiments/shared|experiments/results|src/baseline|src/proposed"
     r"|src/common/(?:generator|hf_generator|system)"
@@ -309,18 +262,11 @@ class DocumentationIntegrityTests(unittest.TestCase):
         for rel in CURRENT_DOCS:
             yield rel, text(ROOT / rel)
 
-    def _archive_docs(self):
-        for rel in ARCHIVE_DOCS:
-            yield rel, text(ROOT / rel)
-
     def test_named_paths_exist(self):
         missing = []
-        for rel, body, only_archive in ([(r, b, False) for r, b in self._docs()]
-                                        + [(r, b, True) for r, b in self._archive_docs()]):
+        for rel, body in self._docs():
             for m in self.PATH.finditer(body):
                 path = m.group(1).rstrip("/.,:;")
-                if only_archive and not path.startswith("_archive/"):
-                    continue                            # an archive README names old locations on purpose
                 if any(c in path for c in "*<>{}") or path.startswith(GENERATED_PREFIXES):
                     continue
                 if not (ROOT / path).exists():
@@ -329,7 +275,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
 
     def test_named_commands_exist(self):
         missing = []
-        for rel, body in list(self._docs()) + list(self._archive_docs()):
+        for rel, body in self._docs():
             for m in self.COMMAND.finditer(body):
                 module = m.group(1)
                 if module in ("unittest", "pyflakes"):
@@ -376,7 +322,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
                     offenders.append(f"{rel}: {term}")
         self.assertEqual(offenders, [])
 
-    def test_current_docs_name_moved_code_only_by_its_archive_path(self):
+    def test_current_docs_do_not_name_moved_code_by_its_old_path(self):
         """The 2026-10-05 move left ``corpus/``, ``experiments/shared/``, ``src/baseline/`` and the like
         in the archive. A current document that still gives the old path points at nothing (on a laptop
         that holds the gitignored ``corpus/data/`` it would even look as if it worked)."""

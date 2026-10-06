@@ -25,7 +25,7 @@ simplifying code:
     is part of this experiment. (Earlier exploratory work looked at a
     four-component score with an entailment-based "support" signal and a
     source-authority term; both needed extra models the thesis does not
-    have, and are archived - see ``_archive/README.md``.)
+    have, and were dropped.)
 
 ``lambda``, ``theta`` and the half-life ``H`` are the only tunable
 quantities, and all three are fitted on the validation split.

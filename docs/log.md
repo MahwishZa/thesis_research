@@ -1164,3 +1164,17 @@ data are rebuilt, not redistributed. *Assumed:* that the as-of pools of the old 
 
 **Still to do (researcher).** Pull this change; run `rag2_pipeline dev` (≈ 26 h by the estimate) and read
 `RAG2_DEV_REPORT.md`; the held-out and `ad` phases follow only after that report, each once.
+
+## Phase 40 — The `_archive` folder removed (Oct 6)
+
+At the researcher's request, and after checking that it was not required: nothing in the pipeline or the active tests
+imports it (checked by the import guard and a scan), no document the thesis depends on lives only there (the
+negative results are written up in this log, Phases 13–19, and in `methodology.md`), and Git history keeps every
+file (commit `5e03540`; `git checkout 5e03540 -- _archive` restores the folder). What went: the Alzheimer's
+framework (corpus scripts, question pool, three-arm runner, annotation, RAG metrics), the RAG² filter-reproduction
+attempt, the first pilot, the matched-pair work, the legacy documents and 592 archived tests. The README, data,
+methodology, glossary, reproducibility and protocol documents, `pyproject.toml` (the `archive` extras), the
+hermetic check and the guard tests were updated; the three archive-specific guards were dropped (active suite: 277
+tests, passing also in a numpy-only environment with sockets blocked). `.gitignore` now ignores `_archive/` as a
+whole, so local leftovers of the first design (corpus text, index, filter-training labels) cannot be committed; a
+`git pull` does not delete them. Earlier entries of this log name `_archive` paths as they were then.

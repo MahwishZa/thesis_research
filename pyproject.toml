@@ -3,9 +3,8 @@
 #
 # The base install is numpy only: that is all the active code and the active test suite import at
 # module level (checked by an import analysis on 2026-10-05). The heavy backends are imported lazily
-# and come with the extras below. _archive/ is not listed: it is not an installable package and no
-# active code imports it (enforced by evaluation/tests/unit/test_scope_invariants.py, which also
-# checks that the package list below matches the active packages).
+# and come with the extras below. The package list below is checked against the active packages by
+# evaluation/tests/unit/test_scope_invariants.py.
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -29,19 +28,6 @@ models = ["torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99"]
 # on Windows install a prebuilt wheel, see docs/reproducibility.md).
 medchange = [
     "torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99",
-    "llama-cpp-python>=0.2.60",
-]
-# Needed only to run the archived work (_archive/): the corpus scripts of the Alzheimer's framework
-# (PyYAML, requests, pypdf) and the matched-pair scripts. The archived tests import these at module level.
-archive = ["PyYAML>=6.0", "requests>=2.28", "pypdf>=3.0"]
-# Used only by the archived RAG2 filter-reproduction attempt
-# (_archive/rag2_filter_reproduction/): pick ONE of the two.
-archive-filter-training-hf = [
-    "torch>=2.0", "transformers>=4.40", "datasets>=2.14",
-    "sentencepiece>=0.1.99", "accelerate>=0.30", "bitsandbytes>=0.43",
-]
-archive-filter-training-gguf = [
-    "transformers>=4.40", "datasets>=2.14", "sentencepiece>=0.1.99",
     "llama-cpp-python>=0.2.60",
 ]
 
