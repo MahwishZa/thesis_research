@@ -190,8 +190,7 @@ class ArchiveLayoutTests(unittest.TestCase):
     #: Files (not folders: see the module docstring) that were active before 2026-10-05 and are gone: the
     #: abandoned filter-reproduction and pilot work, and the Alzheimer's-specific framework.
     MOVED_OUT_OF_THE_ACTIVE_TREE = (
-        "experiments/baseline", "experiments/shared/runners/fit_and_evaluate.py",
-        "experiments/shared/runners/run_real_evaluation.py", "experiments/results/fit_and_evaluate",
+        "experiments/shared/runners/fit_and_evaluate.py", "experiments/shared/runners/run_real_evaluation.py",
         "corpus/scripts/01_pubmed_download.py", "corpus/config/search_queries.yaml",
         "corpus/metadata/pmc.csv", "src/baseline/admission.py", "src/proposed/scorer.py",
         "src/common/generator.py", "src/common/system.py", "evaluation/runner.py",
