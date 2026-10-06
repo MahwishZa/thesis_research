@@ -1,0 +1,44 @@
+{
+  "encoders": {
+    "article": "ncbi/MedCPT-Article-Encoder",
+    "query": "ncbi/MedCPT-Query-Encoder",
+    "reranker": "ncbi/MedCPT-Cross-Encoder"
+  },
+  "generator_model_sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+  "prompts": {
+    "answer_system": "2d0b49c4731e8eeb",
+    "answer_template": "d80db0af96e4fee6",
+    "crit_task": "8651ff8af7cd42c7",
+    "criteria_dated": "00f7e8d16e507780",
+    "criteria_undated": "0d2097b7dc4b5cc3",
+    "filter_system": "6dba1a79051dd450",
+    "filter_template": "4dafdfe4ff2b56e0",
+    "rationale_system": "7ae5c6e51bd515d5",
+    "rationale_template": "eac58bf70017b2ae",
+    "review_system": "f5c9d7e40e673ef5",
+    "review_template": "c19af814239d53c2",
+    "verify_task": "b6fc30bcb090139c"
+  },
+  "settings": {
+    "answer_max_new_tokens": 160,
+    "answer_n_ctx": 6144,
+    "budget": 5,
+    "dense_query": "rationale (question if the rationale is empty)",
+    "filter_n_ctx": 1536,
+    "filter_snippet": "title + results + conclusions, <= 200 words",
+    "filter_threshold": 0.5,
+    "invalid_verification": "draft verdict kept",
+    "min_yes_no_mass": 0.5,
+    "no_evidence": "standard closed-book answer",
+    "quota_per_stratum": 8,
+    "rationale_max_new_tokens": 128,
+    "rerank_keep": 8,
+    "rerank_query": "question",
+    "strata": [
+      "SR/MA",
+      "RCT",
+      "other"
+    ]
+  },
+  "settings_sha256": "1743afd7045b"
+}
