@@ -1,7 +1,7 @@
 """Plain-language reports written by the pipeline: ``DEV_REPORT.md`` (before the go/no-go) and
 ``FINDINGS.md`` (after the confirmatory run). They only restate what the pre-declared rules say.
 
-The wording of every conclusion is fixed in advance in §10 of the stage-2 protocol (``docs/experiment_plan.md`` at commit 92e3aaf); this module
+The wording of every conclusion is fixed in advance in §10 of the stage-2 protocol (the file ``experiment_plan.md`` at commit 92e3aaf); this module
 chooses between the pre-written sentences according to the computed results and never adds
 interpretation of its own.
 """
@@ -69,7 +69,7 @@ def findings(results: Path) -> str:
     r = rep["reading"]
     pf = rep["primary_family"]
     lines = ["# Findings (confirmatory split, run once)", "",
-             "Each conclusion is chosen by the rules fixed in `docs/experiment_plan.md` before the data were opened.", ""]
+             "Each conclusion is chosen by the rules fixed in the stage-2 protocol (the file `experiment_plan.md` at commit 92e3aaf) before the data were opened.", ""]
     rq1 = pf.get("RQ1 B1 vs B0")
     if rq1:
         lines += [f"## RQ1: does as-of retrieval beat no evidence?  **{r['RQ1']}**", "",

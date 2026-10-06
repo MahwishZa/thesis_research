@@ -15,7 +15,7 @@ Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` and `
 answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report/REPORT.md``,
 ``tables.tex``, ``report_data.json`` and four PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
 Every number is computed from those files; nothing is typed in. The dev tables are exploratory; only the
-confirmatory split supports claims (``docs/experiment_plan.md``).
+confirmatory split supports claims (``docs/experimentation.md``).
 """
 
 from __future__ import annotations
@@ -427,7 +427,7 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if d["split"] == "dev":
         lines += ["> **Dev split, exploratory.** These 226 questions were used to design stage 2 and to fit its layer; "
                   "intervals are wide (about ±6 to ±8 points) and nothing here is a confirmatory finding. The confirmatory "
-                  "split (528 questions) is run once, after the frozen model is committed (`docs/experiment_plan.md`).", ""]
+                  "split (528 questions) is run once, after the frozen model is committed (`docs/experimentation.md`).", ""]
     n = d["n"]
     groups = {r["group"][:6] for r in d["systems"]}
     arms = {r["arm"] for r in d["systems"]}

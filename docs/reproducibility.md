@@ -8,9 +8,10 @@ identical everywhere.
 ## 1. Install
 
 ```bash
-pip install -e .                    # tests, framework, corpus scripts: PyYAML, numpy, requests, pypdf
+pip install -e .                    # the active test suite and the pipelines' pure logic: numpy only
 pip install -e ".[models]"          # torch, transformers, sentencepiece (MedCPT, Flan-T5)
 pip install -e ".[medchange]"       # the models extra plus llama-cpp-python (generation)
+pip install -e ".[report]"          # matplotlib, for the figures of `report` only
 ```
 
 Python ≥ 3.10; `pyproject.toml` is the single source of dependency truth. Environment notes that cost
@@ -31,24 +32,18 @@ time once:
 ## 2. Tests
 
 ```bash
-python -m unittest discover -s evaluation -t .      # active suite: no network, no models, no real corpus
-python -m unittest discover -s _archive -t .         # archived work (RAG² filter attempt, v1 pilot runner)
+python -m unittest discover -s evaluation -t .      # active suite: no network, no models, no real data
 ```
 
 The active suite needs neither torch nor transformers nor network; model-dependent code is exercised
-through interfaces and fixtures. Checked on 2026-10-04: in a fresh virtualenv holding only the four
-base dependencies, with outbound socket connections blocked, both suites pass (679 active and 127 archived
-tests; `log.md`, Phase 30).
-
-Tests that run the corpus stage scripts work in a lean scaffold copy
-(`evaluation/tests/corpus_scaffold.py`) that never copies `corpus/data/`, so they behave identically on a
-fresh clone and on a machine holding the multi-GB real corpus, and tests write only to temporary
-directories. `python -m evaluation.tests.check_hermetic` verifies that: it runs both suites and fails if
-any file in the repository, ignored files included, was created, modified or deleted. (It caught tests
-overwriting stage 06's resume marker `corpus/data/chunks/.chunk_progress.json` on 2026-10-02; if that
-file exists with `"documents_done": 10`, it is such an artefact and can be deleted.) The optional static
-check used in the audit is `python -m pyflakes src evaluation experiments corpus/scripts` (`pip install
-pyflakes`; not a project dependency; it flags one intentional availability import in `encoders.py`).
+through interfaces and fixtures, and the realigned pipeline is run end to end on fake models in
+`test_medchange_rag2.py`. Checked on 2026-10-06: in a fresh virtualenv holding only the base dependency (numpy),
+with outbound socket connections blocked, the suite passes (see `log.md`, Phase 40, for the count; the one figure
+test is skipped there because matplotlib is the optional `report` extra), and a fresh clone of GitHub passes it too.
+`python -m evaluation.tests.check_hermetic` verifies that the suite writes nothing into the repository: it fails if
+any file in the repository, ignored files included, was created, modified or deleted. The optional static check
+used in the audit is `python -m pyflakes src evaluation experiments` (`pip install pyflakes`; not a project
+dependency; it flags one intentional availability import in `encoders.py`).
 
 ## 3. Primary pipeline: MedChange as-of benchmark
 
@@ -66,9 +61,9 @@ an interruption.
 | 6 | `python -m experiments.medchange.helpfulness --split dev --device cpu` | zero-shot Flan-T5 on 20 pairs per item; 5,946 s for 223 items (1.33 s/pair) |
 | 7 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\<file>.gguf` | llama.cpp CPU: ≈ 18 s per B0 answer, ≈ 66 s with five passages; add `--limit 3` for a timing test |
 | 8 | `python -m experiments.medchange.analyze --split dev` | per-arm accuracy, retrieval-level metrics, paired tests with Holm, gates G2/G3 |
-| 9 | *(retired, archived in `_archive/medchange_human_checks/`)* the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
+| 9 | *(retired and removed; `log.md` Phase 29)* the human check of stated verdicts | replaced by `consistency_auto` (step 14); the researcher is not asked to label anything |
 | 10 | `python -m experiments.medchange.error_analysis --split dev --out-dir experiments\medchange\results` | seconds; uses the existing answers and frozen pools, no generation |
-| 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experiment_plan.md` §1 |
+| 10b | `python -m experiments.medchange.dev_audit --out-dir experiments\medchange\results` | about 2 s; needs only `benchmark.jsonl` and the committed `results\answers_dev.jsonl` (dev only; refuses `--split confirm`); recomputes the figures quoted in `experimentation.md` §2 |
 
 Dev is run first. For arms B2, P and C1 run step 6 before step 7. The full dev run of all six arms is
 ≈ 22 h (*estimated* from the measured per-answer times). Steps 4 and 5 call NCBI E-utilities and accept an
@@ -100,55 +95,37 @@ exploratory dev version from the out-of-fold predictions.
 
 **Realigned study (adapted RAG² + evidence-criteria verification; no network, no human labelling).** It reuses
 the benchmark, the as-of PubMed records and abstracts from steps 2–5 (`data\pubmed_g0\`, `data\abstracts.jsonl`)
-and the B0/B1 answers. Protocol: `docs/experiment_plan.md`.
+and the B0/B1 answers. Protocol: `docs/experimentation.md`.
 
 | # | Command | What it does and costs (*estimated* from measured per-step times) |
 |---|---|---|
-| 18 | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | integrity checks; rationales (≈ 25 s per question); candidate lists with MedCPT (≈ 45 s); filter (≈ 55 s); answers R2, R2C, R2V, R2V-ND (≈ 4.5 min); analysis; dev report with the pre-declared dev check; design record; commit and push. ≈ 26 h for the 226 dev questions. `--ablations` adds R2-RQ, R2-BR and R2-NF (≈ +14 h); `--judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` adds the directness judge (≈ +3 h) |
+| 18 | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | integrity checks; rationales (≈ 20–25 s per question); candidate lists with MedCPT (≈ 45–90 s); filter (≈ 55–60 s); answers R2, R2C, R2V, R2V-ND (≈ 4–4.5 min); analysis; dev report with the pre-declared dev check; design record; environment record; commit and push. ≈ 26 h for the 226 dev questions (a three-question test gave ≈ 6.8 min per question). `--ablations` adds R2-RQ, R2-BR and R2-NF (≈ +14 h); `--judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` adds the directness judge (≈ +3 h) |
 | 19 | read `results\RAG2_DEV_REPORT.md`; if the dev check says READY: `python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | refuses to start unless the design record on origin/main equals the current design; then the same steps on the 528 held-out questions for R2, R2C, R2V and R2V-ND, analysis, `RAG2_FINDINGS.md`; ≈ 60 h (≈ 49 h with `--no-temporal-ablation`, decided before the run) |
 | 20 | `python -m experiments.medchange.rag2_pipeline status` | which phase is done and whether the design record is pushed |
 | 21 | `python -m experiments.medchange.rag2_run answers --split dev --limit 3 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` | a timing test of one step on three questions (each step: `rationale`, `lists`, `filter`, `answers`, `judge`) |
 | 22 | `python -m experiments.medchange.analyze_rag2 --split dev` | the analysis alone, printed |
-| 23 | `python -m experiments.medchange.ad_benchmark --medchange-dir ..\MedChange` | seconds; appends the 212 Alzheimer's/dementia questions to `benchmark.jsonl` as split `ad` (rerunnable); `experiments/medchange/manifest_ad.json` must show no change in `git status` |
-| 24 | after step 19: `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | same guards as step 19; as-of PubMed records and abstracts (network, ≈ 3 h), B0/B1 (≈ 4.5 h), R2, R2C, R2V (≈ 21 h), analysis, `RAG2_FINDINGS_AD.md` |
+| 23 | `python -m experiments.medchange.ad_benchmark --medchange-dir ..\MedChange` | seconds; appends the 208 Alzheimer's/dementia questions to `benchmark.jsonl` as split `ad` (rerunnable); `experiments/medchange/manifest_ad.json` must show no change in `git status` (it was reproduced from the released files on 2026-10-05) |
+| 24 | after step 19: `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | same guards as step 19; as-of PubMed records (network, ≈ 0.4 h), frozen pools with abstracts (≈ 2.9 h), B0/B1 (≈ 4.4 h), R2, R2C, R2V (≈ 20.5 h), analysis, `RAG2_FINDINGS_AD.md`; ≈ 28 h in all. Many of its reviews are old (48 of 208 before 2005), so some pools may be small or empty: nothing aborts, but for a question with no admitted evidence R2 answers without evidence and R2C and R2V keep R2's answer, so they cannot differ there; the analysis reports the share of questions without evidence per arm, and `freeze_candidates` prints the number of empty pools |
 
-## 4. Secondary: Alzheimer's corpus, question pool and index
+## 4. Removed: the Alzheimer's corpus, question pool and index
 
-```bash
-# corpus (queries and configs are versioned in corpus/config/; data is built locally and gitignored)
-python corpus/scripts/01_pubmed_download.py --all        # PMID lists
-python corpus/scripts/02_pmc_download.py                 # full text and dates (then --finalize)
-python corpus/scripts/04_normalize.py                    # reads metadata/pmc.csv + XML
-python corpus/scripts/05_deduplicate.py
-python corpus/scripts/06_chunk.py                        # MedCPT tokenizer, 256 tokens / 32 overlap
-python corpus/scripts/07_claim_classification.py
-python corpus/scripts/04_normalize.py --input data/raw/pubmed/records.example.jsonl   # offline fixture instead
+The first design (a local Alzheimer's corpus of 4.4 million chunks with a dense index, a 113-question reviewed
+pool and a three-arm runner) is **not used by the current study** and was removed from the repository on
+2026-10-06; the Alzheimer's evaluation is now the `ad` test set (step 23). Git history keeps it (commit `5e03540`,
+the `_archive` folder, whose README describes it).
 
-# dense index over corpus/data/chunks/chunks.jsonl (4,376,141 x 768, ~12.5 GB, memory-bounded, resumable)
-python -m experiments.shared.retrieval.build_index --device cuda   # or cpu
-
-# question pool (already built, reviewed and split; committed under experiments/shared/questions/)
-python -m experiments.shared.questions.build_pool --medrevqa <DS_MedRevQA.csv> --medquad <MedQuAD dir> --retrieved-on 2026-09
-python -m experiments.shared.questions.export_review
-python -m experiments.shared.questions.split
-
-# framework demo on synthetic fixtures (no corpus, no model): all arms, evaluation, ablation
-python -m experiments.shared.runners.run_end_to_end
-```
-
-The corpus is complete and the index is built; the as-of Alzheimer's case-study run is **not
-implemented** (`experiment_plan.md` §11). `run_end_to_end` demonstrates the original three-arm framework
-(`src/`, `evaluation/runner.py`) on fixtures; it is not the thesis result.
+The corpus text, the index and the filter-training labels were built locally and are not tracked. A computer that
+built them still holds them (in `corpus\data\`, `experiments\results\index\` and the `_archive` folder), and the
+root `.gitignore` keeps them out of Git. **A `git pull` does not delete them; do not delete them by hand unless you
+are sure**: the filter-training labels file is 16.6 hours of compute and the index took days.
 
 ## 5. What is gitignored, and results policy
 
 | Path | Why |
 |---|---|
-| `corpus/data/` (except the fixture) | the corpus text: large, built locally |
-| `experiments/results/index/` | the full retrieval index (~12.5 GB) |
 | `experiments/medchange/data/` | MedChange-derived questions, abstracts, frozen pools, raw working files |
 | `models/`, `checkpoints/` | model files |
-| `_archive/rag2_filter_reproduction/filter_training/labels/`, `.textbook_index_cache/` | labels embed textbook passages |
+| local leftovers of the removed first design: the corpus text, the retrieval index (~12.5 GB) and the filter-training labels, under `corpus\`, `experiments\results\index\` and `_archive\` | large or embedding textbook passages; ignored so that `git add -A` is safe on a computer that still holds them |
 
 **Results worth keeping are committed.** After a run, copy the files that contain no source text — the
 answers (`answers_<split>.jsonl`: generated text and PMIDs) with their generator record
@@ -170,18 +147,16 @@ generator cannot run on the 4 GB GPU; llama.cpp on CPU needs ≈ 6–7 GB RAM. T
 same model with `logits_all` (needed for the first-token log-probabilities) and a 1,536-token context, which
 should add about 0.5 GB (*estimated*, not yet measured); close other programs before it, and use
 `--hard-labels` if memory is short. Full fine-tuning of Flan-T5-large
-(archived attempt) was ≈ 106 s per 16-example optimiser step on CPU. The streaming index build keeps memory
+(a removed attempt) was ≈ 106 s per 16-example optimiser step on CPU. The streaming index build keeps memory
 bounded at the full corpus scale.
 
-## 7. Archived work
+## 7. Removed work
 
-`_archive/` holds directions that were tried and replaced: the RAG² filter-reproduction attempt
-(`rag2_filter_reproduction/`: label generation with a 4-bit Llama-3, filter training, diagnostics, with its
-tests), the superseded Alzheimer's pilot runners and results (`alzheimers_pilot_v1/`), and earlier
-exploratory work; see `_archive/README.md`. Local files from the filter-reproduction attempt that git does
-not track (`labels/`, `.textbook_index_cache/`) belong in
-`_archive/rag2_filter_reproduction/filter_training/`; the `labels` file is 16.6 hours of compute, so back it
-up outside the repository.
+Directions that were tried and replaced were kept in an `_archive` folder until 2026-10-06 and are now only in Git
+history (commit `5e03540`): the Alzheimer's-specific framework, the RAG² filter-reproduction attempt (label
+generation with a 4-bit Llama-3, filter training, diagnostics), the first Alzheimer's pilot and earlier exploratory
+work. `git show 5e03540:_archive/README.md` describes each; `git checkout 5e03540 -- _archive` restores the folder
+(its tests need the extra packages PyYAML, requests and pypdf).
 
 ## 8. Reproducing a specific run exactly
 

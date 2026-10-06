@@ -1,6 +1,6 @@
 """Adapted RAG² baseline and evidence-criteria verification: the pure logic (no model, no network).
 
-The realigned study (docs/experiment_plan.md) compares, on the same as-of candidate records:
+The realigned study (docs/experimentation.md) compares, on the same as-of candidate records:
 
 * ``R2``     adapted RAG²: a rationale as the dense query, retrieval balanced over evidence types, a
              zero-shot LLM filter, and the standard answer prompt of ``prompts.py``. The baseline.
@@ -25,7 +25,7 @@ import numpy as np
 from .freeze_candidates import eligible
 from .prompts import SYSTEM as ANSWER_SYSTEM
 from .prompts import TEMPLATE as ANSWER_TEMPLATE
-from .synthesis import LABELS, study_type
+from .synthesis import study_type
 
 STRATA = ("SR/MA", "RCT", "other")
 QUOTA = 8                    # candidates per evidence type taken by the rationale's dense score
@@ -132,7 +132,7 @@ def prompt_hashes() -> dict:
 
 def design_record(model_sha256: str, encoders: Optional[dict] = None) -> dict:
     """Everything that fixes the realigned systems; frozen (committed) before the confirmatory run."""
-    from experiments.shared.retrieval.encoders import ARTICLE_ENCODER, CROSS_ENCODER, QUERY_ENCODER
+    from experiments.medchange.encoders import ARTICLE_ENCODER, CROSS_ENCODER, QUERY_ENCODER
     return {"settings": SETTINGS, "settings_sha256": settings_hash(), "prompts": prompt_hashes(),
             "generator_model_sha256": model_sha256,
             "encoders": encoders or {"query": QUERY_ENCODER, "article": ARTICLE_ENCODER,
@@ -338,6 +338,3 @@ def anachronistic_years(text: str, cutoff: str) -> list[int]:
     limit = int(cutoff[:4])
     return sorted({int(y) for y in _YEAR.findall(text or "") if int(y) > limit})
 
-
-def label_index(label: Optional[str]) -> Optional[int]:
-    return LABELS.index(label) if label in LABELS else None

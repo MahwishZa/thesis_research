@@ -3,8 +3,9 @@
     python -m experiments.medchange.ad_benchmark --medchange-dir ..\\MedChange
 
 Every MedRevQA question whose text names dementia, Alzheimer's disease, mild cognitive impairment or
-cognitive decline, from a Cochrane review that is NOT already in the dev or confirmatory split
-(``data/benchmark.jsonl`` must exist: run ``build_benchmark`` first). Exact duplicate questions are kept once.
+cognitive decline, from a Cochrane review that is NOT already in the dev or confirmatory split, by study
+group AND by Cochrane ID (``data/benchmark.jsonl`` must exist: run ``build_benchmark`` first). Exact duplicate
+questions are kept once.
 Each question is asked as of its review's publication date, exactly like the main benchmark; the gold label is
 the release's label for that review. Reviews with one version have no earlier version: their ``previous``
 field repeats ``newest`` and update-window metrics do not apply to them.
@@ -12,7 +13,7 @@ field repeats ``newest`` and update-window metrics do not apply to them.
 The items are appended to ``data/benchmark.jsonl`` with ``split = "ad"`` (earlier "ad" rows are replaced, so a
 rerun gives the same file) and summarised in ``experiments/medchange/manifest_ad.json`` (tracked): counts,
 labels, the item-id hash and the input-file hashes. No label is used to choose items; the set is used once,
-after the realigned design is frozen (docs/experiment_plan.md §11).
+after the realigned design is frozen (docs/experimentation.md §11).
 """
 
 from __future__ import annotations
@@ -44,8 +45,14 @@ def _item(medrev: dict, newest_row: int, previous_row: int, kind: str) -> dict:
             "notes": ["single version: no earlier review; update-window metrics do not apply"] if single else []}
 
 
-def build_ad_items(medrev: dict, groups: dict, used_groups: set) -> list[dict]:
-    """Questions about dementia/Alzheimer's from reviews outside ``used_groups``; one item per distinct question."""
+def build_ad_items(medrev: dict, groups: dict, used_groups: set, used_reviews: frozenset = frozenset()) -> list[dict]:
+    """Questions about dementia/Alzheimer's from reviews outside dev and confirm; one item per distinct question.
+
+    A review is "outside" when neither its study group (``used_groups``) nor its Cochrane ID (``used_reviews``)
+    appears in those splits. The ID check matters: an older version of a review that dev or confirm already
+    holds can sit in ``MedRevQA`` as an ungrouped row of its own, and the group check alone lets it through
+    (four such questions were found on 2026-10-05, before any use of the set).
+    """
     grouped = {k for keys in groups.values() for k in keys}
     candidates = []                                   # (newest row, previous row, kind)
     for gid in sorted(groups):
@@ -63,9 +70,17 @@ def build_ad_items(medrev: dict, groups: dict, used_groups: set) -> list[dict]:
         question = medrev[newest]["Question"].strip()
         if not AD_QUESTION.search(question) or question.lower() in seen:
             continue
+        if {_version(medrev, newest).cochrane_id, _version(medrev, previous).cochrane_id} & used_reviews:
+            continue
         seen.add(question.lower())
         out.append(_item(medrev, newest, previous, kind))
     return out
+
+
+def used_review_ids(main_rows: list[dict]) -> frozenset:
+    """Cochrane IDs of every review (either version) that an item of the main benchmark is built from."""
+    return frozenset(v["cochrane_id"] for r in main_rows for v in (r["newest"], r["previous"])
+                     if v.get("cochrane_id"))
 
 
 def summary(items: list[dict], inputs: dict) -> dict:
@@ -98,12 +113,14 @@ def main(argv=None) -> int:
         print(f"missing MedChange files: {missing}", file=sys.stderr)
         return 2
     medrev = {int(r[""]): r for r in read_csv(paths["MedRevQA.csv"])}
-    items = build_ad_items(medrev, load_groups(read_csv(paths["AllStudyGroups.csv"])), used)
+    items = build_ad_items(medrev, load_groups(read_csv(paths["AllStudyGroups.csv"])), used,
+                           used_review_ids(main_rows))
     with open(bench, "w", encoding="utf-8", newline="\n") as h:
         for r in main_rows + items:
             h.write(json.dumps(r) + "\n")
     rep = summary(items, {n: file_sha256(p) for n, p in paths.items()})
-    Path(a.manifest).write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8")
+    with open(a.manifest, "w", encoding="utf-8", newline="\n") as h:
+        h.write(json.dumps(rep, indent=2) + "\n")
     print(json.dumps({k: rep[k] for k in ("items", "kinds", "labels", "reviews", "single_version")}, indent=2))
     return 0
 

@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: Directories whose contents are not part of the check (git's own state and Python bytecode).
 IGNORED_PARTS = {".git", "__pycache__"}
 #: The suites that must leave the tree untouched.
-SUITES = ("evaluation", "_archive")
+SUITES = ("evaluation",)
 
 
 def snapshot(root=ROOT):

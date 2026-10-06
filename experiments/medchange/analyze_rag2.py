@@ -8,7 +8,7 @@ Inputs (``--data-dir``): ``benchmark.jsonl``, ``answers_<split>.jsonl`` (B0, B1)
 ``rag2_directness_<split>.jsonl`` (independent directness judgements) and the label audit
 (``--label-audit``, for the label-stable subset). Output: ``rag2_analysis_<split>.json`` and ``.md``.
 
-Pre-declared (docs/experiment_plan.md §7): the primary comparison is R2V - R2 over all items (exact McNemar,
+Pre-declared (docs/experimentation.md §7): the primary comparison is R2V - R2 over all items (exact McNemar,
 paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
 p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
 *not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
@@ -78,6 +78,16 @@ def hallucination_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
         out[arm] = {"n": len(ids), "anachronism_rate": round(sum(ana) / len(ids), 4),
                     "unsupported_decisive_rate": round(sum(flags) / len(flags), 4) if flags else None,
                     "answers_with_evidence": len(flags)}
+    return out
+
+
+def truncation_rows(answers: dict, arms: Sequence[str]) -> dict:
+    """Answers written after the abstracts were shortened because the prompt did not fit the context window."""
+    out = {}
+    for arm in arms:
+        n = sum(1 for (_, a), r in answers.items() if a == arm and r.get("context_truncated"))
+        if n:
+            out[arm] = n
     return out
 
 
@@ -194,7 +204,7 @@ def primary_result(items: dict, answers: dict) -> Optional[dict]:
 
 
 def requirement_reading(primary: Optional[dict], split: str) -> str:
-    """The pre-declared reading of the +1.0 pp requirement (docs/experiment_plan.md §7)."""
+    """The pre-declared reading of the +1.0 pp requirement (docs/experimentation.md §7)."""
     if primary is None:
         return "not run"
     if split not in ("confirm", "ad"):
@@ -231,6 +241,7 @@ def report(items: dict, answers: dict, split: str, frozen: Optional[dict] = None
     rep = {"split": split, "items": len(items), "arms": arms,
            "generation": summarize(items, answers, arms),
            "unsupported_answers": hallucination_rows(items, answers, arms),
+           "context_truncated": truncation_rows(answers, arms),
            "verification": verifier_rows(items, answers, arms),
            "retrieval": retrieval_rows(items, answers, arms, frozen or {}, directness),
            "primary": primary, "requirement": requirement_reading(primary, split),
@@ -271,7 +282,7 @@ def _comparison_table(rows: dict, family: bool) -> list[str]:
 def to_markdown(rep: dict) -> str:
     kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's/dementia"}.get(rep["split"], "exploratory")
     L = [f"# Adapted RAG² and evidence-criteria verification, {rep['split']} split ({kind})", "",
-         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experiment_plan.md`.", "",
+         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experimentation.md`.", "",
          "## Generation: verdict accuracy", "",
          "| Arm | all (95% CI) | changed | unchanged | recall S / R / NEI | macro-F1 | answers NEI | outdated rate |",
          "|---|---|---|---|---|---|---|---|"]
@@ -300,6 +311,9 @@ def to_markdown(rep: dict) -> str:
     for arm, row in rep["unsupported_answers"].items():
         L.append(f"| {arm} | {_pct(row['anachronism_rate'])} | {_pct(row['unsupported_decisive_rate'])} "
                  f"({row['answers_with_evidence']}) |")
+    if rep.get("context_truncated"):
+        L += ["", "Answers written after the abstracts were shortened because the prompt did not fit the context window: "
+              + ", ".join(f"{a} {n}" for a, n in rep["context_truncated"].items()) + "."]
     if rep["verification"]:
         L += ["", "## What the criteria arms changed (questions with evidence)", "",
               "| Arm | valid output | verdict differs from R2 | changes that fixed / broke an answer |", "|---|---|---|---|"]
@@ -326,7 +340,7 @@ def to_markdown(rep: dict) -> str:
               + ", ".join(f"{a} {k}" for a, k in cs["correct"].items()) + "."]
     L += ["", "A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval "
           "excludes 0 and the difference is positive. With about 500 questions only differences of roughly 4–6 pp "
-          "can be confirmed (docs/experiment_plan.md §7)."]
+          "can be confirmed (docs/experimentation.md §7)."]
     return "\n".join(L) + "\n"
 
 
@@ -352,8 +366,10 @@ def main(argv=None) -> int:
     if a.out_dir:
         out = Path(a.out_dir)
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"rag2_analysis_{a.split}.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8")
-        (out / f"rag2_analysis_{a.split}.md").write_text(text, encoding="utf-8")
+        for name, body in ((f"rag2_analysis_{a.split}.json", json.dumps(rep, indent=2) + "\n"),
+                           (f"rag2_analysis_{a.split}.md", text)):
+            with open(out / name, "w", encoding="utf-8", newline="\n") as h:
+                h.write(body)
         print(f"wrote {out / f'rag2_analysis_{a.split}.md'}")
     print(text)
     return 0

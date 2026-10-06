@@ -192,6 +192,33 @@ def scores_by_item(records: Sequence[dict]) -> dict:
 # Step 4: answers
 # --------------------------------------------------------------------------------------
 
+#: Words kept per abstract when a prompt does not fit the context window. This is not a design setting: it is
+#: used only in place of a crash (llama.cpp raises an error for a prompt longer than the context), it never
+#: applies to a prompt that fits, and every answer written under it carries ``"context_truncated": true``.
+OVERFLOW_ABSTRACT_WORDS = 200
+
+
+def is_context_overflow(exc: Exception) -> bool:
+    return isinstance(exc, ValueError) and "exceed context window" in str(exc).lower()
+
+
+def shorten_abstracts(passages: Sequence[dict], words: int = OVERFLOW_ABSTRACT_WORDS) -> list[dict]:
+    return [dict(p, abstract=" ".join((p.get("abstract") or "").split()[:words])) for p in passages]
+
+
+def generate_fitting(generate: Callable[[str, str], str], build: Callable[[Sequence[dict]], tuple[str, str]],
+                     passages: Sequence[dict]) -> tuple[str, str, bool]:
+    """(text, the user prompt that was used, whether the abstracts had to be shortened)."""
+    system, user = build(passages)
+    try:
+        return generate(system, user), user, False
+    except ValueError as exc:
+        if not is_context_overflow(exc):
+            raise
+    system, user = build(shorten_abstracts(passages))
+    return generate(system, user), user, True
+
+
 def _evidence_fields(admitted: Sequence[dict]) -> dict:
     return {"admitted": [c["pmid"] for c in admitted], "admitted_lower": [c["lower"] for c in admitted],
             "admitted_upper": [c["upper"] for c in admitted], "admitted_stratum": [c["stratum"] for c in admitted]}
@@ -204,10 +231,10 @@ def answer_one(item: dict, arm: str, lists: dict, scores: dict, existing: dict,
     base = {"item_id": item["item_id"], "arm": arm, "settings": R.settings_hash(), **_evidence_fields(admitted)}
     started = clock()
     if arm not in R.CRITERIA_ARMS:
-        prompt = build_prompt(question, admitted)
-        text = generate(R.ANSWER_SYSTEM, prompt)
+        text, prompt, cut = generate_fitting(generate, lambda ps: (R.ANSWER_SYSTEM, build_prompt(question, ps)),
+                                             admitted)
         return dict(base, prompt_sha256=R.sha256(prompt)[:16], text=text, verdict=parse_verdict(text),
-                    seconds=round(clock() - started, 1))
+                    seconds=round(clock() - started, 1), **({"context_truncated": True} if cut else {}))
     draft = existing.get((item["item_id"], "R2"))
     if draft is None:
         raise RuntimeError(f"{item['item_id']}: R2 must be answered before {arm}")
@@ -215,14 +242,14 @@ def answer_one(item: dict, arm: str, lists: dict, scores: dict, existing: dict,
     if not admitted:
         return dict(base, **extra, prompt_sha256=None, text=draft["text"], verdict=draft["verdict"],
                     valid=True, changed=False, fallback="no evidence", seconds=0.0)
-    system, user = R.build_criteria_prompt(question, admitted, draft=None if arm == "R2C" else draft["text"],
-                                           dated=arm != "R2V-ND")
-    text = generate(system, user)
+    text, user, cut = generate_fitting(
+        generate, lambda ps: R.build_criteria_prompt(question, ps, draft=None if arm == "R2C" else draft["text"],
+                                                     dated=arm != "R2V-ND"), admitted)
     parsed = R.parse_final_verdict(text)
     verdict = parsed if (parsed is not None or arm == "R2C") else draft["verdict"]
     return dict(base, **extra, prompt_sha256=R.sha256(user)[:16], text=text, verdict=verdict,
                 valid=parsed is not None, changed=verdict != draft["verdict"], fallback=None,
-                seconds=round(clock() - started, 1))
+                seconds=round(clock() - started, 1), **({"context_truncated": True} if cut else {}))
 
 
 def run_answers(items: Sequence[dict], lists: dict, scores: dict, arms: Sequence[str], out: Path,
@@ -317,7 +344,7 @@ def cmd_lists(a, data: Path) -> int:
               file=sys.stderr)
         return 2
     abstracts = {r["pmid"]: r for r in load_jsonl(data / "abstracts.jsonl")}
-    from experiments.shared.retrieval.encoders import (MedCPTReranker, medcpt_article_encoder,
+    from experiments.medchange.encoders import (MedCPTReranker, medcpt_article_encoder,
                                                        medcpt_query_encoder)
     qe, ae, rr = (medcpt_query_encoder(device=a.device), medcpt_article_encoder(device=a.device),
                   MedCPTReranker(device=a.device))

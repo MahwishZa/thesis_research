@@ -24,7 +24,7 @@ Filter) and then a per-paper evidence-synthesis layer (stage 2). Both were
 tested before being believed, and neither beat standard retrieval on the
 development split; on the held-out split, retrieval itself raised accuracy
 by only +1.5 points, which could not be distinguished from no effect. A
-diagnosis of those results (`docs/experiment_plan.md` §2) found the bottleneck
+diagnosis of those results (`docs/experimentation.md` §2) found the bottleneck
 in the verdict decision, not in retrieval: the model's notion of the three
 verdicts differs from the benchmark's definitions, and indirect evidence is read
 as support. Date-based admission had nothing to act on, because newer studies
@@ -38,9 +38,10 @@ baseline's answer against the evidence using explicit evidence criteria
 evidence) — achieves that. The test bed is MedChangeQA (Vladika et al., EMNLP
 2025 Findings): Cochrane questions asked as of the newest review's date with
 only earlier evidence available. Alzheimer's disease, the domain of the
-research proposal, has its own held-out test set: 212 Cochrane questions on
-Alzheimer's disease and dementia, built the same way and run once after the
-design is frozen, as a secondary evaluation.
+research proposal, has its own held-out test set: 208 Cochrane questions on
+Alzheimer's disease and dementia from reviews that are in neither development
+nor held-out split, built the same way and run once after the design is frozen,
+as a secondary evaluation. None of its questions has a changed verdict.
 
 **Research objectives:**
 
@@ -64,7 +65,7 @@ is the MedCPT dense query; (2) *balanced retrieval*: with one dated corpus
 (PubMed, as of the question date), the balance is across evidence types —
 systematic reviews, trials and other designs — up to 8 of each, re-ranked by
 the MedCPT cross-encoder against the question; (3) *filtering*: RAG²'s trained
-filter is not distributed and a local retraining attempt failed (archived), so
+filter is not distributed and a local retraining attempt failed (`docs/log.md` Phases 13–18), so
 the generator itself judges each of the top 8 abstracts ("does it help answer
 the question?"); RAG² reports that a GPT-4o filter matched its trained one, and
 a local 8B judge is a weaker substitute; at most 5 pass. The answer uses the benchmark's standard verdict prompt. This is
@@ -108,7 +109,7 @@ flowchart TD
 The earlier stages remain part of the record. Stage 1, the Temporal Filter,
 added a recency term to a relevance score; recency-aware retrieval is an
 established idea (e.g. TempRALM), so no novelty is claimed for the formula, and
-it did not beat standard retrieval (`docs/evaluation.md` §7). Stage 2's
+it did not beat standard retrieval (`docs/experimentation.md` §13). Stage 2's
 evidence-synthesis layer failed its development check and was not run on the
 held-out split. Verification, criteria prompting and self-checking are
 established techniques too; the contribution claimed is their adaptation to
@@ -117,7 +118,7 @@ to an adapted RAG² baseline.
 
 ## 4. Evaluation and Experimental Design
 
-Every arm is scored on the same metrics (`docs/evaluation.md`). The primary
+Every arm is scored on the same metrics (`docs/experimentation.md` §6–§7). The primary
 outcome is **verdict accuracy**: the answer's verdict (SUPPORTED / REFUTED /
 NOT ENOUGH INFORMATION), parsed from a fixed verdict line with no judge model,
 against the newest Cochrane review's verdict. Generation is also measured by
@@ -140,10 +141,10 @@ improvement is at least 1 percentage point and the test separates it from zero,
 test cannot separate it from zero, and *not met* otherwise. A 1-point
 difference cannot be confirmed with 528 questions: only effects of about 4–6
 percentage points or more can, so the point estimate is reported with its
-interval. The same rule is applied, as a secondary result, to the 212
-Alzheimer's/dementia questions, where only effects of about 7–9 points can be
+interval. The same rule is applied, as a secondary result, to the 208
+Alzheimer's/dementia questions, where only effects of about 6–10 points can be
 confirmed. Settings, prompts and decision rules are fixed before any result in
-`docs/experiment_plan.md`.
+`docs/experimentation.md`.
 
 ## 5. Expected Contribution
 
@@ -162,7 +163,7 @@ advance to which one it will report.
 
 ## Results
 
-Results of record (`docs/evaluation.md` §7–§8): on the development split,
+Results of record (`docs/experimentation.md` §13–§14): on the development split,
 neither recency-aware admission (the Temporal Filter) nor the evidence-synthesis
 layer beat standard retrieval. On the held-out split, run once, standard
 retrieval raised verdict accuracy by +1.5 points over no evidence (95% CI −2.8
@@ -178,44 +179,39 @@ any accuracy here can mean. The realigned study writes its tables to
 research-repository/
 ├── README.md
 ├── pyproject.toml
-├── docs/                methodology, data, glossary, evaluation, reproducibility
-├── corpus/               the evidence corpus: data/ config/ logs/ metadata/ reports/ scripts/
+├── docs/                 protocol and evaluation, methodology, data, glossary, reproducibility, dated log
 ├── src/
-│   ├── common/            shared interfaces (Evidence, Generator, Retriever, System)
-│   ├── baseline/          RAG² baseline + No-Filter control
-│   └── proposed/          the Temporal Filter
-├── evaluation/            metrics, freezing, the comparison runner, statistics
-│   └── tests/             unit + integration tests for the whole repository
-└── experiments/
-    ├── medchange/         primary pipeline: as-of benchmark, adapted RAG², verification, earlier stages, analysis
-    ├── shared/            question pool, retrieval pipeline, framework demo runner
-    └── results/           gitignored retrieval indexes
+│   ├── common/           the Evidence / Candidate record types
+│   └── temporal_filter/  the Temporal Filter formula (stage 1, a result of record)
+├── evaluation/
+│   ├── stats.py          exact McNemar, paired bootstrap interval, Holm correction
+│   └── tests/            the active test suite and the hermetic-run check
+├── experiments/
+│   └── medchange/        the pipeline: as-of benchmark, adapted RAG², verification, earlier stages, analysis,
+│                         and results/ (the committed outputs)
 ```
 
-`_archive/` (not shown above — not part of the active pipeline) holds
-superseded/reference material kept for history rather than for use — see
-`_archive/README.md`. Nothing in the active pipeline depends on it (verified
-by an automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
+The first, Alzheimer's-specific design (a local corpus, a reviewed question pool and a three-arm runner) and the
+other abandoned directions (the RAG² filter retraining, the first pilot) were kept in an `_archive` folder until
+2026-10-06, when nothing in the pipeline needed them any more and they were removed. They remain in Git history:
+`git show 5e03540:_archive/README.md` describes them, and `git checkout 5e03540 -- _archive` restores the folder.
 
 | Document | Read it for |
 |---|---|
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
-| [`docs/data.md`](docs/data.md) | The corpus and question pool — provenance, limitations |
+| [`docs/data.md`](docs/data.md) | The datasets — the MedChange benchmark, the Alzheimer's/dementia test set, the superseded corpus and pool: provenance, limitations |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
-| [`docs/evaluation.md`](docs/evaluation.md) | Metrics, statistical procedure, development-split results |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
-| [`docs/experiment_plan.md`](docs/experiment_plan.md) | The protocol: benchmark, arms, settings, gates, decision rules |
-| [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout (dev split, exploratory) |
+| [`docs/experimentation.md`](docs/experimentation.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
+| [`experiments/medchange/results/report/REPORT.md`](experiments/medchange/results/report/REPORT.md) | Result tables and figures in the base paper's layout, for the held-out split of the stage-1/2 run (the development version's data is `report_data_dev.json` beside it) |
 | [`docs/log.md`](docs/log.md) | Chronological record of implementation work, decisions, and pilot results |
 
 ## How to run
 
 ```bash
-# Run every test (unit + integration)
+# Install (numpy only; the model backends come with the extras, see docs/reproducibility.md) and run every active test
+pip install -e .
 python -m unittest discover -s evaluation -t .
-
-# Fixture demo: all three arms, evaluation, and the ablation sweep
-python -m experiments.shared.runners.run_end_to_end
 
 # Primary pipeline (MedChange as-of benchmark); steps and costs: docs/reproducibility.md
 python -m experiments.medchange.build_benchmark --medchange-dir ../MedChange

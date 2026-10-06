@@ -239,7 +239,7 @@ class PubMedProbeTests(unittest.TestCase):
 from experiments.medchange.freeze_candidates import (  # noqa: E402
     freeze_item, parse_efetch_xml, pool_hash,
 )
-from experiments.shared.retrieval.encoders import HashingEncoder, LexicalOverlapReranker  # noqa: E402
+from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker  # noqa: E402
 
 XML = """<PubmedArticleSet>
 <PubmedArticle><MedlineCitation><PMID>11</PMID><Article>

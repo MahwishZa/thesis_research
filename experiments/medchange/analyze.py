@@ -6,7 +6,7 @@ Primary outcome: parsed verdict == gold NEWEST verdict (unparsed counts wrong an
 reported). Key secondary: verdict == PREVIOUS (outdated) verdict, changed items only.
 Safety: accuracy on unchanged items. Paired comparisons use the exact McNemar test and a
 question-resampled bootstrap CI (``evaluation/stats.py``); only arms present in the
-answers file are compared. Gates are the pre-stated ones in docs/experiment_plan.md:
+answers file are compared. Gates are the pre-stated ones of the stage-1 protocol (the file experiment_plan.md at commit 92e3aaf):
 
 Retrieval-level metrics (what each arm admitted; manipulation checks, never outcomes):
 share of admitted passages that surely first appeared inside the update window (after the

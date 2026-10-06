@@ -1,10 +1,10 @@
 # `experiments/medchange/` — the primary pipeline
 
-An as-of evaluation, on Cochrane questions whose verdict changed between review versions, of an adapted
-RAG² baseline and an evidence-criteria verification extension (the realigned study), with the earlier
-stages kept as results of record: evidence admission (stage 1) and an evidence-synthesis layer (stage 2).
-The protocol, settings and gates are fixed in `docs/experiment_plan.md`; this file maps code to steps.
-Commands and costs: `docs/reproducibility.md` §3.
+An as-of evaluation, on Cochrane questions whose verdict changed between review versions (and a secondary
+Alzheimer's/dementia test set), of an adapted RAG² baseline and an evidence-criteria verification extension (the
+realigned study), with the earlier stages kept as results of record: evidence admission (stage 1) and an
+evidence-synthesis layer (stage 2). The protocol, settings and gates are fixed in `docs/experimentation.md`; this
+file maps code to steps. Commands and costs: `docs/reproducibility.md` §3.
 
 | Module | Step | Network / models | Writes (`data/`, gitignored) |
 |---|---|---|---|
@@ -12,8 +12,9 @@ Commands and costs: `docs/reproducibility.md` §3.
 | `headroom.py` | how often released models give the current verdict without retrieval | none | stdout |
 | `pubmed_asof.py` | as-of PubMed hits per item; gate G0 | PubMed E-utilities | `pubmed_g0/<item>.json` |
 | `freeze_candidates.py` | abstracts, MedCPT dense + cross-encoder rerank, frozen pool of 20 | E-utilities, MedCPT | `abstracts.jsonl`, `frozen_<split>.jsonl` |
+| `encoders.py` | the MedCPT query and article encoders and cross-encoder re-ranker (torch loaded lazily), and the hashing and lexical stand-ins the tests use | MedCPT (HuggingFace) | – |
 | `helpfulness.py` | zero-shot Flan-T5 P(yes) per pool candidate (untrained; **not RAG²**) | Flan-T5-large | `helpfulness_<split>.jsonl` |
-| `arms.py` | admission rules B0, B1, B2, B3, P, C1 with fixed settings; formula delegated to `src/proposed/` | none | – |
+| `arms.py` | admission rules B0, B1, B2, B3, P, C1 with fixed settings; formula delegated to `src/temporal_filter/` | none | – |
 | `prompts.py` | the one answer prompt and the `VERDICT:` parser | none | – |
 | `generate_answers.py` | one answer per (item, arm) with llama.cpp, resumable; records the generator configuration and refuses to resume under a different one | GGUF model | `answers_<split>.jsonl`, `answers_<split>.config.json` |
 | `analyze.py` | accuracy, outdated rate, retrieval-level metrics, paired McNemar + Holm, gates G2/G3 | none | stdout or `--out` |
@@ -31,8 +32,8 @@ Commands and costs: `docs/reproducibility.md` §3.
 | `rag2.py` | realigned study, pure logic: the rationale prompt, balanced retrieval across evidence types, cross-encoder re-ranking, the filter's P(yes) and admission, the evidence criteria and verification prompts, the `FINAL VERDICT:` parser, the unsupported-answer indicators, the design record | none | – |
 | `rag2_run.py` | realigned study, resumable steps: `rationale`, `lists`, `filter`, `answers` (R2, R2-RQ, R2-BR, R2-NF, R2C, R2V, R2V-ND), optional `judge` (directness); records each step's configuration and refuses to resume under a different one | GGUF model; MedCPT for `lists`; no network | `rag2_rationales_<split>.jsonl`, `rag2_lists_<split>.jsonl`, `rag2_filter_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` |
 | `analyze_rag2.py` | realigned analysis: accuracy, per-class recall, macro-F1, outdated rate, unsupported-answer indicators, verifier behaviour, retrieval metrics, the primary test and the pre-declared reading of the +1 pp requirement, secondary and ablation families with Holm, label-stable subset, Alzheimer's items | none | `results/rag2_analysis_<split>.*` |
-| `ad_benchmark.py` | the Alzheimer's/dementia secondary test set: MedRevQA questions naming dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from reviews outside dev and confirm, duplicates removed; appended to `benchmark.jsonl` as split `ad` | none (MedChange clone) | `benchmark.jsonl`; `manifest_ad.json` (tracked) |
-| `rag2_pipeline.py` | one resumable command per phase of the realigned study (`dev`, `confirm --go`, `status`): integrity checks, steps, dev check, design record, findings, publishing, optional commit and push; refuses the held-out run unless the design record on origin/main equals the current design | as the steps | `results/RAG2_DEV_REPORT.md`, `results/rag2_design.json`, `results/RAG2_FINDINGS.md` |
+| `ad_benchmark.py` | the Alzheimer's/dementia secondary test set: MedRevQA questions naming dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline, from reviews outside dev and confirm (by study group and by Cochrane ID), duplicates removed; appended to `benchmark.jsonl` as split `ad` | none (MedChange clone) | `benchmark.jsonl`; `manifest_ad.json` (tracked) |
+| `rag2_pipeline.py` | one resumable command per phase of the realigned study (`dev`, `confirm --go`, `ad --go`, `status`): integrity checks, steps, dev check, design record, findings, publishing, an environment record, optional commit and push; refuses a held-out run unless the design record on origin/main equals the current design | as the steps | `results/RAG2_DEV_REPORT.md`, `results/rag2_design.json`, `results/RAG2_FINDINGS.md`, `results/RAG2_FINDINGS_AD.md`, `results/rag2_environment_<phase>.json` |
 | `analyze_stage2.py` | stage-2 analysis: accuracy with Wilson intervals, per-class recall, macro-F1, NOT ENOUGH INFORMATION share; primary family RQ1 (B1 vs B0) and RQ2 (selected hybrid vs B1R) with Holm; secondary family | none | `results/stage2_analysis_<split>.json`, `.md` |
 
 `data/` is gitignored because the MedChange release states no licence and abstracts are publisher text.
@@ -45,4 +46,7 @@ Tests: `evaluation/tests/unit/test_medchange_benchmark.py`, `test_medchange_arms
 `test_medchange_synthesis.py` (features, weights, fitting, selection, gate 2, the confirmatory analysis and its pre-declared reading),
 `test_medchange_dev_audit.py`, `test_medchange_audits.py`, `test_medchange_report.py`, `test_medchange_pipeline.py` and
 `test_medchange_rag2.py` (the realigned study: retrieval lists, filter, criteria prompts and parsers, the runner with
-fakes, the analysis and its reading of the requirement, the pipeline's checks and guards); all use synthetic data.
+fakes, the analysis and its reading of the requirement, the pipeline's checks and guards, the `ad` builder, and a
+fake-model run of every step); all use synthetic data. The statistics and the Temporal Filter formula that these
+modules share are tested in `test_stats.py` and `test_temporal_filter.py`; `test_scope_invariants.py` guards the
+documentation, the layout and the package list.
