@@ -74,7 +74,7 @@ their results.
 second-family GGUF for the audits (Qwen2.5-7B-Instruct Q4_K_M, about 4.7 GB, into `models\`) with
 `python -c "from huggingface_hub import hf_hub_download; hf_hub_download('bartowski/Qwen2.5-7B-Instruct-GGUF', 'Qwen2.5-7B-Instruct-Q4_K_M.gguf', local_dir='models')"` and have the MedChange
 clone from step 1. Then two commands run everything; each is resumable (rerun the same command after an
-interruption), stops at the first failed step or gate, and with `--commit` commits and pushes the results to `main`.
+interruption), stops at the first failed step or gate, and with `--commit` commits the results (it never pushes: run `git push origin main` yourself).
 
 | # | Command | What it does and costs (*estimated* unless marked measured) |
 |---|---|---|
@@ -99,7 +99,7 @@ and the B0/B1 answers. Protocol: `docs/experimentation.md`.
 
 | # | Command | What it does and costs (*estimated* from measured per-step times) |
 |---|---|---|
-| 18 | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | integrity checks; rationales (≈ 20–25 s per question); candidate lists with MedCPT (≈ 45–90 s); filter (≈ 55–60 s); answers R2, R2C, R2V, R2V-ND (≈ 4–4.5 min); analysis; dev report with the pre-declared dev check; design record; environment record; commit and push. ≈ 26 h for the 226 dev questions (a three-question test gave ≈ 6.8 min per question). `--ablations` adds R2-RQ, R2-BR and R2-NF (≈ +14 h); `--judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` adds the directness judge (≈ +3 h) |
+| 18 | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | integrity checks; rationales (≈ 20–25 s per question); candidate lists with MedCPT (≈ 45–90 s); filter (≈ 55–60 s); answers R2, R2C, R2V, R2V-ND (≈ 4–4.5 min); analysis; dev report with the pre-declared dev check; design record; environment record; commit (you push by hand). ≈ 26 h for the 226 dev questions (a three-question test gave ≈ 6.8 min per question). `--ablations` adds R2-RQ, R2-BR and R2-NF (≈ +14 h); `--judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` adds the directness judge (≈ +3 h) |
 | 19 | read `results\RAG2_DEV_REPORT.md`; if the dev check says READY: `python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | refuses to start unless the design record on origin/main equals the current design; then the same steps on the 528 held-out questions for R2, R2C, R2V and R2V-ND, analysis, `RAG2_FINDINGS.md`; ≈ 60 h (≈ 49 h with `--no-temporal-ablation`, decided before the run) |
 | 20 | `python -m experiments.medchange.rag2_pipeline status` | which phase is done and whether the design record is pushed |
 | 21 | `python -m experiments.medchange.rag2_run answers --split dev --limit 3 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` | a timing test of one step on three questions (each step: `rationale`, `lists`, `filter`, `answers`, `judge`) |

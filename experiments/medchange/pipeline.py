@@ -88,9 +88,9 @@ def frozen_is_pushed(repo: Path = ROOT, rel: str = FROZEN) -> tuple[bool, str]:
     if local.returncode != 0:
         return False, f"{rel} does not exist"
     if remote.returncode != 0:
-        return False, f"{rel} is not on origin/main: commit and push it first (dev --commit does)"
+        return False, f"{rel} is not on origin/main: commit it and push it yourself (git push origin main)"
     if local.stdout.strip() != remote.stdout.strip():
-        return False, f"{rel} differs from origin/main: commit and push the final version first"
+        return False, f"{rel} differs from origin/main: commit it and push the final version yourself first"
     return True, "frozen model is on origin/main"
 
 
@@ -131,14 +131,14 @@ def publish(data: Path, results: Path) -> tuple[bool, str]:
     return True, f"copied {len(copied)} files to results/"
 
 
-def commit_and_push(message: str, repo: Path = ROOT) -> tuple[bool, str]:
+def commit_results(message: str, repo: Path = ROOT) -> tuple[bool, str]:
+    """Commit the results; never pushes (the researcher pushes by hand: ``git push origin main``)."""
     subprocess.run(["git", "add", "experiments/medchange/results"], cwd=repo)
     if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo).returncode == 0:
         return True, "nothing new to commit"
-    for cmd in (["git", "commit", "-q", "-m", message], ["git", "push", "origin", "main"]):
-        if subprocess.run(cmd, cwd=repo).returncode != 0:
-            return False, f"{' '.join(cmd[:2])} failed; fix it and rerun the same command"
-    return True, "committed and pushed to main"
+    if subprocess.run(["git", "commit", "-q", "-m", message], cwd=repo).returncode != 0:
+        return False, "git commit failed; fix it and rerun the same command"
+    return True, "committed; now push it yourself: git push origin main"
 
 
 def report_step(a, split: str) -> Step:
@@ -160,7 +160,7 @@ def dev_plan(a, data: Path, results: Path) -> list[Step]:
               ("dev report", lambda: (True, f"gate 2: {findings.write_dev_report(results, gate1_from_pilot(data))}")),
               report_step(a, "dev")]
     if a.commit:
-        steps.append(("commit and push", lambda: commit_and_push("Dev run: stance, frozen model, audits, dev report")))
+        steps.append(("commit", lambda: commit_results("Dev run: stance, frozen model, audits, dev report")))
     return steps
 
 
@@ -189,7 +189,7 @@ def confirm_plan(a, data: Path, results: Path, gate2: str) -> list[Step]:
               ("findings", lambda: (findings.write_findings(results) or True, "wrote FINDINGS.md")),
               report_step(a, "confirm")]
     if a.commit:
-        steps.append(("commit and push", lambda: commit_and_push("Confirmatory run: answers, stance, analysis, findings")))
+        steps.append(("commit", lambda: commit_results("Confirmatory run: answers, stance, analysis, findings")))
     return steps
 
 
@@ -238,7 +238,7 @@ def main(argv=None) -> int:
     ap.add_argument("--medchange-dir", default=None, help="clone of jvladika/MedChange (label audit)")
     ap.add_argument("--n-threads", default="6")
     ap.add_argument("--go", action="store_true", help="confirm only: your explicit go after reading DEV_REPORT.md")
-    ap.add_argument("--commit", action="store_true", help="commit and push the results to main after the phase")
+    ap.add_argument("--commit", action="store_true", help="commit the results after the phase (it never pushes: you push by hand)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--results-dir", default=str(HERE / "results"))

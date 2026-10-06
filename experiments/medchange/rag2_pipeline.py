@@ -8,12 +8,12 @@
 ``dev``: integrity checks; rationales; candidate lists; filter; answers R2, R2C, R2V and R2V-ND (with
 ``--ablations`` also R2-RQ, R2-BR and R2-NF); the optional directness judge (``--judge-path``); analysis; the
 dev report with the pre-declared dev check; the design record ``results/rag2_design.json``; publishing the
-shareable outputs; with ``--commit``, commit and push to main.
+shareable outputs; with ``--commit``, commit (the push is yours: ``git push origin main``).
 
 ``confirm`` (once): refuses to start without ``--go``, without the dev report, or unless the design record on
 origin/main equals the current design (settings, prompts, model file). Then the same steps on the confirmatory
 split for R2, R2C, R2V and R2V-ND (``--no-temporal-ablation`` leaves R2V-ND out, decided before the run),
-analysis, findings, publishing and, with ``--commit``, commit and push.
+analysis, findings, publishing and, with ``--commit``, commit (never push).
 
 ``ad`` (once, same guards as ``confirm``): the Alzheimer's/dementia secondary test set built by ``ad_benchmark``:
 as-of PubMed records and abstracts (network), B0 and B1 answers, then R2, R2C and R2V, analysis, findings.
@@ -36,7 +36,7 @@ from typing import Optional, Sequence
 
 from . import rag2 as R
 from .generate_answers import file_sha256, load_jsonl
-from .pipeline import EXPECTED_ITEMS, _checks, commit_and_push, execute, frozen_is_pushed, py
+from .pipeline import EXPECTED_ITEMS, _checks, commit_results, execute, frozen_is_pushed, py
 
 HERE = Path(__file__).resolve().parent
 DESIGN = "/".join(("experiments", "medchange", "results", "rag2_design.json"))   # written by the dev phase
@@ -256,7 +256,7 @@ def dev_plan(a, data: Path, results: Path) -> list:
               ("design record", lambda: write_design(results, a.model_path)),
               ("environment record", lambda: write_environment(results, "dev", a.model_path, a.judge_path))]
     if a.commit:
-        steps.append(("commit and push", lambda: commit_and_push("Realigned study: dev run, dev report, design record")))
+        steps.append(("commit", lambda: commit_results("Realigned study: dev run, dev report, design record")))
     return steps
 
 
@@ -270,7 +270,7 @@ def confirm_plan(a, data: Path, results: Path) -> list:
               ("findings", lambda: write_findings(results)),
               ("environment record", lambda: write_environment(results, "confirm", a.model_path, a.judge_path))]
     if a.commit:
-        steps.append(("commit and push", lambda: commit_and_push("Realigned study: confirmatory run and findings")))
+        steps.append(("commit", lambda: commit_results("Realigned study: confirmatory run and findings")))
     return steps
 
 
@@ -288,7 +288,7 @@ def ad_plan(a, data: Path, results: Path) -> list:
               ("findings (ad)", lambda: write_findings(results, "ad")),
               ("environment record", lambda: write_environment(results, "ad", a.model_path, a.judge_path))]
     if a.commit:
-        steps.append(("commit and push", lambda: commit_and_push("Realigned study: Alzheimer's/dementia test set")))
+        steps.append(("commit", lambda: commit_results("Realigned study: Alzheimer's/dementia test set")))
     return steps
 
 
@@ -314,7 +314,7 @@ def main(argv=None) -> int:
     ap.add_argument("--ablations", action="store_true", help="dev only: also R2-RQ, R2-BR and R2-NF")
     ap.add_argument("--no-temporal-ablation", action="store_true", help="confirm only: leave R2V-ND out")
     ap.add_argument("--go", action="store_true", help="confirm only: your explicit go after reading the dev report")
-    ap.add_argument("--commit", action="store_true", help="commit and push the results to main after the phase")
+    ap.add_argument("--commit", action="store_true", help="commit the results after the phase (it never pushes: you push by hand)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--results-dir", default=str(HERE / "results"))

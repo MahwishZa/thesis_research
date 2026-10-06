@@ -481,7 +481,7 @@ class PipelineTests(unittest.TestCase):
         names = [n for n, _ in RP.dev_plan(self._args(ablations=True, judge_path="q.gguf", commit=True), d, res)]
         self.assertIn("answers (dev): R2 R2C R2V R2V-ND R2-NF R2-RQ R2-BR", names)
         self.assertIn("directness judge (dev)", names)
-        self.assertEqual(names[-1], "commit and push")
+        self.assertEqual(names[-1], "commit")
         names = [n for n, _ in RP.confirm_plan(self._args(no_temporal_ablation=True), d, res)]
         self.assertIn("answers (confirm): R2 R2C R2V", names)
         self.assertIn("findings", names)
