@@ -65,7 +65,7 @@ is the MedCPT dense query; (2) *balanced retrieval*: with one dated corpus
 (PubMed, as of the question date), the balance is across evidence types —
 systematic reviews, trials and other designs — up to 8 of each, re-ranked by
 the MedCPT cross-encoder against the question; (3) *filtering*: RAG²'s trained
-filter is not distributed and a local retraining attempt failed (archived), so
+filter is not distributed and a local retraining attempt failed (`docs/log.md` Phases 13–18), so
 the generator itself judges each of the top 8 abstracts ("does it help answer
 the question?"); RAG² reports that a GPT-4o filter matched its trained one, and
 a local 8B judge is a weaker substitute; at most 5 pass. The answer uses the benchmark's standard verdict prompt. This is
@@ -189,18 +189,17 @@ research-repository/
 ├── experiments/
 │   └── medchange/        the pipeline: as-of benchmark, adapted RAG², verification, earlier stages, analysis,
 │                         and results/ (the committed outputs)
-└── _archive/             superseded work, kept for history and not used by the pipeline
 ```
 
-`_archive/` holds the first, Alzheimer's-specific design (`_archive/alzheimers_framework/`: a local corpus, a
-reviewed question pool and a three-arm runner) and other abandoned directions, kept as the record of how the
-study got here — see `_archive/README.md`. Nothing in the active pipeline depends on it (verified by an
-automated import check, `evaluation/tests/unit/test_scope_invariants.py`).
+The first, Alzheimer's-specific design (a local corpus, a reviewed question pool and a three-arm runner) and the
+other abandoned directions (the RAG² filter retraining, the first pilot) were kept in an `_archive` folder until
+2026-10-06, when nothing in the pipeline needed them any more and they were removed. They remain in Git history:
+`git show 5e03540:_archive/README.md` describes them, and `git checkout 5e03540 -- _archive` restores the folder.
 
 | Document | Read it for |
 |---|---|
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
-| [`docs/data.md`](docs/data.md) | The datasets — the MedChange benchmark, the Alzheimer's/dementia test set, the archived corpus and pool: provenance, limitations |
+| [`docs/data.md`](docs/data.md) | The datasets — the MedChange benchmark, the Alzheimer's/dementia test set, the superseded corpus and pool: provenance, limitations |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 | [`docs/experimentation.md`](docs/experimentation.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
