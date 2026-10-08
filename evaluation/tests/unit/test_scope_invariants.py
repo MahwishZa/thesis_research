@@ -297,10 +297,10 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
 
     def test_the_requirement_and_its_reading_are_quoted_exactly(self):
         p = self.confirm["primary"]
-        readme_table = "\n".join(_table(self.readme, "Conclusion"))
-        row = f"| {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])} | " \
-              f"{self.confirm['requirement']} |"
+        readme_table = "\n".join(_table(self.readme, "Difference (points)"))
+        row = f"| {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])} |"
         self.assertIn(row, readme_table)
+        self.assertIn(f"The goal is therefore {self.confirm['requirement']}", self.readme_flat)
         self.assertIn(f"{_pp(p['diff_a_minus_b'])} pp | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])}",
                       self.evaluation)
         self.assertIn(self.confirm["requirement"], self.evaluation)
@@ -311,10 +311,10 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
                       self.evaluation)
 
     def test_the_secondary_comparisons_are_quoted_exactly(self):
-        readme_table = "\n".join(_table(self.readme, "Conclusion"))
+        readme_table = "\n".join(_table(self.readme, "Difference (points)"))
         for name, r in self.confirm["secondary"].items():
             verdict = "confirmed" if r["confirmed"] else "not confirmed"
-            row = f"| {_pp(r['diff_a_minus_b'])} | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | {_p(r['holm_p'])} | {verdict} |"
+            row = f"| {_pp(r['diff_a_minus_b'])} | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | {_p(r['holm_p'])} |"
             self.assertIn(row, readme_table, f"README, {name}")
             full = (f"{_pp(r['diff_a_minus_b'])} pp | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | "
                     f"{_p(r['mcnemar_p'])} ({_p(r['holm_p'])}) | {verdict}")
