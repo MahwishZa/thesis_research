@@ -53,15 +53,15 @@ not confirmed**. With 528 questions, only gains of roughly 4 to 6 points or more
 *confirmed* only if its p-value is below 0.05 and its 95% range stays above zero; p-values after the first row are adjusted
 for making several comparisons. None of the differences is confirmed.
 
-| Comparison | Difference (points) | 95% range | p-value | Conclusion |
-|---|---|---|---|---|
-| **Proposed vs baseline (R2V − R2)** | **+1.3** | −1.9 to +4.7 | 0.51 | **met as a point estimate, not confirmed** |
-| Proposed vs baseline, only the 353 questions whose correct verdict changed between review versions | +3.4 | −0.8 to +7.4 | 0.89 | not confirmed |
-| Baseline vs standard retrieval (R2 − B1) | +0.6 | −3.0 to +4.2 | 1.0 | not confirmed |
-| Proposed vs standard retrieval (R2V − B1) | +1.9 | −2.5 to +6.1 | 1.0 | not confirmed |
-| Rules of evidence only vs baseline (R2C − R2) | −0.2 | −3.6 to +3.4 | 1.0 | not confirmed |
-| Proposed vs rules of evidence only (R2V − R2C) | +1.5 | −1.7 to +4.7 | 1.0 | not confirmed |
-| Proposed vs proposed without dates (R2V − R2V-ND) | +0.9 | −1.1 to +3.0 | 1.0 | not confirmed |
+| Comparison | Difference (points) | 95% range | p-value |
+|---|---|---|---|
+| **Proposed vs baseline (R2V − R2)** | **+1.3** | −1.9 to +4.7 | 0.51 |
+| Proposed vs baseline, only the 353 questions whose correct verdict changed between review versions | +3.4 | −0.8 to +7.4 | 0.89 |
+| Baseline vs standard retrieval (R2 − B1) | +0.6 | −3.0 to +4.2 | 1.0 |
+| Proposed vs standard retrieval (R2V − B1) | +1.9 | −2.5 to +6.1 | 1.0 |
+| Rules of evidence only vs baseline (R2C − R2) | −0.2 | −3.6 to +3.4 | 1.0 |
+| Proposed vs rules of evidence only (R2V − R2C) | +1.5 | −1.7 to +4.7 | 1.0 |
+| Proposed vs proposed without dates (R2V − R2V-ND) | +0.9 | −1.1 to +3.0 | 1.0 |
 
 **What the extra check does.** For the 447 questions where the baseline had studies to read, the check changed the
 baseline's verdict 100 times: 44 changes turned a wrong answer into a right one and 37 did the opposite. It moved answers
