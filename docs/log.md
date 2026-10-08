@@ -1259,7 +1259,7 @@ Its result will be a secondary reading under the same rule. No result, claim or 
 in the committed results.
 
 **Verification.** 200 tests pass, also in a fresh virtual environment with only numpy (Python 3.11, numpy 2.4.6) and outbound
-sockets blocked (one figure test skipped without matplotlib); `check_hermetic` reports the suite leaves the tree unchanged; `pyflakes`
+sockets blocked (one figure test skipped without matplotlib), and in a fresh clone of the pushed commit; every module imports there; `check_hermetic` reports the suite leaves the tree unchanged; `pyflakes`
 reports only the intentional availability import in `encoders.py`; the design record (settings, prompts, encoders) equals the
 current design, and the committed B0 and B1 answers carry the current arm-settings and prompt hashes; the dry runs of the `dev`,
 `confirm` and `ad` phases print the steps that `docs/reproducibility.md` describes. Real-model code paths cannot be tested without the

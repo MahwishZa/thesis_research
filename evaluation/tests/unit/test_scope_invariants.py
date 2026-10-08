@@ -388,7 +388,11 @@ class ActiveTreeLayoutTests(unittest.TestCase):
     def test_the_repository_structure_of_the_readme_names_only_existing_files(self):
         block = text(README).split("## Repository Structure", 1)[1].split("```", 2)[1]
         names = set(re.findall(r"[\w./-]+\.(?:py|md|json|toml)\b", block))
-        existing = {p.name for p in ROOT.rglob("*") if p.is_file() and ".git" not in p.parts}
+        # only the tracked parts of the tree: a computer that built the first design also holds multi-GB ignored folders
+        existing = {p.name for p in ROOT.glob("*") if p.is_file()}
+        for folder in ("docs", "src", "evaluation", "experiments"):
+            existing |= {p.name for p in (ROOT / folder).rglob("*")
+                         if p.is_file() and "__pycache__" not in p.parts and "data" not in p.relative_to(ROOT).parts[:3]}
         self.assertEqual(sorted(n for n in names if Path(n).name not in existing), [])
 
 
