@@ -6,7 +6,7 @@ exists; ``SETTINGS`` is hashed into every answer record so a silent change shows
 
 Pool candidates carry ``rank`` (1 = best cross-encoder rerank), ``lower``/``upper``
 (ISO bounds on first public availability) and, once computed, ``helpful`` (a
-zero-shot P(helpful) from ``helpfulness.py``).
+zero-shot P(helpful) from the stage-1 helpfulness step, removed from the repository; Git history).
 
 The recency term T and the admission score A = (1 - lambda) * rho + lambda * T are NOT
 re-implemented here: they are computed by the project's reference implementation of the

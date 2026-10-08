@@ -1,6 +1,5 @@
-"""G0: is the evidence that changed each verdict retrievable from PubMed, as of
-the newest review's date? Network required - run on the local machine
-(PubMed E-utilities are blocked in the cloud session that wrote this).
+"""As-of evidence collection, and gate G0 of the earlier stages: is the evidence that changed each verdict
+retrievable from PubMed as of the newest review's date? Needs network access (NCBI E-utilities).
 
 For every benchmark item it searches PubMed with the QUESTION ONLY (the system's
 real input), restricted to records published BEFORE the newest review version

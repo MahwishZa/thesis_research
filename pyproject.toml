@@ -19,15 +19,15 @@ dependencies = ["numpy>=1.24"]
 [project.optional-dependencies]
 # Figures of experiments/medchange/report.py (the tables need nothing extra).
 report = ["matplotlib>=3.7"]
-# MedCPT encoders and the Flan-T5 helpfulness/stance fallbacks. Not needed to run the test suite.
+# The MedCPT encoders and cross-encoder. Not needed to run the test suite.
 # NOTE: torch 2.4.x was built against numpy 1.x; if numpy 2.x is installed alongside it,
 # pin numpy<2 (see docs/reproducibility.md).
-models = ["torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99"]
+models = ["torch>=2.0", "transformers>=4.40"]
 # Everything the MedChange pipeline needs end to end (PubMed probing needs only the
 # standard library; llama-cpp-python is the CPU llama.cpp binding used for generation -
 # on Windows install a prebuilt wheel, see docs/reproducibility.md).
 medchange = [
-    "torch>=2.0", "transformers>=4.40", "sentencepiece>=0.1.99",
+    "torch>=2.0", "transformers>=4.40",
     "llama-cpp-python>=0.2.60",
 ]
 

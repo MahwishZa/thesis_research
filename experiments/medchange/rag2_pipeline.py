@@ -1,4 +1,4 @@
-"""One command per phase of the realigned study (docs/experimentation.md §8).
+"""One command per phase of the realigned study (docs/protocol.md §6, docs/reproducibility.md §4).
 
     python -m experiments.medchange.rag2_pipeline dev --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
     python -m experiments.medchange.rag2_pipeline confirm --go --model-path models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
@@ -36,7 +36,7 @@ from typing import Optional, Sequence
 
 from . import rag2 as R
 from .generate_answers import file_sha256, load_jsonl
-from .pipeline import EXPECTED_ITEMS, _checks, commit_results, execute, frozen_is_pushed, py
+from .runner import EXPECTED_ITEMS, commit_results, execute, frozen_is_pushed, print_checks, py
 
 HERE = Path(__file__).resolve().parent
 DESIGN = "/".join(("experiments", "medchange", "results", "rag2_design.json"))   # written by the dev phase
@@ -76,7 +76,7 @@ def _write(path: Path, text: str) -> None:
         handle.write(text)
 
 
-PACKAGES = ("numpy", "torch", "transformers", "sentencepiece", "llama-cpp-python", "matplotlib")
+PACKAGES = ("numpy", "torch", "transformers", "llama-cpp-python", "matplotlib")
 
 
 def _git(*args: str, repo: Optional[Path] = None) -> Optional[str]:
@@ -129,7 +129,7 @@ def write_design(results: Path, model_path: str) -> tuple[bool, str]:
 
 
 def dev_check(rep: dict) -> dict:
-    """The pre-declared dev check (docs/experimentation.md §8)."""
+    """The pre-declared dev check (docs/protocol.md §6)."""
     gen, ver = rep["generation"], rep["verification"]
     parse = {arm: (row["unparsed"] / row["all"]["n"]) <= MAX_UNPARSED
              for arm, row in gen.items() if row.get("all")}
@@ -171,7 +171,7 @@ def write_dev_report(results: Path) -> tuple[bool, str]:
              f"Status: **{check['status']}**. "]
     lines.append({"READY": "Freeze the design (it is written and committed with --commit) and, after reading this "
                            "report, run the confirmatory phase once with --go.",
-                  "DEFECT": "A defect: fix its cause, record it in docs/experimentation.md §9 and rerun the dev phase.",
+                  "DEFECT": "A defect: fix its cause, record it in docs/protocol.md §7 and rerun the dev phase.",
                   "REVISE ONCE": "The plan allows one recorded revision of the verification prompt on dev; then the "
                                  "design is frozen whatever dev shows."}[check["status"]])
     _write(results / "RAG2_DEV_REPORT.md", "\n".join(lines) + "\n")
@@ -185,7 +185,7 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
     p = rep["primary"]
     title = {"confirm": "confirmatory split", "ad": "Alzheimer's/dementia secondary test set"}[split]
     lines = [f"# Findings of the realigned study ({title}, run once)", "",
-             "Each conclusion follows the rules fixed in `docs/experimentation.md` before the run.", "",
+             "Each conclusion follows the rules fixed in `docs/protocol.md` and `docs/evaluation.md` before the run.", "",
              "## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)", ""]
     if p:
         lines += [f"R2V − R2 = {100 * p['diff_a_minus_b']:+.1f} pp (95% CI {100 * p['ci95'][0]:+.1f} to "
@@ -247,7 +247,7 @@ def run_steps(a, split: str, arms: Sequence[str], variants: Sequence[str]) -> li
 def dev_plan(a, data: Path, results: Path) -> list:
     arms = DEV_ARMS + (ABLATION_ARMS if a.ablations else ())
     variants = ("R2", "R2-RQ", "R2-BR") if a.ablations else ("R2",)
-    steps = [("preflight (dev)", lambda: _checks(preflight(data, "dev")))]
+    steps = [("preflight (dev)", lambda: print_checks(preflight(data, "dev")))]
     steps += run_steps(a, "dev", arms, variants)
     steps += [("analysis (dev)", py("analyze_rag2", "--split", "dev", "--out-dir", results,
                                     "--label-audit", results / "label_audit_dev.jsonl")),
@@ -262,7 +262,7 @@ def dev_plan(a, data: Path, results: Path) -> list:
 
 def confirm_plan(a, data: Path, results: Path) -> list:
     arms = ("R2", "R2C", "R2V") + (() if a.no_temporal_ablation else ("R2V-ND",))
-    steps = [("preflight (confirm)", lambda: _checks(preflight(data, "confirm")))]
+    steps = [("preflight (confirm)", lambda: print_checks(preflight(data, "confirm")))]
     steps += run_steps(a, "confirm", arms, ("R2",))
     steps += [("analysis (confirm)", py("analyze_rag2", "--split", "confirm", "--out-dir", results,
                                         "--label-audit", results / "label_audit_confirm.jsonl")),
@@ -275,13 +275,13 @@ def confirm_plan(a, data: Path, results: Path) -> list:
 
 
 def ad_plan(a, data: Path, results: Path) -> list:
-    count = lambda: _checks([preflight(data, "ad")[0]])
+    count = lambda: print_checks([preflight(data, "ad")[0]])
     steps = [("Alzheimer's items present (run ad_benchmark first)", count),
              ("as-of PubMed records (ad)", py("pubmed_asof", "--split", "ad")),
              ("candidate pools and abstracts (ad)", py("freeze_candidates", "--split", "ad", "--device", "cpu")),
              ("B0 and B1 answers (ad)", py("generate_answers", "--split", "ad", "--arms", "B0", "B1",
                                            "--model-path", a.model_path, "--n-threads", a.n_threads)),
-             ("preflight (ad)", lambda: _checks(preflight(data, "ad")))]
+             ("preflight (ad)", lambda: print_checks(preflight(data, "ad")))]
     steps += run_steps(a, "ad", AD_ARMS, ("R2",))
     steps += [("analysis (ad)", py("analyze_rag2", "--split", "ad", "--out-dir", results)),
               ("publish outputs (ad)", lambda: publish(data, results, "ad")),

@@ -74,10 +74,10 @@ class LabelAuditTests(unittest.TestCase):
             rep = LA.summarize([json.loads(l) for l in out.read_text(encoding="utf-8").splitlines()], {"a": items[0]})
         self.assertEqual((rep["n_unparsed"], rep["agreement"], rep["stable_item_ids"]), (1, None, []))
 
-    def test_cli_refuses_the_confirmatory_split_before_the_model_is_frozen(self):
+    def test_cli_refuses_the_confirmatory_split_before_the_design_is_frozen(self):
         with TemporaryDirectory() as tmp, mock.patch("sys.stderr"):
             code = LA.main(["--split", "confirm", "--medchange-dir", tmp, "--model-path", str(Path(tmp) / "m.gguf"),
-                            "--frozen-model", str(Path(tmp) / "absent.json")])
+                            "--design-record", str(Path(tmp) / "absent.json")])
         self.assertEqual(code, 2)
 
     def test_cli_writes_reports_with_a_fake_model(self):

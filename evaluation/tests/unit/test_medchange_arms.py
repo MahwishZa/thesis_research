@@ -1,4 +1,4 @@
-"""Arms, prompts, resumable generation and the dev gates (no model, no network)."""
+"""Arms (B0/B1 and the completed stage-1 arms), prompts and resumable generation (no model, no network)."""
 
 import hashlib
 import json
@@ -9,11 +9,6 @@ from tempfile import TemporaryDirectory
 
 from experiments.medchange import arms as A
 from experiments.medchange import generate_answers as generate_cli
-from experiments.medchange import analyze as analyze_cli
-from experiments.medchange import error_analysis as EA
-from experiments.medchange.analyze import (
-    confirmatory_family, correctness, gates, paired, retrieval_metrics, summarize,
-)
 from experiments.medchange.generate_answers import (
     RESULT_RELEVANT, check_config, config_path, file_sha256, load_jsonl, run, run_config,
 )
@@ -214,21 +209,6 @@ class RunConfigTests(unittest.TestCase):
             recorded = json.loads(config_path(out).read_text(encoding="utf-8"))
         self.assertEqual((recorded["n_threads"], recorded["llama_cpp_python"]), (8, "0.2.90"))
 
-    def test_the_saved_analysis_carries_the_generation_config(self):
-        bench = [dict(item("a", "changed", "SUPPORTED"), split="dev", likely_label_noise=False,
-                      previous={"label": "REFUTED", "date": "2010-01-01"})]
-        rows = [{"item_id": "a", "arm": "B0", "verdict": "SUPPORTED", "seconds": 1.0,
-                 "admitted": [], "text": "x"}]
-        with TemporaryDirectory() as tmp:
-            d = Path(tmp)
-            for name, data in (("benchmark.jsonl", bench), ("answers_dev.jsonl", rows)):
-                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
-            check_config(d / "answers_dev.jsonl", run_config(**self.KW))
-            out = d / "report.json"
-            analyze_cli.main(["--split", "dev", "--data-dir", str(d), "--out", str(out)])
-            report = json.loads(out.read_text(encoding="utf-8"))
-        self.assertEqual(report["generation_config"]["model_sha256"], "a" * 64)
-
 
 class GenerateCliTests(unittest.TestCase):
     """``generate_answers.main`` end to end with a stub generator: the configuration is recorded
@@ -299,177 +279,8 @@ class GenerateCliTests(unittest.TestCase):
             self.assertEqual(len(load_jsonl(d / "answers_dev.jsonl")), 2)
 
 
-class ErrorAnalysisTests(unittest.TestCase):
-
-    def setUp(self):
-        self.item = dict(item("a", "changed", "SUPPORTED", previous="REFUTED"), change_type="REFUTED -> SUPPORTED")
-        self.item["previous"] = {"label": "REFUTED", "date": "2010-01-01"}
-        self.item["newest"] = {"label": "SUPPORTED", "date": "2020-01-01"}
-        self.window = {"pmid": "w", "lower": "2015-01-01", "upper": "2015-01-01"}
-        self.old = {"pmid": "o", "lower": "2005-01-01", "upper": "2005-01-01"}
-
-    def test_every_cause_is_assigned_in_order(self):
-        win = {"w"}
-        c = lambda **k: EA.classify(self.item, k, win)
-        self.assertEqual(c(verdict="SUPPORTED", admitted=[]), "correct")
-        self.assertEqual(c(verdict=None, admitted=["w"]), "parse_failure")
-        self.assertEqual(EA.classify(self.item, {"verdict": "REFUTED", "admitted": ["o"]}, set()), "retrieval_miss")
-        self.assertEqual(c(verdict="REFUTED", admitted=["o"]), "admission_miss")
-        self.assertEqual(c(verdict="REFUTED", admitted=["w", "o"]), "followed_or_ignored_evidence")
-
-    def test_window_membership_uses_the_update_window_only(self):
-        pool = {"candidates": [self.window, self.old]}
-        self.assertEqual(EA.window_pmids(self.item, pool), {"w"})
-
-    def test_report_counts_groups_and_splits_accuracy_by_admitted_window_evidence(self):
-        items = {"a": self.item}
-        pools = {"a": {"candidates": [self.window, self.old]}}
-        answers = {("a", "B1"): {"verdict": "REFUTED", "admitted": ["w"]},
-                   ("a", "P"): {"verdict": "SUPPORTED", "admitted": ["o"]}}
-        rep = EA.analyse(items, pools, answers, ["B1", "P"])
-        self.assertEqual(rep["per_arm"]["B1"]["groups"]["followed_or_ignored_evidence"], 1)
-        self.assertEqual(rep["per_arm"]["B1"]["accuracy_with_admitted_update_window_evidence"], {"n": 1, "accuracy": 0.0})
-        self.assertEqual(rep["per_arm"]["P"]["accuracy_without"], {"n": 1, "accuracy": 1.0})
-        self.assertEqual(rep["per_arm"]["B1"]["outdated_verdict_rate"], 1.0)
-        self.assertIn("| B1 |", EA.to_markdown("dev", rep))
-
-    def test_cli_writes_both_files(self):
-        bench = [dict(self.item, split="dev", likely_label_noise=False)]
-        pools = [{"item_id": "a", "candidates": [self.window]}]
-        rows = [{"item_id": "a", "arm": "B1", "verdict": "SUPPORTED", "admitted": ["w"]}]
-        with TemporaryDirectory() as tmp:
-            d = Path(tmp)
-            for name, data in (("benchmark.jsonl", bench), ("frozen_dev.jsonl", pools), ("answers_dev.jsonl", rows)):
-                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
-            with mock.patch("sys.stdout"):
-                code = EA.main(["--data-dir", str(d), "--out-dir", str(d / "out")])
-            self.assertEqual(code, 0)
-            self.assertTrue((d / "out" / "error_analysis_dev.md").exists())
-            self.assertEqual(json.loads((d / "out" / "error_analysis_dev.json").read_text())["n_changed_items"], 1)
 
 
-def answers(spec):
-    """spec: {(item, arm): verdict}"""
-    return {k: {"verdict": v, "seconds": 1.0} for k, v in spec.items()}
-
-
-class GateTests(unittest.TestCase):
-
-    def setUp(self):
-        self.items = {f"c{i}": item(f"c{i}", "changed", "SUPPORTED") for i in range(20)}
-
-    def test_correctness_and_summary(self):
-        spec = {(i, "B1"): ("SUPPORTED" if n < 12 else "REFUTED") for n, i in enumerate(self.items)}
-        s = summarize(self.items, answers(spec), ["B1"])
-        self.assertEqual(s["B1"]["changed"]["accuracy"], 0.6)
-        self.assertEqual(s["B1"]["changed"]["outdated_match"], 0.4)   # previous label REFUTED
-
-    def test_unparsed_counts_wrong(self):
-        spec = {("c0", "B1"): None}
-        self.assertEqual(correctness(self.items, answers(spec), "B1", "changed"), {"c0": 0})
-
-    def test_g2_threshold(self):
-        spec = {}
-        for n, i in enumerate(self.items):
-            spec[(i, "B0")] = "NOT ENOUGH INFORMATION"
-            spec[(i, "B1")] = "SUPPORTED" if n < 4 else "NOT ENOUGH INFORMATION"   # 20% change
-        self.assertEqual(gates(self.items, answers(spec))["G2"], "PASS")
-        spec2 = {k: v for k, v in spec.items()}
-        for n, i in enumerate(self.items):
-            spec2[(i, "B1")] = "SUPPORTED" if n < 3 else "NOT ENOUGH INFORMATION"   # 15%
-        self.assertEqual(gates(self.items, answers(spec2))["G2"], "FAIL")
-
-    def test_g3_requires_gain_over_b2_and_over_the_shuffled_control(self):
-        spec = {}
-        for n, i in enumerate(self.items):
-            spec[(i, "B2")] = "REFUTED"                                   # 0% correct
-            spec[(i, "P")] = "SUPPORTED" if n < 4 else "REFUTED"           # 20% correct
-            spec[(i, "C1")] = "SUPPORTED" if n < 4 else "REFUTED"          # reproduces it
-        g = gates(self.items, answers(spec))
-        self.assertEqual(g["G3"], "FAIL")
-        for n, i in enumerate(self.items):
-            spec[(i, "C1")] = "REFUTED"
-        self.assertEqual(gates(self.items, answers(spec))["G3"], "PASS")
-
-    def test_confirmatory_family_applies_holm(self):
-        spec = {}
-        for n, i in enumerate(self.items):
-            spec[(i, "P")] = "SUPPORTED"
-            spec[(i, "B1")] = "SUPPORTED" if n < 10 else "REFUTED"      # P better on 10 of 20
-            spec[(i, "B2")] = "REFUTED"                                  # P better on all 20
-        fam = confirmatory_family(self.items, answers(spec))
-        self.assertEqual(set(fam), {"P-B1", "P-B2"})                   # B3 absent -> not invented
-        for v in fam.values():
-            self.assertGreaterEqual(v["holm_p"], v["mcnemar_p"])        # Holm never lowers a p
-        self.assertLess(fam["P-B2"]["holm_p"], 0.001)
-
-    def test_paired_needs_minimum_pairs(self):
-        spec = {("c0", "P"): "SUPPORTED", ("c0", "B2"): "REFUTED"}
-        self.assertIsNone(paired(self.items, answers(spec), "P", "B2"))
-
-
-class RetrievalMetricTests(unittest.TestCase):
-
-    def setUp(self):
-        # update window: (2010-01-01, 2015-01-01]; question date 2015-01-01
-        self.items = {"x": {"item_id": "x", "kind": "changed", "newest": {"date": "2015-01-01"},
-                            "previous": {"date": "2010-01-01"}}}
-        cands = [cand("old", 1, 2005), cand("in1", 2, 2012), cand("in2", 3, 2014), cand("edge", 4, 2010)]
-        self.pools = {"x": {"candidates": cands}}
-
-    def answers(self, **admitted):
-        return {("x", arm): {"admitted": pm, "verdict": "SUPPORTED", "seconds": 1.0}
-                for arm, pm in admitted.items()}
-
-    def test_window_share_any_evidence_age_and_overlap(self):
-        ans = self.answers(B1=["old", "in1"], P=["in1", "in2"])
-        m = retrieval_metrics(self.items, self.pools, ans, ["B1", "P"])
-        self.assertEqual(m["B1"]["changed"]["update_window_share"], 0.5)       # only in1 of 2
-        self.assertEqual(m["P"]["changed"]["update_window_share"], 1.0)
-        self.assertEqual(m["P"]["changed"]["items_with_update_window_evidence"], 1.0)
-        self.assertEqual(m["P"]["changed"]["jaccard_with_B1"], round(1 / 3, 4))
-        self.assertLess(m["P"]["changed"]["mean_age_years"], m["B1"]["changed"]["mean_age_years"])
-
-    def test_a_passage_dated_exactly_on_the_previous_version_is_not_in_the_window(self):
-        ans = self.answers(B1=["edge"])
-        m = retrieval_metrics(self.items, self.pools, ans, ["B1"])
-        self.assertEqual(m["B1"]["changed"]["update_window_share"], 0.0)
-
-    def test_empty_admission_and_missing_pool_are_handled(self):
-        ans = self.answers(B0=[])
-        m = retrieval_metrics(self.items, self.pools, ans, ["B0"])
-        self.assertIsNone(m["B0"]["changed"]["update_window_share"])
-        self.assertEqual(m["B0"]["changed"]["mean_admitted"], 0.0)
-        self.assertEqual(retrieval_metrics(self.items, {}, ans, ["B0"]), {})
-
-
-class AnalyzeCliTests(unittest.TestCase):
-
-    def test_main_writes_a_utf8_json_report_with_all_sections(self):
-        bench = [dict(item("a", "changed", "SUPPORTED"), split="dev", likely_label_noise=False,
-                      previous={"label": "REFUTED", "date": "2010-01-01"}),
-                 dict(item("b", "changed", "REFUTED"), split="dev", likely_label_noise=False,
-                      previous={"label": "SUPPORTED", "date": "2010-01-01"})]
-        pools = [{"item_id": i["item_id"], "candidates": pool()} for i in bench]
-        rows = []
-        for it in bench:
-            for arm, v in (("B0", "SUPPORTED"), ("B1", "REFUTED")):
-                rows.append({"item_id": it["item_id"], "arm": arm, "verdict": v, "seconds": 2.0,
-                             "admitted": [] if arm == "B0" else ["001", "002"], "text": v})
-        with TemporaryDirectory() as tmp:
-            d = Path(tmp)
-            for name, data in (("benchmark.jsonl", bench), ("frozen_dev.jsonl", pools),
-                               ("answers_dev.jsonl", rows)):
-                (d / name).write_text("\n".join(json.dumps(r) for r in data) + "\n", encoding="utf-8")
-            out = d / "sub" / "report.json"
-            self.assertEqual(analyze_cli.main(["--split", "dev", "--data-dir", str(d), "--out", str(out)]), 0)
-            report = json.loads(out.read_text(encoding="utf-8"))
-        self.assertEqual(report["n_answers"], 4)
-        self.assertEqual(set(report), {"split", "n_answers", "per_arm", "paired_changed",
-                                       "paired_unchanged", "confirmatory_family_changed",
-                                       "gates", "retrieval"})
-        self.assertEqual(report["per_arm"]["B0"]["changed"]["accuracy"], 0.5)
-        self.assertEqual(report["gates"]["G2"], "PASS")        # B1 differs from B0 on both items
 
 
 if __name__ == "__main__":

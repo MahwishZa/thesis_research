@@ -13,7 +13,6 @@ from __future__ import annotations
 import re
 from typing import Optional, Sequence
 
-LABELS = ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION")
 SYSTEM = ("You are a careful medical evidence assistant. You answer from the evidence "
           "you are given when there is any, and from your own knowledge otherwise.")
 

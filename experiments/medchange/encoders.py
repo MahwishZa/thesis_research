@@ -1,10 +1,9 @@
 """MedCPT encoders and the cross-encoder reranker.
 
 RAG² uses MedCPT at both stages: a dual-encoder for retrieval and a
-cross-encoder for reranking (fact E6 of the earlier decision log, in Git history at commit 5e03540). The
-thesis keeps both, over its own Alzheimer's corpus rather than RAG²'s 564 GB
-general-medical one. That substitution of *corpus* is the thesis's declared
-adaptation; the *method* is unchanged.
+cross-encoder for reranking. The study keeps both, over the as-of PubMed records of each
+question (docs/methodology.md §3) rather than RAG²'s 564 GB four-corpus index; that
+substitution of the *corpus* is a declared adaptation (docs/methodology.md §5.2).
 
 ``torch`` and ``transformers`` are imported inside the methods, not at module
 import. The test suite and every offline tool must keep working on a machine

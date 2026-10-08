@@ -128,25 +128,21 @@ class TextTests(unittest.TestCase):
 
 class AssemblyTests(unittest.TestCase):
 
-    def build(self):
+    def build(self, split="dev"):
         items = make_items(40, 20)
-        answers = make_answers(items, perfect=("B1",), wrong=("B0", "B2", "B3", "P", "C1"))
-        retrieval = {a: {"changed": {"update_window_share": 0.5}} for a in ("B1", "B2", "B3", "P", "C1")}
-        model = {"cv": {"folds": 5, "repeats": 2, "prior_accuracy": 0.465,
-                        "variants": {"B1R": {"accuracy": 0.52, "accuracy_changed": 0.48,
-                                             "recall": {S: 0.7, RF: 0.1, N: 0.5}},
-                                     "H0": {"accuracy": 0.51, "accuracy_changed": 0.49, "recall": {S: 0.7, RF: 0.1, N: 0.5}}}},
-                 "gate2": {"gate2": "FAIL", "checks": {"stance_auc>=0.6": True, "gain": False}}}
+        answers = make_answers(items, perfect=("B1", "R2V"), wrong=("B0", "B2", "B3", "P", "C1", "R2"))
         audit = {"agreement": 0.83, "kappa": 0.74, "n_items": 226, "n_stable": 188, "label_change_reproduced": 0.68,
                  "per_gold_class": {}}
-        return R.build("dev", items, answers, [], {"retrieval": retrieval}, model, audit)
+        return R.build(split, items, answers, [], audit)
 
     def test_markdown_is_honest_about_status_and_the_base_paper(self):
         text = R.report_markdown(self.build(), {"fig1": True})
-        for needle in ("dev split, exploratory", "not comparable with theirs", "Table 1", "Table 2", "Table 3", "Table 4",
-                       "Gate 2: **FAIL**", "Label reproducibility", "Relation to the base paper", "fig1_accuracy_by_system.png"):
+        for needle in ("dev split, exploratory", "not comparable with theirs", "Table 1", "Table 2", "Table 3",
+                       "Label reproducibility", "Relation to the base paper", "fig1_accuracy_by_system.png",
+                       "R2 is an adapted RAG², not a reproduction"):
             self.assertIn(needle, text)
         self.assertNotIn("fig2_class_recall.png", text)                          # only figures that exist are linked
+        self.assertNotIn("Table 4", text)
 
     def test_write_report_without_figures_writes_markdown_latex_and_data(self):
         with TemporaryDirectory() as tmp:
@@ -155,25 +151,23 @@ class AssemblyTests(unittest.TestCase):
             data = json.loads((Path(tmp) / "report_data_dev.json").read_text(encoding="utf-8"))
         self.assertFalse(any(figs.values()))
         self.assertEqual(names, {"REPORT.md", "tables.tex", "report_data_dev.json"})
-        self.assertNotIn("model", data)
+        self.assertEqual(data["split"], "dev")
 
     @unittest.skipUnless(HAVE_MPL, "matplotlib not installed")
-    def test_write_report_makes_the_four_figures(self):
+    def test_write_report_makes_the_two_figures(self):
         with TemporaryDirectory() as tmp:
-            figs = R.write_report(self.build(), Path(tmp), raw_b1=0.53)
+            figs = R.write_report(self.build(), Path(tmp))
             pngs = sorted(p.name for p in Path(tmp).glob("*.png"))
         self.assertTrue(all(figs.values()), figs)
-        self.assertEqual(len(pngs), 4)
+        self.assertEqual(pngs, ["fig1_accuracy_by_system.png", "fig2_class_recall.png"])
 
     def test_confirmatory_report_has_no_dev_only_sections(self):
         items = make_items(40, 20)
-        d = R.build("confirm", items, make_answers(items), [], None, {"cv": {}, "gate2": {}}, None)
+        d = R.build("confirm", items, make_answers(items), [], None)
         text = R.report_markdown(d, {})
         self.assertIn("confirm split, confirmatory", text)
-        self.assertNotIn("## Table 4", text)
         self.assertNotIn("Dev split, exploratory", text)
         self.assertNotIn("Closed-book rows", text)                               # no released answers were given
-        self.assertNotIn("## Table 2", text)                                     # B1 alone is not a comparison
 
 
 class CliTests(unittest.TestCase):
@@ -190,11 +184,17 @@ class CliTests(unittest.TestCase):
             (res / "answers_dev.jsonl").write_text(
                 "".join(json.dumps({"item_id": i, "arm": a, "verdict": r["verdict"]}) + "\n" for (i, a), r in answers.items()),
                 encoding="utf-8")
+            realigned = make_answers(items, perfect=("R2V",), wrong=("R2",))
+            (res / "rag2_answers_dev.jsonl").write_text(
+                "".join(json.dumps({"item_id": i, "arm": a, "verdict": r["verdict"]}) + "\n" for (i, a), r in realigned.items()),
+                encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 code = R.main(["--data-dir", str(data), "--results-dir", str(res), "--no-figures"])
                 missing = R.main(["--data-dir", str(tmp / "none"), "--results-dir", str(res)])
             exists = (res / "report" / "REPORT.md").is_file()
+            arms = {r["arm"] for r in json.loads((res / "report" / "report_data_dev.json").read_text(encoding="utf-8"))["systems"]}
         self.assertEqual((code, missing, exists), (0, 2, True))
+        self.assertTrue({"R2", "R2V"} <= arms)                                   # the realigned arms are read too
 
 
 if __name__ == "__main__":

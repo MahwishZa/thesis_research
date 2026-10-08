@@ -35,7 +35,7 @@ Closed-book rows are the benchmark authors' own released answers (their prompt, 
 | R2V: R2's answer verified against the evidence criteria (proposed) | 47.0 | +2.0 | -3.4 to +7.1 | 0.5296 | 56.0 |
 | R2V-ND: R2V without dates and without the currency criterion (ablation) | 45.3 | +0.3 | -5.1 to +5.7 | 1.0000 | 56.6 |
 
-Differences are against B1 on changed items; p values are uncorrected exact McNemar tests. The pre-stated Holm-corrected family (P vs B1, B2, B3) is in `analysis_confirm.json`; the realigned study's families are in `rag2_analysis_{d['split']}.md`.
+Differences are against B1 on changed items; p values are uncorrected exact McNemar tests. The pre-stated Holm-corrected comparisons of the realigned study are in `rag2_analysis_confirm.md`.
 
 ## Table 3. Where the accuracy comes from (changed items)
 

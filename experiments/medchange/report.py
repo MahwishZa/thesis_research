@@ -6,16 +6,14 @@ evidence-admission methods (their Table 3), plus the figures that go with them. 
 MedChange (verdict accuracy against the newest Cochrane verdict), not multiple-choice QA, so the numbers
 are not comparable with theirs; only the layout is.
 
-    python -m experiments.medchange.report --medchange-dir ..\\MedChange                # dev (exploratory)
-    python -m experiments.medchange.report --medchange-dir ..\\MedChange --split confirm # after the confirmatory run
+    python -m experiments.medchange.report --split confirm --medchange-dir ..\\MedChange
 
-Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` and ``results/synthesis_<split>.jsonl``
-(the arms), ``results/analysis_<split>.json`` (retrieval-level metrics), ``results/synthesis_model.json``
-(dev cross-validation), the label audit and, for the closed-book rows, the benchmark authors' released
-answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report/REPORT.md``,
-``tables.tex``, ``report_data.json`` and four PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
-Every number is computed from those files; nothing is typed in. The dev tables are exploratory; only the
-confirmatory split supports claims (``docs/experimentation.md``).
+Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` (B0, B1 and the other stage-1 arms),
+``results/rag2_answers_<split>.jsonl`` (R2, R2C, R2V, R2V-ND), the label audit and, for the closed-book rows, the
+benchmark authors' released answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report/REPORT.md``,
+``tables.tex``, ``report_data_<split>.json`` and two PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
+Every number is computed from those files; nothing is typed in. Only the confirmatory split supports claims
+(``docs/evaluation.md``).
 """
 
 from __future__ import annotations
@@ -26,10 +24,10 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
-from .analyze_stage2 import class_stats, correct_map, load_arms, paired, wilson
+from .benchmark import LABELS
 from .generate_answers import load_jsonl
 from .headroom import MODELS, parse_label
-from .synthesis import LABELS
+from .scoring import class_stats, correct_map, load_answers, paired, wilson
 
 HERE = Path(__file__).resolve().parent
 RELEASED = {"qwen25-7b": "Qwen2.5-7B", "mistral-24b": "Mistral-24B", "llama33-70b": "Llama-3.3-70B",
@@ -40,10 +38,6 @@ STAGE1 = (("B0", "Llama-3-8B-Instruct (Q4_K_M), no retrieval"),
           ("B3", "+ recency re-ranking (TempRALM-style)"),
           ("P", "+ helpfulness + recency (stage-1 Temporal Filter)"),
           ("C1", "+ helpfulness + shuffled dates (control)"))
-STAGE2 = (("B1R", "B1 verdict through the same fitting"), ("S0", "stance only"),
-          ("H0", "hybrid: B1 verdict + stance"), ("H1", "hybrid + recency weights"),
-          ("H2", "hybrid + study-type weights"), ("H3", "hybrid + both weights"),
-          ("H1C", "H1 with shuffled dates (control)"), ("H3C", "H3 with shuffled dates (control)"))
 REALIGNED = (("R2", "adapted RAG²: rationale query + type-balanced retrieval + LLM filter (baseline)"),
              ("R2C", "R2's evidence read once with explicit evidence criteria (control)"),
              ("R2V", "R2's answer verified against the evidence criteria (proposed)"),
@@ -97,9 +91,6 @@ def system_rows(items: dict, answers: dict, arms_present: Sequence[str], release
     for arm, name in REALIGNED:
         if arm in arms_present:
             add(REALIGNED_GROUP, f"{arm}: {name}", arm)
-    for arm, name in STAGE2:
-        if arm in arms_present:
-            add("Evidence-synthesis layer (stage 2; out-of-fold on dev)", f"{arm}: {name}", arm)
     return rows
 
 
@@ -118,7 +109,7 @@ def filtering_rows(items: dict, answers: dict, arms_present: Sequence[str], base
 
 def class_rows(items: dict, answers: dict, arms_present: Sequence[str]) -> list[dict]:
     rows = []
-    for arm, name in (("B0", "no retrieval"),) + tuple(STAGE1[1:]) + REALIGNED + (("H0", "hybrid H0"),):
+    for arm, name in (("B0", "no retrieval"),) + tuple(STAGE1[1:]) + REALIGNED:
         ids = [i for i, it in items.items() if it["kind"] == "changed" and (i, arm) in answers]
         if arm not in arms_present or not ids:
             continue
@@ -197,16 +188,6 @@ def table_classes(rows: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def table_cv(model: dict) -> str:
-    cv = model["cv"]
-    lines = [f"Repeated {cv['folds']}-fold cross-validation, {cv['repeats']} repeats, on the 226 dev items; constant-guess accuracy "
-             f"{_pct(cv['prior_accuracy'])}%.", "",
-             "| Variant | accuracy (all) | accuracy (changed) | recall S | recall R | recall NEI |", "|---|---|---|---|---|---|"]
-    for name, v in cv["variants"].items():
-        r = v["recall"]
-        lines.append(f"| {name} | {_pct(v['accuracy'])} | {_pct(v['accuracy_changed'])} | {_pct(r['SUPPORTED'], 0)}% | "
-                     f"{_pct(r['REFUTED'], 0)}% | {_pct(r['NOT ENOUGH INFORMATION'], 0)}% |")
-    return "\n".join(lines) + "\n"
 
 
 def to_latex(rows: list[dict], caption: str, label: str) -> str:
@@ -259,12 +240,10 @@ def _plt():
 
 
 SHORT = {"B0": "B0 no retrieval", "B1": "B1 + MedCPT top-5", "B2": "B2 + helpfulness filter", "B3": "B3 + recency re-rank",
-         "P": "P helpfulness + recency", "C1": "C1 shuffled-date control", "B1R": "B1R refit", "S0": "S0 stance only",
-         "H0": "H0 B1 + stance", "H1": "H1 + recency weights", "H2": "H2 + study-type weights", "H3": "H3 + both weights",
-         "H1C": "H1C shuffled dates", "H3C": "H3C shuffled dates",
+         "P": "P helpfulness + recency", "C1": "C1 shuffled-date control",
          "R2": "R2 adapted RAG² (baseline)", "R2C": "R2C criteria only", "R2V": "R2V verification (proposed)",
          "R2V-ND": "R2V-ND no dates"}
-GROUP_COLOURS = {"Closed-book": BLUE, "Llama-3-8B": ORANGE, "Evidence-synthesis": AQUA, "Adapted RAG²": VIOLET}
+GROUP_COLOURS = {"Closed-book": BLUE, "Llama-3-8B": ORANGE, "Adapted RAG²": VIOLET}
 
 
 def _colour(group: str) -> str:
@@ -339,92 +318,23 @@ def figure_classes(rows: list[dict], path: Path, status: str) -> bool:
     return True
 
 
-def figure_cv(model: dict, raw_b1: Optional[float], path: Path) -> bool:
-    """Dot plot (not bars: the axis does not start at zero) of the cross-validated accuracy of every variant."""
-    plt = _plt()
-    if plt is None or not model:
-        return False
-    cv = model["cv"]
-    names = list(cv["variants"])
-    fig, ax = plt.subplots(figsize=(8.6, 4.4))
-    for i, name in enumerate(names):
-        colour = GRAY if name == "B1R" else (BLUE if name.startswith("S") else ORANGE)
-        v = 100 * cv["variants"][name]["accuracy"]
-        control = name.endswith("C")
-        ax.plot([i], [v], marker="o", ms=9, color=colour, mfc=SURFACE if control else colour, mew=1.8, ls="none")
-        ax.text(i, v - 1.25, f"{v:.1f}", ha="center", fontsize=8, color=MUTED)
-    ax.axhline(100 * cv["prior_accuracy"], color=MUTED, lw=1, ls=(0, (4, 3)))
-    ax.text(len(names) - 0.5, 100 * cv["prior_accuracy"] + 0.3, "constant guess", ha="right", fontsize=8, color=MUTED)
-    if raw_b1 is not None:
-        ax.axhline(100 * raw_b1, color=INK, lw=1)
-        ax.text(len(names) - 0.5, 100 * raw_b1 + 0.3, "raw B1 answer", ha="right", fontsize=8, color=INK)
-    ax.set_xticks(range(len(names)))
-    ax.set_xticklabels(names)
-    ax.set_xlim(-0.6, len(names) - 0.4)
-    ax.set_ylim(40, 57)
-    ax.set_ylabel("Cross-validated accuracy, all dev items (%)")
-    ax.set_title("Evidence-synthesis layer on dev (gate 2): no variant beats B1R")
-    _style(ax, "y")
-    handles = [plt.Line2D([], [], marker="o", ms=8, color=c, ls="none") for c in (GRAY, ORANGE, BLUE)] + \
-              [plt.Line2D([], [], marker="o", ms=8, color=ORANGE, mfc=SURFACE, mew=1.8, ls="none")]
-    fig.legend(handles, ["B1 refit", "hybrid (B1 verdict + stance)", "stance only", "shuffled-date control (open)"],
-               loc="lower center", frameon=False, fontsize=8, ncol=4)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
-    fig.savefig(path, dpi=200)
-    plt.close(fig)
-    return True
 
 
-def figure_mechanism(retrieval: dict, rows: list[dict], const: dict, path: Path, status: str) -> bool:
-    """Two panels, one axis each: how much update-window evidence each arm admitted, and how accurate it was."""
-    plt = _plt()
-    arms = [r["arm"] for r in rows if r["arm"] in retrieval and retrieval[r["arm"]]["changed"].get("update_window_share") is not None]
-    if plt is None or not arms:
-        return False
-    acc = {r["arm"]: r["changed"]["accuracy"] for r in rows if r["changed"]}
-    fig, (a, b) = plt.subplots(1, 2, figsize=(9.0, 3.6))
-    ys = list(range(len(arms)))[::-1]
-    for ax, vals, title, xlabel in (
-            (a, [100 * retrieval[x]["changed"]["update_window_share"] for x in arms], "Mechanism: evidence from the update window",
-             "Share of admitted passages (%)"),
-            (b, [100 * acc[x] for x in arms], "Outcome: verdict accuracy", "Accuracy on changed items (%)")):
-        ax.barh(ys, vals, height=0.56, color=BLUE)
-        for y, v in zip(ys, vals):
-            ax.text(99, y, f"{v:.1f}", va="center", ha="right", fontsize=8, color=INK)
-        ax.set_ylim(-1.0, len(arms) - 0.4)
-        ax.set_yticks(ys)
-        ax.set_yticklabels(arms)
-        ax.set_xlim(0, 100)
-        ax.set_xlabel(xlabel)
-        ax.set_title(title, fontsize=9.5)
-        _style(ax)
-    ref = const.get("changed", {}).get("SUPPORTED")
-    if ref is not None:
-        b.axvline(100 * ref, color=MUTED, lw=1, ls=(0, (4, 3)))
-        b.text(100 * ref + 1, -0.95, "always answering SUPPORTED", fontsize=7.5, color=MUTED, va="bottom")
-    fig.suptitle(f"Recency raised the mechanism, not the outcome ({status})", x=0.01, ha="left", fontweight="bold", fontsize=11)
-    fig.tight_layout()
-    fig.savefig(path, dpi=200)
-    plt.close(fig)
-    return True
 
 
 # --------------------------------------------------------------------------------------
 # Assembly
 # --------------------------------------------------------------------------------------
 
-def build(split: str, items: dict, answers: dict, released: Sequence[str], analysis: Optional[dict],
-          model: Optional[dict], audit: Optional[dict]) -> dict:
+def build(split: str, items: dict, answers: dict, released: Sequence[str], audit: Optional[dict]) -> dict:
     present = sorted({arm for (_, arm) in answers if not arm.startswith("R:")})
     n = {k: sum(it["kind"] in kinds for it in items.values()) for k, kinds in KINDS.items()}
     return {"split": split, "status": "confirmatory" if split == "confirm" else "exploratory", "n": n,
             "systems": system_rows(items, answers, present, released),
             "filtering": filtering_rows(items, answers, present), "classes": class_rows(items, answers, present),
-            "constant": constant_baselines(items), "retrieval": (analysis or {}).get("retrieval", {}),
-            "cv": (model or {}).get("cv") if split == "dev" else None, "gate2": (model or {}).get("gate2"),
+            "constant": constant_baselines(items),
             "label_audit": {k: audit[k] for k in ("agreement", "kappa", "n_items", "n_stable", "label_change_reproduced",
-                                                  "per_gold_class")} if audit else None,
-            "model": model if split == "dev" else None}
+                                                  "per_gold_class")} if audit else None}
 
 
 def report_markdown(d: dict, figures: dict[str, bool]) -> str:
@@ -436,9 +346,9 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
              "verdict accuracy (SUPPORTED / REFUTED / NOT ENOUGH INFORMATION against the newest Cochrane review's label), "
              "not multiple-choice accuracy, on much smaller samples.", ""]
     if d["split"] == "dev":
-        lines += ["> **Dev split, exploratory.** These 226 questions were used to design stage 2 and to fit its layer; "
+        lines += ["> **Dev split, exploratory.** These 226 questions were used to check the pipeline and the design; "
                   "intervals are wide (about ±6 to ±8 points) and nothing here is a confirmatory finding. The confirmatory "
-                  "split (528 questions) is run once, after the frozen model is committed (`docs/experimentation.md`).", ""]
+                  "split (528 questions) is run once, after the design is frozen (`docs/protocol.md`).", ""]
     n = d["n"]
     groups = {r["group"][:6] for r in d["systems"]}
     arms = {r["arm"] for r in d["systems"]}
@@ -447,9 +357,6 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
         note.append("Closed-book rows are the benchmark authors' own released answers (their prompt, no retrieval) scored on the "
                     "same questions.")
     note.append("Local rows: Meta-Llama-3-8B-Instruct Q4_K_M on CPU, one prompt, greedy decoding.")
-    if arms & {"H0", "S0", "B1R"}:
-        note.append("Stage-2 rows on dev are out-of-fold predictions (majority over 50 repeated cross-validation runs), not tests, "
-                    "and can differ slightly from the mean cross-validated accuracy of Table 4 (B1R: 53.1 here, 52.2 there).")
     if arms & {"R2", "R2V"}:
         note.append("R2 is an adapted RAG², not a reproduction (docs/methodology.md). The requirement is read on R2V − R2 only "
                     "(RAG2_FINDINGS.md: the difference, its interval and the pre-declared reading); differences between other rows "
@@ -465,19 +372,11 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if len(d["filtering"]) > 1:
         lines += ["## Table 2. One generator, different evidence-admission methods", "", table_filtering(d["filtering"]),
                   "Differences are against B1 on changed items; p values are uncorrected exact McNemar tests. The pre-stated "
-                  f"Holm-corrected family (P vs B1, B2, B3) is in `analysis_{d['split']}.json`; the realigned study's "
-                  "families are in `rag2_analysis_{d['split']}.md`.", ""]
+                  f"Holm-corrected comparisons of the realigned study are in `rag2_analysis_{d['split']}.md`.", ""]
     if d["classes"]:
         lines += ["## Table 3. Where the accuracy comes from (changed items)", "", table_classes(d["classes"]), ""]
         if figures.get("fig2"):
             lines += ["![Per-class recall](fig2_class_recall.png)", ""]
-    if figures.get("fig4"):
-        lines += ["![Mechanism versus outcome](fig4_mechanism_vs_outcome.png)", ""]
-    if d.get("cv"):
-        lines += ["## Table 4. Evidence-synthesis layer, dev cross-validation (gate 2)", "", table_cv(d["model"]),
-                  f"Gate 2: **{d['gate2']['gate2']}**; " + "; ".join(f"{'PASS' if v else 'FAIL'} {k}" for k, v in d["gate2"]["checks"].items()) + ".", ""]
-        if figures.get("fig3"):
-            lines += ["![Stage-2 cross-validation](fig3_stage2_cv.png)", ""]
     if d.get("label_audit"):
         a = d["label_audit"]
         lines += ["## Label reproducibility", "", f"An independent model (Qwen2.5-7B-Instruct) re-labelled the gold labels with the authors' "
@@ -497,22 +396,18 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     return "\n".join(lines)
 
 
-def write_report(d: dict, out: Path, make_figures: bool = True, raw_b1: Optional[float] = None) -> dict[str, bool]:
+def write_report(d: dict, out: Path, make_figures: bool = True) -> dict[str, bool]:
     out.mkdir(parents=True, exist_ok=True)
     status = d["status"]
-    figures = {"fig1": False, "fig2": False, "fig3": False, "fig4": False}
+    figures = {"fig1": False, "fig2": False}
     if make_figures:
         figures["fig1"] = figure_systems(d["systems"], d["constant"], out / "fig1_accuracy_by_system.png", status)
         figures["fig2"] = figure_classes(d["classes"], out / "fig2_class_recall.png", status)
-        figures["fig3"] = figure_cv(d["model"], raw_b1, out / "fig3_stage2_cv.png") if d.get("model") else False
-        figures["fig4"] = (figure_mechanism(d["retrieval"], d["filtering"], d["constant"], out / "fig4_mechanism_vs_outcome.png", status)
-                           if d["retrieval"] else False)
     (out / "REPORT.md").write_text(report_markdown(d, figures), encoding="utf-8", newline="\n")
     (out / "tables.tex").write_text(
         to_latex(d["systems"], f"Verdict accuracy (\\%) on the MedChange {d['split']} split ({status}); not comparable with "
                  "multiple-choice benchmarks.", f"tab:systems-{d['split']}"), encoding="utf-8", newline="\n")
-    slim = {k: v for k, v in d.items() if k != "model"}
-    (out / f"report_data_{d['split']}.json").write_text(json.dumps(slim, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / f"report_data_{d['split']}.json").write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8", newline="\n")
     return figures
 
 
@@ -531,7 +426,7 @@ def main(argv=None) -> int:
     if not items:
         print("no benchmark items: run build_benchmark first", file=sys.stderr)
         return 2
-    answers = load_arms(results, args.split)
+    answers = load_answers(results, args.split)
     answers.update({(r["item_id"], r["arm"]): r for r in load_jsonl(results / f"rag2_answers_{args.split}.jsonl")
                     if r["arm"] in dict(REALIGNED)})
     if not answers:
@@ -546,14 +441,10 @@ def main(argv=None) -> int:
     elif args.split == "dev":
         print("note: no --medchange-dir, so the closed-book rows are left out", file=sys.stderr)
 
-    def load(name):
-        p = results / name
-        return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
-
-    model = load("synthesis_model.json")
-    d = build(args.split, items, answers, released, load(f"analysis_{args.split}.json"), model, load(f"label_audit_{args.split}.json"))
-    raw_b1 = next((r["all"]["accuracy"] for r in d["systems"] if r["arm"] == "B1"), None)
-    figures = write_report(d, Path(args.out_dir) if args.out_dir else results / "report", not args.no_figures, raw_b1)
+    audit_path = results / f"label_audit_{args.split}.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8")) if audit_path.is_file() else None
+    d = build(args.split, items, answers, released, audit)
+    figures = write_report(d, Path(args.out_dir) if args.out_dir else results / "report", not args.no_figures)
     print(f"wrote the report for the {args.split} split; figures: " + ", ".join(k for k, v in figures.items() if v))
     return 0
 

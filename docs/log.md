@@ -2,12 +2,16 @@
 
 A chronological record of the implementation and research work performed on
 this repository's `main` branch, from project start through the current
-repository layout. Reconstructed from the commit history for documentation
-purposes. Each entry states what changed and why; it does not restate full
-technical detail already covered in `methodology.md`, `data.md`,
-`evaluation.md`, and `reproducibility.md` — see those for the current,
-authoritative description of the system. This log is the history of how the
-project got there.
+repository layout: decisions, progress, changes, problems and how the work stayed
+aligned with the research objectives. Reconstructed from the commit history for
+documentation purposes. Each entry states what changed and why; it does not
+restate full technical detail already covered in `methodology.md`, `data.md`,
+`protocol.md`, `evaluation.md` and `reproducibility.md` — see those for the
+current, authoritative description of the study. This log is the history of how
+the project got there. Entries name files, documents and commands as they were
+called when the entry was written: `experiment_plan.md` and `experimentation.md`
+became `protocol.md` and `evaluation.md` on 2026-10-08 (Phase 42), and the code of
+the earlier stages is in Git history at commit `f721bbb`.
 
 Dates are the date of the commit(s) described. Where a phase corrected an
 earlier decision, both the original decision and the correction are recorded
@@ -1190,3 +1194,76 @@ R2V − R2 = +1.3 pp (95% CI −1.9 to +4.7, p = 0.51): met as a point estimate,
 `report.py` now puts R2, R2C, R2V and R2V-ND beside the released closed-book models (existing work) in Table 1 and
 in the paired and per-class tables; `REPORT.md` is the confirmatory version. Not yet run: the Alzheimer's/dementia
 set (208 questions).
+
+## Phase 42 — Repository audit, cleanup and documentation realignment before the dementia/Alzheimer's run (Oct 8)
+
+At the researcher's request, before the `ad` phase is started, the whole repository was audited, cleaned and its documents
+realigned with the state of the research. Recovery point: commit `f721bbb` (everything removed below is in it).
+
+**Method (each step a check, not an assumption).** (1) An inventory of every tracked file and an import graph of every Python
+module, from the entry points of the current pipeline (`rag2_pipeline`, `rag2_run`, `analyze_rag2`, `report`, `label_audit`,
+`consistency_auto`, `build_benchmark`, `ad_benchmark`, `pubmed_asof`, `freeze_candidates`, `generate_answers`, `headroom`) and of
+the tests; a module that none of them reaches was a candidate for removal. (2) For each candidate, what the current pipeline still
+used from it was found first and moved: `abstracts.py` (the abstract snippet and study-type rules), `scoring.py` (accuracy,
+intervals, paired tests and Holm families) and `runner.py` (the phase driver's step executor, the pushed-design guard and the
+commit helper), each with tests. (3) The analysis and the report were regenerated from the committed records before and after the
+change and compared: identical to within rounding. (4) Every path, `python -m` command, flag and section number that the current
+documents cite, and every figure the README and `docs/evaluation.md` quote from the committed analyses, is now checked by tests
+that stay in the suite.
+
+**Removed** (not needed by the current pipeline; all in Git history): the code of the two completed, superseded approaches
+(`stance.py`, `stance_check.py`, `synthesis.py`, `analyze_stage2.py`, `diagnostics.py`, `dev_audit.py`, `error_analysis.py`,
+`analyze.py`, `helpfulness.py`, `findings.py`, `pipeline.py`) with their four test files; the documents `glossary.md` and
+`related_work.md` (folded into `methodology.md`); two stale figures and the development report data of the old report. Moved to
+`results/earlier_stages/` as results of record: the 18 output files of those approaches. Kept on purpose: `arms.py` and
+`src/temporal_filter/`, because the settings hash of `arms.py` is stamped into every committed B0 and B1 answer and must not change
+(it equals the hash recorded with the answers); `headroom.py`, which `report.py` imports. Unused dependency removed: `sentencepiece`
+(nothing active imports it). Counts: 139 tracked files before, 126 after; 278 tests before, 200 after (97 tests went with the four
+removed test files, 15 tested the removed stage-1 analysis, 21 were added for the new modules, the documentation guards were
+rewritten, 15 replaced by 28; none of the tests of the current pipeline was dropped).
+
+**Documents.** `README.md` now has exactly the agreed sections (title placeholder, overview, objectives, results, repository
+structure, how to run); `docs/` holds `data.md`, `methodology.md` (rewritten step by step, with the adapted RAG² approach, the
+literature and a glossary), `protocol.md` and `evaluation.md` (the former `experimentation.md`, split without duplication),
+`reproducibility.md` and this log. The statements about RAG² were checked against the published paper and the authors' repository;
+the bibliographic details of the other cited works against public listings.
+
+**Inconsistencies found and corrected** (each confirmed in the files):
+
+1. *Dates of the runs.* The protocol and the results README gave the held-out run as 2026-10-06/07; its environment record says it
+   finished on 2026-10-08 (11:00 UTC) after starting on 2026-10-06; the development run ran 2026-10-05 to 2026-10-06.
+2. *Rounding.* The analysis stored rates to four decimals and then showed one, so a few cells were off by 0.1 (R2V-ND accuracy
+   259/528 shown as 49.0%, exactly 49.05%; the REFUTED recall of R2C and R2V 19.1%, exactly 19.0%; four cells of the development
+   analysis). The code now stores six decimals; the committed dev and held-out analyses are not regenerated here (the B1 evidence-type
+   cells need the frozen pools that only the laptop holds), the documents quote the exact values, and `results/README.md` lists the
+   cells.
+3. *A wrong sentence in generated output.* The analysis report said "with about 500 questions only differences of roughly 4–6 pp can
+   be confirmed" whatever the split; for the 208-question `ad` set that would have been wrong. The figure is now computed from the
+   number of questions (4–6 for 528, 6–10 for 208).
+4. *`results/report/REPORT.md`* contained an unfilled placeholder (`{d['split']}`) and a reference to a file that does not exist;
+   regenerated from the committed answers with the corrected code (no number changed).
+5. *Stale references.* Docstrings and generated texts named `docs/experimentation.md` and `docs/experiment_plan.md`; `encoders.py`
+   still described the removed Alzheimer's corpus; the package metadata mentioned the removed Flan-T5 steps. All corrected;
+   the generated analysis and findings files keep the names current when they were written (explained in `results/README.md`).
+6. *The ablations R2-RQ, R2-BR and R2-NF* are part of the design but were never run; the documents now say so wherever they are
+   named, and a test keeps the statement true until answers for them exist.
+7. *No environment record for the development run:* the record was added while it was running. The design record (settings, prompts,
+   generator file hash) covers the systems; the code version of that run is not recorded.
+
+**Research alignment, 2026-10-08.** Objective 1 (implement and validate with predefined metrics): the pipeline, metrics, tests and
+decision rules exist, and the development and held-out splits are evaluated. Objective 2 (the extent of improvement over relevant
+baselines and existing works): on the held-out split R2V − R2 = +1.3 pp (95% CI −1.9 to +4.7, p = 0.51), which meets the 1-point
+requirement as a point estimate and is not confirmed; no claim of a demonstrated improvement is made. Not done: the baseline
+ablations, and the dementia and Alzheimer's set (208 questions), which is the next run (about 22 h, 25 h with the judge, *estimated*).
+Its result will be a secondary reading under the same rule. No result, claim or planned work is described as current unless it exists
+in the committed results.
+
+**Verification.** 200 tests pass, also in a fresh virtual environment with only numpy (Python 3.11, numpy 2.4.6) and outbound
+sockets blocked (one figure test skipped without matplotlib); `check_hermetic` reports the suite leaves the tree unchanged; `pyflakes`
+reports only the intentional availability import in `encoders.py`; the design record (settings, prompts, encoders) equals the
+current design, and the committed B0 and B1 answers carry the current arm-settings and prompt hashes; the dry runs of the `dev`,
+`confirm` and `ad` phases print the steps that `docs/reproducibility.md` describes. Real-model code paths cannot be tested without the
+models. The modules that call them changed in this phase only in where the snippet and study-type helpers are imported from (the
+functions moved to `abstracts.py` are identical to the originals, checked by comparing their source), one argument default (`generate_answers --arms`
+now defaults to B0 and B1, and the pipeline passes the arms explicitly), the guard of `label_audit` for the held-out split (now the design
+record), strings and docstrings.

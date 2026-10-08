@@ -1,6 +1,6 @@
 """Adapted RAG² baseline and evidence-criteria verification: the pure logic (no model, no network).
 
-The realigned study (docs/experimentation.md) compares, on the same as-of candidate records:
+The realigned study (docs/protocol.md, docs/methodology.md) compares, on the same as-of candidate records:
 
 * ``R2``     adapted RAG²: a rationale as the dense query, retrieval balanced over evidence types, a
              zero-shot LLM filter, and the standard answer prompt of ``prompts.py``. The baseline.
@@ -25,7 +25,7 @@ import numpy as np
 from .freeze_candidates import eligible
 from .prompts import SYSTEM as ANSWER_SYSTEM
 from .prompts import TEMPLATE as ANSWER_TEMPLATE
-from .synthesis import study_type
+from .abstracts import study_type
 
 STRATA = ("SR/MA", "RCT", "other")
 QUOTA = 8                    # candidates per evidence type taken by the rationale's dense score

@@ -8,7 +8,7 @@ Inputs (``--data-dir``): ``benchmark.jsonl``, ``answers_<split>.jsonl`` (B0, B1)
 ``rag2_directness_<split>.jsonl`` (independent directness judgements) and the label audit
 (``--label-audit``, for the label-stable subset). Output: ``rag2_analysis_<split>.json`` and ``.md``.
 
-Pre-declared (docs/experimentation.md §7): the primary comparison is R2V - R2 over all items (exact McNemar,
+Pre-declared (docs/protocol.md §1, docs/evaluation.md §5): the primary comparison is R2V - R2 over all items (exact McNemar,
 paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
 p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
 *not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
@@ -26,10 +26,11 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from . import rag2 as R
-from .analyze_stage2 import ALPHA, _family, paired, stable_difference, summarize
+from .scoring import ALPHA, DIGITS, detectable_range, holm_family, paired, stable_difference, summarize
 from .arms import point_date
 from .generate_answers import load_jsonl
-from .synthesis import LABELS, study_type
+from .abstracts import study_type
+from .benchmark import LABELS
 
 HERE = Path(__file__).resolve().parent
 ARM_ORDER = ("B0", "B1", "R2", "R2-RQ", "R2-BR", "R2-NF", "R2C", "R2V", "R2V-ND")
@@ -75,8 +76,8 @@ def hallucination_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
         flags = [R.unsupported_decisive(answers[(i, arm)]["verdict"], answers[(i, arm)]["text"],
                                         len(answers[(i, arm)].get("admitted", []))) for i in ids]
         flags = [f for f in flags if f is not None]
-        out[arm] = {"n": len(ids), "anachronism_rate": round(sum(ana) / len(ids), 4),
-                    "unsupported_decisive_rate": round(sum(flags) / len(flags), 4) if flags else None,
+        out[arm] = {"n": len(ids), "anachronism_rate": round(sum(ana) / len(ids), DIGITS),
+                    "unsupported_decisive_rate": round(sum(flags) / len(flags), DIGITS) if flags else None,
                     "answers_with_evidence": len(flags)}
     return out
 
@@ -112,8 +113,8 @@ def verifier_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
         for i in changed:
             key = f"{answers[(i, arm)]['draft_verdict']} -> {answers[(i, arm)]['verdict']}"
             transitions[key] = transitions.get(key, 0) + 1
-        out[arm] = {"n_with_evidence": len(ids), "valid_rate": round(sum(r["valid"] for r in recs) / len(ids), 4),
-                    "changed_rate": round(len(changed) / len(ids), 4), "changes_fixed": fixed,
+        out[arm] = {"n_with_evidence": len(ids), "valid_rate": round(sum(r["valid"] for r in recs) / len(ids), DIGITS),
+                    "changed_rate": round(len(changed) / len(ids), DIGITS), "changes_fixed": fixed,
                     "changes_broke": broke, "transitions": dict(sorted(transitions.items()))}
     return out
 
@@ -172,13 +173,13 @@ def retrieval_rows(items: dict, answers: dict, arms: Sequence[str], frozen: dict
                     direct.append(sum(j["p_yes"] >= R.FILTER_THRESHOLD for j in judged) / len(judged))
         total = sum(mix.values())
         out[arm] = {"n": len(ids), "mean_admitted": round(sum(counts) / len(ids), 2),
-                    "share_without_evidence": round(zero / len(ids), 4),
-                    "evidence_mix": {s: round(v / total, 4) for s, v in mix.items()} if total else None,
-                    "update_window_share": round(sum(shares) / len(shares), 4) if shares else None,
-                    "items_with_update_window_evidence": round(any_window / len(ids), 4),
+                    "share_without_evidence": round(zero / len(ids), DIGITS),
+                    "evidence_mix": {s: round(v / total, DIGITS) for s, v in mix.items()} if total else None,
+                    "update_window_share": round(sum(shares) / len(shares), DIGITS) if shares else None,
+                    "items_with_update_window_evidence": round(any_window / len(ids), DIGITS),
                     "mean_age_years": round(sum(ages) / len(ages), 2) if ages else None,
-                    "jaccard_with_B1": round(sum(jac) / len(jac), 4) if jac else None,
-                    "directness_at_k": round(sum(direct) / len(direct), 4) if direct else None}
+                    "jaccard_with_B1": round(sum(jac) / len(jac), DIGITS) if jac else None,
+                    "directness_at_k": round(sum(direct) / len(direct), DIGITS) if direct else None}
     return out
 
 
@@ -204,7 +205,7 @@ def primary_result(items: dict, answers: dict) -> Optional[dict]:
 
 
 def requirement_reading(primary: Optional[dict], split: str) -> str:
-    """The pre-declared reading of the +1.0 pp requirement (docs/experimentation.md §7)."""
+    """The pre-declared reading of the +1.0 pp requirement (docs/evaluation.md §5)."""
     if primary is None:
         return "not run"
     if split not in ("confirm", "ad"):
@@ -245,8 +246,8 @@ def report(items: dict, answers: dict, split: str, frozen: Optional[dict] = None
            "verification": verifier_rows(items, answers, arms),
            "retrieval": retrieval_rows(items, answers, arms, frozen or {}, directness),
            "primary": primary, "requirement": requirement_reading(primary, split),
-           "secondary": _family(compare(items, answers, SECONDARY)),
-           "ablations": _family(compare(items, answers, ABLATIONS)),
+           "secondary": holm_family(compare(items, answers, SECONDARY)),
+           "ablations": holm_family(compare(items, answers, ABLATIONS)),
            "case_study_alzheimers": case_study(items, answers, arms)}
     if stable_ids:
         rep["label_stable"] = {"n": len(stable_ids),
@@ -282,7 +283,7 @@ def _comparison_table(rows: dict, family: bool) -> list[str]:
 def to_markdown(rep: dict) -> str:
     kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's/dementia"}.get(rep["split"], "exploratory")
     L = [f"# Adapted RAG² and evidence-criteria verification, {rep['split']} split ({kind})", "",
-         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/experimentation.md`.", "",
+         f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/protocol.md`.", "",
          "## Generation: verdict accuracy", "",
          "| Arm | all (95% CI) | changed | unchanged | recall S / R / NEI | macro-F1 | answers NEI | outdated rate |",
          "|---|---|---|---|---|---|---|---|"]
@@ -338,9 +339,10 @@ def to_markdown(rep: dict) -> str:
     if cs["n"]:
         L += ["", f"Alzheimer's case study ({cs['n']} items, descriptive): correct answers per arm: "
               + ", ".join(f"{a} {k}" for a, k in cs["correct"].items()) + "."]
+    low, high = detectable_range(rep["items"])
     L += ["", "A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval "
-          "excludes 0 and the difference is positive. With about 500 questions only differences of roughly 4–6 pp "
-          "can be confirmed (docs/experimentation.md §7)."]
+          f"excludes 0 and the difference is positive. With {rep['items']} questions only differences of roughly "
+          f"{low}–{high} pp can be confirmed (docs/evaluation.md §4)."]
     return "\n".join(L) + "\n"
 
 

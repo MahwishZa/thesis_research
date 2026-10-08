@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from experiments.medchange import analyze_rag2 as A
-from experiments.medchange import pipeline as P
+from experiments.medchange import runner as P
 from experiments.medchange import rag2 as R
 from experiments.medchange import rag2_pipeline as RP
 from experiments.medchange import rag2_run as RR

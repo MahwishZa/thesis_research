@@ -6,13 +6,13 @@ release). Nobody here can certify them medically, so this script measures what c
 INDEPENDENT local model (a different family from the generator, e.g. Qwen2.5-7B-Instruct) re-labels
 every item from the same text with the same rubric, and we report agreement, Cohen's kappa, per-class
 agreement and whether a label change between versions is reproduced. The items on which the two
-labelers agree on the newest version are "label-stable"; the stage-2 analysis also reports its result
+labelers agree on the newest version are "label-stable"; the realigned analysis also reports its result
 on that subset (descriptive; the primary analysis keeps all items). Agreement is label
 *reproducibility*, not medical truth: two language models can share a bias.
 
     python -m experiments.medchange.label_audit --split dev --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 
-The confirmatory split is audited only after the frozen stage-2 model file exists (so its labels are
+The confirmatory split is audited only after the realigned design record exists (so its labels are
 not looked at before the design is frozen).
 """
 
@@ -26,11 +26,10 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
-from .benchmark import read_csv
+from .benchmark import LABELS, read_csv
 from .generate_answers import check_config, config_path, file_sha256, llama_generator, llama_version, load_jsonl
 
 HERE = Path(__file__).resolve().parent
-LABELS = ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION")
 
 SYSTEM = "You're a helpful assistant. Your task is to help with labelling in the medical and clinical domain."
 # The label definitions are the authors' own (generate_questions_labels.ipynb), applied to a given question.
@@ -144,13 +143,13 @@ def main(argv=None) -> int:
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--out-dir", default=str(HERE / "results"))
-    ap.add_argument("--frozen-model", default=str(HERE / "results" / "synthesis_model.json"))
+    ap.add_argument("--design-record", default=str(HERE / "results" / "rag2_design.json"))
     ap.add_argument("--n-ctx", type=int, default=4096)
     ap.add_argument("--n-threads", type=int, default=None)
     args = ap.parse_args(argv)
-    if args.split == "confirm" and not Path(args.frozen_model).is_file():
-        print("the confirmatory labels are audited only after the frozen stage-2 model exists "
-              f"({args.frozen_model} not found)", file=sys.stderr)
+    if args.split == "confirm" and not Path(args.design_record).is_file():
+        print("the confirmatory labels are audited only after the design is frozen "
+              f"({args.design_record} not found)", file=sys.stderr)
         return 2
     if not Path(args.model_path).is_file():
         print(f"model file not found: {args.model_path}", file=sys.stderr)

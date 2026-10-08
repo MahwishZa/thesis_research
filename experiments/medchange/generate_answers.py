@@ -155,7 +155,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
-    ap.add_argument("--arms", nargs="+", default=list(A.ARMS), choices=list(A.ARMS))
+    ap.add_argument("--arms", nargs="+", default=["B0", "B1"], choices=list(A.ARMS),
+                    help="B0 and B1 are the arms of the current study; B2, B3, P and C1 belong to the completed stage 1")
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--out", default=None)
     ap.add_argument("--limit", type=int, default=None, help="first N items only")
@@ -177,8 +178,8 @@ def main(argv=None) -> int:
     helpful = {r["item_id"]: r for r in load_jsonl(d / f"helpfulness_{args.split}.jsonl")}
     needs = any(a in ("B2", "P", "C1") for a in args.arms)
     if needs and any(i["item_id"] not in helpful for i in items):
-        print("B2/P/C1 need helpfulness scores for every item: run "
-              "experiments.medchange.helpfulness first", file=sys.stderr)
+        print("B2/P/C1 (the completed stage-1 arms) need zero-shot helpfulness scores for every item; the step that "
+              "produced them was removed from the repository (Git history, commit f721bbb)", file=sys.stderr)
         return 2
     if not Path(args.model_path).is_file():
         print(f"model file not found: {args.model_path}", file=sys.stderr)
