@@ -88,7 +88,7 @@ already existed for both splits, so the realigned dev and held-out runs needed n
 **Reuse disclosure.** The held-out split was used once before, for B0 against B1 (§9). Its items and labels were not
 used to design anything below; the B0/B1 aggregate confusion matrices of that split were computed on 2026-10-05
 before this design and show the same pattern as dev. Every design choice rests on the dev split and on the benchmark's
-published labelling rubric. This is a weaker guarantee than an untouched split, and the thesis states it. The
+published labelling rubric. This is a weaker guarantee than an untouched split, and it is declared here. The
 Alzheimer's/dementia set (§8) is the only split no result has touched.
 
 ## 4. Systems
@@ -187,8 +187,8 @@ INFORMATION, 68 REFUTED, 52 SUPPORTED). 202 come from reviews with a single vers
 the update-window metrics do not apply, and none has a changed verdict (computed). By the wording of the question, 48
 name Alzheimer's disease and 156 dementia (15 name both) and 19 name neither (cognitive impairment after stroke, in
 Parkinson's disease or vascular disease, mild cognitive impairment, delirium), so this is a dementia and
-cognitive-impairment set in which fewer than a quarter of the questions name Alzheimer's disease, and the thesis
-should call it that. Its reviews are older than the main benchmark's: 48 of the 208 are dated before 2005 (14 of the
+cognitive-impairment set in which fewer than a quarter of the questions name Alzheimer's disease, and it should be
+called that. Its reviews are older than the main benchmark's: 48 of the 208 are dated before 2005 (14 of the
 main benchmark's 762 are), 46 dates are to the year only (read as 1 January) and the earliest is 2000. As-of evidence
 will therefore be thinner for many of them; the pools have not been built, so their sizes are not known.
 
@@ -198,8 +198,8 @@ phase. The requirement is read on it with the same rule (`evaluation.md` §5) as
 split stays primary. With 208 questions the standard error of R2V − R2 is about 2–3.5 pp depending on how often the
 two systems disagree, so only effects of roughly 6–10 pp can be confirmed, and an observed +1 pp arises by chance
 alone 32–39% of the time (`evaluation.md` §4). Several questions can come from one review (208 questions, 159
-reviews); the paired tests treat questions as independent, which slightly understates the uncertainty, and the thesis
-states it. *Estimated compute:* as-of records ≈ 0.4 h (network), frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h,
+reviews); the paired tests treat questions as independent, which slightly understates the uncertainty (a limitation
+of the analysis). *Estimated compute:* as-of records ≈ 0.4 h (network), frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h,
 the realigned arms ≈ 14.4 h at the held-out run's measured rates, the judge ≈ 2.4 h; about 22 h in all, 25 h with the
 judge.
 

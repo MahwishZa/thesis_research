@@ -146,7 +146,7 @@ and the committed `results\report\` is the held-out version.
 |---|---|
 | `experiments/medchange/data/` | gitignored: MedChange-derived questions, abstracts, frozen pools, working files |
 | `models/`, `checkpoints/`, `build/`, `dist/` | gitignored |
-| `experiments/medchange/results/` | committed: results without source text (`data.md` §4; file list in its `README.md`) |
+| `experiments/medchange/results/` | committed: results without source text (file list: `data.md` §4) |
 | `experiments/medchange/results/earlier_stages/` | committed: results of record of stages 1 and 2 |
 | `corpus\`, `experiments\results\index\`, `_archive\` | gitignored local leftovers of the removed first design |
 

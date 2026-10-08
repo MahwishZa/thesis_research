@@ -11,7 +11,8 @@ current, authoritative description of the study. This log is the history of how
 the project got there. Entries name files, documents and commands as they were
 called when the entry was written: `experiment_plan.md` and `experimentation.md`
 became `protocol.md` and `evaluation.md` on 2026-10-08 (Phase 42), and the code of
-the earlier stages is in Git history at commit `f721bbb`.
+the earlier stages is in Git history at commit `f721bbb`. Generated result files
+keep the text they were generated with, so some cite documents by the older names.
 
 Dates are the date of the commit(s) described. Where a phase corrected an
 earlier decision, both the original decision and the correction are recorded
@@ -1235,7 +1236,7 @@ the bibliographic details of the other cited works against public listings.
 2. *Rounding.* The analysis stored rates to four decimals and then showed one, so a few cells were off by 0.1 (R2V-ND accuracy
    259/528 shown as 49.0%, exactly 49.05%; the REFUTED recall of R2C and R2V 19.1%, exactly 19.0%; four cells of the development
    analysis). The code now stores six decimals; the committed dev and held-out analyses are not regenerated here (the B1 evidence-type
-   cells need the frozen pools that only the laptop holds), the documents quote the exact values, and `results/README.md` lists the
+   cells need the frozen pools that only the laptop holds), the documents quote the exact values, and `evaluation.md` §6.5 lists the
    cells.
 3. *A wrong sentence in generated output.* The analysis report said "with about 500 questions only differences of roughly 4–6 pp can
    be confirmed" whatever the split; for the 208-question `ad` set that would have been wrong. The figure is now computed from the
@@ -1244,7 +1245,7 @@ the bibliographic details of the other cited works against public listings.
    regenerated from the committed answers with the corrected code (no number changed).
 5. *Stale references.* Docstrings and generated texts named `docs/experimentation.md` and `docs/experiment_plan.md`; `encoders.py`
    still described the removed Alzheimer's corpus; the package metadata mentioned the removed Flan-T5 steps. All corrected;
-   the generated analysis and findings files keep the names current when they were written (explained in `results/README.md`).
+   the generated analysis and findings files keep the names current when they were written (noted in `data.md` §4).
 6. *The ablations R2-RQ, R2-BR and R2-NF* are part of the design but were never run; the documents now say so wherever they are
    named, and a test keeps the statement true until answers for them exist.
 7. *No environment record for the development run:* the record was added while it was running. The design record (settings, prompts,
@@ -1267,3 +1268,26 @@ models. The modules that call them changed in this phase only in where the snipp
 functions moved to `abstracts.py` are identical to the originals, checked by comparing their source), one argument default (`generate_answers --arms`
 now defaults to B0 and B1, and the pipeline passes the arms explicitly), the guard of `label_audit` for the held-out split (now the design
 record), strings and docstrings.
+
+## Phase 43 — README for a general reader; the subfolder READMEs removed (Oct 8)
+
+At the researcher's request, before the dementia/Alzheimer's run:
+
+* *Overview.* The README overview now says in two short paragraphs what the research is about, without design detail.
+* *Objectives.* The section holds the two objectives only; the table was removed.
+* *Results.* The section was rewritten for a general reader: what was measured, the main finding, whether the goal was reached,
+  whether the other differences are real, what the extra check does, the practice run, search quality, other models for context,
+  how reliable the reference answers are, and a short conclusion. The table of the status of the experiments was removed from
+  the README; which experiments are completed and which are planned stays in `protocol.md` (status table), `evaluation.md` and
+  this log.
+* *Subfolder READMEs.* `experiments/medchange/README.md` and `experiments/medchange/results/README.md` were removed as
+  redundant: the module map is the repository structure of the README and the docstring of each module; the list of committed
+  result files moved to `data.md` §4 and the note on the rounding of two analysis files to `evaluation.md` §6.5.
+* *Self-contained documents.* Sentences that attributed statements or reports to a separate write-up were reworded, so that
+  every document stands on its own.
+* *Guards.* Tests now check that the README objectives are the two bullets only, that the results section carries no status
+  wording, that there are no README files in the subfolders, and that every table, count and sentence of the README results
+  matches the committed analyses; the module-map guard reads the README.
+
+Verification: 205 tests pass, also in a fresh virtual environment with only numpy and outbound sockets blocked, and in a fresh
+clone of the pushed commit. No code that runs a model was touched in this phase.

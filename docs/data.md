@@ -78,7 +78,7 @@ dementia (15 name both) and 19 name neither (cognitive impairment after stroke, 
 mild cognitive impairment, delirium).
 
 **Limitations.** (1) It is a dementia and cognitive-impairment set in which fewer than a quarter of the questions name
-Alzheimer's disease, and the thesis calls it that, not an Alzheimer's-only benchmark. (2) No question has a changed verdict,
+Alzheimer's disease, and it is called that here, not an Alzheimer's-only benchmark. (2) No question has a changed verdict,
 so changed-question and update-window results cannot be computed for it. (3) Its reviews are old: 48 of the 208 are dated
 before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year only and the earliest is 2000, so as-of evidence
 will be thinner for many questions; the pools have not been built, so their sizes are unknown. (4) 208 questions come from
@@ -108,20 +108,22 @@ withheld in R2V-ND.
 
 ## 4. Study outputs and what is committed
 
-The runs write their working files to `experiments/medchange/data/` (gitignored: MedChange-derived questions, abstracts,
-frozen pools). Outputs that contain **no source text** and are expensive to regenerate are copied to
-`experiments/medchange/results/` and committed, so that a run of many hours does not exist only on one laptop:
+The runs write their working files to `experiments/medchange/data/` (gitignored: MedChange-derived questions, abstracts, frozen
+pools). Outputs that contain **no source text** and are expensive to regenerate are copied to `experiments/medchange/results/`
+and committed, so that a run of many hours does not exist only on one laptop. `<split>` is `dev` or `confirm`, and `ad` once that
+phase has run.
 
-* the answers and their generator records (`answers_<split>.jsonl` for B0 and B1, `rag2_answers_<split>.jsonl` for the R2
-  family, each with `.config.json`), the rationales, filter judgements and the candidate lists without titles or abstracts
-  (PMIDs, ranks, scores, dates), and the directness judgements;
-* the analyses and reports (`rag2_analysis_<split>.*`, `RAG2_DEV_REPORT.md`, `RAG2_FINDINGS.md`, `report/`), the label-audit
-  and consistency outputs (ids, labels and agreement only), the design record `rag2_design.json` (committed **before** the
-  held-out run, which refuses to start otherwise) and the environment records;
-* `results/earlier_stages/` holds the outputs of stages 1 and 2 as results of record (`methodology.md` §10).
-
-`answers_dev.jsonl` also contains the stage-1 answers of B2, B3, P and C1 for the development split. The file list is in
-`experiments/medchange/results/README.md`.
+| Files in `experiments/medchange/results/` | Produced by | Content |
+|---|---|---|
+| `answers_<split>.jsonl`, `.config.json` | `generate_answers` | B0 and B1 answers with the generator record; `answers_dev.jsonl` also holds the stage-1 answers of B2, B3, P and C1 |
+| `rag2_rationales_<split>.jsonl`, `rag2_lists_<split>.ids.jsonl`, `rag2_filter_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl`, each with `.config.json` | `rag2_run` through `rag2_pipeline` | the rationales; the candidate lists without titles or abstracts (PMIDs, ranks, scores, dates); the filter judgements; the answers of R2, R2C, R2V and R2V-ND; the directness judgements |
+| `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the requirement |
+| `RAG2_DEV_REPORT.md`, `RAG2_FINDINGS.md` | `rag2_pipeline` | the development report with the dev check; the held-out findings (`RAG2_FINDINGS_AD.md` after the `ad` phase) |
+| `rag2_design.json` | `rag2_pipeline dev` | the design record, committed **before** the held-out run, which refuses to start otherwise |
+| `rag2_environment_<phase>.json` | `rag2_pipeline` | package versions, platform and code commit of a phase (informational; the development run has none) |
+| `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only) |
+| `report/` | `report` | `REPORT.md`, `tables.tex`, `report_data_confirm.json` and two figures (held-out split) |
+| `earlier_stages/` | the removed stage code | results of record of stages 1 and 2 (`methodology.md` §10): the analysis, error analysis, audit and diagnostics of the stage-1 development answers; the stage-2 per-paper judgements, predictions, cross-validation, frozen model and reports |
 
 ## 5. Usage
 

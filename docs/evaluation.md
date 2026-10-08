@@ -126,7 +126,7 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
   | met as a point estimate, not confirmed | Δ ≥ +1.0 pp otherwise |
   | not met | Δ < +1.0 pp |
 
-  The thesis reports whichever applies, with the interval. A dev result is never reported as meeting it. On the
+  Whichever reading applies is reported with the interval. A dev result is never reported as meeting it. On the
   Alzheimer's/dementia set the same rule gives a secondary reading; the held-out split stays primary.
 * **Dev versus held-out.** Dev results are exploratory (226 questions, intervals of about ±6 to ±8 points) and are
   used to find defects and to apply the pre-declared dev check, not to claim effects.
@@ -217,6 +217,16 @@ p ≈ 0.25). R2V's gain over standard retrieval (+1.9 pp) is also unconfirmed, a
 itself is not better than standard retrieval (+0.6 pp). The controls do not isolate a single cause: R2C (criteria
 without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev estimate (−0.4 pp) and the held-out
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
-earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The thesis
-reports the point estimate with its interval and the sample size that would be needed to settle it. The
+earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
+estimate is reported with its interval, together with the sample size that would be needed to settle it. The
 208-question Alzheimer's/dementia set is **not yet run**; no claim is made about it.
+
+### 6.5 Rounding in the committed analysis files
+
+The committed analysis tables `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` were written when stored rates carried four
+decimals before being shown with one, so a few cells differ by 0.1 from the exact value used in this document. Held-out split:
+the REFUTED recall of R2C and R2V is 19.0% (shown 19.1%) and the accuracy of R2V-ND is 49.1%, 259 of 528 (shown 49.0%).
+Development split: the REFUTED recall of R2C is 32.7% (shown 32.6%), its share of NOT ENOUGH INFORMATION answers 23.5% (23.4%),
+the outdated-verdict rate of R2V 37.7% (37.8%) and the systematic-review or meta-analysis share of R2's admitted abstracts 25.3%
+(25.2%). The code now stores six decimals, and rerunning `analyze_rag2` where the frozen pools exist regenerates the files with
+exact values.
