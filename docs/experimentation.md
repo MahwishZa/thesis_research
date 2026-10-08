@@ -319,7 +319,7 @@ and a method that merely says it more often is shown as such by the per-class re
 judgement and ≈ 50 s per question for MedCPT encoding and re-ranking on this laptop): rationale ≈ 25 s, candidate
 lists ≈ 45 s, filter ≈ 55 s, each evidence answer or verification ≈ 60–75 s per question, about 7 minutes per
 question in all. Dev ≈ 26 h (+ ≈ 14 h with the ablations); confirmatory ≈ 60 h (≈ 49 h without R2V-ND); the
-optional directness judge ≈ 3 h (dev) and 7 h (confirmatory); the Alzheimer's/dementia set ≈ 28 h (§11). A
+optional directness judge ≈ 3 h (dev) and 7 h (confirmatory); the Alzheimer's/dementia set ≈ 25 h (§11). **Measured** on the target laptop with the directness judge: dev 20.4 h (5.4 min per question), held-out 49.2 h (5.6 min per question). A
 three-question smoke test of the realigned steps on the target laptop (2026-10-05; its output was not committed)
 measured a rationale at ≈ 20 s, candidate lists at ≈ 89 s (which includes one load of the encoders, so an upper
 bound), the filter at ≈ 59 s and each answer at ≈ 60 s, about 6.8 minutes per question for the four answers: in
@@ -380,7 +380,7 @@ approximation of §7.3), so only effects of roughly 6–10 pp can be confirmed, 
 alone 32–39% of the time. Several questions
 can come from one review (208 questions, 159 reviews); the paired tests treat questions as independent, which
 slightly understates the uncertainty, and the thesis states it. Compute (*estimated*): as-of records ≈ 0.4 h
-(network) and frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h, the realigned arms ≈ 20.5 h; about 28 h in all.
+(network) and frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h, the realigned arms ≈ 14.4 h (R2, R2C, R2V at the held-out run's measured rates) and the judge ≈ 2.4 h; about 22 h in all, 25 h with the judge.
 
 *Correction, 2026-10-05, before any output of this set existed.* The first build contained **212** questions from
 163 reviews (89 / 69 / 54). The audit that reproduced it found four questions (AD-14453, AD-15149, AD-15568,

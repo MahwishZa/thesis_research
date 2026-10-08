@@ -169,6 +169,7 @@ class SupersededScopeTests(unittest.TestCase):
             "methodology.md",
             "data.md",
             "glossary.md",
+            "related_work.md",
             "reproducibility.md",
             "log.md",
             "experimentation.md",
