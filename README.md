@@ -170,8 +170,17 @@ retrieval raised verdict accuracy by +1.5 points over no evidence (95% CI −2.8
 to +6.1, not confirmed) and by +3.1 points on the questions whose verdict
 changed (−2.5 to +8.5); the +8.6 points seen on the development split did not
 replicate. Another model reproduces 81.4% of the gold labels, which bounds what
-any accuracy here can mean. The realigned study writes its tables to
-`experiments/medchange/results/` (`rag2_analysis_<split>.md`, `RAG2_FINDINGS.md`).
+any accuracy here can mean.
+
+**Realigned study, held-out split (528 questions, run once; `RAG2_FINDINGS.md`).** Verdict accuracy: no evidence
+46.6%, standard retrieval 48.1%, adapted RAG² baseline (R2) 48.7%, proposed evidence-criteria verification (R2V)
+50.0%. The requirement is read on R2V − R2 = **+1.3 points** (95% CI −1.9 to +4.7; exact McNemar p = 0.51):
+**met as a point estimate, not confirmed**. On the 353 questions whose verdict changed the difference is +3.4
+points (−0.8 to +7.4), also not confirmed. On the development split R2V − R2 was −0.4 points (the dev check
+failed on direction; the single allowed prompt revision was not used, so the design was frozen as it stood). The
+local 8B systems score at or below several closed-book models from the benchmark release answering the same
+questions (e.g. Qwen2.5-7B and GPT-4o-mini 52.8%), which is context, not a controlled comparison. The
+Alzheimer's/dementia set has not been run yet. Tables: `experiments/medchange/results/report/REPORT.md`.
 
 ## Repository structure
 
