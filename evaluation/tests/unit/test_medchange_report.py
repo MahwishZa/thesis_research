@@ -55,6 +55,15 @@ class NumbersTests(unittest.TestCase):
         self.assertTrue(all(r["group"].startswith("Llama-3-8B") for r in rows))
         self.assertEqual(rows[1]["all"]["accuracy"], 1.0)
 
+    def test_realigned_arms_get_their_own_group_table_rows_and_class_rows(self):
+        answers = make_answers(self.items, perfect=("B1", "R2V"), wrong=("B0", "R2"))
+        rows = R.system_rows(self.items, answers, ["B0", "B1", "R2", "R2V"], [])
+        self.assertEqual([r["arm"] for r in rows], ["B0", "B1", "R2", "R2V"])
+        self.assertTrue(rows[2]["group"].startswith("Adapted RAG²") and rows[3]["group"] == rows[2]["group"])
+        self.assertEqual(rows[3]["all"]["accuracy"], 1.0)
+        self.assertEqual([r["arm"] for r in R.filtering_rows(self.items, answers, ["B1", "R2", "R2V"])], ["B1", "R2", "R2V"])
+        self.assertIn("R2V", [r["arm"] for r in R.class_rows(self.items, answers, ["B0", "R2V"])])
+
     def test_released_verdicts_are_read_by_row_and_feed_the_closed_book_rows(self):
         with TemporaryDirectory() as tmp:
             folder = Path(tmp) / "Code" / "GeneratedAnswers"

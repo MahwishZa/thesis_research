@@ -14,6 +14,11 @@ DeepSeek-V3 & 48.7 & \textbf{59.4} & 52.3 \\
 \multicolumn{4}{l}{\emph{Llama-3-8B-Instruct, local (this thesis, stage 1)}} \\
 B0: Llama-3-8B-Instruct (Q4\_K\_M), no retrieval & 41.9 & 56.0 & 46.6 \\
 B1: + MedCPT retrieval, top-5 (standard RAG) & 45.0 & 54.3 & 48.1 \\
+\multicolumn{4}{l}{\emph{Adapted RAG$^2$ and evidence-criteria verification (this thesis, realigned study)}} \\
+R2: adapted RAG$^2$: rationale query + type-balanced retrieval + LLM filter (baseline) & 43.6 & 58.9 & 48.7 \\
+R2C: R2's evidence read once with explicit evidence criteria (control) & 45.0 & 55.4 & 48.5 \\
+R2V: R2's answer verified against the evidence criteria (proposed) & 47.0 & 56.0 & 50.0 \\
+R2V-ND: R2V without dates and without the currency criterion (ablation) & 45.3 & 56.6 & 49.1 \\
 \bottomrule
 \end{tabular}
 \caption{Verdict accuracy (\\%) on the MedChange confirm split (confirmatory); not comparable with multiple-choice benchmarks.}

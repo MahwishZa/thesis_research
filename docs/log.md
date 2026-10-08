@@ -1178,3 +1178,15 @@ hermetic check and the guard tests were updated; the three archive-specific guar
 tests, passing also in a numpy-only environment with sockets blocked). `.gitignore` now ignores `_archive/` as a
 whole, so local leftovers of the first design (corpus text, index, filter-training labels) cannot be committed; a
 `git pull` does not delete them. Earlier entries of this log name `_archive` paths as they were then.
+
+## Phase 41 — Realigned dev check, freeze and confirmatory result (Oct 5–8)
+
+Dev run (226 questions, with the directness judge): R2 50.0%, R2V 49.6%, R2V − R2 = −0.4 pp; the pre-declared
+check failed only on direction (status REVISE ONCE). An analysis of R2 → R2V verdict changes showed fixes and
+breaks nearly cancelling (e.g. SUPPORTED → NOT ENOUGH INFORMATION: 10 fixes, 9 breaks), so the one allowed prompt
+revision was not used and the design was frozen (decision of the researcher, 2026-10-06; recorded in §9).
+The pipelines were also changed to commit but never push (the researcher pushes by hand). Confirmatory run, once:
+R2V − R2 = +1.3 pp (95% CI −1.9 to +4.7, p = 0.51): met as a point estimate, not confirmed (§15 of the protocol).
+`report.py` now puts R2, R2C, R2V and R2V-ND beside the released closed-book models (existing work) in Table 1 and
+in the paired and per-class tables; `REPORT.md` is the confirmatory version. Not yet run: the Alzheimer's/dementia
+set (208 questions).

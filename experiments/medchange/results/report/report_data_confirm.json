@@ -230,6 +230,134 @@
           0.5237
         ]
       }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2",
+      "name": "R2: adapted RAG\u00b2: rationale query + type-balanced retrieval + LLM filter (baseline)",
+      "changed": {
+        "n": 353,
+        "correct": 154,
+        "accuracy": 0.43626062322946174,
+        "ci": [
+          0.3855,
+          0.4884
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 103,
+        "accuracy": 0.5885714285714285,
+        "ci": [
+          0.5145,
+          0.6588
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 257,
+        "accuracy": 0.48674242424242425,
+        "ci": [
+          0.4444,
+          0.5293
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2C",
+      "name": "R2C: R2's evidence read once with explicit evidence criteria (control)",
+      "changed": {
+        "n": 353,
+        "correct": 159,
+        "accuracy": 0.45042492917847027,
+        "ci": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 97,
+        "accuracy": 0.5542857142857143,
+        "ci": [
+          0.4803,
+          0.626
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 256,
+        "accuracy": 0.48484848484848486,
+        "ci": [
+          0.4425,
+          0.5274
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2V",
+      "name": "R2V: R2's answer verified against the evidence criteria (proposed)",
+      "changed": {
+        "n": 353,
+        "correct": 166,
+        "accuracy": 0.4702549575070821,
+        "ci": [
+          0.4188,
+          0.5224
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 98,
+        "accuracy": 0.56,
+        "ci": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 264,
+        "accuracy": 0.5,
+        "ci": [
+          0.4575,
+          0.5425
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2V-ND",
+      "name": "R2V-ND: R2V without dates and without the currency criterion (ablation)",
+      "changed": {
+        "n": 353,
+        "correct": 160,
+        "accuracy": 0.45325779036827196,
+        "ci": [
+          0.4021,
+          0.5054
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 99,
+        "accuracy": 0.5657142857142857,
+        "ci": [
+          0.4916,
+          0.637
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 259,
+        "accuracy": 0.49053030303030304,
+        "ci": [
+          0.4481,
+          0.5331
+        ]
+      }
     }
   ],
   "filtering": [
@@ -255,6 +383,150 @@
         ]
       },
       "diff_vs_baseline": null
+    },
+    {
+      "arm": "R2",
+      "name": "adapted RAG\u00b2: rationale query + type-balanced retrieval + LLM filter (baseline)",
+      "changed": {
+        "n": 353,
+        "correct": 154,
+        "accuracy": 0.43626062322946174,
+        "ci": [
+          0.3855,
+          0.4884
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 103,
+        "accuracy": 0.5885714285714285,
+        "ci": [
+          0.5145,
+          0.6588
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "R2",
+        "b": "B1",
+        "items": "changed",
+        "n": 353,
+        "diff_a_minus_b": -0.014164,
+        "ci95": [
+          -0.05949,
+          0.031161
+        ],
+        "a_only_correct": 30,
+        "b_only_correct": 35,
+        "mcnemar_p": 0.6201
+      }
+    },
+    {
+      "arm": "R2C",
+      "name": "R2's evidence read once with explicit evidence criteria (control)",
+      "changed": {
+        "n": 353,
+        "correct": 159,
+        "accuracy": 0.45042492917847027,
+        "ci": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 97,
+        "accuracy": 0.5542857142857143,
+        "ci": [
+          0.4803,
+          0.626
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "R2C",
+        "b": "B1",
+        "items": "changed",
+        "n": 353,
+        "diff_a_minus_b": 0.0,
+        "ci95": [
+          -0.05949,
+          0.056657
+        ],
+        "a_only_correct": 53,
+        "b_only_correct": 53,
+        "mcnemar_p": 1.0
+      }
+    },
+    {
+      "arm": "R2V",
+      "name": "R2's answer verified against the evidence criteria (proposed)",
+      "changed": {
+        "n": 353,
+        "correct": 166,
+        "accuracy": 0.4702549575070821,
+        "ci": [
+          0.4188,
+          0.5224
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 98,
+        "accuracy": 0.56,
+        "ci": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "R2V",
+        "b": "B1",
+        "items": "changed",
+        "n": 353,
+        "diff_a_minus_b": 0.01983,
+        "ci95": [
+          -0.033994,
+          0.070822
+        ],
+        "a_only_correct": 49,
+        "b_only_correct": 42,
+        "mcnemar_p": 0.5296
+      }
+    },
+    {
+      "arm": "R2V-ND",
+      "name": "R2V without dates and without the currency criterion (ablation)",
+      "changed": {
+        "n": 353,
+        "correct": 160,
+        "accuracy": 0.45325779036827196,
+        "ci": [
+          0.4021,
+          0.5054
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 99,
+        "accuracy": 0.5657142857142857,
+        "ci": [
+          0.4916,
+          0.637
+        ]
+      },
+      "diff_vs_baseline": {
+        "a": "R2V-ND",
+        "b": "B1",
+        "items": "changed",
+        "n": 353,
+        "diff_a_minus_b": 0.002833,
+        "ci95": [
+          -0.050992,
+          0.056657
+        ],
+        "a_only_correct": 49,
+        "b_only_correct": 48,
+        "mcnemar_p": 1.0
+      }
     }
   ],
   "classes": [
@@ -279,6 +551,50 @@
       },
       "macro_f1": 0.3762,
       "nei_share": 0.37393767705382436
+    },
+    {
+      "arm": "R2",
+      "name": "adapted RAG\u00b2: rationale query + type-balanced retrieval + LLM filter (baseline)",
+      "recall": {
+        "SUPPORTED": 0.7483,
+        "REFUTED": 0.0879,
+        "NOT ENOUGH INFORMATION": 0.2973
+      },
+      "macro_f1": 0.3488,
+      "nei_share": 0.254957507082153
+    },
+    {
+      "arm": "R2C",
+      "name": "R2's evidence read once with explicit evidence criteria (control)",
+      "recall": {
+        "SUPPORTED": 0.7815,
+        "REFUTED": 0.1758,
+        "NOT ENOUGH INFORMATION": 0.2252
+      },
+      "macro_f1": 0.3736,
+      "nei_share": 0.18980169971671387
+    },
+    {
+      "arm": "R2V",
+      "name": "R2's answer verified against the evidence criteria (proposed)",
+      "recall": {
+        "SUPPORTED": 0.6821,
+        "REFUTED": 0.1538,
+        "NOT ENOUGH INFORMATION": 0.4414
+      },
+      "macro_f1": 0.4133,
+      "nei_share": 0.3087818696883853
+    },
+    {
+      "arm": "R2V-ND",
+      "name": "R2V without dates and without the currency criterion (ablation)",
+      "recall": {
+        "SUPPORTED": 0.7086,
+        "REFUTED": 0.1429,
+        "NOT ENOUGH INFORMATION": 0.3604
+      },
+      "macro_f1": 0.3888,
+      "nei_share": 0.2719546742209632
     }
   ],
   "constant": {

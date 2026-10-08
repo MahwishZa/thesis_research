@@ -339,6 +339,7 @@ data it is tested on.
 | 2026-10-05 | Put the benchmark's class definitions into the verification criteria; add R2C to measure them alone | dev errors (§2); the rubric, known since the label audit |
 | 2026-10-05 | Balance by evidence type; filter with a zero-shot LLM judgement | P0 diagnostics on dev; the failed filter retraining |
 | 2026-10-05 | Keep the currency idea only as a reading criterion with an ablation (R2V-ND) | stage-1 dev results; G0 on both splits |
+| 2026-10-06 | Freeze the design without using the one allowed prompt revision (dev check: direction failed, R2V − R2 = −0.4 pp) | the dev run's results and the pattern of R2V's changes (fixes and breaks nearly cancelled); no held-out realigned result |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§10).
 
@@ -447,3 +448,30 @@ so the confirmatory data cannot distinguish it from no effect. They also do not 
 (§13) did not replicate on the larger split; the dev value is the one chosen for attention after seeing it and
 should not be quoted as the effect. Neither extension tested on dev (recency-aware admission, evidence synthesis)
 beat standard retrieval, so no confirmatory claim is made for them.
+
+## 15. Results: realigned study, confirmatory split (528 items, run once)
+
+Run once on 2026-10-06/07 with the design frozen as it stood after the dev run (§8, §9); nothing was changed
+afterwards (`results/RAG2_FINDINGS.md`, `results/rag2_analysis_confirm.md`, `results/report/REPORT.md`).
+
+| Item | Result |
+|---|---|
+| Accuracy, all items | B0 46.6%, B1 48.1%, R2 48.7% (44.4–52.9), R2C 48.5%, **R2V 50.0%** (45.8–54.2), R2V-ND 49.0% |
+| **Requirement, R2V − R2** | **+1.3 pp**, 95% CI −1.9 to +4.7; 44 questions right only with R2V, 37 only with R2; exact McNemar p = 0.5052. Pre-declared reading: **met as a point estimate, not confirmed** |
+| Changed items (353) | R2V 47.0% vs R2 43.6%: +3.4 pp (−0.8 to +7.4), p = 0.148, Holm 0.888: not confirmed |
+| Secondary family (Holm) | R2 − B1 +0.6; R2V − B1 +1.9; R2C − R2 −0.2; R2V − R2C +1.5; R2V − R2V-ND +0.9 pp: none confirmed |
+| Where the answers move | R2V raises recall of REFUTED (11.9% → 19.1%) and NOT ENOUGH INFORMATION (33.3% → 42.9%) and lowers SUPPORTED (79.5% → 71.8%); macro-F1 39.5% → 44.0% (descriptive) |
+| Verifier behaviour | valid output 100%; changed 22.4% of R2's verdicts, 44 fixes against 37 breaks |
+| Unsupported answers | decisive verdicts citing no admitted study: R2 15.4%, R2C/R2V/R2V-ND 0.0% (the format requires a DIRECT STUDIES line, so this is partly built in); anachronism rate 1.9% for all evidence arms |
+| Retrieval | R2 admits 3.3 abstracts on average (none for 15.3% of questions), 57.3% judged direct by the independent model against 28.6% for B1 |
+| Label-stable subset (430) | R2V − R2 = +1.9 pp; R2 − B1 = +1.4 pp (descriptive) |
+| Closed-book models, same questions | 50.8–52.8% on all items (Table 1 of `REPORT.md`); the local 8B systems are at or below them |
+
+**Reading.** The point estimate meets the +1 point requirement, but the data cannot separate it from zero, and with
+528 questions only effects of about 4–6 pp could be confirmed (§7.3): an observed +1.3 pp arises by chance alone
+about a quarter of the time. R2V's gain over standard retrieval (+1.9 pp) is also unconfirmed, and R2 itself is not
+better than standard retrieval (+0.6 pp). The evidence-criteria controls do not isolate a single cause: R2C
+(criteria without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev estimate (−0.4 pp) and the
+held-out estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks
+like. The thesis should report the point estimate with its interval and the sample size that would be needed.
+The 208-question Alzheimer's/dementia set has not been run.

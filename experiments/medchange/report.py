@@ -44,6 +44,11 @@ STAGE2 = (("B1R", "B1 verdict through the same fitting"), ("S0", "stance only"),
           ("H0", "hybrid: B1 verdict + stance"), ("H1", "hybrid + recency weights"),
           ("H2", "hybrid + study-type weights"), ("H3", "hybrid + both weights"),
           ("H1C", "H1 with shuffled dates (control)"), ("H3C", "H3 with shuffled dates (control)"))
+REALIGNED = (("R2", "adapted RAG²: rationale query + type-balanced retrieval + LLM filter (baseline)"),
+             ("R2C", "R2's evidence read once with explicit evidence criteria (control)"),
+             ("R2V", "R2's answer verified against the evidence criteria (proposed)"),
+             ("R2V-ND", "R2V without dates and without the currency criterion (ablation)"))
+REALIGNED_GROUP = "Adapted RAG² and evidence-criteria verification (this thesis, realigned study)"
 KINDS = {"changed": ("changed",), "unchanged": ("unchanged",), "all": ("changed", "unchanged")}
 
 
@@ -89,6 +94,9 @@ def system_rows(items: dict, answers: dict, arms_present: Sequence[str], release
     for arm, name in STAGE1:
         if arm in arms_present:
             add("Llama-3-8B-Instruct, local (this thesis, stage 1)", f"{arm}: {name}", arm)
+    for arm, name in REALIGNED:
+        if arm in arms_present:
+            add(REALIGNED_GROUP, f"{arm}: {name}", arm)
     for arm, name in STAGE2:
         if arm in arms_present:
             add("Evidence-synthesis layer (stage 2; out-of-fold on dev)", f"{arm}: {name}", arm)
@@ -98,7 +106,7 @@ def system_rows(items: dict, answers: dict, arms_present: Sequence[str], release
 def filtering_rows(items: dict, answers: dict, arms_present: Sequence[str], baseline: str = "B1") -> list[dict]:
     """The Table-3-style rows: one generator, different admission methods, paired against the baseline."""
     rows = []
-    for arm, name in STAGE1:
+    for arm, name in STAGE1 + REALIGNED:
         if arm not in arms_present or arm == "B0":
             continue
         cell = accuracy_cell(items, answers, arm, ("changed",))
@@ -110,7 +118,7 @@ def filtering_rows(items: dict, answers: dict, arms_present: Sequence[str], base
 
 def class_rows(items: dict, answers: dict, arms_present: Sequence[str]) -> list[dict]:
     rows = []
-    for arm, name in (("B0", "no retrieval"),) + tuple(STAGE1[1:]) + (("H0", "hybrid H0"),):
+    for arm, name in (("B0", "no retrieval"),) + tuple(STAGE1[1:]) + REALIGNED + (("H0", "hybrid H0"),):
         ids = [i for i, it in items.items() if it["kind"] == "changed" and (i, arm) in answers]
         if arm not in arms_present or not ids:
             continue
@@ -232,6 +240,7 @@ def _tex(text: str) -> str:
 # --------------------------------------------------------------------------------------
 
 INK, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#e5e4e0", "#fcfcfb"
+VIOLET = "#7b5cc4"                                                           # fourth category (not part of the validated three)
 BLUE, ORANGE, AQUA, GRAY = "#2a78d6", "#eb6834", "#1baf7a", "#9a9993"      # validated categorical slots 1-3 (+ neutral)
 
 
@@ -252,8 +261,10 @@ def _plt():
 SHORT = {"B0": "B0 no retrieval", "B1": "B1 + MedCPT top-5", "B2": "B2 + helpfulness filter", "B3": "B3 + recency re-rank",
          "P": "P helpfulness + recency", "C1": "C1 shuffled-date control", "B1R": "B1R refit", "S0": "S0 stance only",
          "H0": "H0 B1 + stance", "H1": "H1 + recency weights", "H2": "H2 + study-type weights", "H3": "H3 + both weights",
-         "H1C": "H1C shuffled dates", "H3C": "H3C shuffled dates"}
-GROUP_COLOURS = {"Closed-book": BLUE, "Llama-3-8B": ORANGE, "Evidence-synthesis": AQUA}
+         "H1C": "H1C shuffled dates", "H3C": "H3C shuffled dates",
+         "R2": "R2 adapted RAG² (baseline)", "R2C": "R2C criteria only", "R2V": "R2V verification (proposed)",
+         "R2V-ND": "R2V-ND no dates"}
+GROUP_COLOURS = {"Closed-book": BLUE, "Llama-3-8B": ORANGE, "Evidence-synthesis": AQUA, "Adapted RAG²": VIOLET}
 
 
 def _colour(group: str) -> str:
@@ -439,6 +450,11 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if arms & {"H0", "S0", "B1R"}:
         note.append("Stage-2 rows on dev are out-of-fold predictions (majority over 50 repeated cross-validation runs), not tests, "
                     "and can differ slightly from the mean cross-validated accuracy of Table 4 (B1R: 53.1 here, 52.2 there).")
+    if arms & {"R2", "R2V"}:
+        note.append("R2 is an adapted RAG², not a reproduction (docs/methodology.md). The requirement is read on R2V − R2 only "
+                    "(RAG2_FINDINGS.md: the difference, its interval and the pre-declared reading); differences between other rows "
+                    "of this table are descriptive, and none is confirmed. The local 8B systems score at or below several "
+                    "closed-book models on these questions, which is context, not a controlled comparison.")
     note.append("Bold: best per column.")
     if arms & {"B2", "P", "C1"}:
         note.append("B2/P/C1 use an untrained zero-shot Flan-T5 helpfulness score, **not** RAG²'s trained filter (its checkpoint is "
@@ -449,7 +465,8 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if len(d["filtering"]) > 1:
         lines += ["## Table 2. One generator, different evidence-admission methods", "", table_filtering(d["filtering"]),
                   "Differences are against B1 on changed items; p values are uncorrected exact McNemar tests. The pre-stated "
-                  f"Holm-corrected family (P vs B1, B2, B3) is in `analysis_{d['split']}.json`.", ""]
+                  f"Holm-corrected family (P vs B1, B2, B3) is in `analysis_{d['split']}.json`; the realigned study's "
+                  "families are in `rag2_analysis_{d['split']}.md`.", ""]
     if d["classes"]:
         lines += ["## Table 3. Where the accuracy comes from (changed items)", "", table_classes(d["classes"]), ""]
         if figures.get("fig2"):
@@ -471,9 +488,12 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
               "RAG² reports +6.9 points on MedQA for Llama-3-8B-Instruct (57.7 → 64.6) using a Flan-T5 filter trained on "
               "perplexity-based labels, rationale queries and balanced retrieval over a 564 GB index of four corpora, trained on one "
               "H100 GPU. None of that is reproducible here: the trained checkpoint is not distributed, a local retraining attempt "
-              "(archived) learned only the class prior, and the thesis runs on a CPU laptop with a different task (as-of verdict "
+              "(removed from the repository; `docs/log.md` Phases 13–18) learned only the class prior, and the thesis runs on a CPU laptop with a different task (as-of verdict "
               "accuracy). What is comparable is the experimental design, a fixed generator with different evidence-admission methods "
-              "(Table 2) and the comparison with existing systems on identical inputs (Table 1).", ""]
+              "(Table 2) and the comparison with existing systems on identical inputs (Table 1). The closed-book rows are other "
+              "models answering the same questions without retrieval, so they put the local 8B system in context; they are not a "
+              "controlled comparison (different sizes, training and prompts). Recency-aware retrieval (TempRALM) corresponds to "
+              "the stage-1 rows B3 and P.", ""]
     return "\n".join(lines)
 
 
@@ -512,6 +532,8 @@ def main(argv=None) -> int:
         print("no benchmark items: run build_benchmark first", file=sys.stderr)
         return 2
     answers = load_arms(results, args.split)
+    answers.update({(r["item_id"], r["arm"]): r for r in load_jsonl(results / f"rag2_answers_{args.split}.jsonl")
+                    if r["arm"] in dict(REALIGNED)})
     if not answers:
         print(f"no answers for the {args.split} split in {results}", file=sys.stderr)
         return 2
