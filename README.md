@@ -209,6 +209,7 @@ other abandoned directions (the RAG² filter retraining, the first pilot) were k
 |---|---|
 | [`docs/methodology.md`](docs/methodology.md) | The experimental method — every arm's behaviour, parameters, generator contract |
 | [`docs/data.md`](docs/data.md) | The datasets — the MedChange benchmark, the Alzheimer's/dementia test set, the superseded corpus and pool: provenance, limitations |
+| [`docs/related_work.md`](docs/related_work.md) | Positioning against the literature; what is and is not compared with existing models and works |
 | [`docs/glossary.md`](docs/glossary.md) | Term definitions used consistently throughout |
 | [`docs/reproducibility.md`](docs/reproducibility.md) | Install, test, and run instructions; what is reduced-scale and why |
 | [`docs/experimentation.md`](docs/experimentation.md) | Protocol and evaluation in one: requirement, diagnosis, benchmark, systems, metrics, statistics, gates, decision rules, results |
