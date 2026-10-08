@@ -1,0 +1,678 @@
+{
+  "split": "confirm",
+  "items": 528,
+  "arms": [
+    "B0",
+    "B1",
+    "R2",
+    "R2C",
+    "R2V",
+    "R2V-ND"
+  ],
+  "generation": {
+    "B0": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4659,
+        "wilson95": [
+          0.4238,
+          0.5086
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4193,
+        "wilson95": [
+          0.3689,
+          0.4713
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.56,
+        "wilson95": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.8504,
+        "REFUTED": 0.0317,
+        "NOT ENOUGH INFORMATION": 0.256
+      },
+      "macro_f1": 0.329,
+      "predicted_share": {
+        "SUPPORTED": 0.7633,
+        "REFUTED": 0.017,
+        "NOT ENOUGH INFORMATION": 0.2197
+      },
+      "outdated_verdict_rate_changed": 0.3258,
+      "unparsed": 0
+    },
+    "B1": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4811,
+        "wilson95": [
+          0.4387,
+          0.5237
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4504,
+        "wilson95": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.5429,
+        "wilson95": [
+          0.4689,
+          0.615
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7009,
+        "REFUTED": 0.0873,
+        "NOT ENOUGH INFORMATION": 0.4702
+      },
+      "macro_f1": 0.3952,
+      "predicted_share": {
+        "SUPPORTED": 0.5833,
+        "REFUTED": 0.0436,
+        "NOT ENOUGH INFORMATION": 0.3731
+      },
+      "outdated_verdict_rate_changed": 0.3286,
+      "unparsed": 0
+    },
+    "R2": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4867,
+        "wilson95": [
+          0.4444,
+          0.5293
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4363,
+        "wilson95": [
+          0.3855,
+          0.4884
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.5886,
+        "wilson95": [
+          0.5145,
+          0.6588
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7949,
+        "REFUTED": 0.119,
+        "NOT ENOUGH INFORMATION": 0.3333
+      },
+      "macro_f1": 0.3948,
+      "predicted_share": {
+        "SUPPORTED": 0.6799,
+        "REFUTED": 0.0644,
+        "NOT ENOUGH INFORMATION": 0.2557
+      },
+      "outdated_verdict_rate_changed": 0.3286,
+      "unparsed": 0
+    },
+    "R2C": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4848,
+        "wilson95": [
+          0.4425,
+          0.5274
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4504,
+        "wilson95": [
+          0.3993,
+          0.5026
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.5543,
+        "wilson95": [
+          0.4803,
+          0.626
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7991,
+        "REFUTED": 0.1905,
+        "NOT ENOUGH INFORMATION": 0.2679
+      },
+      "macro_f1": 0.4049,
+      "predicted_share": {
+        "SUPPORTED": 0.6913,
+        "REFUTED": 0.1117,
+        "NOT ENOUGH INFORMATION": 0.197
+      },
+      "outdated_verdict_rate_changed": 0.3116,
+      "unparsed": 0
+    },
+    "R2V": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.5,
+        "wilson95": [
+          0.4575,
+          0.5425
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4703,
+        "wilson95": [
+          0.4188,
+          0.5224
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.56,
+        "wilson95": [
+          0.4859,
+          0.6315
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7179,
+        "REFUTED": 0.1905,
+        "NOT ENOUGH INFORMATION": 0.4286
+      },
+      "macro_f1": 0.4397,
+      "predicted_share": {
+        "SUPPORTED": 0.5966,
+        "REFUTED": 0.1023,
+        "NOT ENOUGH INFORMATION": 0.3011
+      },
+      "outdated_verdict_rate_changed": 0.3229,
+      "unparsed": 0
+    },
+    "R2V-ND": {
+      "all": {
+        "n": 528,
+        "accuracy": 0.4905,
+        "wilson95": [
+          0.4481,
+          0.5331
+        ]
+      },
+      "changed": {
+        "n": 353,
+        "accuracy": 0.4533,
+        "wilson95": [
+          0.4021,
+          0.5054
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "accuracy": 0.5657,
+        "wilson95": [
+          0.4916,
+          0.637
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.7436,
+        "REFUTED": 0.1667,
+        "NOT ENOUGH INFORMATION": 0.381
+      },
+      "macro_f1": 0.4203,
+      "predicted_share": {
+        "SUPPORTED": 0.6269,
+        "REFUTED": 0.0947,
+        "NOT ENOUGH INFORMATION": 0.2784
+      },
+      "outdated_verdict_rate_changed": 0.3314,
+      "unparsed": 0
+    }
+  },
+  "unsupported_answers": {
+    "B0": {
+      "n": 528,
+      "anachronism_rate": 0.1383,
+      "unsupported_decisive_rate": null,
+      "answers_with_evidence": 0
+    },
+    "B1": {
+      "n": 528,
+      "anachronism_rate": 0.0,
+      "unsupported_decisive_rate": 0.142,
+      "answers_with_evidence": 528
+    },
+    "R2": {
+      "n": 528,
+      "anachronism_rate": 0.0189,
+      "unsupported_decisive_rate": 0.1544,
+      "answers_with_evidence": 447
+    },
+    "R2C": {
+      "n": 528,
+      "anachronism_rate": 0.0189,
+      "unsupported_decisive_rate": 0.0,
+      "answers_with_evidence": 447
+    },
+    "R2V": {
+      "n": 528,
+      "anachronism_rate": 0.0189,
+      "unsupported_decisive_rate": 0.0,
+      "answers_with_evidence": 447
+    },
+    "R2V-ND": {
+      "n": 528,
+      "anachronism_rate": 0.0189,
+      "unsupported_decisive_rate": 0.0,
+      "answers_with_evidence": 447
+    }
+  },
+  "context_truncated": {},
+  "verification": {
+    "R2C": {
+      "n_with_evidence": 447,
+      "valid_rate": 1.0,
+      "changed_rate": 0.2662,
+      "changes_fixed": 45,
+      "changes_broke": 46,
+      "transitions": {
+        "NOT ENOUGH INFORMATION -> REFUTED": 25,
+        "NOT ENOUGH INFORMATION -> SUPPORTED": 37,
+        "REFUTED -> NOT ENOUGH INFORMATION": 6,
+        "REFUTED -> SUPPORTED": 10,
+        "SUPPORTED -> NOT ENOUGH INFORMATION": 25,
+        "SUPPORTED -> REFUTED": 16
+      }
+    },
+    "R2V": {
+      "n_with_evidence": 447,
+      "valid_rate": 1.0,
+      "changed_rate": 0.2237,
+      "changes_fixed": 44,
+      "changes_broke": 37,
+      "transitions": {
+        "NOT ENOUGH INFORMATION -> REFUTED": 13,
+        "NOT ENOUGH INFORMATION -> SUPPORTED": 20,
+        "REFUTED -> NOT ENOUGH INFORMATION": 3,
+        "SUPPORTED -> NOT ENOUGH INFORMATION": 54,
+        "SUPPORTED -> REFUTED": 10
+      }
+    },
+    "R2V-ND": {
+      "n_with_evidence": 447,
+      "valid_rate": 1.0,
+      "changed_rate": 0.1857,
+      "changes_fixed": 33,
+      "changes_broke": 31,
+      "transitions": {
+        "NOT ENOUGH INFORMATION -> REFUTED": 12,
+        "NOT ENOUGH INFORMATION -> SUPPORTED": 20,
+        "REFUTED -> NOT ENOUGH INFORMATION": 3,
+        "SUPPORTED -> NOT ENOUGH INFORMATION": 41,
+        "SUPPORTED -> REFUTED": 7
+      }
+    }
+  },
+  "retrieval": {
+    "B1": {
+      "n": 528,
+      "mean_admitted": 5.0,
+      "share_without_evidence": 0.0,
+      "evidence_mix": {
+        "SR/MA": 0.1091,
+        "RCT": 0.1709,
+        "other": 0.72
+      },
+      "update_window_share": 0.4803,
+      "items_with_update_window_evidence": 0.8712,
+      "mean_age_years": 9.76,
+      "jaccard_with_B1": null,
+      "directness_at_k": 0.286
+    },
+    "R2": {
+      "n": 528,
+      "mean_admitted": 3.3,
+      "share_without_evidence": 0.1534,
+      "evidence_mix": {
+        "SR/MA": 0.2464,
+        "RCT": 0.3285,
+        "other": 0.425
+      },
+      "update_window_share": 0.4848,
+      "items_with_update_window_evidence": 0.6591,
+      "mean_age_years": 9.21,
+      "jaccard_with_B1": 0.2252,
+      "directness_at_k": 0.5726
+    },
+    "R2C": {
+      "n": 528,
+      "mean_admitted": 3.3,
+      "share_without_evidence": 0.1534,
+      "evidence_mix": {
+        "SR/MA": 0.2464,
+        "RCT": 0.3285,
+        "other": 0.425
+      },
+      "update_window_share": 0.4848,
+      "items_with_update_window_evidence": 0.6591,
+      "mean_age_years": 9.21,
+      "jaccard_with_B1": 0.2252,
+      "directness_at_k": 0.5726
+    },
+    "R2V": {
+      "n": 528,
+      "mean_admitted": 3.3,
+      "share_without_evidence": 0.1534,
+      "evidence_mix": {
+        "SR/MA": 0.2464,
+        "RCT": 0.3285,
+        "other": 0.425
+      },
+      "update_window_share": 0.4848,
+      "items_with_update_window_evidence": 0.6591,
+      "mean_age_years": 9.21,
+      "jaccard_with_B1": 0.2252,
+      "directness_at_k": 0.5726
+    },
+    "R2V-ND": {
+      "n": 528,
+      "mean_admitted": 3.3,
+      "share_without_evidence": 0.1534,
+      "evidence_mix": {
+        "SR/MA": 0.2464,
+        "RCT": 0.3285,
+        "other": 0.425
+      },
+      "update_window_share": 0.4848,
+      "items_with_update_window_evidence": 0.6591,
+      "mean_age_years": 9.21,
+      "jaccard_with_B1": 0.2252,
+      "directness_at_k": 0.5726
+    }
+  },
+  "primary": {
+    "a": "R2V",
+    "b": "R2",
+    "items": "changed+unchanged",
+    "n": 528,
+    "diff_a_minus_b": 0.013258,
+    "ci95": [
+      -0.018939,
+      0.047348
+    ],
+    "a_only_correct": 44,
+    "b_only_correct": 37,
+    "mcnemar_p": 0.5052,
+    "confirmed": false
+  },
+  "requirement": "met as a point estimate, not confirmed",
+  "secondary": {
+    "R2 vs B1": {
+      "a": "R2",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": 0.005682,
+      "ci95": [
+        -0.030303,
+        0.041667
+      ],
+      "a_only_correct": 48,
+      "b_only_correct": 45,
+      "mcnemar_p": 0.8358,
+      "holm_p": 1.0,
+      "confirmed": false
+    },
+    "R2V vs B1": {
+      "a": "R2V",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": 0.018939,
+      "ci95": [
+        -0.024621,
+        0.060606
+      ],
+      "a_only_correct": 73,
+      "b_only_correct": 63,
+      "mcnemar_p": 0.4404,
+      "holm_p": 1.0,
+      "confirmed": false
+    },
+    "R2C vs R2": {
+      "a": "R2C",
+      "b": "R2",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": -0.001894,
+      "ci95": [
+        -0.035985,
+        0.034091
+      ],
+      "a_only_correct": 45,
+      "b_only_correct": 46,
+      "mcnemar_p": 1.0,
+      "holm_p": 1.0,
+      "confirmed": false
+    },
+    "R2V vs R2C": {
+      "a": "R2V",
+      "b": "R2C",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": 0.015152,
+      "ci95": [
+        -0.017045,
+        0.047348
+      ],
+      "a_only_correct": 40,
+      "b_only_correct": 32,
+      "mcnemar_p": 0.4096,
+      "holm_p": 1.0,
+      "confirmed": false
+    },
+    "R2V vs R2V-ND": {
+      "a": "R2V",
+      "b": "R2V-ND",
+      "items": "changed+unchanged",
+      "n": 528,
+      "diff_a_minus_b": 0.00947,
+      "ci95": [
+        -0.011364,
+        0.030303
+      ],
+      "a_only_correct": 19,
+      "b_only_correct": 14,
+      "mcnemar_p": 0.4869,
+      "holm_p": 1.0,
+      "confirmed": false
+    },
+    "R2V vs R2 (changed)": {
+      "a": "R2V",
+      "b": "R2",
+      "items": "changed",
+      "n": 353,
+      "diff_a_minus_b": 0.033994,
+      "ci95": [
+        -0.008499,
+        0.073654
+      ],
+      "a_only_correct": 35,
+      "b_only_correct": 23,
+      "mcnemar_p": 0.148,
+      "holm_p": 0.888,
+      "confirmed": false
+    }
+  },
+  "ablations": {},
+  "case_study_alzheimers": {
+    "items": {
+      "MC-00090": {
+        "kind": "changed",
+        "gold": "REFUTED",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED",
+          "R2V-ND": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "MC-00108": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION",
+          "R2V-ND": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "MC-00119": {
+        "kind": "changed",
+        "gold": "REFUTED",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      },
+      "MC-00635": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION",
+          "R2V-ND": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "MC-00864": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      },
+      "MC-00948": {
+        "kind": "changed",
+        "gold": "SUPPORTED",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      },
+      "MC-01041": {
+        "kind": "changed",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED",
+          "R2V-ND": "REFUTED"
+        }
+      },
+      "MC-01088": {
+        "kind": "changed",
+        "gold": "REFUTED",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      },
+      "MC-01107": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      },
+      "MC-01296": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED",
+          "R2V-ND": "SUPPORTED"
+        }
+      }
+    },
+    "correct": {
+      "B0": 3,
+      "B1": 5,
+      "R2": 5,
+      "R2C": 5,
+      "R2V": 5,
+      "R2V-ND": 4
+    },
+    "n": 10
+  },
+  "label_stable": {
+    "n": 430,
+    "R2V_minus_R2": {
+      "n": 430,
+      "diff_a_minus_b": 0.0186
+    },
+    "R2_minus_B1": {
+      "n": 430,
+      "diff_a_minus_b": 0.014
+    }
+  }
+}

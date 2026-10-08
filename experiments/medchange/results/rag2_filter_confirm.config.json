@@ -1,0 +1,10 @@
+{
+  "backend": "llama-logprobs:Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+  "n_ctx": 1536,
+  "seed": 42,
+  "snippet": "title + results + conclusions, <= 200 words",
+  "system_sha256": "6dba1a79051dd450dbc3ec073dd9157cb0bfd9ed7842c1eecdcd2182ad7a5277",
+  "temperature": 0.0,
+  "template_sha256": "4dafdfe4ff2b56e0444833aa7b5b86e500c1fa4cbec7749a3bdbde7a65545b84"
+}
