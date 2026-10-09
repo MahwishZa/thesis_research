@@ -1479,3 +1479,13 @@ SUPPORTED for 74, REFUTED for 9, NOT ENOUGH INFORMATION for 1. Two readings are 
 independent verifier labels every well-formed draft into a separate diagnostic file that the keep rules never read) and a drafter-versus-verifier
 cross-tabulation in `rulecheck`, to decide what the one allowed redesign can achieve. Nothing is changed in the design or the gates.
 
+## Phase 60 — The verdict mix is a property of the source (Oct 9)
+
+Researcher's run of `verify --role wide` and `rulecheck` on the development split (99 well-formed drafts; counts only). Verdicts: drafter (Qwen2.5-7B)
+SUPPORTED 88, REFUTED 10, NOT ENOUGH INFORMATION 1; independent verifier (Phi-3.5-mini) SUPPORTED 75, REFUTED 8, NOT ENOUGH INFORMATION 16. The two agree on
+77 of 99 (72 SUPPORTED, 5 REFUTED, 0 NOT ENOUGH INFORMATION); 13 drafts that Qwen calls SUPPORTED, Phi calls NOT ENOUGH INFORMATION (Phi's weakest class on
+the Cochrane development split, 65.3%, so those may be hedged conclusions, not absent evidence). Under either labeller SUPPORTED is at least 76% and
+REFUTED is under 10%. If the cue reading were only a veto, survival would rise to about 50% (about 77 of 150) but about 94% of the kept questions
+would be SUPPORTED and none NOT ENOUGH INFORMATION. No change of the cue reading, the span rule or the share of the split can reach the verdict floor
+of 25% each (gate 1) from this source. Nothing in the design or the gates was changed; the decision is the researcher's.
+
