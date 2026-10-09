@@ -103,9 +103,12 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(s["abstract"][a:b], "It worked.")
         self.assertEqual(R.structure({"sections": [("AUTHORS\u2019 CONCLUSIONS", "It worked.")]})["conclusion"], "It worked.")
         self.assertEqual(R.structure({"sections": [("Conclusions and relevance", "It worked.")]})["conclusion"], "It worked.")
-        marker = R.structure({"sections": [("", "We looked. In conclusion, it worked.")]})
-        self.assertEqual(marker["conclusion"], "In conclusion, it worked.")
-        self.assertIsNone(R.structure({"sections": [("", "We looked. It worked.")]})["conclusion"])
+        tail = R.structure({"sections": [("", "One. Two. Three. Four. Further research is needed.")]})
+        self.assertEqual((tail["conclusion"], tail["conclusion_basis"]), ("Three. Four. Further research is needed.", "abstract_tail"))
+        self.assertEqual(R.structure({"sections": [("", "We looked. It worked.")]})["conclusion"], "We looked. It worked.")
+        disc = R.structure({"sections": [("RESULTS", "r."), ("DISCUSSION", "A. B. C. D.")]})
+        self.assertEqual((disc["conclusion"], disc["conclusion_basis"]), ("B. C. D.", "discussion_tail"))
+        self.assertEqual(R.structure({"sections": [("DISCUSSION", "A."), ("CONCLUSIONS", "Z.")]})["conclusion_basis"], "labelled")
         self.assertIsNone(R.structure({"sections": [("BACKGROUND", "x"), ("RESULTS", "y")]})["conclusion"])
 
 
@@ -119,6 +122,35 @@ class DiagnoseTests(unittest.TestCase):
         self.assertEqual(d["no_conclusion"]["labels_in_structured"][0][0], "background")
         self.assertEqual(d["largest_clusters"][0], ("a", 2, "test"))
         self.assertEqual(d["eligible_by_split"], {"dev": 1})
+
+
+class DevFractionTests(unittest.TestCase):
+    def test_the_share_rises_in_declared_steps_until_the_pool_is_large_enough(self):
+        sizes = {f"c{i}": 1 for i in range(1000)}                      # 1000 singleton clusters
+        f = spec.dev_fraction(sizes)
+        got = sum(n for c, n in sizes.items() if spec.split_of(c, f) == "dev")
+        self.assertGreaterEqual(got, spec.DRAFT_N)
+        if f > spec.DEV_FRACTION:
+            below = round(f - spec.DEV_FRACTION_STEP, 2)
+            self.assertLess(sum(n for c, n in sizes.items() if spec.split_of(c, below) == "dev"), spec.DRAFT_N)
+        self.assertEqual(spec.dev_fraction({f"c{i}": 1 for i in range(50)}), spec.DEV_FRACTION_MAX, "never above the cap")
+
+    def test_every_development_cluster_stays_when_the_share_rises(self):
+        names = [f"topic-{i}" for i in range(500)]
+        old = {n for n in names if spec.split_of(n, 0.25) == "dev"}
+        self.assertTrue(old <= {n for n in names if spec.split_of(n, 0.40) == "dev"})
+
+    def test_prepare_records_the_share_and_the_conclusion_basis(self):
+        arts = universe(200)
+        recs = R.parse_efetch(("<PubmedArticleSet>" + "".join(article(p, *arts[p][:2], arts[p][3]) for p in arts) +
+                               "</PubmedArticleSet>").encode())
+        for r in recs:
+            r["date"] = "2024-05-01"
+        rows = R.prepare(recs, {p: "treatment" for p in arts})
+        self.assertEqual(len({r["dev_fraction"] for r in rows}), 1)
+        pools = R.pools(rows)
+        self.assertIn("labelled", pools["by_conclusion_basis"])
+        self.assertEqual(pools["dev_fraction"], rows[0]["dev_fraction"])
 
 
 class DraftCheckTests(unittest.TestCase):

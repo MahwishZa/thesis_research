@@ -23,7 +23,8 @@ MAX_TERM_WORDS = 8                    # words in one copied span
 VERDICTS = ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION")
 
 SPLIT_SEED = "adkqa-split-v1"
-DEV_FRACTION = 0.25                   # share of topic clusters whose records form the development pool
+DEV_FRACTION = 0.25                   # share of topic clusters whose records form the development pool (the starting value)
+DEV_FRACTION_STEP, DEV_FRACTION_MAX = 0.05, 0.60   # raised by one step at a time until the pool holds DRAFT_N records
 DRAFT_N = 150                         # development records drafted in the trial run, in hash order
 DEV_N = 60                            # development questions kept (the first 60 that survive), 40% of DRAFT_N
 TEST_MIN, TEST_MAX = 200, 300
@@ -57,9 +58,8 @@ CUES = {
 _LABEL_OF = {"positive": "SUPPORTED", "negative": "REFUTED", "insufficient": "NOT ENOUGH INFORMATION"}
 CONCLUSION_SECTIONS = ("conclusion", "conclusions", "interpretation", "authors' conclusions", "author conclusions")
 OBJECTIVE_SECTIONS = ("objective", "objectives", "aim", "aims", "purpose", "background")
-UNSTRUCTURED_CONCLUSION = re.compile(
-    r"^(in conclusion|we conclude|overall|taken together|these (results|findings)|our (results|findings)|"
-    r"this (systematic )?(review|meta-analysis|study))", re.IGNORECASE)
+TAIL_SENTENCES = 3                    # conclusion of an abstract without a conclusion section: its last sentences
+DISCUSSION_SECTIONS = ("discussion", "implications")   # fallback sections of a structured abstract (label starts with "discussion")
 
 
 _VERDICT_WORDS = r"(NOT\s+ENOUGH\s+INFORMATION|SUPPORTED|REFUTED)"
@@ -132,8 +132,19 @@ def _unit(*parts: str) -> float:
     return int(hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:8], 16) / 2 ** 32
 
 
-def split_of(cluster: str) -> str:
-    return "dev" if _unit(SPLIT_SEED, "cluster", cluster) < DEV_FRACTION else "test"
+def split_of(cluster: str, fraction: float = DEV_FRACTION) -> str:
+    return "dev" if _unit(SPLIT_SEED, "cluster", cluster) < fraction else "test"
+
+
+def dev_fraction(cluster_sizes: dict) -> float:
+    """The smallest share DEV_FRACTION + k * DEV_FRACTION_STEP (at most DEV_FRACTION_MAX) whose development pool holds at least
+    DRAFT_N records. Depends on cluster sizes only; the seed and the hash are unchanged, so every earlier development cluster stays."""
+    f = DEV_FRACTION
+    while f < DEV_FRACTION_MAX - 1e-9:
+        if sum(n for c, n in cluster_sizes.items() if split_of(c, f) == "dev") >= DRAFT_N:
+            return round(f, 2)
+        f += DEV_FRACTION_STEP
+    return round(min(f, DEV_FRACTION_MAX), 2)
 
 
 def draft_order(pmids: Iterable[str]) -> list[str]:

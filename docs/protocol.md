@@ -183,6 +183,7 @@ is tested on.
 | 2026-10-09 | Cover only the core areas with at least 100 source records (four of seven); Stage 0 needs 4 covered areas and 650 covered records; test minimum 200 (up to 300) | the counts of Stage 0 runs 1 and 2 were seen (original criterion failed twice); no question, label or output exists; every other threshold is unchanged; the amendment is a scope decision, not a test of the original criterion (§8) |
 | 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec is in `spec.py` and compared with the protocol text by a test |
 | 2026-10-09 | Read a verifier reply by `spec.parse_verdict` ("LABEL:" anywhere, or a first line that begins with the verdict) and re-score the stored replies; thresholds unchanged | qualification run 1 (55.8% unparsed; 85.0% agreement on the 100 read) and eight unparsed replies were seen; the repaired reading is applied to every reply alike (§8) |
+| 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -297,6 +298,24 @@ NOT ENOUGH INFORMATION 65.3% (72). The margin over the agreement limit is 2.9 po
 comparison Qwen2.5-7B reached 83.2% and kappa 0.7422 on the same split. A kept question needs the verifier to agree with the drafter
 and the cue reading, so a verifier that errs more removes more questions; it does not make a kept question less valid.
 
+**Amendment B of 2026-10-09 (conclusion rule and development share), after the first `prepare` and `diagnose`.** Decided by the researcher
+on counts only: no abstract text beyond section labels and the first words of last sentences was read, and no draft, verdict or system output
+exists. *Why:* of 710 source records 292 (41%) had no conclusion under the rule above: 245 are abstracts without section labels and 47 are
+structured without a conclusion label (most with a discussion section); most unlabelled abstracts end with a statement about future
+research, so the marker rule rejected conclusions that exist. The development pool was 110 records, fewer than the 150 the trial run
+drafts, because a few large topic clusters (the largest, 115 records, hash position 0.93) fell to test. *Changes:* (B1) the conclusion is
+the section labelled conclusion(s), interpretation or authors' conclusions; else the last three sentences of a section whose label
+begins with "discussion" or is "implications"; else, for an abstract with no section label at all, its last three sentences (the
+repository's convention for unlabelled abstracts, `abstracts.key_text`); otherwise the record gives no question. The cue reading,
+the drafter and the verifier must still agree, so a wrong span costs a question and cannot add one. The verifier's input is that span.
+(B2) The development share starts at 0.25 and is raised by 0.05, up to 0.60, until the development pool holds at least 150 records
+(`spec.dev_fraction`; depends on cluster sizes only; seed and hash unchanged, so every earlier development cluster stays). *Checked
+before applying:* the ten largest clusters have hash positions of 0.61 or more, so the rise cannot pull a large cluster into
+development at once; the development pool grows from the small clusters, to about 150 records at a share of about 0.35 to 0.45
+(expected, to be read from `prepare`), leaving about 530 to 560 test records. *Unchanged:* 150 drafted, 60 kept, the 40% survival
+gate, every other gate and threshold. *Costs:* wider spans meet hedged wording more often, so fewer drafts will survive; a larger
+development share shrinks the test pool, where 40% survival would give about 215 to 225 questions against a minimum of 200.
+
 *Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
 (0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each
 of at least 6 core areas; areas below 100 are reported as not covered]. (1) Trial run of 60 development questions: at least 40% of
@@ -378,7 +397,7 @@ effect, no association, similar to placebo, poor accuracy); NOT ENOUGH INFORMATI
 the evidence are insufficient, not when the certainty is low. *Conclusion:* the abstract section labelled conclusion(s),
 interpretation or authors' conclusions; for an unstructured abstract its last sentence, only if it begins with a conclusion marker
 (in conclusion, we conclude, overall, taken together, these/our results/findings, this review/meta-analysis/study); otherwise the
-record gives no question. *Objectives* for the audit and verifier prompts: the section labelled objective(s), aim(s), purpose or
+record gives no question [replaced by amendment B below]. *Objectives* for the audit and verifier prompts: the section labelled objective(s), aim(s), purpose or
 background, else the first sentence.
 
 *Reading cues (rule-based).* The conclusion is lower-cased; negative phrases are removed first so that "not effective" is not also
@@ -426,7 +445,7 @@ survival rate, and gate 1 then decides.
 *Topic cluster and split.* The cluster of a record is its first major-topic MeSH descriptor other than Alzheimer Disease
 (alphabetical, case-insensitive), or the record itself when it has none, so reviews of one intervention or topic fall in one
 split. A cluster is development if the first 8 hexadecimal digits of the SHA-256 of `adkqa-split-v1|cluster|<cluster>`, read as a
-fraction, are below 0.25 (25%), and test otherwise. The seed is `adkqa-split-v1`; no other seed is tried, and the pool sizes are
+fraction, are below 0.25 (25%), and test otherwise [the share is raised by amendment B below when the pool is too small]. The seed is `adkqa-split-v1`; no other seed is tried, and the pool sizes are
 recorded before any draft. Development records are drafted in the order of the SHA-256 of `adkqa-split-v1|draft|<pmid>`: the first
 150, and the development set is the first 60 of them that are kept. Gate 1 is therefore stated on these 150 drafts: at least 40%
 survive, which is the 60 needed. Test records are not read or drafted until gate 1 has passed. Test: every record of the test pool

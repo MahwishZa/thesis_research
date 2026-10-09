@@ -1434,3 +1434,12 @@ begins with a conclusion marker) is too narrow. Dev eligible 60 of 110; test eli
 cluster ("cognitive dysfunction", 115 records) fell to test. The diagnosis file is written to the untracked data folder from now on (it quotes
 the first words of abstract sentences). No draft or answer exists; any amendment that follows rests on these counts only.
 
+## Phase 55 — Amendment B: conclusion rule and development share (Oct 9)
+
+Applied the two amendments approved by the researcher (`protocol.md` §8, amendment B; ledger row): (B1) conclusion = labelled section, else the last
+three sentences of a discussion/implications section, else the last three sentences of an abstract without section labels; (B2) development share
+0.25 raised by 0.05 up to 0.60 until the development pool holds 150 records. Verified before applying: the ten largest clusters sit at hash positions
+0.61 to 0.99, so the pool grows smoothly from the small clusters (expected share 0.35 to 0.45, to be read from `prepare`). Code: `spec.dev_fraction`,
+`records.structure` and `prepare`; 4 new tests (31 in the two builder files). Nothing is drafted; the researcher re-runs `prepare` and `diagnose`
+to read the new eligible counts, the share and the pool sizes before any model hours are spent.
+

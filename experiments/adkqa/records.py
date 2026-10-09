@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -82,17 +83,25 @@ def fetch_records(eu: EUtils, pmids: Sequence[str], batch: int = 100) -> list[di
     return out
 
 
+def _tail(text: str, n: int = spec.TAIL_SENTENCES) -> str:
+    return " ".join([x for x in _SENTENCE.split((text or "").strip()) if x][-n:])
+
+
 def structure(rec: dict) -> dict:
-    """Abstract as plain text, the conclusion (offsets and hash) and the objectives, by the rules of protocol §8."""
+    """Abstract as plain text, the conclusion (basis, offsets, hash) and the objectives, by the rules of protocol §8: a section
+    labelled conclusion(s) or interpretation; else the last three sentences of a discussion/implications section; else, for an
+    abstract without any section label, its last three sentences."""
     texts = [t for _, t in rec["sections"]]
     plain = " ".join(texts)
     low = lambda s: s.lower().replace("\u2019", "'").rstrip(":").strip()
     is_conclusion = lambda l: low(l) in spec.CONCLUSION_SECTIONS or low(l).startswith("conclusion")
-    conclusion = next((t for l, t in rec["sections"] if is_conclusion(l)), None)
-    if conclusion is None and len(rec["sections"]) == 1 and not rec["sections"][0][0]:
-        last = [s for s in _SENTENCE.split(plain.strip()) if s][-1:]
-        if last and spec.UNSTRUCTURED_CONCLUSION.match(last[0]):
-            conclusion = last[0]
+    conclusion, basis = next(((t, "labelled") for l, t in rec["sections"] if is_conclusion(l)), (None, None))
+    if conclusion is None:
+        disc = next((t for l, t in rec["sections"] if low(l).startswith(spec.DISCUSSION_SECTIONS)), None)
+        if disc:
+            conclusion, basis = _tail(disc), "discussion_tail"
+    if conclusion is None and rec["sections"] and not any(l for l, _ in rec["sections"]):
+        conclusion, basis = _tail(plain), "abstract_tail"
     objectives = next((t for l, t in rec["sections"] if low(l) in spec.OBJECTIVE_SECTIONS), None)
     if objectives is None and plain:
         objectives = ([s for s in _SENTENCE.split(plain.strip()) if s] or [""])[0]
@@ -100,7 +109,7 @@ def structure(rec: dict) -> dict:
     if conclusion:
         start = plain.rfind(conclusion)
         span = [start, start + len(conclusion)]
-    return {"abstract": plain, "conclusion": conclusion, "conclusion_span": span,
+    return {"abstract": plain, "conclusion": conclusion or None, "conclusion_basis": basis, "conclusion_span": span,
             "conclusion_sha256": hashlib.sha256(conclusion.encode()).hexdigest() if conclusion else None,
             "objectives": objectives or ""}
 
@@ -126,8 +135,11 @@ def prepare(records: Sequence[dict], areas: dict[str, str], since: str = "2023-0
                 row["status"] = "no_conclusion"
             elif not rec["date"] or rec["date"] < since:
                 row["status"] = "outside_window"
-        row["split"] = spec.split_of(row["cluster"])
         rows.append(row)
+    fraction = spec.dev_fraction(Counter(r["cluster"] for r in rows))
+    for row in rows:
+        row["split"] = spec.split_of(row["cluster"], fraction)
+        row["dev_fraction"] = fraction
     return rows
 
 
@@ -138,14 +150,15 @@ def pools(rows: Sequence[dict]) -> dict:
         out["by_split"][r["split"]] = out["by_split"].get(r["split"], 0) + 1
         k = f"{r['area']}/{r['split']}"
         out["by_area_split"][k] = out["by_area_split"].get(k, 0) + 1
+    out["dev_fraction"] = rows[0]["dev_fraction"] if rows else None
     out["dev_drafted"] = min(spec.DRAFT_N, out["by_split"].get("dev", 0))
+    out["by_conclusion_basis"] = dict(Counter(r.get("conclusion_basis") for r in rows if r["status"] == "eligible"))
     return out
 
 
 def diagnose(rows: Sequence[dict], top: int = 25) -> dict:
     """Why records have no usable conclusion, and how the split came out. Section labels and the first words of a last sentence
     only; no abstract text is kept."""
-    from collections import Counter
     no = [r for r in rows if r["status"] == "no_conclusion"]
     unstructured = [r for r in no if not any(r.get("labels", []))]
     structured = [r for r in no if any(r.get("labels", []))]

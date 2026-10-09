@@ -191,13 +191,14 @@ stopped and refuses to extend a file written with a different model or prompt. T
 
 ```
 python -m experiments.adkqa.build prepare --api-key YOUR_KEY
+python -m experiments.adkqa.build diagnose
 python -m experiments.adkqa.build draft --split dev --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 python -m experiments.adkqa.build verify --split dev --model-path models\Phi-3.5-mini-instruct.Q4_K_M.gguf
 python -m experiments.adkqa.build assemble --split dev
 python -m experiments.adkqa.build pools --split dev
 python -m experiments.adkqa.build gate1
 ```
-`prepare` (minutes) fetches the 710 source records and splits them by topic cluster; `draft` writes one question per eligible record
+`prepare` (minutes) fetches the 710 source records and splits them by topic cluster (the development share starts at 0.25 and rises until the pool holds 150 records); `diagnose` prints counts of the records without a conclusion (not tracked); `draft` writes one question per eligible record
 of the first 150 development records (about 1 to 2 hours [A]); `verify` has the independent model label each draft that passed the
 automatic checks (about 20 minutes [A]); `assemble` applies the keep rules and prints the figures of gate 1; `pools` counts the
 candidate pool of each kept question; `gate1` evaluates gate 1 and lists what is still pending (the closed-book B0 check needs the
