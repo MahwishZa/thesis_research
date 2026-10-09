@@ -314,8 +314,10 @@ selected, run or looked at. Nothing in it changes a result already obtained.
 The held-out and dementia runs found no confirmed gain in verdict accuracy (R2V − R2 = +1.3 and +3.4 points, intervals including zero). A look at the
 per-verdict behaviour *after* those runs showed that all systems answer SUPPORTED far more often than the reviews do (dementia set: 62 to 70% predicted
 against 25% gold) and almost never answer REFUTED (recall 3 to 6% for B0, B1 and R2), and that R2V raises REFUTED recall (dementia set 6% to 22%,
-held-out 4% to 11%, from the committed answers) and the macro-F1 (R2V − R2 = +0.080, interval +0.026 to +0.136, and +0.045, interval +0.010 to
-+0.080). That metric was chosen after the data were seen and no correction was made for the intervals looked at, so it is a hypothesis, not a result.
+held-out 12% to 19%, from the committed answers) and the macro-F1 (R2V − R2 = +0.080, interval +0.024 to +0.135, and +0.045, interval +0.010 to
++0.080; `python -m experiments.medchange.class_balance`, `results/class_balance.*`). The criteria-only control R2C shows a similar gain on the dementia set
+(R2C − R2 = +0.088; R2V − R2C = −0.008, interval −0.055 to +0.037) but not on the held-out set (R2C − R2 = +0.010; R2V − R2C = +0.035, interval −0.002 to
++0.072), so part of the gain may come from reading the evidence by criteria, not from the verification step. That metric was chosen after the data were seen and no correction was made for the intervals looked at, so it is a hypothesis, not a result.
 This section tests it on questions that played no part in choosing it. Whatever the outcome, it is reported.
 
 ### 10.2 Hypothesis and decision rule
@@ -328,6 +330,7 @@ it is below 0.02, a gain of 0.02 or more is excluded.
 
 *Secondary (reported with intervals; no confirmatory claim).* REFUTED recall and the predicted-SUPPORTED share of R2V and R2; verdict accuracy of
 R2V − R2 read by the three rules of `evaluation.md` §5 (the 1-point requirement keeps its meaning and is not re-read from this test alone); changed
+**R2V − R2C macro-F1 (does the verification step add anything beyond reading the evidence by criteria?)**; changed
 versus unchanged questions if both occur; the share of answers changed by R2V and how many changes fix or break an answer.
 
 *Alzheimer's disease (descriptive, pre-specified).* The fresh pool holds practically no Alzheimer's or dementia questions (§10.3). The 208 dementia-set questions (48 name Alzheimer's disease) were seen and helped form H1, so
@@ -344,21 +347,23 @@ to 83% are dated 2010 or later, which is why the threshold is 2010. *No Alzheime
 name Alzheimer's disease or dementia anywhere in the question, objectives or conclusions, so a fresh Alzheimer's-domain test cannot be built from this
 source; the fresh test is general medicine. The review must be dated from **2010-01-01**; if fewer than the sample size qualify, all qualifying questions are used and the power
 is stated, and the date is not moved earlier than 2005-01-01. From the qualifying questions the first **N** in the order of the SHA-256 of
-`fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 1,200 [to confirm before the freeze].** Power for H1 with N = 1,200 (standard
-error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation): 92% if the true gain is 0.04,
-72% if 0.03, 39% if 0.02; the smallest gain confirmable with 80% power is 0.033. N = 1,000 gives 87%, 64% and 34%; N = 1,500 gives 97%, 81% and 47%.
+`fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 1,500** (decided by the researcher on 2026-10-09, on the recommendation to plan for a true gain smaller than the one observed). Power for H1
+with N = 1,500 (standard error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation):
+97% if the true gain is 0.04, 81% if 0.03, 47% if 0.02; a gain of 0 is "confirmed" in about 2.5% of tests; the smallest gain confirmable with 80%
+power is 0.030. For comparison N = 1,200 gives 92%, 72% and 39%, and N = 2,000 gives 91% at 0.03.
 
 ### 10.4 Systems and settings
 
-The frozen design (settings hash `1743afd7045b`, `results/rag2_design.json`), unchanged: the arms R2 and R2V only (R2V verifies R2's draft; B0, B1, R2C,
-R2V-ND and the directness judge are not run in this test). Every question is analysed whatever happens to it (an unparsed answer counts as wrong; a
+The frozen design (settings hash `1743afd7045b`, `results/rag2_design.json`), unchanged: the arms R2, R2C and R2V (R2V verifies R2's draft; R2C is the criteria
+control; B0, B1, R2V-ND and the directness judge are not run in this test). Every question is analysed whatever happens to it (an unparsed answer counts as wrong; a
 question without admitted abstracts is analysed as the pipeline answers it). A defect found while running is fixed and recorded, never tuned on outcomes.
 The pipeline needs the split name `fresh` added to its registries, a mechanical change made and tested before the freeze.
 
 ### 10.5 Cost
 
 From the measured steps of the dementia run (records, pools, rationales, candidate lists, filter and the R2 and R2V answers), about 3.9 minutes per
-question [estimate]: about 78 hours for 1,200 questions, 65 hours for 1,000, 98 hours for 1,500, on the laptop, resumable.
+question for R2 and R2V plus 52 seconds for R2C, 4.8 minutes [estimate]: about 120 hours for 1,500 questions (96 for 1,200, 160 for 2,000), on the
+laptop, resumable.
 
 ### 10.6 Limits stated in advance
 

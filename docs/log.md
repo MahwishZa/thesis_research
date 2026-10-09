@@ -1363,3 +1363,12 @@ conclusions name Alzheimer's disease or dementia: 7 from 2010, 9 from 2005, 2 af
 pool therefore cannot supply an Alzheimer's-domain test; `protocol.md` §10.3 says so. The pre-registered test stays a general-medicine test of the
 mechanism, with the 208 dementia questions reported descriptively. Draft status unchanged; sample size (1,200 proposed) awaits the researcher's decision.
 
+## Phase 65 — N = 1,500, the control arm, and a saved per-verdict analysis (Oct 9)
+
+Decisions and changes: the sample size of the draft pre-registration is **N = 1,500** (`protocol.md` §10.3; power 97% / 81% / 47% for a true macro-F1 gain of
+0.04 / 0.03 / 0.02). The one-off per-verdict analysis became a saved, tested script, `experiments/medchange/class_balance.py` (outputs `results/class_balance.*`;
+5 tests). It showed that the criteria control R2C gains as much as R2V on the dementia set (macro-F1 R2C − R2 = +0.088, R2V − R2 = +0.080, R2V − R2C = −0.008),
+so the pre-registered run now includes R2C and a secondary comparison R2V − R2C (about 120 hours instead of 98). Two statements of mine were corrected: the held-out
+REFUTED recall of R2 and R2V is 12% and 19% (§10.1 said 4% to 11%), and R2V changed 100 held-out answers, of which 54 moved from SUPPORTED to NOT ENOUGH
+INFORMATION (not "54 of 91"). Draft status unchanged.
+

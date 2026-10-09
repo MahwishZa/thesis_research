@@ -1,0 +1,270 @@
+{
+  "status": "exploratory; metric chosen after the accuracy results were known; see protocol \u00a710",
+  "iterations": 10000,
+  "seed": "class-balance-v1",
+  "splits": {
+    "confirm": {
+      "n": 528,
+      "gold_share": {
+        "SUPPORTED": 0.4432,
+        "REFUTED": 0.2386,
+        "NOT ENOUGH INFORMATION": 0.3182
+      },
+      "arms": {
+        "B0": {
+          "macro_f1": 0.329,
+          "predicted_share": {
+            "SUPPORTED": 0.7633,
+            "REFUTED": 0.017,
+            "NOT ENOUGH INFORMATION": 0.2197
+          },
+          "recall": {
+            "SUPPORTED": 0.8504,
+            "REFUTED": 0.0317,
+            "NOT ENOUGH INFORMATION": 0.256
+          }
+        },
+        "B1": {
+          "macro_f1": 0.3952,
+          "predicted_share": {
+            "SUPPORTED": 0.5833,
+            "REFUTED": 0.0436,
+            "NOT ENOUGH INFORMATION": 0.3731
+          },
+          "recall": {
+            "SUPPORTED": 0.7009,
+            "REFUTED": 0.0873,
+            "NOT ENOUGH INFORMATION": 0.4702
+          }
+        },
+        "R2": {
+          "macro_f1": 0.3948,
+          "predicted_share": {
+            "SUPPORTED": 0.6799,
+            "REFUTED": 0.0644,
+            "NOT ENOUGH INFORMATION": 0.2557
+          },
+          "recall": {
+            "SUPPORTED": 0.7949,
+            "REFUTED": 0.119,
+            "NOT ENOUGH INFORMATION": 0.3333
+          }
+        },
+        "R2C": {
+          "macro_f1": 0.4049,
+          "predicted_share": {
+            "SUPPORTED": 0.6913,
+            "REFUTED": 0.1117,
+            "NOT ENOUGH INFORMATION": 0.197
+          },
+          "recall": {
+            "SUPPORTED": 0.7991,
+            "REFUTED": 0.1905,
+            "NOT ENOUGH INFORMATION": 0.2679
+          }
+        },
+        "R2V": {
+          "macro_f1": 0.4397,
+          "predicted_share": {
+            "SUPPORTED": 0.5966,
+            "REFUTED": 0.1023,
+            "NOT ENOUGH INFORMATION": 0.3011
+          },
+          "recall": {
+            "SUPPORTED": 0.7179,
+            "REFUTED": 0.1905,
+            "NOT ENOUGH INFORMATION": 0.4286
+          }
+        },
+        "R2V-ND": {
+          "macro_f1": 0.4203,
+          "predicted_share": {
+            "SUPPORTED": 0.6269,
+            "REFUTED": 0.0947,
+            "NOT ENOUGH INFORMATION": 0.2784
+          },
+          "recall": {
+            "SUPPORTED": 0.7436,
+            "REFUTED": 0.1667,
+            "NOT ENOUGH INFORMATION": 0.381
+          }
+        }
+      },
+      "paired": {
+        "R2V vs R2": {
+          "macro_f1": {
+            "difference": 0.0449,
+            "ci95": [
+              0.0099,
+              0.0803
+            ]
+          },
+          "refuted_recall": {
+            "difference": 0.0714,
+            "ci95": [
+              0.0296,
+              0.12
+            ]
+          }
+        },
+        "R2C vs R2": {
+          "macro_f1": {
+            "difference": 0.0101,
+            "ci95": [
+              -0.0328,
+              0.0528
+            ]
+          },
+          "refuted_recall": {
+            "difference": 0.0714,
+            "ci95": [
+              0.0078,
+              0.1385
+            ]
+          }
+        },
+        "R2V vs R2C": {
+          "macro_f1": {
+            "difference": 0.0348,
+            "ci95": [
+              -0.0015,
+              0.0717
+            ]
+          },
+          "refuted_recall": {
+            "difference": 0.0,
+            "ci95": [
+              -0.0583,
+              0.0574
+            ]
+          }
+        }
+      }
+    },
+    "ad": {
+      "n": 208,
+      "gold_share": {
+        "SUPPORTED": 0.25,
+        "REFUTED": 0.3269,
+        "NOT ENOUGH INFORMATION": 0.4231
+      },
+      "arms": {
+        "B0": {
+          "macro_f1": 0.2827,
+          "predicted_share": {
+            "SUPPORTED": 0.6298,
+            "REFUTED": 0.0337,
+            "NOT ENOUGH INFORMATION": 0.3365
+          },
+          "recall": {
+            "SUPPORTED": 0.75,
+            "REFUTED": 0.0441,
+            "NOT ENOUGH INFORMATION": 0.3068
+          }
+        },
+        "B1": {
+          "macro_f1": 0.2521,
+          "predicted_share": {
+            "SUPPORTED": 0.6971,
+            "REFUTED": 0.0144,
+            "NOT ENOUGH INFORMATION": 0.2885
+          },
+          "recall": {
+            "SUPPORTED": 0.7885,
+            "REFUTED": 0.0294,
+            "NOT ENOUGH INFORMATION": 0.2386
+          }
+        },
+        "R2": {
+          "macro_f1": 0.292,
+          "predicted_share": {
+            "SUPPORTED": 0.6923,
+            "REFUTED": 0.0337,
+            "NOT ENOUGH INFORMATION": 0.274
+          },
+          "recall": {
+            "SUPPORTED": 0.9038,
+            "REFUTED": 0.0588,
+            "NOT ENOUGH INFORMATION": 0.2386
+          }
+        },
+        "R2C": {
+          "macro_f1": 0.3803,
+          "predicted_share": {
+            "SUPPORTED": 0.6731,
+            "REFUTED": 0.1106,
+            "NOT ENOUGH INFORMATION": 0.2163
+          },
+          "recall": {
+            "SUPPORTED": 0.8462,
+            "REFUTED": 0.2353,
+            "NOT ENOUGH INFORMATION": 0.25
+          }
+        },
+        "R2V": {
+          "macro_f1": 0.3718,
+          "predicted_share": {
+            "SUPPORTED": 0.6154,
+            "REFUTED": 0.101,
+            "NOT ENOUGH INFORMATION": 0.2837
+          },
+          "recall": {
+            "SUPPORTED": 0.7115,
+            "REFUTED": 0.2206,
+            "NOT ENOUGH INFORMATION": 0.3068
+          }
+        }
+      },
+      "paired": {
+        "R2V vs R2": {
+          "macro_f1": {
+            "difference": 0.0799,
+            "ci95": [
+              0.0241,
+              0.1353
+            ]
+          },
+          "refuted_recall": {
+            "difference": 0.1618,
+            "ci95": [
+              0.0794,
+              0.2535
+            ]
+          }
+        },
+        "R2C vs R2": {
+          "macro_f1": {
+            "difference": 0.0883,
+            "ci95": [
+              0.0298,
+              0.1469
+            ]
+          },
+          "refuted_recall": {
+            "difference": 0.1765,
+            "ci95": [
+              0.0806,
+              0.2794
+            ]
+          }
+        },
+        "R2V vs R2C": {
+          "macro_f1": {
+            "difference": -0.0084,
+            "ci95": [
+              -0.0548,
+              0.0371
+            ]
+          },
+          "refuted_recall": {
+            "difference": -0.0147,
+            "ci95": [
+              -0.082,
+              0.0492
+            ]
+          }
+        }
+      }
+    }
+  }
+}

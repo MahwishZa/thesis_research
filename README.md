@@ -76,7 +76,7 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
         ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
         ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
         ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
-        ├── scoring.py, analyze_rag2.py, subgroup_ad.py, fresh_supply.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
+        ├── scoring.py, analyze_rag2.py, subgroup_ad.py, class_balance.py, fresh_supply.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 
@@ -103,6 +103,9 @@ python -m experiments.medchange.rag2_pipeline ad --go --model-path models/Meta-L
 
 # Questions of the dementia set that name Alzheimer's disease (from the answers on file; no model is run)
 python -m experiments.medchange.subgroup_ad
+
+# Per-verdict behaviour: predicted shares, recall per verdict, macro-F1 (from the answers on file; no model is run)
+python -m experiments.medchange.class_balance
 
 # Count the questions of MedRevQA that no split uses yet (counts only)
 python -m experiments.medchange.fresh_supply --medchange-dir ../MedChange
