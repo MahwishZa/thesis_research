@@ -299,6 +299,15 @@ and the supply when each record serves one area only). The thresholds (700, 100,
 re-run is made (`results/stage0_counts_r2.json`); what follows a second no-go (fewer covered areas, a wider window flagged by
 `post_generator_cutoff`, a smaller test set, or stopping) is decided by the researcher and recorded here.
 
+*Stage 0, run 2 (2026-10-09, `results/stage0_counts_r2.json`, instrument revision 2): no-go again under the unchanged criterion.*
+866 records. Distinct per area (qualifier frame, the gate): treatment 314, prevention 21, diagnosis 278, causes_risk 216,
+progression 58, symptoms 171, care_management 20; covered (at least 100): treatment, diagnosis, causes_risk, symptoms (4 of the 6
+required). Information only: with one question per record the qualifier-frame supply is 162 / 21 / 185 / 143 / 57 / 144 / 20
+(634 in the four covered areas); records in no qualifier area 131; the pre-cutoff window 2021-04-01..2023-03-31 holds 525 further
+records. The heading frame (MeSH main headings instead of qualifiers) was recorded for information only; using it as the gate would
+be a change of criterion after the counts were seen and would have to be declared as such. Nothing is built. The next step is the
+researcher's decision, recorded here.
+
 *Still to be fixed in a further dated amendment before any question is drafted:* the question templates, the cue phrases of the
 rule-based reading, the topic-cluster key and the split seed, the freeze date of the source window, and the secondary measures.
 

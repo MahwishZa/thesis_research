@@ -1359,3 +1359,11 @@ After a review of the existing results and of the candidate datasets, the resear
 * *Tests.* 16 tests for Stage 0 (4 new: the prevention qualifier, warning filter, exclusive supply, unchanged thresholds).
 * *Next.* One corrected re-run on the laptop (`stage0_counts_r2.json`). The decision after it, if still no-go, is the researcher's.
 
+## Phase 47 — Stage 0 run 2: no-go again (Oct 9)
+
+Run 2 (`stage0_counts_r2.json`, committed by the researcher): 866 records; qualifier frame treatment 314, prevention 21, diagnosis 278,
+causes_risk 216, progression 58, symptoms 171, care_management 20. Four areas covered, six required: no-go under the unchanged
+criterion. Information only: exclusive supply in the four covered areas 634 records; pre-cutoff window 525 further records; the
+MeSH-heading frame would give more records in progression (135) and care (57) but it is not the declared gate. Nothing built; the
+choice of how to proceed (cover four areas, a flagged wider window, a smaller test set, or stop) is the researcher's.
+
