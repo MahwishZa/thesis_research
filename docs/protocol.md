@@ -20,7 +20,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
 | Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
-| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 run 1 was no-go (instrument corrected, one re-run pending); the specification is fixed before any question is drafted; no question exists |
+| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 was no-go under the original criterion twice and is go under the amendment of 2026-10-09 (four covered areas, 200 to 300 test questions); the specification is fixed before any question is drafted; no question exists |
 
 Since 2026-10-09 the primary evaluation of the research is Alzheimer's-specific (§8). The questions, systems and results in
 §1 to §7 and in `evaluation.md` §6 are those of the realigned study on the as-of Cochrane benchmark (general medicine); they
@@ -180,6 +180,7 @@ is tested on.
 | 2026-10-09 | Add the three remaining released-answer models (BioMistral, PMC-LLaMA, OLMo-13B) and a constant-answer baseline to the comparisons; audit the dementia labels with the same judge | the held-out and `ad` results of the local systems (§8) |
 | 2026-10-09 | Re-declare the primary evaluation as an Alzheimer's-specific question set (AD-KQA); keep the as-of Cochrane results as secondary evidence | all held-out and dementia results of every system and the label audits; no AD-KQA question, label or output exists; the reason is scope, not outcome (§8) |
 | 2026-10-09 | Correct the Stage 0 instrument after run 1 (prevention qualifier, warning filter, information-only counts); thresholds and window unchanged | run 1 counts per area were seen (total 866; prevention 0 by the query error; progression 58; care 20); the criterion was not changed to fit them; the decision after run 2 is the researcher's (§8) |
+| 2026-10-09 | Cover only the core areas with at least 100 source records (four of seven); Stage 0 needs 4 covered areas and 650 covered records; test minimum 200 (up to 300) | the counts of Stage 0 runs 1 and 2 were seen (original criterion failed twice); no question, label or output exists; every other threshold is unchanged; the amendment is a scope decision, not a test of the original criterion (§8) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -245,7 +246,7 @@ Alzheimer's share could not be counted (registration needed) and most of its que
 not score. None combines Alzheimer's focus, a verdict task, dates and evidence, so a controlled set is built from authoritative
 sources instead, and the datasets above are not pooled with it.
 
-*Design.* About 300 test and 60 development questions on Alzheimer's disease, built from PubMed systematic reviews,
+*Design* (as declared; sizes and areas amended below). About 300 test and 60 development questions on Alzheimer's disease, built from PubMed systematic reviews,
 meta-analyses and guidelines (MeSH major topic Alzheimer Disease; MEDLINE-indexed; English; abstract with a conclusion; not
 retracted) published from 2023-04-01, after the generator's stated knowledge cutoff (March 2023), one question per source record.
 Each question is made from a fixed template out of terms copied from the abstract and has a three-way verdict (SUPPORTED, REFUTED,
@@ -278,13 +279,13 @@ second download needs a new approval. Without a qualified verifier the fallback 
 which is weaker independence and is then reported as a limitation.
 
 *Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
-(0) Stage 0 (`python -m experiments.adkqa.stage0`): at least 700 eligible source records in the window and at least 100 in each
-of at least 6 core areas; areas below 100 are reported as not covered. (1) Trial run of 60 development questions: at least 40% of
+(0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each
+of at least 6 core areas; areas below 100 are reported as not covered]. (1) Trial run of 60 development questions: at least 40% of
 drafts survive the automatic checks; verifier agreement at least 85% on kept questions; a claim-only classifier (5-fold) at most
 the majority class plus 5 points; each verdict at least 25%; the same seed gives the same manifest hash; a median candidate pool of
 at least 15 abstracts and at most 5% empty pools; closed-book B0 between the constant answer plus 5 points and 80% on the
 evidence-sensitive areas (a ceiling area is reported, not dropped). One documented redesign is allowed, only before the test
-split is sealed. (2) Full build: at least 300 test questions, at least 25 per covered area, audit agreement at least 85% on test
+split is sealed. (2) Full build: at least 300 test questions [replaced by the amendment below: at least 200], at least 25 per covered area, audit agreement at least 85% on test
 questions, manifest hash committed before any system sees a test question. (3) Run: parse rate and verifier validity at least
 95%; a defect is fixed and recorded, never tuned on outcomes. A failed gate stops the build and is reported.
 
@@ -303,10 +304,36 @@ re-run is made (`results/stage0_counts_r2.json`); what follows a second no-go (f
 866 records. Distinct per area (qualifier frame, the gate): treatment 314, prevention 21, diagnosis 278, causes_risk 216,
 progression 58, symptoms 171, care_management 20; covered (at least 100): treatment, diagnosis, causes_risk, symptoms (4 of the 6
 required). Information only: with one question per record the qualifier-frame supply is 162 / 21 / 185 / 143 / 57 / 144 / 20
-(634 in the four covered areas); records in no qualifier area 131; the pre-cutoff window 2021-04-01..2023-03-31 holds 525 further
+(in the four covered areas the distinct records number 710; the figure 634 first given here was an allocation that gave records shared with the uncovered areas to those areas, and is withdrawn); records in no qualifier area 131; the pre-cutoff window 2021-04-01..2023-03-31 holds 525 further
 records. The heading frame (MeSH main headings instead of qualifiers) was recorded for information only; using it as the gate would
 be a change of criterion after the counts were seen and would have to be declared as such. Nothing is built. The next step is the
 researcher's decision, recorded here.
+
+**Amendment of 2026-10-09 (after Stage 0 run 2): the areas covered, and the thresholds that depend on them.** Decided by the
+researcher on the counts of run 2, which had been seen; it is therefore a scope decision made after the counts, not an independent
+test of the original criterion, and the original criterion stays recorded as failed twice. *What changes:* (a) Only the core areas
+that reach 100 distinct source records are covered: treatment (314), diagnosis (278), causes and risk factors (216) and symptoms
+(171). Prevention (21), progression (58) and care and management (20) are reported as not covered, and no claim about them is made;
+nothing is added to them from dementia-wide sources, from the pre-cutoff window (525 records) or from the MeSH-heading frame, which
+was counted for information only. The optional strata cannot be added: background/history has 0 records and terminology 3.
+(b) Stage 0 criterion: at least 700 eligible records (unchanged: 866), at least 100 distinct records in each covered area
+(unchanged), **at least 4 covered areas (was 6)**, and **at least 650 distinct records in the covered areas (new: 200 test + 60
+development questions at the 40% draft survival of gate 1 is 260 / 0.40)**. The covered areas hold 710 distinct records, so Stage 0
+is go under the amended criterion (`python -m experiments.adkqa.stage0 --recheck experiments/adkqa/results/stage0_counts_r2.json`).
+(c) Test set: **at least 200 test questions (was 300); every question that passes the gates is kept, up to 300**; at least 25 per
+covered area (unchanged); 60 development questions (unchanged); the test and development questions share the 710 records, one
+question per record, a record in two covered areas serving the scarcer one. (d) Unchanged: the 3-way verdict, the as-of rule, the
+frozen design, the requirement of 1 point, the verifier and its qualification thresholds (75%, 0.60, 2%), the trial-run gates (40%
+survival, 85% verifier agreement, claim-only classifier at most the majority class plus 5 points, each verdict at least 25%, the
+same seed gives the same hash, median pool at least 15 abstracts and at most 5% empty, B0 between constant plus 5 points and 80%),
+the audit agreement of 85%, and the run validity of 95%. *Reach:* the evaluation covers treatment, diagnosis, causes and risk
+factors and symptoms of Alzheimer's disease; it does not cover prevention, progression or care. *Power (normal approximation to the
+paired difference, discordance 15%, recomputed for all sizes with one formula; it replaces the figures above, which differ by one or
+two points):* with 200 test questions the standard error is about 2.7 points and gaps of about 7.7 points can be confirmed with
+80% power; with 300 it is 2.2 points and 6.3. A true gain of +1 point is confirmed with probability 7% at both sizes, +1.5 points
+9% to 10%, +3 points 20% to 27%, +5 points 45% to 62%; a point estimate of at least +1 point has probability 36% (200) or 33% (300)
+when the true gain is zero. The requirement therefore cannot be confirmed at either size unless the true gain is several points;
+the reading rules are unchanged.
 
 *Still to be fixed in a further dated amendment before any question is drafted:* the question templates, the cue phrases of the
 rule-based reading, the topic-cluster key and the split seed, the freeze date of the source window, and the secondary measures.

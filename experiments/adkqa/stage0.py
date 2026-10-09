@@ -80,6 +80,11 @@ FILTERS = 'hasabstract[text] AND medline[sb] AND english[lang] NOT "retracted pu
 MIN_TOTAL = 700
 MIN_AREA = 100
 MIN_AREAS = 6
+#: Amended criterion (``docs/protocol.md`` §8, amendment of 2026-10-09 after Stage 0 run 2): the areas that reach MIN_AREA
+#: are the covered areas; at least MIN_AREAS_V2 are required, and the distinct records of the covered areas must be enough for
+#: 200 test + 60 development questions at the 40% draft survival of the trial-run gate (260 / 0.40 = 650).
+MIN_AREAS_V2 = 4
+MIN_COVERED_SUPPLY = 650
 RETMAX = 10000
 SAMPLE_SIZE = 20
 
@@ -153,6 +158,19 @@ def evaluate_gate(total: int, distinct: dict[str, int]) -> dict:
             "areas_ok": areas_ok, "go": total_ok and areas_ok}
 
 
+def evaluate_gate_v2(result: dict) -> dict:
+    """The amended criterion (governing since 2026-10-09; the original is ``evaluate_gate``), computed from a Stage 0 result (also from a committed file, offline)."""
+    core = {a: v for a, v in result["per_area"].items() if v["core"]}
+    covered = sorted(a for a, v in core.items() if v["distinct"] >= MIN_AREA)
+    below = sorted(a for a, v in core.items() if v["distinct"] < MIN_AREA)
+    supply = len(set().union(*[set(core[a]["ids"]) for a in covered])) if covered else 0
+    total_ok, areas_ok, supply_ok = (result["total"] >= MIN_TOTAL, len(covered) >= MIN_AREAS_V2, supply >= MIN_COVERED_SUPPLY)
+    return {"criterion": {"min_total": MIN_TOTAL, "min_per_area": MIN_AREA, "min_areas": MIN_AREAS_V2,
+                          "min_covered_supply": MIN_COVERED_SUPPLY},
+            "total": result["total"], "total_ok": total_ok, "areas_covered": covered, "areas_below": below, "areas_ok": areas_ok,
+            "covered_supply": supply, "supply_ok": supply_ok, "go": total_ok and areas_ok and supply_ok}
+
+
 def sample_pmids(ids: Sequence[str], n: int = SAMPLE_SIZE) -> list[str]:
     """A fixed pseudo-random sample for manual spot checks (hash order; the same records on every run)."""
     return sorted(ids, key=lambda p: hashlib.sha256(f"adk-stage0|{p}".encode()).hexdigest())[:n]
@@ -191,6 +209,12 @@ def exclusive_counts(sets: dict[str, set]) -> dict[str, int]:
 
 
 def collect(eu: EUtils, since: str, until: str, pre_since: str = "2021-04-01") -> dict:
+    result = _collect(eu, since, until, pre_since)
+    result["gate_amended"] = evaluate_gate_v2(result)
+    return result
+
+
+def _collect(eu: EUtils, since: str, until: str, pre_since: str) -> dict:
     base_term = build_term()
     main_ids, main_notes = search(eu, base_term, since, until)
     notes = {"main": main_notes} if main_notes else {}
@@ -225,6 +249,7 @@ def collect(eu: EUtils, since: str, until: str, pre_since: str = "2021-04-01") -
             "window": {"since": since, "until": until}, "base_term": base_term, "total": len(main_ids),
             "by_type": by_type, "by_period": by_period, "per_area": per_area,
             "gate": evaluate_gate(len(main_ids), {a: v["distinct"] for a, v in per_area.items()}),
+            "gate_amended": None,
             "information_only": {
                 "alzheimer_in_title_not_major_topic": len(title_only),
                 "pre_cutoff_window": {"since": pre_since, "until": pre_until, "total": len(pre)},
@@ -245,10 +270,17 @@ def render(result: dict) -> str:
     for area, v in result["per_area"].items():
         lines.append(f"{area + ('' if v['core'] else ' (optional)'):<26}{v['distinct']:>11}{v.get('headings_distinct', 0):>10}"
                      f"{v.get('either_distinct', 0):>8}  " + ", ".join(f"{q} {n}" for q, n in v["qualifier_counts"].items()))
-    lines += ["", f"criterion (qualifier frame, unchanged): total >= {g['criterion']['min_total']} and >= "
+    lines += ["", f"original criterion (qualifier frame): total >= {g['criterion']['min_total']} and >= "
               f"{g['criterion']['min_areas']} core areas with >= {g['criterion']['min_per_area']} distinct records",
               f"total ok: {g['total_ok']}; areas covered: {', '.join(g['areas_covered']) or 'none'}; "
-              f"below: {', '.join(g['areas_below']) or 'none'}", "GO" if g["go"] else "NO-GO (do not build; report these counts)"]
+              f"below: {', '.join(g['areas_below']) or 'none'}", "GO" if g["go"] else "NO-GO"]
+    a = result.get("gate_amended") or evaluate_gate_v2(result)
+    lines += ["", f"amended criterion (2026-10-09): total >= {a['criterion']['min_total']}, >= {a['criterion']['min_areas']} core "
+              f"areas with >= {a['criterion']['min_per_area']} distinct records, and >= {a['criterion']['min_covered_supply']} "
+              f"distinct records in the covered areas",
+              f"total ok: {a['total_ok']}; covered: {', '.join(a['areas_covered']) or 'none'}; not covered: "
+              f"{', '.join(a['areas_below']) or 'none'}; covered supply {a['covered_supply']}",
+              "GO" if a["go"] else "NO-GO (do not build; report these counts)"]
     if info:
         lines += ["", "Information only (not part of the gate):",
                   f"  Alzheimer in the title but not a major MeSH topic: {info['alzheimer_in_title_not_major_topic']}",
@@ -277,8 +309,15 @@ def main(argv=None, *, eu: Optional[EUtils] = None, ref_opener: Optional[Callabl
     ap.add_argument("--since", default="2023-04-01", help="first publication date (after the generator's cutoff)")
     ap.add_argument("--until", default=dt.date.today().isoformat())
     ap.add_argument("--out", default=str(DEFAULT_OUT))
+    ap.add_argument("--recheck", default=None, metavar="FILE", help="evaluate the amended criterion on a committed counts "
+                    "file; no network, nothing is written")
     ap.add_argument("--probe-references", type=int, default=0, metavar="N")
     args = ap.parse_args(argv)
+    if args.recheck:
+        saved = json.loads(Path(args.recheck).read_text(encoding="utf-8"))
+        saved["gate_amended"] = evaluate_gate_v2(saved)
+        print(render(saved))
+        return 0 if saved["gate_amended"]["go"] else 3
     eu = eu or EUtils(args.api_key)
     result = collect(eu, args.since, args.until)
     if args.probe_references:
@@ -288,7 +327,7 @@ def main(argv=None, *, eu: Optional[EUtils] = None, ref_opener: Optional[Callabl
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(render(result))
     print(f"\nwritten: {out}")
-    return 0 if result["gate"]["go"] else 3
+    return 0 if result["gate_amended"]["go"] else 3
 
 
 if __name__ == "__main__":

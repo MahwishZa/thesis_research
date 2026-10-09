@@ -1363,7 +1363,18 @@ After a review of the existing results and of the candidate datasets, the resear
 
 Run 2 (`stage0_counts_r2.json`, committed by the researcher): 866 records; qualifier frame treatment 314, prevention 21, diagnosis 278,
 causes_risk 216, progression 58, symptoms 171, care_management 20. Four areas covered, six required: no-go under the unchanged
-criterion. Information only: exclusive supply in the four covered areas 634 records; pre-cutoff window 525 further records; the
+criterion. Information only: exclusive supply 634 records in the four covered areas (withdrawn in Phase 48: that allocation gave shared records to the uncovered areas; the distinct records are 710); pre-cutoff window 525 further records; the
 MeSH-heading frame would give more records in progression (135) and care (57) but it is not the declared gate. Nothing built; the
 choice of how to proceed (cover four areas, a flagged wider window, a smaller test set, or stop) is the researcher's.
+
+## Phase 48 — Amendment: four covered areas, thresholds corrected (Oct 9)
+
+The researcher accepted covering only the areas the evidence supports. Verified before writing it: the covered areas hold 710
+distinct records (union of the identifiers in `stage0_counts_r2.json`), not 634; the earlier figure, and the statement that 300 + 60
+questions were unlikely to be reachable, came from an allocation that gave shared records to the uncovered areas first, and are
+withdrawn (at 40% draft survival 710 records give 284 questions, at 50% 355). Power recomputed with one formula for n = 150 to 300.
+Changes: `protocol.md` §8 (amendment, ledger row, status row, the replaced wording marked in the gates); `stage0.py`
+(`evaluate_gate_v2`, `--recheck`, exit code by the amended criterion; the original gate stays and is printed); tests (20 for
+Stage 0, including the committed run-2 file). Thresholds changed: covered areas 6 to 4; new covered supply 650; test minimum 300 to
+200 (keep all that pass, up to 300). All others unchanged and listed in the amendment. Optional strata dropped (0 and 3 records).
 

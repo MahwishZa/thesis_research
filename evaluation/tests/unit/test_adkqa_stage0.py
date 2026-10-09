@@ -147,8 +147,43 @@ class RevisionTwoTests(unittest.TestCase):
         self.assertEqual(got, {"a": 2, "b": 1, "c": 1})
         self.assertEqual(sum(got.values()), 4)
 
-    def test_the_gate_thresholds_are_unchanged_from_the_declaration(self):
+    def test_the_original_thresholds_are_kept_for_the_record(self):
         self.assertEqual((S.MIN_TOTAL, S.MIN_AREA, S.MIN_AREAS), (700, 100, 6))
+
+
+class AmendedCriterionTests(unittest.TestCase):
+    def _result(self, sizes, total=900, overlap=2):
+        per_area, start = {}, 0
+        for a, n in sizes.items():
+            per_area[a] = {"core": True, "distinct": n, "ids": [str(i) for i in range(start, start + n)]}
+            start += n if overlap == 0 else n // overlap      # overlap=0: disjoint; 2: neighbours share half
+        return {"total": total, "per_area": per_area}
+
+    def test_the_amended_numbers_follow_from_the_sizes_of_the_question_set(self):
+        self.assertEqual((S.MIN_TOTAL, S.MIN_AREA, S.MIN_AREAS_V2, S.MIN_COVERED_SUPPLY), (700, 100, 4, 650))
+        self.assertEqual(S.MIN_COVERED_SUPPLY, round((200 + 60) / 0.40), "200 test + 60 dev at 40% draft survival")
+
+    def test_four_covered_areas_with_enough_distinct_records_are_go(self):
+        g = S.evaluate_gate_v2(self._result({"treatment": 320, "diagnosis": 280, "causes_risk": 220, "symptoms": 170,
+                                             "progression": 58, "care_management": 20}, overlap=0))
+        self.assertEqual(g["areas_covered"], ["causes_risk", "diagnosis", "symptoms", "treatment"])
+        self.assertTrue(g["go"])
+
+    def test_three_areas_or_too_little_supply_are_no_go(self):
+        three = S.evaluate_gate_v2(self._result({"treatment": 320, "diagnosis": 280, "causes_risk": 220, "symptoms": 99}))
+        self.assertFalse(three["areas_ok"])
+        small = S.evaluate_gate_v2(self._result({"treatment": 110, "diagnosis": 110, "causes_risk": 110, "symptoms": 110}))
+        self.assertFalse(small["supply_ok"], "overlapping areas do not add up")
+        self.assertFalse(small["go"])
+
+    def test_the_committed_run_two_counts_pass_the_amended_criterion_and_fail_the_original(self):
+        path = Path(S.__file__).parent / "results" / "stage0_counts_r2.json"
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        self.assertFalse(saved["gate"]["go"], "the original gate of run 2 is kept as it was recorded")
+        g = S.evaluate_gate_v2(saved)
+        self.assertEqual((g["covered_supply"], g["go"]), (710, True))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(S.main(["--recheck", str(path)]), 0)
 
 
 class MainTests(unittest.TestCase):

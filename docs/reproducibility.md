@@ -174,7 +174,7 @@ requests and pypdf).
 
 `python -m experiments.adkqa.stage0` counts the PubMed records that could be the sources of the question set (Alzheimer's
 disease; systematic review, meta-analysis or guideline; published from 2023-04-01; abstract; MEDLINE-indexed; English; not
-retracted), per knowledge area, and evaluates the go/no-go criterion of `protocol.md` §8. It needs network access (E-utilities,
+retracted), per knowledge area, and evaluates the go/no-go criterion of `protocol.md` §8 (the original and the amended one; the exit code follows the amended one). `--recheck FILE` evaluates a committed counts file offline. It needs network access (E-utilities,
 at most 3 requests per second without `--api-key`), reads no abstract, builds no question and runs no model, and takes a few
 minutes. It writes `experiments/adkqa/results/stage0_counts_r2.json` (revision 2; counts and identifiers only; commit and push it yourself; the file of run 1, `stage0_counts.json`, is kept) and
 exits with 0 for go and 3 for no-go. It also records how PubMed translated each query and any real warning (routine messages are dropped), so that a syntax problem shows in the output, and information-only counts (records naming Alzheimer's only in the title, the pre-cutoff window, records in no area, and the supply when each record may serve one area only) that do not enter the criterion. `--probe-references 20` also asks Europe PMC whether the sampled records have reference
