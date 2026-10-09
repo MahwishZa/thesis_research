@@ -187,6 +187,7 @@ is tested on.
 | 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
 | 2026-10-09 | Use short-form templates when a copied span names Alzheimer's disease | five development drafts were read (reply text only); no verdict of any system, no retrieval and no answer exists; every gate and threshold unchanged (§8, amendment C) |
 | 2026-10-09 | Stop the construction of the Alzheimer's-specific question set after gate 1 of the development build; primary evaluation reverts to the pre-declared held-out split; report the Alzheimer's-named part of the dementia set as an exploratory subgroup | the whole development build (11 of 150 kept; verdict mix 10 / 1 / 0), the diagnostic verifier pass and the dementia-run answers were seen; the subgroup was defined by the wording of the question after the run (§8, close-out) |
+| 2026-10-09 | Draft a pre-registered confirmatory test of the verification effect on fresh as-of questions (§10; not in force) | the exploratory per-verdict analysis of the held-out and dementia answers was seen and gave the hypothesis; the test uses questions outside every existing split; nothing is selected or run yet |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -515,3 +516,76 @@ Both stages were run to a pre-declared gate and did not pass it. Their code was 
   +6.1), not confirmed.
 
 Results of these stages: `evaluation.md` §6.3.
+
+## 10. Pre-registration of a confirmatory test on fresh questions (DRAFT: not in force)
+
+**Status.** This section is a draft written on 2026-10-09. It binds nothing until the freeze of §10.8 is committed, and no fresh question has been
+selected, run or looked at. Nothing in it changes a result already obtained.
+
+### 10.1 Why, and what is already known
+
+The held-out and dementia runs found no confirmed gain in verdict accuracy (R2V − R2 = +1.3 and +3.4 points, intervals including zero). A look at the
+per-verdict behaviour *after* those runs showed that all systems answer SUPPORTED far more often than the reviews do (dementia set: 62 to 70% predicted
+against 25% gold) and almost never answer REFUTED (recall 3 to 6% for B0, B1 and R2), and that R2V raises REFUTED recall (dementia set 6% to 22%,
+held-out 4% to 11%, from the committed answers) and the macro-F1 (R2V − R2 = +0.080, interval +0.026 to +0.136, and +0.045, interval +0.010 to
++0.080). That metric was chosen after the data were seen and no correction was made for the intervals looked at, so it is a hypothesis, not a result.
+This section tests it on questions that played no part in choosing it. Whatever the outcome, it is reported.
+
+### 10.2 Hypothesis and decision rule
+
+*Primary (H1).* On fresh questions, the macro-F1 of R2V is higher than that of R2. Macro-F1 is the unweighted mean of the F1 of the three verdicts
+(an F1 is 0 when the verdict is never predicted correctly). The paired difference R2V − R2 has a 95% interval from a bootstrap over questions
+(10,000 resamples, seed `fresh-macro-f1`, questions as units). **H1 is confirmed if the lower end of the interval is above 0.** Otherwise it is
+reported as "positive but not confirmed" (point estimate above 0) or "no evidence" (point estimate at or below 0), with the upper end stated: if
+it is below 0.02, a gain of 0.02 or more is excluded.
+
+*Secondary (reported with intervals; no confirmatory claim).* REFUTED recall and the predicted-SUPPORTED share of R2V and R2; verdict accuracy of
+R2V − R2 read by the three rules of `evaluation.md` §5 (the 1-point requirement keeps its meaning and is not re-read from this test alone); changed
+versus unchanged questions if both occur; the share of answers changed by R2V and how many changes fix or break an answer.
+
+*Alzheimer's disease (descriptive, pre-specified).* The 208 dementia-set questions (48 name Alzheimer's disease) were seen and helped form H1, so
+they are not part of the confirmatory family. Their macro-F1 difference and interval are reported next to the fresh result, with the statement
+whether the sign agrees. No claim is made that H1 is confirmed for Alzheimer's disease.
+
+### 10.3 Questions
+
+A question is *fresh* when neither its study group, nor its Cochrane ID, nor its wording appears in any split of `benchmark.jsonl` (dev, confirm, ad)
+and its wording does not name dementia or Alzheimer's disease (those were all used). The count is made by `python -m experiments.medchange.fresh_supply`
+(counts only). The review must be dated from **2010-01-01**; if fewer than the sample size qualify, all qualifying questions are used and the power
+is stated, and the date is not moved earlier than 2005-01-01. From the qualifying questions the first **N** in the order of the SHA-256 of
+`fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 1,200 [to confirm before the freeze].** Power for H1 with N = 1,200 (standard
+error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation): 92% if the true gain is 0.04,
+72% if 0.03, 39% if 0.02; the smallest gain confirmable with 80% power is 0.033. N = 1,000 gives 87%, 64% and 34%; N = 1,500 gives 97%, 81% and 47%.
+
+### 10.4 Systems and settings
+
+The frozen design (settings hash `1743afd7045b`, `results/rag2_design.json`), unchanged: the arms R2 and R2V only (R2V verifies R2's draft; B0, B1, R2C,
+R2V-ND and the directness judge are not run in this test). Every question is analysed whatever happens to it (an unparsed answer counts as wrong; a
+question without admitted abstracts is analysed as the pipeline answers it). A defect found while running is fixed and recorded, never tuned on outcomes.
+The pipeline needs the split name `fresh` added to its registries, a mechanical change made and tested before the freeze.
+
+### 10.5 Cost
+
+From the measured steps of the dementia run (records, pools, rationales, candidate lists, filter and the R2 and R2V answers), about 3.9 minutes per
+question [estimate]: about 78 hours for 1,200 questions, 65 hours for 1,000, 98 hours for 1,500, on the laptop, resumable.
+
+### 10.6 Limits stated in advance
+
+(1) Macro-F1 was chosen after exploratory looks; this test is what makes it a result or not. (2) The fresh set is general medicine, not Alzheimer's
+disease; a confirmed H1 would support the mechanism, not an Alzheimer's-specific gain. (3) The reference verdicts are model-made (an independent model
+reproduces 81% of them); a fresh label audit of a sample is part of the report. (4) The true gain may be smaller than the one observed, because the
+observed one was selected; the sample size is set with that in mind. (5) The reviews are older than the generator's training cutoff, so the model may
+have seen some conclusions; the as-of rule limits only the evidence it is shown.
+
+### 10.7 What may not change after the freeze
+
+The hypothesis, the primary metric and decision rule, the sample size, the selection rule and seed, the arms, every setting and prompt. Not tried: other
+metrics as primary, other thresholds, other seeds, dropping questions after seeing answers.
+
+### 10.8 Freeze procedure
+
+(1) The counts of `fresh_supply` are committed. (2) N is fixed here and the list of selected rows is hashed and committed before any answer exists.
+(3) The tests for the new split pass and the design record equals the current design. (4) This section's status is changed to "in force" with the date
+and commit. Only then is the run started.
+
+

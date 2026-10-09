@@ -1499,3 +1499,12 @@ gold NOT ENOUGH INFORMATION 21, REFUTED 19, SUPPORTED 8; constant answer 43.8%; 
 confirmed. `protocol.md` §8 now has a close-out and a ledger row; `evaluation.md` §6.0 is reworded and §6.7 and §6.8 are added; the primary evaluation
 reverts to the pre-declared held-out split (reading unchanged). No result was altered.
 
+## Phase 62 — Supply counter and draft pre-registration (Oct 9)
+
+Added `experiments/medchange/fresh_supply.py` (counts of MedRevQA questions outside every existing split, by earliest review date, verdict and kind; no
+network, no model; 4 tests) and a draft pre-registration, `protocol.md` §10 (not in force): primary outcome macro-F1, R2V − R2, on fresh questions;
+confirmed if the lower end of a 95% bootstrap interval is above 0; N = 1,200 to confirm; arms R2 and R2V only; descriptive Alzheimer's report; limits
+stated in advance. The per-verdict figures it cites come from a one-off analysis of the committed answers (recorded here as such; a saved, tested script
+is still to be added). Cost per question corrected: about 3.9 minutes for R2 and R2V only, from the dementia-run breakdown (an earlier estimate of 3
+minutes was low).
+
