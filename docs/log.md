@@ -1408,3 +1408,10 @@ Eight unparsed replies were inspected: they lead with the verdict word and omit 
 re-scoring tool (`experiments/adkqa/qualify.py`, 5 tests) were added; the builder's verifier step uses the same rule. The thresholds are
 unchanged. The re-score is a repaired instrument on the same data and is recorded as such; its result follows from the researcher's run.
 
+## Phase 52 — Verifier qualified (Oct 9)
+
+The re-score of the stored Phi-3.5-mini replies (researcher's run, `adkqa_verifier_qualification.json`): 226 of 226 read, agreement 77.9%,
+kappa 0.6641, unparsed 0% against the declared limits (75%, 0.60, 2%): qualified, with a 2.9-point margin on agreement and a weak
+NOT ENOUGH INFORMATION class (65.3%). Recorded in `protocol.md` §8 with the caveat that the reading rule was repaired after run 1.
+Next: `prepare`, a small `draft` look, then the dev draft and verify (`reproducibility.md` §11).
+

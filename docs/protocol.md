@@ -291,6 +291,11 @@ used by the builder's verification step. The stored replies (first 60 characters
 (`python -m experiments.adkqa.qualify`), with the thresholds unchanged (agreement at least 75%, kappa at least 0.60, unparsed at most
 2%). The correction was designed after seeing run 1 and eight of its replies, so the re-score is a repaired instrument on the same
 data, not an independent test; its result is recorded here. If it fails, the fallback is Mistral-7B-Instruct-v0.3 on the same terms.
+*Result of the re-score (2026-10-09, `results/adkqa_verifier_qualification.json`):* **qualified.** All 226 replies were read (0 unparsed;
+limit 2%); agreement 77.9% (limit 75%); kappa 0.6641 (limit 0.60). By gold class: SUPPORTED 81.9% (105 items), REFUTED 87.8% (49),
+NOT ENOUGH INFORMATION 65.3% (72). The margin over the agreement limit is 2.9 points, and NOT ENOUGH INFORMATION is the weak class; for
+comparison Qwen2.5-7B reached 83.2% and kappa 0.7422 on the same split. A kept question needs the verifier to agree with the drafter
+and the cue reading, so a verifier that errs more removes more questions; it does not make a kept question less valid.
 
 *Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
 (0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each
