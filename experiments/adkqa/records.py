@@ -117,7 +117,9 @@ def prepare(records: Sequence[dict], areas: dict[str, str], since: str = "2023-0
             row.update(status="not_fetched", cluster=f"pmid:{pmid}")
         else:
             row.update(title=rec["title"], date=rec["date"], pubtypes=rec["pubtypes"], major_mesh=rec["major_mesh"],
-                       cluster=spec.cluster_key(rec["major_mesh"], pmid), **structure(rec))
+                       cluster=spec.cluster_key(rec["major_mesh"], pmid), labels=[l for l, _ in rec["sections"]],
+                       last_words=" ".join(((_SENTENCE.split(" ".join(t for _, t in rec["sections"]).strip()) or [""])[-1]).split()[:4]),
+                       **structure(rec))
             if not rec["sections"]:
                 row["status"] = "no_abstract"
             elif not row["conclusion"]:
@@ -138,6 +140,26 @@ def pools(rows: Sequence[dict]) -> dict:
         out["by_area_split"][k] = out["by_area_split"].get(k, 0) + 1
     out["dev_drafted"] = min(spec.DRAFT_N, out["by_split"].get("dev", 0))
     return out
+
+
+def diagnose(rows: Sequence[dict], top: int = 25) -> dict:
+    """Why records have no usable conclusion, and how the split came out. Section labels and the first words of a last sentence
+    only; no abstract text is kept."""
+    from collections import Counter
+    no = [r for r in rows if r["status"] == "no_conclusion"]
+    unstructured = [r for r in no if not any(r.get("labels", []))]
+    structured = [r for r in no if any(r.get("labels", []))]
+    sizes = Counter(r["cluster"] for r in rows)
+    split_of_cluster = {r["cluster"]: r["split"] for r in rows}
+    eligible = Counter(r["split"] for r in rows if r["status"] == "eligible")
+    return {"status": dict(Counter(r["status"] for r in rows)),
+            "no_conclusion": {"structured": len(structured), "unstructured": len(unstructured),
+                              "labels_in_structured": Counter(l.lower() for r in structured for l in r["labels"] if l).most_common(top),
+                              "last_sentence_start_in_unstructured": Counter(r.get("last_words", "").lower() for r in unstructured).most_common(top)},
+            "eligible_by_split": dict(eligible),
+            "largest_clusters": [(c, n, split_of_cluster[c]) for c, n in sizes.most_common(10)],
+            "clusters_by_split": dict(Counter(split_of_cluster.values())),
+            "singleton_clusters": sum(1 for n in sizes.values() if n == 1)}
 
 
 def write_jsonl(path: Path, rows: Sequence[dict]) -> None:

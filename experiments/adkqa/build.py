@@ -1,6 +1,7 @@
 """Builder of the Alzheimer's-specific question set (``docs/protocol.md`` §8).
 
     python -m experiments.adkqa.build prepare [--api-key KEY]                       fetch the frozen sources, split, count
+    python -m experiments.adkqa.build diagnose                                      why records lack a conclusion; how the split fell
     python -m experiments.adkqa.build draft  --split dev --model-path <Qwen gguf>   draft questions (the drafting model)
     python -m experiments.adkqa.build verify --split dev --model-path <Phi gguf>    independent verifier (--role audit: Qwen)
     python -m experiments.adkqa.build assemble --split dev                          keep rules, question file, manifest, trial figures
@@ -299,7 +300,7 @@ def _read_rows(data: Path) -> list[dict]:
 
 def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("cmd", choices=("prepare", "draft", "verify", "assemble", "pools", "gate1"))
+    ap.add_argument("cmd", choices=("prepare", "diagnose", "draft", "verify", "assemble", "pools", "gate1"))
     ap.add_argument("--split", default="dev", choices=("dev", "test"))
     ap.add_argument("--model-path")
     ap.add_argument("--role", default="verifier", choices=("verifier", "audit"))
@@ -326,6 +327,11 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
         return 0
 
     rows = _read_rows(data)
+    if a.cmd == "diagnose":
+        rep = R.diagnose(rows)
+        _write_json(results / "adkqa_diagnose.json", rep)
+        print(json.dumps(rep, indent=2))
+        return 0
     scope = select(rows, a.split)[:a.limit]
     if a.cmd in ("draft", "verify"):
         if not a.model_path or not Path(a.model_path).is_file():

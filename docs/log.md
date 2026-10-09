@@ -1415,3 +1415,13 @@ kappa 0.6641, unparsed 0% against the declared limits (75%, 0.60, 2%): qualified
 NOT ENOUGH INFORMATION class (65.3%). Recorded in `protocol.md` §8 with the caveat that the reading rule was repaired after run 1.
 Next: `prepare`, a small `draft` look, then the dev draft and verify (`reproducibility.md` §11).
 
+## Phase 53 — `prepare` result and a finding on feasibility (Oct 9)
+
+First `prepare` (researcher's run, `adkqa_pools.json`): 710 records; 418 eligible, 292 (41%) with no usable conclusion under the rule of
+`protocol.md` §8; split test 600 / dev 110 (264 topic clusters; the declared 25% of clusters gave 15.5% of records, because a few large
+clusters fell to test; the seed is not changed); by area dev 27 / 22 / 28 / 33, test 186 / 149 / 148 / 117. Consequences: the development pool
+(110) is smaller than the 150 drafts the trial run needs, and at 59% eligibility the 40% survival gate needs about 68% survival per
+eligible record. Nothing was drafted. Added `build diagnose` (labels of the records without a conclusion, first words of unlabelled last
+sentences, cluster sizes; no abstract text) and the section labels in `sources.jsonl` to see whether the 292 are a real absence or a rule
+that is too narrow. Any change to the conclusion rule is an amendment made after seeing these counts and will be recorded as such.
+

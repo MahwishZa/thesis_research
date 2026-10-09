@@ -109,6 +109,18 @@ class ParsingTests(unittest.TestCase):
         self.assertIsNone(R.structure({"sections": [("BACKGROUND", "x"), ("RESULTS", "y")]})["conclusion"])
 
 
+class DiagnoseTests(unittest.TestCase):
+    def test_diagnosis_counts_labels_and_clusters_without_text(self):
+        rows = [{"pmid": "1", "status": "no_conclusion", "labels": ["BACKGROUND", "DISCUSSION"], "cluster": "a", "split": "test"},
+                {"pmid": "2", "status": "no_conclusion", "labels": [""], "last_words": "Further research is", "cluster": "a", "split": "test"},
+                {"pmid": "3", "status": "eligible", "labels": ["CONCLUSIONS"], "cluster": "b", "split": "dev"}]
+        d = R.diagnose(rows)
+        self.assertEqual((d["no_conclusion"]["structured"], d["no_conclusion"]["unstructured"]), (1, 1))
+        self.assertEqual(d["no_conclusion"]["labels_in_structured"][0][0], "background")
+        self.assertEqual(d["largest_clusters"][0], ("a", 2, "test"))
+        self.assertEqual(d["eligible_by_split"], {"dev": 1})
+
+
 class DraftCheckTests(unittest.TestCase):
     ROW = {"title": "Donepezil and cognition", "abstract": "To assess donepezil and cognition. Donepezil significantly improved cognition.",
            "conclusion": "Donepezil significantly improved cognition."}
