@@ -1,0 +1,28 @@
+{
+  "n_items": 226,
+  "n_unparsed": 0,
+  "unparsed_share": 0.0,
+  "agreement": 0.7788,
+  "kappa": 0.6641,
+  "per_gold_class": {
+    "SUPPORTED": {
+      "n": 105,
+      "agreement": 0.819
+    },
+    "REFUTED": {
+      "n": 49,
+      "agreement": 0.8776
+    },
+    "NOT ENOUGH INFORMATION": {
+      "n": 72,
+      "agreement": 0.6528
+    }
+  },
+  "checks": {
+    "agreement_at_least_75pct": true,
+    "kappa_at_least_0_60": true,
+    "unparsed_at_most_2pct": true
+  },
+  "qualified": true,
+  "verifier": "Phi-3.5-mini-instruct.Q4_K_M.gguf"
+}
