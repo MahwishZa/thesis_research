@@ -142,20 +142,21 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 
 ### 6.0 What each result is
 
-Since 2026-10-09 the research's primary evaluation is Alzheimer's-specific (`protocol.md` §8). The results below come from
-the as-of Cochrane benchmark, which is general medicine, and from a dementia-wide set; they are completed work and are kept
-as secondary or exploratory evidence for that aim, not as an Alzheimer's-specific evaluation.
+The research aims at Alzheimer's disease. An Alzheimer's-specific question set was specified on 2026-10-09 (`protocol.md` §8) and its
+construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-specific confirmatory evaluation exists. The pre-declared
+confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
+dementia-wide set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-specific evaluation.
 
 | Result set | Questions | Class | Scope |
 |---|---|---|---|
 | As-of Cochrane questions, held-out split (§6.2) | 528 | completed once; pre-declared and confirmatory under the protocol of 2026-10-05 | general medicine |
 | Dementia and Alzheimer's set (§6.6) | 208 | completed once; secondary | dementia-wide: 48 questions name Alzheimer's disease |
-| Alzheimer's-named part of the dementia set | 48 | exploratory; defined after the results were known | description only |
 | As-of Cochrane questions, development split (§6.1) | 226 | exploratory; used to find defects | general medicine |
 | Ablation arms, retrieval diagnostics, label audits (§6.2) | | secondary or descriptive | general medicine |
 | Released answers of eight other models (§6.2, §6.6) | 8 | context; other prompts, no retrieval | not a controlled comparison |
 | Earlier stages (§6.3) | | negative results of record | general medicine |
-| Alzheimer's-specific primary evaluation | | specified in `protocol.md` §8; no result exists | Alzheimer's disease |
+| Alzheimer's-named part of the dementia set (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
+| Alzheimer's-specific question set AD-KQA (§6.8) | | construction stopped at gate 1; no system was run on it | Alzheimer's disease |
 
 ### 6.1 Realigned study, development split (226 questions; exploratory)
 
@@ -273,3 +274,38 @@ Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mis
 34.1% and PMC-LLaMA 43.3%; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer. The labels of this set have not been audited by a second model, and the update-window and
 age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
 `results/report_ad/REPORT.md`.
+
+### 6.7 Alzheimer's-named part of the dementia set (exploratory; no model run)
+
+The 48 of the 208 dementia-set questions whose text names Alzheimer's disease, analysed from the answers on file
+(`python -m experiments.medchange.subgroup_ad`; `results/ad_subgroup_alzheimer.*`). The subgroup was defined after the run, by the
+wording of the question alone, so it is exploratory. Gold NOT ENOUGH INFORMATION 21, REFUTED
+19, SUPPORTED 8.
+
+| System | Accuracy (95% Wilson interval) |
+|---|---|
+| Constant answer NOT ENOUGH INFORMATION (no model) | 43.8% |
+| B0 | 31.2% (19.9–45.3) |
+| B1 | 18.8% (10.2–31.9) |
+| R2 | 27.1% (16.6–41.0) |
+| R2C | 31.2% (19.9–45.3) |
+| R2V | 31.2% (19.9–45.3) |
+
+Requirement-style comparison: R2V − R2 +4.2 pp (95% CI −6.2 to +14.6; 4 / 2 discordant, exact p = 0.69). Others: R2C − R2 +4.2 pp (95% CI −8.3 to +16.7; 5 / 3 discordant, exact p = 0.73); R2V − R2C +0.0 pp (95% CI −10.4 to +12.5; 4 / 4 discordant, exact p = 1.00); R2 − B1 +8.3 pp (95% CI +0.0 to +18.8; 5 / 1 discordant, exact p = 0.22); R2V − B1 +12.5 pp (95% CI +0.0 to +25.0; 8 / 2 discordant, exact p = 0.11); R2V − B0 +0.0 pp (95% CI −12.5 to +14.6; 6 / 6 discordant, exact p = 1.00).
+With 48 questions only paired differences of about 13 to 20 points or more could be confirmed (§4), so none of these is
+confirmed and the 1-point requirement is neither met nor failed here. All five systems score below the constant answer, and standard
+retrieval (B1) scores lowest.
+
+### 6.8 Construction of an Alzheimer's-specific question set (AD-KQA): stopped at gate 1 (negative result of record)
+
+Built from 710 PubMed systematic reviews, meta-analyses and guidelines on Alzheimer's disease published from 2023-04-01 (four of seven
+areas had enough sources; `protocol.md` §8). On the development split (150 records) gate 1 failed: 11 questions kept (7.3%; gate 40% and
+60 questions), verdicts SUPPORTED 10, REFUTED 1, NOT ENOUGH INFORMATION 0 (gate: at least 25% each), claim-only classifier equal to the
+majority class. Two model families agree that the source is skewed: of 99 well-formed drafts Qwen2.5-7B proposed SUPPORTED 88, REFUTED 10,
+NOT ENOUGH INFORMATION 1, and the independent verifier Phi-3.5-mini labelled 75, 8 and 16; they agree on 77 (72 SUPPORTED, 5 REFUTED, none
+NOT ENOUGH INFORMATION). Published reviews of Alzheimer's disease lean positive and seldom state that evidence is insufficient, so a
+verdict-balanced question set of useful size cannot be built from this source, and no change of the rules could reach the verdict floors. The
+researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The tools are
+kept (`experiments/adkqa/`) and the counts are in `experiments/adkqa/results/`.
+
+

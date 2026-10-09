@@ -1489,3 +1489,13 @@ REFUTED is under 10%. If the cue reading were only a veto, survival would rise t
 would be SUPPORTED and none NOT ENOUGH INFORMATION. No change of the cue reading, the span rule or the share of the split can reach the verdict floor
 of 25% each (gate 1) from this source. Nothing in the design or the gates was changed; the decision is the researcher's.
 
+## Phase 61 — Option A: AD-KQA stopped; the Alzheimer's-named subgroup (Oct 9)
+
+Decision of the researcher: stop the construction of the Alzheimer's-specific question set (gate 1 failed; the verdict mix is a property of the source,
+Phase 60) and report what the completed runs allow. Added `experiments/medchange/subgroup_ad.py` (the 48 of the 208 dementia-set questions whose
+text names Alzheimer's disease, from the answers on file; no model run) and its committed outputs `results/ad_subgroup_alzheimer.*`. Results (exploratory):
+gold NOT ENOUGH INFORMATION 21, REFUTED 19, SUPPORTED 8; constant answer 43.8%; B0 31.2%, B1 18.8%, R2 27.1%, R2C 31.2%, R2V 31.2%; R2V − R2 = +4.2 pp
+(95% CI −6.2 to +14.6; 4 / 2 discordant, exact p = 0.69). All systems score below the constant answer; with 48 questions only about 13 to 20 points could be
+confirmed. `protocol.md` §8 now has a close-out and a ledger row; `evaluation.md` §6.0 is reworded and §6.7 and §6.8 are added; the primary evaluation
+reverts to the pre-declared held-out split (reading unchanged). No result was altered.
+

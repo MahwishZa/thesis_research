@@ -211,3 +211,6 @@ Verifier qualification (after `python -m experiments.medchange.label_audit --spl
 stored replies with the reading rule of `protocol.md` §8 (no model is run), prints agreement, kappa and the unparsed share against the
 declared thresholds, writes `experiments/adkqa/results/adkqa_verifier_qualification.json` (counts only) and exits 0 when qualified.
 
+Exploratory subgroup of the dementia run (the questions naming Alzheimer's disease): `python -m experiments.medchange.subgroup_ad` uses
+`benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`), runs no model and writes `results/ad_subgroup_alzheimer.*`.
+

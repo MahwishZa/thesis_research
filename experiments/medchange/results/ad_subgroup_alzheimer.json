@@ -1,0 +1,175 @@
+{
+  "split": "ad",
+  "subgroup": "question text names Alzheimer's disease",
+  "dementia_set_items": 208,
+  "n": 48,
+  "gold": {
+    "REFUTED": 19,
+    "SUPPORTED": 8,
+    "NOT ENOUGH INFORMATION": 21
+  },
+  "constant_answer": {
+    "label": "NOT ENOUGH INFORMATION",
+    "accuracy": 0.4375
+  },
+  "accuracy": {
+    "B0": {
+      "n": 48,
+      "accuracy": 0.3125,
+      "wilson95": [
+        0.199455,
+        0.453333
+      ]
+    },
+    "B1": {
+      "n": 48,
+      "accuracy": 0.1875,
+      "wilson95": [
+        0.101913,
+        0.319401
+      ]
+    },
+    "R2": {
+      "n": 48,
+      "accuracy": 0.270833,
+      "wilson95": [
+        0.165658,
+        0.409972
+      ]
+    },
+    "R2C": {
+      "n": 48,
+      "accuracy": 0.3125,
+      "wilson95": [
+        0.199455,
+        0.453333
+      ]
+    },
+    "R2V": {
+      "n": 48,
+      "accuracy": 0.3125,
+      "wilson95": [
+        0.199455,
+        0.453333
+      ]
+    }
+  },
+  "recall": {
+    "B0": {
+      "SUPPORTED": 0.75,
+      "REFUTED": 0.052632,
+      "NOT ENOUGH INFORMATION": 0.380952
+    },
+    "B1": {
+      "SUPPORTED": 0.75,
+      "REFUTED": 0.0,
+      "NOT ENOUGH INFORMATION": 0.142857
+    },
+    "R2": {
+      "SUPPORTED": 0.75,
+      "REFUTED": 0.052632,
+      "NOT ENOUGH INFORMATION": 0.285714
+    },
+    "R2C": {
+      "SUPPORTED": 0.875,
+      "REFUTED": 0.210526,
+      "NOT ENOUGH INFORMATION": 0.190476
+    },
+    "R2V": {
+      "SUPPORTED": 0.625,
+      "REFUTED": 0.157895,
+      "NOT ENOUGH INFORMATION": 0.333333
+    }
+  },
+  "comparisons": {
+    "R2V vs R2": {
+      "a": "R2V",
+      "b": "R2",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.041667,
+      "ci95": [
+        -0.0625,
+        0.145833
+      ],
+      "a_only_correct": 4,
+      "b_only_correct": 2,
+      "mcnemar_p": 0.6875
+    },
+    "R2C vs R2": {
+      "a": "R2C",
+      "b": "R2",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.041667,
+      "ci95": [
+        -0.083333,
+        0.166667
+      ],
+      "a_only_correct": 5,
+      "b_only_correct": 3,
+      "mcnemar_p": 0.7266
+    },
+    "R2V vs R2C": {
+      "a": "R2V",
+      "b": "R2C",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.0,
+      "ci95": [
+        -0.104167,
+        0.125
+      ],
+      "a_only_correct": 4,
+      "b_only_correct": 4,
+      "mcnemar_p": 1.0
+    },
+    "R2 vs B1": {
+      "a": "R2",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.083333,
+      "ci95": [
+        0.0,
+        0.1875
+      ],
+      "a_only_correct": 5,
+      "b_only_correct": 1,
+      "mcnemar_p": 0.2188
+    },
+    "R2V vs B1": {
+      "a": "R2V",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.125,
+      "ci95": [
+        0.0,
+        0.25
+      ],
+      "a_only_correct": 8,
+      "b_only_correct": 2,
+      "mcnemar_p": 0.1094
+    },
+    "R2V vs B0": {
+      "a": "R2V",
+      "b": "B0",
+      "items": "changed+unchanged",
+      "n": 48,
+      "diff_a_minus_b": 0.0,
+      "ci95": [
+        -0.125,
+        0.145833
+      ],
+      "a_only_correct": 6,
+      "b_only_correct": 6,
+      "mcnemar_p": 1.0
+    }
+  },
+  "detectable_range_points": [
+    13,
+    20
+  ],
+  "status": "exploratory; chosen after the run; the requirement is not read from it"
+}

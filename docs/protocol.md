@@ -20,11 +20,12 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
 | Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
-| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 was no-go under the original criterion twice and is go under the amendment of 2026-10-09 (four covered areas, 200 to 300 test questions); the specification is fixed before any question is drafted; no question exists |
+| Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
 
-Since 2026-10-09 the primary evaluation of the research is Alzheimer's-specific (§8). The questions, systems and results in
-§1 to §7 and in `evaluation.md` §6 are those of the realigned study on the as-of Cochrane benchmark (general medicine); they
-are completed work and now serve as secondary evidence for that aim.
+The research aims at Alzheimer's disease. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
+stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
+as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the dementia set secondary; no
+Alzheimer's-specific confirmatory evaluation exists.
 
 ## 1. Requirement and questions
 
@@ -185,6 +186,7 @@ is tested on.
 | 2026-10-09 | Read a verifier reply by `spec.parse_verdict` ("LABEL:" anywhere, or a first line that begins with the verdict) and re-score the stored replies; thresholds unchanged | qualification run 1 (55.8% unparsed; 85.0% agreement on the 100 read) and eight unparsed replies were seen; the repaired reading is applied to every reply alike (§8) |
 | 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
 | 2026-10-09 | Use short-form templates when a copied span names Alzheimer's disease | five development drafts were read (reply text only); no verdict of any system, no retrieval and no answer exists; every gate and threshold unchanged (§8, amendment C) |
+| 2026-10-09 | Stop the construction of the Alzheimer's-specific question set after gate 1 of the development build; primary evaluation reverts to the pre-declared held-out split; report the Alzheimer's-named part of the dementia set as an exploratory subgroup | the whole development build (11 of 150 kept; verdict mix 10 / 1 / 0), the diagnostic verifier pass and the dementia-run answers were seen; the subgroup was defined by the wording of the question after the run (§8, close-out) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -237,7 +239,7 @@ same independent judge as the main benchmark's (`label_audit --split ad`). All t
 included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
 the requirement is read.
 
-**2026-10-09, primary evaluation re-declared: an Alzheimer's-specific question set (AD-KQA, working name).** Decided by the
+**2026-10-09, primary evaluation re-declared: an Alzheimer's-specific question set (AD-KQA, working name) [superseded the same day by the close-out below].** Decided by the
 researcher (the supervisor has left research decisions to the researcher) after the held-out and dementia results of every
 system were known; no AD-KQA question, label or output exists. *Reason (scope, not outcome):* the research is about
 Alzheimer's disease, but the as-of Cochrane benchmark is general medicine and the dementia set is dementia-wide (48 of its 208
@@ -478,6 +480,21 @@ recorded, before any system sees a test question.
 recall of the source's own reference list (the probe found 19 of 20 sampled records with at least 10 references, above the 60%
 needed); rule coverage; share of records excluded for having no conclusion; parse rate. Per-area differences are descriptive, with
 no p-values and no claim.
+
+**Close-out of 2026-10-09: the Alzheimer's-specific question set is not built.** The development build (150 records; drafter Qwen2.5-7B, independent
+verifier Phi-3.5-mini, qualified at agreement 77.9%, kappa 0.6641, 0% unparsed) failed gate 1: 11 questions kept (7.3% survival; gate 40% and
+60 questions); verdicts SUPPORTED 10, REFUTED 1, NOT ENOUGH INFORMATION 0 (gate: at least 25% each); verifier agreement 91.7% on 12 labelled drafts
+(met); claim-only classifier equal to the majority class (met); the pool, closed-book and same-hash checks were not made. Where the drafts were lost:
+cue reading gave no verdict 84, copied span not in the abstract 28, length rules 13, no claim 6, no conclusion 3, rule disagreed 3, verifier
+disagreed 1, unparsed 1. A diagnostic pass (the verifier labelling every well-formed draft, never used by the keep rules) showed the verdict
+mix is a property of the source: of 99 well-formed drafts the drafter proposed SUPPORTED 88, REFUTED 10, NOT ENOUGH INFORMATION 1, and the verifier
+75, 8 and 16; the two agree on 77 (72 SUPPORTED, 5 REFUTED, none NOT ENOUGH INFORMATION). Letting the cue reading act only as a veto would raise
+survival to about 50% but leave about 94% of the kept questions SUPPORTED. No change of the cue reading, the span rule or the split can reach the
+verdict floors from this source. Decision of the researcher: stop. *Consequences:* the test split was never drafted; no system was run on any
+AD-KQA question; the specification, amendments A to C and the build record stay as a negative result of record (`evaluation.md` §6.8). The
+primary evaluation reverts to the pre-declared held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not
+confirmed); the dementia set is secondary and its 48 Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, from answers on
+file, no model run). No Alzheimer's-specific confirmatory evaluation exists, and none is claimed.
 
 ## 9. Earlier stages (completed, superseded)
 

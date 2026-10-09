@@ -47,8 +47,8 @@ is read, and what can be concluded from a given sample size, is fixed in `protoc
 | Evidence | PubMed abstracts first public strictly before the question date | the same |
 | Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) |
 
-Since 2026-10-09 the research's primary evaluation is Alzheimer's-specific (`protocol.md` §8); both settings above are
-secondary evidence for it.
+The research aims at Alzheimer's disease; an Alzheimer's-specific question set was specified on 2026-10-09 and its construction was stopped
+at gate 1 (`protocol.md` §8), so both settings above are the evidence there is, and neither is Alzheimer's-specific.
 
 **The comparison in one line.** Every system answers the same questions with the same generator, decoding and candidate
 records. The baseline systems differ in *what* they read (B0, B1, R2); the R2 family differs only in *how* the same
