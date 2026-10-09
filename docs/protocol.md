@@ -184,6 +184,7 @@ is tested on.
 | 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec is in `spec.py` and compared with the protocol text by a test |
 | 2026-10-09 | Read a verifier reply by `spec.parse_verdict` ("LABEL:" anywhere, or a first line that begins with the verdict) and re-score the stored replies; thresholds unchanged | qualification run 1 (55.8% unparsed; 85.0% agreement on the 100 read) and eight unparsed replies were seen; the repaired reading is applied to every reply alike (§8) |
 | 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
+| 2026-10-09 | Use short-form templates when a copied span names Alzheimer's disease | five development drafts were read (reply text only); no verdict of any system, no retrieval and no answer exists; every gate and threshold unchanged (§8, amendment C) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -315,6 +316,21 @@ development at once; the development pool grows from the small clusters, to abou
 (expected, to be read from `prepare`), leaving about 530 to 560 test records. *Unchanged:* 150 drafted, 60 kept, the 40% survival
 gate, every other gate and threshold. *Costs:* wider spans meet hedged wording more often, so fewer drafts will survive; a larger
 development share shrinks the test pool, where 40% survival would give about 215 to 225 questions against a minimum of 200.
+
+**Amendment C of 2026-10-09 (short-form templates), after a look at five development drafts.** The first five drafts of the development split
+(text of the replies only; no verdict of any system, no retrieval, no answer) showed a grammatical defect of the templates: when a copied span
+already names Alzheimer's disease, the closing phrase names it twice (for example "... on Alzheimer's disease in people with Alzheimer's
+disease?"), and no automatic check caught it. *Change:* when `x` or `y` contains "alzheimer" (case-insensitive) the question uses the short form of
+its template, without the closing phrase:
+- `Is {x} effective for {y}?`
+- `Is there any effect of {x} on {y}?`
+- `Can {x} be used for {y}?`
+
+Every fixed word of the short forms is a stop word of the frozen query builder, as before. In the short form the query takes "alzheimer" from the
+span, which must lie within the first 8 query terms; the limit of 6 content words copied, the length of a span and the rest of the rules are
+unchanged. The drafting prompt is unchanged, so the five drafts stay valid. The same five drafts also showed what the gates will have to
+measure and are not changed here: only 2 of 5 cleared the length rules, and all 5 proposed SUPPORTED. This amendment is not the one redesign that
+gate 1 allows.
 
 *Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
 (0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each

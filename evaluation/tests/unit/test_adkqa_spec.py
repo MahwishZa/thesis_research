@@ -18,6 +18,25 @@ class TemplateTests(unittest.TestCase):
             extra = [w for w in fixed if len(w) > 2 and w not in _STOP]
             self.assertEqual(extra, list(S.CONDITION_WORDS), name)
 
+    def test_short_forms_use_only_stop_words_and_the_span_carries_the_condition(self):
+        for name, t in S.TEMPLATES_SHORT.items():
+            fixed = re.findall(r"[A-Za-z][A-Za-z0-9\-]+", t.replace("{x}", "").replace("{y}", "").lower())
+            self.assertEqual([w for w in fixed if len(w) > 2 and w not in _STOP], [], name)
+        self.assertEqual(set(S.TEMPLATES), set(S.TEMPLATES_SHORT))
+
+    def test_a_span_that_names_the_disease_gives_the_short_form_and_never_names_it_twice(self):
+        q = S.fill("association", "CHASERR expression", "Alzheimer's disease")
+        self.assertEqual(q, "Is there any effect of CHASERR expression on Alzheimer's disease?")
+        self.assertEqual(q.lower().count("alzheimer"), 1)
+        self.assertEqual(S.question_checks("association", "CHASERR expression", "Alzheimer's disease"), [])
+        self.assertEqual(query_terms(q), ["chaserr", "expression", "alzheimer", "disease"])
+        self.assertTrue(S.fill("effect", "donepezil", "cognition").endswith("in people with Alzheimer's disease?"))
+
+    def test_the_short_form_still_needs_a_content_word_and_obeys_the_length_rule(self):
+        self.assertIn("no content word besides the condition", S.question_checks("effect", "Alzheimer's disease", "Alzheimer disease"))
+        self.assertIn("more than 6 content words copied",
+                      S.question_checks("association", "amyloid beta 42 total tau", "Alzheimer's disease risk"))
+
     def test_the_query_of_a_question_is_its_copied_terms_plus_the_condition(self):
         q = S.fill("effect", "donepezil", "cognitive function")
         self.assertEqual(query_terms(q), ["donepezil", "cognitive", "function", "alzheimer", "disease"])
@@ -68,7 +87,7 @@ class SplitTests(unittest.TestCase):
 
 class ProtocolMatchesCodeTests(unittest.TestCase):
     def test_templates_cues_and_constants_in_the_protocol_are_those_of_the_code(self):
-        for t in S.TEMPLATES.values():
+        for t in list(S.TEMPLATES.values()) + list(S.TEMPLATES_SHORT.values()):
             self.assertIn(t, PROTOCOL)
         self.assertIn(f"`{S.SPLIT_SEED}`", PROTOCOL)
         for group in S.CUES.values():

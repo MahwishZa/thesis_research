@@ -1450,3 +1450,12 @@ Researcher's run (`adkqa_pools.json`): 703 of 710 eligible (7 without a conclusi
 listed in the file). Conclusion basis of the eligible records: labelled 367, discussion tail 40, last three sentences of an unlabelled abstract 296
 (42%). The build report now gives records and kept questions per basis. At 40% survival the test pool would give about 220 questions (minimum 200).
 
+## Phase 57 — The first five drafts and amendment C (Oct 9)
+
+Five development drafts (`build draft --split dev --limit 5`, Qwen2.5-7B): the four-line format was followed in all five and parsed; 2 of 5 fail the length
+rules (nine copied words; "Alzheimer's disease" pushed out of the query), 1 reads cleanly ("Is Brexpiprazole effective for reducing agitation ..."), 2
+pass the rules, and all 5 proposed SUPPORTED. One question named the disease twice; no check caught it. A reported join of two words ("reducingagitation")
+was a copy artefact: the stored value has the space (checked with `repr`). Amendment C (`protocol.md` §8): short-form templates when a copied span names the
+disease; `spec.TEMPLATES_SHORT`, `names_condition`, 4 new tests. The drafting prompt and the gates are unchanged. The researcher runs the full development
+draft next; the survival gate (40%) and the verdict floor (25% each) are the open risks.
+

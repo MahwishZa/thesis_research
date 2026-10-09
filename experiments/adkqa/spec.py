@@ -17,6 +17,12 @@ TEMPLATES = {
     "association": "Is there any effect of {x} on {y} in people with Alzheimer's disease?",
     "test": "Can {x} be used for {y} in people with Alzheimer's disease?",
 }
+#: Short forms (amendment C), used when a copied span already names Alzheimer's disease, so that the question does not name it twice.
+TEMPLATES_SHORT = {
+    "effect": "Is {x} effective for {y}?",
+    "association": "Is there any effect of {x} on {y}?",
+    "test": "Can {x} be used for {y}?",
+}
 CONDITION_WORDS = ("alzheimer", "disease")
 MAX_COPIED_CONTENT_WORDS = 6          # x and y together, after stop words; leaves room for the two condition words
 MAX_TERM_WORDS = 8                    # words in one copied span
@@ -77,8 +83,14 @@ def parse_verdict(reply: str) -> Optional[str]:
     return re.sub(r"\s+", " ", m.group(1).upper()) if m else None
 
 
+def names_condition(x: str, y: str) -> bool:
+    """Does a copied span already name Alzheimer's disease?"""
+    return "alzheimer" in f"{x} {y}".lower()
+
+
 def fill(template: str, x: str, y: str) -> str:
-    return TEMPLATES[template].format(x=x.strip(), y=y.strip())
+    forms = TEMPLATES_SHORT if names_condition(x, y) else TEMPLATES
+    return forms[template].format(x=x.strip(), y=y.strip())
 
 
 def question_checks(template: str, x: str, y: str) -> list[str]:
@@ -94,7 +106,8 @@ def question_checks(template: str, x: str, y: str) -> list[str]:
     q = fill(template, x, y)
     terms = query_terms(q)
     content = [t for t in terms if t not in CONDITION_WORDS]
-    if any(w not in terms for w in CONDITION_WORDS):
+    needed = CONDITION_WORDS[:1] if names_condition(x, y) else CONDITION_WORDS     # short form: "alzheimer" comes from the span
+    if any(w not in terms for w in needed):
         problems.append("the condition words fall outside the first 8 query terms")
     if len([t for t in query_terms(f"{x} {y}", max_terms=99)]) > MAX_COPIED_CONTENT_WORDS:
         problems.append("more than 6 content words copied")
