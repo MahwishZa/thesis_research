@@ -20,7 +20,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
 | Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
-| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 counts come first, the specification is fixed before any question is drafted; no question exists |
+| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 run 1 was no-go (instrument corrected, one re-run pending); the specification is fixed before any question is drafted; no question exists |
 
 Since 2026-10-09 the primary evaluation of the research is Alzheimer's-specific (§8). The questions, systems and results in
 §1 to §7 and in `evaluation.md` §6 are those of the realigned study on the as-of Cochrane benchmark (general medicine); they
@@ -179,6 +179,7 @@ is tested on.
 | 2026-10-06 | Freeze the design without using the one allowed prompt revision (dev check: direction failed, R2V − R2 = −0.4 pp) | the dev run's results and the pattern of R2V's changes (fixes and breaks nearly cancelled); no held-out realigned result |
 | 2026-10-09 | Add the three remaining released-answer models (BioMistral, PMC-LLaMA, OLMo-13B) and a constant-answer baseline to the comparisons; audit the dementia labels with the same judge | the held-out and `ad` results of the local systems (§8) |
 | 2026-10-09 | Re-declare the primary evaluation as an Alzheimer's-specific question set (AD-KQA); keep the as-of Cochrane results as secondary evidence | all held-out and dementia results of every system and the label audits; no AD-KQA question, label or output exists; the reason is scope, not outcome (§8) |
+| 2026-10-09 | Correct the Stage 0 instrument after run 1 (prevention qualifier, warning filter, information-only counts); thresholds and window unchanged | run 1 counts per area were seen (total 866; prevention 0 by the query error; progression 58; care 20); the criterion was not changed to fit them; the decision after run 2 is the researcher's (§8) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -286,6 +287,17 @@ evidence-sensitive areas (a ceiling area is reported, not dropped). One document
 split is sealed. (2) Full build: at least 300 test questions, at least 25 per covered area, audit agreement at least 85% on test
 questions, manifest hash committed before any system sees a test question. (3) Run: parse rate and verifier validity at least
 95%; a defect is fixed and recorded, never tuned on outcomes. A failed gate stops the build and is reported.
+
+*Stage 0, run 1 (2026-10-09, `results/stage0_counts.json`): no-go under the criterion above.* 866 eligible records in the window
+(2023-04-01 to 2026-10-09). Distinct records per area: treatment 314, prevention 0, diagnosis 278, causes_risk 216, progression
+58, symptoms 171, care_management 20; four areas reached 100, six were required. The prevention count of 0 was an instrument
+error: the qualifier was written "prevention & control", which PubMed did not find (its translation record showed it). Europe PMC
+reference lists: 19 of 20 sampled records had at least 10 (threshold 60%). *Revision 2 of the instrument* corrects the prevention
+qualifier ("prevention and control"), drops PubMed's routine messages from the recorded warnings, and adds information-only
+counts that do not enter the criterion (records naming Alzheimer's only in the title, the pre-cutoff window, records in no area,
+and the supply when each record serves one area only). The thresholds (700, 100, 6) and the window are unchanged. One corrected
+re-run is made (`results/stage0_counts_r2.json`); what follows a second no-go (fewer covered areas, a wider window flagged by
+`post_generator_cutoff`, a smaller test set, or stopping) is decided by the researcher and recorded here.
 
 *Still to be fixed in a further dated amendment before any question is drafted:* the question templates, the cue phrases of the
 rule-based reading, the topic-cluster key and the split seed, the freeze date of the source window, and the secondary measures.

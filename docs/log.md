@@ -1343,3 +1343,19 @@ After a review of the existing results and of the candidate datasets, the resear
   `earlier_stages/FINDINGS.md`) wait for a re-analysis on the laptop.
 * *Next.* The researcher runs Stage 0 (`python -m experiments.adkqa.stage0`); the go/no-go criterion decides whether the
   specification amendment, the builder and the verifier qualification follow.
+
+## Phase 46 — Stage 0 run 1 (no-go) and revision 2 of the instrument (Oct 9)
+
+* *Result of record.* Run 1 (`experiments/adkqa/results/stage0_counts.json`, committed by the researcher): 866 eligible records;
+  distinct per area treatment 314, prevention 0, diagnosis 278, causes_risk 216, progression 58, symptoms 171, care_management 20.
+  Four areas reached 100 of the six required, so the pre-declared criterion gave no-go. Europe PMC reference lists: 19 of 20.
+* *Instrument error found.* Prevention 0 came from the qualifier "prevention & control", which PubMed did not find (visible in the
+  recorded query translation). Every query also carried PubMed's routine result-limit message as a "warning". Both are fixed in
+  revision 2 (`stage0.py`): "prevention and control"; only real warnings are kept; information-only counts are added (title-only
+  Alzheimer's records, the pre-cutoff window, records in no area, supply when each record serves one area only). They do not enter
+  the criterion. Thresholds (700 / 100 / 6) and the window are unchanged; the protocol records that run-1 counts were seen.
+* *Real, not an artefact:* progression (58) and care_management (20) are thin when the condition must be a MeSH major topic, and the
+  total pool (866) is tight for 360 questions at an unknown yield.
+* *Tests.* 16 tests for Stage 0 (4 new: the prevention qualifier, warning filter, exclusive supply, unchanged thresholds).
+* *Next.* One corrected re-run on the laptop (`stage0_counts_r2.json`). The decision after it, if still no-go, is the researcher's.
+

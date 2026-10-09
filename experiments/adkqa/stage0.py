@@ -7,10 +7,17 @@ abstract, builds no question and runs no model.
 
     python -m experiments.adkqa.stage0 [--api-key KEY] [--since 2023-04-01] [--until 2026-10-09] [--probe-references 20]
 
-Writes ``experiments/adkqa/results/stage0_counts.json``: counts and PubMed identifiers only, no source text.
+Writes ``experiments/adkqa/results/stage0_counts_r2.json``: counts and PubMed identifiers only, no source text.
 ``--probe-references N`` asks Europe PMC for the reference lists of N sampled records, to see whether a recall measure
 against the studies a source cites is possible (an optional, secondary retrieval measure).
 NCBI usage: at most 3 requests per second without a key, 10 with one.
+
+Revision 2 (after the first run, ``stage0_counts.json``, which gave NO-GO): the qualifier "prevention and control" was written
+with an ampersand and PubMed did not find it; PubMed's warnings are now shown only when they say something. The criterion and
+its gate are unchanged. Added, for information only and not part of the gate: counts by MeSH main headings, the records
+with Alzheimer in the title but not as major MeSH topic, the pre-cutoff window, the identifier lists, and an exclusive
+assignment (each record serves one area, scarcest area first), which is the supply that matters when one question is made
+per source record.
 """
 
 from __future__ import annotations
@@ -27,13 +34,14 @@ from typing import Callable, Optional, Sequence
 from experiments.medchange.pubmed_asof import EUtils
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_OUT = HERE / "results" / "stage0_counts.json"
+DEFAULT_OUT = HERE / "results" / "stage0_counts_r2.json"
+REVISION = 2
 
 #: Knowledge areas and the MeSH qualifiers of "Alzheimer Disease" used to sample them (``docs/protocol.md`` §8). MEDLINE
 #: indexing is partly automated since 2022, so the qualifiers sample areas; they are not a ground truth.
 CORE_AREAS = {
     "treatment": ("drug therapy", "therapy"),
-    "prevention": ("prevention & control",),
+    "prevention": ("prevention and control",),
     "diagnosis": ("diagnosis", "diagnostic imaging", "blood", "cerebrospinal fluid"),
     "causes_risk": ("etiology", "genetics"),
     "progression": ("physiopathology", "mortality"),
@@ -44,6 +52,25 @@ CORE_AREAS = {
 OPTIONAL_AREAS = {
     "background_history": ("history",),
     "terminology": ("classification",),
+}
+#: Information only (not part of the gate): MeSH main headings that indexers assign to records of each area, because MeSH
+#: qualifiers of "Alzheimer Disease" alone miss areas that are indexed under other headings. A misspelt heading is
+#: reported by PubMed's warning, not silently counted as zero.
+AREA_HEADINGS = {
+    "treatment": ("Cholinesterase Inhibitors", "Antibodies, Monoclonal", "Memantine", "Donepezil", "Neuroprotective Agents",
+                  "Dietary Supplements"),
+    "prevention": ("Primary Prevention", "Secondary Prevention", "Risk Reduction Behavior", "Protective Factors", "Exercise",
+                   "Life Style", "Diet, Mediterranean"),
+    "diagnosis": ("Biomarkers", "Positron-Emission Tomography", "Magnetic Resonance Imaging", "tau Proteins",
+                  "Amyloid beta-Peptides", "Neuropsychological Tests"),
+    "causes_risk": ("Risk Factors", "Genetic Predisposition to Disease", "Apolipoprotein E4",
+                    "Polymorphism, Single Nucleotide", "Environmental Exposure"),
+    "progression": ("Disease Progression", "Prognosis", "Survival Analysis"),
+    "symptoms": ("Signs and Symptoms", "Behavioral Symptoms", "Depression", "Anxiety", "Psychomotor Agitation",
+                 "Sleep Wake Disorders", "Psychotic Disorders", "Apathy"),
+    "care_management": ("Caregivers", "Quality of Life", "Palliative Care", "Nursing Care", "Rehabilitation"),
+    "background_history": ("History, 20th Century", "History, 21st Century"),
+    "terminology": ("Terminology as Topic",),
 }
 TYPES = ("Systematic Review", "Meta-Analysis", "Practice Guideline", "Guideline")
 CONDITION = '"Alzheimer Disease"[majr]'
@@ -61,22 +88,42 @@ def type_clause(types: Sequence[str] = TYPES) -> str:
     return "(" + " OR ".join(f'"{t}"[pt]' for t in types) + ")"
 
 
-def build_term(qualifier: Optional[str] = None, types: Sequence[str] = TYPES) -> str:
-    """The PubMed term of the eligible records, optionally restricted to one MeSH qualifier of Alzheimer Disease."""
-    condition = f'"Alzheimer Disease/{qualifier}"[majr]' if qualifier else CONDITION
-    return f"{condition} AND {type_clause(types)} AND {FILTERS}"
+def build_term(qualifier: Optional[str] = None, types: Sequence[str] = TYPES, *, headings: Sequence[str] = (),
+               condition: Optional[str] = None) -> str:
+    """The PubMed term of the eligible records: optionally restricted to one MeSH qualifier of Alzheimer Disease, or to
+    records also indexed under any of ``headings`` (information only), or with another ``condition`` clause."""
+    cond = condition or (f'"Alzheimer Disease/{qualifier}"[majr]' if qualifier else CONDITION)
+    term = f"{cond} AND {type_clause(types)} AND {FILTERS}"
+    if headings:
+        term += " AND (" + " OR ".join(f'"{h}"[mh]' for h in headings) + ")"
+    return term
+
+
+def meaningful(notes: dict) -> dict:
+    """Keep what PubMed says only when it says something: a phrase it did not find or ignored, or an error. Its routine
+    message about the result limit is dropped."""
+    warn = notes.get("warninglist") or {}
+    bad = {k: v for k, v in warn.items() if k in ("phrasesignored", "quotedphrasesnotfound") and v}
+    out = {}
+    if bad:
+        out["warninglist"] = bad
+    if notes.get("errorlist"):
+        out["errorlist"] = notes["errorlist"]
+    return out
 
 
 def search(eu: EUtils, term: str, since: str, until: str) -> tuple[list[str], dict]:
     """All identifiers of ``term`` published in [since, until] (ISO dates), with what PubMed says about the query (how it
-    was translated and any warning), so that a syntax problem shows in the output instead of as a silent zero.
+    was translated, any phrase it did not find), so that a syntax problem shows in the output instead of as a silent zero.
     Refuses a truncated list."""
     r = eu._get("esearch.fcgi", {"db": "pubmed", "term": term, "retmax": RETMAX, "datetype": "pdat",
                                  "mindate": since.replace("-", "/"), "maxdate": until.replace("-", "/")})["esearchresult"]
     ids, count = list(r.get("idlist", [])), int(r.get("count", 0))
     if len(ids) < count:
         raise RuntimeError(f"{count} records but only {len(ids)} returned (limit {RETMAX}); narrow the window")
-    notes = {k: r[k] for k in ("querytranslation", "warninglist", "errorlist") if r.get(k)}
+    notes = meaningful(r)
+    if notes and r.get("querytranslation"):
+        notes["querytranslation"] = r["querytranslation"]
     return ids, notes
 
 
@@ -132,46 +179,90 @@ def probe_references(pmids: Sequence[str], opener: Optional[Callable[[str], byte
             "threshold_for_a_recall_measure": 0.6, "rows": rows}
 
 
-def collect(eu: EUtils, since: str, until: str) -> dict:
+def exclusive_counts(sets: dict[str, set]) -> dict[str, int]:
+    """Supply when each record may serve one area only (one question per source record): areas are served scarcest first."""
+    remaining = set().union(*sets.values()) if sets else set()
+    out = {}
+    for area in sorted(sets, key=lambda a: (len(sets[a]), a)):
+        take = sets[area] & remaining
+        out[area] = len(take)
+        remaining -= take
+    return {a: out[a] for a in sets}
+
+
+def collect(eu: EUtils, since: str, until: str, pre_since: str = "2021-04-01") -> dict:
     base_term = build_term()
     main_ids, main_notes = search(eu, base_term, since, until)
     notes = {"main": main_notes} if main_notes else {}
     by_type = {t: len(search_ids(eu, build_term(types=(t,)), since, until)) for t in TYPES}
     by_period = {f"{a}..{b}": len(search_ids(eu, base_term, a, b)) for a, b in periods(since, until)}
-    per_area = {}
-    for area, qualifiers in {**CORE_AREAS, **OPTIONAL_AREAS}.items():
-        sets, counts = set(), {}
+    q_sets, h_sets, per_area = {}, {}, {}
+    for area in {**CORE_AREAS, **OPTIONAL_AREAS}:
+        qualifiers = {**CORE_AREAS, **OPTIONAL_AREAS}[area]
+        ids_q, counts = set(), {}
         for q in qualifiers:
             ids, n = search(eu, build_term(q), since, until)
             counts[q] = len(ids)
-            sets |= set(ids)
-            if n.get("warninglist") or n.get("errorlist"):
+            ids_q |= set(ids)
+            if n:
                 notes[f"{area}/{q}"] = n
-        per_area[area] = {"core": area in CORE_AREAS, "qualifier_counts": counts, "distinct": len(sets)}
-    return {"stage": 0, "generated_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        ids_h, n = search(eu, build_term(headings=AREA_HEADINGS[area]), since, until)
+        if n:
+            notes[f"{area}/headings"] = n
+        q_sets[area], h_sets[area] = ids_q, set(ids_h)
+        per_area[area] = {"core": area in CORE_AREAS, "qualifier_counts": counts, "distinct": len(ids_q),
+                          "headings_distinct": len(h_sets[area]), "either_distinct": len(ids_q | h_sets[area]),
+                          "ids": sorted(ids_q)}
+    either = {a: q_sets[a] | h_sets[a] for a in q_sets}
+    pool = set(main_ids)
+    title_only, n_t = search(eu, build_term(condition="(Alzheimer*[ti] NOT \"Alzheimer Disease\"[majr])"), since, until)
+    pre_until = (dt.date.fromisoformat(since) - dt.timedelta(days=1)).isoformat()
+    pre, n_p = search(eu, base_term, pre_since, pre_until)
+    for key, n in (("title_only", n_t), ("pre_cutoff_window", n_p)):
+        if n:
+            notes[key] = n
+    return {"stage": 0, "revision": REVISION, "generated_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "window": {"since": since, "until": until}, "base_term": base_term, "total": len(main_ids),
             "by_type": by_type, "by_period": by_period, "per_area": per_area,
             "gate": evaluate_gate(len(main_ids), {a: v["distinct"] for a, v in per_area.items()}),
-            "pubmed_notes": notes, "sample_pmids": sample_pmids(main_ids), "references_probe": None}
+            "information_only": {
+                "alzheimer_in_title_not_major_topic": len(title_only),
+                "pre_cutoff_window": {"since": pre_since, "until": pre_until, "total": len(pre)},
+                "records_in_no_qualifier_area": len(pool - set().union(*q_sets.values())),
+                "exclusive_supply_qualifier_frame": exclusive_counts(q_sets),
+                "exclusive_supply_qualifier_or_heading_frame": exclusive_counts(either)},
+            "pool_ids": sorted(main_ids), "pubmed_notes": notes, "sample_pmids": sample_pmids(main_ids),
+            "references_probe": None}
 
 
 def render(result: dict) -> str:
     g = result["gate"]
+    info = result.get("information_only") or {}
     lines = [f"Eligible records {result['window']['since']}..{result['window']['until']}: {result['total']}",
              "by type: " + ", ".join(f"{k} {v}" for k, v in result["by_type"].items()),
              "by period: " + ", ".join(f"{k} {v}" for k, v in result["by_period"].items()), "",
-             f"{'area':<20}{'distinct':>9}  qualifiers"]
+             f"{'area':<26}{'qualifiers':>11}{'headings':>10}{'either':>8}  qualifier counts"]
     for area, v in result["per_area"].items():
-        lines.append(f"{area + ('' if v['core'] else ' (optional)'):<20}{v['distinct']:>9}  "
-                     + ", ".join(f"{q} {n}" for q, n in v["qualifier_counts"].items()))
-    lines += ["", f"criterion: total >= {g['criterion']['min_total']} and >= {g['criterion']['min_areas']} core areas with "
-              f">= {g['criterion']['min_per_area']} distinct records",
+        lines.append(f"{area + ('' if v['core'] else ' (optional)'):<26}{v['distinct']:>11}{v.get('headings_distinct', 0):>10}"
+                     f"{v.get('either_distinct', 0):>8}  " + ", ".join(f"{q} {n}" for q, n in v["qualifier_counts"].items()))
+    lines += ["", f"criterion (qualifier frame, unchanged): total >= {g['criterion']['min_total']} and >= "
+              f"{g['criterion']['min_areas']} core areas with >= {g['criterion']['min_per_area']} distinct records",
               f"total ok: {g['total_ok']}; areas covered: {', '.join(g['areas_covered']) or 'none'}; "
               f"below: {', '.join(g['areas_below']) or 'none'}", "GO" if g["go"] else "NO-GO (do not build; report these counts)"]
+    if info:
+        lines += ["", "Information only (not part of the gate):",
+                  f"  Alzheimer in the title but not a major MeSH topic: {info['alzheimer_in_title_not_major_topic']}",
+                  f"  pool in the window before the cutoff {info['pre_cutoff_window']['since']}..{info['pre_cutoff_window']['until']}: "
+                  f"{info['pre_cutoff_window']['total']}",
+                  f"  records in no qualifier area: {info['records_in_no_qualifier_area']}",
+                  "  exclusive supply (one question per record, scarcest area first):"]
+        for key, label in (("exclusive_supply_qualifier_frame", "qualifier frame"),
+                           ("exclusive_supply_qualifier_or_heading_frame", "qualifier or heading frame")):
+            lines.append(f"    {label}: " + ", ".join(f"{a} {n}" for a, n in info[key].items()))
     if result.get("pubmed_notes"):
-        lines += ["", "PubMed reported notes on some queries (check that no term was ignored):"]
+        lines += ["", "PubMed notes (a phrase it did not find or ignored; check that no term was dropped):"]
         for key, note in result["pubmed_notes"].items():
-            lines.append(f"  {key}: " + json.dumps(note)[:400])
+            lines.append(f"  {key}: " + json.dumps({k: v for k, v in note.items() if k != 'querytranslation'})[:300])
     probe = result.get("references_probe")
     if probe:
         lines += ["", f"reference lists: {probe['with_at_least_10_pubmed_references']} of {probe['sampled']} sampled records have "

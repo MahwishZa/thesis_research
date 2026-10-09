@@ -130,6 +130,27 @@ class ReferenceProbeTests(unittest.TestCase):
         self.assertEqual(probe["with_at_least_10_pubmed_references"], 1)
 
 
+class RevisionTwoTests(unittest.TestCase):
+    def test_prevention_is_queried_with_the_words_pubmed_knows(self):
+        self.assertEqual(tuple(S.CORE_AREAS["prevention"]), ("prevention and control",))
+        self.assertNotIn("&", json.dumps(S.CORE_AREAS))
+
+    def test_routine_pubmed_messages_are_dropped_and_real_ones_kept(self):
+        self.assertEqual(S.meaningful({"warninglist": {"outputmessages": ["Search result exceeds limit"]}}), {})
+        got = S.meaningful({"warninglist": {"quotedphrasesnotfound": ["x"]}, "errorlist": {"phrasesnotfound": ["y"]}})
+        self.assertIn("quotedphrasesnotfound", got["warninglist"])
+        self.assertIn("errorlist", got)
+
+    def test_exclusive_supply_lets_a_record_serve_one_area_only(self):
+        sets = {"a": {"1", "2", "3"}, "b": {"3"}, "c": {"1", "2", "3", "4"}}
+        got = S.exclusive_counts(sets)
+        self.assertEqual(got, {"a": 2, "b": 1, "c": 1})
+        self.assertEqual(sum(got.values()), 4)
+
+    def test_the_gate_thresholds_are_unchanged_from_the_declaration(self):
+        self.assertEqual((S.MIN_TOTAL, S.MIN_AREA, S.MIN_AREAS), (700, 100, 6))
+
+
 class MainTests(unittest.TestCase):
     def test_main_writes_counts_only_and_signals_go_or_no_go(self):
         with tempfile.TemporaryDirectory() as tmp:
