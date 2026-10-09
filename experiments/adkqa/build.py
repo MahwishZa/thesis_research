@@ -329,7 +329,7 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
     rows = _read_rows(data)
     if a.cmd == "diagnose":
         rep = R.diagnose(rows)
-        _write_json(results / "adkqa_diagnose.json", rep)
+        _write_json(data / "adkqa_diagnose.json", rep)    # first words of abstract sentences: not tracked
         print(json.dumps(rep, indent=2))
         return 0
     scope = select(rows, a.split)[:a.limit]

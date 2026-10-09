@@ -1425,3 +1425,12 @@ eligible record. Nothing was drafted. Added `build diagnose` (labels of the reco
 sentences, cluster sizes; no abstract text) and the section labels in `sources.jsonl` to see whether the 292 are a real absence or a rule
 that is too narrow. Any change to the conclusion rule is an amendment made after seeing these counts and will be recorded as such.
 
+## Phase 54 — Diagnosis of the 292 records without a conclusion (Oct 9)
+
+`build diagnose` (researcher's run): of the 292, 245 are unstructured abstracts and 47 structured ones without a conclusion label (their
+labels: results 45, methods 41, discussion 38, introduction 26, highlights 16, ...). Most unstructured abstracts end with a statement about
+future research ("further research is needed", "future studies should ..."), so the conclusion exists but the declared rule (a last sentence that
+begins with a conclusion marker) is too narrow. Dev eligible 60 of 110; test eligible 358 of 600; 62 of 264 clusters are dev; the largest
+cluster ("cognitive dysfunction", 115 records) fell to test. The diagnosis file is written to the untracked data folder from now on (it quotes
+the first words of abstract sentences). No draft or answer exists; any amendment that follows rests on these counts only.
+
