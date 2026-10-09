@@ -1,0 +1,10 @@
+{
+  "backend": "llama-logprobs:Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423",
+  "n_ctx": 1536,
+  "seed": 42,
+  "snippet": "title + results + conclusions, <= 200 words",
+  "system_sha256": "6dba1a79051dd450dbc3ec073dd9157cb0bfd9ed7842c1eecdcd2182ad7a5277",
+  "temperature": 0.0,
+  "template_sha256": "07bd5e91ab40c067af3b0d8fd3ed5915325c739be25a750f99e201e1f433ea44"
+}

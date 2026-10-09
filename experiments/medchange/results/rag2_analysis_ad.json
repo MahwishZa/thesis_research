@@ -1,0 +1,2883 @@
+{
+  "split": "ad",
+  "items": 208,
+  "arms": [
+    "B0",
+    "B1",
+    "R2",
+    "R2C",
+    "R2V"
+  ],
+  "generation": {
+    "B0": {
+      "all": {
+        "n": 208,
+        "accuracy": 0.331731,
+        "wilson95": [
+          0.271304,
+          0.39826
+        ]
+      },
+      "unchanged": {
+        "n": 208,
+        "accuracy": 0.331731,
+        "wilson95": [
+          0.271304,
+          0.39826
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.75,
+        "REFUTED": 0.044118,
+        "NOT ENOUGH INFORMATION": 0.306818
+      },
+      "macro_f1": 0.282667,
+      "predicted_share": {
+        "SUPPORTED": 0.629808,
+        "REFUTED": 0.033654,
+        "NOT ENOUGH INFORMATION": 0.336538
+      },
+      "outdated_verdict_rate_changed": null,
+      "unparsed": 0
+    },
+    "B1": {
+      "all": {
+        "n": 208,
+        "accuracy": 0.307692,
+        "wilson95": [
+          0.248929,
+          0.37343
+        ]
+      },
+      "unchanged": {
+        "n": 208,
+        "accuracy": 0.307692,
+        "wilson95": [
+          0.248929,
+          0.37343
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.788462,
+        "REFUTED": 0.029412,
+        "NOT ENOUGH INFORMATION": 0.238636
+      },
+      "macro_f1": 0.252122,
+      "predicted_share": {
+        "SUPPORTED": 0.697115,
+        "REFUTED": 0.014423,
+        "NOT ENOUGH INFORMATION": 0.288462
+      },
+      "outdated_verdict_rate_changed": null,
+      "unparsed": 0
+    },
+    "R2": {
+      "all": {
+        "n": 208,
+        "accuracy": 0.346154,
+        "wilson95": [
+          0.284818,
+          0.41307
+        ]
+      },
+      "unchanged": {
+        "n": 208,
+        "accuracy": 0.346154,
+        "wilson95": [
+          0.284818,
+          0.41307
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.903846,
+        "REFUTED": 0.058824,
+        "NOT ENOUGH INFORMATION": 0.238636
+      },
+      "macro_f1": 0.291971,
+      "predicted_share": {
+        "SUPPORTED": 0.692308,
+        "REFUTED": 0.033654,
+        "NOT ENOUGH INFORMATION": 0.274038
+      },
+      "outdated_verdict_rate_changed": null,
+      "unparsed": 0
+    },
+    "R2C": {
+      "all": {
+        "n": 208,
+        "accuracy": 0.394231,
+        "wilson95": [
+          0.330313,
+          0.461985
+        ]
+      },
+      "unchanged": {
+        "n": 208,
+        "accuracy": 0.394231,
+        "wilson95": [
+          0.330313,
+          0.461985
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.846154,
+        "REFUTED": 0.235294,
+        "NOT ENOUGH INFORMATION": 0.25
+      },
+      "macro_f1": 0.38027,
+      "predicted_share": {
+        "SUPPORTED": 0.673077,
+        "REFUTED": 0.110577,
+        "NOT ENOUGH INFORMATION": 0.216346
+      },
+      "outdated_verdict_rate_changed": null,
+      "unparsed": 0
+    },
+    "R2V": {
+      "all": {
+        "n": 208,
+        "accuracy": 0.379808,
+        "wilson95": [
+          0.316593,
+          0.447381
+        ]
+      },
+      "unchanged": {
+        "n": 208,
+        "accuracy": 0.379808,
+        "wilson95": [
+          0.316593,
+          0.447381
+        ]
+      },
+      "recall": {
+        "SUPPORTED": 0.711538,
+        "REFUTED": 0.220588,
+        "NOT ENOUGH INFORMATION": 0.306818
+      },
+      "macro_f1": 0.371846,
+      "predicted_share": {
+        "SUPPORTED": 0.615385,
+        "REFUTED": 0.100962,
+        "NOT ENOUGH INFORMATION": 0.283654
+      },
+      "outdated_verdict_rate_changed": null,
+      "unparsed": 0
+    }
+  },
+  "unsupported_answers": {
+    "B0": {
+      "n": 208,
+      "anachronism_rate": 0.139423,
+      "unsupported_decisive_rate": null,
+      "answers_with_evidence": 0
+    },
+    "B1": {
+      "n": 208,
+      "anachronism_rate": 0.0,
+      "unsupported_decisive_rate": 0.163462,
+      "answers_with_evidence": 208
+    },
+    "R2": {
+      "n": 208,
+      "anachronism_rate": 0.009615,
+      "unsupported_decisive_rate": 0.169492,
+      "answers_with_evidence": 177
+    },
+    "R2C": {
+      "n": 208,
+      "anachronism_rate": 0.009615,
+      "unsupported_decisive_rate": 0.0,
+      "answers_with_evidence": 177
+    },
+    "R2V": {
+      "n": 208,
+      "anachronism_rate": 0.009615,
+      "unsupported_decisive_rate": 0.0,
+      "answers_with_evidence": 177
+    }
+  },
+  "context_truncated": {},
+  "verification": {
+    "R2C": {
+      "n_with_evidence": 177,
+      "valid_rate": 1.0,
+      "changed_rate": 0.186441,
+      "changes_fixed": 19,
+      "changes_broke": 9,
+      "transitions": {
+        "NOT ENOUGH INFORMATION -> REFUTED": 13,
+        "NOT ENOUGH INFORMATION -> SUPPORTED": 7,
+        "REFUTED -> SUPPORTED": 1,
+        "SUPPORTED -> NOT ENOUGH INFORMATION": 8,
+        "SUPPORTED -> REFUTED": 4
+      }
+    },
+    "R2V": {
+      "n_with_evidence": 177,
+      "valid_rate": 1.0,
+      "changed_rate": 0.20904,
+      "changes_fixed": 19,
+      "changes_broke": 12,
+      "transitions": {
+        "NOT ENOUGH INFORMATION -> REFUTED": 9,
+        "NOT ENOUGH INFORMATION -> SUPPORTED": 6,
+        "SUPPORTED -> NOT ENOUGH INFORMATION": 17,
+        "SUPPORTED -> REFUTED": 5
+      }
+    }
+  },
+  "retrieval": {
+    "B1": {
+      "n": 208,
+      "mean_admitted": 5.0,
+      "share_without_evidence": 0.0,
+      "evidence_mix": {
+        "SR/MA": 0.093269,
+        "RCT": 0.201923,
+        "other": 0.704808
+      },
+      "update_window_share": 0.016346,
+      "items_with_update_window_evidence": 0.024038,
+      "mean_age_years": 7.0,
+      "jaccard_with_B1": null,
+      "directness_at_k": 0.308654
+    },
+    "R2": {
+      "n": 208,
+      "mean_admitted": 3.07,
+      "share_without_evidence": 0.149038,
+      "evidence_mix": {
+        "SR/MA": 0.186228,
+        "RCT": 0.384977,
+        "other": 0.428795
+      },
+      "update_window_share": 0.017514,
+      "items_with_update_window_evidence": 0.028846,
+      "mean_age_years": 6.98,
+      "jaccard_with_B1": 0.264463,
+      "directness_at_k": 0.583333
+    },
+    "R2C": {
+      "n": 208,
+      "mean_admitted": 3.07,
+      "share_without_evidence": 0.149038,
+      "evidence_mix": {
+        "SR/MA": 0.186228,
+        "RCT": 0.384977,
+        "other": 0.428795
+      },
+      "update_window_share": 0.017514,
+      "items_with_update_window_evidence": 0.028846,
+      "mean_age_years": 6.98,
+      "jaccard_with_B1": 0.264463,
+      "directness_at_k": 0.583333
+    },
+    "R2V": {
+      "n": 208,
+      "mean_admitted": 3.07,
+      "share_without_evidence": 0.149038,
+      "evidence_mix": {
+        "SR/MA": 0.186228,
+        "RCT": 0.384977,
+        "other": 0.428795
+      },
+      "update_window_share": 0.017514,
+      "items_with_update_window_evidence": 0.028846,
+      "mean_age_years": 6.98,
+      "jaccard_with_B1": 0.264463,
+      "directness_at_k": 0.583333
+    }
+  },
+  "primary": {
+    "a": "R2V",
+    "b": "R2",
+    "items": "changed+unchanged",
+    "n": 208,
+    "diff_a_minus_b": 0.033654,
+    "ci95": [
+      -0.019231,
+      0.086538
+    ],
+    "a_only_correct": 19,
+    "b_only_correct": 12,
+    "mcnemar_p": 0.281,
+    "confirmed": false
+  },
+  "requirement": "met as a point estimate, not confirmed",
+  "secondary": {
+    "R2 vs B1": {
+      "a": "R2",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 208,
+      "diff_a_minus_b": 0.038462,
+      "ci95": [
+        -0.014423,
+        0.091346
+      ],
+      "a_only_correct": 21,
+      "b_only_correct": 13,
+      "mcnemar_p": 0.2295,
+      "holm_p": 0.459,
+      "confirmed": false
+    },
+    "R2V vs B1": {
+      "a": "R2V",
+      "b": "B1",
+      "items": "changed+unchanged",
+      "n": 208,
+      "diff_a_minus_b": 0.072115,
+      "ci95": [
+        0.0,
+        0.144231
+      ],
+      "a_only_correct": 36,
+      "b_only_correct": 21,
+      "mcnemar_p": 0.0627,
+      "holm_p": 0.2508,
+      "confirmed": false
+    },
+    "R2C vs R2": {
+      "a": "R2C",
+      "b": "R2",
+      "items": "changed+unchanged",
+      "n": 208,
+      "diff_a_minus_b": 0.048077,
+      "ci95": [
+        0.0,
+        0.096154
+      ],
+      "a_only_correct": 19,
+      "b_only_correct": 9,
+      "mcnemar_p": 0.0872,
+      "holm_p": 0.2616,
+      "confirmed": false
+    },
+    "R2V vs R2C": {
+      "a": "R2V",
+      "b": "R2C",
+      "items": "changed+unchanged",
+      "n": 208,
+      "diff_a_minus_b": -0.014423,
+      "ci95": [
+        -0.057692,
+        0.028846
+      ],
+      "a_only_correct": 10,
+      "b_only_correct": 13,
+      "mcnemar_p": 0.6776,
+      "holm_p": 0.6776,
+      "confirmed": false
+    }
+  },
+  "ablations": {},
+  "case_study_alzheimers": {
+    "items": {
+      "AD-00165": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-00213": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00259": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00339": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00436": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00569": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00608": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-00633": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-00692": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00696": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00708": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00711": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-00810": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "REFUTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00878": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-00942": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-00960": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01007": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-01027": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01039": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01044": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01045": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01046": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01047": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01051": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01052": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01054": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01056": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01099": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01117": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01140": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01230": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-01274": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01290": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01328": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01352": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-01409": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01559": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01718": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-01736": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01816": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01830": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-01846": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01924": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-01980": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-02004": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02107": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-02375": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02396": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02416": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02529": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-02587": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02643": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02705": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-02722": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02732": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02786": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02828": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02835": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-02974": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-03029": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03099": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03258": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03593": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-03606": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03715": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03779": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-03888": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04022": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-04060": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04068": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04105": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04107": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04228": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-04592": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-04813": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-04923": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-05018": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05021": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05140": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-05398": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05511": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-05564": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05584": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05586": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05610": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05706": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05716": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05724": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05790": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05794": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-05847": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06187": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06282": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06316": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-06327": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06391": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-06533": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-06577": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06640": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06651": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06746": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-06759": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-06876": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-07135": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-07270": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-07507": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-07640": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "REFUTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-07795": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-07881": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08163": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-08344": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-08439": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08516": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08664": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08749": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08759": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-08762": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-08953": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-09011": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-09432": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-09487": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-09643": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-09825": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-09863": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10474": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10526": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10527": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10727": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10735": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "REFUTED",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-10736": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-10864": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-10865": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-10866": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-10880": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-11095": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-11220": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-11221": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-11376": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-11489": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-11990": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12005": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12007": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12015": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-12023": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "SUPPORTED",
+          "R2": "REFUTED",
+          "R2C": "SUPPORTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-12113": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-12136": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-12220": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12415": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-12522": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-12742": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12764": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12815": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12818": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-12819": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12853": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12854": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12885": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-12892": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-12911": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13229": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13481": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13493": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13692": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13764": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13773": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13795": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-13796": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-13894": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-13900": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-14032": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-14151": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14169": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14243": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-14254": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14284": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14330": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-14342": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14425": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-14457": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "REFUTED",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-14516": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14568": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14735": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14743": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-14769": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-14784": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15017": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15026": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15073": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15231": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15246": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15322": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15331": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-15332": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15356": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-15366": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15440": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15537": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15562": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-15679": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-15915": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-15927": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "REFUTED",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-15938": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "REFUTED",
+          "R2C": "REFUTED",
+          "R2V": "REFUTED"
+        }
+      },
+      "AD-15980": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-16035": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "REFUTED",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-16041": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "SUPPORTED",
+          "B1": "NOT ENOUGH INFORMATION",
+          "R2": "SUPPORTED",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-16048": {
+        "kind": "unchanged",
+        "gold": "SUPPORTED",
+        "previous": "SUPPORTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "SUPPORTED",
+          "R2C": "SUPPORTED",
+          "R2V": "SUPPORTED"
+        }
+      },
+      "AD-16056": {
+        "kind": "unchanged",
+        "gold": "NOT ENOUGH INFORMATION",
+        "previous": "NOT ENOUGH INFORMATION",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      },
+      "AD-16086": {
+        "kind": "unchanged",
+        "gold": "REFUTED",
+        "previous": "REFUTED",
+        "verdicts": {
+          "B0": "NOT ENOUGH INFORMATION",
+          "B1": "SUPPORTED",
+          "R2": "NOT ENOUGH INFORMATION",
+          "R2C": "NOT ENOUGH INFORMATION",
+          "R2V": "NOT ENOUGH INFORMATION"
+        }
+      }
+    },
+    "correct": {
+      "B0": 69,
+      "B1": 64,
+      "R2": 72,
+      "R2C": 82,
+      "R2V": 79
+    },
+    "n": 208
+  }
+}

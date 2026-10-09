@@ -1,0 +1,18 @@
+{
+  "generator_file": "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "git_commit": "94a698124a35cf24d1e7b982a7b64134955c71da",
+  "judge_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+  "machine": "AMD64",
+  "packages": {
+    "llama-cpp-python": "0.3.35",
+    "matplotlib": null,
+    "numpy": "1.26.4",
+    "torch": "2.4.1+cu121",
+    "transformers": "4.51.3"
+  },
+  "phase": "ad",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.6",
+  "recorded_utc": "2026-10-09T13:14:47Z",
+  "tracked_code_modified": false
+}
