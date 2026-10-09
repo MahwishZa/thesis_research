@@ -1336,7 +1336,7 @@ After a review of the existing results and of the candidate datasets, the resear
   for the paper, no experiment status); `docs/evaluation.md` §6.0 (what each result is) and §6.5 before §6.6; `docs/protocol.md`
   status row, scope note, ledger row and the amendment of 2026-10-09 (reasons, design, frozen design, requirement and power,
   verifier qualification, gates), and a blank line that had split the ledger table was removed; a scope note in `docs/data.md`
-  and `docs/methodology.md`; `docs/reproducibility.md` §10; the package `experiments/adkqa` with `stage0.py` (counts only, 11
+  and `docs/methodology.md`; `docs/reproducibility.md` §10; the package `experiments/adkqa` with `stage0.py` (counts only, 12
   tests, no network in the tests); the guard tests repointed to the new README, to the paper placeholder and to the new module.
 * *Not changed.* No result, split, label, prompt, setting or arm; no committed result file; earlier log entries. Stale pointers in
   generated files (`docs/experimentation.md` in `RAG2_FINDINGS.md` and `rag2_analysis_confirm.md`, `docs/experiment_plan.md` in

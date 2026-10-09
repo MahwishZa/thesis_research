@@ -96,6 +96,16 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(sum(result["by_period"].values()), result["total"])
         self.assertEqual(len(result["sample_pmids"]), S.SAMPLE_SIZE)
 
+    def test_pubmed_warnings_and_the_query_translation_are_kept(self):
+        def opener(url):
+            body = {"esearchresult": {"count": "1", "idlist": ["7"], "querytranslation": "(x[All Fields])",
+                                      "warninglist": {"phrasesignored": ["hasabstract"]}}}
+            return json.dumps(body).encode()
+        ids, notes = S.search(EUtils(opener=opener, sleep=lambda s: None), "x", "2023-04-01", "2026-10-09")
+        self.assertEqual(ids, ["7"])
+        self.assertEqual(notes["warninglist"], {"phrasesignored": ["hasabstract"]})
+        self.assertEqual(notes["querytranslation"], "(x[All Fields])")
+
     def test_a_truncated_search_is_refused(self):
         def opener(url):
             return json.dumps({"esearchresult": {"count": "20000", "idlist": ["1"] * 10000}}).encode()

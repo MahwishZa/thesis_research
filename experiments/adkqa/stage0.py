@@ -67,14 +67,21 @@ def build_term(qualifier: Optional[str] = None, types: Sequence[str] = TYPES) ->
     return f"{condition} AND {type_clause(types)} AND {FILTERS}"
 
 
-def search_ids(eu: EUtils, term: str, since: str, until: str) -> list[str]:
-    """All identifiers of ``term`` published in [since, until] (ISO dates). Refuses a truncated list."""
+def search(eu: EUtils, term: str, since: str, until: str) -> tuple[list[str], dict]:
+    """All identifiers of ``term`` published in [since, until] (ISO dates), with what PubMed says about the query (how it
+    was translated and any warning), so that a syntax problem shows in the output instead of as a silent zero.
+    Refuses a truncated list."""
     r = eu._get("esearch.fcgi", {"db": "pubmed", "term": term, "retmax": RETMAX, "datetype": "pdat",
                                  "mindate": since.replace("-", "/"), "maxdate": until.replace("-", "/")})["esearchresult"]
     ids, count = list(r.get("idlist", [])), int(r.get("count", 0))
     if len(ids) < count:
         raise RuntimeError(f"{count} records but only {len(ids)} returned (limit {RETMAX}); narrow the window")
-    return ids
+    notes = {k: r[k] for k in ("querytranslation", "warninglist", "errorlist") if r.get(k)}
+    return ids, notes
+
+
+def search_ids(eu: EUtils, term: str, since: str, until: str) -> list[str]:
+    return search(eu, term, since, until)[0]
 
 
 def periods(since: str, until: str) -> list[tuple[str, str]]:
@@ -127,22 +134,25 @@ def probe_references(pmids: Sequence[str], opener: Optional[Callable[[str], byte
 
 def collect(eu: EUtils, since: str, until: str) -> dict:
     base_term = build_term()
-    main_ids = search_ids(eu, base_term, since, until)
+    main_ids, main_notes = search(eu, base_term, since, until)
+    notes = {"main": main_notes} if main_notes else {}
     by_type = {t: len(search_ids(eu, build_term(types=(t,)), since, until)) for t in TYPES}
     by_period = {f"{a}..{b}": len(search_ids(eu, base_term, a, b)) for a, b in periods(since, until)}
     per_area = {}
     for area, qualifiers in {**CORE_AREAS, **OPTIONAL_AREAS}.items():
         sets, counts = set(), {}
         for q in qualifiers:
-            ids = search_ids(eu, build_term(q), since, until)
+            ids, n = search(eu, build_term(q), since, until)
             counts[q] = len(ids)
             sets |= set(ids)
+            if n.get("warninglist") or n.get("errorlist"):
+                notes[f"{area}/{q}"] = n
         per_area[area] = {"core": area in CORE_AREAS, "qualifier_counts": counts, "distinct": len(sets)}
     return {"stage": 0, "generated_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "window": {"since": since, "until": until}, "base_term": base_term, "total": len(main_ids),
             "by_type": by_type, "by_period": by_period, "per_area": per_area,
             "gate": evaluate_gate(len(main_ids), {a: v["distinct"] for a, v in per_area.items()}),
-            "sample_pmids": sample_pmids(main_ids), "references_probe": None}
+            "pubmed_notes": notes, "sample_pmids": sample_pmids(main_ids), "references_probe": None}
 
 
 def render(result: dict) -> str:
@@ -158,6 +168,10 @@ def render(result: dict) -> str:
               f">= {g['criterion']['min_per_area']} distinct records",
               f"total ok: {g['total_ok']}; areas covered: {', '.join(g['areas_covered']) or 'none'}; "
               f"below: {', '.join(g['areas_below']) or 'none'}", "GO" if g["go"] else "NO-GO (do not build; report these counts)"]
+    if result.get("pubmed_notes"):
+        lines += ["", "PubMed reported notes on some queries (check that no term was ignored):"]
+        for key, note in result["pubmed_notes"].items():
+            lines.append(f"  {key}: " + json.dumps(note)[:400])
     probe = result.get("references_probe")
     if probe:
         lines += ["", f"reference lists: {probe['with_at_least_10_pubmed_references']} of {probe['sampled']} sampled records have "

@@ -177,6 +177,6 @@ disease; systematic review, meta-analysis or guideline; published from 2023-04-0
 retracted), per knowledge area, and evaluates the go/no-go criterion of `protocol.md` §8. It needs network access (E-utilities,
 at most 3 requests per second without `--api-key`), reads no abstract, builds no question and runs no model, and takes a few
 minutes. It writes `experiments/adkqa/results/stage0_counts.json` (counts and identifiers only; commit and push it yourself) and
-exits with 0 for go and 3 for no-go. `--probe-references 20` also asks Europe PMC whether the sampled records have reference
+exits with 0 for go and 3 for no-go. It also records how PubMed translated each query and any warning, so that a syntax problem shows in the output. `--probe-references 20` also asks Europe PMC whether the sampled records have reference
 lists, an optional secondary measure whose service fields were not tested live. `--since` and `--until` change the window; the
 protocol fixes 2023-04-01, after the generator's stated knowledge cutoff.
