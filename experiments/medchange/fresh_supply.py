@@ -17,10 +17,15 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import re
+
 from .ad_benchmark import AD_QUESTION, used_review_ids
 from .benchmark import LABELS, _version, file_sha256, load_groups, read_csv
 
 HERE = Path(__file__).resolve().parent
+#: Review text (question, objectives, conclusions) that names Alzheimer's disease or dementia. Counted because a review can be about
+#: dementia while its question does not say so.
+AD_DOMAIN_TEXT = re.compile(r"alzheimer|dementia", re.IGNORECASE)
 EARLIEST = ("2005-01-01", "2010-01-01", "2015-01-01", "2023-04-01")      # last: after the generator's stated knowledge cutoff
 
 
@@ -55,7 +60,9 @@ def fresh_items(medrev: dict, groups: dict, used_groups: set, used_reviews: froz
         seen.add(key)
         out.append({"row": newest, "kind": kind, "single_version": newest == previous, "date": nv.date,
                     "precision": nv.date_precision, "label": nv.label, "cochrane_id": nv.cochrane_id,
-                    "dementia_wording": bool(AD_QUESTION.search(q))})
+                    "dementia_wording": bool(AD_QUESTION.search(q)),
+                    "dementia_in_review_text": bool(AD_DOMAIN_TEXT.search(" ".join(
+                        [q, medrev[newest].get("objectives") or "", medrev[newest].get("conclusions") or ""])))})
     return out
 
 
@@ -71,6 +78,9 @@ def report(items: list[dict]) -> dict:
             "label_share": {l: round(labels.get(l, 0) / len(sel), 3) if sel else None for l in LABELS},
             "year_only_dates": sum(i["precision"] == "year" for i in sel),
             "dementia_wording": sum(i["dementia_wording"] for i in sel),
+            "dementia_in_review_text": {
+                "questions": sum(i["dementia_in_review_text"] for i in sel),
+                "labels": {l: sum(i["dementia_in_review_text"] and i["label"] == l for i in sel) for l in LABELS}},
             "ids_sha256": hashlib.sha256(json.dumps(sorted(i["row"] for i in sel)).encode()).hexdigest()}
     years = Counter(i["date"][:4] for i in items)
     out["by_year"] = {y: years[y] for y in sorted(years)}

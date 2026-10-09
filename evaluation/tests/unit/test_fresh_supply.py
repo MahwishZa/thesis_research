@@ -12,7 +12,7 @@ from experiments.medchange.benchmark import load_groups
 
 
 def row(i, label, date, q):
-    return {"": str(i), "Label": label, "Question": q, "PMID": f"/{1000 + i}/",
+    return {"": str(i), "Label": label, "Question": q, "PMID": f"/{1000 + i}/", "objectives": "", "conclusions": "",
             "DOI_Date": f"Cochrane Database Syst Rev. {date};1:CD{100000 + i}. doi: x"}
 
 
@@ -35,6 +35,17 @@ class SupplyTests(unittest.TestCase):
         self.assertFalse(got[0]["single_version"])
         self.assertTrue(got[3]["single_version"])
 
+    def test_a_review_about_dementia_is_counted_even_when_the_question_does_not_say_so(self):
+        medrev = dict(MEDREV)
+        medrev[5] = dict(MEDREV[5], objectives="To assess H in people with Alzheimer's disease.")
+        items = F.fresh_items(medrev, GROUPS, set(), frozenset(), frozenset())
+        by = {i["row"]: i for i in items}
+        self.assertTrue(by[5]["dementia_in_review_text"])
+        self.assertFalse(by[5]["dementia_wording"])
+        self.assertTrue(by[4]["dementia_in_review_text"])                 # the question names dementia
+        rep = F.report(items)["by_earliest_date"]["2010-01-01"]["dementia_in_review_text"]
+        self.assertEqual((rep["questions"], rep["labels"]["SUPPORTED"], rep["labels"]["NOT ENOUGH INFORMATION"]), (2, 1, 1))
+
     def test_used_groups_reviews_and_wording_are_excluded(self):
         self.assertNotIn(0, {i["row"] for i in self.items(used_groups={1})})
         self.assertNotIn(5, {i["row"] for i in self.items(used_reviews={"CD100005"})})
@@ -55,7 +66,7 @@ class SupplyTests(unittest.TestCase):
             (d / "Datasets").mkdir()
             import csv
             with open(d / "Datasets" / "MedRevQA.csv", "w", encoding="utf-8", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=["", "Label", "Question", "PMID", "DOI_Date"])
+                w = csv.DictWriter(f, fieldnames=["", "Label", "Question", "PMID", "DOI_Date", "objectives", "conclusions"])
                 w.writeheader()
                 w.writerows(MEDREV.values())
             with open(d / "Datasets" / "AllStudyGroups.csv", "w", encoding="utf-8", newline="") as f:

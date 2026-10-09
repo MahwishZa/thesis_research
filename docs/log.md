@@ -1347,3 +1347,12 @@ stated in advance. The per-verdict figures it cites come from a one-off analysis
 is still to be added). Cost per question corrected: about 3.9 minutes for R2 and R2V only, from the dementia-run breakdown (an earlier estimate of 3
 minutes was low).
 
+## Phase 63 — Supply of fresh questions (Oct 9)
+
+Researcher's run of `fresh_supply` (counts only): MedRevQA has 16,501 rows; 970 items are used; 10,672 questions are outside every split, all of kind unchanged
+(the changed-verdict items are used up). By earliest review date: 2005 → 9,695; **2010 → 7,880 (6,577 reviews; SUPPORTED 38.1%, REFUTED 16.9%, NOT ENOUGH
+INFORMATION 45.1%)**; 2015 → 4,798; after the generator's cutoff (2023-04) → 302. None of the 10,672 has dementia or Alzheimer's wording, which confirms
+that the wording-based supply is exhausted. The held-out and development reviews have a median year of 2014 and 79 to 83% are dated 2010 or later, so a
+threshold of 2010 matches them. The counter now also counts questions whose review text (objectives, conclusions) names Alzheimer's disease or dementia
+while the question does not; its result decides whether a fresh Alzheimer's stratum can be pre-registered.
+
