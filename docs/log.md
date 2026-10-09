@@ -1389,3 +1389,11 @@ the predicted-SUPPORTED share and REFUTED recall for them (R2 0.245, R2V 0.305; 
 a table of all 48 and a 20-question validation sheet for a clinician. R2V changed 6 of the 48 answers (4 fixed, 2 broken). The outputs hold question text and are
 not committed. Nothing here is confirmatory.
 
+
+## Phase 68 — Counting new Cochrane dementia reviews (Oct 9)
+
+The researcher asked for a small set of new Alzheimer's data for the defence. MedRevQA cannot supply it (7 of 7,880 questions from 2010 on name dementia in the review
+text), so the only source is Cochrane reviews published after MedRevQA's newest review (2024-01-08). `cochrane_ad_supply.py` (counts only; needs PubMed, so it runs on
+the researcher's laptop) asks PubMed for Cochrane reviews with Alzheimer Disease or Dementia as a major topic after that date and counts those that a fixed rule can turn
+into a question (an "Authors' conclusions" section, a title of the form "X for Y", no protocol or withdrawn notice). Rule: 30 or more usable = build a small set; 20 to 29 =
+a small pilot; fewer = stop. Nothing is built before the count is known. 5 tests with a fake E-utilities server; the sandbox cannot reach PubMed, so the real supply is not yet known.

@@ -181,6 +181,8 @@ Exploratory subgroup of the dementia run (the questions naming Alzheimer's disea
 `benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`), runs no model and writes `results/ad_subgroup_alzheimer.*`.
 Questions of MedRevQA that no split uses yet (counts only; nothing is selected): `python -m experiments.medchange.fresh_supply --medchange-dir ..\MedChange`
 reads `benchmark.jsonl` (`--data-dir`) and the MedChange files and writes `results/fresh_supply.json`.
+New Cochrane dementia and Alzheimer's reviews after the MedRevQA snapshot (counts only; needs PubMed): `python -m experiments.medchange.cochrane_ad_supply --medchange-dir ..\MedChange`
+writes `results/cochrane_ad_supply.json` (counts and PubMed identifiers, no titles) and prints the usable titles; 30 or more usable reviews = go, 20 to 29 = a small pilot, fewer = too few.
 
 ## 11. The pre-registered test on fresh questions (protocol §10)
 
