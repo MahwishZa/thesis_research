@@ -116,7 +116,7 @@ information"; the systems gave that answer in 22–34% of cases.
 The proposed system answered 79 of the 208 questions correctly against 72 for the baseline (+3.4 points; 19 against 12 on
 the 31 questions where they differed). The goal is therefore met as a point estimate, not confirmed (p = 0.28): with 208
 questions only differences of about 6–10 points can be confirmed. Giving the rules without the extra check did slightly
-better than the extra check (39.4% against 38.0%), and no system beat the constant answer.
+better than the extra check (39.4% against 38.0%), and none of these five systems beat the constant answer.
 
 | Comparison (dementia questions) | Gap in points | 95% range | p-value |
 |---|---|---|---|
@@ -128,7 +128,7 @@ better than the extra check (39.4% against 38.0%), and no system beat the consta
 
 The released answers of the eight other models score on these questions: Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3
 39.4%, Llama-3.3-70B 43.3%, Mistral-24B 42.3%, OLMo-13B 41.3%, BioMistral 34.1% and PMC-LLaMA 43.3%, against 30.8–39.4% for
-the local systems. The reference answers for these questions have not been re-checked by a second model.
+the local systems; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer. The reference answers for these questions have not been re-checked by a second model.
 
 **In short.** The extra check gave a small gain (+1.3 points) that cannot be told apart from luck, the baseline was not
 clearly better than simple retrieval (+0.6 points), and in the practice run the proposed system was slightly behind. On the

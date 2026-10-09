@@ -1299,8 +1299,8 @@ The `ad` phase finished (22.7 h measured, with the judge) and its results were p
 * *Data check.* Pools were complete (median 20 candidates, no empty pool); R2 admitted at least one abstract for 177 of 208
   questions; every answer parsed.
 * *Result.* R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7, p = 0.28): **met as a point estimate, not confirmed**, with the rule
-  fixed before the run. R2C (39.4% against 38.0% for R2V) did slightly better than R2V; no system beat the constant answer
-  NOT ENOUGH INFORMATION (42.3%). Written up in the README and `evaluation.md` §6.6.
+  fixed before the run. R2C (39.4% against 38.0% for R2V) did slightly better than R2V; none of the five local systems beat the constant answer
+  NOT ENOUGH INFORMATION (42.3%); two released-answer models (Llama-3.3-70B, PMC-LLaMA, 43.3%) are two questions above it. Written up in the README and `evaluation.md` §6.6.
 * *Added comparisons* (`protocol.md` §8, 2026-10-09; descriptive, included whatever they score): the released answers of
   all eight models (BioMistral, PMC-LLaMA and OLMo-13B were added to the five; their files hold three lines per answer, of
   which the second is the answer), and the best constant answer. The earlier README sentence that the local model was below
@@ -1310,3 +1310,6 @@ The `ad` phase finished (22.7 h measured, with the judge) and its results were p
   otherwise); `label_audit` accepts `--split ad`; `analyze_rag2` no longer prints the age/update-window case-study line for `ad`.
 * *Still to do on the laptop:* `label_audit --split ad` (about 1 h), then `analyze_rag2 --split ad --label-audit ...`.
 * *Guards.* Tests check the eight models and every dementia figure of the README against the committed analyses.
+* *Correction (Oct 9, later).* The first version of the write-up said that no system, and in `evaluation.md` §6.6 that every
+  system, scored below the constant answer. That is true of the five local systems only: Llama-3.3-70B and PMC-LLaMA (43.3%,
+  90 of 208) are two questions above the constant answer (42.3%, 88 of 208). README, `evaluation.md` and this entry were corrected.

@@ -241,9 +241,9 @@ Requirement: R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7; 19 / 12 discordant, ex
 estimate, not confirmed**; with 208 questions only 6–10 pp can be confirmed (§4). Secondary comparisons (Holm-adjusted p):
 R2 − B1 +3.8 pp (0.46), R2V − B1 +7.2 pp (0.25), R2C − R2 +4.8 pp (0.26), R2V − R2C −1.4 pp (0.68); none is confirmed.
 R2V changed 20.9% of the answers it verified (19 fixed, 12 broken); its commonest change was SUPPORTED to NOT ENOUGH
-INFORMATION (17). Every system scores below the constant answer. The released answers of the eight models score
+INFORMATION (17). None of the five local systems scores above the constant answer. The released answers of the eight models score
 Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mistral-24B 42.3%, OLMo-13B 41.3%, BioMistral
-34.1% and PMC-LLaMA 43.3%. The labels of this set have not been audited by a second model, and the update-window and
+34.1% and PMC-LLaMA 43.3%; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer. The labels of this set have not been audited by a second model, and the update-window and
 age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
 `results/report_ad/REPORT.md`.
 
