@@ -1356,3 +1356,10 @@ that the wording-based supply is exhausted. The held-out and development reviews
 threshold of 2010 matches them. The counter now also counts questions whose review text (objectives, conclusions) names Alzheimer's disease or dementia
 while the question does not; its result decides whether a fresh Alzheimer's stratum can be pre-registered.
 
+## Phase 64 — No fresh Alzheimer's stratum (Oct 9)
+
+Second run of `fresh_supply` (researcher; counts committed in `results/fresh_supply.json`): questions of the fresh pool whose question, objectives or
+conclusions name Alzheimer's disease or dementia: 7 from 2010, 9 from 2005, 2 after the generator's cutoff; their verdicts 3 / 2 / 2 from 2010. The fresh
+pool therefore cannot supply an Alzheimer's-domain test; `protocol.md` §10.3 says so. The pre-registered test stays a general-medicine test of the
+mechanism, with the 208 dementia questions reported descriptively. Draft status unchanged; sample size (1,200 proposed) awaits the researcher's decision.
+

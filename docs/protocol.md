@@ -330,15 +330,19 @@ it is below 0.02, a gain of 0.02 or more is excluded.
 R2V − R2 read by the three rules of `evaluation.md` §5 (the 1-point requirement keeps its meaning and is not re-read from this test alone); changed
 versus unchanged questions if both occur; the share of answers changed by R2V and how many changes fix or break an answer.
 
-*Alzheimer's disease (descriptive, pre-specified).* The 208 dementia-set questions (48 name Alzheimer's disease) were seen and helped form H1, so
+*Alzheimer's disease (descriptive, pre-specified).* The fresh pool holds practically no Alzheimer's or dementia questions (§10.3). The 208 dementia-set questions (48 name Alzheimer's disease) were seen and helped form H1, so
 they are not part of the confirmatory family. Their macro-F1 difference and interval are reported next to the fresh result, with the statement
 whether the sign agrees. No claim is made that H1 is confirmed for Alzheimer's disease.
 
 ### 10.3 Questions
 
 A question is *fresh* when neither its study group, nor its Cochrane ID, nor its wording appears in any split of `benchmark.jsonl` (dev, confirm, ad)
-and its wording does not name dementia or Alzheimer's disease (those were all used). The count is made by `python -m experiments.medchange.fresh_supply`
-(counts only). The review must be dated from **2010-01-01**; if fewer than the sample size qualify, all qualifying questions are used and the power
+and its wording does not name dementia or Alzheimer's disease (those were all used). The count was made by `python -m experiments.medchange.fresh_supply` (counts only;
+`results/fresh_supply.json`): 16,501 MedRevQA rows, 970 used, 10,672 fresh, all of kind unchanged; **7,880 from 2010** (6,577 reviews; SUPPORTED 38.1%,
+REFUTED 16.9%, NOT ENOUGH INFORMATION 45.1%), 4,798 from 2015, 9,695 from 2005. The held-out and development reviews have a median year of 2014 and 79
+to 83% are dated 2010 or later, which is why the threshold is 2010. *No Alzheimer's stratum:* of the fresh questions only 7 (from 2010; 9 from 2005)
+name Alzheimer's disease or dementia anywhere in the question, objectives or conclusions, so a fresh Alzheimer's-domain test cannot be built from this
+source; the fresh test is general medicine. The review must be dated from **2010-01-01**; if fewer than the sample size qualify, all qualifying questions are used and the power
 is stated, and the date is not moved earlier than 2005-01-01. From the qualifying questions the first **N** in the order of the SHA-256 of
 `fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 1,200 [to confirm before the freeze].** Power for H1 with N = 1,200 (standard
 error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation): 92% if the true gain is 0.04,
