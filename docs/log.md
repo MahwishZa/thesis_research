@@ -1459,3 +1459,14 @@ was a copy artefact: the stored value has the space (checked with `repr`). Amend
 disease; `spec.TEMPLATES_SHORT`, `names_condition`, 4 new tests. The drafting prompt and the gates are unchanged. The researcher runs the full development
 draft next; the survival gate (40%) and the verdict floor (25% each) are the open risks.
 
+## Phase 58 — Development build: gate 1 not passed (Oct 9)
+
+Researcher's run of the full development build (150 records in scope; Qwen2.5-7B drafts, Phi-3.5-mini verifier; `adkqa_build_dev.json`):
+11 questions kept (survival 7.3%; gate 40% and 60 questions). Losses: cue reading gave no verdict 84 (56%), copied span not in the abstract 28 (19%), length
+rules 13, no claim 6, no conclusion 3, unparsed 1, rule disagreed 3, verifier disagreed 1. Verifier agreement on the 12 labelled drafts 91.7%.
+Verdicts of the 11 kept: SUPPORTED 10, REFUTED 1, NOT ENOUGH INFORMATION 0 (gate: at least 25% each); the claim-only classifier equals the majority
+class (0.909); by area causes 2, diagnosis 0, symptoms 3, treatment 6. By conclusion basis: labelled 7 of 71, abstract tail 4 of 66, discussion tail 0 of
+10, so the wider conclusion rule is not the cause. `pools` was not run (the command was sent with the placeholder key and PubMed answered 400; the pool
+sizes of 11 questions say nothing). Gate 1 fails on survival, size and verdict mix; the protocol allows one documented redesign before the test split is
+sealed. Added `build rulecheck` (counts of why the cue reading gave no verdict; no abstract text) and `spec.explain_reading` to inform that decision.
+

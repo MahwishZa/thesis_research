@@ -153,6 +153,18 @@ class DevFractionTests(unittest.TestCase):
         self.assertEqual(pools["dev_fraction"], rows[0]["dev_fraction"])
 
 
+class RuleBreakdownTests(unittest.TestCase):
+    def test_reasons_are_counted_without_text(self):
+        rows = [{"pmid": str(i), "status": "eligible", "title": "t", "abstract": "donepezil cognition " + c, "conclusion": c}
+                for i, c in enumerate(["Results were varied.", "It was effective, however results were mixed.",
+                                       "No significant effect but beneficial for mood.", "Donepezil significantly improved cognition."])]
+        drafts = {r["pmid"]: {"draft": {"template": "effect", "x": "donepezil", "y": "cognition", "verdict": "SUPPORTED"}} for r in rows}
+        got = B.rule_breakdown(rows, drafts)
+        self.assertEqual(got["well_formed_drafts"], 4)
+        self.assertEqual(got["rule_no_verdict_reasons"], {"no cue": 1, "hedge with positive": 1, "conflict: positive+negative": 1})
+        self.assertEqual(spec.explain_reading("Donepezil significantly improved cognition."), "label")
+
+
 class DraftCheckTests(unittest.TestCase):
     ROW = {"title": "Donepezil and cognition", "abstract": "To assess donepezil and cognition. Donepezil significantly improved cognition.",
            "conclusion": "Donepezil significantly improved cognition."}
