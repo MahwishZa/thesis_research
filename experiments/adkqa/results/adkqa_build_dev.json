@@ -1,0 +1,54 @@
+{
+  "split": "dev",
+  "records_in_scope": 150,
+  "statuses": {
+    "rule_no_verdict": 84,
+    "question_rules": 13,
+    "span_not_in_abstract": 28,
+    "verifier_disagrees": 1,
+    "no_claim": 6,
+    "kept": 11,
+    "draft_unparsed": 1,
+    "no_conclusion": 3,
+    "rule_disagrees": 3
+  },
+  "kept": 11,
+  "survival": 0.0733,
+  "all_drafted": true,
+  "verifier_agreement": 0.9167,
+  "verifier_unparsed": 0,
+  "rule_coverage": 0.1515,
+  "by_conclusion_basis": {
+    "abstract_tail": {
+      "records": 66,
+      "kept": 4
+    },
+    "discussion_tail": {
+      "records": 10,
+      "kept": 0
+    },
+    "labelled": {
+      "records": 71,
+      "kept": 7
+    }
+  },
+  "verdict_share": {
+    "SUPPORTED": 0.9091,
+    "REFUTED": 0.0909,
+    "NOT ENOUGH INFORMATION": 0.0
+  },
+  "per_area": {
+    "causes_risk": 2,
+    "diagnosis": 0,
+    "symptoms": 3,
+    "treatment": 6
+  },
+  "claim_only": {
+    "accuracy": 0.9091,
+    "majority": 0.9091
+  },
+  "manifest_hash": "c3c1d730ce996bdd939b5494f952aa62d6d6d39198b8722da99a9bd77b714c82",
+  "settings": {
+    "seed": "adkqa-split-v1"
+  }
+}

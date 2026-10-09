@@ -1,0 +1,170 @@
+{
+  "manifest_hash": "c3c1d730ce996bdd939b5494f952aa62d6d6d39198b8722da99a9bd77b714c82",
+  "items": [
+    {
+      "item_id": "AK-D-0001",
+      "source_pmid": "38968479",
+      "date": "2024-07-05",
+      "area": "symptoms",
+      "cluster": "antipsychotic agents",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        2079,
+        2406
+      ],
+      "conclusion_sha256": "7ed82491fbee0d5474563fe96788b465df5086a716f98174a167df3312346b04"
+    },
+    {
+      "item_id": "AK-D-0002",
+      "source_pmid": "38878598",
+      "date": "2024-11-01",
+      "area": "treatment",
+      "cluster": "brain-derived neurotrophic factor",
+      "conclusion_basis": "abstract_tail",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1041,
+        1620
+      ],
+      "conclusion_sha256": "40e2687b305a91f3c8b4648f0f5f53a8e4ea3d7901193dcf95c315b8dead6341"
+    },
+    {
+      "item_id": "AK-D-0003",
+      "source_pmid": "39573866",
+      "date": "2024-11-01",
+      "area": "treatment",
+      "cluster": "transcranial direct current stimulation",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1373,
+        1618
+      ],
+      "conclusion_sha256": "759dfaf83fceac08b9618b0cdc074e755209b432300f24b32cad134ec2f7f1cc"
+    },
+    {
+      "item_id": "AK-D-0004",
+      "source_pmid": "40320907",
+      "date": "2026-02-01",
+      "area": "symptoms",
+      "cluster": "amyloidosis",
+      "conclusion_basis": "abstract_tail",
+      "template": "association",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1496,
+        1913
+      ],
+      "conclusion_sha256": "d151f69e644b1c1592f41b6d37845e3ce7deaa9c8c3b6bdead19a52804a3a749"
+    },
+    {
+      "item_id": "AK-D-0005",
+      "source_pmid": "39664530",
+      "date": "2024-11-27",
+      "area": "treatment",
+      "cluster": "activities of daily living",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        2050,
+        2259
+      ],
+      "conclusion_sha256": "cfadf69e6b19b43719e765e10751f695b218a7db64b128e7bf88616e8e505cc4"
+    },
+    {
+      "item_id": "AK-D-0006",
+      "source_pmid": "37792627",
+      "date": "2024-02-01",
+      "area": "causes_risk",
+      "cluster": "apolipoproteins e",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1460,
+        1694
+      ],
+      "conclusion_sha256": "598aa60f1ff782689a799d3c21e930294d6c7da31caa0a36b8f362427b1ecc59"
+    },
+    {
+      "item_id": "AK-D-0007",
+      "source_pmid": "39028199",
+      "date": "2025-02-01",
+      "area": "treatment",
+      "cluster": "transcranial direct current stimulation",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1389,
+        1680
+      ],
+      "conclusion_sha256": "1ec7a5cb7e6145146cce4a0dcd32e30e92d8e9684c099cf6bd4bda33421ed167"
+    },
+    {
+      "item_id": "AK-D-0008",
+      "source_pmid": "37539664",
+      "date": "2023-09-01",
+      "area": "causes_risk",
+      "cluster": "parkinson disease",
+      "conclusion_basis": "labelled",
+      "template": "association",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1519,
+        1833
+      ],
+      "conclusion_sha256": "ce631b99800149e6f1e397a5b4edfa8b65584d64cb76931932356738df6453ac"
+    },
+    {
+      "item_id": "AK-D-0009",
+      "source_pmid": "38763935",
+      "date": "2024-10-01",
+      "area": "symptoms",
+      "cluster": "psychomotor agitation",
+      "conclusion_basis": "abstract_tail",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1135,
+        1488
+      ],
+      "conclusion_sha256": "f071c54d89d801f12b4b7d1efdd974b5fd1f8888bb30939cb2196d461dbc9cf8"
+    },
+    {
+      "item_id": "AK-D-0010",
+      "source_pmid": "41276485",
+      "date": "2026-02-01",
+      "area": "treatment",
+      "cluster": "antipsychotic agents",
+      "conclusion_basis": "labelled",
+      "template": "effect",
+      "label": "SUPPORTED",
+      "conclusion_span": [
+        1418,
+        1791
+      ],
+      "conclusion_sha256": "6f3edb2b1153dd4b6b33cf2bb08bc19d238443983d048f4cf0d54d79c100d3c0"
+    },
+    {
+      "item_id": "AK-D-0011",
+      "source_pmid": "39690983",
+      "date": "2024-11-01",
+      "area": "treatment",
+      "cluster": "anti-inflammatory agents, non-steroidal",
+      "conclusion_basis": "abstract_tail",
+      "template": "effect",
+      "label": "REFUTED",
+      "conclusion_span": [
+        1120,
+        1471
+      ],
+      "conclusion_sha256": "0b411d27a1d0fe750061eea0bb41b48b4c9764a5d9d0cc1515af4fd202272353"
+    }
+  ]
+}

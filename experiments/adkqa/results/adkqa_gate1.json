@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "survival_at_least_40pct": false,
+    "verifier_agreement_at_least_85pct": true,
+    "claim_only_at_most_majority_plus_5pp": true,
+    "each_verdict_at_least_25pct": false,
+    "same_seed_same_hash": null,
+    "pool_median_at_least_15_and_empty_at_most_5pct": null,
+    "b0_between_constant_plus_5pp_and_80pct": null
+  },
+  "passed": false,
+  "pending": [
+    "b0_between_constant_plus_5pp_and_80pct",
+    "pool_median_at_least_15_and_empty_at_most_5pct",
+    "same_seed_same_hash"
+  ],
+  "failed": [
+    "each_verdict_at_least_25pct",
+    "survival_at_least_40pct"
+  ]
+}
