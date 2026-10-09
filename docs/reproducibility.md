@@ -181,3 +181,19 @@ Exploratory subgroup of the dementia run (the questions naming Alzheimer's disea
 `benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`), runs no model and writes `results/ad_subgroup_alzheimer.*`.
 Questions of MedRevQA that no split uses yet (counts only; nothing is selected): `python -m experiments.medchange.fresh_supply --medchange-dir ..\MedChange`
 reads `benchmark.jsonl` (`--data-dir`) and the MedChange files and writes `results/fresh_supply.json`.
+
+## 11. The pre-registered test on fresh questions (protocol §10)
+
+Order of work, in PowerShell from the repository folder (the run itself is about 100 to 120 hours [estimate], resumable):
+```
+python -m experiments.medchange.fresh_benchmark --medchange-dir ..\MedChange       # selects the 1,500 questions, writes manifest_fresh.json
+git add experiments\medchange\manifest_fresh.json ; git commit -m "Fresh question selection" ; git push origin main
+python -m experiments.medchange.fresh_benchmark --freeze                            # marks protocol section 10 IN FORCE (needs the push above)
+git add docs\protocol.md ; git commit -m "Pre-registration in force" ; git push origin main
+python -m experiments.medchange.label_audit --split fresh --sample 300 --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
+python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
+python -m experiments.medchange.analyze_fresh                                       # again, to include the audit; prints only a count until all answers exist
+```
+The pipeline refuses to start unless the freeze is complete. `analyze_fresh` is blinded: it computes nothing until all 1,500 questions have answers for R2, R2C and R2V, and
+it writes `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` only then. Do not open partial answer files.
+

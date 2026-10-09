@@ -14,7 +14,7 @@ from typing import Sequence
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-EXPECTED_ITEMS = {"dev": 226, "confirm": 528, "ad": 208}   # equal to manifest.json / manifest_ad.json (a test checks)
+EXPECTED_ITEMS = {"dev": 226, "confirm": 528, "ad": 208, "fresh": 1500}   # equal to manifest.json / manifest_ad.json / manifest_fresh.json (a test checks)
 
 Step = tuple[str, object]          # (name, argv list | callable returning (ok, message))
 

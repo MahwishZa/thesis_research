@@ -440,7 +440,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="step", required=True)
     for name in ("rationale", "lists", "filter", "answers", "judge"):
         p = sub.add_parser(name)
-        p.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
+        p.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "fresh"))
         p.add_argument("--data-dir", default=str(HERE / "data"))
         p.add_argument("--limit", type=int, default=None, help="first N items only (timing test)")
         p.add_argument("--out", default=None)

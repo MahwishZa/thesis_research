@@ -357,13 +357,16 @@ power is 0.030. For comparison N = 1,200 gives 92%, 72% and 39%, and N = 2,000 g
 The frozen design (settings hash `1743afd7045b`, `results/rag2_design.json`), unchanged: the arms R2, R2C and R2V (R2V verifies R2's draft; R2C is the criteria
 control; B0, B1, R2V-ND and the directness judge are not run in this test). Every question is analysed whatever happens to it (an unparsed answer counts as wrong; a
 question without admitted abstracts is analysed as the pipeline answers it). A defect found while running is fixed and recorded, never tuned on outcomes.
-The pipeline needs the split name `fresh` added to its registries, a mechanical change made and tested before the freeze.
+The split name `fresh` is registered in the pipeline (a mechanical change, tested, that does not touch the other splits); the as-of records and the abstracts
+are fetched as for the other splits, the MedCPT candidate pools of the earlier splits are not frozen (the R2 candidate lists are built by `rag2_run lists`), and the
+analysis is the blinded `analyze_fresh` (§10.2), which computes nothing until all questions have answers for all three arms.
 
 ### 10.5 Cost
 
 From the measured steps of the dementia run (records, pools, rationales, candidate lists, filter and the R2 and R2V answers), about 3.9 minutes per
 question for R2 and R2V plus 52 seconds for R2C, 4.8 minutes [estimate]: about 120 hours for 1,500 questions (96 for 1,200, 160 for 2,000), on the
-laptop, resumable.
+laptop, resumable; the abstracts-only step saves the MedCPT pool freezing of the earlier splits (about 50 seconds per question, an estimate from the
+held-out run), so about 100 hours is likely.
 
 ### 10.6 Limits stated in advance
 
@@ -380,8 +383,12 @@ metrics as primary, other thresholds, other seeds, dropping questions after seei
 
 ### 10.8 Freeze procedure
 
-(1) The counts of `fresh_supply` are committed. (2) N is fixed here and the list of selected rows is hashed and committed before any answer exists.
-(3) The tests for the new split pass and the design record equals the current design. (4) This section's status is changed to "in force" with the date
-and commit. Only then is the run started.
+(1) The counts of `fresh_supply` are committed (done: 7,880 qualifying questions). (2) N = 1,500 is fixed here; `python -m experiments.medchange.fresh_benchmark
+--medchange-dir ..\MedChange` selects the questions, writes them to `benchmark.jsonl` and writes `manifest_fresh.json` (the selected MedRevQA rows and the hash of the item
+list), which is committed and pushed before any answer exists. (3) The tests of the new split pass and the design record equals the current design (the pipeline
+checks it). (4) `python -m experiments.medchange.fresh_benchmark --freeze` marks this section IN FORCE (it refuses unless the manifest is on origin/main); the change is
+committed and pushed. (5) A random sample of 300 questions (the first 300 in the order of the SHA-256 of `fresh-audit-v1|<item id>`) has its reference verdicts
+audited by an independent model (`label_audit --split fresh --sample 300`); this uses no answer. Only then is the run started: `rag2_pipeline fresh --go` refuses
+to start unless this section is IN FORCE, the manifest is on origin/main and the items match it.
 
 

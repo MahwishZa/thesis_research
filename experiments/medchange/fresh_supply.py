@@ -29,8 +29,8 @@ AD_DOMAIN_TEXT = re.compile(r"alzheimer|dementia", re.IGNORECASE)
 EARLIEST = ("2005-01-01", "2010-01-01", "2015-01-01", "2023-04-01")      # last: after the generator's stated knowledge cutoff
 
 
-def candidates(medrev: dict, groups: dict, used_groups: set) -> list[tuple[int, int, str]]:
-    """(newest row, previous row, kind) for every group or ungrouped row outside ``used_groups``."""
+def candidates(medrev: dict, groups: dict, used_groups: set) -> list[tuple[int, int, str, object]]:
+    """(newest row, previous row, kind, group id or None) for every group or ungrouped row outside ``used_groups``."""
     grouped = {k for keys in groups.values() for k in keys}
     out = []
     for gid in sorted(groups):
@@ -39,16 +39,16 @@ def candidates(medrev: dict, groups: dict, used_groups: set) -> list[tuple[int, 
         keys = sorted(set(groups[gid]))
         if len(keys) >= 2:
             same = medrev[keys[0]]["Label"].strip() == medrev[keys[1]]["Label"].strip()
-            out.append((keys[0], keys[1], "unchanged" if same else "changed"))
+            out.append((keys[0], keys[1], "unchanged" if same else "changed", gid))
         else:
-            out.append((keys[0], keys[0], "unchanged"))
-    out += [(k, k, "unchanged") for k in sorted(medrev) if k not in grouped]
-    return sorted(out)
+            out.append((keys[0], keys[0], "unchanged", gid))
+    out += [(k, k, "unchanged", None) for k in sorted(medrev) if k not in grouped]
+    return sorted(out, key=lambda t: t[:3])
 
 
 def fresh_items(medrev: dict, groups: dict, used_groups: set, used_reviews: frozenset, used_questions: frozenset) -> list[dict]:
     seen, out = set(), []
-    for newest, previous, kind in candidates(medrev, groups, used_groups):
+    for newest, previous, kind, gid in candidates(medrev, groups, used_groups):
         q = medrev[newest]["Question"].strip()
         key = q.lower()
         try:
@@ -58,7 +58,7 @@ def fresh_items(medrev: dict, groups: dict, used_groups: set, used_reviews: froz
         if key in seen or key in used_questions or {nv.cochrane_id, pv.cochrane_id} & used_reviews:
             continue
         seen.add(key)
-        out.append({"row": newest, "kind": kind, "single_version": newest == previous, "date": nv.date,
+        out.append({"row": newest, "previous": previous, "group_id": gid, "kind": kind, "single_version": newest == previous, "date": nv.date,
                     "precision": nv.date_precision, "label": nv.label, "cochrane_id": nv.cochrane_id,
                     "dementia_wording": bool(AD_QUESTION.search(q)),
                     "dementia_in_review_text": bool(AD_DOMAIN_TEXT.search(" ".join(

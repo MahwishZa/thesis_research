@@ -141,12 +141,15 @@ def main(argv=None) -> int:
     ap.add_argument("--probe-dir", default=str(HERE / "data" / "pubmed_g0"))
     ap.add_argument("--abstract-cache", default=str(HERE / "data" / "abstracts.jsonl"))
     ap.add_argument("--out", default=None)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "all"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "fresh", "all"))
     ap.add_argument("--dense-k", type=int, default=50)
     ap.add_argument("--pool-size", type=int, default=20)
     ap.add_argument("--api-key", default=None)
     ap.add_argument("--device", default=None)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--abstracts-only", action="store_true",
+                    help="download the abstracts of the as-of records and stop (no MedCPT pools; used by the fresh split, whose\n"
+                         "R2 lists are built by rag2_run lists)")
     args = ap.parse_args(argv)
 
     out = Path(args.out or HERE / "data" / f"frozen_{args.split}.jsonl")
@@ -164,7 +167,7 @@ def main(argv=None) -> int:
             return 2
         probes[it["item_id"]] = json.loads(f.read_text(encoding="utf-8"))
     done = {r["item_id"] for r in _load_jsonl(out)}
-    todo = [i for i in items if i["item_id"] not in done]
+    todo = items if args.abstracts_only else [i for i in items if i["item_id"] not in done]
     print(f"{len(items)} items, {len(done)} already frozen, {len(todo)} to do")
     if not todo:
         return 0
@@ -187,6 +190,9 @@ def main(argv=None) -> int:
                 h.flush()
                 print(f"  abstracts {min(i + 500, len(need))}/{len(need)}", flush=True)
 
+    if args.abstracts_only:
+        print(f"abstracts cached for {len(items)} items; pools not frozen (--abstracts-only)")
+        return 0
     from experiments.medchange.encoders import (
         MedCPTReranker, medcpt_article_encoder, medcpt_query_encoder)
     qe = medcpt_query_encoder(device=args.device)

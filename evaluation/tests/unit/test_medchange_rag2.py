@@ -579,6 +579,9 @@ class AlzheimersBenchmarkTests(unittest.TestCase):
         self.assertEqual(P.EXPECTED_ITEMS["dev"] + P.EXPECTED_ITEMS["confirm"],
                          main["items"] - main["likely_label_noise_excluded"])
         self.assertEqual(P.EXPECTED_ITEMS["ad"], ad["items"])
+        fresh = base / "manifest_fresh.json"
+        if fresh.is_file():                                  # written by fresh_benchmark and committed before the fresh run
+            self.assertEqual(P.EXPECTED_ITEMS["fresh"], json.loads(fresh.read_text(encoding="utf-8"))["items"])
         self.assertEqual(ad["kinds"], {"unchanged": ad["items"]})          # no changed verdict can be in this set
 
     def test_cli_appends_once_and_keeps_the_main_benchmark(self):

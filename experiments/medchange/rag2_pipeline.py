@@ -15,6 +15,10 @@ origin/main equals the current design (settings, prompts, model file). Then the 
 split for R2, R2C, R2V and R2V-ND (``--no-temporal-ablation`` leaves R2V-ND out, decided before the run),
 analysis, findings, publishing and, with ``--commit``, commit (never push).
 
+``fresh`` (once; the pre-registered test of ``protocol.md`` §10 on the questions built by ``fresh_benchmark``): refuses to start unless
+the pre-registration is in force, ``manifest_fresh.json`` is on origin/main and the items match it, and the guards of ``confirm`` hold; as-of
+records and abstracts (network), rationales, candidate lists, filter, answers R2, R2C and R2V, then the blinded analysis ``analyze_fresh``.
+
 ``ad`` (once, same guards as ``confirm``): the Alzheimer's/dementia secondary test set built by ``ad_benchmark``:
 as-of PubMed records and abstracts (network), B0 and B1 answers, then R2, R2C and R2V, analysis, findings.
 
@@ -24,8 +28,10 @@ Every step is resumable: after an interruption, rerun the same command.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -44,7 +50,10 @@ SHARE = ("rag2_rationales", "rag2_filter", "rag2_answers", "rag2_directness")
 DEV_ARMS = ("R2", "R2C", "R2V", "R2V-ND")
 ABLATION_ARMS = ("R2-NF", "R2-RQ", "R2-BR")
 AD_ARMS = ("R2", "R2C", "R2V")
+FRESH_ARMS = ("R2", "R2C", "R2V")
 FINDINGS = {"confirm": "RAG2_FINDINGS.md", "ad": "RAG2_FINDINGS_AD.md"}
+MANIFEST_FRESH = "/".join(("experiments", "medchange", "manifest_fresh.json"))
+IN_FORCE = re.compile(r"\*\*Status\.\*\* This section is IN FORCE since \d{4}-\d{2}-\d{2}")
 MAX_UNPARSED = 0.05
 MIN_VALID = 0.95
 BASELINE_FLOOR_PP = 5.0
@@ -64,10 +73,28 @@ def preflight(data: Path, split: str) -> list[tuple[str, bool, str]]:
     no_probe = [r["item_id"] for r in items if not (data / "pubmed_g0" / f"{r['item_id']}.json").is_file()]
     rows.append(("every item has its as-of PubMed records", not no_probe, f"{len(no_probe)} missing"))
     rows.append(("the abstract cache exists", (data / "abstracts.jsonl").is_file(), ""))
-    answers = {(r["item_id"], r["arm"]) for r in load_jsonl(data / f"answers_{split}.jsonl")}
-    lacking = [r["item_id"] for r in items for arm in ("B0", "B1") if (r["item_id"], arm) not in answers]
-    rows.append(("B0 and B1 answers exist for every item (reused)", not lacking, f"{len(lacking)} missing"))
+    if split != "fresh":                      # the fresh test does not run B0 and B1
+        answers = {(r["item_id"], r["arm"]) for r in load_jsonl(data / f"answers_{split}.jsonl")}
+        lacking = [r["item_id"] for r in items for arm in ("B0", "B1") if (r["item_id"], arm) not in answers]
+        rows.append(("B0 and B1 answers exist for every item (reused)", not lacking, f"{len(lacking)} missing"))
     return rows
+
+
+def freeze_problems(data: Path, root: Path = HERE.parents[1]) -> list[str]:
+    """Why the pre-registered test may not start yet (protocol §10.8); empty when the freeze is complete."""
+    problems = []
+    protocol = root / "docs" / "protocol.md"
+    if not (protocol.is_file() and IN_FORCE.search(protocol.read_text(encoding="utf-8"))):
+        problems.append("protocol.md §10 is not marked IN FORCE (the freeze of §10.8 is not complete)")
+    ok, why = frozen_is_pushed(rel=MANIFEST_FRESH)
+    if not ok:
+        problems.append(why)
+    else:
+        manifest = json.loads((root / MANIFEST_FRESH).read_text(encoding="utf-8"))
+        ids = [r["item_id"] for r in load_jsonl(data / "benchmark.jsonl") if r["split"] == "fresh"]
+        if hashlib.sha256(json.dumps(ids).encode()).hexdigest() != manifest["item_ids_sha256"]:
+            problems.append("the fresh items in benchmark.jsonl differ from manifest_fresh.json (run fresh_benchmark)")
+    return problems
 
 
 def _write(path: Path, text: str) -> None:
@@ -292,6 +319,21 @@ def ad_plan(a, data: Path, results: Path) -> list:
     return steps
 
 
+def fresh_plan(a, data: Path, results: Path) -> list:
+    lean = argparse.Namespace(**{**vars(a), "judge_path": None})              # no directness judge in the fresh test
+    steps = [("fresh items present (run fresh_benchmark first)", lambda: print_checks([preflight(data, "fresh")[0]])),
+             ("as-of PubMed records (fresh)", py("pubmed_asof", "--split", "fresh")),
+             ("abstracts of the as-of records (fresh)", py("freeze_candidates", "--split", "fresh", "--abstracts-only")),
+             ("preflight (fresh)", lambda: print_checks(preflight(data, "fresh")))]
+    steps += run_steps(lean, "fresh", FRESH_ARMS, ("R2",))
+    steps += [("blinded analysis (fresh)", py("analyze_fresh", "--data-dir", data, "--results-dir", results)),
+              ("publish outputs (fresh)", lambda: publish(data, results, "fresh")),
+              ("environment record", lambda: write_environment(results, "fresh", a.model_path, None))]
+    if a.commit:
+        steps.append(("commit", lambda: commit_results("Pre-registered test on fresh questions: answers and blinded analysis")))
+    return steps
+
+
 def status(data: Path, results: Path) -> int:
     dev = _analysis(results, "dev")
     pushed = frozen_is_pushed(rel=DESIGN)[0] if (results / "rag2_design.json").is_file() else False
@@ -301,13 +343,15 @@ def status(data: Path, results: Path) -> int:
                       "confirm_answers": len(load_jsonl(data / "rag2_answers_confirm.jsonl")),
                       "findings": (results / "RAG2_FINDINGS.md").is_file(),
                       "ad_answers": len(load_jsonl(data / "rag2_answers_ad.jsonl")),
-                      "ad_findings": (results / "RAG2_FINDINGS_AD.md").is_file()}, indent=2))
+                      "ad_findings": (results / "RAG2_FINDINGS_AD.md").is_file(),
+                      "fresh_answers": len(load_jsonl(data / "rag2_answers_fresh.jsonl")),
+                      "fresh_findings": (results / "RAG2_FINDINGS_FRESH.md").is_file()}, indent=2))
     return 0
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("phase", choices=("dev", "confirm", "ad", "status"))
+    ap.add_argument("phase", choices=("dev", "confirm", "ad", "fresh", "status"))
     ap.add_argument("--model-path", help="the generator GGUF (Meta-Llama-3-8B-Instruct Q4_K_M)")
     ap.add_argument("--judge-path", default=None, help="optional second-family GGUF for the directness judge")
     ap.add_argument("--n-threads", default="6")
@@ -347,7 +391,12 @@ def main(argv=None) -> int:
             print("refusing to start: the current design differs from the frozen record in "
                   + ", ".join(differs), file=sys.stderr)
             return 2
-    plan = confirm_plan if a.phase == "confirm" else ad_plan
+    if a.phase == "fresh" and not a.dry_run:
+        problems = freeze_problems(data)
+        if problems:
+            print("refusing to start: " + "; ".join(problems), file=sys.stderr)
+            return 2
+    plan = {"confirm": confirm_plan, "ad": ad_plan, "fresh": fresh_plan}[a.phase]
     return execute(plan(a, data, results), a.dry_run)
 
 

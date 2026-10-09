@@ -60,7 +60,7 @@ CURRENT_DOCS = ("README.md", "docs/data.md", "docs/methodology.md", "docs/protoc
                 "docs/reproducibility.md")
 #: Paths named in the documents that are generated or machine-local and may be absent.
 GENERATED_PREFIXES = (
-    "experiments/medchange/data", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
+    "experiments/medchange/data", "experiments/medchange/manifest_fresh", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/label_audit_",
     "experiments/medchange/results/consistency_auto_",
 )
@@ -558,7 +558,8 @@ class DocumentationIntegrityTests(unittest.TestCase):
         flags = {}
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
-                "freeze_candidates", "generate_answers", "label_audit")]:
+                "freeze_candidates", "generate_answers", "label_audit", "fresh_benchmark", "fresh_supply", "analyze_fresh", "subgroup_ad",
+                "class_balance")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"

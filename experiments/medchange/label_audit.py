@@ -68,6 +68,11 @@ def cohens_kappa(pairs: Sequence[tuple[str, str]]) -> Optional[float]:
     return None if expected == 1 else round((observed - expected) / (1 - expected), 4)
 
 
+def audit_sample(items: Sequence[dict], n: int) -> list[dict]:
+    """The first ``n`` items in the order of the SHA-256 of ``fresh-audit-v1|<item id>``: the same items on every run, chosen without a label."""
+    return sorted(items, key=lambda r: hashlib.sha256(f"fresh-audit-v1|{r['item_id']}".encode()).hexdigest())[:n]
+
+
 def tasks(items: Sequence[dict]) -> list[tuple[dict, str]]:
     """(item, "newest" | "previous"): the newest version always, the older one for changed items."""
     out = []
@@ -138,7 +143,9 @@ def to_markdown(split: str, rep: dict, model: str) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad", "fresh"))
+    ap.add_argument("--sample", type=int, default=None,
+                    help="audit only the first N items in the order of the SHA-256 of fresh-audit-v1|<item id> (the same items on every run)")
     ap.add_argument("--medchange-dir", required=True)
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--data-dir", default=str(HERE / "data"))
@@ -147,7 +154,7 @@ def main(argv=None) -> int:
     ap.add_argument("--n-ctx", type=int, default=4096)
     ap.add_argument("--n-threads", type=int, default=None)
     args = ap.parse_args(argv)
-    if args.split in ("confirm", "ad") and not Path(args.design_record).is_file():
+    if args.split in ("confirm", "ad", "fresh") and not Path(args.design_record).is_file():
         print("the confirmatory labels are audited only after the design is frozen "
               f"({args.design_record} not found)", file=sys.stderr)
         return 2
@@ -156,6 +163,8 @@ def main(argv=None) -> int:
         return 2
     items = [r for r in load_jsonl(Path(args.data_dir) / "benchmark.jsonl")
              if r["split"] == args.split and not r["likely_label_noise"]]
+    if args.sample:
+        items = audit_sample(items, args.sample)
     medrev = {int(r[""]): r for r in read_csv(Path(args.medchange_dir) / "Datasets" / "MedRevQA.csv")}
     out = Path(args.data_dir) / f"label_audit_{args.split}.jsonl"
     sha = file_sha256(args.model_path)

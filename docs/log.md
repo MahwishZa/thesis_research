@@ -1372,3 +1372,12 @@ so the pre-registered run now includes R2C and a secondary comparison R2V − R2
 REFUTED recall of R2 and R2V is 12% and 19% (§10.1 said 4% to 11%), and R2V changed 100 held-out answers, of which 54 moved from SUPPORTED to NOT ENOUGH
 INFORMATION (not "54 of 91"). Draft status unchanged.
 
+## Phase 66 — The fresh split, the blinded analysis and the freeze guards (built before any fresh question is selected) (Oct 9)
+
+Built and tested (no network, no model): `experiments/medchange/fresh_benchmark.py` (selection: fresh questions dated from 2010, no dementia wording, first 1,500 in the
+order of the SHA-256 of `fresh-v1|<row>`; manifest of rows and hashes; `--freeze` marks protocol §10 in force), `analyze_fresh.py` (blinded: prints only a count until
+all 1,500 questions have answers for R2, R2C and R2V; then the pre-registered primary and secondary outcomes with seeded intervals), the split `fresh` in
+`pubmed_asof`, `freeze_candidates` (with `--abstracts-only`, no MedCPT pools), `rag2_run`, `label_audit` (with `--sample`, seeded) and `rag2_pipeline fresh` (arms R2,
+R2C, R2V; no B0, B1 or judge; refuses unless §10 is IN FORCE, the manifest is on origin/main and the items match it, plus the guards of `confirm`). 16 tests.
+Nothing was selected, run or looked at: the committed protocol still reads as a draft, and a test checks that.
+
