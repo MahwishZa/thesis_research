@@ -170,47 +170,14 @@ Alzheimer's-specific design (corpus, question pool, three-arm runner, filter ret
 (`git show 5e03540:_archive/README.md`; `git checkout 5e03540 -- _archive` restores the folder, whose tests need PyYAML,
 requests and pypdf).
 
-## 10. Alzheimer's-specific question set: Stage 0 (counts only)
+## 10. Archived: the Alzheimer's-specific question-set builder
 
-`python -m experiments.adkqa.stage0` counts the PubMed records that could be the sources of the question set (Alzheimer's
-disease; systematic review, meta-analysis or guideline; published from 2023-04-01; abstract; MEDLINE-indexed; English; not
-retracted), per knowledge area, and evaluates the go/no-go criterion of `protocol.md` §8 (the original and the amended one; the exit code follows the amended one). `--recheck FILE` evaluates a committed counts file offline. It needs network access (E-utilities,
-at most 3 requests per second without `--api-key`), reads no abstract, builds no question and runs no model, and takes a few
-minutes. It writes `experiments/adkqa/results/stage0_counts_r2.json` (revision 2; counts and identifiers only; commit and push it yourself; the file of run 1, `stage0_counts.json`, is kept) and
-exits with 0 for go and 3 for no-go. It also records how PubMed translated each query and any real warning (routine messages are dropped), so that a syntax problem shows in the output, and information-only counts (records naming Alzheimer's only in the title, the pre-cutoff window, records in no area, and the supply when each record may serve one area only) that do not enter the criterion. `--probe-references 20` also asks Europe PMC whether the sampled records have reference
-lists, an optional secondary measure (run 1: 19 of 20 sampled records had at least 10 references). `--since` and `--until` change the window; the
-protocol fixes 2023-04-01, after the generator's stated knowledge cutoff.
-
-## 11. Alzheimer's-specific question set: the builder
-
-`experiments/adkqa/build.py` builds the questions from the frozen source list (`protocol.md` §8, amendments of 2026-10-09). The
-generator under test is never used. Abstracts, drafts, verifier outputs and questions are publisher text: they go to
-`experiments/adkqa/data/` (not tracked, rebuilt by these commands); the tracked `experiments/adkqa/results/` receives counts, hashes
-and offsets (`adkqa_pools.json`, `adkqa_build_dev.json`, `adkqa_manifest_dev.json`, `adkqa_gate1.json`). Every step resumes where it
-stopped and refuses to extend a file written with a different model or prompt. Times are estimates [A] for an ordinary laptop CPU.
-
-```
-python -m experiments.adkqa.build prepare --api-key YOUR_KEY
-python -m experiments.adkqa.build diagnose
-python -m experiments.adkqa.build draft --split dev --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
-python -m experiments.adkqa.build verify --split dev --model-path models\Phi-3.5-mini-instruct.Q4_K_M.gguf
-python -m experiments.adkqa.build assemble --split dev
-python -m experiments.adkqa.build pools --split dev
-python -m experiments.adkqa.build gate1
-```
-`prepare` (minutes) fetches the 710 source records and splits them by topic cluster (the development share starts at 0.25 and rises until the pool holds 150 records); `diagnose` prints counts of the records without a conclusion (not tracked); `draft` writes one question per eligible record
-of the first 150 development records (about 1 to 2 hours [A]); `verify` has the independent model label each draft that passed the
-automatic checks (about 20 minutes [A]); `assemble` applies the keep rules and prints the figures of gate 1; `pools` counts the
-candidate pool of each kept question; `gate1` evaluates gate 1 and lists what is still pending (the closed-book B0 check needs the
-pipeline on the new questions: `--b0-accuracy`; the same-hash check needs a second independent build: `--repeat-manifest`). The test
-split (`--split test`) is refused until `adkqa_gate1.json` says it passed. `verify --role audit` with the drafting model writes the
-audit labels that `assemble` reports as agreement.
-
-Verifier qualification (after `python -m experiments.medchange.label_audit --split dev ...` with the verifier as `--model-path` and separate `--data-dir` and `--out-dir` folders, so that the committed audit is untouched):
-`python -m experiments.adkqa.qualify --audit qual\data\label_audit_dev.jsonl --model-name Phi-3.5-mini-instruct.Q4_K_M.gguf` re-scores the
-stored replies with the reading rule of `protocol.md` §8 (no model is run), prints agreement, kappa and the unparsed share against the
-declared thresholds, writes `experiments/adkqa/results/adkqa_verifier_qualification.json` (counts only) and exits 0 when qualified.
+The counting script, specification, builder and verifier check of the Alzheimer's-specific question set left the active tree after the construction was
+stopped at gate 1 (`protocol.md` §8). They are in Git history: `git checkout 4ab9d1b -- experiments/adkqa evaluation/tests/unit` restores the code and its
+tests (the committed counts-only results are in `experiments/medchange/results/earlier_stages/adkqa/`). Local build data in the git-ignored folder experiments/adkqa/data, if any,
+may be deleted.
 
 Exploratory subgroup of the dementia run (the questions naming Alzheimer's disease): `python -m experiments.medchange.subgroup_ad` uses
 `benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`), runs no model and writes `results/ad_subgroup_alzheimer.*`.
-
+Questions of MedRevQA that no split uses yet (counts only; nothing is selected): `python -m experiments.medchange.fresh_supply --medchange-dir ..\MedChange`
+reads `benchmark.jsonl` (`--data-dir`) and the MedChange files and writes `results/fresh_supply.json`.

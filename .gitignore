@@ -35,5 +35,5 @@ experiments/medchange/data/
 # tracked there any more; the entry stays so leftover local files can never be committed.
 experiments/baseline/
 
-# AD-KQA source abstracts, drafts, verifier outputs and questions (publisher text; rebuilt with experiments/adkqa/build.py).
+# Local data of the archived Alzheimer's question-set builder (publisher text); the code is in Git history, see docs/protocol.md section 8.
 experiments/adkqa/data/

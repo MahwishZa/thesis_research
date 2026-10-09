@@ -305,7 +305,7 @@ majority class. Two model families agree that the source is skewed: of 99 well-f
 NOT ENOUGH INFORMATION 1, and the independent verifier Phi-3.5-mini labelled 75, 8 and 16; they agree on 77 (72 SUPPORTED, 5 REFUTED, none
 NOT ENOUGH INFORMATION). Published reviews of Alzheimer's disease lean positive and seldom state that evidence is insufficient, so a
 verdict-balanced question set of useful size cannot be built from this source, and no change of the rules could reach the verdict floors. The
-researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The tools are
-kept (`experiments/adkqa/`) and the counts are in `experiments/adkqa/results/`.
+researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The code is in
+Git history (commit `4ab9d1b`) and the counts are in `experiments/medchange/results/earlier_stages/adkqa/`.
 
 

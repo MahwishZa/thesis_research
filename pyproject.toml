@@ -39,5 +39,4 @@ packages = [
     "evaluation",
     "experiments",
     "experiments.medchange",
-    "experiments.adkqa",
 ]

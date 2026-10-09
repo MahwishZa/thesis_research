@@ -71,16 +71,13 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
 │   ├── stats.py                exact McNemar test, paired bootstrap interval, Holm correction
 │   └── tests/                  the unit-test suite and the check that it leaves the repository unchanged
 └── experiments/
-    ├── medchange/              the pipeline and the general medical (as-of) benchmark
-    │   ├── build_benchmark.py, ad_benchmark.py, benchmark.py, manifest.json, manifest_ad.json    the benchmark and its splits
-    │   ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
-    │   ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
-    │   ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
-    │   ├── scoring.py, analyze_rag2.py, subgroup_ad.py, fresh_supply.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
-    │   └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
-    └── adkqa/                  tools to build an Alzheimer's-specific question set (see docs/protocol.md §8)
-        ├── stage0.py, spec.py, records.py, build.py, qualify.py   source counts, specification, builder, verifier check
-        └── results/            committed counts (no source text)
+    └── medchange/              the pipeline and the general medical (as-of) benchmark
+        ├── build_benchmark.py, ad_benchmark.py, benchmark.py, manifest.json, manifest_ad.json    the benchmark and its splits
+        ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
+        ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
+        ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
+        ├── scoring.py, analyze_rag2.py, subgroup_ad.py, fresh_supply.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
+        └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 
 The working data (`experiments/medchange/data/`) and model files (`models/`) are not committed.
@@ -103,9 +100,6 @@ python -m experiments.medchange.ad_benchmark --medchange-dir ../MedChange
 python -m experiments.medchange.rag2_pipeline dev --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 python -m experiments.medchange.rag2_pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 python -m experiments.medchange.rag2_pipeline ad --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit
-
-# Alzheimer's-specific question set: count the eligible source records (needs network, runs no model)
-python -m experiments.adkqa.stage0
 
 # Questions of the dementia set that name Alzheimer's disease (from the answers on file; no model is run)
 python -m experiments.medchange.subgroup_ad

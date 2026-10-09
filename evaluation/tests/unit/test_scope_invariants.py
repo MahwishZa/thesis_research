@@ -60,9 +60,9 @@ CURRENT_DOCS = ("README.md", "docs/data.md", "docs/methodology.md", "docs/protoc
                 "docs/reproducibility.md")
 #: Paths named in the documents that are generated or machine-local and may be absent.
 GENERATED_PREFIXES = (
-    "experiments/medchange/data", "experiments/adkqa/data", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
+    "experiments/medchange/data", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/label_audit_",
-    "experiments/medchange/results/consistency_auto_", "experiments/adkqa/results",
+    "experiments/medchange/results/consistency_auto_",
 )
 
 
@@ -474,9 +474,7 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "experiments/medchange/runner.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
         "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "src/common/evidence.py",
-        "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md", "experiments/adkqa/stage0.py",
-        "experiments/adkqa/spec.py", "experiments/adkqa/records.py", "experiments/adkqa/build.py",
-        "experiments/adkqa/qualify.py",
+        "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -560,7 +558,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         flags = {}
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
-                "freeze_candidates", "generate_answers", "label_audit")] + [("adkqa", m) for m in ("stage0", "build", "qualify")]:
+                "freeze_candidates", "generate_answers", "label_audit")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
@@ -568,7 +566,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         missing = []
         for rel, body in self._docs():
             for line in body.splitlines():
-                m = re.search(r"python -m experiments\.(medchange|adkqa)\.(\w+)(.*)", line)
+                m = re.search(r"python -m experiments\.(medchange)\.(\w+)(.*)", line)
                 if not m or (m.group(1), m.group(2)) not in flags:
                     continue
                 command = re.split(r"`|\s\|\s", m.group(3))[0]

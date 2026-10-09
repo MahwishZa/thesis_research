@@ -240,262 +240,49 @@ same independent judge as the main benchmark's (`label_audit --split ad`). All t
 included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
 the requirement is read.
 
-**2026-10-09, primary evaluation re-declared: an Alzheimer's-specific question set (AD-KQA, working name) [superseded the same day by the close-out below].** Decided by the
-researcher (the supervisor has left research decisions to the researcher) after the held-out and dementia results of every
-system were known; no AD-KQA question, label or output exists. *Reason (scope, not outcome):* the research is about
-Alzheimer's disease, but the as-of Cochrane benchmark is general medicine and the dementia set is dementia-wide (48 of its 208
-questions name Alzheimer's disease), so neither can support Alzheimer's-specific claims. Their results stay, unchanged, as
-completed secondary and exploratory evidence (`evaluation.md` §6.0). Existing datasets were checked first (counts verified in
-the released files unless marked): the Alzheimer's subsets of exam benchmarks (ADQA 446 items, 297 naming Alzheimer's; ADRD-Bench
-1,438 index entries and 149 caregiving items) are multiple choice or true/false with no evidence for retrieval evaluation and no dates;
-MedQuAD has 47 Alzheimer's pairs and PubMedQA 4 of 1,000; BioASQ has expert answers and expert-selected evidence but its
-Alzheimer's share could not be counted (registration needed) and most of its questions need answer types the frozen design does
-not score. None combines Alzheimer's focus, a verdict task, dates and evidence, so a controlled set is built from authoritative
-sources instead, and the datasets above are not pooled with it.
+**2026-10-09, an Alzheimer's-specific question set (AD-KQA): specified, built to a gate, stopped (code archived; this is the condensed record).**
+After the held-out and dementia results of every system were known, the researcher re-declared the primary evaluation as an Alzheimer's-specific
+question set, because the as-of Cochrane benchmark is general medicine and the dementia set is dementia-wide (48 of its 208 questions name
+Alzheimer's disease). *Design:* template questions with a three-way verdict from PubMed systematic reviews, meta-analyses and guidelines (MeSH major
+topic Alzheimer Disease, MEDLINE, English, abstract, not retracted, published from 2023-04-01, after the generator's stated knowledge cutoff), one per
+source record, asked as of the source's date; the frozen design (settings hash `1743afd7045b`) unchanged; reference verdicts from the abstract's
+conclusion read by a rule, a drafting model (Qwen2.5-7B) and an independent verifier (Phi-3.5-mini); pre-declared gates for the source counts (Stage
+0), a 150-record development trial (40% survival, verdict floors of 25% each, verifier agreement, claim-only classifier, pool size, closed-book
+headroom, same-seed hash) and the full build. The requirement (R2V at least 1 point above R2) was unchanged; the power at about 300 test questions was
+computed (smallest confirmable gain about 6 points; a true +1 point confirmed with probability about 7%).
 
-*Design* (as declared; sizes and areas amended below). About 300 test and 60 development questions on Alzheimer's disease, built from PubMed systematic reviews,
-meta-analyses and guidelines (MeSH major topic Alzheimer Disease; MEDLINE-indexed; English; abstract with a conclusion; not
-retracted) published from 2023-04-01, after the generator's stated knowledge cutoff (March 2023), one question per source record.
-Each question is made from a fixed template out of terms copied from the abstract and has a three-way verdict (SUPPORTED, REFUTED,
-NOT ENOUGH INFORMATION) as of the source's publication date; retrieval uses only earlier records and never the source itself.
-Areas, sampled by MeSH qualifiers: treatment, prevention, diagnosis, causes and risk factors, progression, symptoms, care and
-management; background/history and terminology are added only if the trial run passes. *Reference answers:* the verdict and the
-key sentence of the source conclusion (stored as offsets and a hash, never as text). A question is kept only if every term is
-found in the abstract, a rule-based reading of the conclusion and the drafting model (Qwen2.5-7B-Instruct) agree, an independent
-verifier that is neither the drafter nor the generator under test agrees when it reads only the quoted sentence, and an audit pass
-confirms it; agreement and kappa are reported as for the other splits. The generator under test never drafts, labels, screens or
-selects questions. *Splits:* development and test by source record and topic with a seeded hash; no question is added or removed
-because of any system's answer.
+*Stage 0 (counts only, committed in `experiments/medchange/results/earlier_stages/adkqa/`).* Run 1: 866 eligible records, areas treatment 314,
+prevention 0, diagnosis 278, causes 216, progression 58, symptoms 171, care 20; four of seven areas reached 100, six were required: no-go. The
+prevention count came from a query error ("prevention & control"), corrected, with the criterion unchanged. Run 2: prevention 21; the same four areas
+covered (710 distinct records, not the 634 first stated, which came from an allocation that gave shared records to the uncovered areas): no-go again.
+*Amendment after the counts (a scope decision, not a pass of the original test):* cover the four areas with at least 100 records, require 4 areas and
+650 covered records (200 test + 60 development questions at 40% survival), a test minimum of 200 (up to 300); every other threshold unchanged.
 
-*Frozen design.* Prompts, settings and arms are those of the design record (settings hash `1743afd7045b`); AD-KQA is a test of the
-frozen design on new data. Only the split registry, the exclusion of the question's own source from retrieval and the audit
-prompt's input change, none of which affects the earlier splits.
+*Specification fixed before any draft:* three question templates (effect, association, test) with short forms when a copied span names the disease
+(added after five development drafts showed the disease named twice), rule-based cue lists for the conclusion, topic clusters by the first other major
+MeSH descriptor, a seeded split (`adkqa-split-v1`) and the source list frozen from Stage 0 run 2. *Amendment B (after the first `prepare` and
+`diagnose` counts, no draft yet):* 292 of 710 records had no conclusion under the first rule (245 without section labels); the conclusion became the
+labelled section, else the last three sentences of a discussion section, else of an unlabelled abstract (703 of 710 eligible), and the development
+share rose from 0.25 in steps of 0.05 until the pool held 150 records (0.35: 156 development, 554 test records).
 
-*Requirement.* Unchanged: R2V at least 1 percentage point of verdict accuracy above R2, read by the three rules of
-`evaluation.md` §5. *Power (computed from the discordance of 14.9% to 16.4% observed in all three completed runs):* with 300 test
-questions the standard error of a paired difference is about 2.3 points, so only gaps of about 6 points can be confirmed with 80%
-power; a true gain of +1 point would be confirmed with probability about 7%, +1.5 points 10%, +3 points 26%, +5 points 60%; a
-point estimate of at least +1 point has probability 33% when the true gain is zero. The requirement can therefore be read as met
-as a point estimate, not confirmed, or as not met, and no conclusion beyond the reading will be drawn.
+*Verifier qualification (Phi-3.5-mini-instruct Q4_K_M, SHA-256 `3EF53267...BB03BCA`; the existing label audit on the 226 development questions).* As
+run, 126 of 226 replies were unparsed (55.8%; limit 2%) because the audit required a "LABEL:" prefix and the model leads with the verdict word. The
+reading rule was corrected after the replies were seen (declared as such) and the stored replies re-scored with the thresholds unchanged: 0 unparsed,
+agreement 77.9% (limit 75%), kappa 0.6641 (limit 0.60), NOT ENOUGH INFORMATION the weak class (65.3%): qualified, a repaired instrument on the same data.
 
-*Independent verifier.* A third-family model: Phi-3.5-mini-instruct (MIT licence; about 2.2 to 2.4 GB at Q4_K_M, a size reported
-by the quantisers; chat template with a system turn), used only if it passes a qualification run that uses the existing label audit
-unchanged on the development split in a separate data folder: agreement with the gold labels at least 75%, kappa at least 0.60,
-unparsed answers at most 2%. If it fails, Mistral-7B-Instruct-v0.3 (Apache-2.0; about 4.4 GB) is tried on the same terms; a
-second download needs a new approval. Without a qualified verifier the fallback is the drafting model with a different prompt,
-which is weaker independence and is then reported as a limitation.
-
-*Verifier qualification, run 1 (2026-10-09, Phi-3.5-mini-instruct Q4_K_M, SHA-256 `3EF53267...BB03BCA` as downloaded; the existing label audit on the
-development split, 226 items, replies limited to 12 tokens):* **not qualified as run.** The audit's strict pattern ("LABEL: <verdict>")
-read 100 of 226 replies; 126 (55.8%) were unparsed against the limit of 2%. On the 100 read replies agreement was 85.0% and kappa
-0.7424, which says little about the other 126. The first eight unparsed replies were inspected: each begins with a verdict word
-without the "LABEL:" prefix (for example "SUPPORTED: ..." or "REFUTED; ..."), so the fault looked like a reading rule, not quality.
-*Correction, declared before the replies were re-read:* a reply is read as its verdict if it contains "LABEL: <verdict>" or if its first
-non-empty line begins with the verdict word (`spec.parse_verdict`); nothing is guessed from the rest of a reply. The same rule is
-used by the builder's verification step. The stored replies (first 60 characters) are re-scored without calling the model
-(`python -m experiments.adkqa.qualify`), with the thresholds unchanged (agreement at least 75%, kappa at least 0.60, unparsed at most
-2%). The correction was designed after seeing run 1 and eight of its replies, so the re-score is a repaired instrument on the same
-data, not an independent test; its result is recorded here. If it fails, the fallback is Mistral-7B-Instruct-v0.3 on the same terms.
-*Result of the re-score (2026-10-09, `results/adkqa_verifier_qualification.json`):* **qualified.** All 226 replies were read (0 unparsed;
-limit 2%); agreement 77.9% (limit 75%); kappa 0.6641 (limit 0.60). By gold class: SUPPORTED 81.9% (105 items), REFUTED 87.8% (49),
-NOT ENOUGH INFORMATION 65.3% (72). The margin over the agreement limit is 2.9 points, and NOT ENOUGH INFORMATION is the weak class; for
-comparison Qwen2.5-7B reached 83.2% and kappa 0.7422 on the same split. A kept question needs the verifier to agree with the drafter
-and the cue reading, so a verifier that errs more removes more questions; it does not make a kept question less valid.
-
-**Amendment B of 2026-10-09 (conclusion rule and development share), after the first `prepare` and `diagnose`.** Decided by the researcher
-on counts only: no abstract text beyond section labels and the first words of last sentences was read, and no draft, verdict or system output
-exists. *Why:* of 710 source records 292 (41%) had no conclusion under the rule above: 245 are abstracts without section labels and 47 are
-structured without a conclusion label (most with a discussion section); most unlabelled abstracts end with a statement about future
-research, so the marker rule rejected conclusions that exist. The development pool was 110 records, fewer than the 150 the trial run
-drafts, because a few large topic clusters (the largest, 115 records, hash position 0.93) fell to test. *Changes:* (B1) the conclusion is
-the section labelled conclusion(s), interpretation or authors' conclusions; else the last three sentences of a section whose label
-begins with "discussion" or is "implications"; else, for an abstract with no section label at all, its last three sentences (the
-repository's convention for unlabelled abstracts, `abstracts.key_text`); otherwise the record gives no question. The cue reading,
-the drafter and the verifier must still agree, so a wrong span costs a question and cannot add one. The verifier's input is that span.
-(B2) The development share starts at 0.25 and is raised by 0.05, up to 0.60, until the development pool holds at least 150 records
-(`spec.dev_fraction`; depends on cluster sizes only; seed and hash unchanged, so every earlier development cluster stays). *Checked
-before applying:* the ten largest clusters have hash positions of 0.61 or more, so the rise cannot pull a large cluster into
-development at once; the development pool grows from the small clusters, to about 150 records at a share of about 0.35 to 0.45
-(expected, to be read from `prepare`), leaving about 530 to 560 test records. *Unchanged:* 150 drafted, 60 kept, the 40% survival
-gate, every other gate and threshold. *Costs:* wider spans meet hedged wording more often, so fewer drafts will survive; a larger
-development share shrinks the test pool, where 40% survival would give about 215 to 225 questions against a minimum of 200.
-
-**Amendment C of 2026-10-09 (short-form templates), after a look at five development drafts.** The first five drafts of the development split
-(text of the replies only; no verdict of any system, no retrieval, no answer) showed a grammatical defect of the templates: when a copied span
-already names Alzheimer's disease, the closing phrase names it twice (for example "... on Alzheimer's disease in people with Alzheimer's
-disease?"), and no automatic check caught it. *Change:* when `x` or `y` contains "alzheimer" (case-insensitive) the question uses the short form of
-its template, without the closing phrase:
-- `Is {x} effective for {y}?`
-- `Is there any effect of {x} on {y}?`
-- `Can {x} be used for {y}?`
-
-Every fixed word of the short forms is a stop word of the frozen query builder, as before. In the short form the query takes "alzheimer" from the
-span, which must lie within the first 8 query terms; the limit of 6 content words copied, the length of a span and the rest of the rules are
-unchanged. The drafting prompt is unchanged, so the five drafts stay valid. The same five drafts also showed what the gates will have to
-measure and are not changed here: only 2 of 5 cleared the length rules, and all 5 proposed SUPPORTED. This amendment is not the one redesign that
-gate 1 allows.
-
-*Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
-(0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each
-of at least 6 core areas; areas below 100 are reported as not covered]. (1) Trial run of 60 development questions: at least 40% of
-drafts survive the automatic checks; verifier agreement at least 85% on kept questions; a claim-only classifier (5-fold) at most
-the majority class plus 5 points; each verdict at least 25%; the same seed gives the same manifest hash; a median candidate pool of
-at least 15 abstracts and at most 5% empty pools; closed-book B0 between the constant answer plus 5 points and 80% on the
-evidence-sensitive areas (a ceiling area is reported, not dropped). One documented redesign is allowed, only before the test
-split is sealed. (2) Full build: at least 300 test questions [replaced by the amendment below: at least 200], at least 25 per covered area, audit agreement at least 85% on test
-questions, manifest hash committed before any system sees a test question. (3) Run: parse rate and verifier validity at least
-95%; a defect is fixed and recorded, never tuned on outcomes. A failed gate stops the build and is reported.
-
-*Stage 0, run 1 (2026-10-09, `results/stage0_counts.json`): no-go under the criterion above.* 866 eligible records in the window
-(2023-04-01 to 2026-10-09). Distinct records per area: treatment 314, prevention 0, diagnosis 278, causes_risk 216, progression
-58, symptoms 171, care_management 20; four areas reached 100, six were required. The prevention count of 0 was an instrument
-error: the qualifier was written "prevention & control", which PubMed did not find (its translation record showed it). Europe PMC
-reference lists: 19 of 20 sampled records had at least 10 (threshold 60%). *Revision 2 of the instrument* corrects the prevention
-qualifier ("prevention and control"), drops PubMed's routine messages from the recorded warnings, and adds information-only
-counts that do not enter the criterion (records naming Alzheimer's only in the title, the pre-cutoff window, records in no area,
-and the supply when each record serves one area only). The thresholds (700, 100, 6) and the window are unchanged. One corrected
-re-run is made (`results/stage0_counts_r2.json`); what follows a second no-go (fewer covered areas, a wider window flagged by
-`post_generator_cutoff`, a smaller test set, or stopping) is decided by the researcher and recorded here.
-
-*Stage 0, run 2 (2026-10-09, `results/stage0_counts_r2.json`, instrument revision 2): no-go again under the unchanged criterion.*
-866 records. Distinct per area (qualifier frame, the gate): treatment 314, prevention 21, diagnosis 278, causes_risk 216,
-progression 58, symptoms 171, care_management 20; covered (at least 100): treatment, diagnosis, causes_risk, symptoms (4 of the 6
-required). Information only: with one question per record the qualifier-frame supply is 162 / 21 / 185 / 143 / 57 / 144 / 20
-(in the four covered areas the distinct records number 710; the figure 634 first given here was an allocation that gave records shared with the uncovered areas to those areas, and is withdrawn); records in no qualifier area 131; the pre-cutoff window 2021-04-01..2023-03-31 holds 525 further
-records. The heading frame (MeSH main headings instead of qualifiers) was recorded for information only; using it as the gate would
-be a change of criterion after the counts were seen and would have to be declared as such. Nothing is built. The next step is the
-researcher's decision, recorded here.
-
-**Amendment of 2026-10-09 (after Stage 0 run 2): the areas covered, and the thresholds that depend on them.** Decided by the
-researcher on the counts of run 2, which had been seen; it is therefore a scope decision made after the counts, not an independent
-test of the original criterion, and the original criterion stays recorded as failed twice. *What changes:* (a) Only the core areas
-that reach 100 distinct source records are covered: treatment (314), diagnosis (278), causes and risk factors (216) and symptoms
-(171). Prevention (21), progression (58) and care and management (20) are reported as not covered, and no claim about them is made;
-nothing is added to them from dementia-wide sources, from the pre-cutoff window (525 records) or from the MeSH-heading frame, which
-was counted for information only. The optional strata cannot be added: background/history has 0 records and terminology 3.
-(b) Stage 0 criterion: at least 700 eligible records (unchanged: 866), at least 100 distinct records in each covered area
-(unchanged), **at least 4 covered areas (was 6)**, and **at least 650 distinct records in the covered areas (new: 200 test + 60
-development questions at the 40% draft survival of gate 1 is 260 / 0.40)**. The covered areas hold 710 distinct records, so Stage 0
-is go under the amended criterion (`python -m experiments.adkqa.stage0 --recheck experiments/adkqa/results/stage0_counts_r2.json`).
-(c) Test set: **at least 200 test questions (was 300); every question that passes the gates is kept, up to 300**; at least 25 per
-covered area (unchanged); 60 development questions (unchanged); the test and development questions share the 710 records, one
-question per record, a record in two covered areas serving the scarcer one. (d) Unchanged: the 3-way verdict, the as-of rule, the
-frozen design, the requirement of 1 point, the verifier and its qualification thresholds (75%, 0.60, 2%), the trial-run gates (40%
-survival, 85% verifier agreement, claim-only classifier at most the majority class plus 5 points, each verdict at least 25%, the
-same seed gives the same hash, median pool at least 15 abstracts and at most 5% empty, B0 between constant plus 5 points and 80%),
-the audit agreement of 85%, and the run validity of 95%. *Reach:* the evaluation covers treatment, diagnosis, causes and risk
-factors and symptoms of Alzheimer's disease; it does not cover prevention, progression or care. *Power (normal approximation to the
-paired difference, discordance 15%, recomputed for all sizes with one formula; it replaces the figures above, which differ by one or
-two points):* with 200 test questions the standard error is about 2.7 points and gaps of about 7.7 points can be confirmed with
-80% power; with 300 it is 2.2 points and 6.3. A true gain of +1 point is confirmed with probability 7% at both sizes, +1.5 points
-9% to 10%, +3 points 20% to 27%, +5 points 45% to 62%; a point estimate of at least +1 point has probability 36% (200) or 33% (300)
-when the true gain is zero. The requirement therefore cannot be confirmed at either size unless the true gain is several points;
-the reading rules are unchanged.
-
-**Amendment of 2026-10-09 (templates, reading cues, split and source freeze), fixed before any question is drafted.** Nothing
-below was tuned on an abstract, an answer or a system output; no abstract has been read. The same values are in
-`experiments/adkqa/spec.py`, and a test compares this text with that file. A change after the trial run is allowed only as the one
-documented redesign of gate 1, before the test split is sealed.
-
-*Templates.* A question is one of three fixed templates filled with two spans copied from the abstract (`x`, `y`):
-- effect of an intervention: `Is {x} effective for {y} in people with Alzheimer's disease?`
-- effect or association of a factor, exposure or biomarker: `Is there any effect of {x} on {y} in people with Alzheimer's disease?`
-- usefulness of a test for a diagnostic purpose: `Can {x} be used for {y} in people with Alzheimer's disease?`
-
-The drafting model picks the template and the spans and proposes the verdict; it writes no other question text. Each span has 1 to
-8 words, must occur verbatim (case-insensitive) in the title or abstract, and `x` and `y` together may have at most 6 content words
-(words the retrieval query builder does not drop). *Why these words:* every fixed word of the templates is a stop word of the
-frozen query builder (`pubmed_asof._STOP`) except "alzheimer" and "disease", which come last, so the retrieval query is the copied
-terms plus those two and no filler word restricts it; a draft whose query would lose "alzheimer" or "disease" within the first 8
-terms is not made. Reviews that report only prevalence, incidence or other descriptive results state no claim and give no question.
-The drafter's prompt is committed and hashed in the manifest before the first development draft.
-
-*Verdicts.* As for the other splits (the audit prompt's definitions): SUPPORTED means the authors' conclusion at least partially
-supports the claim in the question (an effect, an association, a useful test); REFUTED that it at least partially does not (no
-effect, no association, similar to placebo, poor accuracy); NOT ENOUGH INFORMATION only when the authors state that the studies or
-the evidence are insufficient, not when the certainty is low. *Conclusion:* the abstract section labelled conclusion(s),
-interpretation or authors' conclusions; for an unstructured abstract its last sentence, only if it begins with a conclusion marker
-(in conclusion, we conclude, overall, taken together, these/our results/findings, this review/meta-analysis/study); otherwise the
-record gives no question [replaced by amendment B below]. *Objectives* for the audit and verifier prompts: the section labelled objective(s), aim(s), purpose or
-background, else the first sentence.
-
-*Reading cues (rule-based).* The conclusion is lower-cased; negative phrases are removed first so that "not effective" is not also
-read as positive; the verdict is the single class that has a hit; a hit in two classes, or any hedge cue, gives no verdict and no
-question. These are regular expressions as in `spec.py`:
-```
-negative:
-  no (statistically )?significant (effects?|differences?|improvements?|benefits?|associations?|reductions?|changes?)
-  not (significantly )?(effective|beneficial|associated|superior|supported|useful|accurate)
-  (did|does|do) not (improve|reduce|show|demonstrate|differ|prevent|slow|affect|increase|decrease)
-  (no|without) (clear |apparent |definite )?(benefits?|effects?|differences?|associations?|advantages?|improvements?)
-  ineffective
-  failed to
-  similar to placebo
-  not recommended
-  (poor|low) (diagnostic )?(accuracy|performance|sensitivity|specificity)
-positive:
-  significantly (improved?|improves|reduced?|reduces|increased?|increases|enhanced?|slowed?|delayed?|lower|higher|better)
-  \b(effective|efficacious|beneficial|benefits?)\b
-  associated with (a |an )?(higher|increased|lower|reduced|greater|decreased|elevated|increase|decrease|risk)
-  (high|good|excellent|acceptable|promising) (diagnostic )?(accuracy|sensitivity|specificity|performance)
-  positive (effects?|associations?)
-  superior to
-insufficient:
-  insufficient (evidence|data)
-  (evidence|data) (is|are|remains?) (insufficient|lacking|scarce|inconclusive)
-  not enough (evidence|data|studies)
-  inconclusive
-  too few (studies|trials)
-  lack of (evidence|data)
-  no (firm|definitive) conclusions?
-  (cannot|can not|could not) be (drawn|made|determined)
-  remains? unclear
-  unclear whether
-  no (eligible|relevant) (studies|trials)
-hedge:
-  \bhowever\b
-  \bmixed\b
-  \binconsistent\b
-```
-They were written from the audit prompt's definitions and from general wording, not from the abstracts of this set. Their coverage
-(the share of drafts for which the rule gives a verdict) is a secondary measure of the trial run; a low coverage lowers the
-survival rate, and gate 1 then decides.
-
-*Topic cluster and split.* The cluster of a record is its first major-topic MeSH descriptor other than Alzheimer Disease
-(alphabetical, case-insensitive), or the record itself when it has none, so reviews of one intervention or topic fall in one
-split. A cluster is development if the first 8 hexadecimal digits of the SHA-256 of `adkqa-split-v1|cluster|<cluster>`, read as a
-fraction, are below 0.25 (25%), and test otherwise [the share is raised by amendment B below when the pool is too small]. The seed is `adkqa-split-v1`; no other seed is tried, and the pool sizes are
-recorded before any draft. Development records are drafted in the order of the SHA-256 of `adkqa-split-v1|draft|<pmid>`: the first
-150, and the development set is the first 60 of them that are kept. Gate 1 is therefore stated on these 150 drafts: at least 40%
-survive, which is the 60 needed. Test records are not read or drafted until gate 1 has passed. Test: every record of the test pool
-is drafted; all that pass the gates are kept, at least 200 and at most 300 (if more than 300 pass, the first 300 in the order of the
-SHA-256 of `adkqa-split-v1|keep|<pmid>`).
-
-*Source freeze.* The source records are the identifiers in the covered areas of `experiments/adkqa/results/stage0_counts_r2.json`
-(search of 2026-10-09: 2023-04-01 to 2026-10-09); the builder reads that file and does not search again, so records indexed later
-are not added. The date of a source is the publication date PubMed reports (`sortpubdate`), with a missing month or day set to 01 as
-for the other splits, and retrieval admits only records dated strictly earlier. The candidate pools are frozen once, with the date
-recorded, before any system sees a test question.
-
-*Secondary measures (reported, never gates; no new test).* Per covered area: accuracy of each arm with its interval; retrieval
-recall of the source's own reference list (the probe found 19 of 20 sampled records with at least 10 references, above the 60%
-needed); rule coverage; share of records excluded for having no conclusion; parse rate. Per-area differences are descriptive, with
-no p-values and no claim.
-
-**Close-out of 2026-10-09: the Alzheimer's-specific question set is not built.** The development build (150 records; drafter Qwen2.5-7B, independent
-verifier Phi-3.5-mini, qualified at agreement 77.9%, kappa 0.6641, 0% unparsed) failed gate 1: 11 questions kept (7.3% survival; gate 40% and
-60 questions); verdicts SUPPORTED 10, REFUTED 1, NOT ENOUGH INFORMATION 0 (gate: at least 25% each); verifier agreement 91.7% on 12 labelled drafts
-(met); claim-only classifier equal to the majority class (met); the pool, closed-book and same-hash checks were not made. Where the drafts were lost:
-cue reading gave no verdict 84, copied span not in the abstract 28, length rules 13, no claim 6, no conclusion 3, rule disagreed 3, verifier
-disagreed 1, unparsed 1. A diagnostic pass (the verifier labelling every well-formed draft, never used by the keep rules) showed the verdict
-mix is a property of the source: of 99 well-formed drafts the drafter proposed SUPPORTED 88, REFUTED 10, NOT ENOUGH INFORMATION 1, and the verifier
-75, 8 and 16; the two agree on 77 (72 SUPPORTED, 5 REFUTED, none NOT ENOUGH INFORMATION). Letting the cue reading act only as a veto would raise
-survival to about 50% but leave about 94% of the kept questions SUPPORTED. No change of the cue reading, the span rule or the split can reach the
-verdict floors from this source. Decision of the researcher: stop. *Consequences:* the test split was never drafted; no system was run on any
-AD-KQA question; the specification, amendments A to C and the build record stay as a negative result of record (`evaluation.md` §6.8). The
-primary evaluation reverts to the pre-declared held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not
-confirmed); the dementia set is secondary and its 48 Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, from answers on
-file, no model run). No Alzheimer's-specific confirmatory evaluation exists, and none is claimed.
+*Close-out, same day: the set is not built.* The development build (150 records) failed gate 1: 11 questions kept (7.3% survival; gate 40% and 60
+questions); verdicts SUPPORTED 10, REFUTED 1, NOT ENOUGH INFORMATION 0 (gate: at least 25% each); verifier agreement 91.7% on 12 labelled drafts (met);
+claim-only classifier equal to the majority class (met); the pool, closed-book and same-hash checks were not made. Where the drafts were lost: cue
+reading gave no verdict 84, copied span not in the abstract 28, length rules 13, no claim 6, no conclusion 3, rule disagreed 3, verifier disagreed 1,
+unparsed 1. A diagnostic pass (the verifier labelling every well-formed draft, never used by the keep rules) showed the verdict mix is a property of
+the source: of 99 well-formed drafts the drafter proposed SUPPORTED 88, REFUTED 10, NOT ENOUGH INFORMATION 1, the verifier 75, 8 and 16, and they agree
+on 77 (72 SUPPORTED, 5 REFUTED, none NOT ENOUGH INFORMATION). Letting the cue reading act only as a veto would raise survival to about 50% but leave
+about 94% of the kept questions SUPPORTED. No change of the rules can reach the verdict floors from this source. Decision of the researcher: stop. The
+test split was never drafted and no system was run on any AD-KQA question. *Consequences:* the primary evaluation reverts to the pre-declared
+held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not confirmed); the dementia set is secondary and its 48
+Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, from answers on file, no model run). No Alzheimer's-specific
+confirmatory evaluation exists, and none is claimed. The code, tests and long amendment text left the active tree (Git history, commit `4ab9d1b`;
+`git checkout 4ab9d1b -- experiments/adkqa` restores the code, which `evaluation.md` §6.8 summarises).
 
 ## 9. Earlier stages (completed, superseded)
 
