@@ -224,7 +224,8 @@ def assemble(rows: Sequence[dict], drafts: dict, verified: dict, split: str, aud
     for k, r in enumerate(kept, 1):
         d = decisions[r["pmid"]]
         items.append({"item_id": f"{prefix}-{k:04d}", "source_pmid": r["pmid"], "date": r["date"], "split": split,
-                      "area": r["area"], "cluster": r["cluster"], "template": d["template"], "x": d["x"], "y": d["y"],
+                      "area": r["area"], "cluster": r["cluster"], "conclusion_basis": r.get("conclusion_basis"),
+                      "template": d["template"], "x": d["x"], "y": d["y"],
                       "question": d["question"], "label": d["label"], "conclusion_span": r["conclusion_span"],
                       "conclusion_sha256": r["conclusion_sha256"], "rule_label": d["rule_label"],
                       "verifier_label": d["verifier_label"]})
@@ -242,6 +243,9 @@ def assemble(rows: Sequence[dict], drafts: dict, verified: dict, split: str, aud
            "verifier_agreement": round(len(agree) / len(parsed), 4) if parsed else None,
            "verifier_unparsed": len(reached_verifier) - len(parsed),
            "rule_coverage": _coverage(statuses),
+           "by_conclusion_basis": {b: {"records": sum(1 for r in order if r.get("conclusion_basis") == b),
+                                       "kept": sum(1 for i in items if i["conclusion_basis"] == b)}
+                                   for b in sorted({r.get("conclusion_basis") for r in order if r.get("conclusion_basis")})},
            "verdict_share": {c: round(labels.count(c) / len(labels), 4) if labels else None for c in LABELS},
            "per_area": {a: sum(1 for i in items if i["area"] == a) for a in sorted({r["area"] for r in rows})},
            "claim_only": claim_only_accuracy([i["question"] for i in items], labels) if len(items) >= 10 else None,
@@ -376,7 +380,7 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
         _write_json(results / f"adkqa_build_{a.split}.json", rep)
         _write_json(results / f"adkqa_manifest_{a.split}.json", {
             "manifest_hash": rep["manifest_hash"], "items": [{k: i[k] for k in (
-                "item_id", "source_pmid", "date", "area", "cluster", "template", "label", "conclusion_span", "conclusion_sha256")}
+                "item_id", "source_pmid", "date", "area", "cluster", "conclusion_basis", "template", "label", "conclusion_span", "conclusion_sha256")}
                 for i in built["items"]]})
         print(json.dumps(rep, indent=2))
         return 0

@@ -209,6 +209,7 @@ class EndToEndTests(unittest.TestCase):
             self.assertEqual(pools["records"], 200)
             dev = json.loads((results / "adkqa_build_dev.json").read_text(encoding="utf-8"))
             self.assertEqual(dev["verifier_agreement"], 1.0)
+            self.assertEqual(dev["by_conclusion_basis"]["labelled"]["kept"], dev["kept"])
             self.assertEqual(dev["kept"], spec.DEV_N if dev["records_in_scope"] >= spec.DEV_N else dev["records_in_scope"])
             self.assertEqual(dev["verdict_share"]["SUPPORTED"] + dev["verdict_share"]["REFUTED"] +
                              dev["verdict_share"]["NOT ENOUGH INFORMATION"], 1.0)

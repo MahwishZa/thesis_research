@@ -1443,3 +1443,10 @@ three sentences of a discussion/implications section, else the last three senten
 `records.structure` and `prepare`; 4 new tests (31 in the two builder files). Nothing is drafted; the researcher re-runs `prepare` and `diagnose`
 to read the new eligible counts, the share and the pool sizes before any model hours are spent.
 
+## Phase 56 — `prepare` after amendment B (Oct 9)
+
+Researcher's run (`adkqa_pools.json`): 703 of 710 eligible (7 without a conclusion); development share 0.35; development 156 records (153 eligible; 94 of
+264 clusters), test 554 (550 eligible); by area dev 33 / 36 / 43 / 44, test 135 / 102 / 180 / 137 (symptoms / causes / diagnosis / treatment as
+listed in the file). Conclusion basis of the eligible records: labelled 367, discussion tail 40, last three sentences of an unlabelled abstract 296
+(42%). The build report now gives records and kept questions per basis. At 40% survival the test pool would give about 220 questions (minimum 200).
+
