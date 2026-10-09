@@ -1,0 +1,23 @@
+{
+  "records": 710,
+  "by_status": {
+    "eligible": 418,
+    "no_conclusion": 292
+  },
+  "by_split": {
+    "test": 600,
+    "dev": 110
+  },
+  "by_area_split": {
+    "symptoms/test": 149,
+    "causes_risk/test": 117,
+    "diagnosis/test": 186,
+    "treatment/test": 148,
+    "diagnosis/dev": 27,
+    "symptoms/dev": 22,
+    "causes_risk/dev": 28,
+    "treatment/dev": 33
+  },
+  "clusters": 264,
+  "dev_drafted": 110
+}
