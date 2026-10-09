@@ -34,3 +34,6 @@ experiments/medchange/data/
 # The same folders at their location BEFORE the 2026-10-02 reorganisation. Nothing is
 # tracked there any more; the entry stays so leftover local files can never be committed.
 experiments/baseline/
+
+# AD-KQA source abstracts, drafts, verifier outputs and questions (publisher text; rebuilt with experiments/adkqa/build.py).
+experiments/adkqa/data/
