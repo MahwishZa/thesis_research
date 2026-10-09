@@ -1390,3 +1390,13 @@ drafted after gate 1, 200 to 300 kept); the source freeze (`stage0_counts_r2.jso
 Not verifiable from here: how many drafts survive, how often the cues give a verdict, the pool sizes (the MeSH descriptors need
 the network): all are measured in the trial run.
 
+## Phase 50 — The question builder (Oct 9)
+
+Added `experiments/adkqa/records.py` (fetch and structure the frozen source records; area, cluster and split), `experiments/adkqa/build.py`
+(prepare, draft, verify, assemble, pools, gate1) and 14 tests with a fake PubMed and fake models. Rules are exactly those of `protocol.md` §8:
+three templates, spans copied from the abstract, the cue reading, the independent verifier, the keep order, the 150 drafted / 60 kept
+development rule, the refusal to draft the test split before gate 1 passes. A test caught one defect before use: the placeholders of the
+templates collided with string formatting in the drafting prompt (fixed). Tracked outputs hold no abstract or question text. Not verifiable
+here: real PubMed XML beyond the tested fields, the models' behaviour (drafts, verifier), and the figures of the trial run; the
+same-hash check and the closed-book check need further runs (see `reproducibility.md` §11).
+

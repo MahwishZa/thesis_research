@@ -180,3 +180,28 @@ minutes. It writes `experiments/adkqa/results/stage0_counts_r2.json` (revision 2
 exits with 0 for go and 3 for no-go. It also records how PubMed translated each query and any real warning (routine messages are dropped), so that a syntax problem shows in the output, and information-only counts (records naming Alzheimer's only in the title, the pre-cutoff window, records in no area, and the supply when each record may serve one area only) that do not enter the criterion. `--probe-references 20` also asks Europe PMC whether the sampled records have reference
 lists, an optional secondary measure (run 1: 19 of 20 sampled records had at least 10 references). `--since` and `--until` change the window; the
 protocol fixes 2023-04-01, after the generator's stated knowledge cutoff.
+
+## 11. Alzheimer's-specific question set: the builder
+
+`experiments/adkqa/build.py` builds the questions from the frozen source list (`protocol.md` §8, amendments of 2026-10-09). The
+generator under test is never used. Abstracts, drafts, verifier outputs and questions are publisher text: they go to
+`experiments/adkqa/data/` (not tracked, rebuilt by these commands); the tracked `experiments/adkqa/results/` receives counts, hashes
+and offsets (`adkqa_pools.json`, `adkqa_build_dev.json`, `adkqa_manifest_dev.json`, `adkqa_gate1.json`). Every step resumes where it
+stopped and refuses to extend a file written with a different model or prompt. Times are estimates [A] for an ordinary laptop CPU.
+
+```
+python -m experiments.adkqa.build prepare --api-key YOUR_KEY
+python -m experiments.adkqa.build draft --split dev --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
+python -m experiments.adkqa.build verify --split dev --model-path models\Phi-3.5-mini-instruct.Q4_K_M.gguf
+python -m experiments.adkqa.build assemble --split dev
+python -m experiments.adkqa.build pools --split dev
+python -m experiments.adkqa.build gate1
+```
+`prepare` (minutes) fetches the 710 source records and splits them by topic cluster; `draft` writes one question per eligible record
+of the first 150 development records (about 1 to 2 hours [A]); `verify` has the independent model label each draft that passed the
+automatic checks (about 20 minutes [A]); `assemble` applies the keep rules and prints the figures of gate 1; `pools` counts the
+candidate pool of each kept question; `gate1` evaluates gate 1 and lists what is still pending (the closed-book B0 check needs the
+pipeline on the new questions: `--b0-accuracy`; the same-hash check needs a second independent build: `--repeat-manifest`). The test
+split (`--split test`) is refused until `adkqa_gate1.json` says it passed. `verify --role audit` with the drafting model writes the
+audit labels that `assemble` reports as agreement.
+
