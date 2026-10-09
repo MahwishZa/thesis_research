@@ -154,6 +154,13 @@ class BlindedAnalysisTests(unittest.TestCase):
         text = AF.to_markdown(a)
         self.assertIn("Primary outcome", text)
 
+    def test_an_unparsed_answer_counts_as_wrong_and_does_not_crash(self):
+        items, answers = synthetic(60)
+        answers[("FR-00004", "R2")]["verdict"] = None
+        rep = AF.analyse(items, answers, expected=60, iterations=50)
+        self.assertEqual(rep["arms"]["R2"]["unparsed"], 1)
+        self.assertIn("Unparsed answers", AF.to_markdown(rep))
+
     def test_the_decision_rule(self):
         self.assertEqual(AF.read_primary({"difference": 0.04, "ci95": [0.01, 0.07]})["reading"], "confirmed")
         self.assertEqual(AF.read_primary({"difference": 0.04, "ci95": [-0.01, 0.09]})["reading"], "positive but not confirmed")

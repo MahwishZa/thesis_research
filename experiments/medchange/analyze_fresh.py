@@ -82,7 +82,7 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
     ids = sorted(items)
     idx = {l: k for k, l in enumerate(LABELS)}
     gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
-    pred = {a: np.array([idx[answers[(i, a)]["verdict"]] for i in ids]) for a in ARMS}
+    pred = {a: np.array([idx.get(answers[(i, a)]["verdict"], len(LABELS)) for i in ids]) for a in ARMS}      # unparsed: a fourth code, wrong everywhere
     f1 = lambda a: round(macro_f1(gold, pred[a]), 4)
     primary = paired_interval(gold, pred["R2V"], pred["R2"], macro_f1, PRIMARY_SEED, iterations)
     primary.update(read_primary(primary), metric="macro-F1, R2V minus R2")
@@ -93,6 +93,7 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
         "accuracy_R2V_minus_R2C": paired(items, answers, "R2V", "R2C", A.BOTH)}
     verification = A.verifier_rows(items, answers, ARMS)
     arms = {a: {"macro_f1": f1(a), "predicted_share": {l: round(float((pred[a] == k).mean()), 4) for k, l in enumerate(LABELS)},
+                "unparsed": int((pred[a] == len(LABELS)).sum()),
                 "recall": {l: round(recall(gold, pred[a], k), 4) for k, l in enumerate(LABELS)}} for a in ARMS}
     rep = {"split": "fresh", "n": len(ids), "iterations": iterations, "primary": primary, "secondary": sec, "arms": arms,
            "accuracy": {a: v["all"] for a, v in summarize(items, answers, ARMS).items()},
@@ -130,6 +131,9 @@ def to_markdown(rep: dict) -> str:
     for a, v in rep["arms"].items():
         L.append(f"| {a} | {100 * rep['accuracy'][a]['accuracy']:.1f}% | {v['macro_f1']:.3f} | {100 * v['predicted_share']['SUPPORTED']:.1f}% | "
                  f"{100 * v['recall']['REFUTED']:.1f}% |")
+    unp = {a: v["unparsed"] for a, v in rep["arms"].items() if v["unparsed"]}
+    if unp:
+        L += ["", "Unparsed answers (counted wrong): " + ", ".join(f"{a} {n}" for a, n in unp.items()) + "."]
     v = rep["verification"].get("R2V")
     if v:
         L += ["", f"R2V changed {100 * v['changed_rate']:.1f}% of the answers it verified: {v['changes_fixed']} fixed, {v['changes_broke']} broken."]
