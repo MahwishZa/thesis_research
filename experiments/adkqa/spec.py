@@ -8,7 +8,7 @@ import hashlib
 import re
 from typing import Iterable, Optional
 
-from experiments.medchange.pubmed_asof import _STOP, query_terms
+from experiments.medchange.pubmed_asof import query_terms
 
 #: The three question templates. Every fixed word is a stop word of the frozen query builder (``pubmed_asof._STOP``) except
 #: "Alzheimer's disease", which closes the question so that the copied terms come first in the 8-term query.
