@@ -295,6 +295,7 @@ Requirement-style comparison: R2V − R2 +4.2 pp (95% CI −6.2 to +14.6; 4 / 2 
 With 48 questions only paired differences of about 13 to 20 points or more could be confirmed (§4), so none of these is
 confirmed and the 1-point requirement is neither met nor failed here. All five systems score below the constant answer, and standard
 retrieval (B1) scores lowest.
+Per-verdict view of the 48 (exploratory; the metric was chosen after the accuracy results): macro-F1 R2 0.245, R2V 0.305 (R2V − R2 +0.060, 95% interval -0.037 to +0.168); REFUTED recall R2 5.3%, R2V 15.8%; B1 answers SUPPORTED 81.2% of the time against a gold share of 16.7%. R2V changed 6 of the 48 answers (4 fixed, 2 broken; `python -m experiments.medchange.ad_case_study` lists them; its outputs hold question text and are not committed).
 
 ### 6.8 Construction of an Alzheimer's-specific question set (AD-KQA): stopped at gate 1 (negative result of record)
 

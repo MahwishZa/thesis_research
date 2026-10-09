@@ -19,4 +19,14 @@ Gold verdicts: REFUTED 19, SUPPORTED 8, NOT ENOUGH INFORMATION 21. Constant answ
 | R2V vs B1 | +12.5 | +0.0 to +25.0 | 8 | 2 | 0.11 |
 | R2V vs B0 | +0.0 | −12.5 to +14.6 | 6 | 6 | 1.00 |
 
+| System | Macro-F1 | Predicted SUPPORTED | REFUTED recall |
+|---|---|---|---|
+| B0 | 0.285 | 47.9% | 5.3% |
+| B1 | 0.152 | 81.2% | 0.0% |
+| R2 | 0.245 | 60.4% | 5.3% |
+| R2C | 0.309 | 66.7% | 21.1% |
+| R2V | 0.305 | 56.2% | 15.8% |
+
+Macro-F1, R2V − R2: +0.060 (95% interval -0.037 to +0.168). Exploratory: the metric was chosen after the accuracy results were known.
+
 With 48 questions only paired differences of about 13 to 20 points or more could be confirmed with 80% power (`evaluation.md` §4). Exploratory; chosen after the run; the requirement is not read from it. The 1-point requirement is therefore neither met nor failed here; the point estimates are descriptive.

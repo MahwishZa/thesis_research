@@ -16,6 +16,7 @@ from collections import Counter
 from pathlib import Path
 
 from . import analyze_rag2 as A
+from . import class_balance as CB
 from .generate_answers import load_jsonl
 from .scoring import DIGITS, detectable_range, summarize
 
@@ -41,9 +42,14 @@ def subgroup(data: Path, results: Path) -> dict:
         r = A.paired(sub, answers, a, b, A.BOTH)
         if r:
             comparisons[f"{a} vs {b}"] = r
+    pred = {a: {i: answers[(i, a)]["verdict"] for i in sub if (i, a) in answers} for a in arms}
+    gold_v, vec = CB.vectors(sub, {(i, a): v for a, m in pred.items() for i, v in m.items()}, arms)
+    macro = CB.paired_interval(gold_v, vec["R2V"], vec["R2"], CB.macro_f1, seed="ad-subgroup-macro-f1") if {"R2V", "R2"} <= set(vec) else None
     return {"split": "ad", "subgroup": "question text names Alzheimer's disease", "dementia_set_items": len(items), "n": len(sub),
             "gold": dict(gold), "constant_answer": {"label": constant_label, "accuracy": round(constant_n / len(sub), DIGITS)},
             "accuracy": {a: gen[a]["all"] for a in arms}, "recall": {a: gen[a]["recall"] for a in arms},
+            "macro_f1": {a: gen[a]["macro_f1"] for a in arms}, "predicted_share": {a: gen[a]["predicted_share"] for a in arms},
+            "macro_f1_R2V_minus_R2": macro,
             "comparisons": comparisons, "detectable_range_points": list(detectable_range(len(sub))),
             "status": "exploratory; chosen after the run; the requirement is not read from it"}
 
@@ -62,6 +68,12 @@ def to_markdown(rep: dict) -> str:
         L.append(f"| {k} | {pp(r['diff_a_minus_b'])} | {pp(r['ci95'][0])} to {pp(r['ci95'][1])} | {r['a_only_correct']} | "
                  f"{r['b_only_correct']} | {r['mcnemar_p']:.2f} |")
     lo, hi = rep["detectable_range_points"]
+    if rep.get("macro_f1_R2V_minus_R2"):
+        m = rep["macro_f1_R2V_minus_R2"]
+        L += ["", "| System | Macro-F1 | Predicted SUPPORTED | REFUTED recall |", "|---|---|---|---|"]
+        for a in rep["accuracy"]:
+            L.append(f"| {a} | {rep['macro_f1'][a]:.3f} | {pct(rep['predicted_share'][a]['SUPPORTED'])} | {pct(rep['recall'][a]['REFUTED'])} |")
+        L += ["", f"Macro-F1, R2V − R2: {m['difference']:+.3f} (95% interval {m['ci95'][0]:+.3f} to {m['ci95'][1]:+.3f}). Exploratory: the metric was chosen after the accuracy results were known."]
     L += ["", f"With {rep['n']} questions only paired differences of about {lo} to {hi} points or more could be confirmed with 80% power "
           f"(`evaluation.md` §4). {rep['status'].capitalize()}. The 1-point requirement is therefore neither met nor failed here; "
           "the point estimates are descriptive."]

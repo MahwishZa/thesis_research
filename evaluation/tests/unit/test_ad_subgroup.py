@@ -55,6 +55,14 @@ class CommittedFileTests(unittest.TestCase):
         self.assertIn(f"{100 * r['diff_a_minus_b']:+.1f}".replace("-", "−") + " pp", sec)
         self.assertIn(f"{100 * self.rep['constant_answer']['accuracy']:.1f}%", sec)
 
+    def test_the_per_verdict_view_quoted_in_evaluation_md_is_the_committed_one(self):
+        text = (ROOT / "docs" / "evaluation.md").read_text(encoding="utf-8")
+        sec = text[text.index("### 6.7"):text.index("### 6.8")]
+        m = self.rep["macro_f1"]
+        self.assertIn(f"macro-F1 R2 {m['R2']:.3f}, R2V {m['R2V']:.3f}", sec)
+        d = self.rep["macro_f1_R2V_minus_R2"]
+        self.assertIn(f"{d['difference']:+.3f}, 95% interval {d['ci95'][0]:+.3f} to {d['ci95'][1]:+.3f}", sec)
+
     def test_no_system_beats_the_constant_answer_as_the_text_says(self):
         c = self.rep["constant_answer"]["accuracy"]
         self.assertTrue(all(v["accuracy"] < c for v in self.rep["accuracy"].values()))

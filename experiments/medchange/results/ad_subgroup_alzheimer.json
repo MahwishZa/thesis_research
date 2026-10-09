@@ -81,6 +81,47 @@
       "NOT ENOUGH INFORMATION": 0.333333
     }
   },
+  "macro_f1": {
+    "B0": 0.285002,
+    "B1": 0.151773,
+    "R2": 0.245117,
+    "R2C": 0.309355,
+    "R2V": 0.305002
+  },
+  "predicted_share": {
+    "B0": {
+      "SUPPORTED": 0.479167,
+      "REFUTED": 0.083333,
+      "NOT ENOUGH INFORMATION": 0.4375
+    },
+    "B1": {
+      "SUPPORTED": 0.8125,
+      "REFUTED": 0.0,
+      "NOT ENOUGH INFORMATION": 0.1875
+    },
+    "R2": {
+      "SUPPORTED": 0.604167,
+      "REFUTED": 0.041667,
+      "NOT ENOUGH INFORMATION": 0.354167
+    },
+    "R2C": {
+      "SUPPORTED": 0.666667,
+      "REFUTED": 0.125,
+      "NOT ENOUGH INFORMATION": 0.208333
+    },
+    "R2V": {
+      "SUPPORTED": 0.5625,
+      "REFUTED": 0.083333,
+      "NOT ENOUGH INFORMATION": 0.354167
+    }
+  },
+  "macro_f1_R2V_minus_R2": {
+    "difference": 0.0599,
+    "ci95": [
+      -0.0369,
+      0.1678
+    ]
+  },
   "comparisons": {
     "R2V vs R2": {
       "a": "R2V",

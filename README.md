@@ -76,7 +76,7 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
         ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
         ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
         ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
-        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, subgroup_ad.py, class_balance.py, fresh_supply.py, fresh_benchmark.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
+        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, subgroup_ad.py, ad_case_study.py, class_balance.py, fresh_supply.py, fresh_benchmark.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 

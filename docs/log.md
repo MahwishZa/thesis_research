@@ -1381,3 +1381,11 @@ all 1,500 questions have answers for R2, R2C and R2V; then the pre-registered pr
 R2C, R2V; no B0, B1 or judge; refuses unless §10 is IN FORCE, the manifest is on origin/main and the items match it, plus the guards of `confirm`). 16 tests.
 Nothing was selected, run or looked at: the committed protocol still reads as a draft, and a test checks that.
 
+## Phase 67 — Defence material for the Alzheimer's-named questions (Oct 9)
+
+No new data: the 48 questions of the dementia run that name Alzheimer's disease already have answers for all five systems. `subgroup_ad` now also reports macro-F1,
+the predicted-SUPPORTED share and REFUTED recall for them (R2 0.245, R2V 0.305; R2V − R2 +0.060, 95% interval −0.037 to +0.168; exploratory), and a new script,
+`ad_case_study.py`, writes a case study (the first 12 questions in a seeded hash order, plus the first answer R2V fixed and the first it broke, so a failure is shown),
+a table of all 48 and a 20-question validation sheet for a clinician. R2V changed 6 of the 48 answers (4 fixed, 2 broken). The outputs hold question text and are
+not committed. Nothing here is confirmatory.
+
