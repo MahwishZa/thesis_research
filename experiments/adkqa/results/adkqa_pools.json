@@ -1,23 +1,29 @@
 {
   "records": 710,
   "by_status": {
-    "eligible": 418,
-    "no_conclusion": 292
+    "eligible": 703,
+    "no_conclusion": 7
   },
   "by_split": {
-    "test": 600,
-    "dev": 110
+    "test": 554,
+    "dev": 156
   },
   "by_area_split": {
-    "symptoms/test": 149,
-    "causes_risk/test": 117,
-    "diagnosis/test": 186,
-    "treatment/test": 148,
-    "diagnosis/dev": 27,
-    "symptoms/dev": 22,
-    "causes_risk/dev": 28,
-    "treatment/dev": 33
+    "symptoms/test": 135,
+    "causes_risk/test": 102,
+    "diagnosis/test": 180,
+    "treatment/test": 137,
+    "diagnosis/dev": 33,
+    "symptoms/dev": 36,
+    "causes_risk/dev": 43,
+    "treatment/dev": 44
   },
   "clusters": 264,
-  "dev_drafted": 110
+  "dev_fraction": 0.35,
+  "dev_drafted": 150,
+  "by_conclusion_basis": {
+    "labelled": 367,
+    "discussion_tail": 40,
+    "abstract_tail": 296
+  }
 }
