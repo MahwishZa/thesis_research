@@ -116,9 +116,7 @@ def question_checks(template: str, x: str, y: str) -> list[str]:
     return problems
 
 
-def read_conclusion(text: str) -> Optional[str]:
-    """The verdict the conclusion states, or None when it states none or states more than one (the question is then not made).
-    Negative phrases are removed first so that "not effective" is not also read as positive."""
+def _trace(text: str) -> dict:
     t = " ".join((text or "").lower().split())
     hits = {k: [] for k in CUES}
     rest = t
@@ -128,10 +126,28 @@ def read_conclusion(text: str) -> Optional[str]:
             rest = re.sub(pat, " ", rest)
     for k in ("insufficient", "positive", "hedge"):
         hits[k] = [p for p in CUES[k] if re.search(p, rest)]
+    return hits
+
+
+def read_conclusion(text: str) -> Optional[str]:
+    """The verdict the conclusion states, or None when it states none or states more than one (the question is then not made).
+    Negative phrases are removed first so that "not effective" is not also read as positive."""
+    hits = _trace(text)
     if hits["hedge"]:
         return None
     classes = [k for k in ("positive", "negative", "insufficient") if hits[k]]
     return _LABEL_OF[classes[0]] if len(classes) == 1 else None
+
+
+def explain_reading(text: str) -> str:
+    """Why the reading gave a verdict or none: ``label``, ``hedge``, ``no cue`` or ``conflict: a+b`` (for counting, not for deciding)."""
+    hits = _trace(text)
+    classes = [k for k in ("positive", "negative", "insufficient") if hits[k]]
+    if read_conclusion(text):
+        return "label"
+    if hits["hedge"]:
+        return "hedge" + ("" if not classes else " with " + "+".join(classes))
+    return "no cue" if not classes else "conflict: " + "+".join(classes)
 
 
 def cluster_key(major_descriptors: Iterable[str], pmid: str) -> str:

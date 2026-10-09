@@ -271,6 +271,33 @@ def pool_sizes(items: Sequence[dict], eu: EUtils, retmax: int = 100) -> dict:
             "min": min(sizes) if sizes else None, "retmax": retmax}
 
 
+def rule_breakdown(rows: Sequence[dict], drafts: dict) -> dict:
+    """Why the cue reading gave no verdict, and what the drafter proposed, over the drafts that passed the earlier checks. Counts of
+    reasons and of the cue patterns (from the declared lists) that fired; no abstract text."""
+    from collections import Counter
+    reasons, by_drafter, pattern_hits = Counter(), Counter(), Counter()
+    drafter_all = Counter()
+    for r in rows:
+        d = drafts.get(r["pmid"])
+        if r["status"] != "eligible" or d is None:
+            continue
+        status, _ = check_draft(r, d["draft"])
+        if status in ("draft_unparsed", "no_claim", "bad_template", "span_not_in_abstract", "question_rules"):
+            continue
+        drafter_all[d["draft"]["verdict"]] += 1
+        if status == "rule_no_verdict":
+            why = spec.explain_reading(r["conclusion"])
+            reasons[why] += 1
+            by_drafter[(why.split(":")[0].split(" with")[0], d["draft"]["verdict"])] += 1
+            for k, pats in spec._trace(r["conclusion"]).items():
+                for pat in pats:
+                    pattern_hits[(k, pat)] += 1
+    return {"well_formed_drafts": sum(drafter_all.values()), "drafter_verdict_all_well_formed": dict(drafter_all),
+            "rule_no_verdict_reasons": dict(reasons.most_common()),
+            "rule_no_verdict_by_reason_and_drafter_verdict": {f"{a} / {b}": n for (a, b), n in by_drafter.most_common()},
+            "patterns_fired_in_rule_no_verdict": [[k, p, n] for (k, p), n in pattern_hits.most_common(15)]}
+
+
 def evaluate_gate1(dev: dict, pools: Optional[dict], b0_accuracy: Optional[float], repeat_hash: Optional[str]) -> dict:
     """Gate 1 of protocol §8. A check that cannot be made yet is None; the gate passes only when every check is True."""
     c = {}
@@ -304,7 +331,7 @@ def _read_rows(data: Path) -> list[dict]:
 
 def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("cmd", choices=("prepare", "diagnose", "draft", "verify", "assemble", "pools", "gate1"))
+    ap.add_argument("cmd", choices=("prepare", "diagnose", "rulecheck", "draft", "verify", "assemble", "pools", "gate1"))
     ap.add_argument("--split", default="dev", choices=("dev", "test"))
     ap.add_argument("--model-path")
     ap.add_argument("--role", default="verifier", choices=("verifier", "audit"))
@@ -334,6 +361,12 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
     if a.cmd == "diagnose":
         rep = R.diagnose(rows)
         _write_json(data / "adkqa_diagnose.json", rep)    # first words of abstract sentences: not tracked
+        print(json.dumps(rep, indent=2))
+        return 0
+    if a.cmd == "rulecheck":
+        drafts = {r["pmid"]: r for r in load_jsonl(data / f"drafts_{a.split}.jsonl")}
+        rep = rule_breakdown(select(rows, a.split), drafts)
+        _write_json(data / f"adkqa_rulecheck_{a.split}.json", rep)
         print(json.dumps(rep, indent=2))
         return 0
     scope = select(rows, a.split)[:a.limit]
