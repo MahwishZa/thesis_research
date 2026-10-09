@@ -181,6 +181,7 @@ is tested on.
 | 2026-10-09 | Re-declare the primary evaluation as an Alzheimer's-specific question set (AD-KQA); keep the as-of Cochrane results as secondary evidence | all held-out and dementia results of every system and the label audits; no AD-KQA question, label or output exists; the reason is scope, not outcome (§8) |
 | 2026-10-09 | Correct the Stage 0 instrument after run 1 (prevention qualifier, warning filter, information-only counts); thresholds and window unchanged | run 1 counts per area were seen (total 866; prevention 0 by the query error; progression 58; care 20); the criterion was not changed to fit them; the decision after run 2 is the researcher's (§8) |
 | 2026-10-09 | Cover only the core areas with at least 100 source records (four of seven); Stage 0 needs 4 covered areas and 650 covered records; test minimum 200 (up to 300) | the counts of Stage 0 runs 1 and 2 were seen (original criterion failed twice); no question, label or output exists; every other threshold is unchanged; the amendment is a scope decision, not a test of the original criterion (§8) |
+| 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec is in `spec.py` and compared with the protocol text by a test |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -335,8 +336,95 @@ two points):* with 200 test questions the standard error is about 2.7 points and
 when the true gain is zero. The requirement therefore cannot be confirmed at either size unless the true gain is several points;
 the reading rules are unchanged.
 
-*Still to be fixed in a further dated amendment before any question is drafted:* the question templates, the cue phrases of the
-rule-based reading, the topic-cluster key and the split seed, the freeze date of the source window, and the secondary measures.
+**Amendment of 2026-10-09 (templates, reading cues, split and source freeze), fixed before any question is drafted.** Nothing
+below was tuned on an abstract, an answer or a system output; no abstract has been read. The same values are in
+`experiments/adkqa/spec.py`, and a test compares this text with that file. A change after the trial run is allowed only as the one
+documented redesign of gate 1, before the test split is sealed.
+
+*Templates.* A question is one of three fixed templates filled with two spans copied from the abstract (`x`, `y`):
+- effect of an intervention: `Is {x} effective for {y} in people with Alzheimer's disease?`
+- effect or association of a factor, exposure or biomarker: `Is there any effect of {x} on {y} in people with Alzheimer's disease?`
+- usefulness of a test for a diagnostic purpose: `Can {x} be used for {y} in people with Alzheimer's disease?`
+
+The drafting model picks the template and the spans and proposes the verdict; it writes no other question text. Each span has 1 to
+8 words, must occur verbatim (case-insensitive) in the title or abstract, and `x` and `y` together may have at most 6 content words
+(words the retrieval query builder does not drop). *Why these words:* every fixed word of the templates is a stop word of the
+frozen query builder (`pubmed_asof._STOP`) except "alzheimer" and "disease", which come last, so the retrieval query is the copied
+terms plus those two and no filler word restricts it; a draft whose query would lose "alzheimer" or "disease" within the first 8
+terms is not made. Reviews that report only prevalence, incidence or other descriptive results state no claim and give no question.
+The drafter's prompt is committed and hashed in the manifest before the first development draft.
+
+*Verdicts.* As for the other splits (the audit prompt's definitions): SUPPORTED means the authors' conclusion at least partially
+supports the claim in the question (an effect, an association, a useful test); REFUTED that it at least partially does not (no
+effect, no association, similar to placebo, poor accuracy); NOT ENOUGH INFORMATION only when the authors state that the studies or
+the evidence are insufficient, not when the certainty is low. *Conclusion:* the abstract section labelled conclusion(s),
+interpretation or authors' conclusions; for an unstructured abstract its last sentence, only if it begins with a conclusion marker
+(in conclusion, we conclude, overall, taken together, these/our results/findings, this review/meta-analysis/study); otherwise the
+record gives no question. *Objectives* for the audit and verifier prompts: the section labelled objective(s), aim(s), purpose or
+background, else the first sentence.
+
+*Reading cues (rule-based).* The conclusion is lower-cased; negative phrases are removed first so that "not effective" is not also
+read as positive; the verdict is the single class that has a hit; a hit in two classes, or any hedge cue, gives no verdict and no
+question. These are regular expressions as in `spec.py`:
+```
+negative:
+  no (statistically )?significant (effects?|differences?|improvements?|benefits?|associations?|reductions?|changes?)
+  not (significantly )?(effective|beneficial|associated|superior|supported|useful|accurate)
+  (did|does|do) not (improve|reduce|show|demonstrate|differ|prevent|slow|affect|increase|decrease)
+  (no|without) (clear |apparent |definite )?(benefits?|effects?|differences?|associations?|advantages?|improvements?)
+  ineffective
+  failed to
+  similar to placebo
+  not recommended
+  (poor|low) (diagnostic )?(accuracy|performance|sensitivity|specificity)
+positive:
+  significantly (improved?|improves|reduced?|reduces|increased?|increases|enhanced?|slowed?|delayed?|lower|higher|better)
+  \b(effective|efficacious|beneficial|benefits?)\b
+  associated with (a |an )?(higher|increased|lower|reduced|greater|decreased|elevated|increase|decrease|risk)
+  (high|good|excellent|acceptable|promising) (diagnostic )?(accuracy|sensitivity|specificity|performance)
+  positive (effects?|associations?)
+  superior to
+insufficient:
+  insufficient (evidence|data)
+  (evidence|data) (is|are|remains?) (insufficient|lacking|scarce|inconclusive)
+  not enough (evidence|data|studies)
+  inconclusive
+  too few (studies|trials)
+  lack of (evidence|data)
+  no (firm|definitive) conclusions?
+  (cannot|can not|could not) be (drawn|made|determined)
+  remains? unclear
+  unclear whether
+  no (eligible|relevant) (studies|trials)
+hedge:
+  \bhowever\b
+  \bmixed\b
+  \binconsistent\b
+```
+They were written from the audit prompt's definitions and from general wording, not from the abstracts of this set. Their coverage
+(the share of drafts for which the rule gives a verdict) is a secondary measure of the trial run; a low coverage lowers the
+survival rate, and gate 1 then decides.
+
+*Topic cluster and split.* The cluster of a record is its first major-topic MeSH descriptor other than Alzheimer Disease
+(alphabetical, case-insensitive), or the record itself when it has none, so reviews of one intervention or topic fall in one
+split. A cluster is development if the first 8 hexadecimal digits of the SHA-256 of `adkqa-split-v1|cluster|<cluster>`, read as a
+fraction, are below 0.25 (25%), and test otherwise. The seed is `adkqa-split-v1`; no other seed is tried, and the pool sizes are
+recorded before any draft. Development records are drafted in the order of the SHA-256 of `adkqa-split-v1|draft|<pmid>`: the first
+150, and the development set is the first 60 of them that are kept. Gate 1 is therefore stated on these 150 drafts: at least 40%
+survive, which is the 60 needed. Test records are not read or drafted until gate 1 has passed. Test: every record of the test pool
+is drafted; all that pass the gates are kept, at least 200 and at most 300 (if more than 300 pass, the first 300 in the order of the
+SHA-256 of `adkqa-split-v1|keep|<pmid>`).
+
+*Source freeze.* The source records are the identifiers in the covered areas of `experiments/adkqa/results/stage0_counts_r2.json`
+(search of 2026-10-09: 2023-04-01 to 2026-10-09); the builder reads that file and does not search again, so records indexed later
+are not added. The date of a source is the publication date PubMed reports (`sortpubdate`), with a missing month or day set to 01 as
+for the other splits, and retrieval admits only records dated strictly earlier. The candidate pools are frozen once, with the date
+recorded, before any system sees a test question.
+
+*Secondary measures (reported, never gates; no new test).* Per covered area: accuracy of each arm with its interval; retrieval
+recall of the source's own reference list (the probe found 19 of 20 sampled records with at least 10 references, above the 60%
+needed); rule coverage; share of records excluded for having no conclusion; parse rate. Per-area differences are descriptive, with
+no p-values and no claim.
 
 ## 9. Earlier stages (completed, superseded)
 

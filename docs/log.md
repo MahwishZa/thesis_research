@@ -1378,3 +1378,15 @@ Changes: `protocol.md` §8 (amendment, ledger row, status row, the replaced word
 Stage 0, including the committed run-2 file). Thresholds changed: covered areas 6 to 4; new covered supply 650; test minimum 300 to
 200 (keep all that pass, up to 300). All others unchanged and listed in the amendment. Optional strata dropped (0 and 3 records).
 
+## Phase 49 — Templates amendment and fixed specification (Oct 9)
+
+`protocol.md` §8 now fixes, before any draft: three question templates whose fixed words are all stop words of the frozen query
+builder except "alzheimer" and "disease" (checked with `query_terms`; a draft whose query would lose them is not made); the
+verdict definitions and the conclusion extraction; the rule-based reading cues (negatives removed first, one class or no question,
+hedge cues give none); the topic cluster (first other major MeSH descriptor) and the 25% development split with the seed
+`adkqa-split-v1`; the draft order (150 development records, 60 kept = the 40% survival gate); the test rule (every test record
+drafted after gate 1, 200 to 300 kept); the source freeze (`stage0_counts_r2.json`); the secondary measures. Code:
+`experiments/adkqa/spec.py` with 11 tests, including a test that the protocol text and the code agree. No abstract was read.
+Not verifiable from here: how many drafts survive, how often the cues give a verdict, the pool sizes (the MeSH descriptors need
+the network): all are measured in the trial run.
+
