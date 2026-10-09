@@ -45,7 +45,7 @@ is read, and what can be concluded from a given sample size, is fixed in `protoc
 | Questions | 754 usable Cochrane questions: 504 whose verdict changed between review versions, 250 unchanged controls. Development split (`dev`) 226, held-out split (`confirm`) 528 | 208 questions from 159 reviews that are in neither split, on dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline. All have unchanged verdicts (202 come from reviews with a single version) |
 | Question date | the newest review's publication date | the same |
 | Evidence | PubMed abstracts first public strictly before the question date | the same |
-| Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; **not yet run** |
+| Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) |
 
 **The comparison in one line.** Every system answers the same questions with the same generator, decoding and candidate
 records. The baseline systems differ in *what* they read (B0, B1, R2); the R2 family differs only in *how* the same
@@ -333,7 +333,7 @@ benchmark's labelling rubric.
 | No evidence (B0), standard retrieval (B1), adapted RAG² (R2) | same generator, questions and decoding | controlled; paired tests |
 | R2C, R2V, R2V-ND | same evidence as R2; only the reading differs | controlled; paired tests; the requirement is read on R2V − R2 |
 | Recency-aware retrieval (TempRALM-style), helpfulness filter, evidence synthesis | the stage-1 and stage-2 arms | controlled; negative results of record |
-| Other language models (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3) | the benchmark authors' released closed-book answers on the same questions | context only: different size, training and prompt, no retrieval |
+| Other language models (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3, OLMo-13B, BioMistral, PMC-LLaMA) | the benchmark authors' released closed-book answers on the same questions | context only: different size, training and prompt, no retrieval |
 | RAG² as published | different task, scale, corpus and filter | described, not compared |
 
 Further models were not run: each extra generator costs days of CPU time on this hardware and larger ones do not fit. A

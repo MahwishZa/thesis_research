@@ -26,12 +26,13 @@ from typing import Optional, Sequence
 
 from .benchmark import LABELS
 from .generate_answers import load_jsonl
-from .headroom import MODELS, parse_label
+from .headroom import MODELS, read_answers
 from .scoring import class_stats, correct_map, load_answers, paired, wilson
 
 HERE = Path(__file__).resolve().parent
 RELEASED = {"qwen25-7b": "Qwen2.5-7B", "mistral-24b": "Mistral-24B", "llama33-70b": "Llama-3.3-70B",
-            "gpt4o-mini": "GPT-4o-mini", "deepsek-v3": "DeepSeek-V3"}      # file names of the release
+            "gpt4o-mini": "GPT-4o-mini", "deepsek-v3": "DeepSeek-V3", "biomistral": "BioMistral",
+            "pmcllama": "PMC-LLaMA", "olmo-13b": "OLMo-13B"}      # keys of headroom.FILES
 STAGE1 = (("B0", "Llama-3-8B-Instruct (Q4_K_M), no retrieval"),
           ("B1", "+ MedCPT retrieval, top-5 (standard RAG)"),
           ("B2", "+ zero-shot helpfulness filter (untrained RAG²-style stand-in)"),
@@ -55,10 +56,9 @@ def released_verdicts(items: dict, medchange_dir: Path) -> dict:
     out = {}
     folder = Path(medchange_dir) / "Code" / "GeneratedAnswers"
     for model in MODELS:
-        path = folder / f"{model}_answers.txt"
-        if not path.is_file():
+        preds = read_answers(folder, model)
+        if preds is None:
             continue
-        preds = [parse_label(x) for x in path.read_text(encoding="utf-8", errors="replace").split("\n")]
         for item_id, it in items.items():
             row = it["newest"]["row"]
             if row < len(preds):
@@ -150,17 +150,18 @@ def _best(rows: list[dict], kind: str) -> Optional[float]:
 
 def table_systems(rows: list[dict], n: dict) -> str:
     """Markdown in the layout of the base paper's Table 2 (best value per column in bold)."""
-    best = {k: _best(rows, k) for k in KINDS}
-    lines = [f"| System | Changed (n = {n['changed']}) | Unchanged (n = {n['unchanged']}) | All (n = {n['all']}) | 95% CI, all |",
-             "|---|---|---|---|---|"]
+    kinds = [k for k in KINDS if n.get(k) and not (k == "unchanged" and not n.get("changed"))]   # all = unchanged when nothing changed
+    best = {k: _best(rows, k) for k in kinds}
+    head = " | ".join(f"{k.capitalize()} (n = {n[k]})" for k in kinds)
+    lines = [f"| System | {head} | 95% CI, all |", "|---" * (len(kinds) + 2) + "|"]
     group = None
     for r in rows:
         if r["group"] != group:
             group = r["group"]
-            lines.append(f"| *{group}* | | | | |")
-        cells = [_cell(r[k], bool(r.get(k)) and r[k]["accuracy"] == best[k]) for k in KINDS]
+            lines.append(f"| *{group}* |" + " |" * (len(kinds) + 1))
+        cells = " | ".join(_cell(r[k], bool(r.get(k)) and r[k]["accuracy"] == best[k]) for k in kinds)
         ci = r["all"]["ci"]
-        lines.append(f"| {r['name']} | {cells[0]} | {cells[1]} | {cells[2]} | {_pct(ci[0])}–{_pct(ci[1])} |")
+        lines.append(f"| {r['name']} | {cells} | {_pct(ci[0])}–{_pct(ci[1])} |")
     return "\n".join(lines) + "\n"
 
 
@@ -261,7 +262,7 @@ def _style(ax, axis="x"):
 
 def figure_systems(rows: list[dict], const: dict, path: Path, status: str) -> bool:
     plt = _plt()
-    if plt is None or not rows:
+    if plt is None or not rows or not any(r["changed"] for r in rows):
         return False
     fig, ax = plt.subplots(figsize=(9.0, 0.30 * len(rows) + 2.4))
     ys = list(range(len(rows)))[::-1]
@@ -329,12 +330,34 @@ def figure_classes(rows: list[dict], path: Path, status: str) -> bool:
 def build(split: str, items: dict, answers: dict, released: Sequence[str], audit: Optional[dict]) -> dict:
     present = sorted({arm for (_, arm) in answers if not arm.startswith("R:")})
     n = {k: sum(it["kind"] in kinds for it in items.values()) for k, kinds in KINDS.items()}
-    return {"split": split, "status": "confirmatory" if split == "confirm" else "exploratory", "n": n,
+    has_changed = n["changed"] > 0
+    status = {"confirm": "confirmatory", "ad": "secondary held-out test"}.get(split, "exploratory")
+    return {"split": split, "status": status, "n": n,
             "systems": system_rows(items, answers, present, released),
-            "filtering": filtering_rows(items, answers, present), "classes": class_rows(items, answers, present),
+            "filtering": filtering_rows(items, answers, present) if has_changed else [],
+            "classes": class_rows(items, answers, present) if has_changed else [],
             "constant": constant_baselines(items),
             "label_audit": {k: audit[k] for k in ("agreement", "kappa", "n_items", "n_stable", "label_change_reproduced",
                                                   "per_gold_class")} if audit else None}
+
+
+def _context_sentence(rows: list[dict]) -> str:
+    """How the local systems compare numerically with the released closed-book models (context, not a test)."""
+    local = [100 * r["all"]["accuracy"] for r in rows if not r["group"].startswith("Closed")]
+    released = [100 * r["all"]["accuracy"] for r in rows if r["group"].startswith("Closed")]
+    if not local or not released:
+        return ""
+    return (f"The local 8B systems score {min(local):.1f}% to {max(local):.1f}% and the released closed-book models "
+            f"{min(released):.1f}% to {max(released):.1f}% on these questions, which is context, not a controlled comparison.")
+
+
+def _constant_sentence(const: dict) -> str:
+    c = const.get("all") or {}
+    if not c:
+        return ""
+    best = max(c, key=c.get)
+    return ("Answering the same verdict for every question would score " + ", ".join(
+        f"{100 * v:.1f}% ({k})" for k, v in c.items()) + f"; the best constant answer is {best}.")
 
 
 def report_markdown(d: dict, figures: dict[str, bool]) -> str:
@@ -360,8 +383,8 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if arms & {"R2", "R2V"}:
         note.append("R2 is an adapted RAG², not a reproduction (docs/methodology.md). The requirement is read on R2V − R2 only "
                     "(RAG2_FINDINGS.md: the difference, its interval and the pre-declared reading); differences between other rows "
-                    "of this table are descriptive, and none is confirmed. The local 8B systems score at or below several "
-                    "closed-book models on these questions, which is context, not a controlled comparison.")
+                    "of this table are descriptive, and none is confirmed. " + _context_sentence(d["systems"]))
+    note.append(_constant_sentence(d["constant"]))
     note.append("Bold: best per column.")
     if arms & {"B2", "P", "C1"}:
         note.append("B2/P/C1 use an untrained zero-shot Flan-T5 helpfulness score, **not** RAG²'s trained filter (its checkpoint is "
@@ -380,9 +403,9 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
     if d.get("label_audit"):
         a = d["label_audit"]
         lines += ["## Label reproducibility", "", f"An independent model (Qwen2.5-7B-Instruct) re-labelled the gold labels with the authors' "
-                  f"rubric: agreement {_pct(a['agreement'])}%, kappa {a['kappa']}, {a['n_stable']} of {a['n_items']} items label-stable; "
-                  f"{_pct(a['label_change_reproduced'])}% of label changes between versions reproduced. This is reproducibility, not "
-                  "medical truth, and it bounds what any accuracy here can mean.", ""]
+                  f"rubric: agreement {_pct(a['agreement'])}%, kappa {a['kappa']}, {a['n_stable']} of {a['n_items']} items label-stable"
+                  + (f"; {_pct(a['label_change_reproduced'])}% of label changes between versions reproduced" if a["label_change_reproduced"] is not None else "")
+                  + ". This is reproducibility, not medical truth, and it bounds what any accuracy here can mean.", ""]
     lines += ["## Relation to the base paper", "",
               "RAG² reports +6.9 points on MedQA for Llama-3-8B-Instruct (57.7 → 64.6) using a Flan-T5 filter trained on "
               "perplexity-based labels, rationale queries and balanced retrieval over a 564 GB index of four corpora, trained on one "
@@ -413,11 +436,11 @@ def write_report(d: dict, out: Path, make_figures: bool = True) -> dict[str, boo
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
     ap.add_argument("--medchange-dir", default=None, help="clone of jvladika/MedChange (closed-book rows)")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--results-dir", default=str(HERE / "results"))
-    ap.add_argument("--out-dir", default=None, help="default: <results-dir>/report")
+    ap.add_argument("--out-dir", default=None, help="default: <results-dir>/report (held-out split), report_<split> otherwise")
     ap.add_argument("--no-figures", action="store_true")
     args = ap.parse_args(argv)
     data, results = Path(args.data_dir), Path(args.results_dir)
@@ -444,7 +467,8 @@ def main(argv=None) -> int:
     audit_path = results / f"label_audit_{args.split}.json"
     audit = json.loads(audit_path.read_text(encoding="utf-8")) if audit_path.is_file() else None
     d = build(args.split, items, answers, released, audit)
-    figures = write_report(d, Path(args.out_dir) if args.out_dir else results / "report", not args.no_figures)
+    default_out = results / ("report" if args.split == "confirm" else f"report_{args.split}")
+    figures = write_report(d, Path(args.out_dir) if args.out_dir else default_out, not args.no_figures)
     print(f"wrote the report for the {args.split} split; figures: " + ", ".join(k for k, v in figures.items() if v))
     return 0
 

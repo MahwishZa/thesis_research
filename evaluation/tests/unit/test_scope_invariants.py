@@ -367,16 +367,42 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
 
     def test_the_existing_models_and_the_label_reliability_are_quoted_exactly(self):
         closed = [s for s in self.report["systems"] if "Closed-book" in s["group"]]
-        self.assertEqual(len(closed), 5)
+        self.assertEqual(len(closed), 8)
         for system in closed:
             self.assertIn(f"{system['name']} {100 * system['all']['accuracy']:.1f}%", self.readme_flat)
         local = [100 * self.confirm["generation"][a]["all"]["accuracy"] for a in self.ARMS]
         self.assertIn(f"{min(local):.1f}–{max(local):.1f}%", self.readme_flat)
-        self.assertGreater(min(100 * s["all"]["accuracy"] for s in closed), max(local))
         self.assertIn(f"reproduced {100 * self.audit['agreement']:.1f}% of them", self.readme_flat)
         for needle in (f"Agreement {100 * self.audit['agreement']:.1f}%", f"kappa {self.audit['kappa']}",
                        f"{self.audit['n_stable']} of {self.audit['n_items']} questions label-stable"):
             self.assertIn(needle, self.evaluation)
+
+    def test_the_dementia_results_are_quoted_exactly(self):
+        ad = json.loads(text(RESULTS / "rag2_analysis_ad.json"))
+        data = json.loads(text(RESULTS / "report_ad" / "report_data_ad.json"))
+        rows = _table(self.readme, "System (dementia questions)")
+        by_arm = {s["arm"]: s for s in data["systems"]}
+        for arm in ("B0", "B1", "R2", "R2C", "R2V"):
+            cell = by_arm[arm]["all"]
+            lo, hi = wilson(cell["correct"], cell["n"])
+            found = [r for r in rows if r.startswith(f"| {arm}:")]
+            self.assertEqual(len(found), 1, arm)
+            self.assertIn(f"{_pct(cell['correct'], cell['n'])}% ({100 * lo:.1f}–{100 * hi:.1f})", found[0], arm)
+        best = max(data["constant"]["all"].values())
+        self.assertIn(f"| {100 * best:.1f}% |", "\n".join(r for r in rows if "Always answering" in r))
+        cmp_table = "\n".join(_table(self.readme, "Comparison (dementia questions)"))
+        p = ad["primary"]
+        results = {"R2V vs R2": (p, p["mcnemar_p"])}
+        results.update({k: (v, v["holm_p"]) for k, v in ad["secondary"].items()})
+        for name, (r, pv) in results.items():
+            row = f"| {_pp(r['diff_a_minus_b'])} | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | {_p(pv)} |"
+            self.assertIn(row, cmp_table, name)
+        self.assertIn(f"{p['a_only_correct'] + p['b_only_correct']} questions where they differed", self.readme_flat)
+        self.assertIn(f"The goal is therefore {ad['requirement']}", self.readme_flat)
+        self.assertEqual(ad["requirement"], "met as a point estimate, not confirmed")
+        for s in data["systems"]:
+            if s["group"].startswith("Closed-book"):
+                self.assertIn(f"{s['name']} {100 * s['all']['accuracy']:.1f}%", self.readme_flat, s["name"])
 
 
 class CompletedVersusPlannedTests(unittest.TestCase):

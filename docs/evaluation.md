@@ -54,7 +54,7 @@ objective of the first pilot, so the proposed system would have won it by constr
   Cohen's kappa, per-class agreement and whether label changes between versions are reproduced. Questions on which it
   agrees with the gold label are *label-stable*; the analysis repeats the key differences on that subset (descriptive).
   This measures reproducibility, not medical truth: two models can share a bias. No clinician has validated the labels. The audit
-  covers the development and held-out splits; the `ad` set has none, so its analysis has no label-stable subset.
+  covers the development and held-out splits; the `ad` audit is run separately (`label_audit --split ad`), and until it exists the `ad` analysis has no label-stable subset.
 * **Stated-verdict consistency** (`consistency_auto.py`). On a seeded sample of standard answers, an independent judge
   states which verdict the answer expresses; its agreement with the parsed verdict is a diagnostic of the parser.
 
@@ -190,7 +190,8 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
   SUPPORTED 86.8%, REFUTED 91.3%, NOT ENOUGH INFORMATION 66.7%; 72.5% of the 353 label changes between versions
   reproduced.
 * **Existing models, closed-book, same questions** (released answers): Qwen2.5-7B and GPT-4o-mini 52.8%,
-  DeepSeek-V3 52.3%, Llama-3.3-70B and Mistral-24B 50.8%. The local 8B systems (46.6–50.0%) are at or below them.
+  DeepSeek-V3 52.3%, Llama-3.3-70B and Mistral-24B 50.8%, OLMo-13B 50.0%, BioMistral 45.1%, PMC-LLaMA 34.8%. The local
+  8B systems (46.6–50.0%) are below the five best, level with OLMo-13B at best and above the two medical models.
 
 Full tables: `experiments/medchange/results/rag2_analysis_confirm.md`, `RAG2_FINDINGS.md`,
 `results/report/REPORT.md`.
@@ -219,7 +220,32 @@ without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev e
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
 earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
 estimate is reported with its interval, together with the sample size that would be needed to settle it. The
-208-question Alzheimer's/dementia set is **not yet run**; no claim is made about it.
+208-question Alzheimer's/dementia set was run afterwards, once (§6.6); it gives the same reading, with a larger and equally unconfirmed gain.
+
+### 6.6 Dementia and Alzheimer's set (secondary, run once)
+
+208 questions from 159 reviews, none with a changed verdict; gold NOT ENOUGH INFORMATION 42.3%, REFUTED 32.7%, SUPPORTED
+25.0%. Pools were complete (median 20 candidates, none empty); R2 admitted at least one abstract for 177 of 208
+questions (85.1%).
+
+| System | Accuracy (95% Wilson interval) |
+|---|---|
+| Constant answer NOT ENOUGH INFORMATION (no model) | 42.3% |
+| B0 | 33.2% (27.1–39.8) |
+| B1 | 30.8% (24.9–37.3) |
+| R2 | 34.6% (28.5–41.3) |
+| R2C | 39.4% (33.0–46.2) |
+| R2V | 38.0% (31.7–44.7) |
+
+Requirement: R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7; 19 / 12 discordant, exact McNemar p = 0.28), reading **met as a point
+estimate, not confirmed**; with 208 questions only 6–10 pp can be confirmed (§4). Secondary comparisons (Holm-adjusted p):
+R2 − B1 +3.8 pp (0.46), R2V − B1 +7.2 pp (0.25), R2C − R2 +4.8 pp (0.26), R2V − R2C −1.4 pp (0.68); none is confirmed.
+R2V changed 20.9% of the answers it verified (19 fixed, 12 broken); its commonest change was SUPPORTED to NOT ENOUGH
+INFORMATION (17). Every system scores below the constant answer. The released answers of the eight models score
+Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mistral-24B 42.3%, OLMo-13B 41.3%, BioMistral
+34.1% and PMC-LLaMA 43.3%. The labels of this set have not been audited by a second model, and the update-window and
+age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
+`results/report_ad/REPORT.md`.
 
 ### 6.5 Rounding in the committed analysis files
 

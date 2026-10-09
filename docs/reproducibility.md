@@ -60,7 +60,7 @@ study was run (committed answers: `results/answers_<split>.jsonl`); a reader who
 | 4 | `python -m experiments.medchange.pubmed_asof --split dev` (then `--split confirm`) | needs network; about 22 min for the 226 development questions (measured); an optional `--api-key` changes the duration, not the results |
 | 5 | `python -m experiments.medchange.freeze_candidates --split dev --device cpu` (then `--split confirm`) | downloads the abstracts (37,375 for dev), then MedCPT encoding and re-ranking at about 50 s per question, about 3 h for dev (measured) |
 | 6 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` (then `--split confirm`) | about 15 s per B0 answer and 61 s per B1 answer (measured, held-out); `--limit 3` gives a timing test |
-| 7 | `python -m experiments.medchange.label_audit --split dev --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` (and `consistency_auto`) | independent re-labelling of the gold labels (`evaluation.md` §1.4); about an hour for dev (*estimated*); `--split confirm` is accepted only after `results/rag2_design.json` exists |
+| 7 | `python -m experiments.medchange.label_audit --split dev --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` (and `consistency_auto`) | independent re-labelling of the gold labels (`evaluation.md` §1.4); about an hour for dev (*estimated*); `--split confirm` and `--split ad` are accepted only after `results/rag2_design.json` exists |
 
 The `ad` phase (§4.1) fetches its own as-of records and builds its own pools, so steps 4 to 6 are needed only for the
 development and held-out splits; step 3 must have been run before the `ad` phase.
@@ -78,7 +78,7 @@ record is pushed.
 |---|---|---|---|
 | dev | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | checks; rationales; candidate lists; filter; answers R2, R2C, R2V, R2V-ND; analysis; dev report with the pre-declared dev check; design record; environment record; commit. `--ablations` adds R2-RQ, R2-BR and R2-NF; `--judge-path` adds the directness judge | **measured 20.4 h** for the 226 questions with the judge (5.4 min per question) |
 | held-out | `python -m experiments.medchange.rag2_pipeline confirm --go --model-path ... --commit` | the same steps on the 528 held-out questions, then `RAG2_FINDINGS.md`; `--no-temporal-ablation` leaves R2V-ND out (decided before the run) | **measured 49.2 h** with the judge (5.6 min per question) |
-| `ad` | `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit` | as-of PubMed records (network); candidate pools and abstracts; B0 and B1 answers; then rationales, lists, filter and answers R2, R2C, R2V; analysis; `RAG2_FINDINGS_AD.md` | *estimated* about 22 h, 25 h with the judge: records 0.4 h, pools 2.9 h, B0 and B1 4.4 h, the R2 family 14.4 h, judge 2.4 h |
+| `ad` | `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit` | as-of PubMed records (network); candidate pools and abstracts; B0 and B1 answers; then rationales, lists, filter and answers R2, R2C, R2V; analysis; `RAG2_FINDINGS_AD.md` | **measured 22.7 h** with the judge: records 0.4 h, pools 3.7 h, B0 and B1 4.3 h, rationales 0.8 h, lists 2.8 h, filter 2.4 h, answers 6.1 h, judge 2.1 h |
 
 Measured per question in the held-out run, from the recorded durations: rationale 16 s, filter 48 s (eight judgements), the four
 answers 175 s (R2 54 s, R2C 52 s, R2V 14 s, R2V-ND 55 s) and the directness judge 42 s; the remainder of the 5.6 minutes is
@@ -115,7 +115,7 @@ family with Holm correction and the retrieval metrics from the answers and recor
 reads `benchmark.jsonl`, `answers_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` and, when present,
 `frozen_<split>.jsonl` from `experiments\medchange\data\` (without the frozen pools the evidence-type, age and update-window cells of
 B1 stay empty); the committed copies in `results\` can be copied there.
-`report` writes the result tables, a LaTeX table and two figures to `results\report\` (the closed-book rows of existing models
+`report --split ad` writes the dementia set's tables to `results\report_ad\`. `report` writes the result tables, a LaTeX table and two figures to `results\report\` (the closed-book rows of existing models
 need the MedChange clone; the figures need the `report` extra). The phase drivers do not run it: it is run by hand after a phase,
 and the committed `results\report\` is the held-out version.
 

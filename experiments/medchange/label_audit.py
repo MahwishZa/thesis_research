@@ -138,7 +138,7 @@ def to_markdown(split: str, rep: dict, model: str) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--split", default="dev", choices=("dev", "confirm"))
+    ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
     ap.add_argument("--medchange-dir", required=True)
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--data-dir", default=str(HERE / "data"))
@@ -147,7 +147,7 @@ def main(argv=None) -> int:
     ap.add_argument("--n-ctx", type=int, default=4096)
     ap.add_argument("--n-threads", type=int, default=None)
     args = ap.parse_args(argv)
-    if args.split == "confirm" and not Path(args.design_record).is_file():
+    if args.split in ("confirm", "ad") and not Path(args.design_record).is_file():
         print("the confirmatory labels are audited only after the design is frozen "
               f"({args.design_record} not found)", file=sys.stderr)
         return 2

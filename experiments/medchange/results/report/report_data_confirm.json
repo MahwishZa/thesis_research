@@ -168,6 +168,102 @@
       }
     },
     {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:biomistral",
+      "name": "BioMistral",
+      "changed": {
+        "n": 353,
+        "correct": 147,
+        "accuracy": 0.4164305949008499,
+        "ci": [
+          0.366174,
+          0.468487
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 91,
+        "accuracy": 0.52,
+        "ci": [
+          0.446347,
+          0.592794
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 238,
+        "accuracy": 0.45075757575757575,
+        "ci": [
+          0.408824,
+          0.493403
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:pmcllama",
+      "name": "PMC-LLaMA",
+      "changed": {
+        "n": 353,
+        "correct": 114,
+        "accuracy": 0.32294617563739375,
+        "ci": [
+          0.276298,
+          0.373407
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 70,
+        "accuracy": 0.4,
+        "ci": [
+          0.330315,
+          0.473981
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 184,
+        "accuracy": 0.3484848484848485,
+        "ci": [
+          0.309068,
+          0.390091
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:olmo-13b",
+      "name": "OLMo-13B",
+      "changed": {
+        "n": 353,
+        "correct": 162,
+        "accuracy": 0.45892351274787535,
+        "ci": [
+          0.407661,
+          0.511071
+        ]
+      },
+      "unchanged": {
+        "n": 175,
+        "correct": 102,
+        "accuracy": 0.5828571428571429,
+        "ci": [
+          0.508788,
+          0.653367
+        ]
+      },
+      "all": {
+        "n": 528,
+        "correct": 264,
+        "accuracy": 0.5,
+        "ci": [
+          0.457505,
+          0.542495
+        ]
+      }
+    },
+    {
       "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
       "arm": "B0",
       "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",

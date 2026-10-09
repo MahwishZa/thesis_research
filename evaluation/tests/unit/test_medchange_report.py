@@ -191,10 +191,37 @@ class CliTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 code = R.main(["--data-dir", str(data), "--results-dir", str(res), "--no-figures"])
                 missing = R.main(["--data-dir", str(tmp / "none"), "--results-dir", str(res)])
-            exists = (res / "report" / "REPORT.md").is_file()
-            arms = {r["arm"] for r in json.loads((res / "report" / "report_data_dev.json").read_text(encoding="utf-8"))["systems"]}
+            exists = (res / "report_dev" / "REPORT.md").is_file()
+            arms = {r["arm"] for r in json.loads((res / "report_dev" / "report_data_dev.json").read_text(encoding="utf-8"))["systems"]}
         self.assertEqual((code, missing, exists), (0, 2, True))
         self.assertTrue({"R2", "R2V"} <= arms)                                   # the realigned arms are read too
+
+
+class ReleasedAnswerFilesAndUnchangedOnlySplitsTests(unittest.TestCase):
+    def test_three_line_files_are_read_as_the_authors_do(self):
+        import tempfile
+        from experiments.medchange.headroom import FILES, read_answers
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / FILES["biomistral"]).write_text(
+                "Question: a?\nAnswer: REFUTED: no ||| benefit\n---\nQuestion: b?\nAnswer: unclear text\n---\n"
+                "Question: c?\nAnswer: SUPPORTED\n---", encoding="utf-8")
+            (folder / FILES["qwen25-7b"]).write_text("LABEL: SUPPORTED\nNOT ENOUGH INFORMATION: x\n", encoding="utf-8")
+            self.assertEqual(read_answers(folder, "biomistral"), ["REFUTED", None, "SUPPORTED"])
+            self.assertEqual(read_answers(folder, "qwen25-7b"), ["SUPPORTED", "NOT ENOUGH INFORMATION", None])
+            self.assertIsNone(read_answers(folder, "pmcllama"))
+
+    def test_a_split_without_changed_questions_has_no_changed_column_and_no_changed_only_tables(self):
+        items = {f"q{i}": {"item_id": f"q{i}", "kind": "unchanged", "newest": {"label": "NOT ENOUGH INFORMATION", "row": i}}
+                 for i in range(6)}
+        answers = {(i, "B1"): {"verdict": "NOT ENOUGH INFORMATION" if n % 2 else "SUPPORTED"} for n, i in enumerate(items)}
+        d = R.build("ad", items, answers, [], None)
+        text = R.report_markdown(d, {})
+        self.assertEqual((d["filtering"], d["classes"], d["status"]), ([], [], "secondary held-out test"))
+        self.assertNotIn("Changed", text)
+        self.assertIn("All (n = 6)", text)
+        self.assertNotIn("Unchanged", text)
+        self.assertIn("the best constant answer is NOT ENOUGH INFORMATION", text)
 
 
 if __name__ == "__main__":

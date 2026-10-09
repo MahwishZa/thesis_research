@@ -18,7 +18,8 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Design freeze | completed 2026-10-06 without using the one allowed prompt revision; the design record is committed |
 | Held-out run, 528 questions | started 2026-10-06 after the freeze, completed once on 2026-10-08 (results: `evaluation.md` §6) |
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
-| Alzheimer's/dementia run, 208 questions | **planned, not yet run** (§8) |
+| Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
+| Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8) |
 
 ## 1. Requirement and questions
 
@@ -172,6 +173,8 @@ is tested on.
 | 2026-10-05 | Keep the currency idea only as a reading criterion with an ablation (R2V-ND) | stage-1 dev results; G0 on both splits |
 | 2026-10-06 | Freeze the design without using the one allowed prompt revision (dev check: direction failed, R2V − R2 = −0.4 pp) | the dev run's results and the pattern of R2V's changes (fixes and breaks nearly cancelled); no held-out realigned result |
 
+| 2026-10-09 | Add the three remaining released-answer models (BioMistral, PMC-LLaMA, OLMo-13B) and a constant-answer baseline to the comparisons; audit the dementia labels with the same judge | the held-out and `ad` results of the local systems (§8) |
+
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
 ## 8. Amendments
@@ -211,6 +214,17 @@ Cochrane ID; these four are the only difference. The rule concerns review member
 regression test and a manifest-consistency test cover it. The 212-question manifest was reproduced hash-for-hash
 before the change; after it the builder gives the 208-question set, which shares no Cochrane ID, study group, question
 text or review PMID with dev or held-out (computed).
+
+*Outcome, 2026-10-09.* The set was run once with the frozen design; the reading is **met as a point estimate, not
+confirmed** (R2V − R2 = +3.4 pp, p = 0.28). The results are in `evaluation.md` §6.6.
+
+**2026-10-09, added comparisons** (decided after the held-out and `ad` results of the local systems were known, so
+they are not part of the pre-declared design). (1) The released answers of all eight models of the MedChange release are
+scored on the held-out and dementia questions, not only the five first chosen. (2) The best constant answer (always
+the most frequent gold class) is reported as a no-model reference. (3) The 208 dementia labels are audited with the
+same independent judge as the main benchmark's (`label_audit --split ad`). All three are descriptive context. They are
+included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
+the requirement is read.
 
 ## 9. Earlier stages (completed, superseded)
 

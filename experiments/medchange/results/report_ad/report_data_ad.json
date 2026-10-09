@@ -1,0 +1,338 @@
+{
+  "split": "ad",
+  "status": "secondary held-out test",
+  "n": {
+    "changed": 0,
+    "unchanged": 208,
+    "all": 208
+  },
+  "systems": [
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:qwen25-7b",
+      "name": "Qwen2.5-7B",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 88,
+        "accuracy": 0.4230769230769231,
+        "ci": [
+          0.357927,
+          0.491017
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 88,
+        "accuracy": 0.4230769230769231,
+        "ci": [
+          0.357927,
+          0.491017
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:llama33-70b",
+      "name": "Llama-3.3-70B",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 90,
+        "accuracy": 0.4326923076923077,
+        "ci": [
+          0.367183,
+          0.500643
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 90,
+        "accuracy": 0.4326923076923077,
+        "ci": [
+          0.367183,
+          0.500643
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:mistral-24b",
+      "name": "Mistral-24B",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 88,
+        "accuracy": 0.4230769230769231,
+        "ci": [
+          0.357927,
+          0.491017
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 88,
+        "accuracy": 0.4230769230769231,
+        "ci": [
+          0.357927,
+          0.491017
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:gpt4o-mini",
+      "name": "GPT-4o-mini",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 77,
+        "accuracy": 0.3701923076923077,
+        "ci": [
+          0.307481,
+          0.437612
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 77,
+        "accuracy": 0.3701923076923077,
+        "ci": [
+          0.307481,
+          0.437612
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:deepsek-v3",
+      "name": "DeepSeek-V3",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 82,
+        "accuracy": 0.3942307692307692,
+        "ci": [
+          0.330313,
+          0.461985
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 82,
+        "accuracy": 0.3942307692307692,
+        "ci": [
+          0.330313,
+          0.461985
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:biomistral",
+      "name": "BioMistral",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 71,
+        "accuracy": 0.34134615384615385,
+        "ci": [
+          0.280306,
+          0.40814
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 71,
+        "accuracy": 0.34134615384615385,
+        "ci": [
+          0.280306,
+          0.40814
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:pmcllama",
+      "name": "PMC-LLaMA",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 90,
+        "accuracy": 0.4326923076923077,
+        "ci": [
+          0.367183,
+          0.500643
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 90,
+        "accuracy": 0.4326923076923077,
+        "ci": [
+          0.367183,
+          0.500643
+        ]
+      }
+    },
+    {
+      "group": "Closed-book LLMs, released answers (existing work)",
+      "arm": "R:olmo-13b",
+      "name": "OLMo-13B",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 86,
+        "accuracy": 0.41346153846153844,
+        "ci": [
+          0.348697,
+          0.481365
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 86,
+        "accuracy": 0.41346153846153844,
+        "ci": [
+          0.348697,
+          0.481365
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B0",
+      "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 69,
+        "accuracy": 0.3317307692307692,
+        "ci": [
+          0.271304,
+          0.39826
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 69,
+        "accuracy": 0.3317307692307692,
+        "ci": [
+          0.271304,
+          0.39826
+        ]
+      }
+    },
+    {
+      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "arm": "B1",
+      "name": "B1: + MedCPT retrieval, top-5 (standard RAG)",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 64,
+        "accuracy": 0.3076923076923077,
+        "ci": [
+          0.248929,
+          0.37343
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 64,
+        "accuracy": 0.3076923076923077,
+        "ci": [
+          0.248929,
+          0.37343
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2",
+      "name": "R2: adapted RAG\u00b2: rationale query + type-balanced retrieval + LLM filter (baseline)",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 72,
+        "accuracy": 0.34615384615384615,
+        "ci": [
+          0.284818,
+          0.41307
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 72,
+        "accuracy": 0.34615384615384615,
+        "ci": [
+          0.284818,
+          0.41307
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2C",
+      "name": "R2C: R2's evidence read once with explicit evidence criteria (control)",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 82,
+        "accuracy": 0.3942307692307692,
+        "ci": [
+          0.330313,
+          0.461985
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 82,
+        "accuracy": 0.3942307692307692,
+        "ci": [
+          0.330313,
+          0.461985
+        ]
+      }
+    },
+    {
+      "group": "Adapted RAG\u00b2 and evidence-criteria verification (this thesis, realigned study)",
+      "arm": "R2V",
+      "name": "R2V: R2's answer verified against the evidence criteria (proposed)",
+      "changed": null,
+      "unchanged": {
+        "n": 208,
+        "correct": 79,
+        "accuracy": 0.3798076923076923,
+        "ci": [
+          0.316593,
+          0.447381
+        ]
+      },
+      "all": {
+        "n": 208,
+        "correct": 79,
+        "accuracy": 0.3798076923076923,
+        "ci": [
+          0.316593,
+          0.447381
+        ]
+      }
+    }
+  ],
+  "filtering": [],
+  "classes": [],
+  "constant": {
+    "unchanged": {
+      "SUPPORTED": 0.25,
+      "REFUTED": 0.3269230769230769,
+      "NOT ENOUGH INFORMATION": 0.4230769230769231
+    },
+    "all": {
+      "SUPPORTED": 0.25,
+      "REFUTED": 0.3269230769230769,
+      "NOT ENOUGH INFORMATION": 0.4230769230769231
+    }
+  },
+  "label_audit": null
+}

@@ -1,0 +1,28 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+System & Changed & Unchanged & All \\
+\midrule
+\multicolumn{4}{l}{\emph{Closed-book LLMs, released answers (existing work)}} \\
+Qwen2.5-7B & n/a & 42.3 & 42.3 \\
+Llama-3.3-70B & n/a & \textbf{43.3} & \textbf{43.3} \\
+Mistral-24B & n/a & 42.3 & 42.3 \\
+GPT-4o-mini & n/a & 37.0 & 37.0 \\
+DeepSeek-V3 & n/a & 39.4 & 39.4 \\
+BioMistral & n/a & 34.1 & 34.1 \\
+PMC-LLaMA & n/a & \textbf{43.3} & \textbf{43.3} \\
+OLMo-13B & n/a & 41.3 & 41.3 \\
+\multicolumn{4}{l}{\emph{Llama-3-8B-Instruct, local (this thesis, stage 1)}} \\
+B0: Llama-3-8B-Instruct (Q4\_K\_M), no retrieval & n/a & 33.2 & 33.2 \\
+B1: + MedCPT retrieval, top-5 (standard RAG) & n/a & 30.8 & 30.8 \\
+\multicolumn{4}{l}{\emph{Adapted RAG$^2$ and evidence-criteria verification (this thesis, realigned study)}} \\
+R2: adapted RAG$^2$: rationale query + type-balanced retrieval + LLM filter (baseline) & n/a & 34.6 & 34.6 \\
+R2C: R2's evidence read once with explicit evidence criteria (control) & n/a & 39.4 & 39.4 \\
+R2V: R2's answer verified against the evidence criteria (proposed) & n/a & 38.0 & 38.0 \\
+\bottomrule
+\end{tabular}
+\caption{Verdict accuracy (\\%) on the MedChange ad split (secondary held-out test); not comparable with multiple-choice benchmarks.}
+\label{tab:systems-ad}
+\end{table}

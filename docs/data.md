@@ -81,11 +81,11 @@ mild cognitive impairment, delirium).
 Alzheimer's disease, and it is called that here, not an Alzheimer's-only benchmark. (2) No question has a changed verdict,
 so changed-question and update-window results cannot be computed for it. (3) Its reviews are old: 48 of the 208 are dated
 before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year only and the earliest is 2000, so as-of evidence
-will be thinner for many questions; the pools have not been built, so their sizes are unknown. (4) 208 questions come from
+will be thinner for many questions; the pools, once built, had a median of 20 candidates and none was empty, and R2 admitted at least one abstract for 177 of the 208 (85.1%). (4) 208 questions come from
 159 reviews, and the paired tests treat questions as independent, which slightly understates the uncertainty. (5) Its power is
 low: only effects of about 6 to 10 points can be confirmed (`evaluation.md` §4). (6) Its labels have not been audited by an
-independent model (the audit covers the development and held-out splits), so it has no label-stable subset. (7) The set has not
-been run.
+independent model (the audit covers the development and held-out splits; `label_audit --split ad` is available), so it has no
+label-stable subset yet. (7) The set was run once (`evaluation.md` §6.6).
 
 ## 3. Evidence: as-of PubMed records
 
@@ -122,7 +122,7 @@ phase has run.
 | `rag2_design.json` | `rag2_pipeline dev` | the design record, committed **before** the held-out run, which refuses to start otherwise |
 | `rag2_environment_<phase>.json` | `rag2_pipeline` | package versions, platform and code commit of a phase (informational; the development run has none) |
 | `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only) |
-| `report/` | `report` | `REPORT.md`, `tables.tex`, `report_data_confirm.json` and two figures (held-out split) |
+| `report/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the dementia set has no changed questions) |
 | `earlier_stages/` | the removed stage code | results of record of stages 1 and 2 (`methodology.md` §10): the analysis, error analysis, audit and diagnostics of the stage-1 development answers; the stage-2 per-paper judgements, predictions, cross-validation, frozen model and reports |
 
 ## 5. Usage

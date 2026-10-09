@@ -336,7 +336,10 @@ def to_markdown(rep: dict) -> str:
               f"{_pp((s['R2V_minus_R2'] or {}).get('diff_a_minus_b'))} pp; R2 − B1 = "
               f"{_pp((s['R2_minus_B1'] or {}).get('diff_a_minus_b'))} pp."]
     cs = rep["case_study_alzheimers"]
-    if cs["n"]:
+    if rep["split"] == "ad":
+        L += ["", "The update-window and age columns of the retrieval table do not apply to this split: almost every "
+              "review has a single version, so there is no earlier version to measure an update window from."]
+    elif cs["n"]:
         L += ["", f"Alzheimer's case study ({cs['n']} items, descriptive): correct answers per arm: "
               + ", ".join(f"{a} {k}" for a, k in cs["correct"].items()) + "."]
     low, high = detectable_range(rep["items"])

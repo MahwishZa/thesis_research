@@ -1291,3 +1291,22 @@ At the researcher's request, before the dementia/Alzheimer's run:
 
 Verification: 205 tests pass, also in a fresh virtual environment with only numpy and outbound sockets blocked, and in a fresh
 clone of the pushed commit. No code that runs a model was touched in this phase.
+
+## Phase 44 — Dementia and Alzheimer's results; eight released models; constant-answer baseline (Oct 9)
+
+The `ad` phase finished (22.7 h measured, with the judge) and its results were pushed by the researcher.
+
+* *Data check.* Pools were complete (median 20 candidates, no empty pool); R2 admitted at least one abstract for 177 of 208
+  questions; every answer parsed.
+* *Result.* R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7, p = 0.28): **met as a point estimate, not confirmed**, with the rule
+  fixed before the run. R2C (39.4% against 38.0% for R2V) did slightly better than R2V; no system beat the constant answer
+  NOT ENOUGH INFORMATION (42.3%). Written up in the README and `evaluation.md` §6.6.
+* *Added comparisons* (`protocol.md` §8, 2026-10-09; descriptive, included whatever they score): the released answers of
+  all eight models (BioMistral, PMC-LLaMA and OLMo-13B were added to the five; their files hold three lines per answer, of
+  which the second is the answer), and the best constant answer. The earlier README sentence that the local model was below
+  all five models stays true only for the five best; OLMo-13B (50.0%) equals R2V, and two medical models are below it.
+* *Code.* `headroom.read_answers` reads the released files; `report` accepts `--split ad` (no changed-question table or
+  figures for a split without changed questions; default folders `report` for the held-out split and `report_<split>`
+  otherwise); `label_audit` accepts `--split ad`; `analyze_rag2` no longer prints the age/update-window case-study line for `ad`.
+* *Still to do on the laptop:* `label_audit --split ad` (about 1 h), then `analyze_rag2 --split ad --label-audit ...`.
+* *Guards.* Tests check the eight models and every dementia figure of the README against the committed analyses.
