@@ -1470,3 +1470,12 @@ class (0.909); by area causes 2, diagnosis 0, symptoms 3, treatment 6. By conclu
 sizes of 11 questions say nothing). Gate 1 fails on survival, size and verdict mix; the protocol allows one documented redesign before the test split is
 sealed. Added `build rulecheck` (counts of why the cue reading gave no verdict; no abstract text) and `spec.explain_reading` to inform that decision.
 
+## Phase 59 — Why the cue reading failed, and a diagnostic on the skew (Oct 9)
+
+`build rulecheck` (researcher's run, counts only). Of 99 well-formed development drafts the drafter proposed SUPPORTED 88, REFUTED 10, NOT ENOUGH INFORMATION 1.
+Of the 84 where the cue reading gave no verdict: 56 matched no cue, 25 had a hedge cue ("however" alone in 23), 3 were conflicts; the drafter proposed
+SUPPORTED for 74, REFUTED for 9, NOT ENOUGH INFORMATION for 1. Two readings are possible and the data so far cannot separate them: a skew of the source
+(published reviews of Alzheimer's disease lean positive and rarely state insufficiency) or a bias of the drafter. Added `verify --role wide` (the
+independent verifier labels every well-formed draft into a separate diagnostic file that the keep rules never read) and a drafter-versus-verifier
+cross-tabulation in `rulecheck`, to decide what the one allowed redesign can achieve. Nothing is changed in the design or the gates.
+

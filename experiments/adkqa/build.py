@@ -116,7 +116,11 @@ def run_draft(rows: Sequence[dict], gen: Callable[[str, str], str], out: Path, p
     return len(todo)
 
 
-def run_verify(rows: Sequence[dict], drafts: dict, gen: Callable[[str, str], str], out: Path, progress=lambda k, n: None) -> int:
+WIDE_STATUSES = ("rule_ok", "rule_no_verdict", "rule_disagrees")     # --role wide: diagnostic only, never used by the keep rules
+
+
+def run_verify(rows: Sequence[dict], drafts: dict, gen: Callable[[str, str], str], out: Path, progress=lambda k, n: None,
+               statuses: Sequence[str] = ("rule_ok",)) -> int:
     """The verifier reads the question, the objectives and the quoted conclusion only (the audit prompt, unchanged)."""
     done = {r["pmid"] for r in load_jsonl(out)}
     todo = []
@@ -124,7 +128,7 @@ def run_verify(rows: Sequence[dict], drafts: dict, gen: Callable[[str, str], str
         d = drafts.get(row["pmid"])
         if row["pmid"] in done or d is None:
             continue
-        if check_draft(row, d["draft"])[0] == "rule_ok":
+        if check_draft(row, d["draft"])[0] in statuses:
             todo.append((row, d["draft"]))
     with open(out, "a", encoding="utf-8", newline="\n") as fh:
         for k, (row, d) in enumerate(todo, 1):
@@ -271,7 +275,7 @@ def pool_sizes(items: Sequence[dict], eu: EUtils, retmax: int = 100) -> dict:
             "min": min(sizes) if sizes else None, "retmax": retmax}
 
 
-def rule_breakdown(rows: Sequence[dict], drafts: dict) -> dict:
+def rule_breakdown(rows: Sequence[dict], drafts: dict, wide: Optional[dict] = None) -> dict:
     """Why the cue reading gave no verdict, and what the drafter proposed, over the drafts that passed the earlier checks. Counts of
     reasons and of the cue patterns (from the declared lists) that fired; no abstract text."""
     from collections import Counter
@@ -292,7 +296,17 @@ def rule_breakdown(rows: Sequence[dict], drafts: dict) -> dict:
             for k, pats in spec._trace(r["conclusion"]).items():
                 for pat in pats:
                     pattern_hits[(k, pat)] += 1
-    return {"well_formed_drafts": sum(drafter_all.values()), "drafter_verdict_all_well_formed": dict(drafter_all),
+    cross: dict = {}
+    if wide:
+        for r in rows:
+            d, w = drafts.get(r["pmid"]), wide.get(r["pmid"])
+            if d is None or w is None or r["status"] != "eligible":
+                continue
+            key = f"drafter {d['draft']['verdict']} / verifier {w['label']}"
+            cross[key] = cross.get(key, 0) + 1
+    out_wide = {"verifier_labels_all_well_formed": dict(Counter(w["label"] for w in (wide or {}).values())),
+                "drafter_vs_verifier": dict(sorted(cross.items(), key=lambda kv: -kv[1]))} if wide else None
+    return {"wide_verifier": out_wide, "well_formed_drafts": sum(drafter_all.values()), "drafter_verdict_all_well_formed": dict(drafter_all),
             "rule_no_verdict_reasons": dict(reasons.most_common()),
             "rule_no_verdict_by_reason_and_drafter_verdict": {f"{a} / {b}": n for (a, b), n in by_drafter.most_common()},
             "patterns_fired_in_rule_no_verdict": [[k, p, n] for (k, p), n in pattern_hits.most_common(15)]}
@@ -334,7 +348,8 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
     ap.add_argument("cmd", choices=("prepare", "diagnose", "rulecheck", "draft", "verify", "assemble", "pools", "gate1"))
     ap.add_argument("--split", default="dev", choices=("dev", "test"))
     ap.add_argument("--model-path")
-    ap.add_argument("--role", default="verifier", choices=("verifier", "audit"))
+    ap.add_argument("--role", default="verifier", choices=("verifier", "audit", "wide"),
+                    help="wide: also label the drafts the cue reading did not settle (diagnostic file; not used by the keep rules)")
     ap.add_argument("--data-dir", default=str(DATA))
     ap.add_argument("--results-dir", default=str(RESULTS))
     ap.add_argument("--api-key", default=None)
@@ -365,7 +380,8 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
         return 0
     if a.cmd == "rulecheck":
         drafts = {r["pmid"]: r for r in load_jsonl(data / f"drafts_{a.split}.jsonl")}
-        rep = rule_breakdown(select(rows, a.split), drafts)
+        wide = {r["pmid"]: r for r in load_jsonl(data / f"wide_{a.split}.jsonl")} or None
+        rep = rule_breakdown(select(rows, a.split), drafts, wide)
         _write_json(data / f"adkqa_rulecheck_{a.split}.json", rep)
         print(json.dumps(rep, indent=2))
         return 0
@@ -392,14 +408,15 @@ def main(argv=None, *, eu: Optional[EUtils] = None, generator: Optional[Callable
         return 0
     if a.cmd == "verify":
         drafts = {r["pmid"]: r for r in load_jsonl(data / f"drafts_{a.split}.jsonl")}
-        out = data / f"{a.role}_{a.split}.jsonl"
+        out = data / (f"{a.role}_{a.split}.jsonl" if a.role != "wide" else f"wide_{a.split}.jsonl")
         differs = check_config(out, _config(a.model_path, a.n_ctx, LA.SYSTEM, LA.TEMPLATE),
                                ("model_sha256", "n_ctx", "system_sha256", "template_sha256"))
         if differs:
             print(f"refusing to extend {out.name}: configuration differs in {', '.join(differs)}", file=sys.stderr)
             return 2
         gen = generator or llama_generator(a.model_path, a.n_ctx, a.n_threads, 0, 12)
-        n = run_verify(scope, drafts, gen, out, lambda k, t: print(f"  {k}/{t}", flush=True) if k % 10 == 0 or k == t else None)
+        n = run_verify(scope, drafts, gen, out, lambda k, t: print(f"  {k}/{t}", flush=True) if k % 10 == 0 or k == t else None,
+                       WIDE_STATUSES if a.role == "wide" else ("rule_ok",))
         print(f"{a.role}: labelled {n} drafts -> {out}")
         return 0
 

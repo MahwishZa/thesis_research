@@ -163,6 +163,10 @@ class RuleBreakdownTests(unittest.TestCase):
         self.assertEqual(got["well_formed_drafts"], 4)
         self.assertEqual(got["rule_no_verdict_reasons"], {"no cue": 1, "hedge with positive": 1, "conflict: positive+negative": 1})
         self.assertEqual(spec.explain_reading("Donepezil significantly improved cognition."), "label")
+        wide = {"0": {"label": "NOT ENOUGH INFORMATION"}, "1": {"label": "SUPPORTED"}}
+        got = B.rule_breakdown(rows, drafts, wide)["wide_verifier"]
+        self.assertEqual(got["verifier_labels_all_well_formed"], {"NOT ENOUGH INFORMATION": 1, "SUPPORTED": 1})
+        self.assertEqual(got["drafter_vs_verifier"]["drafter SUPPORTED / verifier NOT ENOUGH INFORMATION"], 1)
 
 
 class DraftCheckTests(unittest.TestCase):
