@@ -11,8 +11,8 @@ when RAG gets one extra step: after drafting an answer from the studies it found
 rules of evidence (only studies that really test the treatment count, trials and systematic reviews weigh most, newer
 evidence takes precedence). The idea is compared with an adapted version of a published medical RAG method (RAG²; not a full
 reproduction of it) on real questions taken from Cochrane systematic reviews, each asked as of the day the review was
-published, so that only earlier studies can be used. The goal agreed with the supervisor is an improvement of at least 1
-percentage point in the share of correct answers.
+published, so that only earlier studies can be used. A second set of questions about dementia and Alzheimer's disease serves as an additional test. The goal agreed with the
+supervisor is an improvement of at least 1 percentage point in the share of correct answers.
 
 ## Research Objectives
 
@@ -90,17 +90,49 @@ judged by a second, independent AI model.
 | Standard retrieval (B1) | 5.0 | 0.0% | 28.6% |
 | Baseline and proposed system (same studies) | 3.3 | 15.3% | 57.3% |
 
-**For context.** The authors of the benchmark published the answers of five other AI models, some of them far larger, to the
-same questions without any lookup: Qwen2.5-7B 52.8%, GPT-4o-mini 52.8%, DeepSeek-V3 52.3%, Llama-3.3-70B 50.8% and
-Mistral-24B 50.8%. The small laptop model scored 46.6–50.0%, numerically below all five. This is not a like-for-like
-comparison, because the models differ in size, training and instructions.
+**For context.** The authors of the benchmark published the answers of eight other AI models, some of them far larger, to the
+same questions without any lookup: Qwen2.5-7B 52.8%, GPT-4o-mini 52.8%, DeepSeek-V3 52.3%, Llama-3.3-70B 50.8%,
+Mistral-24B 50.8%, OLMo-13B 50.0%, BioMistral 45.1% and PMC-LLaMA 34.8%. The small laptop model scored 46.6–50.0%: numerically
+below the five best, level with OLMo-13B at best, and above the two medical models. This is not a like-for-like comparison,
+because the models differ in size, training and instructions.
 
 **How reliable are the reference answers?** The reference verdicts were themselves produced by an AI model from the reviews'
 conclusions. A second, independent AI model reproduced 81.4% of them on these questions, so some references are debatable
 and small differences between systems should be read with that in mind.
 
+**Second test: dementia and Alzheimer's questions.** The same systems were then tried, unchanged, on 208 questions about
+dementia and Alzheimer's disease. None of these verdicts changed over time, and 42% of the reference answers are "not enough
+information"; the systems gave that answer in 22–34% of cases.
+
+| System (dementia questions) | Share correct (95% range) |
+|---|---|
+| Always answering *not enough information* (no model) | 42.3% |
+| B0: no lookup | 33.2% (27.1–39.8) |
+| B1: standard retrieval | 30.8% (24.9–37.3) |
+| R2: baseline | 34.6% (28.5–41.3) |
+| R2C: rules without the extra check | 39.4% (33.0–46.2) |
+| R2V: proposed system | 38.0% (31.7–44.7) |
+
+The proposed system answered 79 of the 208 questions correctly against 72 for the baseline (+3.4 points; 19 against 12 on
+the 31 questions where they differed). The goal is therefore met as a point estimate, not confirmed (p = 0.28): with 208
+questions only differences of about 6–10 points can be confirmed. Giving the rules without the extra check did slightly
+better than the extra check (39.4% against 38.0%), and no system beat the constant answer.
+
+| Comparison (dementia questions) | Gap in points | 95% range | p-value |
+|---|---|---|---|
+| Proposed − baseline (R2V − R2) | +3.4 | −1.9 to +8.7 | 0.28 |
+| Baseline − standard retrieval (R2 − B1) | +3.8 | −1.4 to +9.1 | 0.46 |
+| Proposed − standard retrieval (R2V − B1) | +7.2 | +0.0 to +14.4 | 0.25 |
+| Rules only − baseline (R2C − R2) | +4.8 | +0.0 to +9.6 | 0.26 |
+| Proposed − rules only (R2V − R2C) | −1.4 | −5.8 to +2.9 | 0.68 |
+
+The released answers of the eight other models score on these questions: Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3
+39.4%, Llama-3.3-70B 43.3%, Mistral-24B 42.3%, OLMo-13B 41.3%, BioMistral 34.1% and PMC-LLaMA 43.3%, against 30.8–39.4% for
+the local systems. The reference answers for these questions have not been re-checked by a second model.
+
 **In short.** The extra check gave a small gain (+1.3 points) that cannot be told apart from luck, the baseline was not
-clearly better than simple retrieval (+0.6 points), and in the practice run the proposed system was slightly behind. The
+clearly better than simple retrieval (+0.6 points), and in the practice run the proposed system was slightly behind. On the
+dementia questions the gain was larger (+3.4 points) but equally unconfirmed, and the rules alone did as well. The
 results therefore do not show that the extra check improves accuracy. Full tables: `docs/evaluation.md` §6.
 
 ## Repository Structure
