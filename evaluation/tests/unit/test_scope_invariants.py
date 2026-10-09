@@ -26,6 +26,10 @@ History of the guards (each date is a change of what is true; older wording is i
 * 2026-10-08 (later): the README's overview, objectives and results were rewritten for a general reader (objectives as two
   bullets, no experiment status in the results), the READMEs of the subfolders were removed, and no document may point to the
   thesis paper.
+* 2026-10-09: the primary evaluation was re-declared as Alzheimer's-specific (``docs/protocol.md`` §8); the as-of Cochrane
+  results became secondary evidence. The README was shortened to a headline (two small tables, no experiment status), it points
+  to the research paper through a placeholder (the earlier ban on mentioning the paper was temporary), and the quoted-figure
+  guards were repointed to the new README and to ``docs/evaluation.md``.
 """
 
 import ast
@@ -34,7 +38,7 @@ import re
 import unittest
 from pathlib import Path
 
-from experiments.medchange.scoring import wilson
+from experiments.medchange.scoring import detectable_range, wilson
 
 ROOT = Path(__file__).resolve().parents[3]
 README = ROOT / "README.md"
@@ -58,7 +62,7 @@ CURRENT_DOCS = ("README.md", "docs/data.md", "docs/methodology.md", "docs/protoc
 GENERATED_PREFIXES = (
     "experiments/medchange/data", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/label_audit_",
-    "experiments/medchange/results/consistency_auto_",
+    "experiments/medchange/results/consistency_auto_", "experiments/adkqa/results",
 )
 
 
@@ -115,18 +119,13 @@ class ReadmeStructureTests(unittest.TestCase):
         for status_word in ("status", "not yet run", "not run", "planned", "implemented", "still to"):
             self.assertNotIn(status_word, section)
 
-    def test_no_document_points_to_the_thesis_paper(self):
-        """The research paper is not mentioned anywhere in the repository for now; the README title is the only
-        place the word thesis may appear."""
-        offenders = []
-        for rel in CURRENT_DOCS:
-            body = text(ROOT / rel)
-            if rel == "README.md":
-                body = body.split("\n", 1)[1]            # the placeholder title
-            for phrase in ("the thesis", "this thesis", "thesis paper", "research paper", "thesis document"):
-                if phrase in body.lower():
-                    offenders.append(f"{rel}: {phrase}")
-        self.assertEqual(offenders, [])
+    def test_the_readme_points_to_the_research_paper_only_through_a_placeholder(self):
+        """The research paper is not yet available: the README names it through a placeholder and invents neither an
+        address nor a claim of publication."""
+        body = flat(README)
+        self.assertRegex(body, r"research paper: \[[^\]]*to be added\]")
+        for address in ("doi.org", "arxiv.org", "researchgate", "zenodo", "scholar.google", "osf.io"):
+            self.assertNotIn(address, body.lower())
 
     def test_readme_does_not_present_the_rag2_stand_in_as_a_reproduction(self):
         body = flat(README)
@@ -137,7 +136,7 @@ class ReadmeStructureTests(unittest.TestCase):
         sample size; dropping either would turn a hedged result into an unqualified claim."""
         body = flat(README)
         for needle in ("at least 1 percentage point", "met as a point estimate, not confirmed",
-                       "only gains of roughly 4 to 6 points or more could be confirmed",
+                       "cannot be told apart from chance", "only gains of roughly 4 to 6 points",
                        "do not show that the extra check improves accuracy"):
             self.assertIn(needle, body)
 
@@ -265,144 +264,139 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
     the committed analyses, so a figure cannot drift from the file it claims to come from."""
 
     ARMS = ("B0", "B1", "R2", "R2C", "R2V", "R2V-ND")
+    README_ROWS = {"B0": "No retrieval", "B1": "Standard retrieval", "R2": "Adapted RAG²", "R2V": "Proposed extra check"}
 
     @classmethod
     def setUpClass(cls):
         cls.confirm = json.loads(text(RESULTS / "rag2_analysis_confirm.json"))
         cls.dev = json.loads(text(RESULTS / "rag2_analysis_dev.json"))
+        cls.ad = json.loads(text(RESULTS / "rag2_analysis_ad.json"))
         cls.audit = json.loads(text(RESULTS / "label_audit_confirm.json"))
         cls.report = json.loads(text(RESULTS / "report" / "report_data_confirm.json"))
+        cls.report_ad = json.loads(text(RESULTS / "report_ad" / "report_data_ad.json"))
         cls.readme = text(README).replace("**", "")
         cls.readme_flat = " ".join(cls.readme.split())
         cls.evaluation = text(DOCS / "evaluation.md").replace("**", "")
+        cls.evaluation_flat = " ".join(cls.evaluation.split())
+
+    def _row(self, rows, label):
+        found = [r for r in rows if r.startswith(f"| {label}")]
+        self.assertEqual(len(found), 1, label)
+        return found[0]
+
+    # ---- the README: two small tables and the sentences that read them
+
+    def test_the_readme_accuracy_table_is_quoted_exactly(self):
+        rows = _table(self.readme, "System (same language model, same studies)")
+        for arm, label in self.README_ROWS.items():
+            cells = [f"{_pct(*_rate(sj['generation'][arm]['all']))}%" for sj in (self.confirm, self.ad)]
+            row = self._row(rows, label)
+            self.assertEqual([c.strip() for c in row.strip("|").split("|")[1:]], cells, label)
+
+    def test_the_readme_difference_table_and_its_reading_are_quoted_exactly(self):
+        rows = _table(self.readme, "Proposed extra check minus baseline")
+        for label, sj in (("General medicine", self.confirm), ("Dementia-related", self.ad)):
+            p = sj["primary"]
+            expected = (f"| {label} | {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | "
+                        f"{_p(p['mcnemar_p'])} |")
+            self.assertEqual(self._row(rows, label), expected)
+            self.assertEqual(sj["requirement"], "met as a point estimate, not confirmed")
+            self.assertGreaterEqual(100 * p["diff_a_minus_b"], 1.0, "the README says the gap is above the 1-point requirement")
+            self.assertLess(p["ci95"][0], 0, "the README says the range includes negative values")
+            self.assertGreater(p["ci95"][1], 0)
+            self.assertFalse(p["confirmed"])
+        self.assertIn("met as a point estimate, not confirmed", self.readme_flat)
+
+    def test_the_sample_size_limits_in_the_readme_follow_from_the_formula(self):
+        (a, b), (c, d) = detectable_range(self.confirm["items"]), detectable_range(self.ad["items"])
+        self.assertIn(f"roughly {a} to {b} points (general medicine) or {c} to {d} points (dementia-related)",
+                      self.readme_flat)
+
+    def test_the_scope_sentences_of_the_readme_follow_from_the_data(self):
+        self.assertIn(f"{self.confirm['items']} general-medicine questions and {self.ad['items']} dementia-related questions",
+                      self.readme_flat)
+        manifest = json.loads(text(ROOT / "experiments" / "medchange" / "manifest_ad.json"))
+        self.assertEqual(manifest["items"], self.ad["items"])
+        benchmark = ROOT / "experiments" / "medchange" / "data" / "benchmark.jsonl"
+        if benchmark.exists():                      # local data are gitignored; the count is checked where they exist
+            named = sum("alzheimer" in json.loads(line)["question"].lower() for line in text(benchmark).splitlines()
+                        if line.strip() and json.loads(line)["split"] == "ad")
+            self.assertIn(f"of which {named} name Alzheimer's disease", self.readme_flat)
+        self.assertIn("of which 48 name Alzheimer's disease", self.readme_flat)
+
+    def test_the_reliability_sentence_is_quoted_exactly(self):
+        self.assertIn(f"reproduces {100 * self.audit['agreement']:.1f}% of them", self.readme_flat)
+        for needle in (f"Agreement {100 * self.audit['agreement']:.1f}%", f"kappa {self.audit['kappa']}",
+                       f"{self.audit['n_stable']} of {self.audit['n_items']} questions label-stable"):
+            self.assertIn(needle, self.evaluation)
+
+    # ---- docs/evaluation.md: the full tables
 
     def test_held_out_accuracies_are_quoted_exactly(self):
         gen = self.confirm["generation"]
-        readme_rows = _table(self.readme, "Accuracy (95% range)")
         for arm in self.ARMS:
             k, n = _rate(gen[arm]["all"])
             lo, hi = wilson(k, n)
-            all_cell = f"{_pct(k, n)}% ({100 * lo:.1f}–{100 * hi:.1f})"
-            self.assertIn(all_cell, _row(readme_rows, arm), f"README, held-out {arm}")
-            full = (f"{all_cell} | {_pct(*_rate(gen[arm]['changed']))}% | {_pct(*_rate(gen[arm]['unchanged']))}%")
+            full = (f"{_pct(k, n)}% ({100 * lo:.1f}–{100 * hi:.1f}) | {_pct(*_rate(gen[arm]['changed']))}% | "
+                    f"{_pct(*_rate(gen[arm]['unchanged']))}%")
             self.assertIn(full, self.evaluation, f"evaluation.md, held-out {arm}")
 
     def test_development_accuracies_are_quoted_exactly(self):
         gen = self.dev["generation"]
-        readme_rows = _table(self.readme, "practice questions")
         for arm in self.ARMS:
-            self.assertIn(f"{_pct(*_rate(gen[arm]['all']))}%", _row(readme_rows, arm), f"README, practice run {arm}")
             row = " | ".join(f"{_pct(*_rate(gen[arm][kind]))}%" for kind in ("all", "changed", "unchanged"))
             self.assertIn(row, self.evaluation, f"evaluation.md, development {arm}")
 
     def test_the_requirement_and_its_reading_are_quoted_exactly(self):
         p = self.confirm["primary"]
-        readme_table = "\n".join(_table(self.readme, "Difference (points)"))
-        row = f"| {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])} |"
-        self.assertIn(row, readme_table)
-        self.assertIn(f"The goal is therefore {self.confirm['requirement']}", self.readme_flat)
         self.assertIn(f"{_pp(p['diff_a_minus_b'])} pp | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])}",
                       self.evaluation)
         self.assertIn(self.confirm["requirement"], self.evaluation)
         d = self.dev["primary"]
-        needle = f"{_pp(d['diff_a_minus_b'])} points; 95% range {_pp(d['ci95'][0])} to {_pp(d['ci95'][1])}"
-        self.assertIn(needle, self.readme_flat)
         self.assertIn(f"R2V − R2 = {_pp(d['diff_a_minus_b'])} pp (95% CI {_pp(d['ci95'][0])} to {_pp(d['ci95'][1])}",
                       self.evaluation)
 
     def test_the_secondary_comparisons_are_quoted_exactly(self):
-        readme_table = "\n".join(_table(self.readme, "Difference (points)"))
         for name, r in self.confirm["secondary"].items():
             verdict = "confirmed" if r["confirmed"] else "not confirmed"
-            row = f"| {_pp(r['diff_a_minus_b'])} | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | {_p(r['holm_p'])} |"
-            self.assertIn(row, readme_table, f"README, {name}")
             full = (f"{_pp(r['diff_a_minus_b'])} pp | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | "
                     f"{_p(r['mcnemar_p'])} ({_p(r['holm_p'])}) | {verdict}")
             self.assertIn(full, self.evaluation, f"evaluation.md, {name}")
-        self.assertIn("None of the differences is confirmed", self.readme_flat)
         self.assertFalse(any(r["confirmed"] for r in self.confirm["secondary"].values()) or self.confirm["primary"]["confirmed"])
 
-    def test_the_sentences_of_the_main_finding_are_quoted_exactly(self):
-        p, gen = self.confirm["primary"], self.confirm["generation"]
-        ka, n = _rate(gen["R2V"]["all"])
-        kb, _ = _rate(gen["R2"]["all"])
-        a, b = p["a_only_correct"], p["b_only_correct"]
-        self.assertEqual(ka - kb, a - b)
-        for needle in (f"answered {ka} of the {n} questions correctly and the baseline {kb}",
-                       f"a gain of {100 * p['diff_a_minus_b']:.1f} percentage points",
-                       f"On the {a + b} questions where the two systems disagreed, the proposed system was right on {a} "
-                       f"and the baseline on {b}",
-                       f"(p = {p['mcnemar_p']:.2f})"):
-            self.assertIn(needle, self.readme_flat)
-
-    def test_the_sentences_on_what_the_check_does_are_quoted_exactly(self):
+    def test_the_verification_and_retrieval_sentences_are_quoted_exactly(self):
         v = self.confirm["verification"]["R2V"]
-        n_ev, changes = v["n_with_evidence"], round(v["changed_rate"] * v["n_with_evidence"])
-        self.assertEqual(changes, sum(v["transitions"].values()))
-        self.assertIn(f"For the {n_ev} questions where the baseline had studies to read, the check changed the baseline's "
-                      f"verdict {changes} times: {v['changes_fixed']} changes turned a wrong answer into a right one and "
-                      f"{v['changes_broke']} did the opposite", self.readme_flat)
-        sizes = {label: cell["n"] for label, cell in self.audit["per_gold_class"].items()}
-        gen = self.confirm["generation"]
+        self.assertIn(f"({v['changes_fixed']} fixes, {v['changes_broke']} breaks)", self.evaluation_flat)
+        r, b = self.confirm["retrieval"]["R2"], self.confirm["retrieval"]["B1"]
+        self.assertIn(f"R2 admits {r['mean_admitted']:.1f} abstracts on average and none for "
+                      f"{100 * r['share_without_evidence']:.1f}% of questions; {100 * r['directness_at_k']:.1f}% of its "
+                      f"admitted abstracts are judged direct by the independent model, against "
+                      f"{100 * b['directness_at_k']:.1f}% for B1", self.evaluation_flat)
 
-        def right(arm, label):
-            return round(gen[arm]["recall"][label] * sizes[label])
-        for arm in ("R2", "R2V"):
-            self.assertEqual(sum(right(arm, label) for label in sizes), _rate(gen[arm]["all"])[0])
-        self.assertIn(f"the proposed system got {right('R2V', 'REFUTED')} right against {right('R2', 'REFUTED')} for the "
-                      f"baseline; among the {sizes['NOT ENOUGH INFORMATION']} *not enough information* questions, "
-                      f"{right('R2V', 'NOT ENOUGH INFORMATION')} against {right('R2', 'NOT ENOUGH INFORMATION')}; among the "
-                      f"{sizes['SUPPORTED']} *supported* questions, {right('R2V', 'SUPPORTED')} against "
-                      f"{right('R2', 'SUPPORTED')}", self.readme_flat)
-
-    def test_the_search_quality_table_is_quoted_exactly(self):
-        rows = _table(self.readme, "Studies read per question")
-        for arm, label in (("B1", "(B1)"), ("R2", "same studies")):
-            r = self.confirm["retrieval"][arm]
-            cells = (f"{r['mean_admitted']:.1f} | {100 * r['share_without_evidence']:.1f}% | "
-                     f"{100 * r['directness_at_k']:.1f}%")
-            row = [x for x in rows if label in x]
-            self.assertEqual(len(row), 1)
-            self.assertIn(cells, row[0], f"README, search quality {arm}")
-
-    def test_the_existing_models_and_the_label_reliability_are_quoted_exactly(self):
+    def test_the_existing_models_are_quoted_exactly(self):
         closed = [s for s in self.report["systems"] if "Closed-book" in s["group"]]
         self.assertEqual(len(closed), 8)
         for system in closed:
-            self.assertIn(f"{system['name']} {100 * system['all']['accuracy']:.1f}%", self.readme_flat)
+            self.assertIn(system["name"], self.evaluation_flat)
+            self.assertIn(f"{100 * system['all']['accuracy']:.1f}%", self.evaluation_flat, system["name"])
         local = [100 * self.confirm["generation"][a]["all"]["accuracy"] for a in self.ARMS]
-        self.assertIn(f"{min(local):.1f}–{max(local):.1f}%", self.readme_flat)
-        self.assertIn(f"reproduced {100 * self.audit['agreement']:.1f}% of them", self.readme_flat)
-        for needle in (f"Agreement {100 * self.audit['agreement']:.1f}%", f"kappa {self.audit['kappa']}",
-                       f"{self.audit['n_stable']} of {self.audit['n_items']} questions label-stable"):
-            self.assertIn(needle, self.evaluation)
+        self.assertIn(f"{min(local):.1f}–{max(local):.1f}%", self.evaluation_flat)
 
     def test_the_dementia_results_are_quoted_exactly(self):
-        ad = json.loads(text(RESULTS / "rag2_analysis_ad.json"))
-        data = json.loads(text(RESULTS / "report_ad" / "report_data_ad.json"))
-        rows = _table(self.readme, "System (dementia questions)")
-        by_arm = {s["arm"]: s for s in data["systems"]}
+        by_arm = {s["arm"]: s for s in self.report_ad["systems"]}
         for arm in ("B0", "B1", "R2", "R2C", "R2V"):
             cell = by_arm[arm]["all"]
             lo, hi = wilson(cell["correct"], cell["n"])
-            found = [r for r in rows if r.startswith(f"| {arm}:")]
-            self.assertEqual(len(found), 1, arm)
-            self.assertIn(f"{_pct(cell['correct'], cell['n'])}% ({100 * lo:.1f}–{100 * hi:.1f})", found[0], arm)
-        best = max(data["constant"]["all"].values())
-        self.assertIn(f"| {100 * best:.1f}% |", "\n".join(r for r in rows if "Always answering" in r))
-        cmp_table = "\n".join(_table(self.readme, "Comparison (dementia questions)"))
-        p = ad["primary"]
-        results = {"R2V vs R2": (p, p["mcnemar_p"])}
-        results.update({k: (v, v["holm_p"]) for k, v in ad["secondary"].items()})
-        for name, (r, pv) in results.items():
-            row = f"| {_pp(r['diff_a_minus_b'])} | {_pp(r['ci95'][0])} to {_pp(r['ci95'][1])} | {_p(pv)} |"
-            self.assertIn(row, cmp_table, name)
-        self.assertIn(f"{p['a_only_correct'] + p['b_only_correct']} questions where they differed", self.readme_flat)
-        self.assertIn(f"The goal is therefore {ad['requirement']}", self.readme_flat)
-        self.assertEqual(ad["requirement"], "met as a point estimate, not confirmed")
-        for s in data["systems"]:
-            if s["group"].startswith("Closed-book"):
-                self.assertIn(f"{s['name']} {100 * s['all']['accuracy']:.1f}%", self.readme_flat, s["name"])
+            self.assertIn(f"| {arm} | {_pct(cell['correct'], cell['n'])}% ({100 * lo:.1f}–{100 * hi:.1f}) |",
+                          self.evaluation, arm)
+        best = max(self.report_ad["constant"]["all"].values())
+        self.assertIn(f"| {100 * best:.1f}% |", self.evaluation)
+        p = self.ad["primary"]
+        self.assertIn(f"R2V − R2 = {_pp(p['diff_a_minus_b'])} pp (95% CI {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])}; "
+                      f"{p['a_only_correct']} / {p['b_only_correct']} discordant, exact McNemar p = {p['mcnemar_p']:.2f})",
+                      self.evaluation_flat)
+        self.assertIn(self.ad["requirement"], self.evaluation)
+        self.assertEqual(self.ad["requirement"], "met as a point estimate, not confirmed")
 
 
 class CompletedVersusPlannedTests(unittest.TestCase):
@@ -425,7 +419,6 @@ class CompletedVersusPlannedTests(unittest.TestCase):
 
     def test_the_held_out_split_is_reported_as_run_once(self):
         self.assertTrue((RESULTS / "RAG2_FINDINGS.md").is_file())
-        self.assertIn("the method was run on them once", flat(README))
         self.assertIn("completed once", flat(DOCS / "protocol.md"))
 
 
@@ -481,7 +474,7 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "experiments/medchange/runner.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
         "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "src/common/evidence.py",
-        "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md",
+        "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md", "experiments/adkqa/stage0.py",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -563,22 +556,23 @@ class DocumentationIntegrityTests(unittest.TestCase):
         """A flag named beside a pipeline command (``--go``, ``--judge-path``, ...) must be defined by that
         module, so that a documented command cannot silently stop working."""
         flags = {}
-        for module in ("rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark",
-                       "pubmed_asof", "freeze_candidates", "generate_answers", "label_audit"):
-            tree = ast.parse(text(ROOT / "experiments" / "medchange" / f"{module}.py"))
-            flags[module] = {a.value for node in ast.walk(tree)
-                             if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
-                             for a in node.args if isinstance(a, ast.Constant) and str(a.value).startswith("--")}
+        for package, module in [("medchange", m) for m in (
+                "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
+                "freeze_candidates", "generate_answers", "label_audit")] + [("adkqa", "stage0")]:
+            tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
+            flags[(package, module)] = {a.value for node in ast.walk(tree)
+                                        if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
+                                        for a in node.args if isinstance(a, ast.Constant) and str(a.value).startswith("--")}
         missing = []
         for rel, body in self._docs():
             for line in body.splitlines():
-                m = re.search(r"python -m experiments\.medchange\.(\w+)(.*)", line)
-                if not m or m.group(1) not in flags:
+                m = re.search(r"python -m experiments\.(medchange|adkqa)\.(\w+)(.*)", line)
+                if not m or (m.group(1), m.group(2)) not in flags:
                     continue
-                command = re.split(r"`|\s\|\s", m.group(2))[0]
+                command = re.split(r"`|\s\|\s", m.group(3))[0]
                 for flag in re.findall(r"(?<![\w-])(--[a-z][\w-]*)", command):
-                    if flag not in flags[m.group(1)]:
-                        missing.append(f"{rel}: {m.group(1)} {flag}")
+                    if flag not in flags[(m.group(1), m.group(2))]:
+                        missing.append(f"{rel}: {m.group(2)} {flag}")
         self.assertEqual(missing, [])
 
     #: A repository file cited as ``dir/.../name.ext`` in a comment or docstring.

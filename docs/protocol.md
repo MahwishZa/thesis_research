@@ -19,7 +19,12 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Held-out run, 528 questions | started 2026-10-06 after the freeze, completed once on 2026-10-08 (results: `evaluation.md` §6) |
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
-| Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8) |
+| Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
+| Alzheimer's-specific primary evaluation (AD-KQA) | re-declared 2026-10-09 (§8); Stage 0 counts come first, the specification is fixed before any question is drafted; no question exists |
+
+Since 2026-10-09 the primary evaluation of the research is Alzheimer's-specific (§8). The questions, systems and results in
+§1 to §7 and in `evaluation.md` §6 are those of the realigned study on the as-of Cochrane benchmark (general medicine); they
+are completed work and now serve as secondary evidence for that aim.
 
 ## 1. Requirement and questions
 
@@ -172,8 +177,8 @@ is tested on.
 | 2026-10-05 | Balance by evidence type; filter with a zero-shot LLM judgement | P0 diagnostics on dev; the failed filter retraining |
 | 2026-10-05 | Keep the currency idea only as a reading criterion with an ablation (R2V-ND) | stage-1 dev results; G0 on both splits |
 | 2026-10-06 | Freeze the design without using the one allowed prompt revision (dev check: direction failed, R2V − R2 = −0.4 pp) | the dev run's results and the pattern of R2V's changes (fixes and breaks nearly cancelled); no held-out realigned result |
-
 | 2026-10-09 | Add the three remaining released-answer models (BioMistral, PMC-LLaMA, OLMo-13B) and a constant-answer baseline to the comparisons; audit the dementia labels with the same judge | the held-out and `ad` results of the local systems (§8) |
+| 2026-10-09 | Re-declare the primary evaluation as an Alzheimer's-specific question set (AD-KQA); keep the as-of Cochrane results as secondary evidence | all held-out and dementia results of every system and the label audits; no AD-KQA question, label or output exists; the reason is scope, not outcome (§8) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -225,6 +230,65 @@ the most frequent gold class) is reported as a no-model reference. (3) The 208 d
 same independent judge as the main benchmark's (`label_audit --split ad`). All three are descriptive context. They are
 included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
 the requirement is read.
+
+**2026-10-09, primary evaluation re-declared: an Alzheimer's-specific question set (AD-KQA, working name).** Decided by the
+researcher (the supervisor has left research decisions to the researcher) after the held-out and dementia results of every
+system were known; no AD-KQA question, label or output exists. *Reason (scope, not outcome):* the research is about
+Alzheimer's disease, but the as-of Cochrane benchmark is general medicine and the dementia set is dementia-wide (48 of its 208
+questions name Alzheimer's disease), so neither can support Alzheimer's-specific claims. Their results stay, unchanged, as
+completed secondary and exploratory evidence (`evaluation.md` §6.0). Existing datasets were checked first (counts verified in
+the released files unless marked): the Alzheimer's subsets of exam benchmarks (ADQA 446 items, 297 naming Alzheimer's; ADRD-Bench
+1,438 index entries and 149 caregiving items) are multiple choice or true/false with no evidence for retrieval evaluation and no dates;
+MedQuAD has 47 Alzheimer's pairs and PubMedQA 4 of 1,000; BioASQ has expert answers and expert-selected evidence but its
+Alzheimer's share could not be counted (registration needed) and most of its questions need answer types the frozen design does
+not score. None combines Alzheimer's focus, a verdict task, dates and evidence, so a controlled set is built from authoritative
+sources instead, and the datasets above are not pooled with it.
+
+*Design.* About 300 test and 60 development questions on Alzheimer's disease, built from PubMed systematic reviews,
+meta-analyses and guidelines (MeSH major topic Alzheimer Disease; MEDLINE-indexed; English; abstract with a conclusion; not
+retracted) published from 2023-04-01, after the generator's stated knowledge cutoff (March 2023), one question per source record.
+Each question is made from a fixed template out of terms copied from the abstract and has a three-way verdict (SUPPORTED, REFUTED,
+NOT ENOUGH INFORMATION) as of the source's publication date; retrieval uses only earlier records and never the source itself.
+Areas, sampled by MeSH qualifiers: treatment, prevention, diagnosis, causes and risk factors, progression, symptoms, care and
+management; background/history and terminology are added only if the trial run passes. *Reference answers:* the verdict and the
+key sentence of the source conclusion (stored as offsets and a hash, never as text). A question is kept only if every term is
+found in the abstract, a rule-based reading of the conclusion and the drafting model (Qwen2.5-7B-Instruct) agree, an independent
+verifier that is neither the drafter nor the generator under test agrees when it reads only the quoted sentence, and an audit pass
+confirms it; agreement and kappa are reported as for the other splits. The generator under test never drafts, labels, screens or
+selects questions. *Splits:* development and test by source record and topic with a seeded hash; no question is added or removed
+because of any system's answer.
+
+*Frozen design.* Prompts, settings and arms are those of the design record (settings hash `1743afd7045b`); AD-KQA is a test of the
+frozen design on new data. Only the split registry, the exclusion of the question's own source from retrieval and the audit
+prompt's input change, none of which affects the earlier splits.
+
+*Requirement.* Unchanged: R2V at least 1 percentage point of verdict accuracy above R2, read by the three rules of
+`evaluation.md` §5. *Power (computed from the discordance of 14.9% to 16.4% observed in all three completed runs):* with 300 test
+questions the standard error of a paired difference is about 2.3 points, so only gaps of about 6 points can be confirmed with 80%
+power; a true gain of +1 point would be confirmed with probability about 7%, +1.5 points 10%, +3 points 26%, +5 points 60%; a
+point estimate of at least +1 point has probability 33% when the true gain is zero. The requirement can therefore be read as met
+as a point estimate, not confirmed, or as not met, and no conclusion beyond the reading will be drawn.
+
+*Independent verifier.* A third-family model: Phi-3.5-mini-instruct (MIT licence; about 2.2 to 2.4 GB at Q4_K_M, a size reported
+by the quantisers; chat template with a system turn), used only if it passes a qualification run that uses the existing label audit
+unchanged on the development split in a separate data folder: agreement with the gold labels at least 75%, kappa at least 0.60,
+unparsed answers at most 2%. If it fails, Mistral-7B-Instruct-v0.3 (Apache-2.0; about 4.4 GB) is tried on the same terms; a
+second download needs a new approval. Without a qualified verifier the fallback is the drafting model with a different prompt,
+which is weaker independence and is then reported as a limitation.
+
+*Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
+(0) Stage 0 (`python -m experiments.adkqa.stage0`): at least 700 eligible source records in the window and at least 100 in each
+of at least 6 core areas; areas below 100 are reported as not covered. (1) Trial run of 60 development questions: at least 40% of
+drafts survive the automatic checks; verifier agreement at least 85% on kept questions; a claim-only classifier (5-fold) at most
+the majority class plus 5 points; each verdict at least 25%; the same seed gives the same manifest hash; a median candidate pool of
+at least 15 abstracts and at most 5% empty pools; closed-book B0 between the constant answer plus 5 points and 80% on the
+evidence-sensitive areas (a ceiling area is reported, not dropped). One documented redesign is allowed, only before the test
+split is sealed. (2) Full build: at least 300 test questions, at least 25 per covered area, audit agreement at least 85% on test
+questions, manifest hash committed before any system sees a test question. (3) Run: parse rate and verifier validity at least
+95%; a defect is fixed and recorded, never tuned on outcomes. A failed gate stops the build and is reported.
+
+*Still to be fixed in a further dated amendment before any question is drafted:* the question templates, the cue phrases of the
+rule-based reading, the topic-cluster key and the split seed, the freeze date of the source window, and the secondary measures.
 
 ## 9. Earlier stages (completed, superseded)
 

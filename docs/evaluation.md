@@ -140,6 +140,23 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 
 ## 6. Results to date
 
+### 6.0 What each result is
+
+Since 2026-10-09 the research's primary evaluation is Alzheimer's-specific (`protocol.md` §8). The results below come from
+the as-of Cochrane benchmark, which is general medicine, and from a dementia-wide set; they are completed work and are kept
+as secondary or exploratory evidence for that aim, not as an Alzheimer's-specific evaluation.
+
+| Result set | Questions | Class | Scope |
+|---|---|---|---|
+| As-of Cochrane questions, held-out split (§6.2) | 528 | completed once; pre-declared and confirmatory under the protocol of 2026-10-05 | general medicine |
+| Dementia and Alzheimer's set (§6.6) | 208 | completed once; secondary | dementia-wide: 48 questions name Alzheimer's disease |
+| Alzheimer's-named part of the dementia set | 48 | exploratory; defined after the results were known | description only |
+| As-of Cochrane questions, development split (§6.1) | 226 | exploratory; used to find defects | general medicine |
+| Ablation arms, retrieval diagnostics, label audits (§6.2) | | secondary or descriptive | general medicine |
+| Released answers of eight other models (§6.2, §6.6) | 8 | context; other prompts, no retrieval | not a controlled comparison |
+| Earlier stages (§6.3) | | negative results of record | general medicine |
+| Alzheimer's-specific primary evaluation | | specified in `protocol.md` §8; no result exists | Alzheimer's disease |
+
 ### 6.1 Realigned study, development split (226 questions; exploratory)
 
 | System | All | Changed | Unchanged |
@@ -222,6 +239,16 @@ earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (
 estimate is reported with its interval, together with the sample size that would be needed to settle it. The
 208-question Alzheimer's/dementia set was run afterwards, once (§6.6); it gives the same reading, with a larger and equally unconfirmed gain.
 
+### 6.5 Rounding in the committed analysis files
+
+The committed analysis tables `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` were written when stored rates carried four
+decimals before being shown with one, so a few cells differ by 0.1 from the exact value used in this document. Held-out split:
+the REFUTED recall of R2C and R2V is 19.0% (shown 19.1%) and the accuracy of R2V-ND is 49.1%, 259 of 528 (shown 49.0%).
+Development split: the REFUTED recall of R2C is 32.7% (shown 32.6%), its share of NOT ENOUGH INFORMATION answers 23.5% (23.4%),
+the outdated-verdict rate of R2V 37.7% (37.8%) and the systematic-review or meta-analysis share of R2's admitted abstracts 25.3%
+(25.2%). The code now stores six decimals, and rerunning `analyze_rag2` where the frozen pools exist regenerates the files with
+exact values.
+
 ### 6.6 Dementia and Alzheimer's set (secondary, run once)
 
 208 questions from 159 reviews, none with a changed verdict; gold NOT ENOUGH INFORMATION 42.3%, REFUTED 32.7%, SUPPORTED
@@ -246,13 +273,3 @@ Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mis
 34.1% and PMC-LLaMA 43.3%; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer. The labels of this set have not been audited by a second model, and the update-window and
 age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
 `results/report_ad/REPORT.md`.
-
-### 6.5 Rounding in the committed analysis files
-
-The committed analysis tables `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` were written when stored rates carried four
-decimals before being shown with one, so a few cells differ by 0.1 from the exact value used in this document. Held-out split:
-the REFUTED recall of R2C and R2V is 19.0% (shown 19.1%) and the accuracy of R2V-ND is 49.1%, 259 of 528 (shown 49.0%).
-Development split: the REFUTED recall of R2C is 32.7% (shown 32.6%), its share of NOT ENOUGH INFORMATION answers 23.5% (23.4%),
-the outdated-verdict rate of R2V 37.7% (37.8%) and the systematic-review or meta-analysis share of R2's admitted abstracts 25.3%
-(25.2%). The code now stores six decimals, and rerunning `analyze_rag2` where the frozen pools exist regenerates the files with
-exact values.

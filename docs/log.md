@@ -1313,3 +1313,33 @@ The `ad` phase finished (22.7 h measured, with the judge) and its results were p
 * *Correction (Oct 9, later).* The first version of the write-up said that no system, and in `evaluation.md` §6.6 that every
   system, scored below the constant answer. That is true of the five local systems only: Llama-3.3-70B and PMC-LLaMA (43.3%,
   90 of 208) are two questions above the constant answer (42.3%, 88 of 208). README, `evaluation.md` and this entry were corrected.
+
+## Phase 45 — Primary evaluation re-declared as Alzheimer's-specific; README shortened (Oct 9)
+
+After a review of the existing results and of the candidate datasets, the researcher decided:
+
+* *Decisions.* (1) The Alzheimer's-specific question set AD-KQA is the primary evaluation, provided it is verified before it
+  is relied on. (2) The supervisor has left research decisions to the researcher; the requirement (R2V at least 1 percentage
+  point of verdict accuracy above R2) stays. (3) One small independent-verifier model is approved, provided it is verified
+  first. (4) The optional background/history and terminology strata are decided after the trial run. (5) The research paper is
+  pointed to through a placeholder; the earlier ban on mentioning it was temporary. (6) The README is short and carries no
+  experiment status. (7) Small documentation faults are fixed. (8) The dementia label audit and (9) the optional extras (a
+  BioASQ check, a clinician spot-check, R2V-ND on the new set) are skipped for now.
+* *What was checked, and what cannot be checked from here.* Checked: the pipeline modules that can be reused as they are, and
+  the nine modules that hard-code the split names (`analyze_rag2`, `freeze_candidates`, `generate_answers`, `label_audit`,
+  `pubmed_asof`, `rag2_pipeline`, `rag2_run`, `report`, `runner`); the as-of query builder on template-style Alzheimer's
+  questions (it keeps filler words such as "associated", so the templates must avoid them); the power figures; the licences and
+  sizes of the verifier candidates as reported by their publishers; that the generator code is model-agnostic (system and user
+  message through the model's own chat template, so the verifier must accept a system turn). Not checkable from the sandbox: the
+  PubMed counts (Stage 0), the verifier's quality (qualification run on the development split) and BioASQ's Alzheimer's count.
+* *Changes.* README rewritten (about 1,000 words: two small tables, the reading of the requirement and its limits, a placeholder
+  for the paper, no experiment status); `docs/evaluation.md` §6.0 (what each result is) and §6.5 before §6.6; `docs/protocol.md`
+  status row, scope note, ledger row and the amendment of 2026-10-09 (reasons, design, frozen design, requirement and power,
+  verifier qualification, gates), and a blank line that had split the ledger table was removed; a scope note in `docs/data.md`
+  and `docs/methodology.md`; `docs/reproducibility.md` §10; the package `experiments/adkqa` with `stage0.py` (counts only, 11
+  tests, no network in the tests); the guard tests repointed to the new README, to the paper placeholder and to the new module.
+* *Not changed.* No result, split, label, prompt, setting or arm; no committed result file; earlier log entries. Stale pointers in
+  generated files (`docs/experimentation.md` in `RAG2_FINDINGS.md` and `rag2_analysis_confirm.md`, `docs/experiment_plan.md` in
+  `earlier_stages/FINDINGS.md`) wait for a re-analysis on the laptop.
+* *Next.* The researcher runs Stage 0 (`python -m experiments.adkqa.stage0`); the go/no-go criterion decides whether the
+  specification amendment, the builder and the verifier qualification follow.

@@ -7,13 +7,13 @@ retrieval consumes them is explained in `methodology.md`; how to rebuild anythin
 
 | Dataset | Role | Source | In the repository? | Rebuilt by |
 |---|---|---|---|---|
-| MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | primary evaluation: questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
+| MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | evaluation of the realigned study (general medicine): questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
 | Dementia and Alzheimer's set (`ad`): 208 questions | secondary held-out evaluation | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
 | As-of PubMed records, abstracts, frozen pools | the evidence systems may read | PubMed (NCBI E-utilities) | no (publisher text) | `pubmed_asof`, `freeze_candidates` |
 | Study outputs (rationales, filter judgements, answers, analyses, reports, design record) | results of the runs | produced by the pipelines | yes, in `experiments/medchange/results/` (no source text) | the pipelines |
 | Earlier-stage outputs | results of record of stages 1 and 2 | produced by the removed stage code | yes, in `results/earlier_stages/` | not rebuilt (code in Git history) |
 
-## 1. MedChange benchmark (primary)
+## 1. MedChange benchmark (general medicine; the realigned study's evaluation)
 
 **Source.** Vladika, Dhaini and Matthes, *Facts Fade Fast: Evaluating Memorization of Outdated Medical Knowledge in Large
 Language Models* (Findings of EMNLP 2025); repository `github.com/jvladika/MedChange`. `MedRevQA` holds 16,501 questions
