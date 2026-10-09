@@ -128,7 +128,7 @@ def run_verify(rows: Sequence[dict], drafts: dict, gen: Callable[[str, str], str
     with open(out, "a", encoding="utf-8", newline="\n") as fh:
         for k, (row, d) in enumerate(todo, 1):
             raw = gen(LA.SYSTEM, LA.build_prompt(question_of(d), row["objectives"], row["conclusion"]))
-            fh.write(json.dumps({"pmid": row["pmid"], "label": LA.parse_label(raw), "raw": (raw or "")[:60]}) + "\n")
+            fh.write(json.dumps({"pmid": row["pmid"], "label": spec.parse_verdict(raw), "raw": (raw or "")[:60]}) + "\n")
             fh.flush()
             progress(k, len(todo))
     return len(todo)

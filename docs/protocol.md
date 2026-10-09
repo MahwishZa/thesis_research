@@ -182,6 +182,7 @@ is tested on.
 | 2026-10-09 | Correct the Stage 0 instrument after run 1 (prevention qualifier, warning filter, information-only counts); thresholds and window unchanged | run 1 counts per area were seen (total 866; prevention 0 by the query error; progression 58; care 20); the criterion was not changed to fit them; the decision after run 2 is the researcher's (§8) |
 | 2026-10-09 | Cover only the core areas with at least 100 source records (four of seven); Stage 0 needs 4 covered areas and 650 covered records; test minimum 200 (up to 300) | the counts of Stage 0 runs 1 and 2 were seen (original criterion failed twice); no question, label or output exists; every other threshold is unchanged; the amendment is a scope decision, not a test of the original criterion (§8) |
 | 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec is in `spec.py` and compared with the protocol text by a test |
+| 2026-10-09 | Read a verifier reply by `spec.parse_verdict` ("LABEL:" anywhere, or a first line that begins with the verdict) and re-score the stored replies; thresholds unchanged | qualification run 1 (55.8% unparsed; 85.0% agreement on the 100 read) and eight unparsed replies were seen; the repaired reading is applied to every reply alike (§8) |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -278,6 +279,18 @@ unchanged on the development split in a separate data folder: agreement with the
 unparsed answers at most 2%. If it fails, Mistral-7B-Instruct-v0.3 (Apache-2.0; about 4.4 GB) is tried on the same terms; a
 second download needs a new approval. Without a qualified verifier the fallback is the drafting model with a different prompt,
 which is weaker independence and is then reported as a limitation.
+
+*Verifier qualification, run 1 (2026-10-09, Phi-3.5-mini-instruct Q4_K_M, SHA-256 `3EF53267...BB03BCA` as downloaded; the existing label audit on the
+development split, 226 items, replies limited to 12 tokens):* **not qualified as run.** The audit's strict pattern ("LABEL: <verdict>")
+read 100 of 226 replies; 126 (55.8%) were unparsed against the limit of 2%. On the 100 read replies agreement was 85.0% and kappa
+0.7424, which says little about the other 126. The first eight unparsed replies were inspected: each begins with a verdict word
+without the "LABEL:" prefix (for example "SUPPORTED: ..." or "REFUTED; ..."), so the fault looked like a reading rule, not quality.
+*Correction, declared before the replies were re-read:* a reply is read as its verdict if it contains "LABEL: <verdict>" or if its first
+non-empty line begins with the verdict word (`spec.parse_verdict`); nothing is guessed from the rest of a reply. The same rule is
+used by the builder's verification step. The stored replies (first 60 characters) are re-scored without calling the model
+(`python -m experiments.adkqa.qualify`), with the thresholds unchanged (agreement at least 75%, kappa at least 0.60, unparsed at most
+2%). The correction was designed after seeing run 1 and eight of its replies, so the re-score is a repaired instrument on the same
+data, not an independent test; its result is recorded here. If it fails, the fallback is Mistral-7B-Instruct-v0.3 on the same terms.
 
 *Gates (fixed before any question is drafted). They concern the source records and the quality of the questions; the one exception, the closed-book headroom check on the 60 development questions, is made once for the whole set and never removes a question.*
 (0) Stage 0 (`python -m experiments.adkqa.stage0`) [original wording, replaced by the amendment below: at least 700 eligible source records in the window and at least 100 in each

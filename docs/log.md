@@ -1400,3 +1400,11 @@ templates collided with string formatting in the drafting prompt (fixed). Tracke
 here: real PubMed XML beyond the tested fields, the models' behaviour (drafts, verifier), and the figures of the trial run; the
 same-hash check and the closed-book check need further runs (see `reproducibility.md` §11).
 
+## Phase 51 — Verifier qualification run 1: not qualified as run; reading rule corrected (Oct 9)
+
+Phi-3.5-mini-instruct (downloaded; SHA-256 recorded in `protocol.md` §8) was run through the unchanged label audit on the 226 development
+items. The audit's strict pattern read 100 replies; 126 (55.8%) were unparsed (limit 2%); on the 100 read, agreement 85.0%, kappa 0.7424.
+Eight unparsed replies were inspected: they lead with the verdict word and omit "LABEL:". A reading rule (`spec.parse_verdict`) and a
+re-scoring tool (`experiments/adkqa/qualify.py`, 5 tests) were added; the builder's verifier step uses the same rule. The thresholds are
+unchanged. The re-score is a repaired instrument on the same data and is recorded as such; its result follows from the researcher's run.
+

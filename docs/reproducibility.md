@@ -205,3 +205,8 @@ pipeline on the new questions: `--b0-accuracy`; the same-hash check needs a seco
 split (`--split test`) is refused until `adkqa_gate1.json` says it passed. `verify --role audit` with the drafting model writes the
 audit labels that `assemble` reports as agreement.
 
+Verifier qualification (after `python -m experiments.medchange.label_audit --split dev ...` with the verifier as `--model-path` and separate `--data-dir` and `--out-dir` folders, so that the committed audit is untouched):
+`python -m experiments.adkqa.qualify --audit qual\data\label_audit_dev.jsonl --model-name Phi-3.5-mini-instruct.Q4_K_M.gguf` re-scores the
+stored replies with the reading rule of `protocol.md` §8 (no model is run), prints agreement, kappa and the unparsed share against the
+declared thresholds, writes `experiments/adkqa/results/adkqa_verifier_qualification.json` (counts only) and exits 0 when qualified.
+

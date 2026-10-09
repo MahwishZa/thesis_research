@@ -62,6 +62,21 @@ UNSTRUCTURED_CONCLUSION = re.compile(
     r"this (systematic )?(review|meta-analysis|study))", re.IGNORECASE)
 
 
+_VERDICT_WORDS = r"(NOT\s+ENOUGH\s+INFORMATION|SUPPORTED|REFUTED)"
+_PREFIXED = re.compile(r"LABEL\s*:\s*\**\s*" + _VERDICT_WORDS, re.IGNORECASE)
+_LEADING = re.compile(r"^[\s*\"'`_#>\-]*" + _VERDICT_WORDS + r"(?![A-Za-z])", re.IGNORECASE)
+
+
+def parse_verdict(reply: str) -> Optional[str]:
+    """The verdict in a model's reply (protocol §8, reading of replies): "LABEL: <verdict>" anywhere, else a reply whose first
+    non-empty line begins with the verdict. Anything else is unparsed; nothing is guessed from the rest of the reply."""
+    m = _PREFIXED.search(reply or "")
+    if m is None:
+        first = next((line for line in (reply or "").splitlines() if line.strip()), "")
+        m = _LEADING.match(first)
+    return re.sub(r"\s+", " ", m.group(1).upper()) if m else None
+
+
 def fill(template: str, x: str, y: str) -> str:
     return TEMPLATES[template].format(x=x.strip(), y=y.strip())
 

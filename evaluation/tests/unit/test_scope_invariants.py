@@ -476,6 +476,7 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "src/common/evidence.py",
         "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md", "experiments/adkqa/stage0.py",
         "experiments/adkqa/spec.py", "experiments/adkqa/records.py", "experiments/adkqa/build.py",
+        "experiments/adkqa/qualify.py",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -559,7 +560,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         flags = {}
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
-                "freeze_candidates", "generate_answers", "label_audit")] + [("adkqa", m) for m in ("stage0", "build")]:
+                "freeze_candidates", "generate_answers", "label_audit")] + [("adkqa", m) for m in ("stage0", "build", "qualify")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
