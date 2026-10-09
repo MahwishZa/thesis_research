@@ -1386,7 +1386,7 @@ Nothing was selected, run or looked at: the committed protocol still reads as a 
 No new data: the 48 questions of the dementia run that name Alzheimer's disease already have answers for all five systems. `subgroup_ad` now also reports macro-F1,
 the predicted-SUPPORTED share and REFUTED recall for them (R2 0.245, R2V 0.305; R2V − R2 +0.060, 95% interval −0.037 to +0.168; exploratory), and a new script,
 `ad_case_study.py`, writes a case study (the first 12 questions in a seeded hash order, plus the first answer R2V fixed and the first it broke, so a failure is shown),
-a table of all 48 and a 20-question validation sheet for a clinician. R2V changed 6 of the 48 answers (4 fixed, 2 broken). The outputs hold question text and are
+a table of all 48. (A clinician sheet was first written and removed the same day: the study has no manual-checking step.) R2V changed 6 of the 48 answers (4 fixed, 2 broken). The outputs hold question text and are
 not committed. Nothing here is confirmatory.
 
 

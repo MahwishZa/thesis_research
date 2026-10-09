@@ -1,7 +1,6 @@
 """Case study of the Alzheimer's-named questions (no model, no network): selection rule and outputs."""
 
 import contextlib
-import csv
 import io
 import json
 import tempfile
@@ -52,17 +51,14 @@ class CaseStudyTests(unittest.TestCase):
             extra = sum(1 for k in ("fixed", "broke") if any(c["change"] == k for c in cases[:3]) is False and any(c["change"] == k for c in cases))
             self.assertEqual(sum(1 for line in text.splitlines() if line.startswith("## ")), 3 + extra)
 
-    def test_main_writes_three_files_and_a_validation_sheet_of_twenty(self):
+    def test_main_writes_two_files_and_no_sheet_for_manual_checking(self):
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
             fixture(d)
             out = d / "out"
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(C.main(["--data-dir", str(d), "--results-dir", str(d), "--out-dir", str(out)]), 0)
-            rows = list(csv.DictReader(open(out / "validation_sheet.csv", encoding="utf-8-sig")))
-            self.assertEqual(len(rows), 20)
-            self.assertIn("clinician_verdict", rows[0])
-            self.assertEqual(rows[0]["clinician_verdict"], "")
+            self.assertFalse((out / "validation_sheet.csv").exists())
             self.assertTrue((out / "ad_cases_all.csv").is_file() and (out / "ad_case_study.md").is_file())
 
 

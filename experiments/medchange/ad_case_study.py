@@ -4,8 +4,7 @@
 
 Writes, for the 48 questions whose text names Alzheimer's disease: ``ad_cases_all.csv`` (every question with the verdict of every system and what
 R2V did), ``ad_case_study.md`` (12 questions chosen by a seeded hash, then the first fixed and the first broken answer of R2V in that order, so that
-a failure is shown as well as a success) and ``validation_sheet.csv`` (the first 20 questions in the same order, with the reference verdict and empty
-columns for a clinician's check). The outputs contain question text and model answers: they are **not** committed (the questions come from the MedChange
+a failure is shown as well as a success). The outputs contain question text and model answers: they are **not** committed (the questions come from the MedChange
 release, which states no licence). Nothing here is a confirmatory result."""
 
 from __future__ import annotations
@@ -100,13 +99,8 @@ def main(argv=None) -> int:
         for c in cases:
             w.writerow([c["item_id"], c["question"], c["gold"], *[c["verdict"].get(x, "") for x in ARMS], c["change"], c["r2_admitted"],
                         c["review"], c["review_date"], c["medrev_row"]])
-    with open(out / "validation_sheet.csv", "w", encoding="utf-8-sig", newline="") as h:
-        w = csv.writer(h)
-        w.writerow(["item_id", "question", "reference_verdict", "review", "review_date", "medrev_row", "clinician_verdict", "agrees_with_reference", "comment"])
-        for c in cases[:20]:
-            w.writerow([c["item_id"], c["question"], c["gold"], c["review"], c["review_date"], c["medrev_row"], "", "", ""])
     (out / "ad_case_study.md").write_text(to_markdown(cases), encoding="utf-8", newline="\n")
-    print(f"{len(cases)} Alzheimer's-named questions; wrote ad_cases_all.csv, ad_case_study.md and validation_sheet.csv to {out}")
+    print(f"{len(cases)} Alzheimer's-named questions; wrote ad_cases_all.csv and ad_case_study.md to {out}")
     return 0
 
 
