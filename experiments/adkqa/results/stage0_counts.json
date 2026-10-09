@@ -1,0 +1,433 @@
+{
+  "stage": 0,
+  "generated_utc": "2026-10-09T17:41:52Z",
+  "window": {
+    "since": "2023-04-01",
+    "until": "2026-10-09"
+  },
+  "base_term": "\"Alzheimer Disease\"[majr] AND (\"Systematic Review\"[pt] OR \"Meta-Analysis\"[pt] OR \"Practice Guideline\"[pt] OR \"Guideline\"[pt]) AND hasabstract[text] AND medline[sb] AND english[lang] NOT \"retracted publication\"[pt]",
+  "total": 866,
+  "by_type": {
+    "Systematic Review": 686,
+    "Meta-Analysis": 537,
+    "Practice Guideline": 13,
+    "Guideline": 13
+  },
+  "by_period": {
+    "2023-04-01..2023-12-31": 221,
+    "2024-01-01..2024-12-31": 269,
+    "2025-01-01..2025-12-31": 287,
+    "2026-01-01..2026-10-09": 195
+  },
+  "per_area": {
+    "treatment": {
+      "core": true,
+      "qualifier_counts": {
+        "drug therapy": 186,
+        "therapy": 314
+      },
+      "distinct": 314
+    },
+    "prevention": {
+      "core": true,
+      "qualifier_counts": {
+        "prevention & control": 0
+      },
+      "distinct": 0
+    },
+    "diagnosis": {
+      "core": true,
+      "qualifier_counts": {
+        "diagnosis": 243,
+        "diagnostic imaging": 105,
+        "blood": 55,
+        "cerebrospinal fluid": 39
+      },
+      "distinct": 278
+    },
+    "causes_risk": {
+      "core": true,
+      "qualifier_counts": {
+        "etiology": 216,
+        "genetics": 108
+      },
+      "distinct": 216
+    },
+    "progression": {
+      "core": true,
+      "qualifier_counts": {
+        "physiopathology": 57,
+        "mortality": 1
+      },
+      "distinct": 58
+    },
+    "symptoms": {
+      "core": true,
+      "qualifier_counts": {
+        "psychology": 117,
+        "complications": 65
+      },
+      "distinct": 171
+    },
+    "care_management": {
+      "core": true,
+      "qualifier_counts": {
+        "nursing": 2,
+        "rehabilitation": 18
+      },
+      "distinct": 20
+    },
+    "background_history": {
+      "core": false,
+      "qualifier_counts": {
+        "history": 0
+      },
+      "distinct": 0
+    },
+    "terminology": {
+      "core": false,
+      "qualifier_counts": {
+        "classification": 3
+      },
+      "distinct": 3
+    }
+  },
+  "gate": {
+    "criterion": {
+      "min_total": 700,
+      "min_per_area": 100,
+      "min_areas": 6
+    },
+    "total": 866,
+    "total_ok": true,
+    "areas_covered": [
+      "causes_risk",
+      "diagnosis",
+      "symptoms",
+      "treatment"
+    ],
+    "areas_below": [
+      "care_management",
+      "prevention",
+      "progression"
+    ],
+    "areas_ok": false,
+    "go": false
+  },
+  "pubmed_notes": {
+    "main": {
+      "querytranslation": "((\"Alzheimer Disease\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "treatment/drug therapy": {
+      "querytranslation": "((\"alzheimer disease/drug therapy\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "treatment/therapy": {
+      "querytranslation": "((\"alzheimer disease/therapy\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "prevention/prevention & control": {
+      "querytranslation": "\"Alzheimer Disease/prevention & control\"[majr] AND (\"Systematic Review\"[pt] OR \"Meta-Analysis\"[pt] OR \"Practice Guideline\"[pt] OR \"Guideline\"[pt]) AND hasabstract[text] AND medline[sb] AND english[lang] NOT \"retracted publication\"[pt] AND 2023/04/01:2026/10/09[pdat]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [
+          "\"Alzheimer Disease/prevention &amp; control\"[majr]"
+        ],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999",
+          "No items found."
+        ]
+      }
+    },
+    "diagnosis/diagnosis": {
+      "querytranslation": "((\"alzheimer disease/diagnosis\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "diagnosis/diagnostic imaging": {
+      "querytranslation": "((\"alzheimer disease/diagnostic imaging\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "diagnosis/blood": {
+      "querytranslation": "((\"alzheimer disease/blood\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "diagnosis/cerebrospinal fluid": {
+      "querytranslation": "((\"alzheimer disease/cerebrospinal fluid\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "causes_risk/etiology": {
+      "querytranslation": "((\"alzheimer disease/etiology\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "causes_risk/genetics": {
+      "querytranslation": "((\"alzheimer disease/genetics\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "progression/physiopathology": {
+      "querytranslation": "((\"alzheimer disease/physiopathology\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "progression/mortality": {
+      "querytranslation": "((\"alzheimer disease/mortality\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "symptoms/psychology": {
+      "querytranslation": "((\"alzheimer disease/psychology\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "symptoms/complications": {
+      "querytranslation": "((\"alzheimer disease/complications\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "care_management/nursing": {
+      "querytranslation": "((\"alzheimer disease/nursing\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "care_management/rehabilitation": {
+      "querytranslation": "((\"alzheimer disease/rehabilitation\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    },
+    "background_history/history": {
+      "querytranslation": "((\"alzheimer disease/history\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999",
+          "No items found."
+        ]
+      }
+    },
+    "terminology/classification": {
+      "querytranslation": "((\"alzheimer disease/classification\"[MeSH Major Topic] AND (\"Systematic Review\"[Publication Type] OR \"Meta-Analysis\"[Publication Type] OR \"Practice Guideline\"[Publication Type] OR \"Guideline\"[Publication Type]) AND \"hasabstract\"[Text Word] AND \"medlinestatus medline\"[All Fields] AND \"english\"[Language]) NOT \"retracted publication\"[Publication Type]) AND 2023/04/01:2026/10/09[Date - Publication]",
+      "warninglist": {
+        "phrasesignored": [],
+        "quotedphrasesnotfound": [],
+        "outputmessages": [
+          "Restrictions achieved. start and count adjusted to 0, 9999"
+        ]
+      }
+    }
+  },
+  "sample_pmids": [
+    "38088070",
+    "39797935",
+    "40951465",
+    "36963821",
+    "40886956",
+    "36719791",
+    "41860347",
+    "37172376",
+    "41328628",
+    "40819234",
+    "38521993",
+    "39225837",
+    "38079104",
+    "37676429",
+    "37494786",
+    "39581069",
+    "39450675",
+    "40746076",
+    "41878908",
+    "40842389"
+  ],
+  "references_probe": {
+    "sampled": 20,
+    "with_at_least_10_pubmed_references": 19,
+    "share": 0.95,
+    "threshold_for_a_recall_measure": 0.6,
+    "rows": [
+      {
+        "pmid": "38088070",
+        "references": 81,
+        "with_pubmed_id": 80
+      },
+      {
+        "pmid": "39797935",
+        "references": 169,
+        "with_pubmed_id": 169
+      },
+      {
+        "pmid": "40951465",
+        "references": 52,
+        "with_pubmed_id": 52
+      },
+      {
+        "pmid": "36963821",
+        "references": 73,
+        "with_pubmed_id": 72
+      },
+      {
+        "pmid": "40886956",
+        "references": 72,
+        "with_pubmed_id": 57
+      },
+      {
+        "pmid": "36719791",
+        "references": 60,
+        "with_pubmed_id": 32
+      },
+      {
+        "pmid": "41860347",
+        "references": 39,
+        "with_pubmed_id": 19
+      },
+      {
+        "pmid": "37172376",
+        "references": 35,
+        "with_pubmed_id": 31
+      },
+      {
+        "pmid": "41328628",
+        "references": 46,
+        "with_pubmed_id": 46
+      },
+      {
+        "pmid": "40819234",
+        "references": 79,
+        "with_pubmed_id": 63
+      },
+      {
+        "pmid": "38521993",
+        "references": 99,
+        "with_pubmed_id": 96
+      },
+      {
+        "pmid": "39225837",
+        "references": 44,
+        "with_pubmed_id": 44
+      },
+      {
+        "pmid": "38079104",
+        "references": 60,
+        "with_pubmed_id": 60
+      },
+      {
+        "pmid": "37676429",
+        "references": 48,
+        "with_pubmed_id": 48
+      },
+      {
+        "pmid": "37494786",
+        "references": 167,
+        "with_pubmed_id": 155
+      },
+      {
+        "pmid": "39581069",
+        "references": 117,
+        "with_pubmed_id": 71
+      },
+      {
+        "pmid": "39450675",
+        "references": 48,
+        "with_pubmed_id": 42
+      },
+      {
+        "pmid": "40746076",
+        "references": 230,
+        "with_pubmed_id": 230
+      },
+      {
+        "pmid": "41878908",
+        "references": 0,
+        "with_pubmed_id": 0
+      },
+      {
+        "pmid": "40842389",
+        "references": 55,
+        "with_pubmed_id": 54
+      }
+    ]
+  }
+}
