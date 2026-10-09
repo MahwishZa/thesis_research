@@ -76,7 +76,7 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
         ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
         ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
         ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
-        ├── scoring.py, analyze_rag2.py, subgroup_ad.py, class_balance.py, fresh_supply.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
+        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, subgroup_ad.py, class_balance.py, fresh_supply.py, fresh_benchmark.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 
@@ -109,6 +109,9 @@ python -m experiments.medchange.class_balance
 
 # Count the questions of MedRevQA that no split uses yet (counts only)
 python -m experiments.medchange.fresh_supply --medchange-dir ../MedChange
+
+# Select the fresh test questions, then run and analyse the test (steps and freeze: docs/reproducibility.md section 11)
+python -m experiments.medchange.fresh_benchmark --medchange-dir ../MedChange
 
 # Re-analyse and report (no model is run; needs the rebuilt benchmark and the run's files in experiments/medchange/data/)
 python -m experiments.medchange.analyze_rag2 --split confirm --out-dir experiments/medchange/results
