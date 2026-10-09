@@ -1,0 +1,151 @@
+{
+  "fresh_questions_all_dates": 10672,
+  "by_earliest_date": {
+    "2005-01-01": {
+      "questions": 9695,
+      "reviews": 7627,
+      "kinds": {
+        "unchanged": 9695
+      },
+      "labels": {
+        "SUPPORTED": 3725,
+        "REFUTED": 1707,
+        "NOT ENOUGH INFORMATION": 4263
+      },
+      "label_share": {
+        "SUPPORTED": 0.384,
+        "REFUTED": 0.176,
+        "NOT ENOUGH INFORMATION": 0.44
+      },
+      "year_only_dates": 19,
+      "dementia_wording": 0,
+      "dementia_in_review_text": {
+        "questions": 9,
+        "labels": {
+          "SUPPORTED": 4,
+          "REFUTED": 3,
+          "NOT ENOUGH INFORMATION": 2
+        }
+      },
+      "ids_sha256": "61387b5c9c6f0169f2b7ac538b781787a7d23db276a1e2d7231fa3497c3b2d3c"
+    },
+    "2010-01-01": {
+      "questions": 7880,
+      "reviews": 6577,
+      "kinds": {
+        "unchanged": 7880
+      },
+      "labels": {
+        "SUPPORTED": 3000,
+        "REFUTED": 1330,
+        "NOT ENOUGH INFORMATION": 3550
+      },
+      "label_share": {
+        "SUPPORTED": 0.381,
+        "REFUTED": 0.169,
+        "NOT ENOUGH INFORMATION": 0.451
+      },
+      "year_only_dates": 18,
+      "dementia_wording": 0,
+      "dementia_in_review_text": {
+        "questions": 7,
+        "labels": {
+          "SUPPORTED": 3,
+          "REFUTED": 2,
+          "NOT ENOUGH INFORMATION": 2
+        }
+      },
+      "ids_sha256": "b5148e8ee63afe07a1f6105a897443604967113c24da04db7b6a3e6302fae8ed"
+    },
+    "2015-01-01": {
+      "questions": 4798,
+      "reviews": 4408,
+      "kinds": {
+        "unchanged": 4798
+      },
+      "labels": {
+        "SUPPORTED": 1837,
+        "REFUTED": 728,
+        "NOT ENOUGH INFORMATION": 2233
+      },
+      "label_share": {
+        "SUPPORTED": 0.383,
+        "REFUTED": 0.152,
+        "NOT ENOUGH INFORMATION": 0.465
+      },
+      "year_only_dates": 2,
+      "dementia_wording": 0,
+      "dementia_in_review_text": {
+        "questions": 6,
+        "labels": {
+          "SUPPORTED": 3,
+          "REFUTED": 1,
+          "NOT ENOUGH INFORMATION": 2
+        }
+      },
+      "ids_sha256": "6accfd0d19853298e2bac0a74d5f5a1cef768b07013194fc031911f306ca0fb8"
+    },
+    "2023-04-01": {
+      "questions": 302,
+      "reviews": 297,
+      "kinds": {
+        "unchanged": 302
+      },
+      "labels": {
+        "SUPPORTED": 131,
+        "REFUTED": 42,
+        "NOT ENOUGH INFORMATION": 129
+      },
+      "label_share": {
+        "SUPPORTED": 0.434,
+        "REFUTED": 0.139,
+        "NOT ENOUGH INFORMATION": 0.427
+      },
+      "year_only_dates": 0,
+      "dementia_wording": 0,
+      "dementia_in_review_text": {
+        "questions": 2,
+        "labels": {
+          "SUPPORTED": 1,
+          "REFUTED": 0,
+          "NOT ENOUGH INFORMATION": 1
+        }
+      },
+      "ids_sha256": "ed6859a32209cf8282fe07ac5788ecd25d27391349bd4fbedb84cfe1df26bddf"
+    }
+  },
+  "by_year": {
+    "2000": 309,
+    "2001": 154,
+    "2002": 116,
+    "2003": 124,
+    "2004": 274,
+    "2005": 285,
+    "2006": 329,
+    "2007": 462,
+    "2008": 349,
+    "2009": 390,
+    "2010": 477,
+    "2011": 527,
+    "2012": 674,
+    "2013": 754,
+    "2014": 650,
+    "2015": 744,
+    "2016": 676,
+    "2017": 642,
+    "2018": 550,
+    "2019": 519,
+    "2020": 499,
+    "2021": 447,
+    "2022": 316,
+    "2023": 383,
+    "2024": 22
+  },
+  "existing_items": 970,
+  "medrevqa_rows": 16501,
+  "inputs": {
+    "MedRevQA.csv": "3141c6f189ed22522cdb5ffba363669f5115774f2c53a2ce1d358f7af6c8a51a",
+    "AllStudyGroups.csv": "a211ce152f36ebeb89ef6ad2b0ba9df298c2e0a71e7d217445b633b1c1d06b4e"
+  },
+  "note": "counts only; nothing is selected; the selection rule is fixed in docs/protocol.md \u00a710"
+}
