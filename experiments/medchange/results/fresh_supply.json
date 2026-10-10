@@ -27,6 +27,23 @@
           "NOT ENOUGH INFORMATION": 2
         }
       },
+      "neurodegenerative_wording": {
+        "questions": 38,
+        "reviews": 35,
+        "labels": {
+          "SUPPORTED": 13,
+          "REFUTED": 8,
+          "NOT ENOUGH INFORMATION": 17
+        }
+      },
+      "neurodegenerative_in_review_text": {
+        "questions": 46,
+        "labels": {
+          "SUPPORTED": 15,
+          "REFUTED": 9,
+          "NOT ENOUGH INFORMATION": 22
+        }
+      },
       "ids_sha256": "61387b5c9c6f0169f2b7ac538b781787a7d23db276a1e2d7231fa3497c3b2d3c"
     },
     "2010-01-01": {
@@ -53,6 +70,23 @@
           "SUPPORTED": 3,
           "REFUTED": 2,
           "NOT ENOUGH INFORMATION": 2
+        }
+      },
+      "neurodegenerative_wording": {
+        "questions": 25,
+        "reviews": 23,
+        "labels": {
+          "SUPPORTED": 11,
+          "REFUTED": 1,
+          "NOT ENOUGH INFORMATION": 13
+        }
+      },
+      "neurodegenerative_in_review_text": {
+        "questions": 32,
+        "labels": {
+          "SUPPORTED": 12,
+          "REFUTED": 2,
+          "NOT ENOUGH INFORMATION": 18
         }
       },
       "ids_sha256": "b5148e8ee63afe07a1f6105a897443604967113c24da04db7b6a3e6302fae8ed"
@@ -83,6 +117,23 @@
           "NOT ENOUGH INFORMATION": 2
         }
       },
+      "neurodegenerative_wording": {
+        "questions": 9,
+        "reviews": 9,
+        "labels": {
+          "SUPPORTED": 6,
+          "REFUTED": 0,
+          "NOT ENOUGH INFORMATION": 3
+        }
+      },
+      "neurodegenerative_in_review_text": {
+        "questions": 14,
+        "labels": {
+          "SUPPORTED": 6,
+          "REFUTED": 1,
+          "NOT ENOUGH INFORMATION": 7
+        }
+      },
       "ids_sha256": "6accfd0d19853298e2bac0a74d5f5a1cef768b07013194fc031911f306ca0fb8"
     },
     "2023-04-01": {
@@ -107,6 +158,23 @@
         "questions": 2,
         "labels": {
           "SUPPORTED": 1,
+          "REFUTED": 0,
+          "NOT ENOUGH INFORMATION": 1
+        }
+      },
+      "neurodegenerative_wording": {
+        "questions": 0,
+        "reviews": 0,
+        "labels": {
+          "SUPPORTED": 0,
+          "REFUTED": 0,
+          "NOT ENOUGH INFORMATION": 0
+        }
+      },
+      "neurodegenerative_in_review_text": {
+        "questions": 1,
+        "labels": {
+          "SUPPORTED": 0,
           "REFUTED": 0,
           "NOT ENOUGH INFORMATION": 1
         }
