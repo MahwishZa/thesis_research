@@ -3,7 +3,7 @@
     python -m experiments.medchange.fresh_benchmark --medchange-dir ..\\MedChange
 
 Selection rule, fixed before any question is answered: *fresh* questions (``fresh_supply``) whose review is dated from 2010-01-01 and whose
-wording does not name dementia or Alzheimer's disease, in the order of the SHA-256 of ``fresh-v1|<MedRevQA row>``; the first N (1,500). No
+wording does not name dementia or Alzheimer's disease, in the order of the SHA-256 of ``fresh-v1|<MedRevQA row>``; the first N (1,000). No
 label, topic or answer is used. The items are appended to ``data/benchmark.jsonl`` with ``split = "fresh"`` (earlier "fresh" rows are
 replaced, so a rerun gives the same file) and summarised in ``experiments/medchange/manifest_fresh.json`` (tracked: counts, labels, the
 selected MedRevQA rows, the hash of the item list and of the input files). The manifest is committed and pushed before any answer exists
@@ -27,7 +27,7 @@ from .fresh_supply import fresh_items
 HERE = Path(__file__).resolve().parent
 SELECTION_SEED = "fresh-v1"
 EARLIEST = "2010-01-01"
-N_DEFAULT = 1500
+N_DEFAULT = 1000
 
 
 def order_key(row: int) -> str:

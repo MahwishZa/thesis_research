@@ -186,9 +186,9 @@ writes `results/cochrane_ad_supply.json` (counts and PubMed identifiers, no titl
 
 ## 11. The pre-registered test on fresh questions (protocol §10)
 
-Order of work, in PowerShell from the repository folder (the run itself is about 100 to 120 hours [estimate], resumable):
+Order of work, in PowerShell from the repository folder (the run itself is about 67 to 80 hours [estimate], resumable):
 ```
-python -m experiments.medchange.fresh_benchmark --medchange-dir ..\MedChange       # selects the 1,500 questions, writes manifest_fresh.json
+python -m experiments.medchange.fresh_benchmark --medchange-dir ..\MedChange       # selects the 1,000 questions, writes manifest_fresh.json
 git add experiments\medchange\manifest_fresh.json ; git commit -m "Fresh question selection" ; git push origin main
 python -m experiments.medchange.fresh_benchmark --freeze                            # marks protocol section 10 IN FORCE (needs the push above)
 git add docs\protocol.md ; git commit -m "Pre-registration in force" ; git push origin main
@@ -196,6 +196,6 @@ python -m experiments.medchange.label_audit --split fresh --sample 300 --medchan
 python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 python -m experiments.medchange.analyze_fresh                                       # again, to include the audit; prints only a count until all answers exist
 ```
-The pipeline refuses to start unless the freeze is complete. `analyze_fresh` is blinded: it computes nothing until all 1,500 questions have answers for R2, R2C and R2V, and
+The pipeline refuses to start unless the freeze is complete. `analyze_fresh` is blinded: it computes nothing until all 1,000 questions have answers for R2, R2C and R2V, and
 it writes `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` only then. Do not open partial answer files.
 

@@ -1424,3 +1424,12 @@ The ADRD evidence therefore stays the 208-question set (48 naming Alzheimer's di
 
 Wording pass (same day): the descriptive text of `README.md` and the five documents now calls the 208-question set the ADRD set everywhere it describes the current evidence. The dated decision
 ledger, the AD-KQA record and earlier log entries keep the wording they were written in, because they record what was decided and said at the time.
+
+## Phase 72 — Fresh test shortened to N = 1,000; the domain wording approved (Oct 10)
+
+The researcher approved the "Alzheimer's disease and related dementias" wording (the supervisor left the decision to the researcher). Checked before approval: the 208 questions are 48 naming
+Alzheimer's disease, 156 naming dementia (15 both) and 19 naming neither, all about cognitive impairment (mild cognitive impairment, vascular cognitive impairment, impairment after stroke,
+Parkinson's disease, diabetes or brain injury, delirium with cognitive impairment); 189 (91%) name Alzheimer's disease or dementia. The composition is stated wherever the name is used.
+The fresh test was shortened from N = 1,500 to N = 1,000 (about 67 to 80 hours instead of 100 to 120) because the researcher has only the laptop; the arms, settings and rules are unchanged, nothing was
+selected yet, and the choice rests on power and time only (power 93% at a true gain of 0.045, 64% at 0.03; 1,500 gave 99% and 81%). No step of the design was removed: each arm and the
+label audit answers a question a reviewer would ask (R2C: is it the checking or just the criteria; audit: how reliable are the reference verdicts).
