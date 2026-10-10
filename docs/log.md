@@ -1414,3 +1414,10 @@ most common dementia and the registered domain is Alzheimer's disease. The wordi
 were changed accordingly (no number changed). Supervisor sign-off of the domain wording is still advisable. `fresh_supply` now also counts MedRevQA questions about other neurodegenerative
 diseases (Parkinson's, Lewy body, frontotemporal, Huntington's, motor neuron disease, prion and similar) among the unused questions, in the question and in the review text, with their
 verdicts; counts only, nothing selected. Such questions are related to, but are not, Alzheimer's disease: any use would be a separately named, descriptive stratum, decided from the counts.
+
+## Phase 71 — Count of neurodegenerative questions in the unused MedRevQA pool: too few, no stratum (Oct 10)
+
+Researcher's run of `fresh_supply` (counts in `results/fresh_supply.json`): among the 7,880 unused questions dated 2010 or later, 25 name another neurodegenerative disease in the question
+(23 reviews; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 32 do so in the question, objectives or conclusions; from 2005, 38 and 46. Dementia in the review text: 7 (2010 on). With
+a single REFUTED answer a per-verdict reading is impossible and 25 questions cannot carry a result, so **no neurodegenerative stratum is added**; they stay in the general fresh pool at random.
+The ADRD evidence therefore stays the 208-question set (48 naming Alzheimer's disease) and its case study.
