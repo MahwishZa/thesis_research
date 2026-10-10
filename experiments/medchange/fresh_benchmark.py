@@ -89,13 +89,15 @@ def freeze(protocol: Path, manifest: dict, today: str) -> bool:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--medchange-dir", required=True)
+    ap.add_argument("--medchange-dir", default=None, help="the MedChange clone (not needed with --freeze)")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--manifest", default=str(HERE / "manifest_fresh.json"))
     ap.add_argument("--n", type=int, default=N_DEFAULT)
     ap.add_argument("--freeze", action="store_true",
                     help="mark docs/protocol.md section 10 as IN FORCE (needs manifest_fresh.json committed and pushed first)")
     a = ap.parse_args(argv)
+    if not a.freeze and not a.medchange_dir:
+        ap.error("--medchange-dir is required unless --freeze is given")
     if a.freeze:
         from .runner import frozen_is_pushed
         rel = "experiments/medchange/manifest_fresh.json"
