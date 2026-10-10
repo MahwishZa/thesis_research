@@ -313,7 +313,7 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
                       self.readme_flat)
 
     def test_the_scope_sentences_of_the_readme_follow_from_the_data(self):
-        self.assertIn(f"{self.confirm['items']} general-medicine questions and {self.ad['items']} dementia-related questions",
+        self.assertIn(f"{self.confirm['items']} general-medicine questions and {self.ad['items']} questions on Alzheimer's disease and related dementias",
                       self.readme_flat)
         manifest = json.loads(text(ROOT / "experiments" / "medchange" / "manifest_ad.json"))
         self.assertEqual(manifest["items"], self.ad["items"])

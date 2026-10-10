@@ -46,6 +46,14 @@ class SupplyTests(unittest.TestCase):
         rep = F.report(items)["by_earliest_date"]["2010-01-01"]["dementia_in_review_text"]
         self.assertEqual((rep["questions"], rep["labels"]["SUPPORTED"], rep["labels"]["NOT ENOUGH INFORMATION"]), (2, 1, 1))
 
+    def test_neurodegenerative_wording_is_counted_separately(self):
+        medrev = dict(MEDREV)
+        medrev[5] = dict(MEDREV[5], Question="Does H help Parkinson's disease?")
+        medrev[6] = dict(MEDREV[6], objectives="People with Huntington's disease.")
+        rep = F.report(F.fresh_items(medrev, GROUPS, set(), frozenset(), frozenset()))["by_earliest_date"]["2010-01-01"]
+        self.assertEqual(rep["neurodegenerative_wording"]["questions"], 1)
+        self.assertEqual(rep["neurodegenerative_in_review_text"]["questions"], 2)
+
     def test_used_groups_reviews_and_wording_are_excluded(self):
         self.assertNotIn(0, {i["row"] for i in self.items(used_groups={1})})
         self.assertNotIn(5, {i["row"] for i in self.items(used_reviews={"CD100005"})})

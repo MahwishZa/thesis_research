@@ -57,7 +57,7 @@ the 504 usable changes involve NOT ENOUGH INFORMATION, the vaguest boundary. (3)
 are Alzheimer's-related, too few for any test; the `ad` set exists for that reason (§2). (4) The question text was written by
 a model.
 
-## 2. Dementia and Alzheimer's set (secondary; split `ad`)
+## 2. Alzheimer's disease and related dementias (ADRD) set (secondary; split `ad`)
 
 **Why it exists.** The research proposal names Alzheimer's disease as the domain, and the main benchmark holds only 14
 related questions. `experiments/medchange/ad_benchmark.py` builds a second held-out set from the same release by the same
@@ -78,7 +78,7 @@ dementia (15 name both) and 19 name neither (cognitive impairment after stroke, 
 mild cognitive impairment, delirium).
 
 **Limitations.** (1) It is a dementia and cognitive-impairment set in which fewer than a quarter of the questions name
-Alzheimer's disease, and it is called that here, not an Alzheimer's-only benchmark. (2) No question has a changed verdict,
+Alzheimer's disease, and it is called the ADRD set here (Alzheimer's disease is the most common dementia), not an Alzheimer's-only benchmark; the 48 questions that name Alzheimer's disease are reported as a subgroup. (2) No question has a changed verdict,
 so changed-question and update-window results cannot be computed for it. (3) Its reviews are old: 48 of the 208 are dated
 before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year only and the earliest is 2000, so as-of evidence
 will be thinner for many questions; the pools, once built, had a median of 20 candidates and none was empty, and R2 admitted at least one abstract for 177 of the 208 (85.1%). (4) 208 questions come from

@@ -26,6 +26,10 @@ HERE = Path(__file__).resolve().parent
 #: Review text (question, objectives, conclusions) that names Alzheimer's disease or dementia. Counted because a review can be about
 #: dementia while its question does not say so.
 AD_DOMAIN_TEXT = re.compile(r"alzheimer|dementia", re.IGNORECASE)
+#: Neurodegenerative diseases other than dementia itself (the dementia wording is excluded from the fresh pool already). Counted for a possible
+#: descriptive stratum "neurodegenerative diseases related to Alzheimer's disease"; it is not Alzheimer's disease and is never called that.
+NEURO_TEXT = re.compile(r"parkinson|lewy bod|frontotemporal|huntington|amyotrophic|motor neuron|neurodegenerat|supranuclear|multiple system atrophy|"
+                        r"corticobasal|prion|creutzfeldt", re.IGNORECASE)
 EARLIEST = ("2005-01-01", "2010-01-01", "2015-01-01", "2023-04-01")      # last: after the generator's stated knowledge cutoff
 
 
@@ -61,6 +65,9 @@ def fresh_items(medrev: dict, groups: dict, used_groups: set, used_reviews: froz
         out.append({"row": newest, "previous": previous, "group_id": gid, "kind": kind, "single_version": newest == previous, "date": nv.date,
                     "precision": nv.date_precision, "label": nv.label, "cochrane_id": nv.cochrane_id,
                     "dementia_wording": bool(AD_QUESTION.search(q)),
+                    "neuro_wording": bool(NEURO_TEXT.search(q)),
+                    "neuro_in_review_text": bool(NEURO_TEXT.search(" ".join(
+                        [q, medrev[newest].get("objectives") or "", medrev[newest].get("conclusions") or ""]))),
                     "dementia_in_review_text": bool(AD_DOMAIN_TEXT.search(" ".join(
                         [q, medrev[newest].get("objectives") or "", medrev[newest].get("conclusions") or ""])))})
     return out
@@ -81,6 +88,12 @@ def report(items: list[dict]) -> dict:
             "dementia_in_review_text": {
                 "questions": sum(i["dementia_in_review_text"] for i in sel),
                 "labels": {l: sum(i["dementia_in_review_text"] and i["label"] == l for i in sel) for l in LABELS}},
+            "neurodegenerative_wording": {
+                "questions": sum(i["neuro_wording"] for i in sel), "reviews": len({i["cochrane_id"] for i in sel if i["neuro_wording"]}),
+                "labels": {l: sum(i["neuro_wording"] and i["label"] == l for i in sel) for l in LABELS}},
+            "neurodegenerative_in_review_text": {
+                "questions": sum(i["neuro_in_review_text"] for i in sel),
+                "labels": {l: sum(i["neuro_in_review_text"] and i["label"] == l for i in sel) for l in LABELS}},
             "ids_sha256": hashlib.sha256(json.dumps(sorted(i["row"] for i in sel)).encode()).hexdigest()}
     years = Counter(i["date"][:4] for i in items)
     out["by_year"] = {y: years[y] for y in sorted(years)}

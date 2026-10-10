@@ -22,7 +22,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
 | Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
 
-The research aims at Alzheimer's disease. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
+The research domain is Alzheimer's disease and related dementias (ADRD; Alzheimer's disease is the most common dementia). The ADRD set is the 208-question dementia set (§8), of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
 as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the dementia set secondary; no
 Alzheimer's-specific confirmatory evaluation exists.

@@ -1405,3 +1405,12 @@ or Dementia as a major topic (3 with Alzheimer Disease), 7 usable under the fixe
 "Authors' conclusions" section. The rule fixed beforehand (30 or more = build, 20 to 29 = pilot, fewer = stop) gives **TOO FEW**, so no question set, split or pre-registration was
 built from them. Seven questions could not carry a result, and a set that small would be an anecdote, not evidence. The Alzheimer's evidence for the defence stays the 48
 Alzheimer's-named questions of the dementia run with their case study (descriptive), and the pre-registered fresh test (not Alzheimer's-specific) remains the confirmatory test.
+
+## Phase 70 — The dementia set is described as the Alzheimer's disease and related dementias (ADRD) set; neurodegenerative supply to be counted (Oct 10)
+
+Decision (the researcher's): the 208-question dementia set is presented as the ADRD set instead of a separate "dementia" set and an "Alzheimer's" set, because Alzheimer's disease is the
+most common dementia and the registered domain is Alzheimer's disease. The wording rule: the set is called ADRD; its composition is always given (48 name Alzheimer's disease, 156 dementia,
+19 other cognitive impairment); the 48 stay a reported subgroup; nothing is called an Alzheimer's-only evaluation. README, `protocol.md`, `evaluation.md`, `methodology.md` and `data.md`
+were changed accordingly (no number changed). Supervisor sign-off of the domain wording is still advisable. `fresh_supply` now also counts MedRevQA questions about other neurodegenerative
+diseases (Parkinson's, Lewy body, frontotemporal, Huntington's, motor neuron disease, prion and similar) among the unused questions, in the question and in the review text, with their
+verdicts; counts only, nothing selected. Such questions are related to, but are not, Alzheimer's disease: any use would be a separately named, descriptive stratum, decided from the counts.

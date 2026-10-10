@@ -142,15 +142,15 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 
 ### 6.0 What each result is
 
-The research aims at Alzheimer's disease. An Alzheimer's-specific question set was specified on 2026-10-09 (`protocol.md` §8) and its
-construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-specific confirmatory evaluation exists. The pre-declared
+The research domain is Alzheimer's disease and related dementias (ADRD). Its evidence is the 208-question dementia set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
+construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the ADRD results are secondary and descriptive. The pre-declared
 confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
-dementia-wide set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-specific evaluation.
+ADRD set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-only evaluation.
 
 | Result set | Questions | Class | Scope |
 |---|---|---|---|
 | As-of Cochrane questions, held-out split (§6.2) | 528 | completed once; pre-declared and confirmatory under the protocol of 2026-10-05 | general medicine |
-| Dementia and Alzheimer's set (§6.6) | 208 | completed once; secondary | dementia-wide: 48 questions name Alzheimer's disease |
+| Alzheimer's disease and related dementias, the dementia set (§6.6) | 208 | completed once; secondary | ADRD: 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment |
 | As-of Cochrane questions, development split (§6.1) | 226 | exploratory; used to find defects | general medicine |
 | Ablation arms, retrieval diagnostics, label audits (§6.2) | | secondary or descriptive | general medicine |
 | Released answers of eight other models (§6.2, §6.6) | 8 | context; other prompts, no retrieval | not a controlled comparison |
