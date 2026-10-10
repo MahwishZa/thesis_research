@@ -18,14 +18,14 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Design freeze | completed 2026-10-06 without using the one allowed prompt revision; the design record is committed |
 | Held-out run, 528 questions | started 2026-10-06 after the freeze, completed once on 2026-10-08 (results: `evaluation.md` §6) |
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
-| Alzheimer's/dementia run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
+| ADRD (Alzheimer's disease and related dementias) run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
 | Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
 | Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
 
 The research domain is Alzheimer's disease and related dementias (ADRD; Alzheimer's disease is the most common dementia). The ADRD set is the 208-question dementia set (§8), of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
-as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the dementia set secondary; no
-Alzheimer's-specific confirmatory evaluation exists.
+as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the ADRD set secondary; no
+Alzheimer's-only confirmatory evaluation exists.
 
 ## 1. Requirement and questions
 
@@ -96,7 +96,7 @@ already existed for both splits, so the realigned dev and held-out runs needed n
 used to design anything below; the B0/B1 aggregate confusion matrices of that split were computed on 2026-10-05
 before this design and show the same pattern as dev. Every design choice rests on the dev split and on the benchmark's
 published labelling rubric. This is a weaker guarantee than an untouched split, and it is declared here. The
-Alzheimer's/dementia set (§8) is the only split no result has touched.
+ADRD set (§8) is the only split no result has touched.
 
 ## 4. Systems
 
@@ -157,7 +157,7 @@ question, so their differences are differences in how the evidence is used. How 
    pushed. Both held-out phases refuse to start unless that file on origin/main equals the current design.
 4. **Held-out run, once** (`rag2_pipeline confirm --go`): rationales, lists, filter, R2, R2C, R2V, R2V-ND, analysis,
    findings. Nothing is changed afterwards; the result is reported whatever it is.
-5. **Alzheimer's/dementia run, once, after the freeze** (`ad_benchmark`, then `rag2_pipeline ad --go`): §8.
+5. **ADRD run, once, after the freeze** (`ad_benchmark`, then `rag2_pipeline ad --go`): §8.
 6. **Commits and pushes.** The pipelines commit results (`--commit`) but never push; the researcher runs
    `git push origin main`, which is also what puts the design record where the guard looks for it.
 
@@ -279,7 +279,7 @@ the source: of 99 well-formed drafts the drafter proposed SUPPORTED 88, REFUTED 
 on 77 (72 SUPPORTED, 5 REFUTED, none NOT ENOUGH INFORMATION). Letting the cue reading act only as a veto would raise survival to about 50% but leave
 about 94% of the kept questions SUPPORTED. No change of the rules can reach the verdict floors from this source. Decision of the researcher: stop. The
 test split was never drafted and no system was run on any AD-KQA question. *Consequences:* the primary evaluation reverts to the pre-declared
-held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not confirmed); the dementia set is secondary and its 48
+held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not confirmed); the ADRD set is secondary and its 48
 Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, from answers on file, no model run). No Alzheimer's-specific
 confirmatory evaluation exists, and none is claimed. The code, tests and long amendment text left the active tree (Git history, commit `4ab9d1b`;
 `git checkout 4ab9d1b -- experiments/adkqa` restores the code, which `evaluation.md` §6.8 summarises).

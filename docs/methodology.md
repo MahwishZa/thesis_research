@@ -40,7 +40,7 @@ is read, and what can be concluded from a given sample size, is fixed in `protoc
 
 **Two evaluation settings.**
 
-| | MedChange as-of benchmark (general medicine; the realigned study's primary test) | Secondary: dementia and Alzheimer's set (split `ad`) |
+| | MedChange as-of benchmark (general medicine; the realigned study's primary test) | Secondary: Alzheimer's disease and related dementias (ADRD) set (split `ad`) |
 |---|---|---|
 | Questions | 754 usable Cochrane questions: 504 whose verdict changed between review versions, 250 unchanged controls. Development split (`dev`) 226, held-out split (`confirm`) 528 | 208 questions from 159 reviews that are in neither split, on dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline. All have unchanged verdicts (202 come from reviews with a single version) |
 | Question date | the newest review's publication date | the same |

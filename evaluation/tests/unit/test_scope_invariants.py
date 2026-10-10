@@ -295,7 +295,7 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
 
     def test_the_readme_difference_table_and_its_reading_are_quoted_exactly(self):
         rows = _table(self.readme, "Proposed extra check minus baseline")
-        for label, sj in (("General medicine", self.confirm), ("Dementia-related", self.ad)):
+        for label, sj in (("General medicine", self.confirm), ("ADRD", self.ad)):
             p = sj["primary"]
             expected = (f"| {label} | {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | "
                         f"{_p(p['mcnemar_p'])} |")
@@ -309,7 +309,7 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
 
     def test_the_sample_size_limits_in_the_readme_follow_from_the_formula(self):
         (a, b), (c, d) = detectable_range(self.confirm["items"]), detectable_range(self.ad["items"])
-        self.assertIn(f"roughly {a} to {b} points (general medicine) or {c} to {d} points (dementia-related)",
+        self.assertIn(f"roughly {a} to {b} points (general medicine) or {c} to {d} points (ADRD set)",
                       self.readme_flat)
 
     def test_the_scope_sentences_of_the_readme_follow_from_the_data(self):

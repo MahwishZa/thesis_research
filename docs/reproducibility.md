@@ -56,7 +56,7 @@ study was run (committed answers: `results/answers_<split>.jsonl`); a reader who
 |---|---|---|
 | 1 | `git clone https://github.com/jvladika/MedChange ..\MedChange` | one-off |
 | 2 | `python -m experiments.medchange.build_benchmark --medchange-dir ..\MedChange` | seconds; refuses unless all 512 items reproduce; afterwards `git status` must show no change to `manifest.json` |
-| 3 | `python -m experiments.medchange.ad_benchmark --medchange-dir ..\MedChange` | seconds; appends the 208 dementia and Alzheimer's questions as split `ad` (rerunnable); `manifest_ad.json` must show no change in `git status` |
+| 3 | `python -m experiments.medchange.ad_benchmark --medchange-dir ..\MedChange` | seconds; appends the 208 ADRD (Alzheimer's disease and related dementias) questions as split `ad` (rerunnable); `manifest_ad.json` must show no change in `git status` |
 | 4 | `python -m experiments.medchange.pubmed_asof --split dev` (then `--split confirm`) | needs network; about 22 min for the 226 development questions (measured); an optional `--api-key` changes the duration, not the results |
 | 5 | `python -m experiments.medchange.freeze_candidates --split dev --device cpu` (then `--split confirm`) | downloads the abstracts (37,375 for dev), then MedCPT encoding and re-ranking at about 50 s per question, about 3 h for dev (measured) |
 | 6 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` (then `--split confirm`) | about 15 s per B0 answer and 61 s per B1 answer (measured, held-out); `--limit 3` gives a timing test |
@@ -115,7 +115,7 @@ family with Holm correction and the retrieval metrics from the answers and recor
 reads `benchmark.jsonl`, `answers_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` and, when present,
 `frozen_<split>.jsonl` from `experiments\medchange\data\` (without the frozen pools the evidence-type, age and update-window cells of
 B1 stay empty); the committed copies in `results\` can be copied there.
-`report --split ad` writes the dementia set's tables to `results\report_ad\`. `report` writes the result tables, a LaTeX table and two figures to `results\report\` (the closed-book rows of existing models
+`report --split ad` writes the ADRD set's tables to `results\report_ad\`. `report` writes the result tables, a LaTeX table and two figures to `results\report\` (the closed-book rows of existing models
 need the MedChange clone; the figures need the `report` extra). The phase drivers do not run it: it is run by hand after a phase,
 and the committed `results\report\` is the held-out version.
 

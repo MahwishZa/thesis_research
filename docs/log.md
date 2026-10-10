@@ -1421,3 +1421,6 @@ Researcher's run of `fresh_supply` (counts in `results/fresh_supply.json`): amon
 (23 reviews; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 32 do so in the question, objectives or conclusions; from 2005, 38 and 46. Dementia in the review text: 7 (2010 on). With
 a single REFUTED answer a per-verdict reading is impossible and 25 questions cannot carry a result, so **no neurodegenerative stratum is added**; they stay in the general fresh pool at random.
 The ADRD evidence therefore stays the 208-question set (48 naming Alzheimer's disease) and its case study.
+
+Wording pass (same day): the descriptive text of `README.md` and the five documents now calls the 208-question set the ADRD set everywhere it describes the current evidence. The dated decision
+ledger, the AD-KQA record and earlier log entries keep the wording they were written in, because they record what was decided and said at the time.
