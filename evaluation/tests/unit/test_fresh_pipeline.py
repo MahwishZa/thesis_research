@@ -98,9 +98,9 @@ class FreezeTests(unittest.TestCase):
             self.assertIn("### 10.1 Why", text)
             self.assertFalse(FB.freeze(p, man, "2026-11-03"), "a frozen section is not rewritten")
 
-    def test_the_committed_draft_has_a_status_paragraph_that_freeze_can_replace(self):
+    def test_the_committed_protocol_has_a_draft_status_that_freeze_can_replace_or_is_frozen(self):
         text = (Path(P.HERE).parents[1] / "docs" / "protocol.md").read_text(encoding="utf-8")
-        self.assertIsNotNone(FB.DRAFT_STATUS.search(text))
+        self.assertTrue(FB.DRAFT_STATUS.search(text) or P.IN_FORCE.search(text))
 
 
 def synthetic(n=60, gain=True):
