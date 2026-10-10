@@ -30,7 +30,7 @@ which 48 name Alzheimer's disease (23%), 156 name dementia and 19 other cognitiv
 (*supported*, *refuted*, *not enough information*) and counts as correct when it matches the verdict of the Cochrane review;
 *accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short).
 
-| System (same language model, same studies) | General medicine (n = 528) | Dementia-related (n = 208) |
+| System (same language model, same studies) | General medicine (n = 528) | ADRD (n = 208) |
 |---|---|---|
 | No retrieval | 46.6% | 33.2% |
 | Standard retrieval | 48.1% | 30.8% |
@@ -40,13 +40,13 @@ which 48 name Alzheimer's disease (23%), 156 name dementia and 19 other cognitiv
 | Proposed extra check minus baseline | Difference (points) | 95% range | p-value |
 |---|---|---|---|
 | General medicine | +1.3 | −1.9 to +4.7 | 0.51 |
-| Dementia-related | +3.4 | −1.9 to +8.7 | 0.28 |
+| ADRD | +3.4 | −1.9 to +8.7 | 0.28 |
 
 **How to read this.** The 95% range is the span of differences that fits the data, and the p-value is the chance of seeing a gap at
 least this large if the two systems were really equally accurate (below 0.05 would count as evidence). Both gaps are above the
 1-point requirement as point estimates, but both ranges include zero and negative values, so they cannot be told apart from
 chance: the requirement is **met as a point estimate, not confirmed**. With these numbers of questions only gains of roughly 4 to
-6 points (general medicine) or 6 to 10 points (dementia-related) could be confirmed. The results do not show that the extra
+6 points (general medicine) or 6 to 10 points (ADRD set) could be confirmed. The results do not show that the extra
 check improves accuracy, and the Alzheimer's-named subgroup (48 questions) is too small to describe Alzheimer's disease on its own. The reference answers were produced by a
 language model; a second, independent model reproduces 81.4% of them on the general-medicine questions. Further tables,
 controls and the earlier approaches that did not work are in `docs/evaluation.md`.
@@ -101,7 +101,7 @@ python -m experiments.medchange.rag2_pipeline dev --model-path models/Meta-Llama
 python -m experiments.medchange.rag2_pipeline confirm --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 python -m experiments.medchange.rag2_pipeline ad --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit
 
-# Questions of the dementia set that name Alzheimer's disease (from the answers on file; no model is run)
+# Questions of the ADRD set that name Alzheimer's disease (from the answers on file; no model is run)
 python -m experiments.medchange.subgroup_ad
 
 # Per-verdict behaviour: predicted shares, recall per verdict, macro-F1 (from the answers on file; no model is run)
