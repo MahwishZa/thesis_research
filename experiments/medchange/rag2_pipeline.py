@@ -87,7 +87,9 @@ def freeze_problems(data: Path, root: Path = HERE.parents[1]) -> list[str]:
     if not (protocol.is_file() and IN_FORCE.search(protocol.read_text(encoding="utf-8"))):
         problems.append("protocol.md §10 is not marked IN FORCE (the freeze of §10.8 is not complete)")
     ok, why = frozen_is_pushed(rel=MANIFEST_FRESH)
-    if not ok:
+    if not (root / MANIFEST_FRESH).is_file():
+        problems.append(f"{MANIFEST_FRESH} does not exist (run fresh_benchmark)")
+    elif not ok:
         problems.append(why)
     else:
         manifest = json.loads((root / MANIFEST_FRESH).read_text(encoding="utf-8"))

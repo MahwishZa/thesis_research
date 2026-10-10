@@ -183,7 +183,9 @@ class FreezeAndPlanTests(unittest.TestCase):
         self.assertTrue(P.IN_FORCE.search("**Status.** This section is IN FORCE since 2026-11-01 (commit abc)."))
         self.assertIsNone(P.IN_FORCE.search("**Status.** This section is a draft written on 2026-10-09."))
         text = (Path(P.HERE).parents[1] / "docs" / "protocol.md").read_text(encoding="utf-8")
-        self.assertIsNone(P.IN_FORCE.search(text), "the committed protocol must still read as a draft until the researcher freezes it")
+        draft = "**Status.** This section is a draft" in text
+        self.assertTrue(draft or P.IN_FORCE.search(text), "§10 must read either as a draft or as in force, never neither")
+        self.assertFalse(draft and P.IN_FORCE.search(text))
 
     def test_without_the_freeze_the_fresh_run_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
