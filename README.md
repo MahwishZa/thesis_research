@@ -10,7 +10,7 @@ This research tests whether a small language model running on an ordinary laptop
 RAG gets one extra step: after drafting an answer from the studies it found, the model checks the draft against plain rules of
 evidence (only studies that really test the treatment count, trials and systematic reviews weigh most, newer evidence takes
 precedence). The step is compared with an adapted version of a published medical RAG method (RAG²; not a full reproduction of
-it), with standard retrieval and with no retrieval. The research focuses on Alzheimer's disease, and its requirement is an
+it), with standard retrieval and with no retrieval. The research domain is Alzheimer's disease and related dementias, and its requirement is an
 improvement of at least 1 percentage point in the share of correct answers.
 
 The complete academic account (background, related work, methodology, detailed results, statistical analysis, discussion,
@@ -25,8 +25,8 @@ limitations and references) is in the accompanying research paper: [title and li
 ## Research Results
 
 **What was measured.** Two sets of medical-evidence questions taken from Cochrane systematic reviews, each asked as of its
-review's date so that only earlier studies can be used: 528 general-medicine questions and 208 dementia-related questions, of
-which 48 name Alzheimer's disease. They are not an Alzheimer's-specific evaluation. Each answer is one of three verdicts
+review's date so that only earlier studies can be used: 528 general-medicine questions and 208 questions on Alzheimer's disease and related dementias, of
+which 48 name Alzheimer's disease (23%), 156 name dementia and 19 other cognitive impairment. The 48 are reported as a subgroup; the 208 are not an Alzheimer's-only evaluation. Each answer is one of three verdicts
 (*supported*, *refuted*, *not enough information*) and counts as correct when it matches the verdict of the Cochrane review;
 *accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short).
 
@@ -47,7 +47,7 @@ least this large if the two systems were really equally accurate (below 0.05 wou
 1-point requirement as point estimates, but both ranges include zero and negative values, so they cannot be told apart from
 chance: the requirement is **met as a point estimate, not confirmed**. With these numbers of questions only gains of roughly 4 to
 6 points (general medicine) or 6 to 10 points (dementia-related) could be confirmed. The results do not show that the extra
-check improves accuracy, and they do not describe Alzheimer's disease specifically. The reference answers were produced by a
+check improves accuracy, and the Alzheimer's-named subgroup (48 questions) is too small to describe Alzheimer's disease on its own. The reference answers were produced by a
 language model; a second, independent model reproduces 81.4% of them on the general-medicine questions. Further tables,
 controls and the earlier approaches that did not work are in `docs/evaluation.md`.
 
