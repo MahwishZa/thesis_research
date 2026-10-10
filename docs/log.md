@@ -1397,3 +1397,11 @@ text), so the only source is Cochrane reviews published after MedRevQA's newest 
 the researcher's laptop) asks PubMed for Cochrane reviews with Alzheimer Disease or Dementia as a major topic after that date and counts those that a fixed rule can turn
 into a question (an "Authors' conclusions" section, a title of the form "X for Y", no protocol or withdrawn notice). Rule: 30 or more usable = build a small set; 20 to 29 =
 a small pilot; fewer = stop. Nothing is built before the count is known. 5 tests with a fake E-utilities server; the sandbox cannot reach PubMed, so the real supply is not yet known.
+
+## Phase 69 — Result of the count of new Cochrane dementia reviews: too few, so nothing is built (Oct 10)
+
+Researcher's run of `cochrane_ad_supply` (PubMed, window after 2024-01-18 to 2026-10-10; counts in `results/cochrane_ad_supply.json`): 8 Cochrane reviews with Alzheimer Disease
+or Dementia as a major topic (3 with Alzheimer Disease), 7 usable under the fixed rule (6 effect, 1 test; 2 name Alzheimer's disease in the title; by year 4, 1, 2), 1 without an
+"Authors' conclusions" section. The rule fixed beforehand (30 or more = build, 20 to 29 = pilot, fewer = stop) gives **TOO FEW**, so no question set, split or pre-registration was
+built from them. Seven questions could not carry a result, and a set that small would be an anecdote, not evidence. The Alzheimer's evidence for the defence stays the 48
+Alzheimer's-named questions of the dementia run with their case study (descriptive), and the pre-registered fresh test (not Alzheimer's-specific) remains the confirmatory test.
