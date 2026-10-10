@@ -306,8 +306,7 @@ Results of these stages: `evaluation.md` §6.3.
 
 ## 10. Pre-registration of a confirmatory test on fresh questions (DRAFT: not in force)
 
-**Status.** This section is a draft written on 2026-10-09. It binds nothing until the freeze of §10.8 is committed, and no fresh question has been
-selected, run or looked at. Nothing in it changes a result already obtained.
+**Status.** This section is IN FORCE since 2026-10-10. The selection is the first 850 qualifying questions in the order of the SHA-256 of `fresh-v1|<row>` (item list hash `3b684c61f498083e`, manifest committed before any answer). From this date the hypothesis, the primary metric and decision rule, the sample size, the selection rule and seed, the arms, every setting and every prompt are fixed (§10.7). The sections below are those of the draft.
 
 ### 10.1 Why, and what is already known
 
