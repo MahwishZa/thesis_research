@@ -91,7 +91,7 @@ class FreezeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "protocol.md"
             p.write_text("# T\n\n**Status.** This section is a draft written on 2026-10-09. It binds nothing\nuntil the freeze.\n\n### 10.1 Why\n", encoding="utf-8")
-            man = {"items": 1000, "item_ids_sha256": "ab" * 32}
+            man = {"items": 850, "item_ids_sha256": "ab" * 32}
             self.assertTrue(FB.freeze(p, man, "2026-11-02"))
             text = p.read_text(encoding="utf-8")
             self.assertIsNotNone(P.IN_FORCE.search(text))
@@ -167,7 +167,7 @@ class BlindedAnalysisTests(unittest.TestCase):
         self.assertEqual(AF.read_primary({"difference": -0.01, "ci95": [-0.04, 0.01]})["reading"], "no evidence")
         self.assertTrue(AF.read_primary({"difference": 0.0, "ci95": [-0.015, 0.015]})["gain_of_0.02_or_more_excluded"])
         self.assertFalse(AF.read_primary({"difference": 0.0, "ci95": [-0.03, 0.03]})["gain_of_0.02_or_more_excluded"])
-        self.assertEqual((AF.EXPECTED, AF.ITERATIONS, AF.PRIMARY_SEED, AF.ARMS), (1000, 10000, "fresh-macro-f1", ("R2", "R2C", "R2V")))
+        self.assertEqual((AF.EXPECTED, AF.ITERATIONS, AF.PRIMARY_SEED, AF.ARMS), (850, 10000, "fresh-macro-f1", ("R2", "R2C", "R2V")))
 
     def test_the_dementia_comparison_is_descriptive_and_checks_the_sign(self):
         cb = {"splits": {"ad": {"n": 208, "paired": {"R2V vs R2": {"macro_f1": {"difference": 0.08, "ci95": [0.02, 0.13]}}}}}}
@@ -205,7 +205,7 @@ class FreezeAndPlanTests(unittest.TestCase):
         self.assertNotIn("judge", names.lower().replace("no directness judge", ""))
         self.assertIn("--abstracts-only", argv)
         self.assertIn("analyze_fresh", argv)
-        self.assertEqual(P.EXPECTED_ITEMS["fresh"], 1000)
+        self.assertEqual(P.EXPECTED_ITEMS["fresh"], 850)
 
     def test_preflight_of_the_fresh_split_does_not_ask_for_b0_and_b1(self):
         with tempfile.TemporaryDirectory() as tmp:

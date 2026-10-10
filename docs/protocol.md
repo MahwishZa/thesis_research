@@ -347,10 +347,10 @@ to 83% are dated 2010 or later, which is why the threshold is 2010. *No Alzheime
 name Alzheimer's disease or dementia anywhere in the question, objectives or conclusions, so a fresh Alzheimer's-domain test cannot be built from this
 source; the fresh test is general medicine. The review must be dated from **2010-01-01**; if fewer than the sample size qualify, all qualifying questions are used and the power
 is stated, and the date is not moved earlier than 2005-01-01. From the qualifying questions the first **N** in the order of the SHA-256 of
-`fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 1,000** (set by the researcher on 2026-10-10 to shorten the run; it was 1,500 from 2026-10-09 to 2026-10-10, before any fresh question was selected). Power for H1
-with N = 1,000 (standard error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation):
-87% if the true gain is 0.04, 64% if 0.03, 34% if 0.02 (93% at 0.045, the gain seen on the held-out split); a gain of 0 is "confirmed" in about 2.5% of tests; the smallest gain
-confirmable with 80% power is about 0.036. For comparison N = 1,500 gave 97%, 81% and 47%. A true gain below about 0.03 may therefore go unconfirmed; the interval is then reported as it is.
+`fresh-v1|<MedRevQA row>` are taken; no label or topic is used. **N = 850** (set by the researcher on 2026-10-10 to shorten the run; it was 1,500 from 2026-10-09 and 1,000 earlier on 2026-10-10, before any fresh question was selected). Power for H1
+with N = 850 (standard error of the difference about 0.41 divided by the square root of N, from the two intervals above; normal approximation):
+81% if the true gain is 0.04, 57% if 0.03, 30% if 0.02 (89% at 0.045, the gain seen on the held-out split); a gain of 0 is "confirmed" in about 2.5% of tests; the smallest gain
+confirmable with 80% power is about 0.039. For comparison N = 1,500 gave 97%, 81% and 47%. A true gain below about 0.03 may therefore go unconfirmed; the interval is then reported as it is.
 
 ### 10.4 Systems and settings
 
@@ -364,9 +364,9 @@ analysis is the blinded `analyze_fresh` (§10.2), which computes nothing until a
 ### 10.5 Cost
 
 From the measured steps of the dementia run (records, pools, rationales, candidate lists, filter and the R2 and R2V answers), about 3.9 minutes per
-question for R2 and R2V plus 52 seconds for R2C, 4.8 minutes [estimate]: about 80 hours for 1,000 questions (120 for 1,500), on the
+question for R2 and R2V plus 52 seconds for R2C, 4.8 minutes [estimate]: about 68 hours for 850 questions (120 for 1,500), on the
 laptop, resumable; the abstracts-only step saves the MedCPT pool freezing of the earlier splits (about 50 seconds per question, an estimate from the
-held-out run), so about 67 hours is likely for 1,000 questions.
+held-out run), so about 57 hours is likely for 850 questions.
 
 ### 10.6 Limits stated in advance
 
@@ -383,7 +383,7 @@ metrics as primary, other thresholds, other seeds, dropping questions after seei
 
 ### 10.8 Freeze procedure
 
-(1) The counts of `fresh_supply` are committed (done: 7,880 qualifying questions). (2) N = 1,000 is fixed here; `python -m experiments.medchange.fresh_benchmark
+(1) The counts of `fresh_supply` are committed (done: 7,880 qualifying questions). (2) N = 850 is fixed here; `python -m experiments.medchange.fresh_benchmark
 --medchange-dir ..\MedChange` selects the questions, writes them to `benchmark.jsonl` and writes `manifest_fresh.json` (the selected MedRevQA rows and the hash of the item
 list), which is committed and pushed before any answer exists. (3) The tests of the new split pass and the design record equals the current design (the pipeline
 checks it). (4) `python -m experiments.medchange.fresh_benchmark --freeze` marks this section IN FORCE (it refuses unless the manifest is on origin/main); the change is

@@ -1433,3 +1433,6 @@ Parkinson's disease, diabetes or brain injury, delirium with cognitive impairmen
 The fresh test was shortened from N = 1,500 to N = 1,000 (about 67 to 80 hours instead of 100 to 120) because the researcher has only the laptop; the arms, settings and rules are unchanged, nothing was
 selected yet, and the choice rests on power and time only (power 93% at a true gain of 0.045, 64% at 0.03; 1,500 gave 99% and 81%). No step of the design was removed: each arm and the
 label audit answers a question a reviewer would ask (R2C: is it the checking or just the criteria; audit: how reliable are the reference verdicts).
+
+Later the same day the researcher asked for a run of one to two days. N was set to 850 (about 57 to 68 hours; power 89% at a true gain of 0.045, 57% at 0.03; 700 would give 83% and 49%, 1,000 would give 93% and 64%), the largest size that
+still fits about three nights of running. Arms, settings and rules are unchanged; the R2C control stays. Nothing had been selected.

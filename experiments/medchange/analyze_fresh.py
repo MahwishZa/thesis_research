@@ -33,7 +33,7 @@ from .scoring import paired, summarize
 
 HERE = Path(__file__).resolve().parent
 ARMS = ("R2", "R2C", "R2V")
-EXPECTED = 1000
+EXPECTED = 850
 ITERATIONS = 10000
 PRIMARY_SEED = "fresh-macro-f1"
 
