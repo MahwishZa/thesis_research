@@ -28,7 +28,8 @@ Environment notes that cost time once:
   into `models\` (gitignored). The pipelines hash the file and record the SHA-256 (§6).
 * **Independent judge** (label audit, consistency check, directness): `Qwen2.5-7B-Instruct-Q4_K_M.gguf` (about 4.7 GB) into
   `models\`: `python -c "from huggingface_hub import hf_hub_download; hf_hub_download('bartowski/Qwen2.5-7B-Instruct-GGUF', 'Qwen2.5-7B-Instruct-Q4_K_M.gguf', local_dir='models')"`.
-* **Keep a long run alive on a laptop:** plug in and disable sleep (`powercfg /change standby-timeout-ac 0`).
+* **Keep a long run alive on a laptop:** plug in and disable sleep and hibernation (`powercfg /change standby-timeout-ac 0` and
+  `powercfg /change hibernate-timeout-ac 0`). A run that is suspended resumes correctly, but the hours are lost (the progress clock of the fresh test's filter step jumped by about 8 hours, most likely a laptop that went to sleep).
 
 ## 2. Tests and checks
 
@@ -67,7 +68,7 @@ development and held-out splits; step 3 must have been run before the `ad` phase
 
 ## 4. Running the study
 
-### 4.1 The three phases
+### 4.1 The four phases
 
 One resumable command per phase (`rag2_pipeline`). Each stops at the first failed step, prints what it runs, and with
 `--commit` commits the results to the local `main` branch. **It never pushes**: the researcher runs `git push origin main`.
@@ -79,6 +80,7 @@ record is pushed.
 | dev | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | checks; rationales; candidate lists; filter; answers R2, R2C, R2V, R2V-ND; analysis; dev report with the pre-declared dev check; design record; environment record; commit. `--ablations` adds R2-RQ, R2-BR and R2-NF; `--judge-path` adds the directness judge | **measured 20.4 h** for the 226 questions with the judge (5.4 min per question) |
 | held-out | `python -m experiments.medchange.rag2_pipeline confirm --go --model-path ... --commit` | the same steps on the 528 held-out questions, then `RAG2_FINDINGS.md`; `--no-temporal-ablation` leaves R2V-ND out (decided before the run) | **measured 49.2 h** with the judge (5.6 min per question) |
 | `ad` | `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit` | as-of PubMed records (network); candidate pools and abstracts; B0 and B1 answers; then rationales, lists, filter and answers R2, R2C, R2V; analysis; `RAG2_FINDINGS_AD.md` | **measured 22.7 h** with the judge: records 0.4 h, pools 3.7 h, B0 and B1 4.3 h, rationales 0.8 h, lists 2.8 h, filter 2.4 h, answers 6.1 h, judge 2.1 h |
+| `fresh` | `python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` (after the steps of §11) | as-of PubMed records and abstracts (network, no MedCPT pools); rationales; candidate lists; filter; answers R2, R2C, R2V (no B0, B1 or judge); the blinded analysis `analyze_fresh`; publishing; commit | *estimated* 57 to 68 h for 850 questions (`protocol.md` §10.5); measured step times are in `log.md` |
 
 Measured per question in the held-out run, from the recorded durations: rationale 16 s, filter 48 s (eight judgements), the four
 answers 175 s (R2 54 s, R2C 52 s, R2V 14 s, R2V-ND 55 s) and the directness judge 42 s; the remainder of the 5.6 minutes is
@@ -86,12 +88,14 @@ candidate lists with MedCPT and model loading.
 
 ### 4.2 Guards
 
-* The held-out and `ad` phases refuse to start without `--go`, without `results/RAG2_DEV_REPORT.md`, unless the design record
+* The held-out, `ad` and `fresh` phases refuse to start without `--go`, without `results/RAG2_DEV_REPORT.md`, unless the design record
   `results/rag2_design.json` on `origin/main` equals the current design (every setting, every prompt hash, the generator file's
   hash), and unless the design record is pushed. This is why the researcher pushes the dev phase's commit before the next phase.
+  The `fresh` phase also refuses unless `docs/protocol.md` §10 is marked IN FORCE, `manifest_fresh.json` is on `origin/main` and the
+  fresh items in `benchmark.jsonl` match it.
 * Each step records its configuration beside its output (model SHA-256, context size, token limit, temperature, seed, settings
   and prompt hashes) and refuses to resume under a different one, so one file never mixes configurations.
-* A preflight checks the benchmark counts (226, 528, 208), the as-of records, the abstract cache and the B0/B1 answers.
+* A preflight checks the benchmark counts (226, 528, 208, 850), the as-of records, the abstract cache and, except for `fresh`, the B0/B1 answers.
 * The `ad` phase has no empty-pool abort: many of its reviews are old (48 of 208 before 2005), so some pools may be small or
   empty. For a question with no admitted evidence R2 answers without evidence and R2C and R2V keep R2's answer, so they cannot
   differ there; the analysis reports the share of questions without evidence per system, and `freeze_candidates` prints the
@@ -99,7 +103,7 @@ candidate lists with MedCPT and model loading.
 
 ### 4.3 Individual steps
 
-`python -m experiments.medchange.rag2_run <step> --split <dev|confirm|ad> --model-path ...` runs one step: `rationale`,
+`python -m experiments.medchange.rag2_run <step> --split <dev|confirm|ad|fresh> --model-path ...` runs one step: `rationale`,
 `lists` (MedCPT, no model path), `filter`, `answers` (`--arms`) or `judge`; `--limit 3` is a timing test. The modules can be run
 by hand with the flags shown in their docstrings.
 
@@ -146,7 +150,7 @@ and the committed `results\report\` is the held-out version.
 |---|---|
 | `experiments/medchange/data/` | gitignored: MedChange-derived questions, abstracts, frozen pools, working files |
 | `models/`, `checkpoints/`, `build/`, `dist/` | gitignored |
-| `experiments/medchange/results/` | committed: results without source text (file list: `data.md` §4) |
+| `experiments/medchange/results/` | committed: results without source text (file list: `data.md` §5) |
 | `experiments/medchange/results/earlier_stages/` | committed: results of record of stages 1 and 2 |
 | `corpus\`, `experiments\results\index\`, `_archive\` | gitignored local leftovers of the removed first design |
 
@@ -170,15 +174,22 @@ Alzheimer's-specific design (corpus, question pool, three-arm runner, filter ret
 (`git show 5e03540:_archive/README.md`; `git checkout 5e03540 -- _archive` restores the folder, whose tests need PyYAML,
 requests and pypdf).
 
-## 10. Archived: the Alzheimer's-specific question-set builder
+## 10. Archived work, and the counting and descriptive tools
 
-The counting script, specification, builder and verifier check of the Alzheimer's-specific question set left the active tree after the construction was
+**Archived: the Alzheimer's-specific question-set builder.** The counting script, specification, builder and verifier check of the Alzheimer's-specific question set left the active tree after the construction was
 stopped at gate 1 (`protocol.md` §8). They are in Git history: `git checkout 4ab9d1b -- experiments/adkqa evaluation/tests/unit` restores the code and its
 tests (the committed counts-only results are in `experiments/medchange/results/earlier_stages/adkqa/`). Local build data in the git-ignored folder experiments/adkqa/data, if any,
 may be deleted.
 
-Exploratory subgroup of the dementia run (the questions naming Alzheimer's disease): `python -m experiments.medchange.subgroup_ad` uses
-`benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`), runs no model and writes `results/ad_subgroup_alzheimer.*`.
+**Counting and descriptive tools** (no model is run by any of them).
+
+Per-verdict behaviour of the held-out and Alzheimer's disease runs (shares, recall, macro-F1): `python -m experiments.medchange.class_balance` uses `benchmark.jsonl`
+(`--data-dir`) and the committed answers (`--results-dir`) and writes `results/class_balance.*`.
+
+Exploratory subgroup of the Alzheimer's disease set (the questions naming Alzheimer's disease): `python -m experiments.medchange.subgroup_ad` uses
+`benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`) and writes `results/ad_subgroup_alzheimer.*`; `python -m experiments.medchange.ad_case_study --out-dir <folder outside the repository>`
+writes a case study of the same 48 questions (it holds question text and is not committed).
+
 Questions of MedRevQA that no split uses yet (counts only; nothing is selected): `python -m experiments.medchange.fresh_supply --medchange-dir ..\MedChange`
 reads `benchmark.jsonl` (`--data-dir`) and the MedChange files and writes `results/fresh_supply.json` (it also counts questions about other neurodegenerative diseases, by question wording and by review text, with their verdicts).
 New Cochrane dementia and Alzheimer's reviews after the MedRevQA snapshot (counts only; needs PubMed): `python -m experiments.medchange.cochrane_ad_supply --medchange-dir ..\MedChange`
@@ -186,7 +197,7 @@ writes `results/cochrane_ad_supply.json` (counts and PubMed identifiers, no titl
 
 ## 11. The pre-registered test on fresh questions (protocol §10)
 
-Order of work, in PowerShell from the repository folder (the run itself is about 57 to 68 hours [estimate], resumable):
+Order of work, in PowerShell from the repository folder (the run itself is about 57 to 68 hours [estimate], resumable; plug in the laptop and disable sleep and hibernation, §1):
 ```
 python -m experiments.medchange.fresh_benchmark --medchange-dir ..\MedChange       # selects the 850 questions, writes manifest_fresh.json
 git add experiments\medchange\manifest_fresh.json ; git commit -m "Fresh question selection" ; git push origin main
@@ -194,8 +205,10 @@ python -m experiments.medchange.fresh_benchmark --freeze                        
 git add docs\protocol.md ; git commit -m "Pre-registration in force" ; git push origin main
 python -m experiments.medchange.label_audit --split fresh --sample 300 --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
-python -m experiments.medchange.analyze_fresh                                       # again, to include the audit; prints only a count until all answers exist
+git push origin main                                                                # the pipeline commits but never pushes
 ```
-The pipeline refuses to start unless the freeze is complete. `analyze_fresh` is blinded: it computes nothing until all 850 questions have answers for R2, R2C and R2V, and
-it writes `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` only then. Do not open partial answer files.
+The pipeline refuses to start unless the freeze is complete, and after an interruption the same command resumes. `analyze_fresh` is blinded: it computes nothing until
+all 850 questions have answers for R2, R2C and R2V, and it writes `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` only then. The pipeline runs it as its
+last analysis step (`python -m experiments.medchange.analyze_fresh` regenerates the two files, identically, from the answers on file; until the answers are complete it
+prints only a count). Do not open partial answer files. `label_audit` writes its summary and a copy of its item-level file to `results\`, and the pipeline's commit includes them.
 

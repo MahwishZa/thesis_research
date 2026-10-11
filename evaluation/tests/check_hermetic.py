@@ -1,10 +1,10 @@
-"""Run the test suites and fail if they created, modified or deleted any file in the repository.
+"""Run the test suite and fail if it created, modified or deleted any file in the repository.
 
 Tests must be hermetic: they may read the tree but write only to temporary directories. A test
 that writes into the real tree - for example a stage script's resume marker under ``corpus/data`` -
-can damage a genuine run's state on a machine that holds the real corpus, and it passes silently.
+can damage a genuine run's state on a machine that holds real working data, and it passes silently.
 This check found exactly that once (2026-10-02); it compares the size and modification time of every
-file, ignored files included, before and after both suites.
+file, ignored files included, before and after the suite.
 
     python -m evaluation.tests.check_hermetic
 """

@@ -1,4 +1,4 @@
-# Findings of the realigned study (Alzheimer's/dementia secondary test set, run once)
+# Findings of the realigned study (Alzheimer's disease set, secondary test set, run once)
 
 Each conclusion follows the rules fixed in `docs/protocol.md` and `docs/evaluation.md` before the run.
 

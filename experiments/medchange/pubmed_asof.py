@@ -139,7 +139,7 @@ def window_counts(records: list[dict], after: str, until: str, top_k: int) -> di
 
 
 class EUtils:
-    def __init__(self, api_key: Optional[str] = None, *, opener: Callable = None,
+    def __init__(self, api_key: Optional[str] = None, *, opener: Optional[Callable] = None,
                  sleep: Callable = time.sleep):
         self.api_key = api_key
         self.delay = 0.11 if api_key else 0.34
@@ -155,7 +155,7 @@ class EUtils:
             self._sleep(self.delay)
             try:
                 return json.loads(self._open(url))
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, http.client.HTTPException) as exc:
+            except (OSError, json.JSONDecodeError, http.client.HTTPException) as exc:     # OSError: URLError, timeouts, a reset connection
                 if attempt == 4:
                     raise RuntimeError(f"E-utilities failed after 5 attempts: {exc}") from exc
                 self._sleep(2 ** attempt)
@@ -212,6 +212,8 @@ def probe_item(item: dict, eu: EUtils, *, retmax: int, min_hits: int) -> dict:
 
 
 def summarize(results: list[dict], items: dict) -> dict:
+    """Per kind: the share of items with a trial or review in the update window and the median count (for an even number of items the upper
+    one of the two middle values)."""
     out = {}
     for kind in ("changed", "unchanged"):
         rs = [r for r in results if items[r["item_id"]]["kind"] == kind]
@@ -245,7 +247,8 @@ def main(argv=None) -> int:
                     help="G0 is a dev-split gate by default")
     args = ap.parse_args(argv)
 
-    items = [json.loads(l) for l in open(args.benchmark, encoding="utf-8")]
+    with open(args.benchmark, encoding="utf-8") as handle:
+        items = [json.loads(line) for line in handle if line.strip()]
     items = [i for i in items if not i["likely_label_noise"]
              and (args.split == "all" or i["split"] == args.split)]
     if args.limit:

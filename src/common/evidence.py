@@ -1,8 +1,8 @@
 """Shared evidence and experiment data structures.
 
-These classes define the interface between the upstream corpus/retrieval
-pipeline and the three experimental arms (no-filter, RAG², Temporal Filter
- admission).
+These classes carry a candidate passage and its dates to the admission score of the stage-1
+arms (``src.temporal_filter``, called by ``experiments/medchange/arms.py``). The current
+systems (``experiments/medchange/rag2.py``) work on plain dictionaries and do not use them.
 """
 
 from __future__ import annotations

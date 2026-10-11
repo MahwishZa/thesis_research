@@ -27,6 +27,8 @@ FILES = {"qwen25-7b": "qwen25-7b_answers.txt", "llama33-70b": "llama33-70b_answe
 #: (Code/experiments_results.ipynb) reads the answers as ``lines[1::3]``. The others hold one line per answer.
 THREE_LINE = ("biomistral", "pmcllama", "olmo-13b")
 MODELS = tuple(FILES)
+#: The splits of the main benchmark; the questions of the ``ad`` and ``fresh`` splits appended to the same file are not part of this headroom check.
+MAIN_SPLITS = ("dev", "confirm")
 _LABEL = re.compile(r"NOT ENOUGH INFORMATION|SUPPORTED|REFUTED")
 
 
@@ -71,7 +73,9 @@ def main(argv=None) -> int:
     ap.add_argument("--medchange-dir", required=True)
     ap.add_argument("--benchmark", default=str(HERE / "data" / "benchmark.jsonl"))
     args = ap.parse_args(argv)
-    items = [json.loads(l) for l in open(args.benchmark, encoding="utf-8")]
+    with open(args.benchmark, encoding="utf-8") as handle:
+        items = [json.loads(line) for line in handle if line.strip()]
+    items = [i for i in items if i["split"] in MAIN_SPLITS]
     ans_dir = Path(args.medchange_dir) / "Code" / "GeneratedAnswers"
     report = {}
     for m in MODELS:

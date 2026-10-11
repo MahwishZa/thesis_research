@@ -1,1 +1,1 @@
-"""Step 2+ experimental material construction and execution."""
+"""The experiments of the thesis: the as-of medical question answering pipeline (``experiments/medchange``)."""

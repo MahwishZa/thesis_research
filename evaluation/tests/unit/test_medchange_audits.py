@@ -25,6 +25,17 @@ MEDREV = {1: {"objectives": "obj one", "conclusions": "conc one"}, 2: {"objectiv
 
 class LabelAuditTests(unittest.TestCase):
 
+    def test_the_item_level_file_is_copied_to_the_results_folder_once_and_never_onto_itself(self):
+        with TemporaryDirectory() as tmp:
+            data, results = Path(tmp) / "data", Path(tmp) / "results"
+            data.mkdir()
+            rows = data / "label_audit_fresh.jsonl"
+            rows.write_text(json.dumps({"item_id": "FR-1", "which": "newest", "gold": S, "relabel": S}) + "\n", encoding="utf-8")
+            copy = LA.publish_rows(rows, results)
+            self.assertEqual(copy, results / "label_audit_fresh.jsonl")
+            self.assertEqual(copy.read_text(encoding="utf-8"), rows.read_text(encoding="utf-8"))
+            self.assertIsNone(LA.publish_rows(rows, data))                         # same folder: nothing to copy
+
     def test_prompt_carries_the_authors_rubric_and_the_text(self):
         p = LA.build_prompt("Does X help?", "obj", "conc")
         for needle in ("only select the third label if not enough studies were found", "at least partially supported",

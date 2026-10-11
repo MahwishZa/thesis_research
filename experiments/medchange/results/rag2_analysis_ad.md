@@ -1,4 +1,4 @@
-# Adapted RAG² and evidence-criteria verification, ad split (secondary held-out test, Alzheimer's/dementia)
+# Adapted RAG² and evidence-criteria verification, ad split (secondary held-out test, Alzheimer's disease set)
 
 Items: 208. Arms: B0, B1, R2, R2C, R2V. Protocol: `docs/protocol.md`.
 
@@ -53,6 +53,6 @@ Reading (pre-declared): **met as a point estimate, not confirmed**.
 | R2C | 3.07 | 14.9% | 18.6% / 38.5% / 42.9% | 1.8% | 6.98 | 26.4% | 58.3% |
 | R2V | 3.07 | 14.9% | 18.6% / 38.5% / 42.9% | 1.8% | 6.98 | 26.4% | 58.3% |
 
-Alzheimer's case study (208 items, descriptive): correct answers per arm: B0 69, B1 64, R2 72, R2C 82, R2V 79.
+The update-window and age columns of the retrieval table do not apply to this split: almost every review has a single version, so there is no earlier version to measure an update window from.
 
 A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval excludes 0 and the difference is positive. With 208 questions only differences of roughly 6–10 pp can be confirmed (docs/evaluation.md §4).

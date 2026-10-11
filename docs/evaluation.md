@@ -21,13 +21,16 @@ version.
 * The outcome is independent of the mechanism under test: the gold label is not visible to any system.
 * The primary comparison is accuracy over **all** questions of the held-out split, between the proposed system R2V and
   the adapted RAG² baseline R2 (pooling changed and unchanged questions raises power).
+* The pre-registered test on fresh questions (`protocol.md` §10, results in §6.9) has a different primary outcome, the macro-F1 of
+  R2V − R2 (§1.2), because it asks a different question: whether verification makes the three verdicts more balanced. The two outcomes are
+  not interchangeable and neither is re-read from the other.
 
 ### 1.2 Generation metrics
 
 | Metric | Definition | Role |
 |---|---|---|
 | Accuracy on changed / unchanged questions | as the primary, on questions whose verdict changed / never changed | secondary; the unchanged questions check that no system loses accuracy where nothing changed |
-| Per-class recall; macro-F1; share of answers per class | recall of each gold class; mean F1 of the three classes; how often a system answers each class | shows whether accuracy comes from reading evidence or from answering NOT ENOUGH INFORMATION more often |
+| Per-class recall; macro-F1; share of answers per class | recall of each gold class; unweighted mean of the F1 of the three classes (0 for a class never predicted correctly); how often a system answers each class | shows whether accuracy comes from reading evidence or from answering NOT ENOUGH INFORMATION more often; macro-F1 is the primary outcome of the pre-registered test (§6.9) |
 | Outdated-verdict rate | the verdict equals the previous version's verdict (changed questions) | direct measure of outdated answers |
 | Anachronism rate | the answer mentions a year later than the question date's year (approximate: a four-digit number is read as a year) | indicator of unsupported or future knowledge |
 | Unsupported decisive verdict | SUPPORTED or REFUTED while citing no admitted study (`[n]` in a standard answer; the DIRECT STUDIES line in the three-line format); questions without admitted evidence are excluded | indicator of unsupported answers; partly built into the three-line format |
@@ -71,9 +74,9 @@ medical evidence, and clinician validation is a stated limitation.
   comparisons are between systems on the same question (`protocol.md` §5).
 * **Controlled comparisons.** B0, B1 and R2 (what retrieval and the RAG² components add); R2, R2C, R2V, R2V-ND (how the
   same evidence is read); the completed stage-1 and stage-2 systems (negative results of record).
-* **Existing models (context only).** The benchmark authors released the closed-book answers of other language models
-  (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3) to these questions. They are scored with the same
-  rule on the same questions and shown beside the local systems (`results/report/REPORT.md`). They differ in size,
+* **Existing models (context only).** The benchmark authors released the closed-book answers of eight other language models
+  (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3, OLMo-13B, BioMistral, PMC-LLaMA) to these questions. They are scored with the same
+  rule on the same questions and shown beside the local systems (`results/report/REPORT.md`, `results/report_ad/REPORT.md`). They differ in size,
   training and prompt and use no retrieval, so they place the local 8B system among existing models; they are not a
   controlled comparison and are not tested.
 * **Published methods.** RAG² as published is not comparable (different task, scale, corpus and filter); the adapted
@@ -84,11 +87,14 @@ medical evidence, and clinician validation is a stated limitation.
 
 ## 3. Statistical analysis
 
-Standard-library statistics (`evaluation/stats.py`, `experiments/medchange/scoring.py`), paired over the same questions:
+Paired over the same questions. The accuracy comparisons use standard-library statistics (`evaluation/stats.py`,
+`experiments/medchange/scoring.py`); the macro-F1 and per-verdict analyses use numpy for the bootstrap (`class_balance.py`, `analyze_fresh.py`):
 
 * **Exact McNemar test** on the discordant pairs (two-sided exact binomial).
 * **Paired bootstrap 95% interval** of the difference, resampling questions as units (4,000 resamples, fixed seed).
-  Single accuracies carry Wilson 95% intervals.
+  Single accuracies carry Wilson 95% intervals. The macro-F1 differences of the pre-registered test use 10,000 resamples of questions with a seed
+  hashed from the text `fresh-macro-f1` (`analyze_fresh.py`); `class_balance.py` (exploratory) uses 10,000 resamples seeded from the first 8 bytes of its
+  seed text, so its comparisons share one stream of resamples (the intervals are valid and are kept as committed).
 * **Holm correction** within pre-declared families, at family-wise α = .05 (`analyze_rag2.py`):
   * *primary:* R2V − R2 over all questions, a single test;
   * *secondary family:* R2 − B1; R2V − B1; R2C − R2; R2V − R2C; R2V − R2V-ND; R2V − R2 on changed questions;
@@ -114,6 +120,11 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 4–6 pp or more can be confirmed. For the 208-question Alzheimer's disease set the standard error is 2.2–3.5 pp, the
 80%-power effect 6–10 pp, and an observed +1 pp arises by chance alone 32–39% of the time.
 
+For the macro-F1 hypothesis of the pre-registered test the standard error of R2V − R2 is about 0.41 / √N, estimated from the intervals of
+`class_balance.py`; with N = 850 questions it is about 0.014, the chance of confirming a true gain of 0.045 (about what the held-out split
+showed) is 89%, of 0.04 81%, of 0.03 57% and of 0.02 30%, and the smallest gain confirmable with 80% power is about 0.039 (`protocol.md` §10.3). A true gain
+below about 0.03 may therefore go unconfirmed, and the interval is then reported as it is.
+
 ## 5. Interpretation rules
 
 * **Confirmed.** A comparison is *confirmed* only if its Holm-adjusted p is below .05, its 95% interval excludes 0 and
@@ -128,6 +139,9 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 
   Whichever reading applies is reported with the interval. A dev result is never reported as meeting it. On the
   Alzheimer's disease set the same rule gives a secondary reading; the held-out split stays primary.
+* **Pre-registered test.** Its hypothesis is *confirmed* only if the lower end of the 95% bootstrap interval of the macro-F1 difference R2V − R2 is above 0;
+  otherwise it is *positive but not confirmed* (point estimate above 0) or *no evidence*, and when the upper end is below 0.02 a gain of 0.02 or more is
+  excluded (`protocol.md` §10.2). Every other outcome of that test is secondary and carries no confirmatory claim.
 * **Dev versus held-out.** Dev results are exploratory (226 questions, intervals of about ±6 to ±8 points) and are
   used to find defects and to apply the pre-declared dev check, not to claim effects.
 * **Abstention and coverage.** A system that admits nothing still answers and is scored on it. For verdict accuracy the
@@ -145,7 +159,8 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question dementia set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
 construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the Alzheimer's disease results are secondary and descriptive. The pre-declared
 confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
-Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-only evaluation.
+Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. The macro-F1 hypothesis registered afterwards is tested on
+850 fresh general-medicine questions (§6.9). Nothing below is an Alzheimer's-only evaluation.
 
 | Result set | Questions | Class | Scope |
 |---|---|---|---|
@@ -157,6 +172,7 @@ Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory.
 | Earlier stages (§6.3) | | negative results of record | general medicine |
 | The questions of that set that name Alzheimer's disease (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
 | Alzheimer's-specific question set AD-KQA (§6.8) | | construction stopped at gate 1; no system was run on it | Alzheimer's disease |
+| Pre-registered test on fresh questions (§6.9) | 850 | registered before its data existed; analysed blind; confirmatory for the macro-F1 hypothesis only | general medicine |
 
 ### 6.1 Realigned study, development split (226 questions; exploratory)
 
@@ -309,4 +325,28 @@ verdict-balanced question set of useful size cannot be built from this source, a
 researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The code is in
 Git history (commit `4ab9d1b`) and the counts are in `experiments/medchange/results/earlier_stages/adkqa/`.
 
+### 6.9 Pre-registered test on fresh questions (850 questions; in force since 2026-10-10)
 
+**What it asks.** Whether evidence-criteria verification (R2V) raises the macro-F1 of the adapted RAG² baseline (R2), on questions that played no part in
+the design or in choosing the metric. The questions are 850 general-medicine questions of reviews dated 2010 or later that no other split uses,
+chosen by a seeded hash order (`data.md` §3); the arms are R2, R2C (the criteria control) and R2V; the design, settings and prompts are those of
+the held-out run (settings hash `1743afd7045b`, `results/rag2_design.json`). The decision rule is fixed in `protocol.md` §10.2 and summarised in §5.
+
+**Where the hypothesis comes from (exploratory, from answers on file; `class_balance.py`, `results/class_balance.*`).** All systems answer SUPPORTED far
+more often than the reviews do and almost never REFUTED, and R2V raises the REFUTED recall and the macro-F1:
+
+| Set | R2V − R2, macro-F1 (95% interval) | R2C − R2 | R2V − R2C |
+|---|---|---|---|
+| Held-out split (528) | +0.045 (+0.010 to +0.080) | +0.010 (−0.033 to +0.053) | +0.035 (−0.002 to +0.072) |
+| Alzheimer's disease set (208) | +0.080 (+0.024 to +0.135) | +0.088 (+0.030 to +0.147) | −0.008 (−0.055 to +0.037) |
+
+The metric was chosen after these results were known, and R2C gained as much as R2V on the Alzheimer's disease set, so part of the gain may come from
+reading the evidence by criteria and not from the verification step. That is why the test includes R2C and the comparison R2V − R2C.
+
+**Secondary outcomes (no confirmatory claim).** R2V − R2C macro-F1; REFUTED recall and the share of SUPPORTED answers of R2V and R2; verdict accuracy of
+R2V − R2 and R2V − R2C, the first read by the three rules of §5; how many answers R2V changed and how many it fixed or broke; the label audit of a
+seeded sample of 300 reference labels; and, descriptively, the macro-F1 difference on the Alzheimer's disease set with the statement whether its sign
+agrees. The test cannot show an effect for Alzheimer's disease: the fresh questions contain practically none (`data.md` §3).
+
+**Result.** None yet: the analysis computes nothing until all 850 questions have an answer for all three arms, and no partial answer file is opened. This
+section is completed from `results/rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` when the run is complete, whatever the outcome.

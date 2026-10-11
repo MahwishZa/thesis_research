@@ -36,11 +36,10 @@ class StatsTests(unittest.TestCase):
         self.assertLessEqual(ci["ci_low"], ci["difference"])
         self.assertGreaterEqual(ci["ci_high"], ci["difference"])
 
-    def test_holm_is_monotone_and_bounded(self):
-        adj = st.holm({"har": 0.01, "accuracy": 0.04})
-        self.assertGreaterEqual(adj["har"], 0.01)
-        self.assertLessEqual(adj["accuracy"], 1.0)
-        self.assertGreaterEqual(adj["accuracy"], adj["har"])
+    def test_holm_of_two_p_values_is_exact(self):
+        self.assertEqual(st.holm({"first": 0.01, "second": 0.04}), {"first": 0.02, "second": 0.04})     # 2 x 0.01, then max(0.02, 1 x 0.04)
+        self.assertEqual(st.holm({"only": 0.3}), {"only": 0.3})
+        self.assertEqual(st.holm({"a": 0.9, "b": 0.8}), {"a": 1.0, "b": 1.0})                         # adjusted values are capped at 1
 
     def test_holm_orders_by_p_value_and_never_decreases(self):
         adj = st.holm({"a": 0.03, "b": 0.01, "c": 0.20})

@@ -4,6 +4,7 @@ import contextlib
 import csv
 import io
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -90,12 +91,15 @@ class FreezeTests(unittest.TestCase):
     def test_freeze_replaces_the_draft_status_and_only_once(self):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "protocol.md"
-            p.write_text("# T\n\n**Status.** This section is a draft written on 2026-10-09. It binds nothing\nuntil the freeze.\n\n### 10.1 Why\n", encoding="utf-8")
+            p.write_text("# T\n\n## 10. Pre-registration of a confirmatory test on fresh questions (DRAFT: not in force)\n\n"
+                         "**Status.** This section is a draft written on 2026-10-09. It binds nothing\nuntil the freeze.\n\n### 10.1 Why\n", encoding="utf-8")
             man = {"items": 850, "item_ids_sha256": "ab" * 32}
             self.assertTrue(FB.freeze(p, man, "2026-11-02"))
             text = p.read_text(encoding="utf-8")
             self.assertIsNotNone(P.IN_FORCE.search(text))
             self.assertIn("### 10.1 Why", text)
+            self.assertIn("## 10. Pre-registration of a confirmatory test on fresh questions (in force since 2026-11-02)", text)
+            self.assertNotIn("DRAFT", text)
             self.assertFalse(FB.freeze(p, man, "2026-11-03"), "a frozen section is not rewritten")
 
     def test_the_committed_protocol_has_a_draft_status_that_freeze_can_replace_or_is_frozen(self):
@@ -176,6 +180,80 @@ class BlindedAnalysisTests(unittest.TestCase):
         self.assertEqual(d["n"], 208)
         self.assertIn("not confirmation", d["note"])
         self.assertIsInstance(d["sign_agrees_with_fresh"], bool)
+
+
+class CompleteRunTests(unittest.TestCase):
+    """The end of the registered run: the files the analysis writes and the optional inputs it reads (exercised before the real run ends)."""
+
+    def _run(self, tmp, n=60, with_optional=True):
+        d = Path(tmp)
+        items, answers = synthetic(n)
+        (d / "benchmark.jsonl").write_text("\n".join(json.dumps(dict(v, split="fresh", likely_label_noise=False)) for v in items.values()),
+                                           encoding="utf-8")
+        (d / "rag2_answers_fresh.jsonl").write_text("\n".join(json.dumps(a) for a in answers.values()), encoding="utf-8")
+        res = d / "res"
+        res.mkdir()
+        if with_optional:
+            results = Path(AF.__file__).resolve().parent / "results"
+            shutil.copy(results / "class_balance.json", res / "class_balance.json")
+            shutil.copy(results / "label_audit_confirm.json", res / "label_audit_fresh.json")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = AF.main(["--data-dir", str(d), "--results-dir", str(res), "--expected", str(n)])
+        return code, out.getvalue(), res
+
+    def test_a_complete_run_writes_the_json_and_the_findings_with_every_registered_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, printed, res = self._run(tmp)
+            self.assertEqual(code, 0)
+            self.assertEqual(sorted(p.name for p in res.iterdir()),
+                             ["RAG2_FINDINGS_FRESH.md", "class_balance.json", "label_audit_fresh.json", "rag2_analysis_fresh.json"])
+            written = (res / "RAG2_FINDINGS_FRESH.md").read_text(encoding="utf-8")
+            self.assertEqual(written + "\n", printed)                                  # printed with print(): one more newline
+            for needle in ("## Primary outcome", "## Secondary outcomes", "## Alzheimer's disease and related dementias (descriptive)",
+                           "## Label audit (sample)", "questions of the Alzheimer's disease set", "Reading by the rules of `docs/evaluation.md` §5"):
+                self.assertIn(needle, written)
+            self.assertNotIn("dementia questions", written)
+            rep = json.loads((res / "rag2_analysis_fresh.json").read_text(encoding="utf-8"))
+            self.assertEqual(rep["n"], 60)
+            self.assertIn(rep["primary"]["reading"], ("confirmed", "positive but not confirmed", "no evidence"))
+
+    def test_the_optional_inputs_may_be_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, printed, res = self._run(tmp, with_optional=False)
+            self.assertEqual(code, 0)
+            self.assertNotIn("Label audit", printed)
+            self.assertNotIn("descriptive)", printed)
+
+    def test_stored_differences_keep_six_decimals_so_the_rule_follows_the_exact_interval(self):
+        self.assertEqual(AF.DIGITS, 6)
+        gold = np.array([0, 1, 2])
+        r = AF.paired_interval(gold, np.array([0, 1, 0]), np.array([0, 0, 0]), AF.macro_f1, "t", iterations=20)
+        self.assertEqual(r["difference"], round(r["difference"], 6))
+        self.assertNotEqual(r["difference"], round(r["difference"], 4))               # 1/3-type values would be cut by four decimals
+        self.assertEqual(AF.read_primary({"difference": 0.00003, "ci95": [0.00002, 0.01]})["reading"], "confirmed")
+
+    def test_the_accuracy_difference_is_read_by_the_three_rules_of_the_evaluation(self):
+        base = {"a": "R2V", "b": "R2", "n": 850, "a_only_correct": 1, "b_only_correct": 1}
+        self.assertIsNone(AF.accuracy_reading(None))
+        self.assertEqual(AF.accuracy_reading(dict(base, diff_a_minus_b=0.005, ci95=[-0.02, 0.03], mcnemar_p=0.7))["reading"], "not met")
+        met = AF.accuracy_reading(dict(base, diff_a_minus_b=0.02, ci95=[-0.01, 0.05], mcnemar_p=0.3))
+        self.assertEqual((met["reading"], met["confirmed"]), ("met as a point estimate, not confirmed", False))
+        both = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[0.005, 0.055], mcnemar_p=0.01))
+        self.assertEqual((both["reading"], both["confirmed"]), ("met and confirmed", True))
+        wide = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[-0.001, 0.06], mcnemar_p=0.01))      # p below .05 but the interval reaches 0
+        self.assertEqual(wide["reading"], "met as a point estimate, not confirmed")
+
+    def test_only_the_requirement_comparison_carries_a_reading(self):
+        rep = AF.analyse(*synthetic(60), expected=60, iterations=50)
+        self.assertIn("reading", rep["secondary"]["accuracy_R2V_minus_R2"])
+        self.assertNotIn("reading", rep["secondary"]["accuracy_R2V_minus_R2C"])
+
+    def test_the_four_places_that_hold_the_number_of_questions_agree_with_the_manifest(self):
+        manifest = json.loads((Path(AF.__file__).resolve().parent / "manifest_fresh.json").read_text(encoding="utf-8"))
+        self.assertEqual({AF.EXPECTED, FB.N_DEFAULT, P.EXPECTED_ITEMS["fresh"]}, {manifest["items"]})
+        self.assertEqual(len(manifest["rows"]), manifest["items"])
+        self.assertEqual(sum(manifest["labels"].values()), manifest["items"])
 
 
 class FreezeAndPlanTests(unittest.TestCase):

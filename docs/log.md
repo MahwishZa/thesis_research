@@ -580,7 +580,7 @@ Inspection before committing to the expanded scope (all measured):
   512/512 items identical, so both review versions' dates and PMIDs are known
   for every item. Gold labels are gpt-4o-mini labels of abstract conclusions.
 * 8 changed pairs with near-identical conclusions excluded as label noise; 397 of
-  504 usable changes involve NOT ENOUGH INFORMATION; 114 are decisive flips.
+  the 512 released changes (390 of the 504 usable ones; corrected 2026-10-11, the entry first gave 397 of 504) involve NOT ENOUGH INFORMATION; 114 are decisive flips.
 * Without retrieval, five released models (7B to DeepSeek-V3) give the current
   verdict on changed items 49-50% of the time and the outdated one 25-32%.
 * Alzheimer's items in MedChange: 9 changed, 5 unchanged.
@@ -1393,7 +1393,7 @@ not committed. Nothing here is confirmatory.
 ## Phase 68 — Counting new Cochrane dementia reviews (Oct 9)
 
 The researcher asked for a small set of new Alzheimer's data for the defence. MedRevQA cannot supply it (7 of 7,880 questions from 2010 on name dementia in the review
-text), so the only source is Cochrane reviews published after MedRevQA's newest review (2024-01-08). `cochrane_ad_supply.py` (counts only; needs PubMed, so it runs on
+text), so the only source is Cochrane reviews published after MedRevQA's newest review (2024-01-18 in the researcher's copy; the benchmark's newest review is dated 2024-01-08). `cochrane_ad_supply.py` (counts only; needs PubMed, so it runs on
 the researcher's laptop) asks PubMed for Cochrane reviews with Alzheimer Disease or Dementia as a major topic after that date and counts those that a fixed rule can turn
 into a question (an "Authors' conclusions" section, a title of the form "X for Y", no protocol or withdrawn notice). Rule: 30 or more usable = build a small set; 20 to 29 =
 a small pilot; fewer = stop. Nothing is built before the count is known. 5 tests with a fake E-utilities server; the sandbox cannot reach PubMed, so the real supply is not yet known.
@@ -1425,7 +1425,7 @@ The Alzheimer's disease evidence therefore stays the 208-question set (48 naming
 Wording pass (same day): the descriptive text of `README.md` and the five documents now calls the 208-question set the Alzheimer's disease set everywhere it describes the current evidence. The dated decision
 ledger, the AD-KQA record and earlier log entries keep the wording they were written in, because they record what was decided and said at the time.
 
-## Phase 72 — Fresh test shortened to N = 1,000; the domain wording approved (Oct 10)
+## Phase 72 — Fresh test shortened (N = 1,500, then 1,000, then 850); the domain wording approved (Oct 10)
 
 The researcher approved the "Alzheimer's disease and related dementias" wording (the supervisor left the decision to the researcher). Checked before approval: the 208 questions are 48 naming
 Alzheimer's disease, 156 naming dementia (15 both) and 19 naming neither, all about cognitive impairment (mild cognitive impairment, vascular cognitive impairment, impairment after stroke,
@@ -1437,3 +1437,20 @@ label audit answers a question a reviewer would ask (R2C: is it the checking or 
 Later the same day the researcher asked for a run of one to two days. N was set to 850 (about 57 to 68 hours; power 89% at a true gain of 0.045, 57% at 0.03; 700 would give 83% and 49%, 1,000 would give 93% and 64%), the largest size that
 still fits about three nights of running. Arms, settings and rules are unchanged; the R2C control stays. Nothing had been selected.
 A later wording pass (Oct 11) replaced the abbreviation with the full form or "the Alzheimer's disease set"; the abbreviation is not used in the repository.
+
+## Phase 73 — The fresh test: selection, freeze, label audit and run (Oct 10–11)
+
+From the researcher's console output (the sandbox has no access to the laptop's data).
+
+* *Selection (Oct 10).* `fresh_benchmark` selected the 850 questions: 831 reviews, 783 with a single version, all of unchanged verdict; gold SUPPORTED 308, REFUTED
+  137, NOT ENOUGH INFORMATION 405; dates 2010-01-20 to 2024-01-10; 7,880 qualifying questions; item-list hash `3b684c61f498083e...`. `manifest_fresh.json` was committed and pushed
+  before any answer existed.
+* *Freeze rehearsal.* Rehearsed on a clean clone before the real freeze, it found three defects, fixed first (commit `3127409`): `--freeze` demanded `--medchange-dir`;
+  two tests assumed the protocol could never be frozen and would have failed right after the freeze; a missing manifest gave a confusing message.
+* *Freeze.* `protocol.md` §10 marked IN FORCE since 2026-10-10 (commit `a303705`).
+* *Label audit* of the seeded sample of 300 (Qwen2.5-7B-Instruct Q4_K_M, the authors' rubric, before any answer): agreement 83.0%, kappa 0.7332, none unparsed, 249 label-stable;
+  SUPPORTED 80.9% (110 questions), REFUTED 95.7% (47), NOT ENOUGH INFORMATION 80.4% (143). The held-out and development audits gave 81.4% and 83.2%.
+* *Run* (`rag2_pipeline fresh --go --commit`, started after the audit). Completed so far, with the clock times printed by the steps: as-of PubMed records 1.8 h (7.7 s per question); abstracts
+  (123,393 fetched); rationales 3.5 h (14.7 s per question); candidate lists 14.0 h (59 s per question); filter, 6,792 judgements, 20.3 h on the clock of which about 8 h were a
+  pause of the process (the progress clock jumped between the 1,710th and 1,720th judgement, most likely the laptop sleeping) and about 12.4 h were work (53 s per question).
+  Answers for R2, R2C and R2V (estimated 28 h) follow. The per-question times agree with those of the held-out run (rationale 16 s, filter 48 s). No answer has been read.

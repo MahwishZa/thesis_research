@@ -1,9 +1,9 @@
-"""Exploratory subgroup of the dementia run: the questions whose text names Alzheimer's disease.
+"""Exploratory subgroup of the Alzheimer's disease set: the questions whose text names Alzheimer's disease.
 
     python -m experiments.medchange.subgroup_ad [--data-dir <benchmark folder>] [--results-dir <answers folder>]
 
 Uses the answers already on file (no model is run). The subgroup is defined by the wording of the question alone ("alzheimer",
-any case); it was chosen after the dementia run and is exploratory: 48 questions can confirm only very large differences, so
+any case); it was chosen after the run on the set and is exploratory: 48 questions can confirm only very large differences, so
 nothing here is read as meeting the requirement. Writes ``ad_subgroup_alzheimer.json`` and ``.md`` to the results folder."""
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def subgroup(data: Path, results: Path) -> dict:
 def to_markdown(rep: dict) -> str:
     pct = lambda x: f"{100 * x:.1f}%"
     pp = lambda x: f"{100 * x:+.1f}".replace("-", "−")
-    L = [f"# Exploratory subgroup of the dementia run: questions naming Alzheimer's disease (n = {rep['n']} of {rep['dementia_set_items']})", "",
+    L = [f"# Exploratory subgroup of the Alzheimer's disease set: questions naming Alzheimer's disease (n = {rep['n']} of {rep['dementia_set_items']})", "",
          "Gold verdicts: " + ", ".join(f"{k} {v}" for k, v in rep["gold"].items()) +
          f". Constant answer ({rep['constant_answer']['label']}): {pct(rep['constant_answer']['accuracy'])}.", "",
          "| System | Accuracy | 95% interval |", "|---|---|---|"]

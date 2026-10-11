@@ -102,6 +102,28 @@ class NetworkRetryTests(unittest.TestCase):
         self.assertEqual(FC.fetch_abstracts(eu, ["1"]), {})
         self.assertEqual(len(calls), 2)
 
+    def test_eutils_retries_a_reset_connection_and_gives_up_after_five_attempts(self):
+        from experiments.medchange.pubmed_asof import EUtils
+        calls = []
+
+        def flaky(url):
+            calls.append(url)
+            if len(calls) < 3:
+                raise ConnectionResetError("reset by peer")            # an OSError that is neither a URLError nor a timeout
+            return b'{"esearchresult": {"count": "0", "idlist": []}}'
+
+        self.assertEqual(EUtils(opener=flaky, sleep=lambda s: None).search("x", "2020/01/01", 5), (0, []))
+        self.assertEqual(len(calls), 3)
+        dead = []
+
+        def always(url):
+            dead.append(url)
+            raise ConnectionResetError("reset by peer")
+
+        with self.assertRaises(RuntimeError):
+            EUtils(opener=always, sleep=lambda s: None).search("x", "2020/01/01", 5)
+        self.assertEqual(len(dead), 5)
+
 
 if __name__ == "__main__":
     unittest.main()

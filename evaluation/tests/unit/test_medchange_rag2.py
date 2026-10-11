@@ -844,5 +844,29 @@ class EndToEndFlowTests(unittest.TestCase):
             self.assertEqual(before, {p.name: p.read_bytes() for p in data.glob("rag2_*")})
 
 
+class CommittedConfigurationTests(unittest.TestCase):
+    """Every committed output of the R2 family was made under the frozen design on file (generator file, settings, prompts), for every split
+    that has run, so that no split was produced under a changed design. The independent judge's files differ on purpose and are skipped."""
+
+    def test_every_recorded_configuration_agrees_with_the_design_record(self):
+        results = Path(RP.__file__).resolve().parent / "results"
+        design = json.loads((results / "rag2_design.json").read_text(encoding="utf-8"))
+        checked = 0
+        for path in sorted(results.glob("rag2_*_*.config.json")):
+            if "directness" in path.name:
+                continue
+            cfg = json.loads(path.read_text(encoding="utf-8"))
+            if "model_sha256" in cfg:
+                self.assertEqual(cfg["model_sha256"], design["generator_model_sha256"], path.name)
+            if "settings_sha256" in cfg:
+                self.assertEqual(cfg["settings_sha256"], design["settings_sha256"], path.name)
+            if "prompts" in cfg:
+                self.assertEqual(cfg["prompts"], design["prompts"], path.name)
+            checked += 1
+        self.assertGreaterEqual(checked, 12)                  # rationales, lists, filter and answers of dev, confirm and ad (and fresh, once committed)
+        self.assertEqual(design["settings_sha256"], R.settings_hash())
+        self.assertEqual(design["prompts"], R.prompt_hashes())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -19,8 +19,10 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Held-out run, 528 questions | started 2026-10-06 after the freeze, completed once on 2026-10-08 (results: `evaluation.md` §6) |
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's disease and related dementias run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
-| Added comparisons (all eight released-answer models, constant-answer baseline, dementia label audit) | added 2026-10-09 (§8); the dementia label audit is not run |
+| Added comparisons (all eight released-answer models, constant-answer baseline, label audit of the Alzheimer's disease set) | added 2026-10-09 (§8); the label audit of the Alzheimer's disease set is not run |
 | Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
+| More Alzheimer's disease data (new Cochrane reviews; other neurodegenerative questions) | counted 2026-10-10 (§8): 7 usable new reviews (rule: 30 to build) and 25 questions on other neurodegenerative diseases; nothing was built |
+| Pre-registered test on fresh questions, 850 questions (§10) | in force since 2026-10-10; the question list was committed and pushed before any answer; the label audit of a 300-question sample was done before the run; results: `evaluation.md` §6.9 |
 
 The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the 208-question dementia set (§8), of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
@@ -96,7 +98,8 @@ already existed for both splits, so the realigned dev and held-out runs needed n
 used to design anything below; the B0/B1 aggregate confusion matrices of that split were computed on 2026-10-05
 before this design and show the same pattern as dev. Every design choice rests on the dev split and on the benchmark's
 published labelling rubric. This is a weaker guarantee than an untouched split, and it is declared here. The
-Alzheimer's disease set (§8) is the only split no result has touched.
+Alzheimer's disease set (§8) was the only split no result had touched when the design was frozen; it was run once afterwards, and its results
+helped form the hypothesis of §10, which is why the fresh questions (§10.3) exist.
 
 ## 4. Systems
 
@@ -154,11 +157,13 @@ question, so their differences are differences in how the evidence is used. How 
    verification prompt on dev. Then the design is frozen whatever dev shows. *Outcome:* (a) and (b) passed, (c) failed
    (−0.4 pp); the revision was not used (§7).
 3. **Freeze:** `results/rag2_design.json` (every setting, prompt hash and the generator file's hash) is committed and
-   pushed. Both held-out phases refuse to start unless that file on origin/main equals the current design.
+   pushed. The held-out, Alzheimer's disease and fresh phases refuse to start unless that file on origin/main equals the current design.
 4. **Held-out run, once** (`rag2_pipeline confirm --go`): rationales, lists, filter, R2, R2C, R2V, R2V-ND, analysis,
    findings. Nothing is changed afterwards; the result is reported whatever it is.
 5. **Alzheimer's disease run, once, after the freeze** (`ad_benchmark`, then `rag2_pipeline ad --go`): §8.
-6. **Commits and pushes.** The pipelines commit results (`--commit`) but never push; the researcher runs
+6. **Pre-registered test on fresh questions, once** (`fresh_benchmark`, the freeze, `label_audit --split fresh --sample 300`, then
+   `rag2_pipeline fresh --go`): §10.8.
+7. **Commits and pushes.** The pipelines commit results (`--commit`) but never push; the researcher runs
    `git push origin main`, which is also what puts the design record where the guard looks for it.
 
 **Compute (measured on the target laptop, with the directness judge).** Development run 20.4 h (5.4 min per
@@ -187,7 +192,12 @@ is tested on.
 | 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
 | 2026-10-09 | Use short-form templates when a copied span names Alzheimer's disease | five development drafts were read (reply text only); no verdict of any system, no retrieval and no answer exists; every gate and threshold unchanged (§8, amendment C) |
 | 2026-10-09 | Stop the construction of the Alzheimer's-specific question set after gate 1 of the development build; primary evaluation reverts to the pre-declared held-out split; report the Alzheimer's-named part of the dementia set as an exploratory subgroup | the whole development build (11 of 150 kept; verdict mix 10 / 1 / 0), the diagnostic verifier pass and the dementia-run answers were seen; the subgroup was defined by the wording of the question after the run (§8, close-out) |
-| 2026-10-09 | Draft a pre-registered confirmatory test of the verification effect on fresh as-of questions (§10; not in force) | the exploratory per-verdict analysis of the held-out and dementia answers was seen and gave the hypothesis; the test uses questions outside every existing split; nothing is selected or run yet |
+| 2026-10-09 | Draft a pre-registered confirmatory test of the verification effect on fresh as-of questions (§10) | the exploratory per-verdict analysis of the held-out and dementia answers was seen and gave the hypothesis; the test uses questions outside every existing split; nothing was selected or run |
+| 2026-10-09 | Fix N = 1,500 for the draft and add the criteria control R2C and the comparison R2V − R2C | the per-verdict analysis of the dementia answers, where R2C gained as much as R2V (R2V − R2C = −0.008); the held-out and dementia answers; no fresh question exists |
+| 2026-10-10 | Count more possible Alzheimer's disease data: new Cochrane reviews (7 usable; rule fixed beforehand: 30 to build, 20 to 29 a pilot) and questions on other neurodegenerative diseases among the unused ones (25); build nothing (§8) | counts only: no abstract, question text, label or answer of any new item was read |
+| 2026-10-10 | Call the 208-question set the Alzheimer's disease set (short for Alzheimer's disease and related dementias) and always give its composition (48 name Alzheimer's disease, 156 dementia, 19 other cognitive impairment) | its composition and the results already known; no new result |
+| 2026-10-10 | Reduce N from 1,500 to 850 (through 1,000), for run time on a laptop; arms, settings and rules unchanged | power calculations and run-time estimates only; no fresh question was selected; the dementia and held-out answers were already known |
+| 2026-10-10 | Select the 850 questions, commit the list and mark §10 in force (§10.8) | the selection manifest (verdict counts and dates of the selected questions); no answer to a fresh question existed. The audit of a seeded sample of 300 reference labels followed the freeze and changed nothing |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -284,6 +294,20 @@ Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, 
 confirmatory evaluation exists, and none is claimed. The code, tests and long amendment text left the active tree (Git history, commit `4ab9d1b`;
 `git checkout 4ab9d1b -- experiments/adkqa` restores the code, which `evaluation.md` §6.8 summarises).
 
+**2026-10-10, no larger Alzheimer's disease set can be built from the sources at hand; the name of the 208-question set.** The researcher asked
+for a small additional set of Alzheimer's disease data. Two sources were counted (counts only; no question text, label or answer of any new item
+was read). (1) New Cochrane reviews with Alzheimer Disease or Dementia as a major MeSH topic, published after the newest review of MedRevQA
+(2024-01-18) and found by `cochrane_ad_supply.py`: 8, of which 7 are usable by a rule fixed beforehand (an "Authors' conclusions" section, a title
+of the form "X for Y", not a protocol or a withdrawn review). The rule for building a set was 30 or more usable reviews (20 to 29: a small pilot),
+so nothing was built (`results/cochrane_ad_supply.json`). (2) Among the 7,880 unused MedRevQA questions dated 2010 or later, 25 name another
+neurodegenerative disease in the question (Parkinson's disease, Lewy body or frontotemporal dementia, Huntington's disease, motor neuron disease,
+prion disease; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 7 name Alzheimer's disease or dementia anywhere in the review text
+(`results/fresh_supply.json`): too few for a stratum, so none was added. The 208-question set already holds every MedRevQA question on dementia,
+Alzheimer's disease or cognitive impairment outside the development and held-out splits; it is called the **Alzheimer's disease set** (short for
+Alzheimer's disease and related dementias; Alzheimer's disease is the most common dementia). Its composition is always stated (48 questions name
+Alzheimer's disease, 156 dementia, 19 other cognitive impairment), the 48 stay an exploratory subgroup, and nothing is called an Alzheimer's-only
+evaluation.
+
 ## 9. Earlier stages (completed, superseded)
 
 Both stages were run to a pre-declared gate and did not pass it. Their code was removed from the active tree on
@@ -304,7 +328,7 @@ Both stages were run to a pre-declared gate and did not pass it. Their code was 
 
 Results of these stages: `evaluation.md` §6.3.
 
-## 10. Pre-registration of a confirmatory test on fresh questions (DRAFT: not in force)
+## 10. Pre-registration of a confirmatory test on fresh questions (in force since 2026-10-10)
 
 **Status.** This section is IN FORCE since 2026-10-10. The selection is the first 850 qualifying questions in the order of the SHA-256 of `fresh-v1|<row>` (item list hash `3b684c61f498083e`, manifest committed before any answer). From this date the hypothesis, the primary metric and decision rule, the sample size, the selection rule and seed, the arms, every setting and every prompt are fixed (§10.7). The sections below are those of the draft.
 
@@ -390,4 +414,22 @@ committed and pushed. (5) A random sample of 300 questions (the first 300 in the
 audited by an independent model (`label_audit --split fresh --sample 300`); this uses no answer. Only then is the run started: `rag2_pipeline fresh --go` refuses
 to start unless this section is IN FORCE, the manifest is on origin/main and the items match it.
 
+### 10.9 Corrections after the freeze (none changes the design)
 
+Recorded here, not made silently. Nothing below touches the hypothesis, the primary metric and decision rule, the sample size, the selection rule and
+seed, the arms, a setting or a prompt (§10.7), and each was made before any fresh question had an answer.
+
+1. *Heading.* The heading of this section still read "DRAFT: not in force" after the status paragraph was replaced; corrected on 2026-10-11 (the
+   freeze command now rewrites the heading too).
+2. *Terms.* "The dementia set" and "the dementia-set questions" in this section are the 208 questions of the Alzheimer's disease set (§8).
+3. *Reading of verdict accuracy.* §10.2 says verdict accuracy of R2V − R2 is read by the three rules of `evaluation.md` §5. The script printed the
+   difference, interval and p-value but not the reading; `analyze_fresh` now prints it (2026-10-11). The requirement itself is still not re-read from
+   this test alone.
+4. *Stored decimals.* Differences, intervals, shares, recalls and macro-F1 values are stored with six decimals instead of four, so that the decision
+   rule ("the lower end is above 0") follows the exact interval and cannot be reversed by rounding, and a percentage shown to one decimal is not
+   rounded twice (`class_balance.py` was changed the same way: 19.0476% had been shown as 19.1%; the regenerated file shows 19.0%).
+5. *Wording filter.* §10.3 says the wording of a fresh question does not name dementia or Alzheimer's disease; the filter applied is the one that built
+   the Alzheimer's disease set (§8): the question must not contain dementia, Alzheimer, mild cognitive impairment, cognitive decline, cognitively
+   impaired or cognitive impairment (`ad_benchmark.AD_QUESTION`), so no question on cognitive impairment is in the fresh test either.
+6. *Cut-off.* §10.6 (5) says the reviews are older than the generator's training cut-off. Most are; 302 of the 7,880 qualifying questions are dated
+   2023-04-01 or later, after the cut-off stated for the generator (§10.3).

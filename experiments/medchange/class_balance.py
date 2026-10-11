@@ -2,10 +2,13 @@
 
     python -m experiments.medchange.class_balance [--data-dir <benchmark folder>] [--results-dir <answers folder>]
 
-Uses the answers already on file (no model is run) for the held-out ("confirm") and dementia ("ad") splits. **Exploratory:** the metric was
-chosen after the accuracy results were known (``docs/protocol.md`` §10.1), so nothing here is a confirmatory result; ``protocol.md`` §10 fixes
-how it is tested on fresh questions. Macro-F1 is the unweighted mean of the F1 of the three verdicts (an F1 is 0 when a verdict is never
-predicted correctly). Intervals: 10,000 bootstrap resamples of questions, seeded."""
+Uses the answers already on file (no model is run) for the held-out ("confirm") and Alzheimer's disease ("ad") splits. **Exploratory:** the
+metric was chosen after the accuracy results were known (``docs/protocol.md`` §10.1), so nothing here is a confirmatory result;
+``protocol.md`` §10 fixes how it is tested on fresh questions. Macro-F1 is the unweighted mean of the F1 of the three verdicts (an F1 is 0
+when a verdict is never predicted correctly; an unparsed answer is a fourth code that is never right). Intervals: 10,000 bootstrap resamples
+of questions, seeded. The generator is seeded from the first 8 bytes of the seed text (``paired_interval``), so every comparison of this file
+shares the stream of resamples that begins "class-ba"; the intervals are valid bootstrap intervals and are kept as committed. The
+pre-registered analysis (``analyze_fresh``) hashes the whole seed text instead."""
 
 from __future__ import annotations
 
@@ -25,6 +28,9 @@ SPLITS = ("confirm", "ad")
 PAIRS = (("R2V", "R2"), ("R2C", "R2"), ("R2V", "R2C"))
 ITERATIONS = 10000
 SEED = "class-balance-v1"
+#: Decimals kept in stored shares, recalls and intervals. Six, not four: a value stored to four decimals and then shown to one (19.0476% -> 0.1905 -> "19.1%")
+#: can be rounded the wrong way at a boundary (the same reason as ``scoring.DIGITS``).
+DIGITS = 6
 
 
 def macro_f1(gold: np.ndarray, pred: np.ndarray) -> float:
@@ -56,7 +62,8 @@ def vectors(items: dict, answers: dict, arms) -> tuple[np.ndarray, dict]:
     ids = sorted(items)
     idx = {l: k for k, l in enumerate(LABELS)}
     gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
-    return gold, {a: np.array([idx[answers[(i, a)]] for i in ids]) for a in arms if all((i, a) in answers for i in ids)}
+    unparsed = len(LABELS)                          # a fourth code: counted wrong, never predicted as a verdict
+    return gold, {a: np.array([idx.get(answers[(i, a)], unparsed) for i in ids]) for a in arms if all((i, a) in answers for i in ids)}
 
 
 def paired_interval(gold, pa, pb, metric, *, seed: str, iterations: int = ITERATIONS) -> dict:
@@ -68,7 +75,7 @@ def paired_interval(gold, pa, pb, metric, *, seed: str, iterations: int = ITERAT
         s = rng.integers(0, n, n)
         diffs[k] = metric(gold[s], pa[s]) - metric(gold[s], pb[s])
     lo, hi = np.percentile(diffs, [2.5, 97.5])
-    return {"difference": round(float(point), 4), "ci95": [round(float(lo), 4), round(float(hi), 4)]}
+    return {"difference": round(float(point), DIGITS), "ci95": [round(float(lo), DIGITS), round(float(hi), DIGITS)]}
 
 
 def analyse(data: Path, results: Path) -> dict:
@@ -79,11 +86,11 @@ def analyse(data: Path, results: Path) -> dict:
         arms = [a for a in A.ARM_ORDER if any((i, a) in answers for i in items)]
         gold, pred = vectors(items, answers, arms)
         n = len(gold)
-        rep = {"n": n, "gold_share": {l: round(float((gold == k).mean()), 4) for k, l in enumerate(LABELS)}, "arms": {}, "paired": {}}
+        rep = {"n": n, "gold_share": {l: round(float((gold == k).mean()), DIGITS) for k, l in enumerate(LABELS)}, "arms": {}, "paired": {}}
         for a, p in pred.items():
-            rep["arms"][a] = {"macro_f1": round(macro_f1(gold, p), 4),
-                              "predicted_share": {l: round(float((p == k).mean()), 4) for k, l in enumerate(LABELS)},
-                              "recall": {l: round(recall(gold, p, k), 4) for k, l in enumerate(LABELS)}}
+            rep["arms"][a] = {"macro_f1": round(macro_f1(gold, p), DIGITS),
+                              "predicted_share": {l: round(float((p == k).mean()), DIGITS) for k, l in enumerate(LABELS)},
+                              "recall": {l: round(recall(gold, p, k), DIGITS) for k, l in enumerate(LABELS)}}
         for a, b in PAIRS:
             if a in pred and b in pred:
                 rep["paired"][f"{a} vs {b}"] = {

@@ -19,7 +19,7 @@ analysis, findings, publishing and, with ``--commit``, commit (never push).
 the pre-registration is in force, ``manifest_fresh.json`` is on origin/main and the items match it, and the guards of ``confirm`` hold; as-of
 records and abstracts (network), rationales, candidate lists, filter, answers R2, R2C and R2V, then the blinded analysis ``analyze_fresh``.
 
-``ad`` (once, same guards as ``confirm``): the Alzheimer's/dementia secondary test set built by ``ad_benchmark``:
+``ad`` (once, same guards as ``confirm``): the Alzheimer's disease set, a secondary test set built by ``ad_benchmark``:
 as-of PubMed records and abstracts (network), B0 and B1 answers, then R2, R2C and R2V, analysis, findings.
 
 Every step is resumable: after an interruption, rerun the same command.
@@ -212,7 +212,7 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
     if rep is None:
         return False, f"no {split} analysis"
     p = rep["primary"]
-    title = {"confirm": "confirmatory split", "ad": "Alzheimer's/dementia secondary test set"}[split]
+    title = {"confirm": "confirmatory split", "ad": "Alzheimer's disease set, secondary test set"}[split]
     lines = [f"# Findings of the realigned study ({title}, run once)", "",
              "Each conclusion follows the rules fixed in `docs/protocol.md` and `docs/evaluation.md` before the run.", "",
              "## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)", ""]
@@ -317,7 +317,7 @@ def ad_plan(a, data: Path, results: Path) -> list:
               ("findings (ad)", lambda: write_findings(results, "ad")),
               ("environment record", lambda: write_environment(results, "ad", a.model_path, a.judge_path))]
     if a.commit:
-        steps.append(("commit", lambda: commit_results("Realigned study: Alzheimer's/dementia test set")))
+        steps.append(("commit", lambda: commit_results("Realigned study: Alzheimer's disease set")))
     return steps
 
 
@@ -358,8 +358,8 @@ def main(argv=None) -> int:
     ap.add_argument("--judge-path", default=None, help="optional second-family GGUF for the directness judge")
     ap.add_argument("--n-threads", default="6")
     ap.add_argument("--ablations", action="store_true", help="dev only: also R2-RQ, R2-BR and R2-NF")
-    ap.add_argument("--no-temporal-ablation", action="store_true", help="confirm only: leave R2V-ND out")
-    ap.add_argument("--go", action="store_true", help="confirm only: your explicit go after reading the dev report")
+    ap.add_argument("--no-temporal-ablation", action="store_true", help="confirm only: leave R2V-ND out (decided before the run)")
+    ap.add_argument("--go", action="store_true", help="confirm, ad and fresh: your explicit go after reading the dev report")
     ap.add_argument("--commit", action="store_true", help="commit the results after the phase (it never pushes: you push by hand)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--data-dir", default=str(HERE / "data"))

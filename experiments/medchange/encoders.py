@@ -40,8 +40,8 @@ PAIR_MAX_TOKENS = 512
 class Encoder(ABC):
     """Turns text into a matrix of row vectors, one per input."""
 
-    #: Recorded into the index manifest so an index cannot be silently
-    #: queried with vectors from a different encoder.
+    #: The checkpoint name, recorded with every frozen pool and candidate list so that a
+    #: result states which encoder produced it.
     name: str
 
     @abstractmethod
@@ -85,16 +85,10 @@ def _load(model_id: str, kind: str):
 def _move_to_device(model, device: str, model_id: str):
     """``model.to(device)``, but with an error a person can act on.
 
-    The raw failure mode this guards against is real and was hit on a real
-    run (2026-09-21): asking for ``cuda`` when torch itself has no CUDA
-    support raises ``AssertionError: Torch not compiled with CUDA enabled``
-    eight stack frames deep inside torch's own ``Module._apply`` - which
-    says nothing about *why*, and nothing about the actual, very common
-    cause: a later ``pip install`` (typically pulled in by ``accelerate`` or
-    ``bitsandbytes``) silently replacing a CUDA-enabled torch with a
-    CPU-only wheel. Checking
-    ``torch.cuda.is_available()`` first turns a multi-minute failure (after
-    downloading and tokenizing everything) into an immediate, specific one.
+    Asking for ``cuda`` when torch has no CUDA support raises a bare ``AssertionError: Torch not
+    compiled with CUDA enabled`` deep inside torch, usually because a later ``pip install``
+    replaced a CUDA-enabled torch with a CPU-only wheel. Checking ``torch.cuda.is_available()``
+    first turns that into an immediate, specific message.
     """
     import torch
 
@@ -149,21 +143,11 @@ class MedCPTEncoder(Encoder):
         on_progress: Optional[Callable[[int, int, float], None]] = None,
         progress_every_batches: int = 200,
     ) -> np.ndarray:
-        """Encode every text, batched.
+        """Encode every text in batches of ``batch_size``.
 
-        Writes each batch straight into a preallocated output array instead
-        of collecting per-batch arrays in a list and ``np.vstack``-ing them
-        at the end. For a small test corpus the difference is invisible; for
-        the real ~4.3M-chunk corpus at MedCPT's 768 dims, the vector matrix
-        alone is ~13 GB in float32, and the list-then-vstack approach holds
-        *two* copies (the growing list plus the freshly concatenated array)
-        at its peak - on the order of 26 GB, comfortably past a 16 GB
-        laptop. Preallocating keeps peak memory to roughly one matrix.
-
-        ``on_progress(batches_done, batches_total, elapsed_seconds)`` is
-        called every ``progress_every_batches`` batches (and always on the
-        last one) - encoding hundreds of thousands of batches on CPU can run
-        for hours with nothing else to show it is still working.
+        Each batch is written straight into a preallocated output array, so peak memory is
+        about one matrix. ``on_progress(batches_done, batches_total, elapsed_seconds)`` is
+        called every ``progress_every_batches`` batches and on the last one (no caller uses it).
         """
         import torch
 

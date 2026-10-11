@@ -1,4 +1,4 @@
-"""Case study of the Alzheimer's-named questions of the dementia run (descriptive; from the answers on file; no model is run).
+"""Case study of the questions of the Alzheimer's disease set that name Alzheimer's disease (descriptive; from the answers on file; no model is run).
 
     python -m experiments.medchange.ad_case_study --out-dir <folder outside the repository>
 
@@ -66,7 +66,7 @@ def to_markdown(cases: list[dict], n: int = 12) -> str:
     chosen = cases[:n]
     extra = [c for c in (first("fixed"), first("broke")) if c and c not in chosen]
     L = ["# Alzheimer's-named questions: a case study (descriptive)", "",
-         f"{len(cases)} questions of the dementia run name Alzheimer's disease. Shown: the first {n} in the order of a seeded hash (`{SEED}`), "
+         f"{len(cases)} questions of the Alzheimer's disease set name Alzheimer's disease. Shown: the first {n} in the order of a seeded hash (`{SEED}`), "
          "then the first answer R2V fixed and the first it broke in that order, so that a failure is shown as well as a success. Nothing was chosen by outcome "
          "except those two. Nothing here is a confirmatory result.", ""]
     for k, c in enumerate(chosen + extra, 1):

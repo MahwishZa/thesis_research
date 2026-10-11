@@ -25,7 +25,17 @@ class MetricTests(unittest.TestCase):
         self.assertEqual(C.recall(gold, a, 1), 0.75)
         r = C.paired_interval(gold, a, b, lambda g, p: C.recall(g, p, 1), seed="t", iterations=500)
         self.assertEqual(r["difference"], 0.5)
-        self.assertLessEqual(r["ci95"][0], 0.5 <= r["ci95"][1])
+        self.assertTrue(r["ci95"][0] <= 0.5 <= r["ci95"][1])
+
+
+class UnparsedAnswerTests(unittest.TestCase):
+    def test_an_unparsed_answer_is_a_fourth_code_that_is_never_right(self):
+        items = {f"Q{k}": {"newest": {"label": lab}} for k, lab in enumerate(("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"))}
+        answers = {("Q0", "R2"): "SUPPORTED", ("Q1", "R2"): None, ("Q2", "R2"): "NOT ENOUGH INFORMATION"}
+        gold, vec = C.vectors(items, answers, ["R2"])
+        self.assertEqual(list(vec["R2"]), [0, 3, 2])
+        self.assertEqual(C.recall(gold, vec["R2"], 1), 0.0)
+        self.assertAlmostEqual(C.macro_f1(gold, vec["R2"]), 2 / 3)           # the unparsed REFUTED answer counts as a miss, not as a crash
 
 
 class CommittedFileTests(unittest.TestCase):

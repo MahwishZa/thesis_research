@@ -46,7 +46,8 @@ class NumbersTests(unittest.TestCase):
     def test_accuracy_cell_counts_and_interval(self):
         c = R.accuracy_cell(self.items, self.answers, "B1", ("changed",))
         self.assertEqual((c["n"], c["correct"], c["accuracy"]), (6, 6, 1.0))
-        self.assertLessEqual(c["ci"][0], 1.0)
+        self.assertAlmostEqual(c["ci"][0], 0.6097, places=3)         # Wilson lower bound of 6 of 6
+        self.assertAlmostEqual(c["ci"][1], 1.0, places=3)
         self.assertIsNone(R.accuracy_cell(self.items, self.answers, "absent", ("changed",)))
 
     def test_system_rows_are_grouped_and_skip_missing_arms(self):

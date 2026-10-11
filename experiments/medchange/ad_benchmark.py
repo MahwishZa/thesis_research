@@ -1,4 +1,4 @@
-"""Alzheimer's/dementia benchmark: a fresh, held-out secondary test set (split "ad").
+"""The Alzheimer's disease set (split "ad"): questions on Alzheimer's disease and related dementias, a held-out secondary test set.
 
     python -m experiments.medchange.ad_benchmark --medchange-dir ..\\MedChange
 
@@ -46,7 +46,7 @@ def _item(medrev: dict, newest_row: int, previous_row: int, kind: str) -> dict:
 
 
 def build_ad_items(medrev: dict, groups: dict, used_groups: set, used_reviews: frozenset = frozenset()) -> list[dict]:
-    """Questions about dementia/Alzheimer's from reviews outside dev and confirm; one item per distinct question.
+    """Questions on Alzheimer's disease and related dementias from reviews outside dev and confirm; one item per distinct question.
 
     A review is "outside" when neither its study group (``used_groups``) nor its Cochrane ID (``used_reviews``)
     appears in those splits. The ID check matters: an older version of a review that dev or confirm already

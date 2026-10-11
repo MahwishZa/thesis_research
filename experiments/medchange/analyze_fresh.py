@@ -9,8 +9,10 @@ else, so that no partial result can be seen. When the run is complete it compute
   seed ``fresh-macro-f1``); **confirmed if the lower end is above 0**, otherwise "positive but not confirmed" (point estimate above 0) or "no
   evidence"; the upper end is stated (below 0.02 excludes a gain of 0.02 or more);
 * the secondary outcomes: macro-F1 of R2V − R2C; REFUTED recall and the predicted-SUPPORTED share; verdict accuracy R2V − R2 (exact McNemar,
-  bootstrap interval); how many answers R2V changed and how many it fixed or broke; the label audit when it exists;
-* the descriptive Alzheimer's/dementia comparison: the macro-F1 difference of the 208 dementia questions from ``class_balance.json`` and
+  bootstrap interval) with its reading by the three rules of ``docs/evaluation.md`` §5 (not met / met as a point estimate, not confirmed /
+  met and confirmed; the requirement itself is not re-read from this test alone); how many answers R2V changed and how many it fixed or
+  broke; the label audit when it exists;
+* the descriptive comparison on the Alzheimer's disease set: the macro-F1 difference of its 208 questions from ``class_balance.json`` and
   whether its sign agrees (no confirmatory claim).
 
 It writes ``rag2_analysis_fresh.json`` and ``RAG2_FINDINGS_FRESH.md`` to the results folder."""
@@ -29,13 +31,16 @@ import numpy as np
 from . import analyze_rag2 as A
 from .benchmark import LABELS
 from .class_balance import macro_f1, recall
-from .scoring import paired, summarize
+from .scoring import ALPHA, paired, summarize
 
 HERE = Path(__file__).resolve().parent
 ARMS = ("R2", "R2C", "R2V")
 EXPECTED = 850
 ITERATIONS = 10000
 PRIMARY_SEED = "fresh-macro-f1"
+#: Decimals kept in stored differences and intervals. Six, not four: the decision rule compares the lower end of the interval with 0, and an
+#: end stored to four decimals can be rounded onto the wrong side of 0 (the same reason as ``scoring.DIGITS``).
+DIGITS = 6
 
 
 class Blinded(Exception):
@@ -60,7 +65,7 @@ def paired_interval(gold, pa, pb, metric, seed: str, iterations: int = ITERATION
         s = rng.integers(0, n, n)
         diffs[k] = metric(gold[s], pa[s]) - metric(gold[s], pb[s])
     lo, hi = np.percentile(diffs, [2.5, 97.5])
-    return {"difference": round(float(point), 4), "ci95": [round(float(lo), 4), round(float(hi), 4)]}
+    return {"difference": round(float(point), DIGITS), "ci95": [round(float(lo), DIGITS), round(float(hi), DIGITS)]}
 
 
 def read_primary(d: dict) -> dict:
@@ -74,6 +79,15 @@ def read_primary(d: dict) -> dict:
     return {"reading": reading, "gain_of_0.02_or_more_excluded": hi < 0.02}
 
 
+def accuracy_reading(r: Optional[dict]) -> Optional[dict]:
+    """The three-rule reading of ``docs/evaluation.md`` §5 applied to a paired accuracy difference (``scoring.paired``): *not met* below +1.0 point,
+    *met and confirmed* when McNemar's p is below .05 and the interval is above 0, otherwise *met as a point estimate, not confirmed*."""
+    if r is None:
+        return None
+    confirmed = r["mcnemar_p"] < ALPHA and r["ci95"][0] > 0 and r["diff_a_minus_b"] > 0
+    return dict(r, confirmed=bool(confirmed), reading=A.requirement_reading(dict(r, confirmed=bool(confirmed)), "confirm"))
+
+
 def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations: int = ITERATIONS,
             class_balance: Optional[dict] = None, audit: Optional[dict] = None) -> dict:
     comp = completeness(items, answers)
@@ -83,21 +97,21 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
     idx = {l: k for k, l in enumerate(LABELS)}
     gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
     pred = {a: np.array([idx.get(answers[(i, a)]["verdict"], len(LABELS)) for i in ids]) for a in ARMS}      # unparsed: a fourth code, wrong everywhere
-    f1 = lambda a: round(macro_f1(gold, pred[a]), 4)
+    f1 = lambda a: round(macro_f1(gold, pred[a]), DIGITS)
     primary = paired_interval(gold, pred["R2V"], pred["R2"], macro_f1, PRIMARY_SEED, iterations)
     primary.update(read_primary(primary), metric="macro-F1, R2V minus R2")
     sec = {
         "macro_f1_R2V_minus_R2C": paired_interval(gold, pred["R2V"], pred["R2C"], macro_f1, "fresh-macro-f1-R2V-R2C", iterations),
         "refuted_recall_R2V_minus_R2": paired_interval(gold, pred["R2V"], pred["R2"], lambda g, p: recall(g, p, 1), "fresh-refuted-R2V-R2", iterations),
-        "accuracy_R2V_minus_R2": paired(items, answers, "R2V", "R2", A.BOTH),
+        "accuracy_R2V_minus_R2": accuracy_reading(paired(items, answers, "R2V", "R2", A.BOTH)),
         "accuracy_R2V_minus_R2C": paired(items, answers, "R2V", "R2C", A.BOTH)}
     verification = A.verifier_rows(items, answers, ARMS)
-    arms = {a: {"macro_f1": f1(a), "predicted_share": {l: round(float((pred[a] == k).mean()), 4) for k, l in enumerate(LABELS)},
+    arms = {a: {"macro_f1": f1(a), "predicted_share": {l: round(float((pred[a] == k).mean()), DIGITS) for k, l in enumerate(LABELS)},
                 "unparsed": int((pred[a] == len(LABELS)).sum()),
-                "recall": {l: round(recall(gold, pred[a], k), 4) for k, l in enumerate(LABELS)}} for a in ARMS}
+                "recall": {l: round(recall(gold, pred[a], k), DIGITS) for k, l in enumerate(LABELS)}} for a in ARMS}
     rep = {"split": "fresh", "n": len(ids), "iterations": iterations, "primary": primary, "secondary": sec, "arms": arms,
            "accuracy": {a: v["all"] for a, v in summarize(items, answers, ARMS).items()},
-           "gold_share": {l: round(float((gold == k).mean()), 4) for k, l in enumerate(LABELS)}, "verification": verification}
+           "gold_share": {l: round(float((gold == k).mean()), DIGITS) for k, l in enumerate(LABELS)}, "verification": verification}
     if class_balance:
         ad = class_balance["splits"]["ad"]["paired"]["R2V vs R2"]["macro_f1"]
         rep["alzheimers_dementia_descriptive"] = {
@@ -126,7 +140,8 @@ def to_markdown(rep: dict) -> str:
         a = s[k]
         if a:
             L.append(f"* Verdict accuracy, {lab}: {100 * a['diff_a_minus_b']:+.1f} points (95% interval {100 * a['ci95'][0]:+.1f} to {100 * a['ci95'][1]:+.1f}; "
-                     f"exact McNemar p = {a['mcnemar_p']:.4f}).")
+                     f"exact McNemar p = {a['mcnemar_p']:.4f})." + (f" Reading by the rules of `docs/evaluation.md` §5: {a['reading']} "
+                                                                    "(the 1-point requirement is not re-read from this test alone)." if "reading" in a else ""))
     L += ["", "| System | Accuracy | Macro-F1 | Predicted SUPPORTED | REFUTED recall |", "|---|---|---|---|---|"]
     for a, v in rep["arms"].items():
         L.append(f"| {a} | {100 * rep['accuracy'][a]['accuracy']:.1f}% | {v['macro_f1']:.3f} | {100 * v['predicted_share']['SUPPORTED']:.1f}% | "
@@ -141,7 +156,7 @@ def to_markdown(rep: dict) -> str:
     if d:
         m = d["macro_f1_R2V_minus_R2"]
         L += ["", "## Alzheimer's disease and related dementias (descriptive)", "",
-              f"The {d['n']} dementia questions: macro-F1, R2V − R2 = {f(m['difference'])} ({f(m['ci95'][0])} to {f(m['ci95'][1])}). "
+              f"The {d['n']} questions of the Alzheimer's disease set: macro-F1, R2V − R2 = {f(m['difference'])} ({f(m['ci95'][0])} to {f(m['ci95'][1])}). "
               f"The sign {'agrees' if d['sign_agrees_with_fresh'] else 'does not agree'} with the fresh result. {d['note'].capitalize()}."]
     au = rep.get("label_audit")
     if au:

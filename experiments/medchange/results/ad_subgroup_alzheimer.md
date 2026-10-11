@@ -1,4 +1,4 @@
-# Exploratory subgroup of the dementia run: questions naming Alzheimer's disease (n = 48 of 208)
+# Exploratory subgroup of the Alzheimer's disease set: questions naming Alzheimer's disease (n = 48 of 208)
 
 Gold verdicts: REFUTED 19, SUPPORTED 8, NOT ENOUGH INFORMATION 21. Constant answer (NOT ENOUGH INFORMATION): 43.8%.
 

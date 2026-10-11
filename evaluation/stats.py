@@ -77,10 +77,10 @@ def mcnemar(baseline: Mapping[str, int],
             proposed: Mapping[str, int]) -> McNemarResult:
     """Exact McNemar test on paired binary outcomes.
 
-    ``baseline_only`` counts questions where the baseline shows the outcome
-    (e.g. hallucinated) and the proposed system does not. Concordant pairs
-    carry no information about the difference, which is why the test uses only
-    the discordant ones.
+    Outcomes are 0/1 (for example 1 = answered correctly). ``baseline_only`` counts
+    questions where only the baseline shows the outcome, ``proposed_only`` those where
+    only the proposed system does. Concordant pairs carry no information about the
+    difference, which is why the test uses only the discordant ones.
     """
     keys = _paired(baseline, proposed)
     b_only = sum(1 for k in keys if baseline[k] == 1 and proposed[k] == 0)

@@ -11,8 +11,11 @@ on that subset (descriptive; the primary analysis keeps all items). Agreement is
 *reproducibility*, not medical truth: two language models can share a bias.
 
     python -m experiments.medchange.label_audit --split dev --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
+    python -m experiments.medchange.label_audit --split fresh --sample 300 --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 
-The confirmatory split is audited only after the realigned design record exists (so its labels are
+The item-level file (ids, labels and the first 60 characters of the labeller's reply; no source text) is written to the working folder
+(``--data-dir``); the summary ``label_audit_<split>.json`` and ``.md`` and a copy of the item-level file go to ``--out-dir``, where
+``rag2_pipeline`` and ``analyze_rag2 --label-audit`` look for them. The confirmatory splits are audited only after the realigned design record exists (so their labels are
 not looked at before the design is frozen).
 """
 
@@ -22,6 +25,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Callable, Optional, Sequence
@@ -124,6 +128,17 @@ def summarize(rows: Sequence[dict], items: dict) -> dict:
             "n_stable": len(stable), "stable_item_ids": stable}
 
 
+def publish_rows(rows: Path, out_dir: Path) -> Optional[Path]:
+    """Copy the item-level audit file (ids, labels and 60 characters of the labeller's reply; no source text) from the working folder to
+    ``out_dir``, where ``rag2_pipeline`` and ``analyze_rag2 --label-audit`` look for it. Returns the copy, or None when both are the same folder."""
+    target = Path(out_dir) / Path(rows).name
+    if target.resolve() == Path(rows).resolve():
+        return None
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(rows, target)
+    return target
+
+
 def to_markdown(split: str, rep: dict, model: str) -> str:
     pct = lambda x: "n/a" if x is None else f"{100 * x:.1f}%"
     lines = [f"# Label audit, {split} split", "",
@@ -182,6 +197,7 @@ def main(argv=None) -> int:
     rep.update(split=args.split, labeler=Path(args.model_path).name, labeler_sha256=sha)
     od = Path(args.out_dir)
     od.mkdir(parents=True, exist_ok=True)
+    publish_rows(out, od)
     (od / f"label_audit_{args.split}.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8", newline="\n")
     text = to_markdown(args.split, rep, Path(args.model_path).name)
     (od / f"label_audit_{args.split}.md").write_text(text, encoding="utf-8", newline="\n")

@@ -9,6 +9,7 @@ retrieval consumes them is explained in `methodology.md`; how to rebuild anythin
 |---|---|---|---|---|
 | MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | evaluation of the realigned study (general medicine): questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
 | Alzheimer's disease and related dementias set (`ad`): 208 questions | secondary held-out evaluation | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
+| Fresh questions (`fresh`): 850 questions | the pre-registered confirmatory test (`protocol.md` §10); general medicine | the same release (questions no other split uses) | no; only `experiments/medchange/manifest_fresh.json` | `fresh_benchmark` |
 | As-of PubMed records, abstracts, frozen pools | the evidence systems may read | PubMed (NCBI E-utilities) | no (publisher text) | `pubmed_asof`, `freeze_candidates` |
 | Study outputs (rationales, filter judgements, answers, analyses, reports, design record) | results of the runs | produced by the pipelines | yes, in `experiments/medchange/results/` (no source text) | the pipelines |
 | Earlier-stage outputs | results of record of stages 1 and 2 | produced by the removed stage code | yes, in `results/earlier_stages/` | not rebuilt (code in Git history) |
@@ -52,8 +53,8 @@ for 266 of the 504 changed questions, so the update window (the interval after t
 approximate for them. A year-only date is read as 1 January.
 
 **Limitations.** (1) Gold labels are model-generated, not human-verified. An independent model of another family reproduces
-81.4% of the held-out and 83.2% of the development labels (`evaluation.md` §1.4); no clinician has validated them. (2) 397 of
-the 504 usable changes involve NOT ENOUGH INFORMATION, the vaguest boundary. (3) Only 14 questions (9 changed, 5 unchanged)
+81.4% of the held-out and 83.2% of the development labels (`evaluation.md` §1.4); no clinician has validated them. (2) 390 of
+the 504 usable changes (77%) involve NOT ENOUGH INFORMATION, the vaguest boundary (397 of the 512 released changes do; the 8 excluded as label noise account for the difference). (3) Only 14 questions (9 changed, 5 unchanged)
 are Alzheimer's-related, too few for any test; the `ad` set exists for that reason (§2). (4) The question text was written by
 a model.
 
@@ -87,7 +88,34 @@ low: only effects of about 6 to 10 points can be confirmed (`evaluation.md` §4)
 independent model (the audit covers the development and held-out splits; `label_audit --split ad` is available), so it has no
 label-stable subset yet. (7) The set was run once (`evaluation.md` §6.6).
 
-## 3. Evidence: as-of PubMed records
+## 3. Fresh questions (the pre-registered test; split `fresh`)
+
+**Why it exists.** Every question of the other splits was seen while the design was built or while its results were read, and the metric
+of the confirmatory test (macro-F1) was chosen after the first results were known (`protocol.md` §10.1). Testing the verification effect
+needs questions that played no part in any of these decisions.
+
+**Construction** (`fresh_supply.py`, `fresh_benchmark.py`). The MedRevQA questions that no split uses: neither the study group, nor the
+Cochrane ID of either version, nor the wording of the question appears in `dev`, `confirm` or `ad`. That leaves 10,672 of the 16,501 rows,
+all of unchanged verdict (the changed-verdict questions are all used). Of these, the questions of reviews dated 2010-01-01 or later that
+do not match the wording filter of the Alzheimer's disease set (§2: dementia, Alzheimer, mild cognitive impairment, cognitive decline,
+cognitively impaired, cognitive impairment) are *qualifying* (7,880 questions from 6,577 reviews; SUPPORTED 38.1%, REFUTED 16.9%, NOT ENOUGH
+INFORMATION 45.1%), and the first 850 in the order of the SHA-256 of `fresh-v1|<MedRevQA row>` are the split. No label, topic or answer is
+used. Each question is asked as of its review's date, like the others. The size was 1,500 and then 1,000 before it was set to 850 on
+2026-10-10, before any question was selected (`protocol.md` §10.3).
+
+**Composition** (`manifest_fresh.json`, computed). 850 questions from 831 reviews, all of unchanged verdict; 783 come from reviews with a
+single version (`previous` repeats `newest`, so the update-window metrics do not apply); gold SUPPORTED 308 (36.2%), REFUTED 137 (16.1%),
+NOT ENOUGH INFORMATION 405 (47.6%); the newest reviews are dated 2010-01-20 to 2024-01-10. The manifest lists the selected MedRevQA rows and
+the hash of the item list, and was committed and pushed before any answer existed.
+
+**Limitations.** (1) It is general medicine: of the 7,880 qualifying questions only 7 name Alzheimer's disease or dementia anywhere in the
+question, objectives or conclusions, and 25 name another neurodegenerative disease in the question, so the test cannot show an effect for
+Alzheimer's disease (`results/fresh_supply.json`). (2) The labels are model-generated; a sample of 300 questions is re-labelled by the
+independent model (`label_audit --split fresh --sample 300`). (3) Some reviews are dated after the generator's stated knowledge cut-off
+(302 of the 7,880 qualifying questions are dated 2023-04-01 or later), and the as-of rule limits only the evidence a system is shown
+(`protocol.md` §10.6). (4) The 850 questions come from 831 reviews, and the paired tests treat questions as independent, which very slightly understates the uncertainty.
+
+## 4. Evidence: as-of PubMed records
 
 **Source.** PubMed, through the NCBI E-utilities (ESearch for record identifiers, ESummary for dates and publication types,
 EFetch for abstracts), at most 3 requests per second without an API key and 10 with one.
@@ -106,26 +134,29 @@ redistributed: they are fetched per question and cached under the gitignored `ex
 and the *update-window* retrieval metrics (`evaluation.md` §1.3). The year of a record is shown to the verifier in R2V, and
 withheld in R2V-ND.
 
-## 4. Study outputs and what is committed
+## 5. Study outputs and what is committed
 
 The runs write their working files to `experiments/medchange/data/` (gitignored: MedChange-derived questions, abstracts, frozen
 pools). Outputs that contain **no source text** and are expensive to regenerate are copied to `experiments/medchange/results/`
-and committed, so that a run of many hours does not exist only on one laptop. `<split>` is `dev` or `confirm`, and `ad` once that
+and committed, so that a run of many hours does not exist only on one laptop. `<split>` is `dev`, `confirm`, `ad` or `fresh`, once that
 phase has run.
 
 | Files in `experiments/medchange/results/` | Produced by | Content |
 |---|---|---|
 | `answers_<split>.jsonl`, `.config.json` | `generate_answers` | B0 and B1 answers with the generator record; `answers_dev.jsonl` also holds the stage-1 answers of B2, B3, P and C1 |
 | `rag2_rationales_<split>.jsonl`, `rag2_lists_<split>.ids.jsonl`, `rag2_filter_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl`, each with `.config.json` | `rag2_run` through `rag2_pipeline` | the rationales; the candidate lists without titles or abstracts (PMIDs, ranks, scores, dates); the filter judgements; the answers of R2, R2C, R2V and R2V-ND; the directness judgements |
-| `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the requirement |
+| `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the requirement (`dev`, `confirm`, `ad`) |
+| `rag2_analysis_fresh.json`, `RAG2_FINDINGS_FRESH.md` | `analyze_fresh` | the blinded analysis of the pre-registered test: written only when every question has an answer for R2, R2C and R2V |
 | `RAG2_DEV_REPORT.md`, `RAG2_FINDINGS.md` | `rag2_pipeline` | the development report with the dev check; the held-out findings (`RAG2_FINDINGS_AD.md` after the `ad` phase) |
+| `class_balance.json`, `.md`; `ad_subgroup_alzheimer.json`, `.md` | `class_balance`, `subgroup_ad` | per-verdict shares, recall and macro-F1 of the held-out and Alzheimer's disease runs; the 48 questions that name Alzheimer's disease (both exploratory, from answers on file) |
+| `fresh_supply.json`, `cochrane_ad_supply.json` | `fresh_supply`, `cochrane_ad_supply` | counts only: the questions no split uses (and those on other neurodegenerative diseases); the new Cochrane reviews on Alzheimer's disease and dementia after the MedRevQA snapshot |
 | `rag2_design.json` | `rag2_pipeline dev` | the design record, committed **before** the held-out run, which refuses to start otherwise |
 | `rag2_environment_<phase>.json` | `rag2_pipeline` | package versions, platform and code commit of a phase (informational; the development run has none) |
-| `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only) |
+| `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only; `label_audit` copies its item-level file here) |
 | `report/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the Alzheimer's disease set has no changed questions) |
 | `earlier_stages/` | the removed stage code | results of record of stages 1 and 2 (`methodology.md` §10): the analysis, error analysis, audit and diagnostics of the stage-1 development answers; the stage-2 per-paper judgements, predictions, cross-validation, frozen model and reports |
 
-## 5. Usage
+## 6. Usage
 
 | Data | Used by | Purpose |
 |---|---|---|
@@ -139,7 +170,7 @@ No part of the study trains a model on any question set; the sets only evaluate.
 the stage-2 logistic layer, with a few dozen coefficients fitted on the 226 development questions and frozen; it is not part of
 the current systems.
 
-## 6. Removed: the Alzheimer's evidence corpus and question pool
+## 7. Removed: the Alzheimer's evidence corpus and question pool
 
 Both belonged to the first design and are **not used** by the current study; they remain in Git history (commit `5e03540`,
 the `alzheimers_framework` subfolder of the former `_archive` folder). Facts computed before their removal:
@@ -154,13 +185,14 @@ the `alzheimers_framework` subfolder of the former `_archive` folder). Facts com
 Local leftovers of that design (`corpus\`, `experiments\results\index\` and `_archive\`, among them 16.6 hours of
 filter-training labels) are gitignored; a `git pull` does not delete them (`reproducibility.md` §7).
 
-## 7. Known limitations of the data
+## 8. Known limitations of the data
 
 1. Gold labels (main benchmark and `ad` set) are model-generated; their reproducibility is measured by an independent model, and
    no clinician has validated them. Nobody involved in the study is a medical expert, which is a documented limitation.
 2. Identifiers (PMIDs, DOIs) were taken from the source datasets and not independently resolved in every build environment.
-3. The held-out split's labels and its B0/B1 results had been seen before the realigned design was fixed (§1); only the `ad` set
-   is untouched, and it is secondary.
+3. The held-out split's labels and its B0/B1 results had been seen before the realigned design was fixed (§1). The `ad` set had not
+   been seen when the design was fixed, but it was run before the pre-registered test and its results helped form that test's hypothesis
+   (`protocol.md` §10.1); only the fresh questions (§3) played no part in choosing the hypothesis.
 4. MedChange states no licence and abstracts are publisher text, so neither is redistributed: a reader rebuilds both from the
    manifests and the public sources.
 5. Only 36.4% of the 4,520 candidates in the development pools have labelled RESULTS or CONCLUSIONS sections

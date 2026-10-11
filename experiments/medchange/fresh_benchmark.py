@@ -72,10 +72,12 @@ def build(medrev: dict, groups: dict, rows: list[dict], n: int = N_DEFAULT) -> t
 
 
 DRAFT_STATUS = re.compile(r"\*\*Status\.\*\* This section is a draft.*?(?=\n\n)", re.DOTALL)
+DRAFT_HEADING = re.compile(r"^(## 10\. Pre-registration of a confirmatory test on fresh questions) \(DRAFT: not in force\)$", re.MULTILINE)
 
 
 def freeze(protocol: Path, manifest: dict, today: str) -> bool:
-    """Mark protocol §10 as in force: replaces the draft status paragraph; False when there is none (already frozen or edited)."""
+    """Mark protocol §10 as in force: replaces the draft status paragraph and the "(DRAFT: not in force)" of the section heading; False when
+    there is no draft status paragraph (already frozen or edited)."""
     text = protocol.read_text(encoding="utf-8")
     line = (f"**Status.** This section is IN FORCE since {today}. The selection is the first {manifest['items']} qualifying questions in the order of "
             f"the SHA-256 of `fresh-v1|<row>` (item list hash `{manifest['item_ids_sha256'][:16]}`, manifest committed before any answer). "
@@ -83,6 +85,7 @@ def freeze(protocol: Path, manifest: dict, today: str) -> bool:
             "setting and every prompt are fixed (§10.7). The sections below are those of the draft.")
     new, n = DRAFT_STATUS.subn(lambda m: line, text, count=1)
     if n:
+        new = DRAFT_HEADING.sub(lambda m: f"{m.group(1)} (in force since {today})", new, count=1)
         protocol.write_text(new, encoding="utf-8", newline="\n")
     return bool(n)
 

@@ -30,6 +30,9 @@ History of the guards (each date is a change of what is true; older wording is i
   results became secondary evidence. The README was shortened to a headline (two small tables, no experiment status), it points
   to the research paper through a placeholder (the earlier ban on mentioning the paper was temporary), and the quoted-figure
   guards were repointed to the new README and to ``docs/evaluation.md``.
+* 2026-10-11: the pre-registered test on fresh questions (``docs/protocol.md`` §10, 850 questions) was in force and under way. The
+  documents that omitted it were completed (``docs/data.md`` §3, ``docs/evaluation.md`` §6.9), the figures of ``docs/data.md`` were
+  tied to the committed manifests, and a guard keeps the number of fresh questions equal in every place that states it.
 """
 
 import ast
@@ -404,11 +407,20 @@ class CompletedVersusPlannedTests(unittest.TestCase):
     once a result exists the statement may stay stale for a while, but a result must never be claimed that does
     not exist."""
 
-    def test_the_dementia_and_alzheimers_set_is_reported_as_not_run_until_a_result_exists(self):
-        if (RESULTS / "rag2_analysis_ad.json").exists():
-            self.skipTest("the dementia and Alzheimer's set has been run: update the documents")
-        for rel in ("docs/protocol.md", "docs/evaluation.md", "docs/methodology.md"):
-            self.assertTrue("not yet run" in flat(ROOT / rel), f"{rel} must say the set is not yet run")
+    def test_the_alzheimers_disease_set_is_reported_as_run_once_because_its_result_exists(self):
+        """Its analysis is committed, so the documents must report it as run, and none may still call it "not yet run"."""
+        self.assertTrue((RESULTS / "rag2_analysis_ad.json").exists())
+        self.assertIn("completed once", flat(DOCS / "protocol.md"))
+        self.assertIn("run once", flat(DOCS / "evaluation.md"))
+        for rel in CURRENT_DOCS:
+            self.assertNotIn("not yet run", flat(ROOT / rel), rel)
+
+    def test_the_fresh_test_is_reported_as_without_a_result_until_its_analysis_is_committed(self):
+        """The reverse guard of the one above: while ``rag2_analysis_fresh.json`` is not committed, no document may quote a result of the fresh test."""
+        if (RESULTS / "rag2_analysis_fresh.json").exists():
+            self.skipTest("the fresh test has a committed analysis: quote it in docs/evaluation.md §6.9 and README.md")
+        self.assertIn("None yet", flat(DOCS / "evaluation.md").split("### 6.9", 1)[1])
+        self.assertFalse((RESULTS / "RAG2_FINDINGS_FRESH.md").exists())
 
     def test_the_baseline_ablations_are_reported_as_not_run_until_an_answer_exists(self):
         arms = {json.loads(line)["arm"] for line in text(RESULTS / "rag2_answers_dev.jsonl").splitlines() if line.strip()}
@@ -449,6 +461,92 @@ class SupersededScopeTests(unittest.TestCase):
         body = text(ROOT / ".gitignore")
         for pattern in ("_archive/", "/corpus/", "experiments/results/index", "build/", "dist/"):
             self.assertIn(pattern, body)
+
+
+class DataDocumentQuotesTheManifestsTests(unittest.TestCase):
+    """``docs/data.md`` states counts by hand; they must be those of the committed manifests (one of them, 397 of 504, had a wrong denominator)."""
+
+    @classmethod
+    def setUpClass(cls):
+        base = ROOT / "experiments" / "medchange"
+        cls.main = json.loads(text(base / "manifest.json"))
+        cls.ad = json.loads(text(base / "manifest_ad.json"))
+        cls.fresh = json.loads(text(base / "manifest_fresh.json"))
+        cls.supply = json.loads(text(RESULTS / "fresh_supply.json"))
+        cls.data = flat(DOCS / "data.md")
+
+    def test_the_main_benchmark(self):
+        c = self.main["counts"]
+        usable = c["items"] - c["likely_label_noise_excluded"]
+        self.assertIn(f"{usable} usable Cochrane questions", self.data)
+        self.assertIn(f"{c['usable_changed']} usable changed questions", self.data)
+        self.assertIn(f"samples {usable - c['usable_changed']} unchanged controls", self.data)
+        self.assertIn(f"{c['likely_label_noise_excluded']} changed items", self.data)
+        nei = sum(n for k, n in c["change_types"].items() if "NOT ENOUGH INFORMATION" in k)
+        self.assertIn(f"{nei} of the {c['usable_changed']} usable changes ({round(100 * nei / c['usable_changed'])}%) involve NOT ENOUGH INFORMATION", self.data)
+        self.assertEqual({k.split("/")[1] for k in c["by_kind_split"]}, {"dev", "confirm"})
+        self.assertEqual(sum(c["by_kind_split"].values()), c["items"])
+
+    def test_the_alzheimers_disease_set(self):
+        a = self.ad
+        self.assertIn(f"{a['items']} questions from {a['reviews']} reviews", self.data)
+        for label, key in (("NOT ENOUGH INFORMATION", "NOT ENOUGH INFORMATION"), ("REFUTED", "REFUTED"), ("SUPPORTED", "SUPPORTED")):
+            self.assertIn(f"{label} {a['labels'][key]} ({round(100 * a['labels'][key] / a['items'])}%)", self.data)
+        self.assertIn(f"{a['single_version']} come from reviews with a single version", self.data)
+        self.assertEqual(a["kinds"], {"unchanged": a["items"]})
+
+    def test_the_fresh_questions(self):
+        f, sup = self.fresh, self.supply["by_earliest_date"]["2010-01-01"]
+        self.assertIn(f"{f['items']} questions from {f['reviews']} reviews, all of unchanged verdict", self.data)
+        self.assertIn(f"{f['single_version']} come from reviews with a single version", self.data)
+        for label in ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"):
+            self.assertIn(f"{label} {f['labels'][label]} ({100 * f['labels'][label] / f['items']:.1f}%)", self.data)
+        lo, hi = f["selection"]["dates"]
+        self.assertIn(f"dated {lo} to {hi}", self.data)
+        self.assertIn(f"{sup['questions']:,} questions from {sup['reviews']:,} reviews", self.data)
+        self.assertEqual(f["selection"]["qualifying_questions"], sup["questions"])
+        self.assertEqual(f["selection"]["selected"], f["items"])
+        self.assertIn(f"{self.supply['fresh_questions_all_dates']:,} of the 16,501 rows", self.data)
+        self.assertEqual(self.supply["medrevqa_rows"], 16501)
+        self.assertIn(f"only {sup['dementia_in_review_text']['questions']} name Alzheimer's disease or dementia anywhere", self.data)
+        self.assertIn(f"{sup['neurodegenerative_wording']['questions']} name another neurodegenerative disease in the question", self.data)
+
+
+class FreshTestDocumentsTests(unittest.TestCase):
+    """The pre-registered test is described in several documents; the number of questions and the date it came into force must agree everywhere."""
+
+    N = json.loads(text(ROOT / "experiments" / "medchange" / "manifest_fresh.json"))["items"]
+
+    def test_every_document_that_describes_the_test_states_the_registered_number_of_questions(self):
+        for rel in ("README.md", "docs/data.md", "docs/methodology.md", "docs/protocol.md", "docs/evaluation.md", "docs/reproducibility.md"):
+            self.assertIn(str(self.N), flat(ROOT / rel), rel)
+
+    def test_the_protocol_is_in_force_consistently(self):
+        body = text(DOCS / "protocol.md")
+        heading = re.search(r"^## 10\. Pre-registration of a confirmatory test on fresh questions \((.*)\)$", body, flags=re.MULTILINE)
+        status = re.search(r"\*\*Status\.\*\* This section is IN FORCE since (\d{4}-\d{2}-\d{2})", body)
+        self.assertIsNotNone(heading, "the heading of §10")
+        self.assertIsNotNone(status, "the status paragraph of §10")
+        self.assertEqual(heading.group(1), f"in force since {status.group(1)}")
+        self.assertIn(f"in force since {status.group(1)}", flat(DOCS / "protocol.md"))
+        self.assertNotIn("DRAFT", body.split("## 10.", 1)[1].split("### 10.1", 1)[0])
+        self.assertIn(f"N = {self.N}", flat(DOCS / "protocol.md"))
+
+    def test_the_status_table_and_the_ledger_record_the_test(self):
+        body = flat(DOCS / "protocol.md")
+        for needle in ("Pre-registered test on fresh questions", "Reduce N from 1,500 to 850", "mark §10 in force"):
+            self.assertIn(needle, body)
+
+    def test_the_power_figures_follow_from_the_standard_error(self):
+        """0.41 / sqrt(N) is the standard error of the registered power statement; the quoted percentages must follow from it."""
+        from math import erf, sqrt
+        phi = lambda z: 0.5 * (1 + erf(z / sqrt(2)))
+        se = 0.41 / sqrt(self.N)
+        body = flat(DOCS / "protocol.md")
+        for gain, quoted in ((0.04, "81%"), (0.03, "57%"), (0.02, "30%"), (0.045, "89%")):
+            self.assertEqual(f"{round(100 * phi(gain / se - 1.96))}%", quoted)
+            self.assertIn(quoted, body)
+        self.assertIn(f"about {2.8 * se:.3f}", body)
 
 
 class ActiveTreeLayoutTests(unittest.TestCase):
@@ -559,7 +657,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
                 "freeze_candidates", "generate_answers", "label_audit", "fresh_benchmark", "fresh_supply", "analyze_fresh", "subgroup_ad",
-                "class_balance")]:
+                "class_balance", "cochrane_ad_supply", "ad_case_study", "headroom", "consistency_auto")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"

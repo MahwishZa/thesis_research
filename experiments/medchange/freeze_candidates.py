@@ -153,7 +153,8 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     out = Path(args.out or HERE / "data" / f"frozen_{args.split}.jsonl")
-    items = [json.loads(l) for l in open(args.benchmark, encoding="utf-8")]
+    with open(args.benchmark, encoding="utf-8") as handle:
+        items = [json.loads(line) for line in handle if line.strip()]
     items = [i for i in items if not i["likely_label_noise"]
              and (args.split == "all" or i["split"] == args.split)]
     if args.limit:
@@ -168,7 +169,7 @@ def main(argv=None) -> int:
         probes[it["item_id"]] = json.loads(f.read_text(encoding="utf-8"))
     done = {r["item_id"] for r in _load_jsonl(out)}
     todo = items if args.abstracts_only else [i for i in items if i["item_id"] not in done]
-    print(f"{len(items)} items, {len(done)} already frozen, {len(todo)} to do")
+    print(f"{len(items)} items, abstracts only" if args.abstracts_only else f"{len(items)} items, {len(done)} already frozen, {len(todo)} to do")
     if not todo:
         return 0
 

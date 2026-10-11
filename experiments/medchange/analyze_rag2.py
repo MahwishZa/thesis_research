@@ -12,7 +12,7 @@ Pre-declared (docs/protocol.md §1, docs/evaluation.md §5): the primary compari
 paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
 p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
 *not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
-everything is exploratory and the requirement is never read as met. The Alzheimer's/dementia split ("ad") is a
+everything is exploratory and the requirement is never read as met. The Alzheimer's disease split ("ad") is a
 secondary held-out test, run once after the freeze; the requirement is read on it in the same way.
 """
 
@@ -281,7 +281,7 @@ def _comparison_table(rows: dict, family: bool) -> list[str]:
 
 
 def to_markdown(rep: dict) -> str:
-    kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's/dementia"}.get(rep["split"], "exploratory")
+    kind = {"confirm": "confirmatory", "ad": "secondary held-out test, Alzheimer's disease set"}.get(rep["split"], "exploratory")
     L = [f"# Adapted RAG² and evidence-criteria verification, {rep['split']} split ({kind})", "",
          f"Items: {rep['items']}. Arms: {', '.join(rep['arms'])}. Protocol: `docs/protocol.md`.", "",
          "## Generation: verdict accuracy", "",
