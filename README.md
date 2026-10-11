@@ -13,6 +13,10 @@ precedence). The step is compared with an adapted version of a published medical
 it), with standard retrieval and with no retrieval. The research domain is Alzheimer's disease and related dementias, and its requirement is an
 improvement of at least 1 percentage point in the share of correct answers.
 
+A last test asks the question again on 850 new questions that played no part in the design, with a measure that gives each of the
+three verdicts the same weight (macro-F1). Its hypothesis, questions and decision rule were registered before any of its questions was
+answered (`docs/protocol.md` §10).
+
 The complete academic account (background, related work, methodology, detailed results, statistical analysis, discussion,
 limitations and references) is in the accompanying research paper: [title and link to be added].
 
@@ -110,17 +114,18 @@ python -m experiments.medchange.class_balance
 # Count the questions of MedRevQA that no split uses yet (counts only)
 python -m experiments.medchange.fresh_supply --medchange-dir ../MedChange
 
-# Count new Cochrane dementia/Alzheimer's reviews published after MedRevQA's newest review (counts only; needs the network)
+# Count new Cochrane reviews on Alzheimer's disease and dementia published after MedRevQA's newest review (counts only; needs the network)
 python -m experiments.medchange.cochrane_ad_supply --medchange-dir ../MedChange
 
-# Select the fresh test questions, then run and analyse the test (steps and freeze: docs/reproducibility.md section 11)
+# The pre-registered test on fresh questions: select the questions, then (after the freeze, docs/reproducibility.md section 11) run and analyse it
 python -m experiments.medchange.fresh_benchmark --medchange-dir ../MedChange
+python -m experiments.medchange.rag2_pipeline fresh --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit
 
 # Re-analyse and report (no model is run; needs the rebuilt benchmark and the run's files in experiments/medchange/data/)
 python -m experiments.medchange.analyze_rag2 --split confirm --out-dir experiments/medchange/results
 python -m experiments.medchange.report --split confirm --medchange-dir ../MedChange
 ```
 
-The held-out (`confirm`) and `ad` phases refuse to start without `--go`, without the development report, and unless the design
-record on `origin/main` equals the current design. `--dry-run` prints a phase's steps without running them, and
-`rag2_pipeline status` shows which phase is done.
+The held-out (`confirm`), `ad` and `fresh` phases refuse to start without `--go`, without the development report, and unless the design
+record on `origin/main` equals the current design; the `fresh` phase also needs the pre-registration marked in force and its question
+list on `origin/main`. `--dry-run` prints a phase's steps without running them, and `rag2_pipeline status` shows which phase is done.
