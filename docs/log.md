@@ -1406,10 +1406,10 @@ or Dementia as a major topic (3 with Alzheimer Disease), 7 usable under the fixe
 built from them. Seven questions could not carry a result, and a set that small would be an anecdote, not evidence. The Alzheimer's evidence for the defence stays the 48
 Alzheimer's-named questions of the dementia run with their case study (descriptive), and the pre-registered fresh test (not Alzheimer's-specific) remains the confirmatory test.
 
-## Phase 70 — The dementia set is described as the Alzheimer's disease and related dementias (ADRD) set; neurodegenerative supply to be counted (Oct 10)
+## Phase 70 — The dementia set is described as the Alzheimer's disease and related dementias set; neurodegenerative supply to be counted (Oct 10)
 
-Decision (the researcher's): the 208-question dementia set is presented as the ADRD set instead of a separate "dementia" set and an "Alzheimer's" set, because Alzheimer's disease is the
-most common dementia and the registered domain is Alzheimer's disease. The wording rule: the set is called ADRD; its composition is always given (48 name Alzheimer's disease, 156 dementia,
+Decision (the researcher's): the 208-question dementia set is presented as the Alzheimer's disease set instead of a separate "dementia" set and an "Alzheimer's" set, because Alzheimer's disease is the
+most common dementia and the registered domain is Alzheimer's disease. The wording rule: the set is called the Alzheimer's disease set; its composition is always given (48 name Alzheimer's disease, 156 dementia,
 19 other cognitive impairment); the 48 stay a reported subgroup; nothing is called an Alzheimer's-only evaluation. README, `protocol.md`, `evaluation.md`, `methodology.md` and `data.md`
 were changed accordingly (no number changed). Supervisor sign-off of the domain wording is still advisable. `fresh_supply` now also counts MedRevQA questions about other neurodegenerative
 diseases (Parkinson's, Lewy body, frontotemporal, Huntington's, motor neuron disease, prion and similar) among the unused questions, in the question and in the review text, with their
@@ -1420,9 +1420,9 @@ verdicts; counts only, nothing selected. Such questions are related to, but are 
 Researcher's run of `fresh_supply` (counts in `results/fresh_supply.json`): among the 7,880 unused questions dated 2010 or later, 25 name another neurodegenerative disease in the question
 (23 reviews; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 32 do so in the question, objectives or conclusions; from 2005, 38 and 46. Dementia in the review text: 7 (2010 on). With
 a single REFUTED answer a per-verdict reading is impossible and 25 questions cannot carry a result, so **no neurodegenerative stratum is added**; they stay in the general fresh pool at random.
-The ADRD evidence therefore stays the 208-question set (48 naming Alzheimer's disease) and its case study.
+The Alzheimer's disease evidence therefore stays the 208-question set (48 naming Alzheimer's disease) and its case study.
 
-Wording pass (same day): the descriptive text of `README.md` and the five documents now calls the 208-question set the ADRD set everywhere it describes the current evidence. The dated decision
+Wording pass (same day): the descriptive text of `README.md` and the five documents now calls the 208-question set the Alzheimer's disease set everywhere it describes the current evidence. The dated decision
 ledger, the AD-KQA record and earlier log entries keep the wording they were written in, because they record what was decided and said at the time.
 
 ## Phase 72 — Fresh test shortened to N = 1,000; the domain wording approved (Oct 10)
@@ -1436,3 +1436,4 @@ label audit answers a question a reviewer would ask (R2C: is it the checking or 
 
 Later the same day the researcher asked for a run of one to two days. N was set to 850 (about 57 to 68 hours; power 89% at a true gain of 0.045, 57% at 0.03; 700 would give 83% and 49%, 1,000 would give 93% and 64%), the largest size that
 still fits about three nights of running. Arms, settings and rules are unchanged; the R2C control stays. Nothing had been selected.
+A later wording pass (Oct 11) replaced the abbreviation with the full form or "the Alzheimer's disease set"; the abbreviation is not used in the repository.

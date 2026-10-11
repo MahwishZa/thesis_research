@@ -8,7 +8,7 @@ retrieval consumes them is explained in `methodology.md`; how to rebuild anythin
 | Dataset | Role | Source | In the repository? | Rebuilt by |
 |---|---|---|---|---|
 | MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | evaluation of the realigned study (general medicine): questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
-| Alzheimer's disease and related dementias (ADRD) set (`ad`): 208 questions | secondary held-out evaluation | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
+| Alzheimer's disease and related dementias set (`ad`): 208 questions | secondary held-out evaluation | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
 | As-of PubMed records, abstracts, frozen pools | the evidence systems may read | PubMed (NCBI E-utilities) | no (publisher text) | `pubmed_asof`, `freeze_candidates` |
 | Study outputs (rationales, filter judgements, answers, analyses, reports, design record) | results of the runs | produced by the pipelines | yes, in `experiments/medchange/results/` (no source text) | the pipelines |
 | Earlier-stage outputs | results of record of stages 1 and 2 | produced by the removed stage code | yes, in `results/earlier_stages/` | not rebuilt (code in Git history) |
@@ -57,7 +57,7 @@ the 504 usable changes involve NOT ENOUGH INFORMATION, the vaguest boundary. (3)
 are Alzheimer's-related, too few for any test; the `ad` set exists for that reason (§2). (4) The question text was written by
 a model.
 
-## 2. Alzheimer's disease and related dementias (ADRD) set (secondary; split `ad`)
+## 2. Alzheimer's disease and related dementias set (secondary; split `ad`)
 
 **Why it exists.** The research proposal names Alzheimer's disease as the domain, and the main benchmark holds only 14
 related questions. `experiments/medchange/ad_benchmark.py` builds a second held-out set from the same release by the same
@@ -78,7 +78,7 @@ dementia (15 name both) and 19 name neither (cognitive impairment after stroke, 
 mild cognitive impairment, delirium).
 
 **Limitations.** (1) It is a dementia and cognitive-impairment set in which fewer than a quarter of the questions name
-Alzheimer's disease, and it is called the ADRD set here (Alzheimer's disease is the most common dementia), not an Alzheimer's-only benchmark; the 48 questions that name Alzheimer's disease are reported as a subgroup. (2) No question has a changed verdict,
+Alzheimer's disease, and it is called the Alzheimer's disease set here (short for Alzheimer's disease and related dementias; Alzheimer's disease is the most common dementia), not an Alzheimer's-only benchmark; the 48 questions that name Alzheimer's disease are reported as a subgroup. (2) No question has a changed verdict,
 so changed-question and update-window results cannot be computed for it. (3) Its reviews are old: 48 of the 208 are dated
 before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year only and the earliest is 2000, so as-of evidence
 will be thinner for many questions; the pools, once built, had a median of 20 candidates and none was empty, and R2 admitted at least one abstract for 177 of the 208 (85.1%). (4) 208 questions come from
@@ -122,7 +122,7 @@ phase has run.
 | `rag2_design.json` | `rag2_pipeline dev` | the design record, committed **before** the held-out run, which refuses to start otherwise |
 | `rag2_environment_<phase>.json` | `rag2_pipeline` | package versions, platform and code commit of a phase (informational; the development run has none) |
 | `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only) |
-| `report/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the ADRD set has no changed questions) |
+| `report/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the Alzheimer's disease set has no changed questions) |
 | `earlier_stages/` | the removed stage code | results of record of stages 1 and 2 (`methodology.md` §10): the analysis, error analysis, audit and diagnostics of the stage-1 development answers; the stage-2 per-paper judgements, predictions, cross-validation, frozen model and reports |
 
 ## 5. Usage

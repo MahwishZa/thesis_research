@@ -95,7 +95,7 @@ Standard-library statistics (`evaluation/stats.py`, `experiments/medchange/scori
   * *ablation family* (development split only, exploratory; the ablations have not been run): R2 − R2-RQ; R2 − R2-BR;
     R2 − R2-NF;
   * *descriptive:* the label-stable subset, the Alzheimer's-related items of the main benchmark, all retrieval metrics.
-* **Clustering.** Several ADRD questions can come from one review (208 questions, 159 reviews); the
+* **Clustering.** Several Alzheimer's disease and dementia questions can come from one review (208 questions, 159 reviews); the
   tests treat questions as independent, which slightly understates the uncertainty.
 
 ## 4. Power and what can be confirmed
@@ -111,7 +111,7 @@ is right:
 
 An observed +1 pp arises by chance alone 23–32% of the time, so a point estimate that meets the requirement is weak
 evidence; confirming an observed +1 pp would need about 3,800–9,600 questions. With 528 questions only effects of about
-4–6 pp or more can be confirmed. For the 208-question ADRD set the standard error is 2.2–3.5 pp, the
+4–6 pp or more can be confirmed. For the 208-question Alzheimer's disease set the standard error is 2.2–3.5 pp, the
 80%-power effect 6–10 pp, and an observed +1 pp arises by chance alone 32–39% of the time.
 
 ## 5. Interpretation rules
@@ -127,7 +127,7 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
   | not met | Δ < +1.0 pp |
 
   Whichever reading applies is reported with the interval. A dev result is never reported as meeting it. On the
-  ADRD set the same rule gives a secondary reading; the held-out split stays primary.
+  Alzheimer's disease set the same rule gives a secondary reading; the held-out split stays primary.
 * **Dev versus held-out.** Dev results are exploratory (226 questions, intervals of about ±6 to ±8 points) and are
   used to find defects and to apply the pre-declared dev check, not to claim effects.
 * **Abstention and coverage.** A system that admits nothing still answers and is scored on it. For verdict accuracy the
@@ -142,20 +142,20 @@ evidence; confirming an observed +1 pp would need about 3,800–9,600 questions.
 
 ### 6.0 What each result is
 
-The research domain is Alzheimer's disease and related dementias (ADRD). Its evidence is the 208-question dementia set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
-construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the ADRD results are secondary and descriptive. The pre-declared
+The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question dementia set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
+construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the Alzheimer's disease results are secondary and descriptive. The pre-declared
 confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
-ADRD set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-only evaluation.
+Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. Nothing below is an Alzheimer's-only evaluation.
 
 | Result set | Questions | Class | Scope |
 |---|---|---|---|
 | As-of Cochrane questions, held-out split (§6.2) | 528 | completed once; pre-declared and confirmatory under the protocol of 2026-10-05 | general medicine |
-| Alzheimer's disease and related dementias, the ADRD set (§6.6) | 208 | completed once; secondary | ADRD: 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment |
+| The Alzheimer's disease set, i.e. Alzheimer's disease and related dementias (§6.6) | 208 | completed once; secondary | Alzheimer's disease and related dementias: 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment |
 | As-of Cochrane questions, development split (§6.1) | 226 | exploratory; used to find defects | general medicine |
 | Ablation arms, retrieval diagnostics, label audits (§6.2) | | secondary or descriptive | general medicine |
 | Released answers of eight other models (§6.2, §6.6) | 8 | context; other prompts, no retrieval | not a controlled comparison |
 | Earlier stages (§6.3) | | negative results of record | general medicine |
-| Alzheimer's-named part of the ADRD set (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
+| The questions of that set that name Alzheimer's disease (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
 | Alzheimer's-specific question set AD-KQA (§6.8) | | construction stopped at gate 1; no system was run on it | Alzheimer's disease |
 
 ### 6.1 Realigned study, development split (226 questions; exploratory)
@@ -238,7 +238,7 @@ without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev e
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
 earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
 estimate is reported with its interval, together with the sample size that would be needed to settle it. The
-208-question ADRD set was run afterwards, once (§6.6); it gives the same reading, with a larger and equally unconfirmed gain.
+208-question Alzheimer's disease set was run afterwards, once (§6.6); it gives the same reading, with a larger and equally unconfirmed gain.
 
 ### 6.5 Rounding in the committed analysis files
 
@@ -250,7 +250,7 @@ the outdated-verdict rate of R2V 37.7% (37.8%) and the systematic-review or meta
 (25.2%). The code now stores six decimals, and rerunning `analyze_rag2` where the frozen pools exist regenerates the files with
 exact values.
 
-### 6.6 Alzheimer's disease and related dementias (ADRD) set (secondary, run once)
+### 6.6 Alzheimer's disease and related dementias set (secondary, run once)
 
 208 questions from 159 reviews, none with a changed verdict; gold NOT ENOUGH INFORMATION 42.3%, REFUTED 32.7%, SUPPORTED
 25.0%. Pools were complete (median 20 candidates, none empty); R2 admitted at least one abstract for 177 of 208
@@ -275,7 +275,7 @@ Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mis
 age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
 `results/report_ad/REPORT.md`.
 
-### 6.7 Alzheimer's-named part of the ADRD set (exploratory; no model run)
+### 6.7 The questions of the Alzheimer's disease set that name Alzheimer's disease (exploratory; no model run)
 
 The 48 of the 208 dementia-set questions whose text names Alzheimer's disease, analysed from the answers on file
 (`python -m experiments.medchange.subgroup_ad`; `results/ad_subgroup_alzheimer.*`). The subgroup was defined after the run, by the
