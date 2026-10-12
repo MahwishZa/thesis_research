@@ -38,6 +38,10 @@ experiments/baseline/
 # Local data of the archived Alzheimer's question-set builder (publisher text); the code is in Git history, see docs/protocol.md section 8.
 experiments/adkqa/data/
 
+# A copy of the MedChange release inside the repository folder (git clone run from the repository root). The documents place it
+# beside the repository (../MedChange), but a copy here works the same; the release states no licence, so it is never committed.
+/MedChange/
+
 # Tool caches that appear when the tests are measured or linted.
 .coverage
 htmlcov/
