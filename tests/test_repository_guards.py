@@ -714,6 +714,10 @@ class SupersededScopeTests(unittest.TestCase):
         for pattern in ("_archive/", "/corpus/", "experiments/results/index", "build/", "dist/"):
             self.assertIn(pattern, body)
 
+    def test_a_copy_of_the_medchange_release_inside_the_repository_folder_cannot_be_committed(self):
+        """The release states no licence; a ``git add .`` run beside a clone made from the repository root must not pick it up."""
+        self.assertIn("/MedChange/", text(ROOT / ".gitignore").splitlines())
+
 
 class DataDocumentQuotesTheManifestsTests(unittest.TestCase):
     """``docs/data.md`` states counts by hand; they must be those of the committed manifests (one of them, 397 of 504, had a wrong denominator)."""
