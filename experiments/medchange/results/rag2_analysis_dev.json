@@ -422,7 +422,7 @@
     "mcnemar_p": 1.0,
     "confirmed": false
   },
-  "requirement": "dev estimate only (exploratory; the requirement is read on the confirmatory split)",
+  "reading": "development estimate only (exploratory; read on the held-out split)",
   "secondary": {
     "R2 vs B1": {
       "a": "R2",

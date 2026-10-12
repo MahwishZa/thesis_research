@@ -212,5 +212,5 @@
     13,
     20
   ],
-  "status": "exploratory; chosen after the run; the requirement is not read from it"
+  "status": "exploratory; chosen after the run; nothing is read from it as a finding"
 }

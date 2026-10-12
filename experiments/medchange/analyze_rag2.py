@@ -9,11 +9,11 @@ Inputs (``--data-dir``): ``benchmark.jsonl``, ``answers_<split>.jsonl`` (B0, B1)
 (``--label-audit``, for the label-stable subset). Output: ``rag2_analysis_<split>.json`` and ``.md``.
 
 Pre-declared (docs/protocol.md §1, docs/evaluation.md §5): the primary comparison is R2V - R2 over all items (exact McNemar,
-paired bootstrap 95% interval); the requirement of +1.0 pp is read as *met and confirmed* (difference >= 1.0 pp,
-p < .05, interval above 0), *met as a point estimate, not confirmed* (difference >= 1.0 pp otherwise) or
-*not met*. Secondary comparisons are Holm-corrected among themselves, the ablations likewise. On the dev split
-everything is exploratory and the requirement is never read as met. The Alzheimer's disease split ("ad") is a
-secondary held-out test, run once after the freeze; the requirement is read on it in the same way.
+paired bootstrap 95% interval), read as *confirmed* (p < .05 and the interval above 0), *positive but not confirmed* (the
+difference is above 0 otherwise) or *no evidence* (the difference is not above 0). Secondary comparisons are Holm-corrected
+among themselves, the ablations likewise. On the dev split everything is exploratory and nothing is read as a finding. The
+Alzheimer's disease split ("ad") is a secondary held-out test, run once after the freeze; the difference is read on it in the
+same way.
 """
 
 from __future__ import annotations
@@ -35,7 +35,6 @@ from .benchmark import LABELS
 HERE = Path(__file__).resolve().parent
 ARM_ORDER = ("B0", "B1", "R2", "R2-RQ", "R2-BR", "R2-NF", "R2C", "R2V", "R2V-ND")
 EVIDENCE_ARMS = ("B1",) + tuple(a for a in ARM_ORDER if a.startswith("R2"))
-REQUIREMENT_PP = 1.0
 PRIMARY = ("R2V", "R2", ("changed", "unchanged"))
 SECONDARY = (("R2", "B1", ("changed", "unchanged")), ("R2V", "B1", ("changed", "unchanged")),
              ("R2C", "R2", ("changed", "unchanged")), ("R2V", "R2C", ("changed", "unchanged")),
@@ -184,7 +183,7 @@ def retrieval_rows(items: dict, answers: dict, arms: Sequence[str], frozen: dict
 
 
 # --------------------------------------------------------------------------------------
-# Comparisons and the reading of the requirement
+# Comparisons and the reading of the primary difference
 # --------------------------------------------------------------------------------------
 
 def compare(items: dict, answers: dict, specs) -> dict:
@@ -204,17 +203,18 @@ def primary_result(items: dict, answers: dict) -> Optional[dict]:
     return dict(r, confirmed=bool(confirmed))
 
 
-def requirement_reading(primary: Optional[dict], split: str) -> str:
-    """The pre-declared reading of the +1.0 pp requirement (docs/evaluation.md §5)."""
+def primary_reading(primary: Optional[dict], split: str) -> str:
+    """The reading of the primary accuracy difference R2V - R2 (docs/evaluation.md §5): *confirmed*, *positive but not
+    confirmed* or *no evidence*."""
     if primary is None:
         return "not run"
     if split not in ("confirm", "ad"):
-        return "dev estimate only (exploratory; the requirement is read on the confirmatory split)"
-    if primary["diff_a_minus_b"] * 100 < REQUIREMENT_PP:
-        return "not met"
+        return "development estimate only (exploratory; read on the held-out split)"
     if primary["confirmed"]:
-        return "met and confirmed"
-    return "met as a point estimate, not confirmed"
+        return "confirmed"
+    if primary["diff_a_minus_b"] > 0:
+        return "positive but not confirmed"
+    return "no evidence"
 
 
 def stable_ids_from_audit(path: Optional[Path]) -> Optional[list[str]]:
@@ -245,7 +245,7 @@ def report(items: dict, answers: dict, split: str, frozen: Optional[dict] = None
            "context_truncated": truncation_rows(answers, arms),
            "verification": verifier_rows(items, answers, arms),
            "retrieval": retrieval_rows(items, answers, arms, frozen or {}, directness),
-           "primary": primary, "requirement": requirement_reading(primary, split),
+           "primary": primary, "reading": primary_reading(primary, split),
            "secondary": holm_family(compare(items, answers, SECONDARY)),
            "ablations": holm_family(compare(items, answers, ABLATIONS)),
            "case_study_alzheimers": case_study(items, answers, arms)}
@@ -295,12 +295,12 @@ def to_markdown(rep: dict) -> str:
                  f"{_pct(row.get('unchanged', {}).get('accuracy'))} | {_pct(rec[LABELS[0]])} / {_pct(rec[LABELS[1]])} / "
                  f"{_pct(rec[LABELS[2]])} | {_pct(row['macro_f1'])} | {_pct(row['predicted_share'][LABELS[2]])} | "
                  f"{_pct(row['outdated_verdict_rate_changed'])} |")
-    L += ["", "## The requirement (+1.0 pp over the adapted RAG² baseline)", ""]
+    L += ["", "## Verdict accuracy: R2V against the adapted RAG² baseline (R2)", ""]
     p = rep["primary"]
     if p:
         L += [f"R2V − R2 = **{_pp(p['diff_a_minus_b'])} pp** (95% CI {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])}; "
               f"{p['a_only_correct']} questions right only with R2V, {p['b_only_correct']} only with R2; exact McNemar "
-              f"p = {p['mcnemar_p']:.4f}).", "", f"Reading (pre-declared): **{rep['requirement']}**."]
+              f"p = {p['mcnemar_p']:.4f}).", "", f"Reading (`docs/evaluation.md` §5): **{rep['reading']}**."]
     else:
         L += ["R2V or R2 is missing: not run."]
     L += ["", "## Secondary comparisons (Holm among themselves)", ""]

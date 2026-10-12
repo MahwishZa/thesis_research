@@ -114,7 +114,7 @@ python -m experiments.medchange.analyze_rag2 --split confirm --out-dir experimen
 python -m experiments.medchange.report --split confirm --medchange-dir ..\MedChange
 ```
 
-`analyze_rag2` computes the accuracy tables, the primary test, the pre-declared reading of the 1-point requirement, the secondary
+`analyze_rag2` computes the accuracy tables, the primary test, the reading of the primary difference (confirmed, positive but not confirmed, no evidence), the secondary
 family with Holm correction and the retrieval metrics from the answers and records; it runs a model nowhere and takes seconds. It
 reads `benchmark.jsonl`, `answers_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` and, when present,
 `frozen_<split>.jsonl` from `experiments\medchange\data\` (without the frozen pools the evidence-type, age and update-window cells of

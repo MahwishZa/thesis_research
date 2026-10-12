@@ -14,8 +14,7 @@ History of the guards (each date is a change of what is true; older wording is i
 * 2026-09-24 and 2026-10-02: repository reorganised; the research was re-scoped to an as-of evaluation on MedChangeQA
   with an Alzheimer's case study, and ``DocumentationIntegrityTests`` made dangling paths and commands fail.
 * 2026-10-05: the study was realigned around an adapted RAG² baseline and an evidence-criteria verification
-  extension under a supervisor requirement of +1 percentage point; the superseded Alzheimer's-specific framework left
-  the active tree. The layout is checked by named *files*, not folders, because a laptop that pulls such a change
+  extension; the superseded Alzheimer's-specific framework left the active tree. The layout is checked by named *files*, not folders, because a laptop that pulls such a change
   still holds the gitignored ``corpus/data/`` and ``experiments/results/index/`` folders.
 * 2026-10-06: the ``_archive`` folder was removed (Git history, commit 5e03540, keeps it).
 * 2026-10-08: the code and documents of the earlier stages (recency-aware admission, evidence synthesis) left the
@@ -33,6 +32,8 @@ History of the guards (each date is a change of what is true; older wording is i
 * 2026-10-11: the pre-registered test on fresh questions (``docs/protocol.md`` §10, 850 questions) was in force and under way. The
   documents that omitted it were completed (``docs/data.md`` §3, ``docs/evaluation.md`` §6.9), the figures of ``docs/data.md`` were
   tied to the committed manifests, and a guard keeps the number of fresh questions equal in every place that states it.
+* 2026-10-12: the documents, code and committed results state what was achieved and no longer measure the accuracy against a minimum gain
+  (``StatedResultsTests``).
 """
 
 import ast
@@ -134,12 +135,11 @@ class ReadmeStructureTests(unittest.TestCase):
         body = flat(README)
         self.assertIn("not a full reproduction", body)
 
-    def test_readme_keeps_the_requirement_and_its_limits_visible(self):
-        """The requirement is read by a pre-declared rule and a 1-point difference cannot be confirmed at this
+    def test_readme_states_the_result_and_keeps_its_limits_visible(self):
+        """The README says what the extra check achieved and that the gaps cannot be told apart from chance at this
         sample size; dropping either would turn a hedged result into an unqualified claim."""
         body = flat(README)
-        for needle in ("at least 1 percentage point", "met as a point estimate, not confirmed",
-                       "cannot be told apart from chance", "only gains of roughly 4 to 6 points",
+        for needle in ("positive but not confirmed", "cannot be told apart from chance", "only gains of roughly 4 to 6 points",
                        "do not show that the extra check improves accuracy"):
             self.assertIn(needle, body)
 
@@ -160,9 +160,9 @@ class DocumentSetTests(unittest.TestCase):
         self.assertIn("forking-path ledger", body)
         self.assertIn("Freeze the design without using the one allowed prompt revision", body)
 
-    def test_the_evaluation_keeps_the_three_readings_of_the_requirement(self):
+    def test_the_evaluation_keeps_the_three_readings_of_a_paired_difference(self):
         body = flat(DOCS / "evaluation.md")
-        for reading in ("met and confirmed", "met as a point estimate, not confirmed", "not met"):
+        for reading in ("| confirmed |", "| positive but not confirmed |", "| no evidence |"):
             self.assertIn(reading, body)
 
     def test_the_methodology_states_what_is_held_constant(self):
@@ -303,12 +303,14 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
             expected = (f"| {label} | {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | "
                         f"{_p(p['mcnemar_p'])} |")
             self.assertEqual(self._row(rows, label), expected)
-            self.assertEqual(sj["requirement"], "met as a point estimate, not confirmed")
-            self.assertGreaterEqual(100 * p["diff_a_minus_b"], 1.0, "the README says the gap is above the 1-point requirement")
+            self.assertEqual(sj["reading"], "positive but not confirmed")
+            self.assertGreater(p["diff_a_minus_b"], 0, "the README says the extra check scored higher")
             self.assertLess(p["ci95"][0], 0, "the README says the range includes negative values")
             self.assertGreater(p["ci95"][1], 0)
             self.assertFalse(p["confirmed"])
-        self.assertIn("met as a point estimate, not confirmed", self.readme_flat)
+        self.assertIn(f"The extra check scored {100 * self.confirm['primary']['diff_a_minus_b']:.1f} points higher on general medicine and "
+                      f"{100 * self.ad['primary']['diff_a_minus_b']:.1f} points higher on the Alzheimer's disease set", self.readme_flat)
+        self.assertIn("they are positive but not confirmed", self.readme_flat)
 
     def test_the_sample_size_limits_in_the_readme_follow_from_the_formula(self):
         (a, b), (c, d) = detectable_range(self.confirm["items"]), detectable_range(self.ad["items"])
@@ -350,11 +352,11 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
             row = " | ".join(f"{_pct(*_rate(gen[arm][kind]))}%" for kind in ("all", "changed", "unchanged"))
             self.assertIn(row, self.evaluation, f"evaluation.md, development {arm}")
 
-    def test_the_requirement_and_its_reading_are_quoted_exactly(self):
+    def test_the_primary_difference_and_its_reading_are_quoted_exactly(self):
         p = self.confirm["primary"]
         self.assertIn(f"{_pp(p['diff_a_minus_b'])} pp | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | {_p(p['mcnemar_p'])}",
                       self.evaluation)
-        self.assertIn(self.confirm["requirement"], self.evaluation)
+        self.assertIn(self.confirm["reading"], self.evaluation)
         d = self.dev["primary"]
         self.assertIn(f"R2V − R2 = {_pp(d['diff_a_minus_b'])} pp (95% CI {_pp(d['ci95'][0])} to {_pp(d['ci95'][1])}",
                       self.evaluation)
@@ -398,8 +400,8 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         self.assertIn(f"R2V − R2 = {_pp(p['diff_a_minus_b'])} pp (95% CI {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])}; "
                       f"{p['a_only_correct']} / {p['b_only_correct']} discordant, exact McNemar p = {p['mcnemar_p']:.2f})",
                       self.evaluation_flat)
-        self.assertIn(self.ad["requirement"], self.evaluation)
-        self.assertEqual(self.ad["requirement"], "met as a point estimate, not confirmed")
+        self.assertIn(self.ad["reading"], self.evaluation)
+        self.assertEqual(self.ad["reading"], "positive but not confirmed")
 
 
 class CompletedVersusPlannedTests(unittest.TestCase):
@@ -571,6 +573,44 @@ class TerminologyTests(unittest.TestCase):
                 if re.search(r"dementia[- ]set|dementia run|dementia split", line, flags=re.IGNORECASE) and "(`ad`)" not in line:
                     offenders.append(f"{rel}:{number}")
         self.assertEqual(offenders, [])
+
+
+class StatedResultsTests(unittest.TestCase):
+    """The researcher asked (2026-10-12) that the repository state what was achieved and no longer measure it against a minimum gain
+    of one point. Differences are read as confirmed, positive but not confirmed, or no evidence (``docs/evaluation.md`` §5). The
+    dated record of the change (``docs/protocol.md`` §8 and §10.9), the log and the results of the earlier stages keep their words."""
+
+    OLD_WORDING = re.compile(
+        r"1[- ]point requirement|requirement of \+1|met as a point estimate|at least 1(?:\.0)? (?:percentage point|pp)|"
+        r"\+1(?:\.0)? (?:pp|point)|REQUIREMENT_PP|requirement_reading|\"requirement\"|\bthe requirement\b", re.IGNORECASE)
+
+    def _protocol_without_the_dated_record(self):
+        body = text(DOCS / "protocol.md")
+        start, stop = body.index("**2026-10-12, how the accuracy differences are read.**"), body.index("## 9. Earlier stages")
+        body = body[:start] + body[stop:]
+        item = body.index("7. *Wording of the readings.*")
+        return body[:item]
+
+    def test_the_current_documents_do_not_measure_the_accuracy_against_a_minimum_gain(self):
+        offenders = []
+        for rel in CURRENT_DOCS:
+            body = self._protocol_without_the_dated_record() if rel == "docs/protocol.md" else text(ROOT / rel)
+            offenders += [f"{rel}: {m.group(0)}" for m in self.OLD_WORDING.finditer(re.sub(r"\s+", " ", body))]      # a phrase may be split over two lines
+        self.assertEqual(offenders, [])
+
+    def test_the_code_and_the_committed_results_do_not_measure_the_accuracy_against_a_minimum_gain(self):
+        files = [p for p in (ROOT / "experiments" / "medchange").glob("*.py")] + [ROOT / "evaluation" / "__init__.py"]
+        files += [p for p in RESULTS.glob("*.md")] + [p for p in RESULTS.glob("*.json") if "answers" not in p.name and "rationales" not in p.name]
+        files += list((RESULTS / "report").glob("*.md")) + list((RESULTS / "report_ad").glob("*.md"))
+        offenders = [str(p.relative_to(ROOT)) for p in files if self.OLD_WORDING.search(re.sub(r"\s+", " ", text(p)))]
+        self.assertEqual(offenders, [])
+
+    def test_the_change_is_recorded_once_in_the_protocol_and_in_the_log(self):
+        body = text(DOCS / "protocol.md")
+        self.assertEqual(body.count("**2026-10-12, how the accuracy differences are read.**"), 1)
+        self.assertIn("| 2026-10-12 | Read accuracy differences by the confirmation rule alone", body)
+        self.assertIn("7. *Wording of the readings.*", body)
+        self.assertIn("## Phase 75", text(DOCS / "log.md"))
 
 
 class ActiveTreeLayoutTests(unittest.TestCase):

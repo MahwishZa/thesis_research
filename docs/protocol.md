@@ -1,6 +1,6 @@
 # Experimental Protocol
 
-This document fixes the design of the study: the requirement, the systems compared, the controls, the procedure and
+This document fixes the design of the study: the questions, the systems compared, the controls, the procedure and
 decision rules, the decisions taken after data had been seen, and the amendments. Metrics, statistics and the rules for
 reading results are in `evaluation.md`; the approach is explained step by step in `methodology.md`; the data in
 `data.md`; the commands in `reproducibility.md`.
@@ -26,14 +26,13 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 
 The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the set of 208 questions of §8, of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
-as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the Alzheimer's disease set secondary; no
+as-of Cochrane benchmark, general medicine) remain the main evidence, with the Alzheimer's disease set secondary; no
 Alzheimer's-only confirmatory evaluation exists.
 
-## 1. Requirement and questions
+## 1. Questions
 
-**Requirement (agreed with the supervisor).** The proposed system must improve verdict accuracy by at least
-1 percentage point over the selected baseline, an adapted RAG² system. The improvement must be genuine: no tuning on
-the test split, no change of metric, no selection of questions.
+**Aim.** The study asks whether the proposed system improves verdict accuracy over the selected baseline, an adapted
+RAG² system. A gain must be genuine: no tuning on the test split, no change of metric, no selection of questions.
 
 **Primary question.** On held-out Cochrane questions asked as of the newest review's date, does evidence-criteria
 verification (R2V, §4) give a higher verdict accuracy than the adapted RAG² baseline (R2)?
@@ -45,8 +44,8 @@ contribute (R2V against R2V-ND)? (d) How do the evidence sets that R2 admits dif
 (`evaluation.md` §1.3)?
 
 What can be claimed from the answers is fixed in `evaluation.md` §5: an improvement is *confirmed* only when the paired
-test says so; a difference of 1 point or more that the test cannot separate from zero is reported as a point
-estimate that meets the requirement but is not demonstrated.
+test says so; a difference that the test cannot separate from zero is reported as a point estimate with its interval
+and is not demonstrated.
 
 ## 2. Basis of the design
 
@@ -75,7 +74,7 @@ item-level inspection used the dev split only.
 5. **There was no working RAG² baseline in the pipeline.** B1 is standard retrieval; B2 was an untrained Flan-T5
    stand-in whose input was cut for 31% of the papers it admitted, and it lost 12.6 pp against B1. RAG²'s trained
    filter is not distributed and a local retraining learned only the class prior (`log.md` Phases 13–18).
-6. **The evaluation cannot confirm 1 point.** With 528 paired questions the smallest effect detectable with 80% power
+6. **The evaluation cannot confirm small gains.** With 528 paired questions the smallest effect detectable with 80% power
    is about 4–6 pp (`evaluation.md` §4). Earlier gains measured on 226 dev items did not replicate (retrieval: +8.6 pp
    on dev changed items, +3.1 pp on the held-out changed items, not significant).
 7. **Decision-side fixes tried earlier were weak.** Refitting B1's verdict (B1R) did not beat B1 (52.2% against 53.1%,
@@ -198,6 +197,7 @@ is tested on.
 | 2026-10-10 | Call the 208-question set the Alzheimer's disease set (short for Alzheimer's disease and related dementias) and always give its composition (48 name Alzheimer's disease, 156 dementia, 19 other cognitive impairment) | its composition and the results already known; no new result |
 | 2026-10-10 | Reduce N from 1,500 to 850 (through 1,000), for run time on a laptop; arms, settings and rules unchanged | power calculations and run-time estimates only; no fresh question was selected; the dementia and held-out answers were already known |
 | 2026-10-10 | Select the 850 questions, commit the list and mark §10 in force (§10.8) | the selection manifest (verdict counts and dates of the selected questions); no answer to a fresh question existed. The audit of a seeded sample of 300 reference labels followed the freeze and changed nothing |
+| 2026-10-12 | Read accuracy differences by the confirmation rule alone (confirmed / positive but not confirmed / no evidence), without a minimum size of gain; wording only, no analysis or number changed (§8) | the held-out and Alzheimer's disease set results were known; no result of the fresh test existed |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
@@ -221,10 +221,9 @@ will therefore be thinner for many of them; the pools have not been built, so th
 
 It is a fresh set: no item, label or answer of it has been seen. It is run **once, after the freeze**, with the frozen
 design (B0, B1, R2, R2C, R2V; no ablations), by `rag2_pipeline ad --go`, which has the same guards as the held-out
-phase. The requirement is read on it with the same rule (`evaluation.md` §5) as a **secondary** result; the held-out
+phase. The primary difference is read on it with the same rule (`evaluation.md` §5) as a **secondary** result; the held-out
 split stays primary. With 208 questions the standard error of R2V − R2 is about 2–3.5 pp depending on how often the
-two systems disagree, so only effects of roughly 6–10 pp can be confirmed, and an observed +1 pp arises by chance
-alone 32–39% of the time (`evaluation.md` §4). Several questions can come from one review (208 questions, 159
+two systems disagree, so only effects of roughly 6–10 pp can be confirmed (`evaluation.md` §4). Several questions can come from one review (208 questions, 159
 reviews); the paired tests treat questions as independent, which slightly understates the uncertainty (a limitation
 of the analysis). *Estimated compute:* as-of records ≈ 0.4 h (network), frozen pools with abstracts ≈ 2.9 h, B0/B1 ≈ 4.4 h,
 the realigned arms ≈ 14.4 h at the held-out run's measured rates, the judge ≈ 2.4 h; about 22 h in all, 25 h with the
@@ -239,7 +238,7 @@ regression test and a manifest-consistency test cover it. The 212-question manif
 before the change; after it the builder gives the 208-question set, which shares no Cochrane ID, study group, question
 text or review PMID with dev or held-out (computed).
 
-*Outcome, 2026-10-09.* The set was run once with the frozen design; the reading is **met as a point estimate, not
+*Outcome, 2026-10-09.* The set was run once with the frozen design; the reading is **positive but not
 confirmed** (R2V − R2 = +3.4 pp, p = 0.28). The results are in `evaluation.md` §6.6.
 
 **2026-10-09, added comparisons** (decided after the held-out and `ad` results of the local systems were known, so
@@ -248,7 +247,7 @@ scored on the held-out and dementia questions, not only the five first chosen. (
 the most frequent gold class) is reported as a no-model reference. (3) The 208 dementia labels are audited with the
 same independent judge as the main benchmark's (`label_audit --split ad`). All three are descriptive context. They are
 included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
-the requirement is read.
+the primary difference is read.
 
 **2026-10-09, an Alzheimer's-specific question set (AD-KQA): specified, built to a gate, stopped (code archived; this is the condensed record).**
 After the held-out and dementia results of every system were known, the researcher re-declared the primary evaluation as an Alzheimer's-specific
@@ -258,8 +257,8 @@ topic Alzheimer Disease, MEDLINE, English, abstract, not retracted, published fr
 source record, asked as of the source's date; the frozen design (settings hash `1743afd7045b`) unchanged; reference verdicts from the abstract's
 conclusion read by a rule, a drafting model (Qwen2.5-7B) and an independent verifier (Phi-3.5-mini); pre-declared gates for the source counts (Stage
 0), a 150-record development trial (40% survival, verdict floors of 25% each, verifier agreement, claim-only classifier, pool size, closed-book
-headroom, same-seed hash) and the full build. The requirement (R2V at least 1 point above R2) was unchanged; the power at about 300 test questions was
-computed (smallest confirmable gain about 6 points; a true +1 point confirmed with probability about 7%).
+headroom, same-seed hash) and the full build. The comparison (R2V against R2) was unchanged; the power at about 300 test questions was
+computed (smallest confirmable gain about 6 points).
 
 *Stage 0 (counts only, committed in `experiments/medchange/results/earlier_stages/adkqa/`).* Run 1: 866 eligible records, areas treatment 314,
 prevention 0, diagnosis 278, causes 216, progression 58, symptoms 171, care 20; four of seven areas reached 100, six were required: no-go. The
@@ -289,7 +288,7 @@ the source: of 99 well-formed drafts the drafter proposed SUPPORTED 88, REFUTED 
 on 77 (72 SUPPORTED, 5 REFUTED, none NOT ENOUGH INFORMATION). Letting the cue reading act only as a veto would raise survival to about 50% but leave
 about 94% of the kept questions SUPPORTED. No change of the rules can reach the verdict floors from this source. Decision of the researcher: stop. The
 test split was never drafted and no system was run on any AD-KQA question. *Consequences:* the primary evaluation reverts to the pre-declared
-held-out split of the protocol of 2026-10-05 (reading unchanged: met as a point estimate, not confirmed); the Alzheimer's disease set is secondary and its 48
+held-out split of the protocol of 2026-10-05 (reading unchanged: positive but not confirmed); the Alzheimer's disease set is secondary and its 48
 Alzheimer's-named questions are an exploratory subgroup (`evaluation.md` §6.7, from answers on file, no model run). No Alzheimer's-specific
 confirmatory evaluation exists, and none is claimed. The code, tests and long amendment text left the active tree (Git history, commit `4ab9d1b`;
 `git checkout 4ab9d1b -- experiments/adkqa` restores the code, which `evaluation.md` §6.8 summarises).
@@ -307,6 +306,16 @@ Alzheimer's disease or cognitive impairment outside the development and held-out
 Alzheimer's disease and related dementias; Alzheimer's disease is the most common dementia). Its composition is always stated (48 questions name
 Alzheimer's disease, 156 dementia, 19 other cognitive impairment), the 48 stay an exploratory subgroup, and nothing is called an Alzheimer's-only
 evaluation.
+
+**2026-10-12, how the accuracy differences are read.** At the researcher's request the documents state what was achieved and no longer measure it
+against a minimum gain of one percentage point in verdict accuracy, which §1 had set as the requirement agreed with the supervisor. Differences are read
+by the confirmation rule alone (`evaluation.md` §5): *confirmed* (p < .05 and the 95% interval above 0), *positive but not confirmed* (the difference is
+above 0 otherwise) or *no evidence*. No analysis, test, interval or p-value changed. The committed analysis files were
+regenerated from their stored numbers with the new wording, and the held-out split (+1.3 points, 95% interval −1.9 to +4.7, p = 0.51) and the
+Alzheimer's disease set (+3.4 points, −1.9 to +8.7, p = 0.28) are both *positive but not confirmed*, which the earlier wording called "met as a point
+estimate, not confirmed". The change was made after both results were known and before any result of the fresh test existed (§10.9, item 7). Earlier
+entries of this section were reworded where they named the minimum or the earlier readings (their facts and numbers are unchanged); `log.md` and the
+results of the earlier stages keep the words they were written in. The earlier wording is in Git history.
 
 ## 9. Earlier stages (completed, superseded)
 
@@ -352,7 +361,7 @@ reported as "positive but not confirmed" (point estimate above 0) or "no evidenc
 it is below 0.02, a gain of 0.02 or more is excluded.
 
 *Secondary (reported with intervals; no confirmatory claim).* REFUTED recall and the predicted-SUPPORTED share of R2V and R2; verdict accuracy of
-R2V − R2 read by the three rules of `evaluation.md` §5 (the 1-point requirement keeps its meaning and is not re-read from this test alone); changed
+R2V − R2 read by the rule of `evaluation.md` §5 (confirmed, positive but not confirmed, or no evidence);
 **R2V − R2C macro-F1 (does the verification step add anything beyond reading the evidence by criteria?)**; changed
 versus unchanged questions if both occur; the share of answers changed by R2V and how many changes fix or break an answer.
 
@@ -423,9 +432,8 @@ the analysis is blinded, and no partial answer file was opened.
 1. *Heading.* The heading of this section still read "DRAFT: not in force" after the status paragraph was replaced; corrected on 2026-10-12 (the
    freeze command now rewrites the heading too).
 2. *Terms.* "The dementia set" and "the dementia-set questions" in this section are the 208 questions of the Alzheimer's disease set (§8).
-3. *Reading of verdict accuracy.* §10.2 says verdict accuracy of R2V − R2 is read by the three rules of `evaluation.md` §5. The script printed the
-   difference, interval and p-value but not the reading; `analyze_fresh` now prints it (2026-10-12). The requirement itself is still not re-read from
-   this test alone.
+3. *Reading of verdict accuracy.* §10.2 says verdict accuracy of R2V − R2 is read by the rule of `evaluation.md` §5. The script printed the
+   difference, interval and p-value but not the reading; `analyze_fresh` now prints it (2026-10-12).
 4. *Stored decimals.* Differences, intervals, shares, recalls and macro-F1 values are stored with six decimals instead of four, so that the decision
    rule ("the lower end is above 0") follows the exact interval and cannot be reversed by rounding, and a percentage shown to one decimal is not
    rounded twice (`class_balance.py` was changed the same way: 19.0476% had been shown as 19.1%; the regenerated file shows 19.0%).
@@ -434,3 +442,7 @@ the analysis is blinded, and no partial answer file was opened.
    impaired or cognitive impairment (`ad_benchmark.AD_QUESTION`), so no question on cognitive impairment is in the fresh test either.
 6. *Cut-off.* §10.6 (5) says the reviews are older than the generator's training cut-off. Most are; 302 of the 7,880 qualifying questions are dated
    2023-04-01 or later, after the cut-off stated for the generator (§10.3).
+7. *Wording of the readings.* On 2026-10-12, at the researcher's request, the documents stopped measuring verdict accuracy against a minimum gain of one
+   point (§8, entry of that date). The secondary reading of verdict accuracy in §10.2 therefore uses the readings *confirmed*, *positive but not
+   confirmed* and *no evidence* of `evaluation.md` §5, instead of the three earlier readings that included the minimum; the condition for *confirmed* is
+   unchanged. A stray word ("changed") before the R2V − R2C item of §10.2 was removed. The reading of H1 is untouched.

@@ -12,11 +12,11 @@ Items: 208. Arms: B0, B1, R2, R2C, R2V. Protocol: `docs/protocol.md`.
 | R2C | 39.4% (33.0%–46.2%) | — | 39.4% | 84.6% / 23.5% / 25.0% | 38.0% | 21.6% | — |
 | R2V | 38.0% (31.7%–44.7%) | — | 38.0% | 71.2% / 22.1% / 30.7% | 37.2% | 28.4% | — |
 
-## The requirement (+1.0 pp over the adapted RAG² baseline)
+## Verdict accuracy: R2V against the adapted RAG² baseline (R2)
 
 R2V − R2 = **+3.4 pp** (95% CI -1.9 to +8.7; 19 questions right only with R2V, 12 only with R2; exact McNemar p = 0.2810).
 
-Reading (pre-declared): **met as a point estimate, not confirmed**.
+Reading (`docs/evaluation.md` §5): **positive but not confirmed**.
 
 ## Secondary comparisons (Holm among themselves)
 

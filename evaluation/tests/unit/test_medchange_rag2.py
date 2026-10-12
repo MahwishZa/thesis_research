@@ -389,10 +389,13 @@ def world(n=40, r2v_extra=6):
 
 
 class AnalysisTests(unittest.TestCase):
-    def test_the_requirement_is_met_at_exactly_one_point(self):
-        primary = {"diff_a_minus_b": 0.01, "ci95": [-0.02, 0.04], "mcnemar_p": 0.5, "confirmed": False}
-        self.assertEqual(A.requirement_reading(primary, "confirm"), "met as a point estimate, not confirmed")
-        self.assertEqual(A.requirement_reading(dict(primary, diff_a_minus_b=0.00999), "confirm"), "not met")
+    def test_a_positive_difference_has_no_minimum_size_and_zero_is_no_evidence(self):
+        primary = {"diff_a_minus_b": 0.001, "ci95": [-0.02, 0.04], "mcnemar_p": 0.5, "confirmed": False}
+        self.assertEqual(A.primary_reading(primary, "confirm"), "positive but not confirmed")
+        self.assertEqual(A.primary_reading(dict(primary, diff_a_minus_b=0.0), "confirm"), "no evidence")
+        self.assertEqual(A.primary_reading(dict(primary, diff_a_minus_b=-0.001), "confirm"), "no evidence")
+        self.assertEqual(A.primary_reading(dict(primary, diff_a_minus_b=0.004, ci95=[0.001, 0.007], mcnemar_p=0.01, confirmed=True), "confirm"),
+                         "confirmed")
 
     def test_a_significantly_worse_verifier_is_never_confirmed(self):
         items, answers = world(n=60, r2v_extra=0)
@@ -403,7 +406,7 @@ class AnalysisTests(unittest.TestCase):
         self.assertLess(primary["mcnemar_p"], A.ALPHA)
         self.assertLess(primary["diff_a_minus_b"], 0)
         self.assertFalse(primary["confirmed"])
-        self.assertEqual(A.requirement_reading(primary, "confirm"), "not met")
+        self.assertEqual(A.primary_reading(primary, "confirm"), "no evidence")
 
     def test_an_admitted_study_counts_for_the_update_window_only_if_it_surely_appeared_after_the_previous_version(self):
         it = dict(item("MC-1", split="confirm"))                      # previous version 2010-01-01, newest 2015-06-01
@@ -413,14 +416,15 @@ class AnalysisTests(unittest.TestCase):
         row = A.retrieval_rows({"MC-1": it}, {("MC-1", "R2"): rec}, ["R2"], {})["R2"]
         self.assertAlmostEqual(row["update_window_share"], 2 / 3, places=5)       # the first appeared no later than the previous version
 
-    def test_requirement_reading(self):
+    def test_primary_reading(self):
         primary = {"diff_a_minus_b": 0.02, "ci95": [0.005, 0.04], "mcnemar_p": 0.01, "confirmed": True}
-        self.assertEqual(A.requirement_reading(primary, "confirm"), "met and confirmed")
-        self.assertEqual(A.requirement_reading(dict(primary, confirmed=False), "confirm"),
-                         "met as a point estimate, not confirmed")
-        self.assertEqual(A.requirement_reading(dict(primary, diff_a_minus_b=0.009), "confirm"), "not met")
-        self.assertTrue(A.requirement_reading(primary, "dev").startswith("dev estimate only"))
-        self.assertEqual(A.requirement_reading(None, "confirm"), "not run")
+        self.assertEqual(A.primary_reading(primary, "confirm"), "confirmed")
+        self.assertEqual(A.primary_reading(primary, "ad"), "confirmed")
+        self.assertEqual(A.primary_reading(dict(primary, confirmed=False), "confirm"), "positive but not confirmed")
+        self.assertEqual(A.primary_reading(dict(primary, diff_a_minus_b=0.009, confirmed=False), "confirm"), "positive but not confirmed")
+        self.assertEqual(A.primary_reading(dict(primary, diff_a_minus_b=-0.02, confirmed=False), "confirm"), "no evidence")
+        self.assertTrue(A.primary_reading(primary, "dev").startswith("development estimate only"))
+        self.assertEqual(A.primary_reading(None, "confirm"), "not run")
 
     def test_report_on_a_synthetic_world(self):
         items, answers = world()
@@ -429,15 +433,16 @@ class AnalysisTests(unittest.TestCase):
         p = rep["primary"]
         self.assertAlmostEqual(p["diff_a_minus_b"], 6 / 40)
         self.assertEqual((p["a_only_correct"], p["b_only_correct"]), (6, 0))
-        self.assertEqual(rep["requirement"], "met and confirmed")
+        self.assertEqual(rep["reading"], "confirmed")
         self.assertIn("R2 vs B1", rep["secondary"])
         self.assertEqual(rep["verification"]["R2V"]["changes_fixed"], 6)
         self.assertEqual(rep["verification"]["R2V"]["changes_broke"], 0)
         self.assertEqual(rep["retrieval"]["R2"]["evidence_mix"], {"SR/MA": 0.0, "RCT": 1.0, "other": 0.0})
         self.assertEqual(rep["case_study_alzheimers"]["n"], 1)
         text = A.to_markdown(rep)
-        for needle in ("verdict accuracy", "The requirement", "Secondary comparisons", "Retrieval", "met and confirmed"):
+        for needle in ("verdict accuracy", "R2V against the adapted RAG² baseline", "Secondary comparisons", "Retrieval", "**confirmed**"):
             self.assertIn(needle, text)
+        self.assertNotIn("requirement", text.lower())
 
     def test_unsupported_answer_indicators(self):
         items, answers = world(n=10)
@@ -502,7 +507,7 @@ class PipelineTests(unittest.TestCase):
                for a, acc in (("B1", b1), ("R2", r2), ("R2V", r2v))}
         return {"generation": gen, "verification": {"R2V": {"valid_rate": valid}},
                 "primary": {"diff_a_minus_b": r2v - r2, "ci95": [-0.03, 0.07], "mcnemar_p": 0.4, "confirmed": False},
-                "secondary": {}, "requirement": "dev estimate only (exploratory)"}
+                "secondary": {}, "reading": "development estimate only (exploratory)"}
 
     def test_dev_check(self):
         self.assertEqual(RP.dev_check(self._rep())["status"], "READY")
@@ -679,9 +684,9 @@ class AlzheimersBenchmarkTests(unittest.TestCase):
             self.assertEqual([r["split"] for r in bench], ["dev", "ad", "ad", "ad"])
             self.assertEqual(json.loads((d / "m.json").read_text(encoding="utf-8"))["items"], 3)
 
-    def test_requirement_is_read_on_the_ad_split_and_the_phase_is_guarded(self):
+    def test_the_difference_is_read_on_the_ad_split_and_the_phase_is_guarded(self):
         primary = {"diff_a_minus_b": 0.02, "ci95": [-0.01, 0.05], "mcnemar_p": 0.2, "confirmed": False}
-        self.assertEqual(A.requirement_reading(primary, "ad"), "met as a point estimate, not confirmed")
+        self.assertEqual(A.primary_reading(primary, "ad"), "positive but not confirmed")
         args = mock.Mock(model_path="m.gguf", judge_path=None, n_threads="6", commit=False)
         names = [n for n, _ in RP.ad_plan(args, Path("data"), Path("results"))]
         self.assertIn("B0 and B1 answers (ad)", names)
@@ -912,7 +917,7 @@ class EndToEndFlowTests(unittest.TestCase):
             self.assertEqual(RP.design_differences(results, str(model)), [])
             rep = json.loads((results / "rag2_analysis_dev.json").read_text(encoding="utf-8"))
             self.assertEqual(rep["arms"], ["B0", "B1", "R2", "R2C", "R2V", "R2V-ND"])
-            self.assertEqual(rep["requirement"].split(" (")[0], "dev estimate only")
+            self.assertEqual(rep["reading"].split(" (")[0], "development estimate only")
             self.assertIn("label_stable", rep)
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 RP.status(data, results)

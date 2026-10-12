@@ -213,7 +213,7 @@ class CompleteRunTests(unittest.TestCase):
             written = (res / "RAG2_FINDINGS_FRESH.md").read_text(encoding="utf-8")
             self.assertEqual(written + "\n", printed)                                  # printed with print(): one more newline
             for needle in ("## Primary outcome", "## Secondary outcomes", "## Alzheimer's disease and related dementias (descriptive)",
-                           "## Label audit (sample)", "questions of the Alzheimer's disease set", "Reading by the rules of `docs/evaluation.md` §5"):
+                           "## Label audit (sample)", "questions of the Alzheimer's disease set", "Reading by the rule of `docs/evaluation.md` §5"):
                 self.assertIn(needle, written)
             self.assertNotIn("dementia questions", written)
             rep = json.loads((res / "rag2_analysis_fresh.json").read_text(encoding="utf-8"))
@@ -259,22 +259,25 @@ class CompleteRunTests(unittest.TestCase):
     def test_a_significant_p_value_or_a_positive_interval_alone_does_not_confirm_the_accuracy_difference(self):
         base = {"a": "R2V", "b": "R2", "n": 850, "a_only_correct": 5, "b_only_correct": 1}
         interval_only = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[0.005, 0.055], mcnemar_p=0.06))
-        self.assertEqual(interval_only["reading"], "met as a point estimate, not confirmed")
+        self.assertEqual(interval_only["reading"], "positive but not confirmed")
         negative = AF.accuracy_reading(dict(base, diff_a_minus_b=-0.03, ci95=[-0.05, -0.01], mcnemar_p=0.001))
-        self.assertEqual(negative["reading"], "not met")
+        self.assertEqual(negative["reading"], "no evidence")
 
-    def test_the_accuracy_difference_is_read_by_the_three_rules_of_the_evaluation(self):
+    def test_the_accuracy_difference_is_read_by_the_rule_of_the_evaluation(self):
         base = {"a": "R2V", "b": "R2", "n": 850, "a_only_correct": 1, "b_only_correct": 1}
         self.assertIsNone(AF.accuracy_reading(None))
-        self.assertEqual(AF.accuracy_reading(dict(base, diff_a_minus_b=0.005, ci95=[-0.02, 0.03], mcnemar_p=0.7))["reading"], "not met")
+        small = AF.accuracy_reading(dict(base, diff_a_minus_b=0.005, ci95=[-0.02, 0.03], mcnemar_p=0.7))      # no minimum size: any positive difference is positive
+        self.assertEqual((small["reading"], small["confirmed"]), ("positive but not confirmed", False))
         met = AF.accuracy_reading(dict(base, diff_a_minus_b=0.02, ci95=[-0.01, 0.05], mcnemar_p=0.3))
-        self.assertEqual((met["reading"], met["confirmed"]), ("met as a point estimate, not confirmed", False))
+        self.assertEqual((met["reading"], met["confirmed"]), ("positive but not confirmed", False))
         both = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[0.005, 0.055], mcnemar_p=0.01))
-        self.assertEqual((both["reading"], both["confirmed"]), ("met and confirmed", True))
+        self.assertEqual((both["reading"], both["confirmed"]), ("confirmed", True))
         wide = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[-0.001, 0.06], mcnemar_p=0.01))      # p below .05 but the interval reaches 0
-        self.assertEqual(wide["reading"], "met as a point estimate, not confirmed")
+        self.assertEqual(wide["reading"], "positive but not confirmed")
+        for diff in (0.0, -0.01):
+            self.assertEqual(AF.accuracy_reading(dict(base, diff_a_minus_b=diff, ci95=[-0.04, 0.02], mcnemar_p=0.5))["reading"], "no evidence")
 
-    def test_only_the_requirement_comparison_carries_a_reading(self):
+    def test_only_the_comparison_with_the_baseline_carries_a_reading(self):
         rep = AF.analyse(*synthetic(60), expected=60, iterations=50)
         self.assertIn("reading", rep["secondary"]["accuracy_R2V_minus_R2"])
         self.assertNotIn("reading", rep["secondary"]["accuracy_R2V_minus_R2C"])

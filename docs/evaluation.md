@@ -110,16 +110,14 @@ Paired over the same questions. The accuracy comparisons use standard-library st
 Computed with a normal approximation for n = 528; d is the share of questions on which exactly one of the two systems
 is right:
 
-| d | SE of Δ | P(Δ̂ ≥ 1 pp) if true Δ = 0 / 2 / 3 / 5 pp | P(confirmed) if true Δ = 3 / 5 pp | 80%-power effect |
-|---|---|---|---|---|
-| 0.10 | 1.4 pp | 0.23 / 0.77 / 0.93 / 1.00 | 0.59 / 0.95 | 3.9 pp |
-| 0.15 | 1.7 pp | 0.28 / 0.72 / 0.88 / 0.99 | 0.43 / 0.84 | 4.7 pp |
-| 0.25 | 2.2 pp | 0.32 / 0.68 / 0.82 / 0.97 | 0.28 / 0.63 | 6.1 pp |
+| d | SE of Δ | P(confirmed) if true Δ = 3 / 5 pp | 80%-power effect |
+|---|---|---|---|
+| 0.10 | 1.4 pp | 0.59 / 0.95 | 3.9 pp |
+| 0.15 | 1.7 pp | 0.43 / 0.84 | 4.7 pp |
+| 0.25 | 2.2 pp | 0.28 / 0.63 | 6.1 pp |
 
-An observed +1 pp arises by chance alone 23–32% of the time, so a point estimate that meets the requirement is weak
-evidence; confirming an observed +1 pp would need about 3,800–9,600 questions. With 528 questions only effects of about
-4–6 pp or more can be confirmed. For the 208-question Alzheimer's disease set the standard error is 2.2–3.5 pp, the
-80%-power effect 6–10 pp, and an observed +1 pp arises by chance alone 32–39% of the time.
+With 528 questions only effects of about 4–6 pp or more can be confirmed, so a smaller gain may be real and still go
+unconfirmed. For the 208-question Alzheimer's disease set the standard error is 2.2–3.5 pp and the 80%-power effect 6–10 pp.
 
 For the macro-F1 hypothesis of the pre-registered test the standard error of R2V − R2 is about 0.41 / √N, estimated from the intervals of
 `class_balance.py`; with N = 850 questions it is about 0.014, the chance of confirming a true gain of 0.045 (about what the held-out split
@@ -130,15 +128,16 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
 
 * **Confirmed.** A comparison is *confirmed* only if its Holm-adjusted p is below .05, its 95% interval excludes 0 and
   the difference is positive. Everything else is an estimate with an interval, not a finding.
-* **Reading of the requirement.** Δ = R2V − R2 on the held-out split, fixed before any held-out output existed:
+* **Reading of the primary accuracy difference.** Δ = R2V − R2 on the held-out split. The condition for *confirmed* is the one fixed before
+  any held-out output existed:
 
   | Reading | Condition |
   |---|---|
-  | met and confirmed | Δ ≥ +1.0 pp, McNemar p < .05 and the 95% interval above 0 |
-  | met as a point estimate, not confirmed | Δ ≥ +1.0 pp otherwise |
-  | not met | Δ < +1.0 pp |
+  | confirmed | McNemar p < .05 and the 95% interval above 0 |
+  | positive but not confirmed | Δ > 0 otherwise |
+  | no evidence | Δ ≤ 0 |
 
-  Whichever reading applies is reported with the interval. A dev result is never reported as meeting it. On the
+  Whichever reading applies is reported with the interval. A dev result is never read as a finding. On the
   Alzheimer's disease set the same rule gives a secondary reading; the held-out split stays primary.
 * **Pre-registered test.** Its hypothesis is *confirmed* only if the lower end of the 95% bootstrap interval of the macro-F1 difference R2V − R2 is above 0;
   otherwise it is *positive but not confirmed* (point estimate above 0) or *no evidence*, and when the upper end is below 0.02 a gain of 0.02 or more is
@@ -159,7 +158,7 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
 
 The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question Alzheimer's disease set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
 construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the Alzheimer's disease results are secondary and descriptive. The pre-declared
-confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
+confirmatory evidence remains the held-out split of the as-of Cochrane benchmark (general medicine); the
 Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. The macro-F1 hypothesis registered afterwards is tested on
 850 fresh general-medicine questions (§6.9). Nothing below is an Alzheimer's-only evaluation.
 
@@ -205,7 +204,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
 
 | Comparison | Difference | 95% CI | Exact McNemar p (Holm) | Reading |
 |---|---|---|---|---|
-| **R2V − R2 (primary)** | **+1.3 pp** | −1.9 to +4.7 | 0.51 | **met as a point estimate, not confirmed** |
+| **R2V − R2 (primary)** | **+1.3 pp** | −1.9 to +4.7 | 0.51 | **positive but not confirmed** |
 | R2V − R2, changed questions | +3.4 pp | −0.8 to +7.4 | 0.15 (0.89) | not confirmed |
 | R2 − B1 | +0.6 pp | −3.0 to +4.2 | 0.84 (1.0) | not confirmed |
 | R2V − B1 | +1.9 pp | −2.5 to +6.1 | 0.44 (1.0) | not confirmed |
@@ -246,16 +245,15 @@ Files: `experiments/medchange/results/earlier_stages/` (records) and `results/` 
 
 ### 6.4 Reading
 
-The point estimate of R2V over R2 on the held-out split meets the +1 point requirement, but the data cannot separate it
-from zero, and with 528 questions only effects of about 4–6 pp could be confirmed (§4): a gap of +1.3 pp or more in
-R2V's favour arises by chance alone about a quarter of the time if the two systems are equally good (one-sided
-p ≈ 0.25). R2V's gain over standard retrieval (+1.9 pp) is also unconfirmed, and R2
+R2V scored 1.3 points above R2 on the held-out split, but the data cannot separate that from zero, and with 528
+questions only effects of about 4–6 pp could be confirmed (§4): a gap of +1.3 pp or more in R2V's favour arises by chance
+alone about a quarter of the time if the two systems are equally good (one-sided p ≈ 0.25). R2V's gain over standard retrieval (+1.9 pp) is also unconfirmed, and R2
 itself is not better than standard retrieval (+0.6 pp). The controls do not isolate a single cause: R2C (criteria
 without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev estimate (−0.4 pp) and the held-out
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
 earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
-estimate is reported with its interval, together with the sample size that would be needed to settle it. The
-208-question Alzheimer's disease set was run afterwards, once (§6.6); it gives the same reading, with a larger and equally unconfirmed gain.
+estimate is reported with its interval. The 208-question Alzheimer's disease set was run afterwards, once (§6.6); it gives
+the same reading, with a larger and equally unconfirmed gain.
 
 ### 6.5 Rounding in the committed analysis files
 
@@ -282,8 +280,8 @@ questions (85.1%).
 | R2C | 39.4% (33.0–46.2) |
 | R2V | 38.0% (31.7–44.7) |
 
-Requirement: R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7; 19 / 12 discordant, exact McNemar p = 0.28), reading **met as a point
-estimate, not confirmed**; with 208 questions only 6–10 pp can be confirmed (§4). Secondary comparisons (Holm-adjusted p):
+Verdict accuracy: R2V − R2 = +3.4 pp (95% CI −1.9 to +8.7; 19 / 12 discordant, exact McNemar p = 0.28), reading **positive but not
+confirmed**; with 208 questions only 6–10 pp can be confirmed (§4). Secondary comparisons (Holm-adjusted p):
 R2 − B1 +3.8 pp (0.46), R2V − B1 +7.2 pp (0.25), R2C − R2 +4.8 pp (0.26), R2V − R2C −1.4 pp (0.68); none is confirmed.
 R2V changed 20.9% of the answers it verified (19 fixed, 12 broken); its commonest change was SUPPORTED to NOT ENOUGH
 INFORMATION (17). None of the five local systems scores above the constant answer. The released answers of the eight models score
@@ -308,9 +306,9 @@ wording of the question alone, so it is exploratory. Gold NOT ENOUGH INFORMATION
 | R2C | 31.2% (19.9–45.3) |
 | R2V | 31.2% (19.9–45.3) |
 
-Requirement-style comparison: R2V − R2 +4.2 pp (95% CI −6.2 to +14.6; 4 / 2 discordant, exact p = 0.69). Others: R2C − R2 +4.2 pp (95% CI −8.3 to +16.7; 5 / 3 discordant, exact p = 0.73); R2V − R2C +0.0 pp (95% CI −10.4 to +12.5; 4 / 4 discordant, exact p = 1.00); R2 − B1 +8.3 pp (95% CI +0.0 to +18.8; 5 / 1 discordant, exact p = 0.22); R2V − B1 +12.5 pp (95% CI +0.0 to +25.0; 8 / 2 discordant, exact p = 0.11); R2V − B0 +0.0 pp (95% CI −12.5 to +14.6; 6 / 6 discordant, exact p = 1.00).
+R2V against R2: R2V − R2 +4.2 pp (95% CI −6.2 to +14.6; 4 / 2 discordant, exact p = 0.69). Others: R2C − R2 +4.2 pp (95% CI −8.3 to +16.7; 5 / 3 discordant, exact p = 0.73); R2V − R2C +0.0 pp (95% CI −10.4 to +12.5; 4 / 4 discordant, exact p = 1.00); R2 − B1 +8.3 pp (95% CI +0.0 to +18.8; 5 / 1 discordant, exact p = 0.22); R2V − B1 +12.5 pp (95% CI +0.0 to +25.0; 8 / 2 discordant, exact p = 0.11); R2V − B0 +0.0 pp (95% CI −12.5 to +14.6; 6 / 6 discordant, exact p = 1.00).
 With 48 questions only paired differences of about 13 to 20 points or more could be confirmed (§4), so none of these is
-confirmed and the 1-point requirement is neither met nor failed here. All five systems score below the constant answer, and standard
+confirmed. All five systems score below the constant answer, and standard
 retrieval (B1) scores lowest.
 Per-verdict view of the 48 (exploratory; the metric was chosen after the accuracy results): macro-F1 R2 0.245, R2V 0.305 (R2V − R2 +0.060, 95% interval -0.037 to +0.168); REFUTED recall R2 5.3%, R2V 15.8%; B1 answers SUPPORTED 81.2% of the time against a gold share of 16.7%. R2V changed 6 of the 48 answers (4 fixed, 2 broken; `python -m experiments.medchange.ad_case_study` lists them; its outputs hold question text and are not committed).
 
@@ -345,7 +343,7 @@ The metric was chosen after these results were known, and R2C gained as much as 
 reading the evidence by criteria and not from the verification step. That is why the test includes R2C and the comparison R2V − R2C.
 
 **Secondary outcomes (no confirmatory claim).** R2V − R2C macro-F1; REFUTED recall and the share of SUPPORTED answers of R2V and R2; verdict accuracy of
-R2V − R2 and R2V − R2C, the first read by the three rules of §5; how many answers R2V changed and how many it fixed or broke; the label audit of a
+R2V − R2 and R2V − R2C, the first read by the rule of §5; how many answers R2V changed and how many it fixed or broke; the label audit of a
 seeded sample of 300 reference labels; and, descriptively, the macro-F1 difference on the Alzheimer's disease set with the statement whether its sign
 agrees. The test cannot show an effect for Alzheimer's disease: the fresh questions contain practically none (`data.md` §3).
 

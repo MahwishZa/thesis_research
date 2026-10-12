@@ -145,7 +145,7 @@ phase has run.
 |---|---|---|
 | `answers_<split>.jsonl`, `.config.json` | `generate_answers` | B0 and B1 answers with the generator record; `answers_dev.jsonl` also holds the stage-1 answers of B2, B3, P and C1 |
 | `rag2_rationales_<split>.jsonl`, `rag2_lists_<split>.ids.jsonl`, `rag2_filter_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl`, each with `.config.json` | `rag2_run` through `rag2_pipeline` | the rationales; the candidate lists without titles or abstracts (PMIDs, ranks, scores, dates); the filter judgements; the answers of R2, R2C, R2V and R2V-ND; the directness judgements |
-| `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the requirement (`dev`, `confirm`, `ad`) |
+| `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the primary difference (`dev`, `confirm`, `ad`) |
 | `rag2_analysis_fresh.json`, `RAG2_FINDINGS_FRESH.md` | `analyze_fresh` | the blinded analysis of the pre-registered test: written only when every question has an answer for R2, R2C and R2V |
 | `RAG2_DEV_REPORT.md`, `RAG2_FINDINGS.md` | `rag2_pipeline` | the development report with the dev check; the held-out findings (`RAG2_FINDINGS_AD.md` after the `ad` phase) |
 | `class_balance.json`, `.md`; `ad_subgroup_alzheimer.json`, `.md` | `class_balance`, `subgroup_ad` | per-verdict shares, recall and macro-F1 of the held-out and Alzheimer's disease runs; the 48 questions that name Alzheimer's disease (both exploratory, from answers on file) |

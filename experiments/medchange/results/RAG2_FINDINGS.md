@@ -1,12 +1,12 @@
 # Findings of the realigned study (confirmatory split, run once)
 
-Each conclusion follows the rules fixed in `docs/experimentation.md` before the run.
+Each conclusion follows the rules of `docs/evaluation.md` §5: a difference is confirmed only when its p-value is below .05 and its 95% interval excludes 0.
 
-## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)
+## Verdict accuracy: R2V against the adapted RAG² baseline (R2)
 
 R2V − R2 = +1.3 pp (95% CI -1.9 to +4.7; exact McNemar p = 0.5052).
 
-Reading: **met as a point estimate, not confirmed**.
+Reading: **positive but not confirmed**.
 
 ## Secondary comparisons (Holm)
 

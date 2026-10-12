@@ -214,12 +214,13 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
     p = rep["primary"]
     title = {"confirm": "confirmatory split", "ad": "Alzheimer's disease set, secondary test set"}[split]
     lines = [f"# Findings of the realigned study ({title}, run once)", "",
-             "Each conclusion follows the rules fixed in `docs/protocol.md` and `docs/evaluation.md` before the run.", "",
-             "## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)", ""]
+             "Each conclusion follows the rules of `docs/evaluation.md` §5: a difference is confirmed only when its p-value is below .05 and "
+             "its 95% interval excludes 0.", "",
+             "## Verdict accuracy: R2V against the adapted RAG² baseline (R2)", ""]
     if p:
         lines += [f"R2V − R2 = {100 * p['diff_a_minus_b']:+.1f} pp (95% CI {100 * p['ci95'][0]:+.1f} to "
                   f"{100 * p['ci95'][1]:+.1f}; exact McNemar p = {p['mcnemar_p']:.4f}).", "",
-                  f"Reading: **{rep['requirement']}**."]
+                  f"Reading: **{rep['reading']}**."]
     else:
         lines.append("Not run.")
     lines += ["", "## Secondary comparisons (Holm)", ""]

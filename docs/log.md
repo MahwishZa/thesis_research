@@ -1483,3 +1483,27 @@ record; the end of the fresh run (analysis, publishing, environment record, comm
 *Left as it is, and why.* The seed of `class_balance.py` is the first 8 bytes of its text, so its comparisons share one stream of resamples; the intervals are valid and the committed numbers stay (documented in the module and in `evaluation.md` §3). The
 statements about RAG² (57.7 to 64.6 on MedQA, 564 GB, Flan-T5-large) could not be rechecked from the sandbox (no access to the paper; only its abstract was confirmed: up to 6.1% over LLMs, up to 5.6% over the previous best medical RAG). The label audit of
 the Alzheimer's disease set has not been run (documented as such).
+
+## Phase 75 — The documents state what was achieved; the minimum gain is no longer used (Oct 12)
+
+The researcher asked that the repository no longer mention the improvement of at least one point that the study had been set up to meet, and that it
+state what has been achieved, not what was expected. Done for the current documents, the analysis code and the committed result files; recorded in
+`protocol.md` §8 (entry of 2026-10-12), the ledger of §7 and §10.9 (item 7).
+
+*What changed.* Differences in verdict accuracy are read by the confirmation rule alone (`evaluation.md` §5): *confirmed*, *positive but not confirmed*,
+*no evidence* (the words already used for the macro-F1 hypothesis). The README, `methodology.md`, `evaluation.md` (§4 to §6), `data.md`,
+`reproducibility.md` and `protocol.md` (§0 to §2, the amendments, §10.2) say what each run gave, with its interval, and no longer compare it with a
+minimum; the power table of `evaluation.md` §4 lost the column that gave the chance of seeing a gain of at least one point. In the code,
+`analyze_rag2.requirement_reading` became `primary_reading`, the key `requirement` of `rag2_analysis_*.json` became `reading`, and the headings of
+`rag2_analysis_*.md`, `RAG2_FINDINGS*.md`, `ad_subgroup_alzheimer.md` and `report*/REPORT.md` were reworded. `analyze_fresh` uses the same function.
+
+*What did not change.* No number, test, interval or p-value: the held-out split (+1.3 points, interval −1.9 to +4.7, p = 0.51) and the Alzheimer's disease
+set (+3.4, −1.9 to +8.7, p = 0.28) are both *positive but not confirmed*, as before in substance. The prompts, settings, arms, answer-producing code and
+the question list of the fresh test are untouched. The files above were regenerated from their stored numbers, and the diff shows only wording, with two
+exceptions that the regeneration also corrected: `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` named a document that no longer exists
+(`docs/experiment_plan.md`, `docs/experimentation.md`) and said "with about 500 questions only differences of roughly 4–6 pp can be confirmed"; they now name
+`docs/protocol.md` and give the range for the split's own size (226 questions: 6–9 pp; 528: 4–6 pp), as the code already did.
+
+*Left as written.* The earlier phases of this log, the ledger rows and the results of the earlier stages (their gate names include a threshold of one
+point, which was theirs). `protocol.md` §8 keeps one dated entry that says what was dropped and why no number moved, so that the change can be
+checked; the earlier wording is in Git history.

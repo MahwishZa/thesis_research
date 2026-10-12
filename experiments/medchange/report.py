@@ -381,8 +381,8 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
                     "same questions.")
     note.append("Local rows: Meta-Llama-3-8B-Instruct Q4_K_M on CPU, one prompt, greedy decoding.")
     if arms & {"R2", "R2V"}:
-        note.append("R2 is an adapted RAG², not a reproduction (docs/methodology.md). The requirement is read on R2V − R2 only "
-                    "(RAG2_FINDINGS.md: the difference, its interval and the pre-declared reading); differences between other rows "
+        note.append("R2 is an adapted RAG², not a reproduction (docs/methodology.md). The primary comparison is R2V − R2 "
+                    "(RAG2_FINDINGS.md: the difference, its interval and its reading); differences between other rows "
                     "of this table are descriptive, and none is confirmed. " + _context_sentence(d["systems"]))
     note.append(_constant_sentence(d["constant"]))
     note.append("Bold: best per column.")

@@ -1,6 +1,6 @@
 # Adapted RAG² and evidence-criteria verification, dev split (exploratory)
 
-Items: 226. Arms: B0, B1, R2, R2C, R2V, R2V-ND. Protocol: `docs/experiment_plan.md`.
+Items: 226. Arms: B0, B1, R2, R2C, R2V, R2V-ND. Protocol: `docs/protocol.md`.
 
 ## Generation: verdict accuracy
 
@@ -13,11 +13,11 @@ Items: 226. Arms: B0, B1, R2, R2C, R2V, R2V-ND. Protocol: `docs/experiment_plan.
 | R2V | 49.6% (43.1%–56.0%) | 42.4% | 64.0% | 65.7% / 20.4% / 45.8% | 43.8% | 35.0% | 37.8% |
 | R2V-ND | 52.2% (45.7%–58.6%) | 46.4% | 64.0% | 68.6% / 24.5% / 47.2% | 46.9% | 32.3% | 34.4% |
 
-## The requirement (+1.0 pp over the adapted RAG² baseline)
+## Verdict accuracy: R2V against the adapted RAG² baseline (R2)
 
 R2V − R2 = **-0.4 pp** (95% CI -5.8 to +4.9; 18 questions right only with R2V, 19 only with R2; exact McNemar p = 1.0000).
 
-Reading (pre-declared): **dev estimate only (exploratory; the requirement is read on the confirmatory split)**.
+Reading (`docs/evaluation.md` §5): **development estimate only (exploratory; read on the held-out split)**.
 
 ## Secondary comparisons (Holm among themselves)
 
@@ -63,4 +63,4 @@ Label-stable subset (188 items, descriptive): R2V − R2 = -1.1 pp; R2 − B1 = 
 
 Alzheimer's case study (4 items, descriptive): correct answers per arm: B0 0, B1 1, R2 2, R2C 3, R2V 3, R2V-ND 3.
 
-A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval excludes 0 and the difference is positive. With about 500 questions only differences of roughly 4–6 pp can be confirmed (docs/experiment_plan.md §7).
+A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval excludes 0 and the difference is positive. With 226 questions only differences of roughly 6–9 pp can be confirmed (docs/evaluation.md §4).

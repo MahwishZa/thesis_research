@@ -29,4 +29,4 @@ Gold verdicts: REFUTED 19, SUPPORTED 8, NOT ENOUGH INFORMATION 21. Constant answ
 
 Macro-F1, R2V − R2: +0.060 (95% interval -0.037 to +0.168). Exploratory: the metric was chosen after the accuracy results were known.
 
-With 48 questions only paired differences of about 13 to 20 points or more could be confirmed with 80% power (`evaluation.md` §4). Exploratory; chosen after the run; the requirement is not read from it. The 1-point requirement is therefore neither met nor failed here; the point estimates are descriptive.
+With 48 questions only paired differences of about 13 to 20 points or more could be confirmed with 80% power (`evaluation.md` §4). Exploratory; chosen after the run; nothing is read from it as a finding. The point estimates are descriptive.

@@ -9,9 +9,8 @@ else, so that no partial result can be seen. When the run is complete it compute
   seed ``fresh-macro-f1``); **confirmed if the lower end is above 0**, otherwise "positive but not confirmed" (point estimate above 0) or "no
   evidence"; the upper end is stated (below 0.02 excludes a gain of 0.02 or more);
 * the secondary outcomes: macro-F1 of R2V − R2C; REFUTED recall and the predicted-SUPPORTED share; verdict accuracy R2V − R2 (exact McNemar,
-  bootstrap interval) with its reading by the three rules of ``docs/evaluation.md`` §5 (not met / met as a point estimate, not confirmed /
-  met and confirmed; the requirement itself is not re-read from this test alone); how many answers R2V changed and how many it fixed or
-  broke; the label audit when it exists;
+  bootstrap interval) with its reading by the rule of ``docs/evaluation.md`` §5 (confirmed / positive but not confirmed / no evidence);
+  how many answers R2V changed and how many it fixed or broke; the label audit when it exists;
 * the descriptive comparison on the Alzheimer's disease set: the macro-F1 difference of its 208 questions from ``class_balance.json`` and
   whether its sign agrees (no confirmatory claim).
 
@@ -80,12 +79,12 @@ def read_primary(d: dict) -> dict:
 
 
 def accuracy_reading(r: Optional[dict]) -> Optional[dict]:
-    """The three-rule reading of ``docs/evaluation.md`` §5 applied to a paired accuracy difference (``scoring.paired``): *not met* below +1.0 point,
-    *met and confirmed* when McNemar's p is below .05 and the interval is above 0, otherwise *met as a point estimate, not confirmed*."""
+    """The reading of ``docs/evaluation.md`` §5 applied to a paired accuracy difference (``scoring.paired``): *confirmed* when McNemar's p is
+    below .05 and the interval is above 0, otherwise *positive but not confirmed* (difference above 0) or *no evidence*."""
     if r is None:
         return None
     confirmed = r["mcnemar_p"] < ALPHA and r["ci95"][0] > 0 and r["diff_a_minus_b"] > 0
-    return dict(r, confirmed=bool(confirmed), reading=A.requirement_reading(dict(r, confirmed=bool(confirmed)), "confirm"))
+    return dict(r, confirmed=bool(confirmed), reading=A.primary_reading(dict(r, confirmed=bool(confirmed)), "confirm"))
 
 
 def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations: int = ITERATIONS,
@@ -140,8 +139,7 @@ def to_markdown(rep: dict) -> str:
         a = s[k]
         if a:
             L.append(f"* Verdict accuracy, {lab}: {100 * a['diff_a_minus_b']:+.1f} points (95% interval {100 * a['ci95'][0]:+.1f} to {100 * a['ci95'][1]:+.1f}; "
-                     f"exact McNemar p = {a['mcnemar_p']:.4f})." + (f" Reading by the rules of `docs/evaluation.md` §5: {a['reading']} "
-                                                                    "(the 1-point requirement is not re-read from this test alone)." if "reading" in a else ""))
+                     f"exact McNemar p = {a['mcnemar_p']:.4f})." + (f" Reading by the rule of `docs/evaluation.md` §5: {a['reading']}." if "reading" in a else ""))
     L += ["", "| System | Accuracy | Macro-F1 | Predicted SUPPORTED | REFUTED recall |", "|---|---|---|---|---|"]
     for a, v in rep["arms"].items():
         L.append(f"| {a} | {100 * rep['accuracy'][a]['accuracy']:.1f}% | {v['macro_f1']:.3f} | {100 * v['predicted_share']['SUPPORTED']:.1f}% | "

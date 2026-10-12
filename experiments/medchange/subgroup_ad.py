@@ -4,7 +4,7 @@
 
 Uses the answers already on file (no model is run). The subgroup is defined by the wording of the question alone ("alzheimer",
 any case); it was chosen after the run on the set and is exploratory: 48 questions can confirm only very large differences, so
-nothing here is read as meeting the requirement. Writes ``ad_subgroup_alzheimer.json`` and ``.md`` to the results folder."""
+nothing here is read as a finding. Writes ``ad_subgroup_alzheimer.json`` and ``.md`` to the results folder."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def subgroup(data: Path, results: Path) -> dict:
             "macro_f1": {a: gen[a]["macro_f1"] for a in arms}, "predicted_share": {a: gen[a]["predicted_share"] for a in arms},
             "macro_f1_R2V_minus_R2": macro,
             "comparisons": comparisons, "detectable_range_points": list(detectable_range(len(sub))),
-            "status": "exploratory; chosen after the run; the requirement is not read from it"}
+            "status": "exploratory; chosen after the run; nothing is read from it as a finding"}
 
 
 def to_markdown(rep: dict) -> str:
@@ -75,8 +75,7 @@ def to_markdown(rep: dict) -> str:
             L.append(f"| {a} | {rep['macro_f1'][a]:.3f} | {pct(rep['predicted_share'][a]['SUPPORTED'])} | {pct(rep['recall'][a]['REFUTED'])} |")
         L += ["", f"Macro-F1, R2V − R2: {m['difference']:+.3f} (95% interval {m['ci95'][0]:+.3f} to {m['ci95'][1]:+.3f}). Exploratory: the metric was chosen after the accuracy results were known."]
     L += ["", f"With {rep['n']} questions only paired differences of about {lo} to {hi} points or more could be confirmed with 80% power "
-          f"(`evaluation.md` §4). {rep['status'].capitalize()}. The 1-point requirement is therefore neither met nor failed here; "
-          "the point estimates are descriptive."]
+          f"(`evaluation.md` §4). {rep['status'].capitalize()}. The point estimates are descriptive."]
     return "\n".join(L) + "\n"
 
 
