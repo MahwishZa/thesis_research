@@ -3,19 +3,13 @@
 ## Overview
 
 AI chatbots can give wrong medical answers, rely on studies that do not address the question, or repeat advice that newer research
-has overturned. This research tests whether a small language model on an ordinary laptop answers medical questions more correctly
-when *retrieval-augmented generation* (RAG), which looks up scientific studies before answering, adds one check of its draft against
-plain rules of evidence (for example, newer evidence takes precedence). Answers with the check are compared with an adapted published
-medical RAG method (RAG²; not a full reproduction of it), standard retrieval and no retrieval, on Cochrane-review questions asked as
-of each review's date. The research domain is Alzheimer's disease and related dementias. No improvement was confirmed in any of three
-tests, the last on 850 new questions, registered before any was answered (`docs/evaluation.md` §6.9). The full academic account is in
-the accompanying research paper: [title and link to be added].
+has overturned. This research tests whether a small language model answers medical questions more correctly when *retrieval-augmented generation* (RAG), which looks up scientific studies before answering, adds one check of its draft against plain rules of evidence (for example, newer evidence takes precedence). Answers with the check are compared with an adapted published medical RAG method (RAG²; not a full reproduction of it), standard retrieval and no retrieval, on Cochrane-review questions asked as of each review's date. 
+The research domain is Alzheimer's disease and related dementias. The full academic account is in the accompanying research paper: [title and link to be added].
 
 ## Research Objectives
 
 1. To implement and validate the proposed system using predefined evaluation metrics for retrieval and generation performance.
-2. To determine the extent to which the proposed system improves retrieval and generation performance compared with relevant
-   baseline models and existing works.
+2. To determine the extent to which the proposed system improves retrieval and generation performance compared with relevant baseline models and existing works.
 
 ## Research Results
 
