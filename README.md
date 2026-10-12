@@ -29,7 +29,7 @@ limitations and references) is in the accompanying research paper: [title and li
 
 **What was measured.** Two sets of medical-evidence questions taken from Cochrane systematic reviews, each asked as of its
 review's date so that only earlier studies can be used: 528 general-medicine questions and 208 questions on Alzheimer's disease and related dementias, of
-which 48 name Alzheimer's disease (23%), 156 name dementia and 19 other cognitive impairment. The 48 are reported as a subgroup; the 208 are not an Alzheimer's-only evaluation. Each answer is one of three verdicts
+which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither (other cognitive impairment). The 48 are reported as a subgroup; the 208 are not an Alzheimer's-only evaluation. Each answer is one of three verdicts
 (*supported*, *refuted*, *not enough information*) and counts as correct when it matches the verdict of the Cochrane review;
 *accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short).
 
@@ -56,7 +56,7 @@ language model; a second, independent model reproduces 81.4% of them on the gene
 **The pre-registered test.** The last test asked the question again on 850 new general-medicine questions, with a measure that gives each of the three verdicts the
 same weight (macro-F1). The extra check did not change it: the proposed check minus the baseline was −0.002 (95% range −0.027 to +0.023), which counts as **no evidence**
 of an improvement. Accuracy was 45.4% with the extra check and 47.2% for the baseline (−1.8 points, range −4.2 to +0.8, which cannot be told apart from chance). The gains
-seen earlier on the other two sets, which led to this test, did not repeat on new questions. Further tables, controls and the earlier approaches that did not work are in
+seen earlier on the other two sets, which led to this test, did not repeat on new questions. Further tables, controls, the earlier approaches that did not work, the answers to the research questions (§7) and the limitations (§8) are in
 `docs/evaluation.md`.
 
 ## Repository Structure
