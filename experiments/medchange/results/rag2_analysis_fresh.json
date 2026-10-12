@@ -165,6 +165,44 @@
       }
     }
   },
+  "retrieval": {
+    "arms": {
+      "R2": {
+        "n": 850,
+        "mean_admitted": 3.0,
+        "share_without_evidence": 0.18,
+        "evidence_mix": {
+          "SR/MA": 0.208856,
+          "RCT": 0.339342,
+          "other": 0.451803
+        },
+        "mean_age_years": 8.58
+      },
+      "R2C": {
+        "n": 850,
+        "mean_admitted": 3.0,
+        "share_without_evidence": 0.18,
+        "evidence_mix": {
+          "SR/MA": 0.208856,
+          "RCT": 0.339342,
+          "other": 0.451803
+        },
+        "mean_age_years": 8.58
+      },
+      "R2V": {
+        "n": 850,
+        "mean_admitted": 3.0,
+        "share_without_evidence": 0.18,
+        "evidence_mix": {
+          "SR/MA": 0.208856,
+          "RCT": 0.339342,
+          "other": 0.451803
+        },
+        "mean_age_years": 8.58
+      }
+    },
+    "single_version": 783
+  },
   "alzheimers_dementia_descriptive": {
     "n": 208,
     "macro_f1_R2V_minus_R2": {

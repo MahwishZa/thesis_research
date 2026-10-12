@@ -57,6 +57,18 @@ class GetTests(unittest.TestCase):
         self.assertEqual(len(dead), 5)
 
 
+    def test_the_json_requests_pause_like_the_xml_requests(self):
+        pauses, calls = [], []
+
+        def opener(url):
+            calls.append(url)
+            if len(calls) < 3:
+                raise OSError("reset")
+            return b'{"esearchresult": {"count": "0", "idlist": []}}'
+        EUtils(None, opener=opener, sleep=pauses.append).search("x", "2020/01/01", 5)
+        self.assertEqual(pauses, [0.34, 1, 0.34, 2, 0.34])                         # the rate limit before each attempt, then 2 ** attempt after a failure
+
+
 class EfetchTests(unittest.TestCase):
     XML = b"<PubmedArticleSet><PubmedArticle/></PubmedArticleSet>"
 

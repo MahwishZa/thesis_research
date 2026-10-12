@@ -139,6 +139,15 @@ class PipelineTests(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(RP.main(["ad", "--model-path", "m.gguf", "--dry-run"]), 2)   # no --go
 
+    def test_every_analysis_step_looks_for_the_label_audit_of_its_split(self):
+        """The label-stable subset is reported whenever the audit exists. The audit runs after the phase, so the analysis step names the file in
+        advance and a missing file is skipped (``analyze_rag2.stable_ids_from_audit``); the dev and confirm plans did this from the start, the ad plan did not."""
+        args = mock.Mock(model_path="m.gguf", judge_path=None, n_threads="6", ablations=False, no_temporal_ablation=False, commit=False)
+        for split, plan in (("dev", RP.dev_plan), ("confirm", RP.confirm_plan), ("ad", RP.ad_plan)):
+            steps = {name: action for name, action in plan(args, Path("data"), Path("results"))}
+            action = steps[f"analysis ({split})"]
+            self.assertEqual(action[action.index("--label-audit") + 1], str(Path("results") / f"label_audit_{split}.jsonl"), split)
+
 
 class FreshPhaseTests(unittest.TestCase):
     def test_the_status_line_that_puts_the_preregistration_in_force(self):

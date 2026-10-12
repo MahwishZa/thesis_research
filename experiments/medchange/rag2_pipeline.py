@@ -313,7 +313,8 @@ def ad_plan(a, data: Path, results: Path) -> list:
                                            "--model-path", a.model_path, "--n-threads", a.n_threads)),
              ("preflight (ad)", lambda: print_checks(preflight(data, "ad")))]
     steps += run_steps(a, "ad", AD_ARMS, ("R2",))
-    steps += [("analysis (ad)", py("analyze_rag2", "--split", "ad", "--out-dir", results)),
+    steps += [("analysis (ad)", py("analyze_rag2", "--split", "ad", "--out-dir", results,
+                                   "--label-audit", results / "label_audit_ad.jsonl")),
               ("publish outputs (ad)", lambda: publish(data, results, "ad")),
               ("findings (ad)", lambda: write_findings(results, "ad")),
               ("environment record", lambda: write_environment(results, "ad", a.model_path, a.judge_path))]

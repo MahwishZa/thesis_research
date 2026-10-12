@@ -22,6 +22,14 @@ Reading: **no evidence**.
 
 R2V changed 19.5% of the answers it verified: 51 fixed, 66 broken.
 
+## Retrieval (descriptive)
+
+| System | Abstracts admitted per question | Questions with none admitted | SR/MA / RCT / other | Mean age of the evidence (years) |
+|---|---|---|---|---|
+| R2, R2C, R2V | 3.0 | 18.0% | 20.9% / 33.9% / 45.2% | 8.58 |
+
+R2C and R2V read the abstracts that R2 admitted, so one row describes all three. Retrieval measures describe a mechanism; they are not outcomes. The update-window measures of the other analyses do not apply: 783 of the 850 questions come from reviews with a single version, so there is no earlier version to measure an update window from.
+
 ## Alzheimer's disease and related dementias (descriptive)
 
 The 208 questions of the Alzheimer's disease set: macro-F1, R2V − R2 = +0.080 (+0.024 to +0.135). The sign does not agree with the fresh result. Seen before the hypothesis was formed: description, not confirmation.

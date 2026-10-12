@@ -1594,3 +1594,38 @@ design-record test passes. The suite (313 tests) passes on Python 3.11, 3.12 and
 
 *Not changed, deliberately.* The folder `experiments/medchange/` and its `data/` and `results/`, the manifests, the module names that the pre-registration cites, and the flat layout of `results/` (the file names follow
 `rag2_<artifact>_<split>.<ext>`). Nothing further is planned.
+
+## Phase 79 — Second audit: the structure of the code and tests, the committed results and the research record (Oct 12)
+
+Every module, test and document was read again after the run, and the committed results were checked against the code that made them. Nothing in the frozen design, the pre-registration or any answer changed.
+
+*Verified, nothing to change.* A fresh clone of the public release (`jvladika/MedChange`, commit `474f969`) rebuilt `manifest.json`, `manifest_ad.json` and `manifest_fresh.json` byte for byte, with the
+registered item-list hash `3b684c61…`; the committed audit summaries equal the summaries of their item-level files; every recorded configuration of the R2 family equals the design record; the committed run of the
+fresh test covers exactly the 850 registered questions, once per arm; `class_balance.*`, `fresh_supply.json`, `report_confirm/`, `report_ad/` and the fresh analysis are reproduced by the current code.
+
+*Found and corrected.*
+
+| Finding | Correction |
+|---|---|
+| 19 of the modules can be run with `python -m` (commands), and the code that other modules needed lived inside them: file helpers and the model configuration in `generate_answers`, the E-utilities client in `pubmed_asof`, the metrics in `class_balance`, the measurements in `analyze_rag2`, the release reader in `headroom`, the label parser in `label_audit`, eligibility in `freeze_candidates`, the selection rules in `ad_benchmark` and `fresh_supply` | new libraries `files`, `generator`, `eutils`, `selection`, `released_answers`, `analysis`; `scoring` and `abstracts` and `prompts` gained the shared functions; no module imports a command (`LayeringTests`) |
+| two different functions were both called `file_sha256` (bytes of a model file; line-ending-normalised text of the release), three copies of `load_jsonl` existed, two copies of the candidate list (`ad_benchmark`, `fresh_supply`), two copies of the E-utilities retry loop that reached into private members of the client, two copies of the bootstrap | `files.file_sha256` and `files.text_file_sha256`, one `load_jsonl`, `selection.candidates`, `EUtils.get` and `EUtils.efetch`, `scoring.bootstrap_difference` with the two documented seedings (`prefix_rng` for `class_balance` and `ad_subgroup`, `hashed_rng` for the pre-registered analysis) |
+| the README said one test file per module, but 6 of 20 files covered several modules | 37 test files, one per module, plus `test_repository_guards.py`; `tests/fixtures.py` holds the shared synthetic data; a guard requires a test file for every module |
+| `rag2_analysis_dev.*` and `rag2_analysis_confirm.*` had been written when rates were stored with four decimals (a few cells 0.1 off, `evaluation.md` §6.5); `ad_subgroup_alzheimer.json` likewise | regenerated from the committed answers with six decimals; the four B1 retrieval figures per file, which need the frozen pools that only the laptop holds, were carried over; the same procedure with four decimals gives the committed files back byte for byte |
+| the ad plan did not name the label audit (the dev and confirm plans did) | `rag2_pipeline ad` passes `--label-audit results/label_audit_ad.jsonl`; a missing file is skipped |
+| the composition of the Alzheimer's disease set was stated as 48 + 156 + 19, which is 223, in five places | "(15 name both)" added wherever it is stated; `CompositionOfTheAlzheimersDiseaseSetTests` |
+| the note under the retrieval table of the Alzheimer's disease set said that the age column does not apply (only the update-window column does) | corrected in `analyze_rag2`, `rag2_analysis_ad.md` and `evaluation.md` §6.6 |
+| the fresh test had no description of its retrieval, the documents had no consolidated limitations and no answers to the research questions | `analyze_fresh` describes the retrieval (added after the result; `protocol.md` §10.9, item 10; every other number of the two files is unchanged), `evaluation.md` §7 (answers) and §8 (limitations), figures checked by `AnswersAndLimitationsTests` and `FreshResultQuotedTests` |
+
+*Verification.* The syntax trees (docstrings removed) of 60 moved definitions are identical to those of commit `ee07e33`; the new code (`EUtils.efetch`, `load_split`, `bootstrap_difference`, the shared
+candidate list) is covered by tests. A regression run of every command that needs no model or network (`analyze_rag2` for three splits, `analyze_fresh`, `class_balance`, `ad_subgroup`, `report` for three splits,
+`fresh_supply`, `headroom`, `ad_case_study`, `build_benchmark`, `ad_benchmark`, `fresh_benchmark`, the dry-run plans and `status`) on the full rebuilt benchmark gave byte-identical output before and after the change
+(the plan of the ad phase differs by the added flag). The suite grew from 314 to 384 tests (new tests for `files`, `eutils`, `selection`, `encoders`, `build_benchmark`, the commands `freeze_candidates`, `pubmed_asof`,
+`verdict_consistency`, `ad_subgroup`, `class_balance`, the vector metrics and the guards listed above); the line and branch coverage of the pipeline package rose from 80% to 89% (it passes on Python 3.11, 3.12 and 3.13). Twenty-one faults planted one at a time
+(a command imported by a library, a dropped line of the fresh answers, a drifting figure in a document, a changed seeding rule, an interval from the wrong percentiles, a retry that no longer pauses, ...) were all caught
+after two weak spots were closed (the pause between retries of JSON requests was untested, and one statement of the label agreement in `evaluation.md` §5 was not checked against the audit).
+
+*Not changed, deliberately.* The flat package `experiments/medchange/`: sub-packages would change every command that the documents, the environment records and this log cite. Style-only findings of the linters
+(ambiguous one-letter names, lambda assignments, import order). The data, the model files and the design.
+
+*Open (needs the researcher's computer, no manual step).* The label audit of the Alzheimer's disease set (`label_audit --split ad`, about an hour) and the analysis rerun with it; the item-level file of the fresh audit
+(`label_audit --split fresh --sample 300`, finished items are skipped); optionally `analyze_rag2` for the three splits, which must give the files already committed.

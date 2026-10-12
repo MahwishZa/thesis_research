@@ -53,6 +53,6 @@ Reading (`docs/evaluation.md` §5): **positive but not confirmed**.
 | R2C | 3.07 | 14.9% | 18.6% / 38.5% / 42.9% | 1.8% | 6.98 | 26.4% | 58.3% |
 | R2V | 3.07 | 14.9% | 18.6% / 38.5% / 42.9% | 1.8% | 6.98 | 26.4% | 58.3% |
 
-The update-window and age columns of the retrieval table do not apply to this split: almost every review has a single version, so there is no earlier version to measure an update window from.
+The update-window column of the retrieval table does not apply to this split: almost every review has a single version, so there is no earlier version to measure an update window from.
 
 A result is *confirmed* only if the p-value (Holm-adjusted in a family) is below .05, the 95% interval excludes 0 and the difference is positive. With 208 questions only differences of roughly 6–10 pp can be confirmed (docs/evaluation.md §4).

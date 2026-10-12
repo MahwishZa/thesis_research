@@ -12,7 +12,9 @@ else, so that no partial result can be seen. When the run is complete it compute
   bootstrap interval) with its reading by the rule of ``docs/evaluation.md`` §5 (confirmed / positive but not confirmed / no evidence);
   how many answers R2V changed and how many it fixed or broke; the label audit when it exists;
 * the descriptive comparison on the Alzheimer's disease set: the macro-F1 difference of its 208 questions from ``class_balance.json`` and
-  whether its sign agrees (no confirmatory claim).
+  whether its sign agrees (no confirmatory claim);
+* a description of the retrieval (abstracts admitted, questions with none, evidence mix, mean age of the evidence), added after the run
+  (``docs/protocol.md`` §10.9, item 10): it describes a mechanism, it is not an outcome and no decision depends on it.
 
 It writes ``rag2_analysis_fresh.json`` and ``RAG2_FINDINGS_FRESH.md`` to the results folder."""
 
@@ -33,6 +35,9 @@ ARMS = ("R2", "R2C", "R2V")
 EXPECTED = 850
 ITERATIONS = 10000
 PRIMARY_SEED = "fresh-macro-f1"
+#: The retrieval figures that apply to the fresh questions. The update-window figures of ``analysis.retrieval_rows`` do not: almost every fresh
+#: review has a single version, so there is no earlier version to measure an update window from.
+RETRIEVAL_FIELDS = ("n", "mean_admitted", "share_without_evidence", "evidence_mix", "mean_age_years")
 
 
 class Blinded(Exception):
@@ -86,12 +91,14 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
         "accuracy_R2V_minus_R2": accuracy_reading(paired(items, answers, "R2V", "R2", A.BOTH)),
         "accuracy_R2V_minus_R2C": paired(items, answers, "R2V", "R2C", A.BOTH)}
     verification = A.verifier_rows(items, answers, ARMS)
+    retrieval = {a: {k: row[k] for k in RETRIEVAL_FIELDS} for a, row in A.retrieval_rows(items, answers, ARMS, {}).items()}
     arms = {a: {"macro_f1": f1(a), "predicted_share": {l: round(float((pred[a] == k).mean()), DIGITS) for k, l in enumerate(LABELS)},
                 "unparsed": int((pred[a] == len(LABELS)).sum()),
                 "recall": {l: round(recall(gold, pred[a], k), DIGITS) for k, l in enumerate(LABELS)}} for a in ARMS}
     rep = {"split": "fresh", "n": len(gold), "iterations": iterations, "primary": primary, "secondary": sec, "arms": arms,
            "accuracy": {a: v["all"] for a, v in summarize(items, answers, ARMS).items()},
-           "gold_share": {l: round(float((gold == k).mean()), DIGITS) for k, l in enumerate(LABELS)}, "verification": verification}
+           "gold_share": {l: round(float((gold == k).mean()), DIGITS) for k, l in enumerate(LABELS)}, "verification": verification,
+           "retrieval": {"arms": retrieval, "single_version": sum(it["previous"]["row"] == it["newest"]["row"] for it in items.values())}}
     if class_balance:
         ad = class_balance["splits"]["ad"]["paired"]["R2V vs R2"]["macro_f1"]
         rep["alzheimers_dementia_descriptive"] = {
@@ -131,6 +138,20 @@ def to_markdown(rep: dict) -> str:
     v = rep["verification"].get("R2V")
     if v:
         L += ["", f"R2V changed {100 * v['changed_rate']:.1f}% of the answers it verified: {v['changes_fixed']} fixed, {v['changes_broke']} broken."]
+    r = rep.get("retrieval")
+    if r:
+        pct = lambda x: "—" if x is None else f"{100 * x:.1f}%"
+        rows = r["arms"]
+        same = len({json.dumps(v, sort_keys=True) for v in rows.values()}) == 1                # R2C and R2V read the abstracts that R2 admitted
+        L += ["", "## Retrieval (descriptive)", "",
+              "| System | Abstracts admitted per question | Questions with none admitted | SR/MA / RCT / other | Mean age of the evidence (years) |", "|---|---|---|---|---|"]
+        for name, row in ({"R2, R2C, R2V": rows["R2"]} if same else rows).items():
+            mix = row["evidence_mix"]
+            L.append(f"| {name} | {row['mean_admitted']} | {pct(row['share_without_evidence'])} | "
+                     f"{' / '.join(pct(mix[s]) for s in mix) if mix else '—'} | {row['mean_age_years'] if row['mean_age_years'] is not None else '—'} |")
+        L += ["", ("R2C and R2V read the abstracts that R2 admitted, so one row describes all three. " if same else "")
+              + f"Retrieval measures describe a mechanism; they are not outcomes. The update-window measures of the other analyses do not apply: "
+              f"{r['single_version']} of the {rep['n']} questions come from reviews with a single version, so there is no earlier version to measure an update window from."]
     d = rep.get("alzheimers_dementia_descriptive")
     if d:
         m = d["macro_f1_R2V_minus_R2"]

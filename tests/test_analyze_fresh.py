@@ -19,11 +19,15 @@ def synthetic(n=60, gain=True):
     items, answers = {}, {}
     for k in range(n):
         gold = labs[k % 3]
-        items[f"FR-{k:05d}"] = {"item_id": f"FR-{k:05d}", "kind": "unchanged", "newest": {"label": gold}}
+        items[f"FR-{k:05d}"] = {"item_id": f"FR-{k:05d}", "kind": "unchanged", "newest": {"label": gold, "date": "2015-06-01", "row": k},
+                                "previous": {"label": gold, "date": "2015-06-01", "row": k}}           # a review with a single version
         r2 = gold if rng.random() < 0.4 else "SUPPORTED"
         r2v = gold if (rng.random() < 0.6 if gain else r2 == gold) else "SUPPORTED"
+        admitted = ["p1", "p2", "p3"][:k % 4]                                                              # 0, 1, 2 or 3 abstracts of one trial type
         for arm, v in (("R2", r2), ("R2C", r2), ("R2V", r2v)):
-            answers[(f"FR-{k:05d}", arm)] = {"item_id": f"FR-{k:05d}", "arm": arm, "verdict": v, "text": "VERDICT", "admitted": [],
+            answers[(f"FR-{k:05d}", arm)] = {"item_id": f"FR-{k:05d}", "arm": arm, "verdict": v, "text": "VERDICT", "admitted": admitted,
+                                             "admitted_lower": ["2010-01-01"] * len(admitted), "admitted_upper": ["2010-12-31"] * len(admitted),
+                                             "admitted_stratum": ["RCT"] * len(admitted),
                                              "valid": True, "changed": arm == "R2V" and r2v != r2, "draft_verdict": r2, "fallback": None}
     return items, answers
 
@@ -88,6 +92,46 @@ class BlindedAnalysisTests(unittest.TestCase):
         self.assertIsInstance(d["sign_agrees_with_fresh"], bool)
 
 
+class RetrievalDescriptionTests(unittest.TestCase):
+    """The description of the retrieval that was added after the run (``docs/protocol.md`` §10.9, item 10)."""
+
+    def test_the_block_describes_the_admitted_abstracts_and_leaves_the_update_window_out(self):
+        rep = AF.analyse(*synthetic(60), expected=60, iterations=50)
+        r = rep["retrieval"]
+        self.assertEqual(set(r["arms"]), {"R2", "R2C", "R2V"})
+        self.assertEqual(set(r["arms"]["R2"]), set(AF.RETRIEVAL_FIELDS))
+        self.assertNotIn("update_window_share", r["arms"]["R2"])
+        self.assertEqual(r["arms"]["R2"]["n"], 60)
+        self.assertEqual(r["arms"]["R2"]["mean_admitted"], 1.5)                                # 0, 1, 2 and 3 abstracts in turn
+        self.assertEqual(r["arms"]["R2"]["share_without_evidence"], 0.25)
+        self.assertEqual(r["arms"]["R2"]["evidence_mix"], {"SR/MA": 0.0, "RCT": 1.0, "other": 0.0})
+        self.assertAlmostEqual(r["arms"]["R2"]["mean_age_years"], 4.91, places=2)              # from the midpoint of 2010 to 2015-06-01
+        self.assertEqual(r["single_version"], 60)
+
+    def test_one_row_describes_the_three_arms_when_they_read_the_same_abstracts(self):
+        text = AF.to_markdown(AF.analyse(*synthetic(60), expected=60, iterations=50))
+        self.assertIn("## Retrieval (descriptive)", text)
+        self.assertIn("| R2, R2C, R2V | 1.5 | 25.0% | 0.0% / 100.0% / 0.0% | 4.91 |", text)
+        self.assertIn("60 of the 60 questions come from reviews with a single version", text)
+        self.assertIn("they are not outcomes", text)
+
+    def test_arms_that_read_different_abstracts_get_a_row_each(self):
+        items, answers = synthetic(60)
+        answers[("FR-00003", "R2V")].update(admitted=["p1"], admitted_lower=["2010-01-01"], admitted_upper=["2010-12-31"], admitted_stratum=["RCT"])
+        text = AF.to_markdown(AF.analyse(items, answers, expected=60, iterations=50))
+        self.assertNotIn("| R2, R2C, R2V |", text)
+        for arm in ("R2", "R2C", "R2V"):
+            self.assertIn(f"| {arm} |", text)
+
+    def test_questions_without_evidence_show_no_mix_and_no_age(self):
+        items, answers = synthetic(12)
+        for key in answers:
+            answers[key].update(admitted=[], admitted_lower=[], admitted_upper=[], admitted_stratum=[])
+        rep = AF.analyse(items, answers, expected=12, iterations=50)
+        self.assertEqual((rep["retrieval"]["arms"]["R2"]["share_without_evidence"], rep["retrieval"]["arms"]["R2"]["evidence_mix"]), (1.0, None))
+        self.assertIn("| R2, R2C, R2V | 0.0 | 100.0% | — | — |", AF.to_markdown(rep))
+
+
 class CompleteRunTests(unittest.TestCase):
     """The end of the registered run: the files the analysis writes and the optional inputs it reads (exercised before the real run ends)."""
 
@@ -129,7 +173,8 @@ class CompleteRunTests(unittest.TestCase):
             code, printed, res = self._run(tmp, with_optional=False)
             self.assertEqual(code, 0)
             self.assertNotIn("Label audit", printed)
-            self.assertNotIn("descriptive)", printed)
+            self.assertNotIn("Alzheimer's disease and related dementias (descriptive)", printed)
+            self.assertIn("## Retrieval (descriptive)", printed)                       # this block needs only the answers
 
     def test_a_lower_end_exactly_at_zero_is_not_above_zero(self):
         self.assertEqual(AF.read_primary({"difference": 0.04, "ci95": [0.0, 0.08]})["reading"], "positive but not confirmed")

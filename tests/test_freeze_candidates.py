@@ -1,8 +1,15 @@
 """Freezing one candidate pool per item: the abstracts of the as-of records, eligibility, ranking and the pool hash (fake encoders; no network)."""
 
+import contextlib
 import http.client
+import io
+import json
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest import mock
 
+from experiments.medchange import freeze_candidates as FC
 from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
 from experiments.medchange.eutils import EUtils
 from experiments.medchange.freeze_candidates import fetch_abstracts, freeze_item, parse_efetch_xml, pool_hash
@@ -100,6 +107,89 @@ class FetchAbstractsTests(unittest.TestCase):
             return b"<PubmedArticleSet></PubmedArticleSet>"
         self.assertEqual(fetch_abstracts(EUtils(opener=opener, sleep=lambda s: None), [str(i) for i in range(250)]), {})
         self.assertEqual(len(calls), 3)
+
+
+
+class MainTests(unittest.TestCase):
+    """The command end to end: the abstract cache, the pools and their resumption, with a fake E-utilities server and fake encoders."""
+
+    LONG = "cranberry juice reduces recurrence of urinary infection in women. " * 6
+
+    def _xml(self):
+        body = "".join(f"<PubmedArticle><MedlineCitation><PMID>{p}</PMID><Article><ArticleTitle>Trial {p}</ArticleTitle>"
+                       f"<Abstract><AbstractText>{self.LONG}</AbstractText></Abstract></Article></MedlineCitation></PubmedArticle>" for p in ("11", "12"))
+        return f"<PubmedArticleSet>{body}</PubmedArticleSet>".encode("utf-8")
+
+    def _world(self, tmp):
+        d = Path(tmp)
+        item = {"item_id": "MC-1", "question": "Does cranberry juice prevent urinary infection?", "split": "dev", "likely_label_noise": False,
+                "newest": {"date": "2012-10-17"}, "previous": {"date": "2008-01-23"}}
+        (d / "benchmark.jsonl").write_text(json.dumps(item) + "\n", encoding="utf-8")
+        (d / "pubmed_g0").mkdir()
+        records = [{"pmid": p, "lower": "2010-01-01", "upper": "2010-01-31", "pubtypes": [], "journal": "J"} for p in ("11", "12")]
+        (d / "pubmed_g0" / "MC-1.json").write_text(json.dumps({"records": records}), encoding="utf-8")
+        return d
+
+    def _args(self, d, *extra):
+        return ["--benchmark", str(d / "benchmark.jsonl"), "--probe-dir", str(d / "pubmed_g0"), "--abstract-cache", str(d / "abstracts.jsonl"),
+                "--out", str(d / "frozen_dev.jsonl"), "--split", "dev", *extra]
+
+    def _run(self, argv, opener):
+        eu = lambda key=None: EUtils(key, opener=opener, sleep=lambda s: None)
+        with mock.patch.object(FC, "EUtils", eu), contextlib.redirect_stdout(io.StringIO()) as out:
+            return FC.main(argv), out.getvalue()
+
+    def test_abstracts_only_downloads_each_abstract_once_and_freezes_nothing(self):
+        urls = []
+
+        def opener(url):
+            urls.append(url)
+            return self._xml()
+        with TemporaryDirectory() as tmp:
+            d = self._world(tmp)
+            code, printed = self._run(self._args(d, "--abstracts-only"), opener)
+            self.assertEqual(code, 0)
+            cached = [json.loads(line) for line in (d / "abstracts.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(sorted(r["pmid"] for r in cached), ["11", "12"])
+            self.assertFalse((d / "frozen_dev.jsonl").exists())
+            self.assertIn("abstracts only", printed)
+            self.assertEqual(len(urls), 1)
+            self._run(self._args(d, "--abstracts-only"), opener)                            # the cache is complete: nothing is downloaded again
+            self.assertEqual(len(urls), 1)
+
+    def test_the_pools_are_frozen_once_and_a_rerun_finds_them_finished(self):
+        encoders = [mock.patch("experiments.medchange.encoders.medcpt_query_encoder", lambda **k: HashingEncoder()),
+                    mock.patch("experiments.medchange.encoders.medcpt_article_encoder", lambda **k: HashingEncoder()),
+                    mock.patch("experiments.medchange.encoders.MedCPTReranker", lambda **k: LexicalOverlapReranker())]
+        for patch in encoders:
+            patch.start()
+        try:
+            with TemporaryDirectory() as tmp:
+                d = self._world(tmp)
+                code, printed = self._run(self._args(d), lambda url: self._xml())
+                self.assertEqual(code, 0)
+                frozen = [json.loads(line) for line in (d / "frozen_dev.jsonl").read_text(encoding="utf-8").splitlines()]
+                self.assertEqual(len(frozen), 1)
+                self.assertEqual(sorted(c["pmid"] for c in frozen[0]["candidates"]), ["11", "12"])
+                self.assertEqual(frozen[0]["encoders"], {"query": "hashing-stub", "article": "hashing-stub", "reranker": "lexical-overlap-stub"})
+                self.assertIn("frozen pools: 1; empty: 0", printed)
+                before = (d / "frozen_dev.jsonl").read_bytes()
+                code, printed = self._run(self._args(d), lambda url: self.fail("nothing is left to download"))
+                self.assertEqual(code, 0)
+                self.assertIn("1 already frozen, 0 to do", printed)
+                self.assertEqual((d / "frozen_dev.jsonl").read_bytes(), before)
+        finally:
+            for patch in encoders:
+                patch.stop()
+
+    def test_a_missing_probe_is_reported_before_anything_is_downloaded(self):
+        with TemporaryDirectory() as tmp:
+            d = self._world(tmp)
+            (d / "pubmed_g0" / "MC-1.json").unlink()
+            with contextlib.redirect_stderr(io.StringIO()) as err:
+                code, _ = self._run(self._args(d), lambda url: self.fail("no download without a probe"))
+            self.assertEqual(code, 2)
+            self.assertIn("missing PubMed probe for MC-1", err.getvalue())
 
 
 if __name__ == "__main__":

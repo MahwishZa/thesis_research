@@ -425,7 +425,6 @@ class FreshResultQuotedTests(unittest.TestCase):
         cls.readme = " ".join(text(README).replace("**", "").split())
         evaluation = " ".join(text(DOCS / "evaluation.md").replace("**", "").split())
         cls.evaluation = evaluation.split("### 6.9", 1)[1]
-        cls.evaluation_all = evaluation
         protocol = " ".join(text(DOCS / "protocol.md").replace("**", "").replace("*", "").split())
         cls.outcome = protocol.split("### 10.10 Outcome", 1)[1]
         cls.protocol = protocol
@@ -494,6 +493,20 @@ class FreshResultQuotedTests(unittest.TestCase):
         self.assertIn(f"({v['transitions']['SUPPORTED -> NOT ENOUGH INFORMATION']} of {changed}) turned SUPPORTED into NOT ENOUGH INFORMATION", self.evaluation)
         self.assertIn(f"changed {self.pc(c['changed_rate'])} of the same answers: {c['changes_fixed']} fixed, {c['changes_broke']} broken", self.evaluation)
 
+    def test_the_evaluation_quotes_the_retrieval_description(self):
+        r = self.r["retrieval"]
+        row = r["arms"]["R2"]
+        self.assertEqual((r["arms"]["R2C"], r["arms"]["R2V"]), (row, row))                  # the three arms read the same abstracts
+        mix = row["evidence_mix"]
+        held_out = json.loads(text(RESULTS / "rag2_analysis_confirm.json"))["retrieval"]["R2"]
+        self.assertIn(f"R2 admitted {row['mean_admitted']} abstracts per question on average and none for {self.pc(row['share_without_evidence'])} of the questions "
+                      f"(held-out split: {held_out['mean_admitted']} and {self.pc(held_out['share_without_evidence'])})", self.evaluation)
+        self.assertIn(f"{self.pc(mix['SR/MA'])} are systematic reviews or meta-analyses, {self.pc(mix['RCT'])} trials and {self.pc(mix['other'])} other studies", self.evaluation)
+        self.assertIn(f"their mean age at the review date is {row['mean_age_years']} years", self.evaluation)
+        self.assertIn(f"{r['single_version']} of the {self.r['n']} questions come from reviews with a single version", self.evaluation)
+        self.assertIn("10. Description of the retrieval (2026-10-12)", self.protocol)
+        self.assertIn("## Retrieval (descriptive)", text(RESULTS / "RAG2_FINDINGS_FRESH.md"))
+
     def test_the_descriptive_comparison_and_the_label_audit_are_quoted(self):
         d = self.r["alzheimers_dementia_descriptive"]
         m = d["macro_f1_R2V_minus_R2"]
@@ -528,6 +541,109 @@ class FreshResultQuotedTests(unittest.TestCase):
         self.assertIn(f"Macro-F1, R2V − R2 = **{p['difference']:+.3f}** (95% interval {p['ci95'][0]:+.3f} to {p['ci95'][1]:+.3f}; {self.r['iterations']} bootstrap resamples).", md)
         self.assertIn(f"Reading: **{p['reading']}**.", md)
         self.assertNotIn("not met", md)
+
+
+class AnswersAndLimitationsTests(unittest.TestCase):
+    """Sections 7 (answers to the research questions) and 8 (limitations) of ``docs/evaluation.md`` are typed by hand; every figure in them is checked
+    against the committed file it comes from (2026-10-12)."""
+
+    @classmethod
+    def setUpClass(cls):
+        body = " ".join(text(DOCS / "evaluation.md").replace("**", "").split())
+        cls.s7 = body.split("## 7. Answers to the research questions", 1)[1].split("## 8. Limitations and threats to validity", 1)[0]
+        cls.s8 = body.split("## 8. Limitations and threats to validity", 1)[1]
+        load = lambda name: json.loads(text(RESULTS / name))
+        cls.confirm, cls.ad, cls.fresh = load("rag2_analysis_confirm.json"), load("rag2_analysis_ad.json"), load("rag2_analysis_fresh.json")
+        cls.report = load("report_confirm/report_data_confirm.json")
+
+    @staticmethod
+    def acc(rep, arm):
+        return _pct(*_rate(rep["generation"][arm]["all"]))
+
+    @staticmethod
+    def ci(r):
+        return f"{_pp(r['ci95'][0])} to {_pp(r['ci95'][1])}"
+
+    def test_the_sections_exist_and_answer_every_question_of_the_protocol(self):
+        for needle in ("Primary (`protocol.md` §1)", "(a)", "(b)", "(c)", "(d)", "Pre-registered", "Objective 1", "Objective 2"):
+            self.assertIn(needle, self.s7)
+        self.assertIn("(d) How do the evidence sets that R2 admits differ from those of B1?", self.s7)
+        protocol = flat(DOCS / "protocol.md")
+        for question in ("(a) Does the adapted RAG² baseline beat standard retrieval", "(b) How much of any gain comes from stating the evidence criteria alone",
+                         "(c) Does the currency criterion", "(d) How do the evidence sets that R2 admits differ from B1's"):
+            self.assertIn(question, protocol)
+
+    def test_the_three_primary_answers_are_those_of_the_committed_analyses(self):
+        c, a, f = self.confirm["primary"], self.ad["primary"], self.fresh["primary"]
+        self.assertIn(f"{self.acc(self.confirm, 'R2V')}% against {self.acc(self.confirm, 'R2')}% (528 questions): {_pp(c['diff_a_minus_b'])} points, 95% interval {self.ci(c)}, "
+                      f"exact McNemar p = {c['mcnemar_p']:.2f} (§6.2)", self.s7)
+        self.assertIn(f"{self.acc(self.ad, 'R2V')}% against {self.acc(self.ad, 'R2')}%: {_pp(a['diff_a_minus_b'])} points, {self.ci(a)}, p = {a['mcnemar_p']:.2f} (§6.6)", self.s7)
+        m = lambda arm: f"{self.fresh['arms'][arm]['macro_f1']:.3f}"
+        f3 = lambda x: f"{x:+.3f}".replace("-", "−")
+        self.assertIn(f"{m('R2V')} against {m('R2')}: {f3(f['difference'])}, 95% interval {f3(f['ci95'][0])} to {f3(f['ci95'][1])} (§6.9)", self.s7)
+        self.assertEqual((self.confirm["reading"], self.ad["reading"], f["reading"]), ("positive but not confirmed", "positive but not confirmed", "no evidence"))
+
+    def test_the_secondary_answers_quote_the_comparisons(self):
+        cs, as_ = self.confirm["secondary"], self.ad["secondary"]
+        diff = lambda r: f"{_pp(r['diff_a_minus_b'])} ({self.ci(r)})"
+        self.assertIn(f"Held-out: R2 {self.acc(self.confirm, 'R2')}%, B1 {self.acc(self.confirm, 'B1')}%, B0 {self.acc(self.confirm, 'B0')}%; R2 − B1 = {_pp(cs['R2 vs B1']['diff_a_minus_b'])} points ({self.ci(cs['R2 vs B1'])}). "
+                      f"Alzheimer's disease set: R2 {self.acc(self.ad, 'R2')}%, B1 {self.acc(self.ad, 'B1')}%, B0 {self.acc(self.ad, 'B0')}%; R2 − B1 = {diff(as_['R2 vs B1'])}", self.s7)
+        self.assertIn(f"Held-out: R2C − R2 = {diff(cs['R2C vs R2'])}, R2V − R2C = {diff(cs['R2V vs R2C'])}. Alzheimer's disease set: {diff(as_['R2C vs R2'])} and {diff(as_['R2V vs R2C'])}.", self.s7)
+        s = self.fresh["secondary"]["macro_f1_R2V_minus_R2C"]
+        f3 = lambda x: f"{x:+.3f}".replace("-", "−")
+        self.assertIn(f"Fresh macro-F1: R2V − R2C = {f3(s['difference'])} ({f3(s['ci95'][0])} to {f3(s['ci95'][1])})", self.s7)
+        self.assertIn(f"Held-out: {_pp(cs['R2V vs R2V-ND']['diff_a_minus_b'])} points ({self.ci(cs['R2V vs R2V-ND'])}); not run on the other sets", self.s7)
+        self.assertFalse(any(v["confirmed"] for v in list(cs.values()) + list(as_.values())))
+
+    def test_the_retrieval_answer_and_the_objectives_quote_the_files(self):
+        r, b = self.confirm["retrieval"]["R2"], self.confirm["retrieval"]["B1"]
+        pc = lambda x: f"{100 * x:.1f}%"
+        self.assertIn(f"R2 admits {r['mean_admitted']} abstracts per question against {b['mean_admitted']} and none for {pc(r['share_without_evidence'])} of the questions; "
+                      f"systematic reviews or meta-analyses are {pc(r['evidence_mix']['SR/MA'])} of its abstracts against {pc(b['evidence_mix']['SR/MA'])}, trials "
+                      f"{pc(r['evidence_mix']['RCT'])} against {pc(b['evidence_mix']['RCT'])}; {pc(r['directness_at_k'])} are judged direct by the independent model against {pc(b['directness_at_k'])}", self.s7)
+        p = {k: self.confirm["primary"] if k == "confirm" else self.ad["primary"] for k in ("confirm", "ad")}
+        fresh_difference = f"{self.fresh['primary']['difference']:+.3f}".replace("-", "−")
+        self.assertIn(f"{_pp(p['confirm']['diff_a_minus_b'])} and {_pp(p['ad']['diff_a_minus_b'])} points and the macro-F1 difference on new questions was {fresh_difference}", self.s7)
+        self.assertIn(f"gains of {100 * p['confirm']['ci95'][1]:.1f}, {100 * p['ad']['ci95'][1]:.1f} and {self.fresh['primary']['ci95'][1]:.3f} (macro-F1)", self.s7)
+        released = {x["name"]: x["all"]["accuracy"] for x in self.report["systems"] if x["group"].startswith("Closed-book")}
+        self.assertEqual((min(released, key=released.get), max(released.values())), ("PMC-LLaMA", released["Qwen2.5-7B"]))
+        self.assertIn(f"from {pc(min(released.values()))} (PMC-LLaMA) to {pc(max(released.values()))} (Qwen2.5-7B and GPT-4o-mini)", self.s7)
+        local = [self.confirm["generation"][a]["all"]["accuracy"] for a in ("B0", "B1", "R2", "R2C", "R2V", "R2V-ND")]
+        self.assertIn(f"the local systems ({pc(min(local))} to {pc(max(local))})", self.s7)
+
+    def test_every_statement_of_the_label_reproducibility_in_the_current_documents_is_the_audit_value(self):
+        audit = {"held-out": json.loads(text(RESULTS / "label_audit_confirm.json")), "development": json.loads(text(RESULTS / "label_audit_dev.json"))}
+        seen = 0
+        for rel in CURRENT_DOCS:
+            body = " ".join(text(ROOT / rel).replace("**", "").split())
+            for m in re.finditer(r"(\d+\.\d)% of the (held-out|development) (?:gold )?labels", body):
+                seen += 1
+                self.assertEqual(m.group(1), f"{100 * audit[m.group(2)]['agreement']:.1f}", f"{rel}: {m.group(0)}")
+        self.assertGreaterEqual(seen, 3)
+
+    def test_the_limitations_quote_the_audits_the_sample_sizes_and_the_sets(self):
+        audit = lambda split: json.loads(text(RESULTS / f"label_audit_{split}.json"))
+        pc = lambda x: f"{100 * x:.1f}%"
+        self.assertIn(f"{pc(audit('confirm')['agreement'])} of the held-out labels (kappa {audit('confirm')['kappa']}), {pc(audit('dev')['agreement'])} of the development labels and "
+                      f"{pc(audit('fresh')['agreement'])} of a sample of {audit('fresh')['n_items']} fresh labels (kappa {audit('fresh')['kappa']})", self.s8)
+        audited = (RESULTS / "label_audit_ad.json").exists()
+        self.assertEqual("have not been audited" in self.s8, not audited, "§8 must say whether the labels of the Alzheimer's disease set have been audited")
+        self.assertEqual("the label audit of the Alzheimer's disease set," in self.s8, not audited)
+        lo, hi = detectable_range(528)
+        lo2, hi2 = detectable_range(208)
+        self.assertIn(f"With 528 questions only gains of roughly {lo} to {hi} points can be confirmed, with 208 only {lo2} to {hi2}", self.s8)
+        manifests = {n: json.loads(text(PACKAGE / f"manifest{n}.json")) for n in ("", "_ad", "_fresh")}
+        ad, fresh = manifests["_ad"], manifests["_fresh"]
+        self.assertIn(f"{ad['items']} questions come from {ad['reviews']} reviews", self.s8)
+        self.assertIn(f"Of the {fresh['items']} fresh questions, {fresh['single_version']} come from reviews with a single version, and so do {ad['single_version']} of the {ad['items']} of the Alzheimer's disease set", self.s8)
+        counts = manifests[""]["counts"]["ad_related"]
+        self.assertIn(f"The main benchmark has {sum(counts.values())} Alzheimer's-related questions", self.s8)
+        changed = self.confirm["generation"]["B0"]["changed"]["n"]
+        self.assertIn(f"({changed} of the {self.confirm['items']} held-out questions)", self.s8)
+        supply = json.loads(text(RESULTS / "ad_cochrane_supply.json"))
+        self.assertIn(f"{supply['usable']} usable new reviews were found, 30 were needed", self.s8)
+        self.assertEqual(json.loads(text(RESULTS / "ad_subgroup_alzheimer.json"))["n"], 48)
+        self.assertIn("48 questions name Alzheimer's disease", self.s8)
 
 
 class CompletedVersusPlannedTests(unittest.TestCase):
@@ -677,6 +793,26 @@ class FreshTestDocumentsTests(unittest.TestCase):
             self.assertEqual(f"{round(100 * phi(gain / se - 1.96))}%", quoted)
             self.assertIn(quoted, body)
         self.assertIn(f"about {2.8 * se:.3f}", body)
+
+
+class CompositionOfTheAlzheimersDiseaseSetTests(unittest.TestCase):
+    """The set is described by the wording of its questions: 48 name Alzheimer's disease, 156 dementia, 19 neither, and 15 name both, so the
+    three numbers add up to 223, not 208. Every statement of the composition says so (2026-10-12)."""
+
+    def test_the_numbers_come_from_the_committed_files(self):
+        sub = json.loads(text(RESULTS / "ad_subgroup_alzheimer.json"))
+        self.assertEqual((sub["n"], sub["dementia_set_items"]), (48, 208))
+        self.assertEqual(48 + 156 - 15 + 19, 208)
+        self.assertIn("48 name Alzheimer's disease and 156 dementia (15 name both) and 19 name neither", flat(DOCS / "protocol.md").replace("\n", " "))
+
+    def test_every_statement_of_the_composition_gives_the_overlap(self):
+        offenders = []
+        for rel in CURRENT_DOCS:
+            body = " ".join(text(ROOT / rel).split())
+            for m in re.finditer(r"156 (?:name )?dementia", body):
+                if not body[m.end():m.end() + 20].startswith(" (15 name both)"):
+                    offenders.append(f"{rel}: {body[max(0, m.start() - 40):m.end() + 40]}")
+        self.assertEqual(offenders, [])
 
 
 class TerminologyTests(unittest.TestCase):
@@ -966,6 +1102,18 @@ class CommittedFreshRunTests(unittest.TestCase):
         judged = {r["item_id"] for r in load_jsonl(RESULTS / "rag2_filter_fresh.jsonl")}
         self.assertLessEqual(judged, set(self.IDS))                                 # a question without an eligible record has nothing to judge
         self.assertGreater(len(judged), 0.8 * 850)
+
+    def test_the_retrieval_description_is_recomputed_from_the_committed_answers(self):
+        """Mean age needs the dates of the reviews, which are not committed; the rest follows from the answers alone."""
+        described = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))["retrieval"]["arms"]["R2"]
+        by_arm = {arm: {r["item_id"]: r for r in load_jsonl(RESULTS / "rag2_answers_fresh.jsonl") if r["arm"] == arm} for arm in self.ARMS}
+        for arm in ("R2C", "R2V"):
+            self.assertEqual({i: r["admitted"] for i, r in by_arm[arm].items()}, {i: r["admitted"] for i, r in by_arm["R2"].items()}, arm)
+        counts = [len(r["admitted"]) for r in by_arm["R2"].values()]
+        self.assertEqual(round(sum(counts) / len(counts), 2), described["mean_admitted"])
+        self.assertEqual(round(sum(c == 0 for c in counts) / len(counts), 6), described["share_without_evidence"])
+        strata = [s for r in by_arm["R2"].values() for s in r["admitted_stratum"]]
+        self.assertEqual({s: round(strata.count(s) / len(strata), 6) for s in ("SR/MA", "RCT", "other")}, described["evidence_mix"])
 
     def test_the_run_used_the_generator_of_the_design_and_no_judge_model(self):
         env = json.loads(text(RESULTS / "rag2_environment_fresh.json"))

@@ -1,5 +1,7 @@
 """The Alzheimer's-named subgroup of the dementia run: its code, its committed file and the documents that quote it."""
 
+import contextlib
+import io
 import json
 import tempfile
 import unittest
@@ -36,6 +38,14 @@ class SubgroupCodeTests(unittest.TestCase):
             self.assertEqual(rep["n"], 8)
             self.assertEqual(rep["accuracy"]["R2V"]["accuracy"], 1.0)
             self.assertIn("R2V vs R2", rep["comparisons"])
+            self.assertEqual(rep["macro_f1_R2V_minus_R2"]["difference"], rep["macro_f1"]["R2V"] - rep["macro_f1"]["R2"])
+            text = G.to_markdown(rep)
+            for needle in ("(n = 8 of 10)", "| R2V |", "| R2V vs R2 |", "Macro-F1, R2V − R2:", "Exploratory"):
+                self.assertIn(needle, text)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(G.main(["--data-dir", tmp, "--results-dir", tmp]), 0)
+            self.assertEqual(json.loads((d / "ad_subgroup_alzheimer.json").read_text(encoding="utf-8"))["n"], 8)
+            self.assertEqual((d / "ad_subgroup_alzheimer.md").read_text(encoding="utf-8"), text)
 
 
 class CommittedFileTests(unittest.TestCase):

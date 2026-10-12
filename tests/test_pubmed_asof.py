@@ -1,8 +1,14 @@
 """The as-of PubMed probe: the query, the cutoff, the update window and the records proven to precede it (a fake opener; no network)."""
 
+import contextlib
+import io
 import json
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest import mock
 
+from experiments.medchange import pubmed_asof as PA
 from experiments.medchange.eutils import EUtils
 from experiments.medchange.pubmed_asof import (
     build_term, day_before, probe_item, query_terms, summarize, window_counts,
@@ -104,6 +110,45 @@ class PubMedProbeTests(unittest.TestCase):
         s = summarize(results, {"a": {"kind": "changed"}, "b": {"kind": "changed"}})
         self.assertEqual(s["changed"]["share_with_trial_or_review_in_window_top200"], 0.5)
         self.assertEqual(s["changed"]["zero_hits"], 1)
+
+
+
+class MainTests(unittest.TestCase):
+    """The command: one cached file per item, reruns that skip it, the split filter and the pre-stated G0 line (a fake E-utilities server)."""
+
+    def _benchmark(self, tmp):
+        rows = [dict(ITEM, split="dev", likely_label_noise=False, kind="changed"),
+                dict(ITEM, item_id="MC-2", split="confirm", likely_label_noise=False, kind="changed"),
+                dict(ITEM, item_id="MC-3", split="dev", likely_label_noise=True, kind="changed")]
+        path = Path(tmp) / "benchmark.jsonl"
+        path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+        return path
+
+    def _run(self, tmp, opener, *extra):
+        eu = lambda key=None: EUtils(key, opener=opener, sleep=lambda s: None)
+        argv = ["--benchmark", str(self._benchmark(tmp)), "--cache-dir", str(Path(tmp) / "cache"), "--min-hits", "1", *extra]
+        with mock.patch.object(PA, "EUtils", eu), contextlib.redirect_stdout(io.StringIO()) as out:
+            return PA.main(argv), out.getvalue()
+
+    def test_a_dev_item_is_probed_once_cached_and_judged_by_the_pre_stated_gate(self):
+        opener = FakeOpener([search(100, ["1"]), summ(("1", "2010 Mar 1", "", ["Randomized Controlled Trial"]))])
+        with TemporaryDirectory() as tmp:
+            code, printed = self._run(tmp, opener)
+            self.assertEqual(code, 0)
+            self.assertEqual(sorted(p.name for p in (Path(tmp) / "cache").iterdir()), ["MC-00001.json"])       # not the confirm item, not the noisy one
+            cached = json.loads((Path(tmp) / "cache" / "MC-00001.json").read_text(encoding="utf-8"))
+            self.assertEqual([r["pmid"] for r in cached["records"]], ["1"])
+            self.assertIn("G0 (pre-stated): >= 50% of changed items have a trial or review in the update window among the as-of candidates -> PASS", printed)
+            self.assertEqual(len(opener.urls), 2)
+            code, _ = self._run(tmp, opener)                                       # cached: no request is made (the fake has no response left)
+            self.assertEqual((code, len(opener.urls)), (0, 2))
+
+    def test_the_split_option_selects_the_items_and_all_takes_every_usable_one(self):
+        opener = FakeOpener([search(100, []), search(100, [])])
+        with TemporaryDirectory() as tmp:
+            code, _ = self._run(tmp, opener, "--split", "all")
+            self.assertEqual(code, 0)
+            self.assertEqual(sorted(p.name for p in (Path(tmp) / "cache").iterdir()), ["MC-00001.json", "MC-2.json"])
 
 
 if __name__ == "__main__":

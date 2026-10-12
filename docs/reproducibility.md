@@ -40,12 +40,18 @@ python -m pyflakes experiments tests                  # optional static check (p
 ```
 
 The suite needs neither torch nor transformers nor network: model-dependent code is exercised through interfaces and fake
-models, and the realigned pipeline is run end to end on fakes in `tests/test_rag2.py`. It passes in a fresh virtual
+models, and the realigned pipeline is run end to end on fakes in `tests/test_rag2_pipeline.py`. It passes in a fresh virtual
 environment that holds only numpy, with outbound socket connections blocked (one figure test is skipped there because
 matplotlib is an optional extra), and in a fresh clone of the repository (the dated checks are in `log.md`).
 `check_hermetic` fails if any file in the repository, ignored files included, was created, modified or deleted by the suite.
 `pyflakes` reports one intentional availability import in `encoders.py`. Real-model code paths cannot be tested without the
 models; they were exercised only by the researcher's smoke test and runs.
+
+There is one test file per module (`tests/test_<module>.py`; `python -m unittest tests.test_scoring` runs one of them), the guards that tie the
+documents and the committed results to the code are in `tests/test_repository_guards.py`, and `tests/fixtures.py` holds the synthetic data the tests
+share. One guard is skipped unless it is asked for: with a clone of the MedChange release it rebuilds the three question sets and requires their
+manifests to equal the committed ones byte for byte (a few seconds; PowerShell: `$env:MEDCHANGE_DIR = "..\MedChange"` before the command, bash:
+`MEDCHANGE_DIR=../MedChange python -m unittest tests.test_repository_guards`). It passed on 2026-10-12 against a fresh clone of the public release.
 
 ## 3. Rebuilding the data (once)
 

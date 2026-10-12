@@ -194,7 +194,7 @@ is tested on.
 | 2026-10-09 | Draft a pre-registered confirmatory test of the verification effect on fresh as-of questions (§10) | the exploratory per-verdict analysis of the held-out and dementia answers was seen and gave the hypothesis; the test uses questions outside every existing split; nothing was selected or run |
 | 2026-10-09 | Fix N = 1,500 for the draft and add the criteria control R2C and the comparison R2V − R2C | the per-verdict analysis of the dementia answers, where R2C gained as much as R2V (R2V − R2C = −0.008); the held-out and dementia answers; no fresh question exists |
 | 2026-10-10 | Count more possible Alzheimer's disease data: new Cochrane reviews (7 usable; rule fixed beforehand: 30 to build, 20 to 29 a pilot) and questions on other neurodegenerative diseases among the unused ones (25); build nothing (§8) | counts only: no abstract, question text, label or answer of any new item was read |
-| 2026-10-10 | Call the 208-question set the Alzheimer's disease set (short for Alzheimer's disease and related dementias) and always give its composition (48 name Alzheimer's disease, 156 dementia, 19 other cognitive impairment) | its composition and the results already known; no new result |
+| 2026-10-10 | Call the 208-question set the Alzheimer's disease set (short for Alzheimer's disease and related dementias) and always give its composition (48 name Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment) | its composition and the results already known; no new result |
 | 2026-10-10 | Reduce N from 1,500 to 850 (through 1,000), for run time on a laptop; arms, settings and rules unchanged | power calculations and run-time estimates only; no fresh question was selected; the dementia and held-out answers were already known |
 | 2026-10-10 | Select the 850 questions, commit the list and mark §10 in force (§10.8) | the selection manifest (verdict counts and dates of the selected questions); no answer to a fresh question existed. The audit of a seeded sample of 300 reference labels followed the freeze and changed nothing |
 | 2026-10-12 | Read accuracy differences by the confirmation rule alone (confirmed / positive but not confirmed / no evidence), without a minimum size of gain; wording only, no analysis or number changed (§8) | the held-out and Alzheimer's disease set results were known; no result of the fresh test existed |
@@ -304,7 +304,7 @@ prion disease; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 7 name Al
 (`results/fresh_supply.json`): too few for a stratum, so none was added. The 208-question set already holds every MedRevQA question on dementia,
 Alzheimer's disease or cognitive impairment outside the development and held-out splits; it is called the **Alzheimer's disease set** (short for
 Alzheimer's disease and related dementias; Alzheimer's disease is the most common dementia). Its composition is always stated (48 questions name
-Alzheimer's disease, 156 dementia, 19 other cognitive impairment), the 48 stay an exploratory subgroup, and nothing is called an Alzheimer's-only
+Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment), the 48 stay an exploratory subgroup, and nothing is called an Alzheimer's-only
 evaluation.
 
 **2026-10-12, how the accuracy differences are read.** At the researcher's request the documents state what was achieved and no longer measure it
@@ -450,10 +450,14 @@ the analysis is blinded, and no partial answer file was opened.
    retries after a reset connection as well as after a timeout or a URL error (a wider list of network errors; the records fetched are the same) and closes
    the file it reads; `freeze_candidates.py` closes the file it reads and prints "abstracts only" in that mode; the docstrings of `encoders.py` and
    the evidence-type module of stage 1 no longer describe the removed corpus. The eight modules that produce the answers (`rag2`, `rag2_run`, `prompts`, `arms`,
-   `generate_answers`, `abstracts`, `benchmark` and `runner`, now `pipeline_support`) are byte-identical to the freeze commit `a303705`, and so are the manifests and the design record.
+   `generate_answers`, `abstracts`, `benchmark` and `runner`, now `pipeline_support`) were byte-identical to the freeze commit `a303705` when the run started (commit `3c61751`), and so are the manifests and the design record.
 9. *Final wording of the findings (2026-10-12).* The findings written by the pipeline at the end of the run carried the earlier reading text of the accuracy
    difference ("not met", with a sentence about the minimum of item 7). The two files `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` were regenerated from
    the same answers with the wording of item 7 (commit `1b2319d`); the only differences are that reading text in each file. Every number is the same.
+10. *Description of the retrieval (2026-10-12).* After the result was known, `analyze_fresh` was extended to describe what the three arms retrieved: the abstracts
+    admitted per question, the share of questions with none, the evidence-type mix and the mean age of the evidence (descriptive, `evaluation.md` §6.9; §10.2 did not
+    list it). `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` were regenerated from the same answers; the only difference is the added block `retrieval`, and
+    every other number is identical. No outcome and no decision depends on it.
 
 ### 10.10 Outcome (2026-10-12)
 
@@ -463,4 +467,6 @@ The test was run once, with the frozen design, and analysed blind by `analyze_fr
 (the upper end is 0.023), a gain as large as the held-out estimate (+0.045) is. The secondary outcomes, the descriptive comparison on the Alzheimer's disease set (+0.080,
 its sign differs) and the label audit are in `evaluation.md` §6.9 and `results/RAG2_FINDINGS_FRESH.md`. The run took about 66 hours on the clock (58 hours of work and an
 8-hour pause of the process, most likely the laptop sleeping), against the estimate of 57 to 68 hours (§10.5); the step times are in `log.md`, Phase 77. After the run the code was reorganised (folders and names only; `log.md`, Phase 78): the code that produced the answers is the code at commit `3c61751`, and the
-changes to it since are import lines, the name of one findings file and one unused class that was deleted (an AST comparison in Phase 78 shows nothing else).
+changes to it since are import lines, the name of one findings file and one unused class that was deleted (an AST comparison in Phase 78 shows nothing else). A second
+reorganisation moved the functions that several commands share out of the command modules into libraries (`log.md`, Phase 79): every moved definition is AST-identical to the one
+that produced the answers, and the analyses, tables, manifests and plans regenerated afterwards are byte-identical.
