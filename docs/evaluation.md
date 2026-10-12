@@ -59,7 +59,7 @@ objective of the first pilot, so the proposed system would have won it by constr
   This measures reproducibility, not medical truth: two models can share a bias. No clinician has validated the labels. The audit
   covers the development and held-out splits and, for the pre-registered test, a seeded sample of 300 fresh questions (§6.9); the audit of the Alzheimer's disease
   set is run separately (`label_audit --split ad`), and until it exists that analysis has no label-stable subset.
-* **Stated-verdict consistency** (`consistency_auto.py`). On a seeded sample of standard answers, an independent judge
+* **Stated-verdict consistency** (`verdict_consistency.py`). On a seeded sample of standard answers, an independent judge
   states which verdict the answer expresses; its agreement with the parsed verdict is a diagnostic of the parser.
 
 ### 1.5 Metrics not used
@@ -77,7 +77,7 @@ medical evidence, and clinician validation is a stated limitation.
   same evidence is read); the completed stage-1 and stage-2 systems (negative results of record).
 * **Existing models (context only).** The benchmark authors released the closed-book answers of eight other language models
   (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3, OLMo-13B, BioMistral, PMC-LLaMA) to these questions. They are scored with the same
-  rule on the same questions and shown beside the local systems (`results/report/REPORT.md`, `results/report_ad/REPORT.md`). They differ in size,
+  rule on the same questions and shown beside the local systems (`results/report_confirm/REPORT.md`, `results/report_ad/REPORT.md`). They differ in size,
   training and prompt and use no retrieval, so they place the local 8B system among existing models; they are not a
   controlled comparison and are not tested.
 * **Published methods.** RAG² as published is not comparable (different task, scale, corpus and filter); the adapted
@@ -228,7 +228,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
   8B systems (46.6–50.0%) are below the five best, level with OLMo-13B at best and above the two medical models.
 
 Full tables: `experiments/medchange/results/rag2_analysis_confirm.md`, `RAG2_FINDINGS.md`,
-`results/report/REPORT.md`.
+`results/report_confirm/REPORT.md`.
 
 ### 6.3 Earlier stages (completed, superseded)
 
@@ -241,7 +241,7 @@ Full tables: `experiments/medchange/results/rag2_analysis_confirm.md`, `RAG2_FIN
 | Label audit, dev | agreement 83.2%, kappa 0.7422; 188 of 226 questions label-stable | |
 | Stated-verdict consistency | parse rate 100% (dev 0 of 1,356 unparsed); the independent judge agrees with the stated verdict on 99.0% (dev) and 97.7% (held-out, 399 sampled) | diagnostic |
 
-Files: `experiments/medchange/results/earlier_stages/` (records) and `results/` (`label_audit_*`, `consistency_auto_*`).
+Files: `experiments/medchange/results/earlier_stages/` (records) and `results/` (`label_audit_*`, `verdict_consistency_*`).
 
 ### 6.4 Reading
 
@@ -293,7 +293,7 @@ age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FI
 ### 6.7 The questions of the Alzheimer's disease set that name Alzheimer's disease (exploratory; no model run)
 
 The 48 of the 208 questions of the Alzheimer's disease set whose text names Alzheimer's disease, analysed from the answers on file
-(`python -m experiments.medchange.subgroup_ad`; `results/ad_subgroup_alzheimer.*`). The subgroup was defined after the run, by the
+(`python -m experiments.medchange.ad_subgroup`; `results/ad_subgroup_alzheimer.*`). The subgroup was defined after the run, by the
 wording of the question alone, so it is exploratory. Gold NOT ENOUGH INFORMATION 21, REFUTED
 19, SUPPORTED 8.
 

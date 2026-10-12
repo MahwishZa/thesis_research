@@ -8,7 +8,7 @@ import numpy as np
 
 from experiments.medchange import class_balance as C
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 REP = json.loads((ROOT / "experiments" / "medchange" / "results" / "class_balance.json").read_text(encoding="utf-8"))
 
 

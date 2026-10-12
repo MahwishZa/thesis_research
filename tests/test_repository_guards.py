@@ -44,7 +44,7 @@ from pathlib import Path
 
 from experiments.medchange.scoring import detectable_range, wilson
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS = ROOT / "docs"
 RESULTS = ROOT / "experiments" / "medchange" / "results"
@@ -66,7 +66,7 @@ CURRENT_DOCS = ("README.md", "docs/data.md", "docs/methodology.md", "docs/protoc
 GENERATED_PREFIXES = (
     "experiments/medchange/data", "experiments/medchange/manifest_fresh", "experiments/medchange/results/rag2_", "experiments/medchange/results/RAG2_",
     "experiments/medchange/results/answers_", "experiments/medchange/results/label_audit_",
-    "experiments/medchange/results/consistency_auto_",
+    "experiments/medchange/results/verdict_consistency_",
 )
 
 
@@ -185,7 +185,7 @@ class DocumentSetTests(unittest.TestCase):
     def test_there_are_no_readme_files_in_the_subfolders(self):
         """The README at the root is the only one. Only the tracked folders are searched: a computer that built the
         first design also holds ignored folders (``corpus/``, ``_archive/``) with files of their own."""
-        found = sorted(str(p.relative_to(ROOT)) for folder in ("docs", "src", "evaluation", "experiments")
+        found = sorted(str(p.relative_to(ROOT)) for folder in ("docs", "src", "evaluation", "tests", "experiments")
                        for p in (ROOT / folder).rglob("README.md")
                        if "data" not in p.relative_to(ROOT).parts[:3] and "baseline" not in p.relative_to(ROOT).parts[:2])
         self.assertEqual(found, [])
@@ -275,7 +275,7 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         cls.dev = json.loads(text(RESULTS / "rag2_analysis_dev.json"))
         cls.ad = json.loads(text(RESULTS / "rag2_analysis_ad.json"))
         cls.audit = json.loads(text(RESULTS / "label_audit_confirm.json"))
-        cls.report = json.loads(text(RESULTS / "report" / "report_data_confirm.json"))
+        cls.report = json.loads(text(RESULTS / "report_confirm" / "report_data_confirm.json"))
         cls.report_ad = json.loads(text(RESULTS / "report_ad" / "report_data_ad.json"))
         cls.readme = text(README).replace("**", "")
         cls.readme_flat = " ".join(cls.readme.split())
@@ -601,7 +601,7 @@ class StatedResultsTests(unittest.TestCase):
     def test_the_code_and_the_committed_results_do_not_measure_the_accuracy_against_a_minimum_gain(self):
         files = [p for p in (ROOT / "experiments" / "medchange").glob("*.py")] + [ROOT / "evaluation" / "__init__.py"]
         files += [p for p in RESULTS.glob("*.md")] + [p for p in RESULTS.glob("*.json") if "answers" not in p.name and "rationales" not in p.name]
-        files += list((RESULTS / "report").glob("*.md")) + list((RESULTS / "report_ad").glob("*.md"))
+        files += list((RESULTS / "report_confirm").glob("*.md")) + list((RESULTS / "report_ad").glob("*.md"))
         offenders = [str(p.relative_to(ROOT)) for p in files if self.OLD_WORDING.search(re.sub(r"\s+", " ", text(p)))]
         self.assertEqual(offenders, [])
 
@@ -630,13 +630,18 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "evaluation/tests/unit/test_medchange_synthesis.py", "evaluation/tests/unit/test_medchange_dev_audit.py",
         "evaluation/tests/unit/test_medchange_pipeline.py", "docs/experimentation.md", "docs/glossary.md",
         "docs/related_work.md",
+        # the tests moved to ``tests/`` on 2026-10-12 (the bytecode folders they leave behind on a computer that ran them are not files of the tree)
+        "evaluation/tests/__init__.py", "evaluation/tests/check_hermetic.py", "evaluation/tests/unit/__init__.py",
+        "evaluation/tests/unit/test_scope_invariants.py", "evaluation/tests/unit/test_medchange_rag2.py",
+        "experiments/medchange/subgroup_ad.py", "experiments/medchange/cochrane_ad_supply.py",
+        "experiments/medchange/consistency_auto.py",
     )
     ACTIVE = (
         "experiments/medchange/encoders.py", "experiments/medchange/abstracts.py", "experiments/medchange/scoring.py",
         "experiments/medchange/runner.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
         "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "src/common/evidence.py",
-        "evaluation/stats.py", "docs/protocol.md", "docs/evaluation.md",
+        "evaluation/stats.py", "tests/check_hermetic.py", "docs/protocol.md", "docs/evaluation.md",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -674,17 +679,53 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         names = set(re.findall(r"[\w./-]+\.(?:py|md|json|toml)\b", block))
         # only the tracked parts of the tree: a computer that built the first design also holds multi-GB ignored folders
         existing = {p.name for p in ROOT.glob("*") if p.is_file()}
-        for folder in ("docs", "src", "evaluation", "experiments"):
+        for folder in ("docs", "src", "evaluation", "tests", "experiments"):
             existing |= {p.name for p in (ROOT / folder).rglob("*")
                          if p.is_file() and "__pycache__" not in p.parts and "data" not in p.relative_to(ROOT).parts[:3]}
         self.assertEqual(sorted(n for n in names if Path(n).name not in existing), [])
+
+
+class NamingTests(unittest.TestCase):
+    """Names say what a file is (2026-10-12): the tests live in ``tests/`` and are named after the module they test; the modules about the
+    Alzheimer's disease set start with ``ad_``; the committed reports are in one folder per split; no module or output keeps the vestigial
+    suffix ``_auto`` (every check of this study is automatic)."""
+
+    PACKAGE = ROOT / "experiments" / "medchange"
+    #: Test files that cover a feature spread over several modules rather than one module.
+    FEATURE_TESTS = {"audits", "fresh_pipeline", "repository_guards"}
+
+    def _modules(self):
+        return {p.stem for p in self.PACKAGE.glob("*.py") if p.name != "__init__.py"}
+
+    def test_every_test_file_is_in_tests_and_named_after_a_module_or_a_feature(self):
+        stray = sorted(str(p.relative_to(ROOT)) for folder in ("src", "evaluation", "experiments", "docs")
+                       for p in (ROOT / folder).rglob("test_*.py") if "__pycache__" not in p.parts)
+        self.assertEqual(stray, [], "tests belong in tests/")
+        allowed = self._modules() | {"stats", "temporal_filter", "check_hermetic"} | self.FEATURE_TESTS
+        misnamed = sorted(p.name for p in (ROOT / "tests").glob("test_*.py") if p.stem[len("test_"):] not in allowed)
+        self.assertEqual(misnamed, [])
+
+    def test_modules_about_the_alzheimers_disease_set_start_with_ad(self):
+        misplaced = sorted(m for m in self._modules() if re.search(r"(^|_)ad(_|$)", m) and not m.startswith("ad_"))
+        self.assertEqual(misplaced, [])
+
+    def test_no_module_or_committed_output_keeps_the_auto_suffix(self):
+        names = [m for m in self._modules() if m.endswith("_auto") or "_auto_" in m]
+        names += [p.name for p in RESULTS.iterdir() if "_auto" in p.name]
+        self.assertEqual(names, [])
+
+    def test_the_committed_reports_are_one_folder_per_split(self):
+        folders = sorted(p.name for p in RESULTS.iterdir() if p.is_dir() and p.name.startswith("report"))
+        self.assertEqual(folders, ["report_ad", "report_confirm"])
+        for split in ("ad", "confirm"):
+            self.assertTrue((RESULTS / f"report_{split}" / "REPORT.md").is_file())
 
 
 class DocumentationIntegrityTests(unittest.TestCase):
     """Every repository path and every ``python -m`` command that the current documents name must exist.
     Dangling references were the most common defect found in the audits; this makes them fail loudly."""
 
-    PATH = re.compile(r"`((?:src|evaluation|experiments|corpus|docs|_archive)/[^`\s]*)`")
+    PATH = re.compile(r"`((?:src|evaluation|tests|experiments|corpus|docs|_archive)/[^`\s]*)`")
     COMMAND = re.compile(r"python -m ([A-Za-z_][\w.]*)")
 
     def _docs(self):
@@ -720,8 +761,8 @@ class DocumentationIntegrityTests(unittest.TestCase):
         flags = {}
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
-                "freeze_candidates", "generate_answers", "label_audit", "fresh_benchmark", "fresh_supply", "analyze_fresh", "subgroup_ad",
-                "class_balance", "cochrane_ad_supply", "ad_case_study", "headroom", "consistency_auto")]:
+                "freeze_candidates", "generate_answers", "label_audit", "fresh_benchmark", "fresh_supply", "analyze_fresh", "ad_subgroup",
+                "class_balance", "ad_cochrane_supply", "ad_case_study", "headroom", "verdict_consistency")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"
@@ -740,7 +781,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
 
     #: A repository file cited as ``dir/.../name.ext`` in a comment or docstring.
     CODE_PATH = re.compile(
-        r"(?<![\w./-])((?:src|evaluation|experiments|corpus|docs|_archive)/[\w./-]*\w"
+        r"(?<![\w./-])((?:src|evaluation|tests|experiments|corpus|docs|_archive)/[\w./-]*\w"
         r"\.(?:py|md|yaml|yml|json|jsonl|csv|toml|log))(?![\w-])")
 
     def test_paths_cited_in_code_comments_and_docstrings_exist(self):
@@ -778,7 +819,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         r"(?<![\w./-])(?:experiments/shared|experiments/results|src/baseline|src/proposed"
         r"|src/common/(?:generator|hf_generator|system)"
         r"|evaluation/(?:runner|freezing|questions|accuracy|rag_metrics|annotation)\.py"
-        r"|evaluation/tests/(?:integration|corpus_scaffold)"
+        r"|evaluation/tests"
         r"|corpus/(?:scripts|config|metadata|reports|data|logs))")
 
     def test_current_documents_do_not_name_moved_code_by_its_old_path(self):

@@ -4,7 +4,7 @@
 # The base install is numpy only: that is all the active code and the active test suite import at
 # module level (checked by an import analysis on 2026-10-05). The heavy backends are imported lazily
 # and come with the extras below. The package list below is checked against the active packages by
-# evaluation/tests/unit/test_scope_invariants.py.
+# tests/test_repository_guards.py.
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"

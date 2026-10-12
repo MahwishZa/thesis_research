@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.medchange import subgroup_ad as G
+from experiments.medchange import ad_subgroup as G
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "experiments" / "medchange" / "results"
 
 

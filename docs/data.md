@@ -148,12 +148,12 @@ phase has run.
 | `rag2_analysis_<split>.json`, `.md` | `analyze_rag2` | accuracy tables, paired tests, the reading of the primary difference (`dev`, `confirm`, `ad`) |
 | `rag2_analysis_fresh.json`, `RAG2_FINDINGS_FRESH.md` | `analyze_fresh` | the blinded analysis of the pre-registered test: written only when every question has an answer for R2, R2C and R2V |
 | `RAG2_DEV_REPORT.md`, `RAG2_FINDINGS.md` | `rag2_pipeline` | the development report with the dev check; the held-out findings (`RAG2_FINDINGS_AD.md` after the `ad` phase) |
-| `class_balance.json`, `.md`; `ad_subgroup_alzheimer.json`, `.md` | `class_balance`, `subgroup_ad` | per-verdict shares, recall and macro-F1 of the held-out and Alzheimer's disease runs; the 48 questions that name Alzheimer's disease (both exploratory, from answers on file) |
-| `fresh_supply.json`, `cochrane_ad_supply.json` | `fresh_supply`, `cochrane_ad_supply` | counts only: the questions no split uses (and those on other neurodegenerative diseases); the new Cochrane reviews on Alzheimer's disease and dementia after the MedRevQA snapshot |
+| `class_balance.json`, `.md`; `ad_subgroup_alzheimer.json`, `.md` | `class_balance`, `ad_subgroup` | per-verdict shares, recall and macro-F1 of the held-out and Alzheimer's disease runs; the 48 questions that name Alzheimer's disease (both exploratory, from answers on file) |
+| `fresh_supply.json`, `ad_cochrane_supply.json` | `fresh_supply`, `ad_cochrane_supply` | counts only: the questions no split uses (and those on other neurodegenerative diseases); the new Cochrane reviews on Alzheimer's disease and dementia after the MedRevQA snapshot |
 | `rag2_design.json` | `rag2_pipeline dev` | the design record, committed **before** the held-out run, which refuses to start otherwise |
 | `rag2_environment_<phase>.json` | `rag2_pipeline` | package versions, platform and code commit of a phase (informational; the development run has none) |
-| `label_audit_<split>.*`, `consistency_auto_<split>.*` | `label_audit`, `consistency_auto` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only; `label_audit` copies its item-level file here) |
-| `report/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the Alzheimer's disease set has no changed questions) |
+| `label_audit_<split>.*`, `verdict_consistency_<split>.*` | `label_audit`, `verdict_consistency` | the independent re-labelling of the gold labels and the check of stated verdicts (ids, labels and agreement only; `label_audit` copies its item-level file here) |
+| `report_confirm/`, `report_ad/` | `report` | `REPORT.md`, `tables.tex`, `report_data_<split>.json`; two figures for the held-out split only (the Alzheimer's disease set has no changed questions) |
 | `earlier_stages/` | the removed stage code | results of record of stages 1 and 2 (`methodology.md` §10): the analysis, error analysis, audit and diagnostics of the stage-1 development answers; the stage-2 per-paper judgements, predictions, cross-validation, frozen model and reports |
 
 ## 6. Usage

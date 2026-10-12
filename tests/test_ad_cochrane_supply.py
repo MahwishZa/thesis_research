@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.medchange import cochrane_ad_supply as C
+from experiments.medchange import ad_cochrane_supply as C
 from experiments.medchange.pubmed_asof import EUtils
 
 
@@ -72,7 +72,7 @@ class CollectTests(unittest.TestCase):
         recs = {"1": (article(1, "Secret title for dementia"), "2025-01-01")}
         with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()) as out:
             code = C.main(["--since", "2024-01-08", "--until", "2026-10-01", "--out-dir", d], eu=fake_eu(recs))
-            saved = (Path(d) / "cochrane_ad_supply.json").read_text(encoding="utf-8")
+            saved = (Path(d) / "ad_cochrane_supply.json").read_text(encoding="utf-8")
         self.assertEqual(code, 3)
         self.assertNotIn("Secret title", saved)
         self.assertIn("Secret title", out.getvalue())

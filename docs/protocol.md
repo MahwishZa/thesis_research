@@ -296,9 +296,9 @@ confirmatory evaluation exists, and none is claimed. The code, tests and long am
 **2026-10-10, no larger Alzheimer's disease set can be built from the sources at hand; the name of the 208-question set.** The researcher asked
 for a small additional set of Alzheimer's disease data. Two sources were counted (counts only; no question text, label or answer of any new item
 was read). (1) New Cochrane reviews with Alzheimer Disease or Dementia as a major MeSH topic, published after the newest review of MedRevQA
-(2024-01-18) and found by `cochrane_ad_supply.py`: 8, of which 7 are usable by a rule fixed beforehand (an "Authors' conclusions" section, a title
+(2024-01-18) and found by `ad_cochrane_supply.py` (then called `cochrane_ad_supply.py`): 8, of which 7 are usable by a rule fixed beforehand (an "Authors' conclusions" section, a title
 of the form "X for Y", not a protocol or a withdrawn review). The rule for building a set was 30 or more usable reviews (20 to 29: a small pilot),
-so nothing was built (`results/cochrane_ad_supply.json`). (2) Among the 7,880 unused MedRevQA questions dated 2010 or later, 25 name another
+so nothing was built (`results/ad_cochrane_supply.json`). (2) Among the 7,880 unused MedRevQA questions dated 2010 or later, 25 name another
 neurodegenerative disease in the question (Parkinson's disease, Lewy body or frontotemporal dementia, Huntington's disease, motor neuron disease,
 prion disease; SUPPORTED 11, REFUTED 1, NOT ENOUGH INFORMATION 13) and 7 name Alzheimer's disease or dementia anywhere in the review text
 (`results/fresh_supply.json`): too few for a stratum, so none was added. The 208-question set already holds every MedRevQA question on dementia,
@@ -446,3 +446,8 @@ the analysis is blinded, and no partial answer file was opened.
    point (§8, entry of that date). The secondary reading of verdict accuracy in §10.2 therefore uses the readings *confirmed*, *positive but not
    confirmed* and *no evidence* of `evaluation.md` §5, instead of the three earlier readings that included the minimum; the condition for *confirmed* is
    unchanged. A stray word ("changed") before the R2V − R2C item of §10.2 was removed. The reading of H1 is untouched.
+8. *Evidence-collection code and descriptions (audit of 2026-10-12).* After the freeze, and without changing what any of them computes: `pubmed_asof.py`
+   retries after a reset connection as well as after a timeout or a URL error (a wider list of network errors; the records fetched are the same) and closes
+   the file it reads; `freeze_candidates.py` closes the file it reads and prints "abstracts only" in that mode; the docstrings of `encoders.py` and
+   `src/common/evidence.py` no longer describe the removed corpus. The eight modules that produce the answers (`rag2`, `rag2_run`, `prompts`, `arms`,
+   `generate_answers`, `abstracts`, `benchmark`, `runner`) are byte-identical to the freeze commit `a303705`, and so are the manifests and the design record.

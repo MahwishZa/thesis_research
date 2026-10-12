@@ -10,7 +10,7 @@ are not comparable with theirs; only the layout is.
 
 Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` (B0, B1 and the other stage-1 arms),
 ``results/rag2_answers_<split>.jsonl`` (R2, R2C, R2V, R2V-ND), the label audit and, for the closed-book rows, the
-benchmark authors' released answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report/REPORT.md``,
+benchmark authors' released answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report_<split>/REPORT.md``,
 ``tables.tex``, ``report_data_<split>.json`` and two PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
 Every number is computed from those files; nothing is typed in. Only the confirmatory split supports claims
 (``docs/evaluation.md``).
@@ -440,7 +440,7 @@ def main(argv=None) -> int:
     ap.add_argument("--medchange-dir", default=None, help="clone of jvladika/MedChange (closed-book rows)")
     ap.add_argument("--data-dir", default=str(HERE / "data"))
     ap.add_argument("--results-dir", default=str(HERE / "results"))
-    ap.add_argument("--out-dir", default=None, help="default: <results-dir>/report (held-out split), report_<split> otherwise")
+    ap.add_argument("--out-dir", default=None, help="default: <results-dir>/report_<split>")
     ap.add_argument("--no-figures", action="store_true")
     args = ap.parse_args(argv)
     data, results = Path(args.data_dir), Path(args.results_dir)
@@ -467,7 +467,7 @@ def main(argv=None) -> int:
     audit_path = results / f"label_audit_{args.split}.json"
     audit = json.loads(audit_path.read_text(encoding="utf-8")) if audit_path.is_file() else None
     d = build(args.split, items, answers, released, audit)
-    default_out = results / ("report" if args.split == "confirm" else f"report_{args.split}")
+    default_out = results / f"report_{args.split}"
     figures = write_report(d, Path(args.out_dir) if args.out_dir else default_out, not args.no_figures)
     print(f"wrote the report for the {args.split} split; figures: " + ", ".join(k for k, v in figures.items() if v))
     return 0

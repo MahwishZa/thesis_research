@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
-from experiments.medchange import consistency_auto as CA
+from experiments.medchange import verdict_consistency as CA
 from experiments.medchange import label_audit as LA
 
 S, R, N = "SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"

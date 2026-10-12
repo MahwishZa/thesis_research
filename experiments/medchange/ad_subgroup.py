@@ -1,6 +1,6 @@
 """Exploratory subgroup of the Alzheimer's disease set: the questions whose text names Alzheimer's disease.
 
-    python -m experiments.medchange.subgroup_ad [--data-dir <benchmark folder>] [--results-dir <answers folder>]
+    python -m experiments.medchange.ad_subgroup [--data-dir <benchmark folder>] [--results-dir <answers folder>]
 
 Uses the answers already on file (no model is run). The subgroup is defined by the wording of the question alone ("alzheimer",
 any case); it was chosen after the run on the set and is exploratory: 48 questions can confirm only very large differences, so

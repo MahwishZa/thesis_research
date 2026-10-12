@@ -1507,3 +1507,40 @@ exceptions that the regeneration also corrected: `rag2_analysis_dev.md` and `rag
 *Left as written.* The earlier phases of this log, the ledger rows and the results of the earlier stages (their gate names include a threshold of one
 point, which was theirs). `protocol.md` §8 keeps one dated entry that says what was dropped and why no number moved, so that the change can be
 checked; the earlier wording is in Git history.
+
+## Phase 76 — Names and layout of the repository (Oct 12)
+
+The researcher asked for the names of the code files and internal folders and the misaligned structures to be corrected while the fresh test was
+running. One rule governed the work: nothing that the running test uses was moved, renamed or edited, so the eight modules that produce its answers (`rag2`,
+`rag2_run`, `prompts`, `arms`, `generate_answers`, `abstracts`, `benchmark`, `runner`) stay byte-identical to the frozen ones (`git diff a303705 -- <file>` is
+empty for each; the audit's harmless corrections to four other files are item 8 of `protocol.md` §10.9) and a `git pull` during the run cannot break its last steps. The
+modules and paths the pre-registration names (`ad_benchmark`, `fresh_benchmark`, `fresh_supply`, `label_audit`, `class_balance`, `analyze_fresh`,
+`rag2_pipeline`, `rag2_run`, `manifest_fresh.json`), the folder `experiments/medchange/` with its gitignored `data/`, and the top level of `results/` therefore stay.
+
+*Findings.* (1) The tests lived in `evaluation/tests/unit/`, inside the package that holds the study's statistics; half the files carried a
+`test_medchange_` prefix and the names did not follow the modules they test (`test_ad_subgroup.py` tested `subgroup_ad.py`). (2) Three modules broke the
+naming scheme: `subgroup_ad` and `cochrane_ad_supply` placed `ad` at the end or in the middle where the other modules of the Alzheimer's disease set start
+with it (`ad_benchmark`, `ad_case_study`), and `consistency_auto` kept a suffix from the time the check replaced a manual sheet. (3) The committed reports
+sat in `report/` (the held-out split, no split in the name) and `report_ad/`. (4) The README listed the counting tools and the fresh-split builder under
+"analysis and audits" and omitted `manifest_fresh.json`; the package descriptions of `experiments/` and `experiments/medchange/` named only the benchmark.
+
+*Changes* (git records them as renames; contents are unchanged except for the references):
+
+| Before | After |
+|---|---|
+| `evaluation/tests/unit/test_*.py`, `evaluation/tests/check_hermetic.py` | `tests/test_<module>.py`, `tests/check_hermetic.py` (`python -m unittest discover -s tests -t .`, `python -m tests.check_hermetic`) |
+| `test_medchange_abstracts / arms / audits / benchmark / rag2 / report / runner / scoring.py` | `test_abstracts / arms / audits / benchmark / rag2 / report / runner / scoring.py` |
+| `test_scope_invariants.py`, `test_cochrane_ad_supply.py` | `test_repository_guards.py`, `test_ad_cochrane_supply.py` |
+| `subgroup_ad.py` | `ad_subgroup.py` (its outputs were already `ad_subgroup_alzheimer.*`) |
+| `cochrane_ad_supply.py`, `results/cochrane_ad_supply.json` | `ad_cochrane_supply.py`, `results/ad_cochrane_supply.json` |
+| `consistency_auto.py`, `results/consistency_auto_<split>.*` | `verdict_consistency.py`, `results/verdict_consistency_<split>.*` |
+| `results/report/` | `results/report_confirm/` (`report.py` now writes `report_<split>` for every split) |
+
+The README structure is grouped by role, the package descriptions say what each package holds, and `NamingTests` (in `tests/test_repository_guards.py`) keep the
+scheme: tests in `tests/` named after a module or a feature, `ad_` as a prefix, no `_auto`, one report folder per split. The suite has 304 tests (the 300 of before and four naming guards).
+
+*Left for after the run (the researcher's call).* Folding `src/` (the evidence types and the recency formula of stage 1, imported by `arms.py`) and
+`evaluation/stats.py` (imported by `scoring.py`) into the pipeline package, which would leave no one-file packages; removing the unused class
+`ExperimentResult` of `src/common/evidence.py`; renaming `runner.py`, whose name is easily confused with `rag2_run.py`; and writing the held-out findings as
+`RAG2_FINDINGS_CONFIRM.md` like the other split-named files. All of them touch files that produced the fresh answers, so none is done until the test
+has finished and its results are pushed.
