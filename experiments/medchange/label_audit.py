@@ -13,6 +13,10 @@ on that subset (descriptive; the primary analysis keeps all items). Agreement is
     python -m experiments.medchange.label_audit --split dev --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
     python -m experiments.medchange.label_audit --split fresh --sample 300 --medchange-dir ..\\MedChange --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 
+``--medchange-dir`` is the folder of the MedChange release. The review text is read from its ``Datasets/MedRevQA.csv`` by row number, so the
+command first compares that file's hash with the one in the manifest of the split and stops, before loading the model, if the file is missing
+or is another version.
+
 The item-level file (ids, labels and the first 60 characters of the labeller's reply; no source text) is written to the working folder
 (``--data-dir``); the summary ``label_audit_<split>.json`` and ``.md`` and a copy of the item-level file go to ``--out-dir``, where
 ``rag2_pipeline`` and ``analyze_rag2 --label-audit`` look for them. The confirmatory splits are audited only after the realigned design record exists (so their labels are
@@ -30,11 +34,14 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from .benchmark import LABELS, read_csv
-from .files import file_sha256, load_jsonl
+from .files import file_sha256, load_jsonl, text_file_sha256
 from .generator import check_config, config_path, llama_generator, llama_version
 from .prompts import parse_label
 
 HERE = Path(__file__).resolve().parent
+#: The manifest of each split and the key under which it records the hash of ``MedRevQA.csv``, the file the questions were built from.
+MANIFEST_OF = {"dev": ("manifest.json", "input_sha256"), "confirm": ("manifest.json", "input_sha256"),
+               "ad": ("manifest_ad.json", "inputs"), "fresh": ("manifest_fresh.json", "inputs")}
 
 SYSTEM = "You're a helpful assistant. Your task is to help with labelling in the medical and clinical domain."
 # The label definitions are the authors' own (generate_questions_labels.ipynb), applied to a given question.
@@ -69,6 +76,24 @@ def cohens_kappa(pairs: Sequence[tuple[str, str]]) -> Optional[float]:
 def audit_sample(items: Sequence[dict], n: int) -> list[dict]:
     """The first ``n`` items in the order of the SHA-256 of ``fresh-audit-v1|<item id>``: the same items on every run, chosen without a label."""
     return sorted(items, key=lambda r: hashlib.sha256(f"fresh-audit-v1|{r['item_id']}".encode()).hexdigest())[:n]
+
+
+def recorded_release_hash(split: str, manifest_dir: Path = HERE) -> str:
+    """The hash of ``MedRevQA.csv`` that the manifest of ``split`` records."""
+    name, key = MANIFEST_OF[split]
+    return json.loads((Path(manifest_dir) / name).read_text(encoding="utf-8"))[key]["MedRevQA.csv"]
+
+
+def release_problem(medchange_dir, recorded: str) -> Optional[str]:
+    """Why ``medchange_dir`` cannot be used, or None. The audit reads the review text from ``Datasets/MedRevQA.csv`` by row number, so the
+    file must exist and be the one the questions were built from (``recorded``); another version of the release could shift the rows."""
+    medrevqa = Path(medchange_dir) / "Datasets" / "MedRevQA.csv"
+    if not medrevqa.is_file():
+        return (f"{medrevqa} not found: --medchange-dir is the folder of the MedChange release "
+                "(git clone https://github.com/jvladika/MedChange ..\\MedChange)")
+    if text_file_sha256(medrevqa) != recorded:
+        return f"{medrevqa} is not the MedRevQA.csv these questions were built from (its hash differs from the one in the manifest)"
+    return None
 
 
 def tasks(items: Sequence[dict]) -> list[tuple[dict, str]]:
@@ -174,6 +199,13 @@ def main(argv=None) -> int:
              if r["split"] == args.split and not r["likely_label_noise"]]
     if args.sample:
         items = audit_sample(items, args.sample)
+    if not items:
+        print(f"no {args.split} items in {Path(args.data_dir) / 'benchmark.jsonl'} (build the split first, docs/reproducibility.md)", file=sys.stderr)
+        return 2
+    problem = release_problem(args.medchange_dir, recorded_release_hash(args.split))
+    if problem:
+        print(problem, file=sys.stderr)
+        return 2
     medrev = {int(r[""]): r for r in read_csv(Path(args.medchange_dir) / "Datasets" / "MedRevQA.csv")}
     out = Path(args.data_dir) / f"label_audit_{args.split}.jsonl"
     sha = file_sha256(args.model_path)

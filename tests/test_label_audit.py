@@ -1,7 +1,9 @@
 """Automatic label audit (synthetic data; a fake in place of the model)."""
 
+import contextlib
 import csv
 import hashlib
+import io
 import json
 import unittest
 from pathlib import Path
@@ -9,6 +11,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from experiments.medchange import label_audit as LA
+from experiments.medchange.files import text_file_sha256
 
 
 S, R, N = "SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"
@@ -22,6 +25,15 @@ def item(i, kind, new, prev, row_new, row_prev):
 
 MEDREV = {1: {"objectives": "obj one", "conclusions": "conc one"}, 2: {"objectives": "o2", "conclusions": "c2"},
           3: {"objectives": "o3", "conclusions": "c3"}, 4: {"objectives": "o4", "conclusions": "c4"}}
+
+
+def write_release_file(path):
+    """A small MedRevQA.csv with the columns the audit reads."""
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["", "objectives", "conclusions"])
+        w.writeheader()
+        for k, v in MEDREV.items():
+            w.writerow({"": k, **v})
 
 
 class LabelAuditTests(unittest.TestCase):
@@ -93,20 +105,91 @@ class LabelAuditTests(unittest.TestCase):
             data, res, ds = tmp / "data", tmp / "results", tmp / "mc" / "Datasets"
             data.mkdir(); ds.mkdir(parents=True)
             (data / "benchmark.jsonl").write_text(json.dumps(item("a", "unchanged", S, S, 1, 2)) + "\n", encoding="utf-8")
-            with open(ds / "MedRevQA.csv", "w", encoding="utf-8", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=["", "objectives", "conclusions"])
-                w.writeheader()
-                for k, v in MEDREV.items():
-                    w.writerow({"": k, **v})
+            write_release_file(ds / "MedRevQA.csv")
             model = tmp / "m.gguf"
             model.write_bytes(b"x")
             with mock.patch.object(LA, "llama_generator", lambda *a, **k: (lambda s, u: "LABEL: SUPPORTED")), \
+                    mock.patch.object(LA, "recorded_release_hash", return_value=text_file_sha256(ds / "MedRevQA.csv")), \
                     mock.patch("sys.stdout"):
                 code = LA.main(["--split", "dev", "--medchange-dir", str(tmp / "mc"), "--model-path", str(model),
                                 "--data-dir", str(data), "--out-dir", str(res)])
             rep = json.loads((res / "label_audit_dev.json").read_text(encoding="utf-8"))
         self.assertEqual(code, 0)
         self.assertEqual(rep["stable_item_ids"], ["a"])
+
+    def refused(self, *, items, has_file=True, matches=True):
+        """Run the command on a ``dev`` split of ``items`` benchmark rows and a MedChange folder with (``has_file``) a MedRevQA.csv that
+        the manifest does (``matches``) or does not describe; returns the exit code, what was printed to stderr and what the run left behind
+        besides ``benchmark.jsonl``."""
+        with TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            data, ds = tmp / "data", tmp / "mc" / "Datasets"
+            data.mkdir(); ds.mkdir(parents=True)
+            (data / "benchmark.jsonl").write_text("".join(json.dumps(item(i, "unchanged", S, S, 1, 2)) + "\n" for i in items), encoding="utf-8")
+            recorded = "0" * 64
+            if has_file:
+                write_release_file(ds / "MedRevQA.csv")
+                if matches:
+                    recorded = text_file_sha256(ds / "MedRevQA.csv")
+            model = tmp / "m.gguf"
+            model.write_bytes(b"x")
+            err = io.StringIO()
+            with mock.patch.object(LA, "recorded_release_hash", return_value=recorded), \
+                    mock.patch.object(LA, "llama_generator", side_effect=AssertionError("the model must not be loaded")), \
+                    contextlib.redirect_stderr(err):
+                code = LA.main(["--split", "dev", "--medchange-dir", str(tmp / "mc"), "--model-path", str(model),
+                                "--data-dir", str(data), "--out-dir", str(tmp / "results")])
+            left = sorted([p.name for p in data.iterdir() if p.name != "benchmark.jsonl"] + (["results"] if (tmp / "results").exists() else []))
+            return code, err.getvalue(), left
+
+    def test_cli_stops_before_loading_the_model_when_the_medchange_folder_has_no_release_file(self):
+        code, err, left = self.refused(items=["a"], has_file=False)
+        self.assertEqual(code, 2)
+        self.assertIn("MedRevQA.csv not found", err)
+        self.assertIn("git clone https://github.com/jvladika/MedChange", err)
+        self.assertEqual(left, [])
+
+    def test_cli_stops_before_loading_the_model_when_the_release_file_is_another_version(self):
+        code, err, left = self.refused(items=["a"], matches=False)
+        self.assertEqual(code, 2)
+        self.assertIn("is not the MedRevQA.csv these questions were built from", err)
+        self.assertEqual(left, [])
+
+    def test_cli_stops_when_the_split_has_no_items_instead_of_writing_an_empty_report(self):
+        code, err, left = self.refused(items=[])
+        self.assertEqual(code, 2)
+        self.assertIn("no dev items", err)
+        self.assertEqual(left, [])
+
+    def test_cli_reaches_the_model_when_the_release_file_is_the_recorded_one(self):
+        """The refusals above are the only difference: the same folder and items with a matching file reach the model."""
+        with self.assertRaises(AssertionError) as caught:
+            self.refused(items=["a"])
+        self.assertIn("the model must not be loaded", str(caught.exception))
+
+
+class ReleaseFileTests(unittest.TestCase):
+    def test_the_manifests_record_one_release_file_for_every_split(self):
+        """``MANIFEST_OF`` names an existing key in each manifest, and the three manifests agree on the file."""
+        hashes = {split: LA.recorded_release_hash(split) for split in LA.MANIFEST_OF}
+        self.assertEqual(set(hashes), {"dev", "confirm", "ad", "fresh"})
+        self.assertEqual(len(set(hashes.values())), 1)
+        self.assertRegex(next(iter(hashes.values())), r"^[0-9a-f]{64}$")
+
+    def test_only_the_recorded_file_is_accepted_whatever_its_line_endings(self):
+        with TemporaryDirectory() as tmp:
+            ds = Path(tmp) / "Datasets"
+            ds.mkdir()
+            write_release_file(ds / "MedRevQA.csv")
+            recorded = text_file_sha256(ds / "MedRevQA.csv")
+            self.assertIsNone(LA.release_problem(tmp, recorded))
+            crlf = (ds / "MedRevQA.csv").read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")      # a Windows checkout
+            (ds / "MedRevQA.csv").write_bytes(crlf)
+            self.assertIsNone(LA.release_problem(tmp, recorded))
+            (ds / "MedRevQA.csv").write_bytes(crlf + b"9,extra,row\r\n")
+            self.assertIn("is not the MedRevQA.csv", LA.release_problem(tmp, recorded))
+            (ds / "MedRevQA.csv").unlink()
+            self.assertIn("not found", LA.release_problem(tmp, recorded))
 
 
 class AuditSampleTests(unittest.TestCase):

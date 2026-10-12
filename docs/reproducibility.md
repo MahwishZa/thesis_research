@@ -72,6 +72,16 @@ study was run (committed answers: `results/answers_<split>.jsonl`); a reader who
 The `ad` phase (§4.1) fetches its own as-of records and builds its own pools, so steps 4 to 6 are needed only for the
 development and held-out splits; step 3 must have been run before the `ad` phase.
 
+`--medchange-dir` is the folder of the MedChange release (the folder that holds `Datasets\`; it need not be `..\MedChange`). The label audit reads
+the review text from `Datasets\MedRevQA.csv` by row number, so before it loads a model it compares that file's hash with the one in the manifest
+of the split and stops with a message when the folder or the file is missing or is another version of the release. The label audit of the Alzheimer's disease set
+(`--split ad`, about an hour) and the analysis rerun that uses it:
+
+```
+python -m experiments.medchange.label_audit --split ad --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf
+python -m experiments.medchange.analyze_rag2 --split ad --out-dir experiments\medchange\results --label-audit experiments\medchange\results\label_audit_ad.jsonl
+```
+
 ## 4. Running the study
 
 ### 4.1 The four phases

@@ -1619,7 +1619,7 @@ fresh test covers exactly the 850 registered questions, once per arm; `class_bal
 *Verification.* The syntax trees (docstrings removed) of 60 moved definitions are identical to those of commit `ee07e33`; the new code (`EUtils.efetch`, `load_split`, `bootstrap_difference`, the shared
 candidate list) is covered by tests. A regression run of every command that needs no model or network (`analyze_rag2` for three splits, `analyze_fresh`, `class_balance`, `ad_subgroup`, `report` for three splits,
 `fresh_supply`, `headroom`, `ad_case_study`, `build_benchmark`, `ad_benchmark`, `fresh_benchmark`, the dry-run plans and `status`) on the full rebuilt benchmark gave byte-identical output before and after the change
-(the plan of the ad phase differs by the added flag). The suite grew from 314 to 384 tests (new tests for `files`, `eutils`, `selection`, `encoders`, `build_benchmark`, the commands `freeze_candidates`, `pubmed_asof`,
+(the plan of the ad phase differs by the added flag). The suite grew from 314 to 391 tests (new tests for `files`, `eutils`, `selection`, `encoders`, `build_benchmark`, the commands `freeze_candidates`, `pubmed_asof`,
 `verdict_consistency`, `ad_subgroup`, `class_balance`, the vector metrics and the guards listed above); the line and branch coverage of the pipeline package rose from 80% to 89% (it passes on Python 3.11, 3.12 and 3.13). Twenty-one faults planted one at a time
 (a command imported by a library, a dropped line of the fresh answers, a drifting figure in a document, a changed seeding rule, an interval from the wrong percentiles, a retry that no longer pauses, ...) were all caught
 after two weak spots were closed (the pause between retries of JSON requests was untested, and one statement of the label agreement in `evaluation.md` §5 was not checked against the audit).
@@ -1634,3 +1634,9 @@ after two weak spots were closed (the pause between retries of JSON requests was
 (the problem, the extra check, the domain and the pointer to the paper). After the pull, two guards that quoted sentences of the first condensed version failed on the researcher's computer, as they should; they were
 adapted to the shorter text. The sentence that the baseline is an adaptation of the published method and not a full reproduction of it, which the Overview no longer carries, moved to the first paragraph of Research
 Results (`ReadmeStructureTests` still requires it). `ReadmeStructureTests` requires one paragraph of at most 150 words.
+
+*On the researcher's computer, the same day.* The suite ran there (385 tests, 2 failures, the two guards just described). `analyze_rag2` was rerun for the development and held-out splits, where the frozen pools exist:
+the four B1 retrieval figures are now computed exactly instead of carried over, so three files changed (`rag2_analysis_dev.json`, `rag2_analysis_dev.md`, `rag2_analysis_confirm.json`); the only change that shows in a
+table is the third share of the evidence mix of B1 in the development table (70.3% to 70.4%). The statement made earlier that the rerun gives the same files was wrong and is corrected in `evaluation.md` §6.5.
+`analyze_fresh` reproduced its two files unchanged. The first start of the label audit stopped with `FileNotFoundError` because the MedChange release was not in `..\MedChange` on that computer. `label_audit` now checks the folder
+before it loads the model: a missing `Datasets\MedRevQA.csv` or one whose hash differs from the manifest of the split stops with a message, and so does a split without items in `benchmark.jsonl` (it used to write an empty report).
