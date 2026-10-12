@@ -57,7 +57,8 @@ objective of the first pilot, so the proposed system would have won it by constr
   Cohen's kappa, per-class agreement and whether label changes between versions are reproduced. Questions on which it
   agrees with the gold label are *label-stable*; the analysis repeats the key differences on that subset (descriptive).
   This measures reproducibility, not medical truth: two models can share a bias. No clinician has validated the labels. The audit
-  covers the development and held-out splits; the `ad` audit is run separately (`label_audit --split ad`), and until it exists the `ad` analysis has no label-stable subset.
+  covers the development and held-out splits and, for the pre-registered test, a seeded sample of 300 fresh questions (§6.9); the audit of the Alzheimer's disease
+  set is run separately (`label_audit --split ad`), and until it exists that analysis has no label-stable subset.
 * **Stated-verdict consistency** (`consistency_auto.py`). On a seeded sample of standard answers, an independent judge
   states which verdict the answer expresses; its agreement with the parsed verdict is a diagnostic of the parser.
 
@@ -156,7 +157,7 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
 
 ### 6.0 What each result is
 
-The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question dementia set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
+The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question Alzheimer's disease set (§6.6; 48 questions name Alzheimer's disease, 156 dementia, 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
 construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the Alzheimer's disease results are secondary and descriptive. The pre-declared
 confirmatory evidence for the requirement remains the held-out split of the as-of Cochrane benchmark (general medicine); the
 Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. The macro-F1 hypothesis registered afterwards is tested on
@@ -293,7 +294,7 @@ age columns of `rag2_analysis_ad.md` do not apply to it. Files: `results/RAG2_FI
 
 ### 6.7 The questions of the Alzheimer's disease set that name Alzheimer's disease (exploratory; no model run)
 
-The 48 of the 208 dementia-set questions whose text names Alzheimer's disease, analysed from the answers on file
+The 48 of the 208 questions of the Alzheimer's disease set whose text names Alzheimer's disease, analysed from the answers on file
 (`python -m experiments.medchange.subgroup_ad`; `results/ad_subgroup_alzheimer.*`). The subgroup was defined after the run, by the
 wording of the question alone, so it is exploratory. Gold NOT ENOUGH INFORMATION 21, REFUTED
 19, SUPPORTED 8.

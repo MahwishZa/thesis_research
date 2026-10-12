@@ -54,7 +54,7 @@ approximate for them. A year-only date is read as 1 January.
 
 **Limitations.** (1) Gold labels are model-generated, not human-verified. An independent model of another family reproduces
 81.4% of the held-out and 83.2% of the development labels (`evaluation.md` §1.4); no clinician has validated them. (2) 390 of
-the 504 usable changes (77%) involve NOT ENOUGH INFORMATION, the vaguest boundary (397 of the 512 released changes do; the 8 excluded as label noise account for the difference). (3) Only 14 questions (9 changed, 5 unchanged)
+the 504 usable changes (77%) involve NOT ENOUGH INFORMATION, the vaguest boundary (397 of the 512 released changes do; 7 of the 8 excluded as label noise involve it). (3) Only 14 questions (9 changed, 5 unchanged)
 are Alzheimer's-related, too few for any test; the `ad` set exists for that reason (§2). (4) The question text was written by
 a model.
 

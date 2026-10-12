@@ -36,6 +36,16 @@ class StatsTests(unittest.TestCase):
         self.assertLessEqual(ci["ci_low"], ci["difference"])
         self.assertGreaterEqual(ci["ci_high"], ci["difference"])
 
+    def test_the_bootstrap_interval_takes_the_2_5_and_97_5_percentiles_of_the_resampled_differences(self):
+        import random
+        b = {f"q{i}": float(i % 2) for i in range(40)}
+        p = {f"q{i}": float((i * 7) % 3 == 0) for i in range(40)}
+        ci = st.paired_bootstrap_ci(b, p, iterations=1000, seed="percentiles")
+        diffs = [p[k] - b[k] for k in sorted(b)]
+        rng = random.Random("percentiles")
+        means = sorted(sum(diffs[rng.randrange(40)] for _ in range(40)) / 40 for _ in range(1000))
+        self.assertEqual((ci["ci_low"], ci["ci_high"]), (round(means[25], 6), round(means[975], 6)))      # indices 0.025 x 1000 and 0.975 x 1000
+
     def test_holm_of_two_p_values_is_exact(self):
         self.assertEqual(st.holm({"first": 0.01, "second": 0.04}), {"first": 0.02, "second": 0.04})     # 2 x 0.01, then max(0.02, 1 x 0.04)
         self.assertEqual(st.holm({"only": 0.3}), {"only": 0.3})

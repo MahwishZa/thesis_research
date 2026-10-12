@@ -44,6 +44,15 @@ class SummaryTests(unittest.TestCase):
         self.assertIsNone(stats["recall"][R])
         self.assertEqual(stats["predicted_share"][R], 0.5)
 
+    def test_macro_f1_is_the_mean_of_the_three_f1_values(self):
+        # gold S S R R N N, answered S R R R N S: F1 of S 0.5, of R 0.8 (precision 2/3, recall 1), of N 2/3
+        gold = [S, S, R, R, N, N]
+        answered = [S, R, R, R, N, S]
+        items = {f"q{k}": {"kind": "changed", "newest": {"label": g}} for k, g in enumerate(gold)}
+        answers = {(f"q{k}", "X"): {"verdict": v} for k, v in enumerate(answered)}
+        stats = SC.class_stats(items, answers, "X", ("changed",))
+        self.assertAlmostEqual(stats["macro_f1"], (0.5 + 0.8 + 2 / 3) / 3, places=5)
+
     def test_summary_counts_accuracy_unparsed_answers_and_the_outdated_rate(self):
         items, answers = world(4, 2)
         answers[("MC-000", "A")]["verdict"] = None
@@ -74,6 +83,14 @@ class PairedTests(unittest.TestCase):
         self.assertFalse(family["same"]["confirmed"])
         self.assertNotIn("missing", family)
         self.assertLess(family["gain"]["holm_p"], 0.001)
+
+    def test_a_result_is_confirmed_only_when_p_interval_and_sign_all_agree(self):
+        base = {"n": 100, "a_only_correct": 20, "b_only_correct": 5}
+        significant_but_interval_reaches_zero = dict(base, mcnemar_p=0.001, diff_a_minus_b=0.05, ci95=[0.0, 0.1])
+        significant_but_negative = dict(base, mcnemar_p=0.001, diff_a_minus_b=-0.05, ci95=[-0.1, -0.01])
+        clean = dict(base, mcnemar_p=0.001, diff_a_minus_b=0.05, ci95=[0.01, 0.1])
+        family = SC.holm_family({"zero": significant_but_interval_reaches_zero, "neg": significant_but_negative, "clean": clean})
+        self.assertEqual({k: v["confirmed"] for k, v in family.items()}, {"zero": False, "neg": False, "clean": True})
 
     def test_a_positive_but_insignificant_difference_is_not_confirmed(self):
         items, answers = world(a_better=6, b_better=4)

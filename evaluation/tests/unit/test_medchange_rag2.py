@@ -89,6 +89,25 @@ class RetrievalTests(unittest.TestCase):
             self.assertTrue(all(c["stratum"] in R.STRATA for c in cands))
         self.assertTrue(a["rationale_used"])
 
+    def test_records_are_ranked_from_the_highest_score_and_ties_go_to_the_smaller_pmid(self):
+        recs = [{"pmid": "b"}, {"pmid": "a"}, {"pmid": "c"}, {"pmid": "d"}]
+        self.assertEqual(R._ranked([0.1, 0.9, 0.5, 0.9], recs), [1, 3, 2, 0])         # 0.9 (a), 0.9 (d), 0.5 (c), 0.1 (b)
+
+    def test_a_given_rationale_is_the_dense_query_of_r2_and_the_question_is_that_of_the_ablation(self):
+        rec = self._build(records(n_per_type=3))
+        for cands in rec["lists"].values():
+            self.assertTrue(all(c["dense_rationale"] != c["dense_question"] for c in cands))
+        empty = self._build(records(n_per_type=3), rationale="")
+        for cands in empty["lists"].values():
+            self.assertTrue(all(c["dense_rationale"] == c["dense_question"] for c in cands))
+
+    def test_the_unbalanced_ablation_re_ranks_as_many_records_as_r2_does(self):
+        recs = [r for r in records(n_per_type=12) if r["pmid"].startswith("other") or r["pmid"] in ("RCT-0", "SR/MA-0")]      # 12 + 1 + 1 records
+        rec = R.build_lists(item("MC-1"), recs, abstracts(recs), "Population adults; intervention drug; outcome pain.",
+                            query_encoder=HashingEncoder(), article_encoder=HashingEncoder(), reranker=LexicalOverlapReranker(), keep=20)
+        self.assertEqual(len(rec["lists"]["R2"]), R.QUOTA + 1 + 1)               # 8 of the common type and the two single records
+        self.assertEqual(len(rec["lists"]["R2-BR"]), len(rec["lists"]["R2"]))     # the same number, taken without balancing
+
     def test_records_after_the_cutoff_or_ineligible_are_never_listed(self):
         recs = records(n_per_type=2)
         recs.append({"pmid": "late", "lower": "2016-01-01", "upper": "2016-12-31", "pubtypes": TYPES["RCT"], "journal": "J"})
@@ -129,6 +148,13 @@ class FilterTests(unittest.TestCase):
         self.assertGreater(p, 0.9)
         self.assertEqual(R.yes_probability([{"token": "A", "logprob": -0.1}]), (None, 0.0))
 
+    def test_the_probability_of_yes_is_renormalised_and_takes_the_most_likely_spelling_of_each_word(self):
+        import math
+        p, mass = R.yes_probability([{"token": "Yes", "logprob": math.log(0.5)}, {"token": " yes", "logprob": math.log(0.2)},
+                                     {"token": "No", "logprob": math.log(0.1)}, {"token": "no", "logprob": math.log(0.05)}])
+        self.assertAlmostEqual(mass, 0.6)                           # max over spellings: 0.5 + 0.1 (the spellings are not summed)
+        self.assertAlmostEqual(p, 0.5 / 0.6)
+
     def test_admission_filters_keeps_order_and_budget(self):
         lists = lists_for()
         scores = scores_for(lists)
@@ -139,6 +165,13 @@ class FilterTests(unittest.TestCase):
         self.assertEqual([c["pmid"] for c in admitted], ["R2-1", "R2-2", "R2-3", "R2-4", "R2-5"])
         self.assertEqual([c["pmid"] for c in R.admit("R2-NF", lists, {})], [f"R2-{i}" for i in range(5)])
         self.assertEqual(R.admit("R2V", lists, scores), admitted)          # the criteria arms read R2's evidence
+
+    def test_a_paper_passes_the_filter_at_exactly_the_threshold(self):
+        lists = lists_for()
+        scores = scores_for(lists, p=R.FILTER_THRESHOLD)                    # "at least 0.5" passes
+        self.assertEqual(len(R.admit("R2", lists, scores)), R.BUDGET)
+        below = scores_for(lists, p=R.FILTER_THRESHOLD - 1e-9)
+        self.assertEqual(R.admit("R2", lists, below), [])
 
     def test_everything_filtered_admits_nothing_and_a_missing_judgement_is_an_error(self):
         lists = lists_for()
@@ -253,6 +286,18 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(RR.run_lists([item("MC-1")], {"MC-1": {"records": recs}}, abstracts(recs),
                                           {"MC-1": "x"}, out, **kw), 0)
 
+    def test_a_judgement_is_valid_only_when_yes_and_no_carry_enough_of_the_probability(self):
+        class Fixed:
+            def __init__(self, p, mass):
+                self.p, self.mass = p, mass
+
+            def score(self, question, study):
+                return self.p, self.mass
+        cand = {"pmid": "1", "title": "T", "abstract": "A"}
+        self.assertTrue(RR.judge_one(Fixed(0.9, R.MIN_YES_NO_MASS), "Q?", cand)["valid"])             # exactly the minimum mass is valid
+        self.assertFalse(RR.judge_one(Fixed(0.9, R.MIN_YES_NO_MASS - 0.01), "Q?", cand)["valid"])     # yes + no below it: unusable
+        self.assertFalse(RR.judge_one(Fixed(None, 0.0), "Q?", cand)["valid"])
+
     def test_judgements_deduplicate_resume_and_mark_invalid(self):
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "f.jsonl"
@@ -344,6 +389,30 @@ def world(n=40, r2v_extra=6):
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_the_requirement_is_met_at_exactly_one_point(self):
+        primary = {"diff_a_minus_b": 0.01, "ci95": [-0.02, 0.04], "mcnemar_p": 0.5, "confirmed": False}
+        self.assertEqual(A.requirement_reading(primary, "confirm"), "met as a point estimate, not confirmed")
+        self.assertEqual(A.requirement_reading(dict(primary, diff_a_minus_b=0.00999), "confirm"), "not met")
+
+    def test_a_significantly_worse_verifier_is_never_confirmed(self):
+        items, answers = world(n=60, r2v_extra=0)
+        for k, iid in enumerate(sorted(items)):                       # R2V is wrong wherever R2 is right on 25 items, and right nowhere new
+            if k < 25:
+                answers[(iid, "R2V")]["verdict"] = N
+        primary = A.primary_result(items, answers)
+        self.assertLess(primary["mcnemar_p"], A.ALPHA)
+        self.assertLess(primary["diff_a_minus_b"], 0)
+        self.assertFalse(primary["confirmed"])
+        self.assertEqual(A.requirement_reading(primary, "confirm"), "not met")
+
+    def test_an_admitted_study_counts_for_the_update_window_only_if_it_surely_appeared_after_the_previous_version(self):
+        it = dict(item("MC-1", split="confirm"))                      # previous version 2010-01-01, newest 2015-06-01
+        rec = answer("MC-1", "R2", S, admitted=("p1", "p2", "p3"))
+        rec.update(admitted_lower=["2010-01-01", "2010-01-02", "2012-01-01"], admitted_upper=["2012-01-01", "2012-01-01", "2015-06-01"],
+                   admitted_stratum=["RCT", "RCT", "RCT"])
+        row = A.retrieval_rows({"MC-1": it}, {("MC-1", "R2"): rec}, ["R2"], {})["R2"]
+        self.assertAlmostEqual(row["update_window_share"], 2 / 3, places=5)       # the first appeared no later than the previous version
+
     def test_requirement_reading(self):
         primary = {"diff_a_minus_b": 0.02, "ci95": [0.005, 0.04], "mcnemar_p": 0.01, "confirmed": True}
         self.assertEqual(A.requirement_reading(primary, "confirm"), "met and confirmed")
@@ -669,11 +738,31 @@ class ContextOverflowTests(unittest.TestCase):
         lists = lists_for()
         rec = RR.answer_one(item("MC-1"), "R2", lists, scores_for(lists), {}, fake_generate)
         self.assertNotIn("context_truncated", rec)
+        calls = []
 
         def broken(system, user):
+            calls.append(user)
             raise ValueError("something else went wrong")
         with self.assertRaises(ValueError):
             RR.answer_one(item("MC-1"), "R2", lists, scores_for(lists), {}, broken)
+        self.assertEqual(len(calls), 1)                              # only a context overflow is retried
+
+    def test_the_undated_ablation_shows_neither_years_nor_the_currency_criterion_and_the_dated_arms_show_both(self):
+        lists = lists_for()
+        existing = {("MC-1", "R2"): {"verdict": S, "text": "VERDICT: SUPPORTED [1]"}}
+        prompts = {}
+        for arm in ("R2V", "R2V-ND", "R2C"):
+            def capture(system, user, arm=arm):
+                prompts[arm] = user
+                return "DIRECT STUDIES: 1\nFINDINGS: x.\nFINAL VERDICT: SUPPORTED"
+            RR.answer_one(item("MC-1"), arm, lists, scores_for(lists), existing, capture)
+        for arm in ("R2V", "R2C"):
+            self.assertIn("2012", prompts[arm])
+            self.assertIn("newer evidence take precedence", prompts[arm])
+        self.assertNotIn("2012", prompts["R2V-ND"])
+        self.assertNotIn("newer evidence", prompts["R2V-ND"])
+        self.assertIn("Draft answer", prompts["R2V"] + prompts["R2V-ND"])
+        self.assertNotIn("Draft answer", prompts["R2C"])
 
     def test_the_analysis_reports_truncated_answers(self):
         items, answers = world(n=6)

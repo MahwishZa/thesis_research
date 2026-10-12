@@ -1454,3 +1454,32 @@ From the researcher's console output (the sandbox has no access to the laptop's 
   (123,393 fetched); rationales 3.5 h (14.7 s per question); candidate lists 14.0 h (59 s per question); filter, 6,792 judgements, 20.3 h on the clock of which about 8 h were a
   pause of the process (the progress clock jumped between the 1,710th and 1,720th judgement, most likely the laptop sleeping) and about 12.4 h were work (53 s per question).
   Answers for R2, R2C and R2V (estimated 28 h) follow. The per-question times agree with those of the held-out run (rationale 16 s, filter 48 s). No answer has been read.
+
+## Phase 74 — Audit of the whole repository (Oct 11–12)
+
+Requested by the researcher while the fresh test was running; nothing that decides what the test reads, writes or counts was changed.
+
+*How.* Every module and test was read; static analysis (pyflakes, ruff, vulture) and a spell check were run; the tests were measured (89% of the lines; the suite also passes on Python 3.11, 3.12 and 3.13); 64 deliberate faults were
+planted one at a time in the decision logic (the pre-registered metric, intervals and rule, the filter, the retrieval, the parsers, the selection, the guards) and the tests rerun: **26 of the 64 survived**, and after new tests all but one (an
+equivalent change) are caught; every figure of `data.md` was recomputed from the manifests and the benchmark; every committed JSON and JSONL file was parsed and the recorded configurations of every split compared with the design
+record; the end of the fresh run (analysis, publishing, environment record, commit) was rehearsed on a clean clone with synthetic answers. A comparison of the syntax trees shows that `rag2.py`, `prompts.py`, `arms.py`, `rag2_run.py`,
+`generate_answers.py`, `abstracts.py`, `scoring.py` and `benchmark.py` are unchanged in code, and a test now compares the code's settings and prompt hashes with the design record (`1743afd7045b`).
+
+*Errors corrected.*
+* *Wrong number.* `data.md` (and Phase 21 of this log) said 397 of the 504 usable changes involve NOT ENOUGH INFORMATION; it is 390 (397 of the 512 released). `class_balance.md` showed the REFUTED recall of R2C and R2V as 19.1%; 24 of 126 is 19.0%
+  (a value stored to four decimals was rounded twice; stored values now keep six, the same fix as in `analyze_fresh`).
+* *Contradictions and stale statements.* The heading of `protocol.md` §10 still read "DRAFT: not in force" beside an "IN FORCE" status (and `fresh_benchmark --freeze` would not have rewritten it: it does now); `protocol.md` §3 and `data.md`
+  said the Alzheimer's disease set was untouched; a log entry named the wrong snapshot date (2024-01-18, not 2024-01-08) and another a superseded N in its title; `evaluation.md` listed five of the eight released models; the `.gitattributes`
+  comment described CSV files that no longer exist; module docstrings described the removed 4.3-million-chunk corpus, the three removed arms and the removed hallucination accounting.
+* *Missing.* The fresh test was absent from `data.md`, `methodology.md` and `evaluation.md` and from the status table, the ledger and the phase table of `protocol.md` and `reproducibility.md`; the README did not mention it or its command;
+  `data.md` did not list the committed results of four tools (`class_balance`, `subgroup_ad`, `fresh_supply`, `cochrane_ad_supply`); the ledger lacked six decisions of 2026-10-09/10; the amendments lacked the counts of more Alzheimer's disease data; `protocol.md` §10.9 now records every correction made after the freeze.
+* *Code.* `analyze_fresh` printed no reading of the accuracy difference although §10.2 registers one (added); stored differences and intervals kept four decimals, enough to flip a lower end at 0 (now six); `class_balance` crashed on an
+  unparsed answer (now a fourth code); `label_audit` left its item-level file out of `results/` where the pipeline and `analyze_rag2` look for it (now copied); `headroom` mixed the Alzheimer's disease and fresh questions into the main
+  benchmark; the E-utilities retry missed a reset connection; three files were opened without being closed; output titles said "Alzheimer's/dementia" (the three affected result files were regenerated from their JSON).
+* *Tests.* One assertion could never fail (`assertLessEqual(x, a <= b)`), one test checked almost nothing (Holm), one never ran (always skipped); 25 gaps found by the planted faults were closed (exact macro-F1, the 95% percentile indices, pairing of the two
+  systems in the bootstrap, a lower end exactly at 0, the +1-point boundary, the filter threshold, the validity of a judgement, the direction of the retrieval ranking, the use of the rationale, the undated ablation, the noise threshold, the rounding of the
+  development share, the registered audit sample, the guard on the question list); guards were added for `data.md` against the manifests, for the fresh test across the documents, for the recorded configurations, and against the abbreviation.
+
+*Left as it is, and why.* The seed of `class_balance.py` is the first 8 bytes of its text, so its comparisons share one stream of resamples; the intervals are valid and the committed numbers stay (documented in the module and in `evaluation.md` §3). The
+statements about RAG² (57.7 to 64.6 on MedQA, 564 GB, Flan-T5-large) could not be rechecked from the sandbox (no access to the paper; only its abstract was confirmed: up to 6.1% over LLMs, up to 5.6% over the previous best medical RAG). The label audit of
+the Alzheimer's disease set has not been run (documented as such).

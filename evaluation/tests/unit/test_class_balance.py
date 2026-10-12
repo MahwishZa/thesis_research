@@ -19,6 +19,13 @@ class MetricTests(unittest.TestCase):
         always_first = np.zeros(6, dtype=int)
         self.assertAlmostEqual(C.macro_f1(gold, always_first), (2 * 2 / (2 * 2 + 4 + 0)) / 3)     # F1 of class 0 = 0.5; others 0
 
+    def test_macro_f1_equals_the_hand_computed_value_when_there_are_false_positives_and_false_negatives(self):
+        # gold S S R R N N, predicted S R R R N S (codes 0 0 1 1 2 2 and 0 1 1 1 2 0):
+        # S: tp 1, predicted 2, gold 2 -> F1 0.5; R: tp 2, predicted 3, gold 2 -> precision 2/3, recall 1 -> F1 0.8; N: tp 1, predicted 1, gold 2 -> F1 2/3
+        gold, pred = np.array([0, 0, 1, 1, 2, 2]), np.array([0, 1, 1, 1, 2, 0])
+        self.assertAlmostEqual(C.macro_f1(gold, pred), (0.5 + 0.8 + 2 / 3) / 3)
+        self.assertEqual(C.macro_f1(gold, np.array([3, 3, 3, 3, 3, 3])), 0.0)                 # only unparsed answers: nothing is ever right
+
     def test_recall_of_a_verdict_and_the_paired_interval_contains_the_point(self):
         gold = np.array([1, 1, 1, 1, 0, 0, 2, 2])
         a, b = np.array([1, 1, 1, 0, 0, 0, 2, 2]), np.array([0, 0, 1, 0, 0, 0, 2, 2])

@@ -2,12 +2,14 @@
 
 import contextlib
 import csv
+import hashlib
 import io
 import json
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -233,6 +235,34 @@ class CompleteRunTests(unittest.TestCase):
         self.assertNotEqual(r["difference"], round(r["difference"], 4))               # 1/3-type values would be cut by four decimals
         self.assertEqual(AF.read_primary({"difference": 0.00003, "ci95": [0.00002, 0.01]})["reading"], "confirmed")
 
+    def test_a_lower_end_exactly_at_zero_is_not_above_zero(self):
+        self.assertEqual(AF.read_primary({"difference": 0.04, "ci95": [0.0, 0.08]})["reading"], "positive but not confirmed")
+        self.assertEqual(AF.read_primary({"difference": 0.0, "ci95": [-0.03, 0.03]})["reading"], "no evidence")
+
+    def test_the_interval_is_the_2_5_to_97_5_percentile_range_of_the_resampled_differences(self):
+        calls = iter(range(10 ** 6))
+
+        def metric(g, p):                                  # the first two calls are the point estimate; then resample k returns k - 1 and 0
+            index = next(calls)
+            return float(index // 2 - 1) if index >= 2 and index % 2 == 0 else 0.0
+        r = AF.paired_interval(np.array([0, 1, 2]), np.array([0, 1, 2]), np.array([0, 1, 2]), metric, "t", iterations=1000)
+        self.assertEqual(r["difference"], 0.0)
+        self.assertAlmostEqual(r["ci95"][0], 0.025 * 999, places=6)           # resampled differences are 0, 1, ..., 999
+        self.assertAlmostEqual(r["ci95"][1], 0.975 * 999, places=6)
+
+    def test_both_systems_are_resampled_with_the_same_questions(self):
+        accuracy = lambda g, p: float((g == p).mean())
+        gold, same = np.array([0, 1, 2, 0, 1, 2, 0, 1]), np.array([0, 1, 1, 0, 2, 2, 1, 1])
+        r = AF.paired_interval(gold, same, same.copy(), accuracy, "t", iterations=200)
+        self.assertEqual((r["difference"], r["ci95"]), (0.0, [0.0, 0.0]))     # identical systems never differ, in any resample
+
+    def test_a_significant_p_value_or_a_positive_interval_alone_does_not_confirm_the_accuracy_difference(self):
+        base = {"a": "R2V", "b": "R2", "n": 850, "a_only_correct": 5, "b_only_correct": 1}
+        interval_only = AF.accuracy_reading(dict(base, diff_a_minus_b=0.03, ci95=[0.005, 0.055], mcnemar_p=0.06))
+        self.assertEqual(interval_only["reading"], "met as a point estimate, not confirmed")
+        negative = AF.accuracy_reading(dict(base, diff_a_minus_b=-0.03, ci95=[-0.05, -0.01], mcnemar_p=0.001))
+        self.assertEqual(negative["reading"], "not met")
+
     def test_the_accuracy_difference_is_read_by_the_three_rules_of_the_evaluation(self):
         base = {"a": "R2V", "b": "R2", "n": 850, "a_only_correct": 1, "b_only_correct": 1}
         self.assertIsNone(AF.accuracy_reading(None))
@@ -294,6 +324,41 @@ class FreezeAndPlanTests(unittest.TestCase):
             names = [n for n, _, _ in P.preflight(d, "fresh")]
             self.assertFalse(any("B0 and B1" in n for n in names))
             self.assertTrue(any("B0 and B1" in n for n in [n for n, _, _ in P.preflight(d, "ad")]))
+
+    def test_the_items_in_the_benchmark_file_must_match_the_manifest_when_the_list_is_pushed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs").mkdir()
+            (root / "docs" / "protocol.md").write_text("**Status.** This section is IN FORCE since 2026-10-10 (list `abc`).", encoding="utf-8")
+            ids = ["FR-00001", "FR-00002"]
+            manifest = root / "experiments" / "medchange" / "manifest_fresh.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(json.dumps({"items": 2, "item_ids_sha256": hashlib.sha256(json.dumps(ids).encode()).hexdigest()}), encoding="utf-8")
+            data = root / "data"
+            data.mkdir()
+
+            def write(listed):
+                (data / "benchmark.jsonl").write_text("\n".join(json.dumps({"item_id": i, "split": "fresh"}) for i in listed) + "\n", encoding="utf-8")
+            with mock.patch.object(P, "frozen_is_pushed", return_value=(True, "file is on origin/main")):
+                write(ids)
+                self.assertEqual(P.freeze_problems(data, root), [])
+                write(ids[:1])
+                self.assertEqual(len(P.freeze_problems(data, root)), 1)
+                write(ids[::-1])
+                self.assertTrue(any("differ" in p for p in P.freeze_problems(data, root)))               # the order is part of the list
+            with mock.patch.object(P, "frozen_is_pushed", return_value=(False, "differs from origin/main")):
+                write(ids)
+                self.assertEqual(P.freeze_problems(data, root), ["differs from origin/main"])
+
+    def test_the_registered_audit_sample_of_the_committed_question_list_is_these_300_questions(self):
+        """The rule of protocol §10.8 (SHA-256 order of ``fresh-audit-v1|<item id>``) applied to the committed manifest; a change of the rule or of the
+        list changes the sample and fails here."""
+        manifest = json.loads((Path(AF.__file__).resolve().parent / "manifest_fresh.json").read_text(encoding="utf-8"))
+        items = [{"item_id": f"FR-{row:05d}"} for row in manifest["rows"]]
+        sample = [x["item_id"] for x in LA.audit_sample(items, 300)]
+        self.assertEqual(sample[:5], ["FR-00725", "FR-03135", "FR-07991", "FR-03991", "FR-02782"])
+        self.assertEqual(hashlib.sha256(json.dumps(sorted(sample)).encode()).hexdigest()[:16], "0dd10528022c2eae")
+        self.assertEqual(len(set(sample)), 300)
 
     def test_the_audit_sample_is_the_same_items_every_time(self):
         items = [{"item_id": f"FR-{i:05d}"} for i in range(100)]

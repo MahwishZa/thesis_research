@@ -549,6 +549,30 @@ class FreshTestDocumentsTests(unittest.TestCase):
         self.assertIn(f"about {2.8 * se:.3f}", body)
 
 
+class TerminologyTests(unittest.TestCase):
+    """The researcher asked for the full form, or "Alzheimer's disease" for short, and not for an abbreviation of "Alzheimer's disease and related
+    dementias"; the 208-question set is called the Alzheimer's disease set."""
+
+    def test_the_abbreviation_is_not_used_in_any_document_or_source_file(self):
+        offenders = []
+        files = [ROOT / rel for rel in CURRENT_DOCS] + [DOCS / "log.md"]
+        files += [p for p in ROOT.rglob("*.py") if "__pycache__" not in p.parts and "data" not in p.relative_to(ROOT).parts[:3]]
+        for path in files:
+            if re.search(r"\bADRD\b", text(path)) and path != Path(__file__).resolve():
+                offenders.append(str(path.relative_to(ROOT)))
+        self.assertEqual(offenders, [])
+
+    def test_the_set_is_not_called_a_dementia_set_in_the_current_descriptive_text(self):
+        """History (the ledger, the amendments, the log) keeps the words it was written in; the README, the data description and the
+        evaluation results do not call the 208 questions "the dementia set" or "the dementia run"."""
+        offenders = []
+        for rel in ("README.md", "docs/data.md", "docs/evaluation.md", "docs/methodology.md", "docs/reproducibility.md"):
+            for number, line in enumerate(text(ROOT / rel).splitlines(), 1):
+                if re.search(r"dementia[- ]set|dementia run|dementia split", line, flags=re.IGNORECASE) and "(`ad`)" not in line:
+                    offenders.append(f"{rel}:{number}")
+        self.assertEqual(offenders, [])
+
+
 class ActiveTreeLayoutTests(unittest.TestCase):
 
     #: Files (not folders: see the module docstring) that were active once and are gone: the abandoned

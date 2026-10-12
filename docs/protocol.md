@@ -24,7 +24,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | More Alzheimer's disease data (new Cochrane reviews; other neurodegenerative questions) | counted 2026-10-10 (§8): 7 usable new reviews (rule: 30 to build) and 25 questions on other neurodegenerative diseases; nothing was built |
 | Pre-registered test on fresh questions, 850 questions (§10) | in force since 2026-10-10; the question list was committed and pushed before any answer; the label audit of a 300-question sample was done before the run; results: `evaluation.md` §6.9 |
 
-The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the 208-question dementia set (§8), of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
+The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the set of 208 questions of §8, of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
 as-of Cochrane benchmark, general medicine) remain the evidence for the requirement, with the Alzheimer's disease set secondary; no
 Alzheimer's-only confirmatory evaluation exists.
@@ -417,13 +417,14 @@ to start unless this section is IN FORCE, the manifest is on origin/main and the
 ### 10.9 Corrections after the freeze (none changes the design)
 
 Recorded here, not made silently. Nothing below touches the hypothesis, the primary metric and decision rule, the sample size, the selection rule and
-seed, the arms, a setting or a prompt (§10.7), and each was made before any fresh question had an answer.
+seed, the arms, a setting or a prompt (§10.7). Each was made while the run was under way and before any result of it had been computed or seen:
+the analysis is blinded, and no partial answer file was opened.
 
-1. *Heading.* The heading of this section still read "DRAFT: not in force" after the status paragraph was replaced; corrected on 2026-10-11 (the
+1. *Heading.* The heading of this section still read "DRAFT: not in force" after the status paragraph was replaced; corrected on 2026-10-12 (the
    freeze command now rewrites the heading too).
 2. *Terms.* "The dementia set" and "the dementia-set questions" in this section are the 208 questions of the Alzheimer's disease set (§8).
 3. *Reading of verdict accuracy.* §10.2 says verdict accuracy of R2V − R2 is read by the three rules of `evaluation.md` §5. The script printed the
-   difference, interval and p-value but not the reading; `analyze_fresh` now prints it (2026-10-11). The requirement itself is still not re-read from
+   difference, interval and p-value but not the reading; `analyze_fresh` now prints it (2026-10-12). The requirement itself is still not re-read from
    this test alone.
 4. *Stored decimals.* Differences, intervals, shares, recalls and macro-F1 values are stored with six decimals instead of four, so that the decision
    rule ("the lower end is above 0") follows the exact interval and cannot be reversed by rounding, and a percentage shown to one decimal is not

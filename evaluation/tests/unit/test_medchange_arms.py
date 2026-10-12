@@ -29,9 +29,16 @@ def pool(n=10, with_helpful=True):
     # rank 1 is the OLDEST; helpfulness is highest for rank 3
     out = []
     for r in range(1, n + 1):
-        out.append(cand(f"{r:03d}", r, 2019 - 2 * (n - r) if False else 2000 + r * 2,
+        out.append(cand(f"{r:03d}", r, 2000 + r * 2,
                         helpful=(0.9 if r == 3 else 0.1 + 0.01 * (n - r)) if with_helpful else None))
     return out
+
+
+class PointDateTests(unittest.TestCase):
+    def test_the_date_of_a_passage_is_the_midpoint_of_the_bounds_on_its_first_availability(self):
+        import datetime as dt
+        self.assertEqual(A.point_date({"lower": "2020-01-01", "upper": "2020-01-31"}), dt.date(2020, 1, 16))
+        self.assertEqual(A.point_date({"lower": "2020-03-05", "upper": "2020-03-05"}), dt.date(2020, 3, 5))
 
 
 class ArmTests(unittest.TestCase):
