@@ -34,13 +34,13 @@ Environment notes that cost time once:
 ## 2. Tests and checks
 
 ```bash
-python -m unittest discover -s evaluation -t .      # no network, no models, no real data
-python -m evaluation.tests.check_hermetic            # the suite must leave the repository unchanged
-python -m pyflakes src evaluation experiments        # optional static check (pip install pyflakes)
+python -m unittest discover -s tests -t .           # no network, no models, no real data
+python -m tests.check_hermetic                       # the suite must leave the repository unchanged
+python -m pyflakes src evaluation experiments tests   # optional static check (pip install pyflakes)
 ```
 
 The suite needs neither torch nor transformers nor network: model-dependent code is exercised through interfaces and fake
-models, and the realigned pipeline is run end to end on fakes in `test_medchange_rag2.py`. It passes in a fresh virtual
+models, and the realigned pipeline is run end to end on fakes in `tests/test_rag2.py`. It passes in a fresh virtual
 environment that holds only numpy, with outbound socket connections blocked (one figure test is skipped there because
 matplotlib is an optional extra), and in a fresh clone of the repository (the dated checks are in `log.md`).
 `check_hermetic` fails if any file in the repository, ignored files included, was created, modified or deleted by the suite.
@@ -61,7 +61,7 @@ study was run (committed answers: `results/answers_<split>.jsonl`); a reader who
 | 4 | `python -m experiments.medchange.pubmed_asof --split dev` (then `--split confirm`) | needs network; about 22 min for the 226 development questions (measured); an optional `--api-key` changes the duration, not the results |
 | 5 | `python -m experiments.medchange.freeze_candidates --split dev --device cpu` (then `--split confirm`) | downloads the abstracts (37,375 for dev), then MedCPT encoding and re-ranking at about 50 s per question, about 3 h for dev (measured) |
 | 6 | `python -m experiments.medchange.generate_answers --split dev --arms B0 B1 --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf` (then `--split confirm`) | about 15 s per B0 answer and 61 s per B1 answer (measured, held-out); `--limit 3` gives a timing test |
-| 7 | `python -m experiments.medchange.label_audit --split dev --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` (and `consistency_auto`) | independent re-labelling of the gold labels (`evaluation.md` §1.4); about an hour for dev (*estimated*); `--split confirm` and `--split ad` are accepted only after `results/rag2_design.json` exists |
+| 7 | `python -m experiments.medchange.label_audit --split dev --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf` (and `verdict_consistency`) | independent re-labelling of the gold labels (`evaluation.md` §1.4); about an hour for dev (*estimated*); `--split confirm` and `--split ad` are accepted only after `results/rag2_design.json` exists |
 
 The `ad` phase (§4.1) fetches its own as-of records and builds its own pools, so steps 4 to 6 are needed only for the
 development and held-out splits; step 3 must have been run before the `ad` phase.
@@ -114,14 +114,14 @@ python -m experiments.medchange.analyze_rag2 --split confirm --out-dir experimen
 python -m experiments.medchange.report --split confirm --medchange-dir ..\MedChange
 ```
 
-`analyze_rag2` computes the accuracy tables, the primary test, the pre-declared reading of the 1-point requirement, the secondary
+`analyze_rag2` computes the accuracy tables, the primary test, the reading of the primary difference (confirmed, positive but not confirmed, no evidence), the secondary
 family with Holm correction and the retrieval metrics from the answers and records; it runs a model nowhere and takes seconds. It
 reads `benchmark.jsonl`, `answers_<split>.jsonl`, `rag2_answers_<split>.jsonl`, `rag2_directness_<split>.jsonl` and, when present,
 `frozen_<split>.jsonl` from `experiments\medchange\data\` (without the frozen pools the evidence-type, age and update-window cells of
 B1 stay empty); the committed copies in `results\` can be copied there.
-`report --split ad` writes the Alzheimer's disease set's tables to `results\report_ad\`. `report` writes the result tables, a LaTeX table and two figures to `results\report\` (the closed-book rows of existing models
+`report --split <split>` writes the result tables, a LaTeX table and (for the held-out split) two figures to `results\report_<split>\` (the closed-book rows of existing models
 need the MedChange clone; the figures need the `report` extra). The phase drivers do not run it: it is run by hand after a phase,
-and the committed `results\report\` is the held-out version.
+and the committed folders are `results\report_confirm\` (the held-out version) and `results\report_ad\`.
 
 ## 6. What is recorded, and what is and is not reproducible
 
@@ -177,8 +177,9 @@ requests and pypdf).
 ## 10. Archived work, and the counting and descriptive tools
 
 **Archived: the Alzheimer's-specific question-set builder.** The counting script, specification, builder and verifier check of the Alzheimer's-specific question set left the active tree after the construction was
-stopped at gate 1 (`protocol.md` §8). They are in Git history: `git checkout 4ab9d1b -- experiments/adkqa evaluation/tests/unit` restores the code and its
-tests (the committed counts-only results are in `experiments/medchange/results/earlier_stages/adkqa/`). Local build data in the git-ignored folder experiments/adkqa/data, if any,
+stopped at gate 1 (`protocol.md` §8). They are in Git history: `git checkout 4ab9d1b -- experiments/adkqa` restores the code, and its four test files (`test_adkqa_*.py`, in the
+test folder of that commit) can be restored with `git checkout 4ab9d1b -- <path>` from `git ls-tree -r 4ab9d1b --name-only` (the committed counts-only results are in
+`experiments/medchange/results/earlier_stages/adkqa/`). Local build data in the git-ignored folder experiments/adkqa/data, if any,
 may be deleted.
 
 **Counting and descriptive tools** (no model is run by any of them).
@@ -186,14 +187,14 @@ may be deleted.
 Per-verdict behaviour of the held-out and Alzheimer's disease runs (shares, recall, macro-F1): `python -m experiments.medchange.class_balance` uses `benchmark.jsonl`
 (`--data-dir`) and the committed answers (`--results-dir`) and writes `results/class_balance.*`.
 
-Exploratory subgroup of the Alzheimer's disease set (the questions naming Alzheimer's disease): `python -m experiments.medchange.subgroup_ad` uses
+Exploratory subgroup of the Alzheimer's disease set (the questions naming Alzheimer's disease): `python -m experiments.medchange.ad_subgroup` uses
 `benchmark.jsonl` (`--data-dir`) and the committed answers (`--results-dir`) and writes `results/ad_subgroup_alzheimer.*`; `python -m experiments.medchange.ad_case_study --out-dir <folder outside the repository>`
 writes a case study of the same 48 questions (it holds question text and is not committed).
 
 Questions of MedRevQA that no split uses yet (counts only; nothing is selected): `python -m experiments.medchange.fresh_supply --medchange-dir ..\MedChange`
 reads `benchmark.jsonl` (`--data-dir`) and the MedChange files and writes `results/fresh_supply.json` (it also counts questions about other neurodegenerative diseases, by question wording and by review text, with their verdicts).
-New Cochrane dementia and Alzheimer's reviews after the MedRevQA snapshot (counts only; needs PubMed): `python -m experiments.medchange.cochrane_ad_supply --medchange-dir ..\MedChange`
-writes `results/cochrane_ad_supply.json` (counts and PubMed identifiers, no titles) and prints the usable titles; 30 or more usable reviews = go, 20 to 29 = a small pilot, fewer = too few.
+New Cochrane dementia and Alzheimer's reviews after the MedRevQA snapshot (counts only; needs PubMed): `python -m experiments.medchange.ad_cochrane_supply --medchange-dir ..\MedChange`
+writes `results/ad_cochrane_supply.json` (counts and PubMed identifiers, no titles) and prints the usable titles; 30 or more usable reviews = go, 20 to 29 = a small pilot, fewer = too few.
 
 ## 11. The pre-registered test on fresh questions (protocol §10)
 

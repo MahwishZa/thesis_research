@@ -6,18 +6,18 @@ can damage a genuine run's state on a machine that holds real working data, and 
 This check found exactly that once (2026-10-02); it compares the size and modification time of every
 file, ignored files included, before and after the suite.
 
-    python -m evaluation.tests.check_hermetic
+    python -m tests.check_hermetic
 """
 
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 #: Directories whose contents are not part of the check (git's own state and Python bytecode).
 IGNORED_PARTS = {".git", "__pycache__"}
 #: The suites that must leave the tree untouched.
-SUITES = ("evaluation",)
+SUITES = ("tests",)
 
 
 def snapshot(root=ROOT):

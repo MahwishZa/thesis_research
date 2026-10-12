@@ -1,12 +1,12 @@
 """How many new Cochrane dementia and Alzheimer's reviews exist after the MedRevQA snapshot? (counts only; needs the network; no model)
 
-    python -m experiments.medchange.cochrane_ad_supply --medchange-dir ..\\MedChange [--api-key KEY]
+    python -m experiments.medchange.ad_cochrane_supply --medchange-dir ..\\MedChange [--api-key KEY]
 
 MedRevQA ends at a date (its newest review); this tool asks PubMed for Cochrane reviews with Alzheimer Disease or Dementia as a major topic published
 after it, fetches those records, and counts how many could become a question by a fixed rule: an abstract with an
 "Authors' conclusions" section, a title of the form "X for Y" (intervention: "Is X effective for Y?"; a title with "diagnos" or "accuracy":
 "Can X be used for Y?"), and no protocol or withdrawn notice. It selects nothing. The counts and PubMed identifiers go to
-``results/cochrane_ad_supply.json`` (no titles, no abstract text); the titles are only printed, for you to read, and are not saved."""
+``results/ad_cochrane_supply.json`` (no titles, no abstract text); the titles are only printed, for you to read, and are not saved."""
 
 from __future__ import annotations
 
@@ -140,7 +140,7 @@ def main(argv=None, *, eu: Optional[EUtils] = None) -> int:
     titles = rep.pop("_titles")
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "cochrane_ad_supply.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / "ad_cochrane_supply.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({k: v for k, v in rep.items() if k != "usable_pmids"}, indent=2))
     print("\nUsable reviews (titles are printed for you to read and are not saved):")
     for p in rep["usable_pmids"]:

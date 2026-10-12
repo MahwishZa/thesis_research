@@ -31,11 +31,11 @@ question date *t_q*. Only PubMed records that were first public before *t_q* may
 excluded, so no system can read the review it is being tested against or anything published after it. Every system
 therefore sees only what the review's authors could have seen.
 
-**What the study tests.** The requirement agreed with the supervisor is that the proposed system improves verdict
-accuracy by at least 1 percentage point over an adapted RAG² baseline, genuinely and reproducibly. The proposed system
-is a second reading step, *evidence-criteria verification*, applied to the baseline's answer (§6). How the requirement
-is read, and what can be concluded from a given sample size, is fixed in `protocol.md` §1 and `evaluation.md` §§4–5.
-After the held-out result (met as a point estimate, not confirmed), a second question was registered before its data existed: whether
+**What the study tests.** Whether the proposed system gives a higher verdict accuracy than an adapted RAG² baseline,
+genuinely and reproducibly. The proposed system is a second reading step, *evidence-criteria verification*, applied to the
+baseline's answer (§6). How a difference is read, and what can be concluded from a given sample size, is fixed in
+`protocol.md` §1 and `evaluation.md` §§4–5.
+After the held-out result (positive but not confirmed), a second question was registered before its data existed: whether
 the verification step makes the three verdicts more balanced (macro-F1, which gives each verdict the same weight), tested on questions
 that played no part in the design (§2 and `protocol.md` §10).
 
@@ -49,7 +49,7 @@ that played no part in the design (§2 and `protocol.md` §10).
 | Question date | the newest review's publication date | the same | the same |
 | Evidence | PubMed abstracts first public strictly before the question date | the same | the same |
 | Systems | B0, B1, R2, R2C, R2V, R2V-ND | B0, B1, R2, R2C, R2V | R2, R2C, R2V |
-| Primary outcome | verdict accuracy, R2V − R2 (requirement: +1 point) | the same, read as a secondary result | macro-F1, R2V − R2 (`protocol.md` §10.2) |
+| Primary outcome | verdict accuracy, R2V − R2 | the same, read as a secondary result | macro-F1, R2V − R2 (`protocol.md` §10.2) |
 | Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) | run once after its pre-registration was in force; analysed blind (`evaluation.md` §6.9) |
 
 The research domain is Alzheimer's disease and related dementias; the secondary setting is the Alzheimer's disease set. An Alzheimer's-only question set was specified on 2026-10-09 and its construction was stopped
@@ -342,7 +342,7 @@ benchmark's labelling rubric.
 | Comparison | Basis | Status |
 |---|---|---|
 | No evidence (B0), standard retrieval (B1), adapted RAG² (R2) | same generator, questions and decoding | controlled; paired tests |
-| R2C, R2V, R2V-ND | same evidence as R2; only the reading differs | controlled; paired tests; the requirement is read on R2V − R2 |
+| R2C, R2V, R2V-ND | same evidence as R2; only the reading differs | controlled; paired tests; the primary comparison is R2V − R2 |
 | Recency-aware retrieval (TempRALM-style), helpfulness filter, evidence synthesis | the stage-1 and stage-2 arms | controlled; negative results of record |
 | Other language models (Qwen2.5-7B, Mistral-24B, Llama-3.3-70B, GPT-4o-mini, DeepSeek-V3, OLMo-13B, BioMistral, PMC-LLaMA) | the benchmark authors' released closed-book answers on the same questions | context only: different size, training and prompt, no retrieval |
 | RAG² as published | different task, scale, corpus and filter | described, not compared |
@@ -382,13 +382,13 @@ stronger generator, a trained filter and a larger sample are the natural next st
 | Term | Meaning |
 |---|---|
 | **Verdict**, **gold verdict** | SUPPORTED, REFUTED or NOT ENOUGH INFORMATION; the gold verdict is the newest Cochrane review's, as labelled by gpt-4o-mini |
-| **Verdict accuracy** | share of questions whose parsed verdict equals the gold verdict; the outcome of the requirement |
+| **Verdict accuracy** | share of questions whose parsed verdict equals the gold verdict; the primary outcome of the held-out split and the Alzheimer's disease set |
 | **Macro-F1** | the unweighted mean of the F1 of the three verdicts (an F1 is 0 when a verdict is never predicted correctly); the primary outcome of the pre-registered test |
 | **Pre-registration**, **blinded analysis** | a hypothesis, metric, sample and decision rule fixed before the data exist (`protocol.md` §10); an analysis that computes nothing until every answer exists |
 | **Changed / unchanged question** | the newest verdict differs from / equals an earlier version's; unchanged questions are controls |
 | **As-of protocol**, **question date *t_q*** | each question is asked at the newest review's date with only evidence first public strictly before it, Cochrane records excluded |
 | **Update window** | the interval after the previous review version and up to the newest, when the evidence that could change a verdict appeared |
-| **Development (`dev`), held-out (`confirm`), `ad`, `fresh`** | the 226-question split used to find defects and apply the dev check; the 528-question split run once for the requirement; the 208-question Alzheimer's disease set (Alzheimer's disease and related dementias) run once as a secondary result; the 850 fresh general-medicine questions of the pre-registered test |
+| **Development (`dev`), held-out (`confirm`), `ad`, `fresh`** | the 226-question split used to find defects and apply the dev check; the 528-question split run once as the primary test; the 208-question Alzheimer's disease set (Alzheimer's disease and related dementias) run once as a secondary result; the 850 fresh general-medicine questions of the pre-registered test |
 | **Frozen pool** | the 20 candidates kept for one question, with date bounds and an order-sensitive hash |
 | **Dense retrieval**, **cross-encoder**, **MedCPT** | similarity of text vectors; a model that scores a question and an article together; the biomedical encoder family used for both |
 | **Rationale** | a short closed-book account of the question written by the generator, used as the dense query in R2 |
@@ -399,5 +399,5 @@ stronger generator, a trained filter and a larger sample are the natural next st
 | **Directness@k** | share of admitted abstracts that an independent model judges to test the question's intervention and outcome (optional) |
 | **Label-stable** | a question on which the independent model agrees with the gold label |
 | **Design record** | `results/rag2_design.json`: every setting, prompt hash and the generator file's hash, committed before the held-out run |
-| **Dev check**, **requirement reading** | the pre-declared checks on the development run; the pre-declared reading of the 1-point requirement (`protocol.md` §6, `evaluation.md` §5) |
+| **Dev check**, **reading** | the pre-declared checks on the development run; the reading of a paired difference as confirmed, positive but not confirmed, or no evidence (`protocol.md` §6, `evaluation.md` §5) |
 | **Stage 1 / stage 2** | the earlier recency-aware admission and evidence-synthesis approaches (§10) |

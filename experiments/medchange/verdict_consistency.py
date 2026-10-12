@@ -1,4 +1,4 @@
-"""Automatic consistency check of the stated verdict (replaces the human G1 sheet).
+"""Consistency of the stated verdict with the explanation of the answer (replaces the human G1 sheet of the earlier stages).
 
 The primary outcome is the parsed ``VERDICT:`` line, so this is a measurement-validity diagnostic, not
 a gate on results. (1) Deterministic: every answer must open with exactly one parsable VERDICT line
@@ -7,7 +7,7 @@ the explanation of a seeded, arm-balanced sample of answers (the verdict line re
 verdict it supports; we report how often that equals the stated verdict, per arm. A 7B judge makes its
 own mistakes, so the agreement is reported, not thresholded.
 
-    python -m experiments.medchange.consistency_auto --split dev --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
+    python -m experiments.medchange.verdict_consistency --split dev --model-path models\\Qwen2.5-7B-Instruct-Q4_K_M.gguf
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ def main(argv=None) -> int:
         print(f"model file not found: {args.model_path}", file=sys.stderr)
         return 2
     questions = {r["item_id"]: r["question"] for r in load_jsonl(d / "benchmark.jsonl")}
-    out = d / f"consistency_auto_{args.split}.jsonl"
+    out = d / f"verdict_consistency_{args.split}.jsonl"
     sha = file_sha256(args.model_path)
     differs = check_config(out, {"judge_sha256": sha, "template_sha256": hashlib.sha256(TEMPLATE.encode()).hexdigest(),
                                  "n": args.n, "seed": args.seed, "llama_cpp_python": llama_version()},
@@ -129,9 +129,9 @@ def main(argv=None) -> int:
     rep.update(split=args.split, judge=Path(args.model_path).name, judge_sha256=sha)
     od = Path(args.out_dir)
     od.mkdir(parents=True, exist_ok=True)
-    (od / f"consistency_auto_{args.split}.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (od / f"verdict_consistency_{args.split}.json").write_text(json.dumps(rep, indent=2) + "\n", encoding="utf-8", newline="\n")
     text = to_markdown(args.split, rep, Path(args.model_path).name)
-    (od / f"consistency_auto_{args.split}.md").write_text(text, encoding="utf-8", newline="\n")
+    (od / f"verdict_consistency_{args.split}.md").write_text(text, encoding="utf-8", newline="\n")
     print(text)
     return 0
 

@@ -421,7 +421,7 @@
     "mcnemar_p": 0.5052,
     "confirmed": false
   },
-  "requirement": "met as a point estimate, not confirmed",
+  "reading": "positive but not confirmed",
   "secondary": {
     "R2 vs B1": {
       "a": "R2",

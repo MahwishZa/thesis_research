@@ -1483,3 +1483,64 @@ record; the end of the fresh run (analysis, publishing, environment record, comm
 *Left as it is, and why.* The seed of `class_balance.py` is the first 8 bytes of its text, so its comparisons share one stream of resamples; the intervals are valid and the committed numbers stay (documented in the module and in `evaluation.md` §3). The
 statements about RAG² (57.7 to 64.6 on MedQA, 564 GB, Flan-T5-large) could not be rechecked from the sandbox (no access to the paper; only its abstract was confirmed: up to 6.1% over LLMs, up to 5.6% over the previous best medical RAG). The label audit of
 the Alzheimer's disease set has not been run (documented as such).
+
+## Phase 75 — The documents state what was achieved; the minimum gain is no longer used (Oct 12)
+
+The researcher asked that the repository no longer mention the improvement of at least one point that the study had been set up to meet, and that it
+state what has been achieved, not what was expected. Done for the current documents, the analysis code and the committed result files; recorded in
+`protocol.md` §8 (entry of 2026-10-12), the ledger of §7 and §10.9 (item 7).
+
+*What changed.* Differences in verdict accuracy are read by the confirmation rule alone (`evaluation.md` §5): *confirmed*, *positive but not confirmed*,
+*no evidence* (the words already used for the macro-F1 hypothesis). The README, `methodology.md`, `evaluation.md` (§4 to §6), `data.md`,
+`reproducibility.md` and `protocol.md` (§0 to §2, the amendments, §10.2) say what each run gave, with its interval, and no longer compare it with a
+minimum; the power table of `evaluation.md` §4 lost the column that gave the chance of seeing a gain of at least one point. In the code,
+`analyze_rag2.requirement_reading` became `primary_reading`, the key `requirement` of `rag2_analysis_*.json` became `reading`, and the headings of
+`rag2_analysis_*.md`, `RAG2_FINDINGS*.md`, `ad_subgroup_alzheimer.md` and `report*/REPORT.md` were reworded. `analyze_fresh` uses the same function.
+
+*What did not change.* No number, test, interval or p-value: the held-out split (+1.3 points, interval −1.9 to +4.7, p = 0.51) and the Alzheimer's disease
+set (+3.4, −1.9 to +8.7, p = 0.28) are both *positive but not confirmed*, as before in substance. The prompts, settings, arms, answer-producing code and
+the question list of the fresh test are untouched. The files above were regenerated from their stored numbers, and the diff shows only wording, with two
+exceptions that the regeneration also corrected: `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` named a document that no longer exists
+(`docs/experiment_plan.md`, `docs/experimentation.md`) and said "with about 500 questions only differences of roughly 4–6 pp can be confirmed"; they now name
+`docs/protocol.md` and give the range for the split's own size (226 questions: 6–9 pp; 528: 4–6 pp), as the code already did.
+
+*Left as written.* The earlier phases of this log, the ledger rows and the results of the earlier stages (their gate names include a threshold of one
+point, which was theirs). `protocol.md` §8 keeps one dated entry that says what was dropped and why no number moved, so that the change can be
+checked; the earlier wording is in Git history.
+
+## Phase 76 — Names and layout of the repository (Oct 12)
+
+The researcher asked for the names of the code files and internal folders and the misaligned structures to be corrected while the fresh test was
+running. One rule governed the work: nothing that the running test uses was moved, renamed or edited, so the eight modules that produce its answers (`rag2`,
+`rag2_run`, `prompts`, `arms`, `generate_answers`, `abstracts`, `benchmark`, `runner`) stay byte-identical to the frozen ones (`git diff a303705 -- <file>` is
+empty for each; the audit's harmless corrections to four other files are item 8 of `protocol.md` §10.9) and a `git pull` during the run cannot break its last steps. The
+modules and paths the pre-registration names (`ad_benchmark`, `fresh_benchmark`, `fresh_supply`, `label_audit`, `class_balance`, `analyze_fresh`,
+`rag2_pipeline`, `rag2_run`, `manifest_fresh.json`), the folder `experiments/medchange/` with its gitignored `data/`, and the top level of `results/` therefore stay.
+
+*Findings.* (1) The tests lived in `evaluation/tests/unit/`, inside the package that holds the study's statistics; half the files carried a
+`test_medchange_` prefix and the names did not follow the modules they test (`test_ad_subgroup.py` tested `subgroup_ad.py`). (2) Three modules broke the
+naming scheme: `subgroup_ad` and `cochrane_ad_supply` placed `ad` at the end or in the middle where the other modules of the Alzheimer's disease set start
+with it (`ad_benchmark`, `ad_case_study`), and `consistency_auto` kept a suffix from the time the check replaced a manual sheet. (3) The committed reports
+sat in `report/` (the held-out split, no split in the name) and `report_ad/`. (4) The README listed the counting tools and the fresh-split builder under
+"analysis and audits" and omitted `manifest_fresh.json`; the package descriptions of `experiments/` and `experiments/medchange/` named only the benchmark.
+
+*Changes* (git records them as renames; contents are unchanged except for the references):
+
+| Before | After |
+|---|---|
+| `evaluation/tests/unit/test_*.py`, `evaluation/tests/check_hermetic.py` | `tests/test_<module>.py`, `tests/check_hermetic.py` (`python -m unittest discover -s tests -t .`, `python -m tests.check_hermetic`) |
+| `test_medchange_abstracts / arms / audits / benchmark / rag2 / report / runner / scoring.py` | `test_abstracts / arms / audits / benchmark / rag2 / report / runner / scoring.py` |
+| `test_scope_invariants.py`, `test_cochrane_ad_supply.py` | `test_repository_guards.py`, `test_ad_cochrane_supply.py` |
+| `subgroup_ad.py` | `ad_subgroup.py` (its outputs were already `ad_subgroup_alzheimer.*`) |
+| `cochrane_ad_supply.py`, `results/cochrane_ad_supply.json` | `ad_cochrane_supply.py`, `results/ad_cochrane_supply.json` |
+| `consistency_auto.py`, `results/consistency_auto_<split>.*` | `verdict_consistency.py`, `results/verdict_consistency_<split>.*` |
+| `results/report/` | `results/report_confirm/` (`report.py` now writes `report_<split>` for every split) |
+
+The README structure is grouped by role, the package descriptions say what each package holds, and `NamingTests` (in `tests/test_repository_guards.py`) keep the
+scheme: tests in `tests/` named after a module or a feature, `ad_` as a prefix, no `_auto`, one report folder per split. The suite has 304 tests (the 300 of before and four naming guards).
+
+*Left for after the run (the researcher's call).* Folding `src/` (the evidence types and the recency formula of stage 1, imported by `arms.py`) and
+`evaluation/stats.py` (imported by `scoring.py`) into the pipeline package, which would leave no one-file packages; removing the unused class
+`ExperimentResult` of `src/common/evidence.py`; renaming `runner.py`, whose name is easily confused with `rag2_run.py`; and writing the held-out findings as
+`RAG2_FINDINGS_CONFIRM.md` like the other split-named files. All of them touch files that produced the fresh answers, so none is done until the test
+has finished and its results are pushed.

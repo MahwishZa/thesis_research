@@ -1,12 +1,12 @@
 # Findings of the realigned study (Alzheimer's disease set, secondary test set, run once)
 
-Each conclusion follows the rules fixed in `docs/protocol.md` and `docs/evaluation.md` before the run.
+Each conclusion follows the rules of `docs/evaluation.md` §5: a difference is confirmed only when its p-value is below .05 and its 95% interval excludes 0.
 
-## Requirement: R2V at least 1.0 pp above the adapted RAG² baseline (R2)
+## Verdict accuracy: R2V against the adapted RAG² baseline (R2)
 
 R2V − R2 = +3.4 pp (95% CI -1.9 to +8.7; exact McNemar p = 0.2810).
 
-Reading: **met as a point estimate, not confirmed**.
+Reading: **positive but not confirmed**.
 
 ## Secondary comparisons (Holm)
 

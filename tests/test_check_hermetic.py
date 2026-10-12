@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from evaluation.tests.check_hermetic import changes, snapshot
+from tests.check_hermetic import changes, snapshot
 
 
 class SnapshotTests(unittest.TestCase):
