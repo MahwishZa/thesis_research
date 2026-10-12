@@ -15,15 +15,13 @@ import datetime as dt
 import json
 import re
 import sys
-import urllib.error
-import urllib.parse
 import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 from .benchmark import parse_cochrane_date, read_csv
-from .pubmed_asof import EUTILS, EUtils
+from .eutils import EUtils
 
 HERE = Path(__file__).resolve().parent
 JOURNAL = '"Cochrane Database Syst Rev"[Journal]'
@@ -48,28 +46,10 @@ def snapshot_end(medchange_dir: Optional[Path], benchmark: Path) -> str:
 
 def search(eu: EUtils, term: str, since: str, until: str, retmax: int = 1000) -> list[str]:
     p = {"db": "pubmed", "term": term, "datetype": "pdat", "mindate": since.replace("-", "/"), "maxdate": until.replace("-", "/"), "retmax": retmax}
-    r = eu._get("esearch.fcgi", p)["esearchresult"]
+    r = eu.get("esearch.fcgi", p)["esearchresult"]
     if int(r.get("count", 0)) > retmax:
         raise RuntimeError(f"{r['count']} records for {term!r}: more than retmax")
     return list(r.get("idlist", []))
-
-
-def fetch_xml(eu: EUtils, pmids: Sequence[str]) -> bytes:
-    params = {"db": "pubmed", "id": ",".join(pmids), "retmode": "xml", "tool": "thesis_research"}
-    if eu.api_key:
-        params["api_key"] = eu.api_key
-    url = EUTILS + "efetch.fcgi?" + urllib.parse.urlencode(params)
-    for attempt in range(5):
-        eu._sleep(eu.delay)
-        try:
-            data = eu._open(url)
-            ET.fromstring(data)
-            return data
-        except (urllib.error.URLError, TimeoutError, ET.ParseError, OSError) as exc:
-            if attempt == 4:
-                raise RuntimeError(f"efetch failed after 5 attempts: {exc}") from exc
-            eu._sleep(2 ** attempt)
-    raise AssertionError("unreachable")
 
 
 def _text(el) -> str:
@@ -106,7 +86,7 @@ def collect(eu: EUtils, since: str, until: str) -> dict:
     only_ad = set(search(eu, f"{JOURNAL} AND hasabstract[text] AND Alzheimer Disease[majr]", since, until))
     recs = []
     for i in range(0, len(ids), 100):
-        recs += parse(fetch_xml(eu, ids[i:i + 100]))
+        recs += parse(eu.efetch(ids[i:i + 100]))
     dates = {s["pmid"]: s["sortpubdate"] for s in eu.summaries(ids)} if ids else {}
     rows = []
     for r in recs:

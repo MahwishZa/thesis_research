@@ -6,6 +6,9 @@ versus the gold verdict, the same three-way task the MedChange authors used. An
 answer that does not parse is counted wrong and reported separately. The same
 template serves every arm; B0 simply has no evidence block. Publication dates are
 NOT shown, so only admission (not in-context date reasoning) differs between arms.
+
+The independent judge models of ``label_audit`` and ``verdict_consistency`` reply with one
+``LABEL: <label>`` line, which ``parse_label`` reads in the same way.
 """
 
 from __future__ import annotations
@@ -46,3 +49,12 @@ def parse_verdict(text: str) -> Optional[str]:
     if not m:
         return None
     return re.sub(r"\s+", " ", m.group(1).upper())
+
+
+_LABEL = re.compile(r"LABEL\s*:\s*\**\s*(NOT\s+ENOUGH\s+INFORMATION|SUPPORTED|REFUTED)", re.IGNORECASE)
+
+
+def parse_label(text: str) -> Optional[str]:
+    """First ``LABEL:`` line of a judge model's reply; None when absent."""
+    m = _LABEL.search(text or "")
+    return re.sub(r"\s+", " ", m.group(1).upper()) if m else None

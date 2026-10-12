@@ -22,10 +22,9 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from .freeze_candidates import eligible
+from .abstracts import eligible, study_type
 from .prompts import SYSTEM as ANSWER_SYSTEM
 from .prompts import TEMPLATE as ANSWER_TEMPLATE
-from .abstracts import study_type
 
 STRATA = ("SR/MA", "RCT", "other")
 QUOTA = 8                    # candidates per evidence type taken by the rationale's dense score

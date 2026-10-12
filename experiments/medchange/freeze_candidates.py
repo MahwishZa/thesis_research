@@ -17,24 +17,20 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import http.client
 import json
 import sys
 import time
-import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Sequence
 
 import numpy as np
 
-from .pubmed_asof import EUtils, EUTILS
+from .abstracts import eligible
+from .eutils import EUtils
+from .files import load_jsonl
 
 HERE = Path(__file__).resolve().parent
-#: Record types that are not primary evidence and are dropped before ranking.
-EXCLUDED_TYPES = ("Retraction of Publication", "Retracted Publication", "Published Erratum",
-                  "Comment", "Editorial", "Letter", "News", "Patient Education Handout")
-MIN_ABSTRACT_CHARS = 200
 
 
 def parse_efetch_xml(xml_text: str) -> dict[str, dict]:
@@ -61,21 +57,7 @@ def parse_efetch_xml(xml_text: str) -> dict[str, dict]:
 def fetch_abstracts(eu: EUtils, pmids: Sequence[str]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for i in range(0, len(pmids), 100):
-        batch = list(pmids[i:i + 100])
-        params = {"db": "pubmed", "id": ",".join(batch), "retmode": "xml", "rettype": "abstract",
-                  "tool": "thesis_research"}
-        if eu.api_key:
-            params["api_key"] = eu.api_key
-        url = EUTILS + "efetch.fcgi?" + urllib.parse.urlencode(params)
-        for attempt in range(5):
-            eu._sleep(eu.delay)
-            try:
-                out.update(parse_efetch_xml(eu._open(url).decode("utf-8")))
-                break
-            except (ET.ParseError, TimeoutError, OSError, http.client.HTTPException) as exc:
-                if attempt == 4:
-                    raise RuntimeError(f"efetch failed after 5 attempts: {exc}") from exc
-                eu._sleep(2 ** attempt)
+        out.update(parse_efetch_xml(eu.efetch(list(pmids[i:i + 100]), rettype="abstract").decode("utf-8")))
     return out
 
 
@@ -83,13 +65,6 @@ def pool_hash(candidates: Sequence[dict]) -> str:
     """Order-sensitive hash of the frozen pool (ids, order, dates)."""
     payload = [[c["pmid"], c["rank"], c["lower"], c["upper"]] for c in candidates]
     return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
-
-
-def eligible(record: dict, abstracts: dict[str, dict]) -> bool:
-    a = abstracts.get(record["pmid"])
-    if not a or len(a["abstract"]) < MIN_ABSTRACT_CHARS:
-        return False
-    return not any(t in record.get("pubtypes", []) for t in EXCLUDED_TYPES)
 
 
 def freeze_item(item: dict, probe: dict, abstracts: dict[str, dict], *, query_encoder,
@@ -116,22 +91,6 @@ def freeze_item(item: dict, probe: dict, abstracts: dict[str, dict], *, query_en
                       "title": abstracts[r["pmid"]]["title"], "abstract": abstracts[r["pmid"]]["abstract"]})
     return {"item_id": item["item_id"], "cutoff": cutoff, "n_eligible": len(recs),
             "candidates": cands, "pool_hash": pool_hash(cands)}
-
-
-def _load_jsonl(path: Path) -> list[dict]:
-    rows = []
-    if path.exists():
-        lines = path.read_text(encoding="utf-8").splitlines()
-        for i, line in enumerate(lines):
-            if not line.strip():
-                continue
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError:
-                if i == len(lines) - 1:      # truncated last line from a kill
-                    break
-                raise
-    return rows
 
 
 def main(argv=None) -> int:
@@ -167,14 +126,14 @@ def main(argv=None) -> int:
                   f"--split {args.split} first", file=sys.stderr)
             return 2
         probes[it["item_id"]] = json.loads(f.read_text(encoding="utf-8"))
-    done = {r["item_id"] for r in _load_jsonl(out)}
+    done = {r["item_id"] for r in load_jsonl(out)}
     todo = items if args.abstracts_only else [i for i in items if i["item_id"] not in done]
     print(f"{len(items)} items, abstracts only" if args.abstracts_only else f"{len(items)} items, {len(done)} already frozen, {len(todo)} to do")
     if not todo:
         return 0
 
     cache_path = Path(args.abstract_cache)
-    abstracts = {r["pmid"]: r for r in _load_jsonl(cache_path)}
+    abstracts = {r["pmid"]: r for r in load_jsonl(cache_path)}
     eu = EUtils(args.api_key)
     need = sorted({r["pmid"] for it in todo for r in probes[it["item_id"]]["records"]}
                   - set(abstracts))
@@ -211,7 +170,7 @@ def main(argv=None) -> int:
             h.flush()
             if k % 5 == 0 or k == len(todo):
                 print(f"  {k}/{len(todo)} frozen ({time.time() - t0:.0f}s)", flush=True)
-    sizes = [len(r["candidates"]) for r in _load_jsonl(out)]
+    sizes = [len(r["candidates"]) for r in load_jsonl(out)]
     print(f"frozen pools: {len(sizes)}; empty: {sum(s == 0 for s in sizes)}; "
           f"median size {sorted(sizes)[len(sizes) // 2]}")
     return 0

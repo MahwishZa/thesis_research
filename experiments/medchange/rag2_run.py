@@ -30,10 +30,10 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from . import rag2 as R
-from .generate_answers import (SEED, check_config, config_path, file_sha256, llama_generator, llama_version,
-                               load_jsonl)
-from .prompts import build_prompt, parse_verdict
 from .abstracts import study_snippet
+from .files import file_sha256, load_jsonl
+from .generator import SEED, check_config, config_path, llama_generator, llama_version
+from .prompts import build_prompt, parse_verdict
 
 HERE = Path(__file__).resolve().parent
 RATIONALE_N_CTX = 1024

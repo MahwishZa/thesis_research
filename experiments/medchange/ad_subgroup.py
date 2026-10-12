@@ -15,10 +15,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from . import analyze_rag2 as A
-from . import class_balance as CB
-from .generate_answers import load_jsonl
-from .scoring import DIGITS, detectable_range, summarize
+from . import analysis as A
+from .scoring import DIGITS, detectable_range, macro_f1, paired, paired_interval, summarize, vectors
 
 HERE = Path(__file__).resolve().parent
 NAMES_ALZHEIMER = re.compile(r"alzheimer", re.IGNORECASE)
@@ -26,12 +24,7 @@ COMPARISONS = (("R2V", "R2"), ("R2C", "R2"), ("R2V", "R2C"), ("R2", "B1"), ("R2V
 
 
 def subgroup(data: Path, results: Path) -> dict:
-    items = {r["item_id"]: r for r in load_jsonl(data / "benchmark.jsonl") if r["split"] == "ad" and not r["likely_label_noise"]}
-    answers = {}
-    for name in ("answers_ad.jsonl", "rag2_answers_ad.jsonl"):
-        for r in load_jsonl(results / name):
-            if r["item_id"] in items and r["arm"] in A.ARM_ORDER:
-                answers[(r["item_id"], r["arm"])] = r
+    items, answers = A.load_split(data, "ad", results)
     sub = {i: it for i, it in items.items() if NAMES_ALZHEIMER.search(it["question"])}
     arms = A.present_arms(answers)
     gold = Counter(it["newest"]["label"] for it in sub.values())
@@ -39,12 +32,12 @@ def subgroup(data: Path, results: Path) -> dict:
     gen = summarize(sub, answers, arms)
     comparisons = {}
     for a, b in COMPARISONS:
-        r = A.paired(sub, answers, a, b, A.BOTH)
+        r = paired(sub, answers, a, b, A.BOTH)
         if r:
             comparisons[f"{a} vs {b}"] = r
     pred = {a: {i: answers[(i, a)]["verdict"] for i in sub if (i, a) in answers} for a in arms}
-    gold_v, vec = CB.vectors(sub, {(i, a): v for a, m in pred.items() for i, v in m.items()}, arms)
-    macro = CB.paired_interval(gold_v, vec["R2V"], vec["R2"], CB.macro_f1, seed="ad-subgroup-macro-f1") if {"R2V", "R2"} <= set(vec) else None
+    gold_v, vec = vectors(sub, {(i, a): v for a, m in pred.items() for i, v in m.items()}, arms)
+    macro = paired_interval(gold_v, vec["R2V"], vec["R2"], macro_f1, seed="ad-subgroup-macro-f1") if {"R2V", "R2"} <= set(vec) else None
     return {"split": "ad", "subgroup": "question text names Alzheimer's disease", "dementia_set_items": len(items), "n": len(sub),
             "gold": dict(gold), "constant_answer": {"label": constant_label, "accuracy": round(constant_n / len(sub), DIGITS)},
             "accuracy": {a: gen[a]["all"] for a in arms}, "recall": {a: gen[a]["recall"] for a in arms},

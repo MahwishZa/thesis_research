@@ -20,9 +20,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from .ad_benchmark import used_review_ids
-from .benchmark import LABELS, _version, file_sha256, load_groups, read_csv
-from .fresh_supply import fresh_items
+from .benchmark import LABELS, load_groups, read_csv, read_version
+from .files import text_file_sha256
+from .selection import fresh_items, used_review_ids
 
 HERE = Path(__file__).resolve().parent
 SELECTION_SEED = "fresh-v1"
@@ -41,7 +41,7 @@ def select(candidates: list[dict], n: int = N_DEFAULT, earliest: str = EARLIEST)
 
 
 def make_item(medrev: dict, c: dict) -> dict:
-    newest, previous = _version(medrev, c["row"]), _version(medrev, c["previous"])
+    newest, previous = read_version(medrev, c["row"]), read_version(medrev, c["previous"])
     return {"item_id": f"FR-{c['row']:05d}", "group_id": c["group_id"], "kind": c["kind"], "split": "fresh",
             "question": medrev[c["row"]]["Question"].strip(), "newest": newest.__dict__, "previous": previous.__dict__,
             "change_type": f"{previous.label} -> {newest.label}" if c["kind"] == "changed" else None,
@@ -127,7 +127,7 @@ def main(argv=None) -> int:
     if len(items) < a.n:
         print(f"only {len(items)} qualifying questions for N = {a.n}: the pre-registration needs a decision", file=sys.stderr)
         return 3
-    rep = summary(items, meta["qualifying"], {n: file_sha256(p) for n, p in paths.items()})
+    rep = summary(items, meta["qualifying"], {n: text_file_sha256(p) for n, p in paths.items()})
     mpath = Path(a.manifest)
     if mpath.is_file():
         old = json.loads(mpath.read_text(encoding="utf-8"))

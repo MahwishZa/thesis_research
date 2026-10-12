@@ -25,14 +25,14 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from .benchmark import LABELS
-from .generate_answers import load_jsonl
-from .headroom import MODELS, read_answers
+from .files import load_jsonl
+from .released_answers import MODELS, read_answers
 from .scoring import class_stats, correct_map, load_answers, paired, wilson
 
 HERE = Path(__file__).resolve().parent
 RELEASED = {"qwen25-7b": "Qwen2.5-7B", "mistral-24b": "Mistral-24B", "llama33-70b": "Llama-3.3-70B",
             "gpt4o-mini": "GPT-4o-mini", "deepsek-v3": "DeepSeek-V3", "biomistral": "BioMistral",
-            "pmcllama": "PMC-LLaMA", "olmo-13b": "OLMo-13B"}      # keys of headroom.FILES
+            "pmcllama": "PMC-LLaMA", "olmo-13b": "OLMo-13B"}      # keys of released_answers.FILES
 STAGE1 = (("B0", "Llama-3-8B-Instruct (Q4_K_M), no retrieval"),
           ("B1", "+ MedCPT retrieval, top-5 (standard RAG)"),
           ("B2", "+ zero-shot helpfulness filter (untrained RAG²-style stand-in)"),

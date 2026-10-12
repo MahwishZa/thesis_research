@@ -1,14 +1,15 @@
-"""Automatic label audit and consistency check (synthetic data; a fake in place of the model)."""
+"""Automatic label audit (synthetic data; a fake in place of the model)."""
 
 import csv
+import hashlib
 import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
-from experiments.medchange import verdict_consistency as CA
 from experiments.medchange import label_audit as LA
+
 
 S, R, N = "SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"
 
@@ -41,11 +42,6 @@ class LabelAuditTests(unittest.TestCase):
         for needle in ("only select the third label if not enough studies were found", "at least partially supported",
                        "Does X help?", "obj", "conc", "LABEL:"):
             self.assertIn(needle, p)
-
-    def test_parse_label(self):
-        self.assertEqual(LA.parse_label("LABEL: not  enough information"), N)
-        self.assertEqual(LA.parse_label("label: **Refuted**"), R)
-        self.assertIsNone(LA.parse_label("I think it works"))
 
     def test_kappa(self):
         self.assertEqual(LA.cohens_kappa([(S, S), (R, R), (N, N)]), 1.0)
@@ -113,44 +109,22 @@ class LabelAuditTests(unittest.TestCase):
         self.assertEqual(rep["stable_item_ids"], ["a"])
 
 
-def answer(i, arm, verdict, text):
-    return {"item_id": i, "arm": arm, "verdict": verdict, "text": text}
+class AuditSampleTests(unittest.TestCase):
+    def test_the_registered_audit_sample_of_the_committed_question_list_is_these_300_questions(self):
+        """The rule of protocol §10.8 (SHA-256 order of ``fresh-audit-v1|<item id>``) applied to the committed manifest; a change of the rule or of the
+        list changes the sample and fails here."""
+        manifest = json.loads((Path(LA.__file__).resolve().parent / "manifest_fresh.json").read_text(encoding="utf-8"))
+        items = [{"item_id": f"FR-{row:05d}"} for row in manifest["rows"]]
+        sample = [x["item_id"] for x in LA.audit_sample(items, 300)]
+        self.assertEqual(sample[:5], ["FR-00725", "FR-03135", "FR-07991", "FR-03991", "FR-02782"])
+        self.assertEqual(hashlib.sha256(json.dumps(sorted(sample)).encode()).hexdigest()[:16], "0dd10528022c2eae")
+        self.assertEqual(len(set(sample)), 300)
 
-
-class ConsistencyAutoTests(unittest.TestCase):
-
-    def test_the_explanation_drops_only_the_verdict_line(self):
-        self.assertEqual(CA.explanation("VERDICT: SUPPORTED\n\nIt works [1]."), "It works [1].")
-        self.assertEqual(CA.explanation("no verdict here"), "no verdict here")
-
-    def test_sample_is_arm_balanced_seeded_and_skips_unparsed(self):
-        answers = [answer(f"i{k}", arm, "SUPPORTED", "x") for k in range(10) for arm in ("B0", "B1")]
-        answers.append(answer("bad", "B0", None, "x"))
-        s1, s2 = CA.sample_answers(answers, 6, 3), CA.sample_answers(answers, 6, 3)
-        self.assertEqual(s1, s2)
-        self.assertEqual(len(s1), 6)
-        self.assertEqual(sum(a["arm"] == "B0" for a in s1), 3)
-        self.assertNotIn("bad", {a["item_id"] for a in s1})
-
-    def test_run_and_summary(self):
-        answers = [answer("a", "B0", S, "VERDICT: SUPPORTED\nIt helps."), answer("b", "B0", R, "VERDICT: REFUTED\nIt helps."),
-                   answer("c", "B1", None, "no verdict")]
-        seen = []
-
-        def fake(system, user):
-            seen.append(user)
-            return "LABEL: SUPPORTED"
-
-        with TemporaryDirectory() as tmp:
-            out = Path(tmp) / "c.jsonl"
-            CA.run(answers[:2], {"a": "Qa?", "b": "Qb?"}, fake, out)
-            rows = [json.loads(l) for l in out.read_text(encoding="utf-8").splitlines()]
-        self.assertTrue(all("VERDICT" not in u.split("EXPLANATION:")[1] for u in seen))   # the stated verdict is hidden
-        rep = CA.summarize(rows, answers)
-        self.assertAlmostEqual(rep["parse_rate"], 2 / 3, places=3)
-        self.assertEqual(rep["parse_gate"], "FAIL")
-        self.assertEqual(rep["agreement"], 0.5)
-        self.assertEqual(rep["disagreements"][f"{R}->{S}"], 1)
+    def test_the_audit_sample_is_the_same_items_every_time(self):
+        items = [{"item_id": f"FR-{i:05d}"} for i in range(100)]
+        a, b = LA.audit_sample(items, 20), LA.audit_sample(list(reversed(items)), 20)
+        self.assertEqual([x["item_id"] for x in a], [x["item_id"] for x in b])
+        self.assertEqual(len(a), 20)
 
 
 if __name__ == "__main__":

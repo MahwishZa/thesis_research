@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from experiments.medchange import ad_cochrane_supply as C
-from experiments.medchange.pubmed_asof import EUtils
+from experiments.medchange.eutils import EUtils
 
 
 def article(pmid, title, conclusions=True, pubtype="Review"):

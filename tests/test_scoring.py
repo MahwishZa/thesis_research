@@ -1,10 +1,12 @@
-"""Accuracy intervals, per-class recall, paired comparisons and Holm families (no model, no network)."""
+"""Accuracy intervals, per-class recall and macro-F1, paired comparisons, bootstrap intervals and Holm families (no model, no network)."""
 
 import json
 import math
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+import numpy as np
 
 from experiments.medchange import scoring as SC
 
@@ -108,6 +110,97 @@ class PairedTests(unittest.TestCase):
                ("b", "X"): {"verdict": R}, ("b", "Y"): {"verdict": S}}
         self.assertEqual(SC.stable_difference(items, ans, "X", "Y", ["a"]), {"n": 1, "diff_a_minus_b": 1.0})
         self.assertIsNone(SC.stable_difference(items, ans, "X", "Y", []))
+
+
+#: The first raw 64-bit output of the generators seeded as the committed intervals were (numpy keeps the stream of its bit generator).
+PREFIX_RAW = 5729317375224220984
+HASHED_RAW = 18042913583985041560
+
+
+class VectorMetricTests(unittest.TestCase):
+    def test_macro_f1_is_the_mean_of_three_f1_and_zero_for_a_verdict_never_found(self):
+        gold = np.array([0, 0, 1, 1, 2, 2])
+        self.assertEqual(SC.macro_f1(gold, gold), 1.0)
+        always_first = np.zeros(6, dtype=int)
+        self.assertAlmostEqual(SC.macro_f1(gold, always_first), (2 * 2 / (2 * 2 + 4 + 0)) / 3)     # F1 of class 0 = 0.5; others 0
+
+    def test_macro_f1_equals_the_hand_computed_value_when_there_are_false_positives_and_false_negatives(self):
+        # gold S S R R N N, predicted S R R R N S (codes 0 0 1 1 2 2 and 0 1 1 1 2 0):
+        # S: tp 1, predicted 2, gold 2 -> F1 0.5; R: tp 2, predicted 3, gold 2 -> precision 2/3, recall 1 -> F1 0.8; N: tp 1, predicted 1, gold 2 -> F1 2/3
+        gold, pred = np.array([0, 0, 1, 1, 2, 2]), np.array([0, 1, 1, 1, 2, 0])
+        self.assertAlmostEqual(SC.macro_f1(gold, pred), (0.5 + 0.8 + 2 / 3) / 3)
+        self.assertEqual(SC.macro_f1(gold, np.array([3, 3, 3, 3, 3, 3])), 0.0)                 # only unparsed answers: nothing is ever right
+
+    def test_an_unparsed_answer_is_a_fourth_code_that_is_never_right(self):
+        items = {f"Q{k}": {"newest": {"label": lab}} for k, lab in enumerate((S, R, N))}
+        answers = {("Q0", "R2"): S, ("Q1", "R2"): None, ("Q2", "R2"): N}
+        gold, vec = SC.vectors(items, answers, ["R2"])
+        self.assertEqual(list(vec["R2"]), [0, 3, 2])
+        self.assertEqual(SC.recall(gold, vec["R2"], 1), 0.0)
+        self.assertAlmostEqual(SC.macro_f1(gold, vec["R2"]), 2 / 3)           # the unparsed REFUTED answer counts as a miss, not as a crash
+
+    def test_an_arm_that_misses_an_answer_gets_no_vector(self):
+        items = {"Q0": {"newest": {"label": S}}, "Q1": {"newest": {"label": R}}}
+        gold, vec = SC.vectors(items, {("Q0", "A"): S, ("Q1", "A"): R, ("Q0", "B"): S}, ["A", "B"])
+        self.assertEqual(list(gold), [0, 1])
+        self.assertEqual(set(vec), {"A"})
+
+    def test_the_vector_metric_and_the_dictionary_metric_compute_the_same_numbers(self):
+        rng = np.random.default_rng(3)
+        verdicts = [S, R, N, None]
+        items = {f"q{k:02d}": {"item_id": f"q{k:02d}", "kind": "unchanged", "newest": {"label": (S, R, N)[k % 3]}, "previous": {"label": S}}
+                 for k in range(90)}
+        answers = {(i, "A"): {"verdict": verdicts[int(rng.integers(0, 4))]} for i in items}
+        gold, vec = SC.vectors(items, {key: rec["verdict"] for key, rec in answers.items()}, ["A"])
+        stats = SC.class_stats(items, answers, "A", ("unchanged",))
+        self.assertAlmostEqual(stats["macro_f1"], SC.macro_f1(gold, vec["A"]), places=5)
+        for k, label in enumerate(SC.LABELS):
+            self.assertAlmostEqual(stats["recall"][label], SC.recall(gold, vec["A"], k), places=5)
+
+
+class BootstrapTests(unittest.TestCase):
+    def test_recall_of_a_verdict_and_the_paired_interval_contains_the_point(self):
+        gold = np.array([1, 1, 1, 1, 0, 0, 2, 2])
+        a, b = np.array([1, 1, 1, 0, 0, 0, 2, 2]), np.array([0, 0, 1, 0, 0, 0, 2, 2])
+        self.assertEqual(SC.recall(gold, a, 1), 0.75)
+        r = SC.paired_interval(gold, a, b, lambda g, p: SC.recall(g, p, 1), seed="t", iterations=500)
+        self.assertEqual(r["difference"], 0.5)
+        self.assertTrue(r["ci95"][0] <= 0.5 <= r["ci95"][1])
+
+    def test_the_interval_is_the_2_5_to_97_5_percentile_range_of_the_resampled_differences(self):
+        calls = iter(range(10 ** 6))
+
+        def metric(g, p):                                  # the first two calls are the point estimate; then resample k returns k - 1 and 0
+            index = next(calls)
+            return float(index // 2 - 1) if index >= 2 and index % 2 == 0 else 0.0
+        gold = np.array([0, 1, 2])
+        r = SC.bootstrap_difference(gold, gold, gold, metric, SC.hashed_rng("t"), 1000)
+        self.assertEqual(r["difference"], 0.0)
+        self.assertAlmostEqual(r["ci95"][0], 0.025 * 999, places=6)           # resampled differences are 0, 1, ..., 999
+        self.assertAlmostEqual(r["ci95"][1], 0.975 * 999, places=6)
+
+    def test_both_systems_are_resampled_with_the_same_questions(self):
+        accuracy = lambda g, p: float((g == p).mean())
+        gold, same = np.array([0, 1, 2, 0, 1, 2, 0, 1]), np.array([0, 1, 1, 0, 2, 2, 1, 1])
+        r = SC.bootstrap_difference(gold, same, same.copy(), accuracy, SC.prefix_rng("t"), 200)
+        self.assertEqual((r["difference"], r["ci95"]), (0.0, [0.0, 0.0]))     # identical systems never differ, in any resample
+
+    def test_stored_values_keep_six_decimals(self):
+        self.assertEqual(SC.DIGITS, 6)
+        gold = np.array([0, 1, 2])
+        r = SC.bootstrap_difference(gold, np.array([0, 1, 0]), np.array([0, 0, 0]), SC.macro_f1, SC.prefix_rng("t"), 20)
+        self.assertEqual(r["difference"], round(r["difference"], 6))
+        self.assertNotEqual(r["difference"], round(r["difference"], 4))               # 1/3-type values would be cut by four decimals
+
+    def test_the_two_seeding_rules_are_those_of_the_committed_intervals(self):
+        """``class_balance`` and ``ad_subgroup`` seed from the first 8 bytes of the seed text, the pre-registered ``analyze_fresh`` from its SHA-256.
+        The committed intervals were made with these streams, so the first raw numbers of each are pinned."""
+        self.assertEqual(SC.prefix_rng("class-balance-v1|confirm|R2V|R2|f1").bit_generator.random_raw(), PREFIX_RAW)
+        self.assertEqual(SC.prefix_rng("class-balance-v1|ad|R2C|R2|rec").bit_generator.random_raw(), PREFIX_RAW)       # the same first 8 bytes: "class-ba"
+        self.assertNotEqual(SC.prefix_rng("ad-subgroup-macro-f1").bit_generator.random_raw(), PREFIX_RAW)
+        self.assertEqual(SC.hashed_rng("fresh-macro-f1").bit_generator.random_raw(), HASHED_RAW)
+        self.assertNotEqual(SC.hashed_rng("fresh-macro-f1-R2V-R2C").bit_generator.random_raw(), HASHED_RAW)
+        self.assertEqual(SC.prefix_rng("short").bit_generator.random_raw(), SC.prefix_rng("short").bit_generator.random_raw())        # a short seed is padded with zeros
 
 
 if __name__ == "__main__":

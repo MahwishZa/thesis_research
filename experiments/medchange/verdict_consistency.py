@@ -21,8 +21,10 @@ import sys
 from pathlib import Path
 from typing import Callable, Sequence
 
-from .generate_answers import check_config, config_path, file_sha256, llama_generator, llama_version, load_jsonl
-from .label_audit import LABELS, parse_label
+from .benchmark import LABELS
+from .files import file_sha256, load_jsonl
+from .generator import check_config, config_path, llama_generator, llama_version
+from .prompts import parse_label
 
 HERE = Path(__file__).resolve().parent
 MIN_PARSE = 0.95

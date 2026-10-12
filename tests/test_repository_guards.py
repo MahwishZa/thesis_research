@@ -34,14 +34,24 @@ History of the guards (each date is a change of what is true; older wording is i
   tied to the committed manifests, and a guard keeps the number of fresh questions equal in every place that states it.
 * 2026-10-12: the documents, code and committed results state what was achieved and no longer measure the accuracy against a minimum gain
   (``StatedResultsTests``).
+* 2026-10-12 (later): the code that several commands need left the command modules for libraries (``LayeringTests``), the tests were split
+  to one file per module (``NamingTests``), and the committed run of the pre-registered test is checked against the registered question
+  list (``CommittedFreshRunTests``).
 """
 
 import ast
+import contextlib
+import hashlib
+import io
 import json
+import os
 import re
+import tempfile
 import unittest
 from pathlib import Path
 
+from experiments.medchange import analyze_fresh, fresh_benchmark, pipeline_support
+from experiments.medchange.files import load_jsonl
 from experiments.medchange.scoring import detectable_range, wilson
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -758,6 +768,8 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "evaluation/__init__.py", "evaluation/stats.py",
         "experiments/medchange/runner.py", "experiments/medchange/results/RAG2_FINDINGS.md",
         "tests/test_runner.py", "tests/test_temporal_filter.py",
+        # split to one test file per module on 2026-10-12 (the shared code left the command modules the same day)
+        "tests/test_audits.py", "tests/test_fresh_pipeline.py",
     )
     ACTIVE = (
         "experiments/medchange/encoders.py", "experiments/medchange/abstracts.py", "experiments/medchange/scoring.py",
@@ -765,6 +777,9 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
         "experiments/medchange/stage1/scorer.py", "experiments/medchange/stage1/temporal.py", "experiments/medchange/stage1/evidence.py",
         "experiments/medchange/stats.py", "tests/check_hermetic.py", "docs/protocol.md", "docs/evaluation.md",
+        "experiments/medchange/analysis.py", "experiments/medchange/eutils.py", "experiments/medchange/files.py",
+        "experiments/medchange/generator.py", "experiments/medchange/selection.py", "experiments/medchange/released_answers.py",
+        "tests/fixtures.py",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -809,26 +824,30 @@ class ActiveTreeLayoutTests(unittest.TestCase):
 
 
 class NamingTests(unittest.TestCase):
-    """Names say what a file is (2026-10-12): the tests live in ``tests/`` and are named after the module they test; the modules about the
+    """Names say what a file is (2026-10-12): the tests live in ``tests/``, one file per module (``test_<module>.py``) plus the guards; the modules about the
     Alzheimer's disease set start with ``ad_``; the committed reports are in one folder per split; no module or output keeps the vestigial
     suffix ``_auto`` (every check of this study is automatic)."""
 
     PACKAGE = ROOT / "experiments" / "medchange"
-    #: Test files that cover a feature spread over several modules rather than one module.
-    FEATURE_TESTS = {"audits", "fresh_pipeline", "repository_guards"}
+    #: The one test file that is not about a module: it ties the code, the documents and the committed results together.
+    GUARDS = {"repository_guards"}
 
     def _modules(self):
         """The modules of the pipeline package and its subpackages (``stage1``)."""
         modules = {p.stem for p in self.PACKAGE.glob("*.py") if p.name != "__init__.py"}
         return modules | {p.name for p in self.PACKAGE.iterdir() if p.is_dir() and (p / "__init__.py").is_file()}
 
-    def test_every_test_file_is_in_tests_and_named_after_a_module_or_a_feature(self):
+    def test_every_test_file_is_in_tests_and_named_after_a_module(self):
         stray = sorted(str(p.relative_to(ROOT)) for folder in ("experiments", "docs")
                        for p in (ROOT / folder).rglob("test_*.py") if "__pycache__" not in p.parts)
         self.assertEqual(stray, [], "tests belong in tests/")
-        allowed = self._modules() | {"check_hermetic"} | self.FEATURE_TESTS
+        allowed = self._modules() | {"check_hermetic"} | self.GUARDS
         misnamed = sorted(p.name for p in (ROOT / "tests").glob("test_*.py") if p.stem[len("test_"):] not in allowed)
         self.assertEqual(misnamed, [])
+
+    def test_every_module_has_its_test_file(self):
+        tested = {p.stem[len("test_"):] for p in (ROOT / "tests").glob("test_*.py")}
+        self.assertEqual(sorted(self._modules() - tested), [], "modules without a test file")
 
     def test_modules_about_the_alzheimers_disease_set_start_with_ad(self):
         misplaced = sorted(m for m in self._modules() if re.search(r"(^|_)ad(_|$)", m) and not m.startswith("ad_"))
@@ -851,6 +870,132 @@ class NamingTests(unittest.TestCase):
         self.assertEqual(folders, ["report_ad", "report_confirm"])
         for split in ("ad", "confirm"):
             self.assertTrue((RESULTS / f"report_{split}" / "REPORT.md").is_file())
+
+
+PACKAGE = ROOT / "experiments" / "medchange"
+
+
+class LayeringTests(unittest.TestCase):
+    """Code that several commands need lives in a library module (2026-10-12). A command is a module that can be run with ``python -m``
+    (it has a ``__main__`` guard); no module imports a command, so a command can change without changing another."""
+
+    @staticmethod
+    def _sources():
+        out = {p.stem: p for p in PACKAGE.glob("*.py") if p.name != "__init__.py"}
+        out.update({f"stage1.{p.stem}": p for p in (PACKAGE / "stage1").glob("*.py") if p.name != "__init__.py"})
+        return out
+
+    @staticmethod
+    def _is_command(tree):
+        return any(isinstance(n, ast.If) and isinstance(n.test, ast.Compare) and isinstance(n.test.left, ast.Name)
+                   and n.test.left.id == "__name__" for n in tree.body)
+
+    @staticmethod
+    def _imported(name, tree):
+        """The pipeline modules that a module imports, relative or absolute, under their names in ``_sources``."""
+        package = name.rpartition(".")[0]                     # "stage1" for a module of the subpackage, "" for the others
+        found = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.level:
+                base = (package + "." if package and node.level == 1 else "") + (node.module or "")
+            elif (node.module or "").startswith("experiments.medchange"):
+                base = node.module[len("experiments.medchange"):].lstrip(".")
+            else:
+                continue
+            found.add(base)
+            found.update((base + "." if base else "") + a.name for a in node.names)
+        return found
+
+    def _commands(self):
+        return {n for n, p in self._sources().items() if self._is_command(ast.parse(text(p)))}
+
+    def test_no_module_imports_a_command(self):
+        sources = self._sources()
+        commands = self._commands()
+        offenders = sorted(f"{n} imports {m}" for n, p in sources.items() for m in self._imported(n, ast.parse(text(p))) if m in commands)
+        self.assertEqual(offenders, [])
+        self.assertGreaterEqual(len(commands), 19)
+
+    def test_the_commands_and_the_libraries_are_those_the_readme_lists(self):
+        block = text(README).split("## Repository Structure", 1)[1].split("```", 2)[1]
+        commands_part = block.split("commands (", 1)[1].split("libraries (", 1)[0]
+        libraries_part = block.split("libraries (", 1)[1].split("manifest.json", 1)[0]
+        listed_commands = set(re.findall(r"(\w+)\.py\b", commands_part))
+        listed_libraries = set(re.findall(r"(\w+)\.py\b", libraries_part))
+        modules = {n for n in self._sources() if "." not in n}
+        self.assertEqual(listed_commands, self._commands())
+        self.assertEqual(listed_libraries, modules - self._commands())
+
+
+class CodeAgreesWithTheManifestsTests(unittest.TestCase):
+
+    def test_the_places_that_hold_the_number_of_fresh_questions_agree_with_the_manifest(self):
+        manifest = json.loads(text(PACKAGE / "manifest_fresh.json"))
+        self.assertEqual({analyze_fresh.EXPECTED, fresh_benchmark.N_DEFAULT, pipeline_support.EXPECTED_ITEMS["fresh"]}, {manifest["items"]})
+        self.assertEqual(len(manifest["rows"]), manifest["items"])
+        self.assertEqual(sum(manifest["labels"].values()), manifest["items"])
+
+
+class CommittedFreshRunTests(unittest.TestCase):
+    """The committed run of the pre-registered test covers exactly the registered question list: nothing is missing, repeated or extra,
+    and every record was made by the arms and the generator of the registration."""
+
+    MANIFEST = json.loads(text(PACKAGE / "manifest_fresh.json"))
+    IDS = ["FR-%05d" % row for row in MANIFEST["rows"]]
+    ARMS = ("R2", "R2C", "R2V")
+
+    def test_the_registered_list_has_the_registered_hash_and_the_protocol_quotes_it(self):
+        self.assertEqual(hashlib.sha256(json.dumps(self.IDS).encode()).hexdigest(), self.MANIFEST["item_ids_sha256"])
+        self.assertEqual(len(set(self.IDS)), 850)
+        self.assertIn(self.MANIFEST["item_ids_sha256"][:16], text(DOCS / "protocol.md"))
+
+    def test_the_answers_are_one_per_question_and_arm(self):
+        answers = load_jsonl(RESULTS / "rag2_answers_fresh.jsonl")
+        self.assertEqual(len(answers), 3 * 850)
+        for arm in self.ARMS:
+            self.assertEqual(sorted(r["item_id"] for r in answers if r["arm"] == arm), sorted(self.IDS), arm)
+        self.assertEqual({r["arm"] for r in answers}, set(self.ARMS))               # no B0, B1, R2V-ND or ablation arm was run
+        self.assertTrue(all(r["verdict"] in ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION", None) for r in answers))
+        self.assertEqual({r["settings"] for r in answers if r["arm"] == "R2"}, {"1743afd7045b"})         # the frozen design
+
+    def test_the_other_steps_cover_the_same_questions(self):
+        self.assertEqual(sorted(r["item_id"] for r in load_jsonl(RESULTS / "rag2_rationales_fresh.jsonl")), sorted(self.IDS))
+        self.assertEqual(sorted(r["item_id"] for r in load_jsonl(RESULTS / "rag2_lists_fresh.ids.jsonl")), sorted(self.IDS))
+        judged = {r["item_id"] for r in load_jsonl(RESULTS / "rag2_filter_fresh.jsonl")}
+        self.assertLessEqual(judged, set(self.IDS))                                 # a question without an eligible record has nothing to judge
+        self.assertGreater(len(judged), 0.8 * 850)
+
+    def test_the_run_used_the_generator_of_the_design_and_no_judge_model(self):
+        env = json.loads(text(RESULTS / "rag2_environment_fresh.json"))
+        design = json.loads(text(RESULTS / "rag2_design.json"))
+        self.assertEqual((env["phase"], env["judge_file"], env["tracked_code_modified"]), ("fresh", None, False))
+        self.assertEqual(env["generator_file"], "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf")
+        cfg = json.loads(text(RESULTS / "rag2_answers_fresh.config.json"))
+        self.assertEqual(cfg["model_sha256"], design["generator_model_sha256"])
+        self.assertEqual(cfg["model_file"], env["generator_file"])
+        self.assertFalse((RESULTS / "rag2_directness_fresh.jsonl").exists())        # the fresh test has no directness judge
+
+
+@unittest.skipUnless(os.environ.get("MEDCHANGE_DIR"), "set MEDCHANGE_DIR to a clone of jvladika/MedChange to rebuild the question sets from the release")
+class RebuildFromTheReleaseTests(unittest.TestCase):
+    """Run with ``MEDCHANGE_DIR=<clone>``: the three question sets are rebuilt from the public release and their manifests (counts, input
+    hashes, item lists) must equal the committed ones byte for byte. Nothing is written outside a temporary folder."""
+
+    def test_the_three_manifests_are_rebuilt_byte_for_byte(self):
+        from experiments.medchange import ad_benchmark, build_benchmark
+        release = os.environ["MEDCHANGE_DIR"]
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            tmp = Path(tmp)
+            data = tmp / "data"
+            self.assertEqual(build_benchmark.main(["--medchange-dir", release, "--out-dir", str(data), "--manifest", str(tmp / "manifest.json")]), 0)
+            self.assertEqual(ad_benchmark.main(["--medchange-dir", release, "--data-dir", str(data), "--manifest", str(tmp / "manifest_ad.json")]), 0)
+            self.assertEqual(fresh_benchmark.main(["--medchange-dir", release, "--data-dir", str(data), "--manifest", str(tmp / "manifest_fresh.json")]), 0)
+            for name in ("manifest.json", "manifest_ad.json", "manifest_fresh.json"):
+                rebuilt = (tmp / name).read_bytes().replace(b"\r\n", b"\n")
+                committed = (PACKAGE / name).read_bytes().replace(b"\r\n", b"\n")           # a Windows checkout may convert line endings
+                self.assertEqual(rebuilt, committed, name)
 
 
 class DocumentationIntegrityTests(unittest.TestCase):

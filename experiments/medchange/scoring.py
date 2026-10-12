@@ -3,21 +3,31 @@ paired comparisons (exact McNemar + paired bootstrap, ``stats.py``) and Holm-adj
 
 ``paired(items, answers, a, b, kinds)`` compares arm ``a`` with arm ``b`` over the same questions; a result in a
 family is *confirmed* only if its Holm-adjusted p is below ``ALPHA``, its 95% interval excludes 0 and the difference
-is positive (``docs/evaluation.md``). The functions are unchanged from the earlier stages' analysis.
+is positive (``docs/evaluation.md``). The accuracy functions are unchanged from the earlier stages' analysis.
+
+The per-verdict metrics (``macro_f1``, ``recall``) work on integer codes: ``vectors`` turns the verdicts of the arms into
+one code per question (0, 1, 2 for the three verdicts in the order of ``LABELS``; 3 for an answer without a verdict, which is
+never right), and ``bootstrap_difference`` gives the paired difference of such a metric with a 95% interval from resampled
+questions. The two seeding rules (``prefix_rng`` for ``class_balance`` and ``ad_subgroup``, ``hashed_rng`` for the
+pre-registered ``analyze_fresh``) are kept apart because the committed intervals of each were produced with its own.
 """
 
 from __future__ import annotations
 
+import hashlib
 import math
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
-from .stats import holm, mcnemar, paired_bootstrap_ci
+import numpy as np
 
 from .benchmark import LABELS
-from .generate_answers import load_jsonl
+from .files import load_jsonl
+from .stats import holm, mcnemar, paired_bootstrap_ci
 
 ALPHA = 0.05
+#: Bootstrap resamples of questions for the per-verdict metrics (``docs/protocol.md`` §10.1).
+ITERATIONS = 10000
 #: Decimals kept in stored rates and intervals. Six, not four: a rate stored to four decimals and then shown as a
 #: percentage to one decimal can round the wrong way at a boundary (259/528 = 49.053% was shown as 49.0%).
 DIGITS = 6
@@ -124,3 +134,61 @@ def stable_difference(items: dict, answers: dict, a: str, b: str, stable_ids: Se
     if not ids:
         return None
     return {"n": len(ids), "diff_a_minus_b": round(sum(ca[i] - cb[i] for i in ids) / len(ids), DIGITS)}
+
+
+# --------------------------------------------------------------------------------------
+# Per-verdict metrics on integer codes
+# --------------------------------------------------------------------------------------
+
+def macro_f1(gold: np.ndarray, pred: np.ndarray) -> float:
+    """Unweighted mean of the F1 of the three verdicts; the F1 of a verdict that is never predicted correctly is 0."""
+    f = []
+    for c in range(len(LABELS)):
+        tp = int(((gold == c) & (pred == c)).sum())
+        fp = int(((gold != c) & (pred == c)).sum())
+        fn = int(((gold == c) & (pred != c)).sum())
+        f.append(0.0 if tp == 0 else 2 * tp / (2 * tp + fp + fn))
+    return sum(f) / len(f)
+
+
+def recall(gold: np.ndarray, pred: np.ndarray, c: int) -> float:
+    m = gold == c
+    return float((pred[m] == c).mean()) if m.any() else 0.0
+
+
+def vectors(items: dict, answers: dict, arms) -> tuple[np.ndarray, dict]:
+    """(gold codes, {arm: predicted codes}) over the questions in sorted order, for the arms that have an answer to every question.
+    ``answers`` maps (item id, arm) to the verdict."""
+    ids = sorted(items)
+    idx = {l: k for k, l in enumerate(LABELS)}
+    gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
+    unparsed = len(LABELS)                          # a fourth code: counted wrong, never predicted as a verdict
+    return gold, {a: np.array([idx.get(answers[(i, a)], unparsed) for i in ids]) for a in arms if all((i, a) in answers for i in ids)}
+
+
+def prefix_rng(seed: str) -> np.random.Generator:
+    """Seeded from the first 8 bytes of the seed text, so seeds that share those 8 bytes share the stream of resamples."""
+    return np.random.default_rng(int.from_bytes(seed.encode()[:8].ljust(8, b"\0"), "little"))
+
+
+def hashed_rng(seed: str) -> np.random.Generator:
+    """Seeded from the SHA-256 of the whole seed text."""
+    return np.random.default_rng(int(hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16], 16))
+
+
+def bootstrap_difference(gold: np.ndarray, pa: np.ndarray, pb: np.ndarray, metric: Callable, rng: np.random.Generator,
+                         iterations: int) -> dict:
+    """metric(a) - metric(b) on the questions, with the 2.5th and 97.5th percentile of the same difference over ``iterations``
+    resamples of the questions (the same resample for both systems)."""
+    point = metric(gold, pa) - metric(gold, pb)
+    n = len(gold)
+    diffs = np.empty(iterations)
+    for k in range(iterations):
+        s = rng.integers(0, n, n)
+        diffs[k] = metric(gold[s], pa[s]) - metric(gold[s], pb[s])
+    lo, hi = np.percentile(diffs, [2.5, 97.5])
+    return {"difference": round(float(point), DIGITS), "ci95": [round(float(lo), DIGITS), round(float(hi), DIGITS)]}
+
+
+def paired_interval(gold, pa, pb, metric, *, seed: str, iterations: int = ITERATIONS) -> dict:
+    return bootstrap_difference(gold, pa, pb, metric, prefix_rng(seed), iterations)

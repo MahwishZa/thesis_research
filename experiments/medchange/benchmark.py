@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import csv
 import difflib
-import hashlib
 import random
 import re
 from dataclasses import asdict, dataclass, field
@@ -124,7 +123,7 @@ def load_groups(rows: Iterable[dict]) -> dict[int, list[int]]:
     return groups
 
 
-def _version(medrev: dict[int, dict], row: int) -> Version:
+def read_version(medrev: dict[int, dict], row: int) -> Version:
     r = medrev[row]
     date, precision = parse_cochrane_date(r["DOI_Date"])
     return Version(row=row, pmid=_pmid(r.get("PMID", "")),
@@ -187,7 +186,7 @@ def build_items(medrev: dict[int, dict], groups: dict[int, list[int]],
 
 
 def _make_item(medrev, gid, n, o, kind) -> Item:
-    newest, prev = _version(medrev, n), _version(medrev, o)
+    newest, prev = read_version(medrev, n), read_version(medrev, o)
     if prev.date > newest.date:
         raise BenchmarkError(f"group {gid}: previous version dated after newest")
     sim = _similarity(medrev[n]["conclusions"], medrev[o]["conclusions"])
@@ -219,9 +218,3 @@ def assign_splits(items: list[Item], *, dev_fraction: float, seed: int) -> None:
         n_dev = round(len(members) * dev_fraction)
         for i, it in enumerate(members):
             it.split = "dev" if i < n_dev else "confirm"
-
-
-def file_sha256(path: Path) -> str:
-    """SHA-256 of the file with CRLF normalised to LF, so a Windows checkout with
-    git's autocrlf conversion and a Linux checkout of the same release hash alike."""
-    return hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).hexdigest()

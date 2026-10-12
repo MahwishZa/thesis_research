@@ -257,13 +257,18 @@ the same reading, with a larger and equally unconfirmed gain. The pre-registered
 
 ### 6.5 Rounding in the committed analysis files
 
-The committed analysis tables `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` were written when stored rates carried four
-decimals before being shown with one, so a few cells differ by 0.1 from the exact value used in this document. Held-out split:
-the REFUTED recall of R2C and R2V is 19.0% (shown 19.1%) and the accuracy of R2V-ND is 49.1%, 259 of 528 (shown 49.0%).
-Development split: the REFUTED recall of R2C is 32.7% (shown 32.6%), its share of NOT ENOUGH INFORMATION answers 23.5% (23.4%),
-the outdated-verdict rate of R2V 37.7% (37.8%) and the systematic-review or meta-analysis share of R2's admitted abstracts 25.3%
-(25.2%). The code now stores six decimals, and rerunning `analyze_rag2` where the frozen pools exist regenerates the files with
-exact values.
+The first versions of `rag2_analysis_dev.md` and `rag2_analysis_confirm.md` were written when stored rates carried four decimals before
+being shown with one, so a few cells were 0.1 away from the exact value. Held-out split: the REFUTED recall of R2C and R2V (exactly
+19.0%) was shown as 19.1% and the accuracy of R2V-ND (exactly 49.1%, 259 of 528) as 49.0%. Development split: the REFUTED recall of R2C
+(32.7%) was shown as 32.6%, its share of NOT ENOUGH INFORMATION answers (23.5%) as 23.4%, the outdated-verdict rate of R2V (37.7%) as
+37.8% and the systematic-review or meta-analysis share of R2's admitted abstracts (25.3%) as 25.2%. The code now stores six decimals,
+and on 2026-10-12 both analyses (`.json` and `.md`) were regenerated from the committed answers with the same code, so their cells equal
+the values used in this document. Four figures per file describe the abstracts that standard retrieval (B1) admitted (the evidence mix, the
+update-window share, the share of questions with update-window evidence and the mean age); they need the frozen candidate pools, which exist
+only on the researcher's computer, and were carried over unchanged from the first versions. Regenerating the first versions with four
+decimals in the same way gave the committed files again, byte for byte (the development file only lacked the key `context_truncated`,
+added later), and the Alzheimer's disease set's analysis, written with six decimals from the start, is reproduced exactly by the same
+procedure. Rerunning `analyze_rag2` on the researcher's computer, where the pools exist, gives the same files.
 
 ### 6.6 Alzheimer's disease and related dementias set (secondary, run once)
 

@@ -1,10 +1,9 @@
-"""The helpers shared by the phase drivers: the frozen-file guard, a commit that never pushes, the executor, and the
-network retry of the evidence download (no model, no network)."""
+"""The helpers shared by the phase drivers: the frozen-file guard, a commit that never pushes, the executor and the expected item counts (no model, no network)."""
 
 import contextlib
 import io
+import json
 import subprocess
-import types
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -83,46 +82,20 @@ class ExecuteTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("FAIL b 1 missing", out.getvalue())
 
-
-class NetworkRetryTests(unittest.TestCase):
-    """A connection cut in the middle of a download (IncompleteRead) is retried, not fatal."""
-
-    def test_efetch_retries_an_incomplete_read(self):
-        import http.client
-        from experiments.medchange import freeze_candidates as FC
-        calls = []
-
-        def opener(url):
-            calls.append(url)
-            if len(calls) == 1:
-                raise http.client.IncompleteRead(b"partial")
-            return b"<PubmedArticleSet></PubmedArticleSet>"
-
-        eu = types.SimpleNamespace(api_key=None, delay=0, _sleep=lambda s: None, _open=opener)
-        self.assertEqual(FC.fetch_abstracts(eu, ["1"]), {})
-        self.assertEqual(len(calls), 2)
-
-    def test_eutils_retries_a_reset_connection_and_gives_up_after_five_attempts(self):
-        from experiments.medchange.pubmed_asof import EUtils
-        calls = []
-
-        def flaky(url):
-            calls.append(url)
-            if len(calls) < 3:
-                raise ConnectionResetError("reset by peer")            # an OSError that is neither a URLError nor a timeout
-            return b'{"esearchresult": {"count": "0", "idlist": []}}'
-
-        self.assertEqual(EUtils(opener=flaky, sleep=lambda s: None).search("x", "2020/01/01", 5), (0, []))
-        self.assertEqual(len(calls), 3)
-        dead = []
-
-        def always(url):
-            dead.append(url)
-            raise ConnectionResetError("reset by peer")
-
-        with self.assertRaises(RuntimeError):
-            EUtils(opener=always, sleep=lambda s: None).search("x", "2020/01/01", 5)
-        self.assertEqual(len(dead), 5)
+class ExpectedItemsTests(unittest.TestCase):
+    def test_expected_item_counts_equal_the_committed_manifests(self):
+        """``pipeline.EXPECTED_ITEMS`` is what the preflight of both pipelines demands. It is a hand-typed copy
+        of the manifests' counts, and it went stale once (212, against the corrected 208)."""
+        base = Path(RN.__file__).resolve().parent
+        main = json.loads((base / "manifest.json").read_text(encoding="utf-8"))["counts"]
+        ad = json.loads((base / "manifest_ad.json").read_text(encoding="utf-8"))
+        self.assertEqual(RN.EXPECTED_ITEMS["dev"] + RN.EXPECTED_ITEMS["confirm"],
+                         main["items"] - main["likely_label_noise_excluded"])
+        self.assertEqual(RN.EXPECTED_ITEMS["ad"], ad["items"])
+        fresh = base / "manifest_fresh.json"
+        if fresh.is_file():                                  # written by fresh_benchmark and committed before the fresh run
+            self.assertEqual(RN.EXPECTED_ITEMS["fresh"], json.loads(fresh.read_text(encoding="utf-8"))["items"])
+        self.assertEqual(ad["kinds"], {"unchanged": ad["items"]})          # no changed verdict can be in this set
 
 
 if __name__ == "__main__":

@@ -6,9 +6,9 @@ Uses the answers already on file (no model is run) for the held-out ("confirm") 
 metric was chosen after the accuracy results were known (``docs/protocol.md`` §10.1), so nothing here is a confirmatory result;
 ``protocol.md`` §10 fixes how it is tested on fresh questions. Macro-F1 is the unweighted mean of the F1 of the three verdicts (an F1 is 0
 when a verdict is never predicted correctly; an unparsed answer is a fourth code that is never right). Intervals: 10,000 bootstrap resamples
-of questions, seeded. The generator is seeded from the first 8 bytes of the seed text (``paired_interval``), so every comparison of this file
+of questions, seeded. The generator is seeded from the first 8 bytes of the seed text (``scoring.prefix_rng``), so every comparison of this file
 shares the stream of resamples that begins "class-ba"; the intervals are valid bootstrap intervals and are kept as committed. The
-pre-registered analysis (``analyze_fresh``) hashes the whole seed text instead."""
+pre-registered analysis (``analyze_fresh``) hashes the whole seed text instead (``scoring.hashed_rng``)."""
 
 from __future__ import annotations
 
@@ -17,65 +17,20 @@ import json
 import sys
 from pathlib import Path
 
-import numpy as np
-
-from . import analyze_rag2 as A
+from . import analysis as A
 from .benchmark import LABELS
-from .generate_answers import load_jsonl
+from .scoring import DIGITS, ITERATIONS, macro_f1, paired_interval, recall, vectors
 
 HERE = Path(__file__).resolve().parent
 SPLITS = ("confirm", "ad")
 PAIRS = (("R2V", "R2"), ("R2C", "R2"), ("R2V", "R2C"))
-ITERATIONS = 10000
 SEED = "class-balance-v1"
-#: Decimals kept in stored shares, recalls and intervals. Six, not four: a value stored to four decimals and then shown to one (19.0476% -> 0.1905 -> "19.1%")
-#: can be rounded the wrong way at a boundary (the same reason as ``scoring.DIGITS``).
-DIGITS = 6
-
-
-def macro_f1(gold: np.ndarray, pred: np.ndarray) -> float:
-    f = []
-    for c in range(len(LABELS)):
-        tp = int(((gold == c) & (pred == c)).sum())
-        fp = int(((gold != c) & (pred == c)).sum())
-        fn = int(((gold == c) & (pred != c)).sum())
-        f.append(0.0 if tp == 0 else 2 * tp / (2 * tp + fp + fn))
-    return sum(f) / len(f)
-
-
-def recall(gold: np.ndarray, pred: np.ndarray, c: int) -> float:
-    m = gold == c
-    return float((pred[m] == c).mean()) if m.any() else 0.0
 
 
 def load(data: Path, results: Path, split: str):
-    items = {r["item_id"]: r for r in load_jsonl(data / "benchmark.jsonl") if r["split"] == split and not r["likely_label_noise"]}
-    answers = {}
-    for name in (f"answers_{split}.jsonl", f"rag2_answers_{split}.jsonl"):
-        for r in load_jsonl(results / name):
-            if r["item_id"] in items and r["arm"] in A.ARM_ORDER:
-                answers[(r["item_id"], r["arm"])] = r["verdict"]
-    return items, answers
-
-
-def vectors(items: dict, answers: dict, arms) -> tuple[np.ndarray, dict]:
-    ids = sorted(items)
-    idx = {l: k for k, l in enumerate(LABELS)}
-    gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
-    unparsed = len(LABELS)                          # a fourth code: counted wrong, never predicted as a verdict
-    return gold, {a: np.array([idx.get(answers[(i, a)], unparsed) for i in ids]) for a in arms if all((i, a) in answers for i in ids)}
-
-
-def paired_interval(gold, pa, pb, metric, *, seed: str, iterations: int = ITERATIONS) -> dict:
-    rng = np.random.default_rng(int.from_bytes(seed.encode()[:8].ljust(8, b"\0"), "little"))
-    point = metric(gold, pa) - metric(gold, pb)
-    n = len(gold)
-    diffs = np.empty(iterations)
-    for k in range(iterations):
-        s = rng.integers(0, n, n)
-        diffs[k] = metric(gold[s], pa[s]) - metric(gold[s], pb[s])
-    lo, hi = np.percentile(diffs, [2.5, 97.5])
-    return {"difference": round(float(point), DIGITS), "ci95": [round(float(lo), DIGITS), round(float(hi), DIGITS)]}
+    """(items, {(item id, arm): verdict}): the benchmark from ``data``, the answers from ``results``."""
+    items, records = A.load_split(data, split, results)
+    return items, {k: r["verdict"] for k, r in records.items()}
 
 
 def analyse(data: Path, results: Path) -> dict:
@@ -94,9 +49,9 @@ def analyse(data: Path, results: Path) -> dict:
         for a, b in PAIRS:
             if a in pred and b in pred:
                 rep["paired"][f"{a} vs {b}"] = {
-                    "macro_f1": paired_interval(gold, pred[a], pred[b], macro_f1, seed=f"{SEED}|{split}|{a}|{b}|f1"),
+                    "macro_f1": paired_interval(gold, pred[a], pred[b], macro_f1, seed=f"{SEED}|{split}|{a}|{b}|f1", iterations=ITERATIONS),
                     "refuted_recall": paired_interval(gold, pred[a], pred[b], lambda g, p: recall(g, p, 1),
-                                                      seed=f"{SEED}|{split}|{a}|{b}|rec")}
+                                                      seed=f"{SEED}|{split}|{a}|{b}|rec", iterations=ITERATIONS)}
         out["splits"][split] = rep
     return out
 

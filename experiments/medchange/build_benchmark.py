@@ -17,9 +17,10 @@ import sys
 from pathlib import Path
 
 from .benchmark import (
-    BenchmarkError, assign_splits, build_items, file_sha256, load_groups, read_csv,
+    BenchmarkError, assign_splits, build_items, load_groups, read_csv,
     rebuild_medchangeqa, verify_against_release,
 )
+from .files import text_file_sha256
 
 HERE = Path(__file__).resolve().parent
 
@@ -63,7 +64,7 @@ def main(argv=None) -> int:
     usable = [i for i in items if not i.likely_label_noise]
     summary = {
         "source": "MedChange (Vladika et al., EMNLP 2025 Findings), github.com/jvladika/MedChange",
-        "input_sha256": {n: file_sha256(p) for n, p in paths.items()},
+        "input_sha256": {n: text_file_sha256(p) for n, p in paths.items()},
         "seed": args.seed, "dev_fraction": args.dev_fraction,
         "n_unchanged_requested": args.n_unchanged,
         "medchangeqa_rebuilt_and_verified": len(rebuilt),

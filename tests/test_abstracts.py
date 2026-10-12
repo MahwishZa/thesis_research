@@ -58,5 +58,23 @@ class StudyTypeTests(unittest.TestCase):
         self.assertEqual(AB.study_type(None), "other")
 
 
+class EligibleTests(unittest.TestCase):
+
+    def test_a_record_needs_an_abstract_of_at_least_200_characters(self):
+        rec = {"pmid": "1", "pubtypes": []}
+        self.assertTrue(AB.eligible(rec, {"1": {"abstract": "x" * 200}}))
+        self.assertFalse(AB.eligible(rec, {"1": {"abstract": "x" * 199}}))
+        self.assertFalse(AB.eligible(rec, {}))                                  # no abstract was downloaded for it
+        self.assertFalse(AB.eligible(rec, {"1": {"abstract": ""}}))             # PubMed has the record but no abstract
+
+    def test_retractions_errata_comments_editorials_letters_news_and_handouts_are_never_listed(self):
+        abstracts = {"1": {"abstract": "x" * 300}}
+        for kind in AB.EXCLUDED_TYPES:
+            self.assertFalse(AB.eligible({"pmid": "1", "pubtypes": ["Journal Article", kind]}, abstracts), kind)
+        self.assertEqual(len(AB.EXCLUDED_TYPES), 8)
+        self.assertTrue(AB.eligible({"pmid": "1", "pubtypes": ["Randomized Controlled Trial"]}, abstracts))
+        self.assertTrue(AB.eligible({"pmid": "1"}, abstracts))                  # a record without publication types is not excluded
+
+
 if __name__ == "__main__":
     unittest.main()

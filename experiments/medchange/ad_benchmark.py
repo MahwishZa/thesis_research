@@ -21,20 +21,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
 
-from .benchmark import _version, file_sha256, load_groups, read_csv
+from .benchmark import load_groups, read_csv, read_version
+from .files import text_file_sha256
+from .selection import AD_QUESTION, candidates, used_review_ids
 
 HERE = Path(__file__).resolve().parent
-AD_QUESTION = re.compile(r"dementia|alzheimer|mild cognitive impairment|cognitive decline|cognitively impaired|"
-                         r"cognitive impairment", re.I)
 
 
 def _item(medrev: dict, newest_row: int, previous_row: int, kind: str) -> dict:
-    newest, previous = _version(medrev, newest_row), _version(medrev, previous_row)
+    newest, previous = read_version(medrev, newest_row), read_version(medrev, previous_row)
     single = newest_row == previous_row
     return {"item_id": f"AD-{newest_row:05d}", "group_id": None, "kind": kind, "split": "ad",
             "question": medrev[newest_row]["Question"].strip(),
@@ -53,34 +52,16 @@ def build_ad_items(medrev: dict, groups: dict, used_groups: set, used_reviews: f
     holds can sit in ``MedRevQA`` as an ungrouped row of its own, and the group check alone lets it through
     (four such questions were found on 2026-10-05, before any use of the set).
     """
-    grouped = {k for keys in groups.values() for k in keys}
-    candidates = []                                   # (newest row, previous row, kind)
-    for gid in sorted(groups):
-        if gid in used_groups:
-            continue
-        keys = sorted(set(groups[gid]))
-        if len(keys) >= 2:
-            same = medrev[keys[0]]["Label"].strip() == medrev[keys[1]]["Label"].strip()
-            candidates.append((keys[0], keys[1], "unchanged" if same else "changed"))
-        else:
-            candidates.append((keys[0], keys[0], "unchanged"))
-    candidates += [(k, k, "unchanged") for k in sorted(medrev) if k not in grouped]
     seen, out = set(), []
-    for newest, previous, kind in sorted(candidates):
+    for newest, previous, kind, _ in candidates(medrev, groups, used_groups):
         question = medrev[newest]["Question"].strip()
         if not AD_QUESTION.search(question) or question.lower() in seen:
             continue
-        if {_version(medrev, newest).cochrane_id, _version(medrev, previous).cochrane_id} & used_reviews:
+        if {read_version(medrev, newest).cochrane_id, read_version(medrev, previous).cochrane_id} & used_reviews:
             continue
         seen.add(question.lower())
         out.append(_item(medrev, newest, previous, kind))
     return out
-
-
-def used_review_ids(main_rows: list[dict]) -> frozenset:
-    """Cochrane IDs of every review (either version) that an item of the main benchmark is built from."""
-    return frozenset(v["cochrane_id"] for r in main_rows for v in (r["newest"], r["previous"])
-                     if v.get("cochrane_id"))
 
 
 def summary(items: list[dict], inputs: dict) -> dict:
@@ -118,7 +99,7 @@ def main(argv=None) -> int:
     with open(bench, "w", encoding="utf-8", newline="\n") as h:
         for r in main_rows + items:
             h.write(json.dumps(r) + "\n")
-    rep = summary(items, {n: file_sha256(p) for n, p in paths.items()})
+    rep = summary(items, {n: text_file_sha256(p) for n, p in paths.items()})
     with open(a.manifest, "w", encoding="utf-8", newline="\n") as h:
         h.write(json.dumps(rep, indent=2) + "\n")
     print(json.dumps({k: rep[k] for k in ("items", "kinds", "labels", "reviews", "single_version")}, indent=2))

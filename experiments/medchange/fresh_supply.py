@@ -3,7 +3,7 @@
     python -m experiments.medchange.fresh_supply --medchange-dir ..\\MedChange
 
 A question is *fresh* when neither its study group nor its Cochrane ID nor its wording appears in any split of
-``data/benchmark.jsonl`` (dev, confirm, ad). The tool applies the same exclusion rules as ``ad_benchmark`` but no topic filter,
+``data/benchmark.jsonl`` (dev, confirm, ad). The tool applies the exclusion rules of ``selection`` (the ones that built the Alzheimer's disease set) but no topic filter,
 and reports how many fresh questions there are at several earliest review dates, with their verdicts and kinds. It selects
 nothing and writes only counts to ``results/fresh_supply.json`` (``docs/protocol.md`` §10 fixes the selection rule before any
 question is chosen)."""
@@ -17,60 +17,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import re
-
-from .ad_benchmark import AD_QUESTION, used_review_ids
-from .benchmark import LABELS, _version, file_sha256, load_groups, read_csv
+from .benchmark import LABELS, load_groups, read_csv
+from .files import text_file_sha256
+from .selection import fresh_items, used_review_ids
 
 HERE = Path(__file__).resolve().parent
-#: Review text (question, objectives, conclusions) that names Alzheimer's disease or dementia. Counted because a review can be about
-#: dementia while its question does not say so.
-AD_DOMAIN_TEXT = re.compile(r"alzheimer|dementia", re.IGNORECASE)
-#: Neurodegenerative diseases other than dementia itself (the dementia wording is excluded from the fresh pool already). Counted for a possible
-#: descriptive stratum "neurodegenerative diseases related to Alzheimer's disease"; it is not Alzheimer's disease and is never called that.
-NEURO_TEXT = re.compile(r"parkinson|lewy bod|frontotemporal|huntington|amyotrophic|motor neuron|neurodegenerat|supranuclear|multiple system atrophy|"
-                        r"corticobasal|prion|creutzfeldt", re.IGNORECASE)
 EARLIEST = ("2005-01-01", "2010-01-01", "2015-01-01", "2023-04-01")      # last: after the generator's stated knowledge cutoff
-
-
-def candidates(medrev: dict, groups: dict, used_groups: set) -> list[tuple[int, int, str, object]]:
-    """(newest row, previous row, kind, group id or None) for every group or ungrouped row outside ``used_groups``."""
-    grouped = {k for keys in groups.values() for k in keys}
-    out = []
-    for gid in sorted(groups):
-        if gid in used_groups:
-            continue
-        keys = sorted(set(groups[gid]))
-        if len(keys) >= 2:
-            same = medrev[keys[0]]["Label"].strip() == medrev[keys[1]]["Label"].strip()
-            out.append((keys[0], keys[1], "unchanged" if same else "changed", gid))
-        else:
-            out.append((keys[0], keys[0], "unchanged", gid))
-    out += [(k, k, "unchanged", None) for k in sorted(medrev) if k not in grouped]
-    return sorted(out, key=lambda t: t[:3])
-
-
-def fresh_items(medrev: dict, groups: dict, used_groups: set, used_reviews: frozenset, used_questions: frozenset) -> list[dict]:
-    seen, out = set(), []
-    for newest, previous, kind, gid in candidates(medrev, groups, used_groups):
-        q = medrev[newest]["Question"].strip()
-        key = q.lower()
-        try:
-            nv, pv = _version(medrev, newest), _version(medrev, previous)
-        except Exception:                                  # a citation without a date cannot be asked as of a date
-            continue
-        if key in seen or key in used_questions or {nv.cochrane_id, pv.cochrane_id} & used_reviews:
-            continue
-        seen.add(key)
-        out.append({"row": newest, "previous": previous, "group_id": gid, "kind": kind, "single_version": newest == previous, "date": nv.date,
-                    "precision": nv.date_precision, "label": nv.label, "cochrane_id": nv.cochrane_id,
-                    "dementia_wording": bool(AD_QUESTION.search(q)),
-                    "neuro_wording": bool(NEURO_TEXT.search(q)),
-                    "neuro_in_review_text": bool(NEURO_TEXT.search(" ".join(
-                        [q, medrev[newest].get("objectives") or "", medrev[newest].get("conclusions") or ""]))),
-                    "dementia_in_review_text": bool(AD_DOMAIN_TEXT.search(" ".join(
-                        [q, medrev[newest].get("objectives") or "", medrev[newest].get("conclusions") or ""])))})
-    return out
 
 
 def report(items: list[dict]) -> dict:
@@ -119,7 +71,7 @@ def main(argv=None) -> int:
                         {r["group_id"] for r in rows if r.get("group_id") is not None}, used_review_ids(rows),
                         frozenset(r["question"].strip().lower() for r in rows))
     rep = report(items)
-    rep.update(existing_items=len(rows), medrevqa_rows=len(medrev), inputs={n: file_sha256(p) for n, p in paths.items()},
+    rep.update(existing_items=len(rows), medrevqa_rows=len(medrev), inputs={n: text_file_sha256(p) for n, p in paths.items()},
                note="counts only; nothing is selected; the selection rule is fixed in docs/protocol.md §10")
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)

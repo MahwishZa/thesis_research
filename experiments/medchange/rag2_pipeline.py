@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from . import rag2 as R
-from .generate_answers import file_sha256, load_jsonl
+from .files import file_sha256, load_jsonl
 from .pipeline_support import EXPECTED_ITEMS, commit_results, execute, frozen_is_pushed, print_checks, py
 
 HERE = Path(__file__).resolve().parent

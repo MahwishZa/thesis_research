@@ -1,48 +1,78 @@
-"""Per-verdict behaviour and macro-F1 (no model): the code, the committed file and the documents that quote it."""
+"""Per-verdict behaviour and macro-F1 (no model): the analysis on synthetic splits, the committed file and the documents that quote it."""
 
+import contextlib
+import io
 import json
 import unittest
 from pathlib import Path
-
-import numpy as np
+from tempfile import TemporaryDirectory
+from unittest import mock
 
 from experiments.medchange import class_balance as C
+from tests.fixtures import F_, N, S, answer, item, write
 
 ROOT = Path(__file__).resolve().parents[1]
 REP = json.loads((ROOT / "experiments" / "medchange" / "results" / "class_balance.json").read_text(encoding="utf-8"))
 
 
-class MetricTests(unittest.TestCase):
-    def test_macro_f1_is_the_mean_of_three_f1_and_zero_for_a_verdict_never_found(self):
-        gold = np.array([0, 0, 1, 1, 2, 2])
-        self.assertEqual(C.macro_f1(gold, gold), 1.0)
-        always_first = np.zeros(6, dtype=int)
-        self.assertAlmostEqual(C.macro_f1(gold, always_first), (2 * 2 / (2 * 2 + 4 + 0)) / 3)     # F1 of class 0 = 0.5; others 0
+class SyntheticRunTests(unittest.TestCase):
+    """The analysis and its tables on small synthetic splits (no committed file is read)."""
 
-    def test_macro_f1_equals_the_hand_computed_value_when_there_are_false_positives_and_false_negatives(self):
-        # gold S S R R N N, predicted S R R R N S (codes 0 0 1 1 2 2 and 0 1 1 1 2 0):
-        # S: tp 1, predicted 2, gold 2 -> F1 0.5; R: tp 2, predicted 3, gold 2 -> precision 2/3, recall 1 -> F1 0.8; N: tp 1, predicted 1, gold 2 -> F1 2/3
-        gold, pred = np.array([0, 0, 1, 1, 2, 2]), np.array([0, 1, 1, 1, 2, 0])
-        self.assertAlmostEqual(C.macro_f1(gold, pred), (0.5 + 0.8 + 2 / 3) / 3)
-        self.assertEqual(C.macro_f1(gold, np.array([3, 3, 3, 3, 3, 3])), 0.0)                 # only unparsed answers: nothing is ever right
+    def _write(self, d):
+        rows, base, r2 = [], [], []
+        for split, prefix in (("confirm", "MC"), ("ad", "AD")):
+            for k in range(30):
+                gold = (S, F_, N)[k % 3]
+                iid = f"{prefix}-{k:03d}"
+                rows.append(item(iid, kind="unchanged", gold=gold, split=split))
+                base += [answer(iid, "B0", N), answer(iid, "B1", gold if k % 2 else N)]
+                r2 += [answer(iid, "R2", gold if k % 3 else N), answer(iid, "R2C", gold if k % 3 else N),
+                       answer(iid, "R2V", gold if k % 4 else None)]           # R2V leaves a quarter of the answers without a verdict
+            write(d / f"answers_{split}.jsonl", [r for r in base if r["item_id"].startswith(prefix)])
+            write(d / f"rag2_answers_{split}.jsonl", [r for r in r2 if r["item_id"].startswith(prefix)])
+        write(d / "benchmark.jsonl", rows)
 
-    def test_recall_of_a_verdict_and_the_paired_interval_contains_the_point(self):
-        gold = np.array([1, 1, 1, 1, 0, 0, 2, 2])
-        a, b = np.array([1, 1, 1, 0, 0, 0, 2, 2]), np.array([0, 0, 1, 0, 0, 0, 2, 2])
-        self.assertEqual(C.recall(gold, a, 1), 0.75)
-        r = C.paired_interval(gold, a, b, lambda g, p: C.recall(g, p, 1), seed="t", iterations=500)
-        self.assertEqual(r["difference"], 0.5)
-        self.assertTrue(r["ci95"][0] <= 0.5 <= r["ci95"][1])
+    def test_the_loader_reads_the_benchmark_and_the_verdicts_of_the_known_arms(self):
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            self._write(d)
+            items, answers = C.load(d, d, "ad")
+            self.assertEqual(len(items), 30)
+            self.assertEqual(sorted({a for _, a in answers}), ["B0", "B1", "R2", "R2C", "R2V"])
+            self.assertIsNone(answers[("AD-000", "R2V")])                                 # an unparsed answer stays None
 
+    def test_the_recorded_number_of_resamples_is_10000(self):
+        self.assertEqual(C.ITERATIONS, 10000)
 
-class UnparsedAnswerTests(unittest.TestCase):
-    def test_an_unparsed_answer_is_a_fourth_code_that_is_never_right(self):
-        items = {f"Q{k}": {"newest": {"label": lab}} for k, lab in enumerate(("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"))}
-        answers = {("Q0", "R2"): "SUPPORTED", ("Q1", "R2"): None, ("Q2", "R2"): "NOT ENOUGH INFORMATION"}
-        gold, vec = C.vectors(items, answers, ["R2"])
-        self.assertEqual(list(vec["R2"]), [0, 3, 2])
-        self.assertEqual(C.recall(gold, vec["R2"], 1), 0.0)
-        self.assertAlmostEqual(C.macro_f1(gold, vec["R2"]), 2 / 3)           # the unparsed REFUTED answer counts as a miss, not as a crash
+    def test_the_analysis_has_the_shares_the_recalls_and_the_three_paired_differences_of_each_split(self):
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            self._write(d)
+            with mock.patch.object(C, "ITERATIONS", 100):                      # the recorded value is 10,000; the tables do not depend on it
+                rep = C.analyse(d, d)
+        self.assertEqual((rep["iterations"], rep["seed"]), (100, "class-balance-v1"))
+        for split in ("confirm", "ad"):
+            r = rep["splits"][split]
+            self.assertEqual(r["n"], 30)
+            self.assertAlmostEqual(sum(r["gold_share"].values()), 1.0, places=5)
+            self.assertEqual(set(r["arms"]), {"B0", "B1", "R2", "R2C", "R2V"})
+            self.assertEqual(set(r["paired"]), {"R2V vs R2", "R2C vs R2", "R2V vs R2C"})
+            self.assertAlmostEqual(sum(r["arms"]["R2V"]["predicted_share"].values()), 1.0 - 8 / 30, places=5)       # the unparsed answers are no verdict
+            self.assertEqual(r["paired"]["R2C vs R2"]["macro_f1"]["difference"], 0.0)            # the same answers
+            self.assertGreater(r["paired"]["R2V vs R2"]["macro_f1"]["difference"], 0)             # right on 22 of 30 against 20 of 30
+
+    def test_the_command_writes_the_json_and_the_markdown_and_prints_the_tables(self):
+        with TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            self._write(d)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), mock.patch.object(C, "ITERATIONS", 100):
+                self.assertEqual(C.main(["--data-dir", tmp, "--results-dir", tmp]), 0)
+            written = (d / "class_balance.md").read_text(encoding="utf-8")
+            self.assertEqual(written + "\n", out.getvalue())
+            self.assertEqual(json.loads((d / "class_balance.json").read_text(encoding="utf-8"))["splits"]["ad"]["n"], 30)
+        for needle in ("# Per-verdict behaviour (exploratory)", "## confirm split (n = 30)", "## ad split (n = 30)", "| R2V vs R2 |", "Gold shares:"):
+            self.assertIn(needle, written)
 
 
 class CommittedFileTests(unittest.TestCase):

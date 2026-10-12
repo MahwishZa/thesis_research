@@ -1,10 +1,12 @@
-"""What the model reads from one PubMed record, and how a record's study design is classified.
+"""What the model reads from one PubMed record, how a record's study design is classified and whether it may be listed at all.
 
 ``study_snippet`` is the text the realigned study's filter judges for each candidate abstract: the title, then the
 RESULTS and CONCLUSIONS sections (an abstract without labelled sections contributes its last three sentences),
 at most ``MAX_SNIPPET_WORDS`` words. ``study_type`` assigns a record to one of the three evidence types used for
 balanced retrieval and for labelling studies in the verification prompt: systematic review or meta-analysis, trial,
-other. Both were first written for the earlier stages and are unchanged.
+other. Both were first written for the earlier stages and are unchanged. ``eligible`` keeps a record out of every
+candidate list unless it has an abstract of at least ``MIN_ABSTRACT_CHARS`` characters and is not a retraction, erratum,
+comment, editorial, letter, news item or handout.
 """
 
 from __future__ import annotations
@@ -15,6 +17,10 @@ from typing import Optional, Sequence
 MAX_SNIPPET_WORDS = 200
 SR_MA_TYPES = ("Meta-Analysis", "Systematic Review")
 RCT_TYPES = ("Randomized Controlled Trial", "Controlled Clinical Trial", "Clinical Trial")
+#: Record types that are not primary evidence and are dropped before ranking.
+EXCLUDED_TYPES = ("Retraction of Publication", "Retracted Publication", "Published Erratum",
+                  "Comment", "Editorial", "Letter", "News", "Patient Education Handout")
+MIN_ABSTRACT_CHARS = 200
 
 
 _LABEL = re.compile(r"(?:(?<=\s)|^)([A-Z][A-Z0-9 ,'’/&()-]{2,60}?):\s")
@@ -84,3 +90,10 @@ def study_type(pubtypes: Optional[Sequence[str]]) -> str:
     if kinds & set(RCT_TYPES):
         return "RCT"
     return "other"
+
+
+def eligible(record: dict, abstracts: dict[str, dict]) -> bool:
+    a = abstracts.get(record["pmid"])
+    if not a or len(a["abstract"]) < MIN_ABSTRACT_CHARS:
+        return False
+    return not any(t in record.get("pubtypes", []) for t in EXCLUDED_TYPES)

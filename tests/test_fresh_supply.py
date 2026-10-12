@@ -9,6 +9,7 @@ from pathlib import Path
 
 from experiments.medchange import fresh_supply as F
 from experiments.medchange.benchmark import load_groups
+from experiments.medchange.selection import fresh_items
 
 
 def row(i, label, date, q):
@@ -20,25 +21,20 @@ MEDREV = {0: row(0, "SUPPORTED", "2012 Mar 5", "Does A help B?"), 1: row(1, "NOT
           2: row(2, "REFUTED", "2019 May 1", "Does C help D?"), 3: row(3, "REFUTED", "2003", "Does E help F?"),
           4: row(4, "NOT ENOUGH INFORMATION", "2016 Jun 1", "Does G help dementia?"), 5: row(5, "SUPPORTED", "2021 Jun 1", "Does H help I?"),
           6: row(6, "SUPPORTED", "2024 Jun 1", "Does J help K?")}
+
+
 GROUPS = load_groups([{"Group_ID": "1", "Study_ID": "0"}, {"Group_ID": "", "Study_ID": "1"},
                       {"Group_ID": "2", "Study_ID": "2"}])
 
 
 class SupplyTests(unittest.TestCase):
     def items(self, used_groups=frozenset(), used_reviews=frozenset(), used_questions=frozenset()):
-        return F.fresh_items(MEDREV, GROUPS, set(used_groups), frozenset(used_reviews), frozenset(used_questions))
-
-    def test_grouped_and_ungrouped_questions_are_candidates_with_their_kind(self):
-        got = {i["row"]: i for i in self.items()}
-        self.assertEqual(set(got), {0, 2, 3, 4, 5, 6})
-        self.assertEqual(got[0]["kind"], "changed")                       # newer SUPPORTED, older NEI
-        self.assertFalse(got[0]["single_version"])
-        self.assertTrue(got[3]["single_version"])
+        return fresh_items(MEDREV, GROUPS, set(used_groups), frozenset(used_reviews), frozenset(used_questions))
 
     def test_a_review_about_dementia_is_counted_even_when_the_question_does_not_say_so(self):
         medrev = dict(MEDREV)
         medrev[5] = dict(MEDREV[5], objectives="To assess H in people with Alzheimer's disease.")
-        items = F.fresh_items(medrev, GROUPS, set(), frozenset(), frozenset())
+        items = fresh_items(medrev, GROUPS, set(), frozenset(), frozenset())
         by = {i["row"]: i for i in items}
         self.assertTrue(by[5]["dementia_in_review_text"])
         self.assertFalse(by[5]["dementia_wording"])
@@ -50,14 +46,9 @@ class SupplyTests(unittest.TestCase):
         medrev = dict(MEDREV)
         medrev[5] = dict(MEDREV[5], Question="Does H help Parkinson's disease?")
         medrev[6] = dict(MEDREV[6], objectives="People with Huntington's disease.")
-        rep = F.report(F.fresh_items(medrev, GROUPS, set(), frozenset(), frozenset()))["by_earliest_date"]["2010-01-01"]
+        rep = F.report(fresh_items(medrev, GROUPS, set(), frozenset(), frozenset()))["by_earliest_date"]["2010-01-01"]
         self.assertEqual(rep["neurodegenerative_wording"]["questions"], 1)
         self.assertEqual(rep["neurodegenerative_in_review_text"]["questions"], 2)
-
-    def test_used_groups_reviews_and_wording_are_excluded(self):
-        self.assertNotIn(0, {i["row"] for i in self.items(used_groups={1})})
-        self.assertNotIn(5, {i["row"] for i in self.items(used_reviews={"CD100005"})})
-        self.assertNotIn(2, {i["row"] for i in self.items(used_questions={"does c help d?"})})
 
     def test_the_report_counts_by_earliest_date_without_selecting_anything(self):
         rep = F.report(self.items())

@@ -72,17 +72,24 @@ seen earlier on the other two sets, which led to this test, did not repeat on ne
 │   ├── evaluation.md           metrics, comparison methodology, statistics, interpretation rules, results
 │   ├── reproducibility.md      install, tests, commands, costs, recorded configuration
 │   └── log.md                  dated research log: decisions, progress, problems, changes
-├── tests/                      the test suite, one file per module (test_<module>.py), and check_hermetic.py, which fails if the suite changes any file
+├── tests/                      the test suite: one file per module (test_<module>.py), test_repository_guards.py (documents, committed results and layout),
+│                               fixtures.py (synthetic data shared by the tests) and check_hermetic.py, which fails if the suite changes any file
 └── experiments/
     └── medchange/              the pipeline and the general medical (as-of) benchmark
-        ├── build_benchmark.py, benchmark.py, ad_benchmark.py, manifest.json, manifest_ad.json       the benchmark and the Alzheimer's disease set
-        ├── fresh_supply.py, fresh_benchmark.py, manifest_fresh.json, ad_cochrane_supply.py         the unused questions and the fresh split; new Alzheimer's disease reviews (counts only)
-        ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                          as-of evidence and retrieval models
-        ├── prompts.py, arms.py, generate_answers.py                                                 standard answering (B0, B1)
-        ├── rag2.py, rag2_run.py, rag2_pipeline.py, pipeline_support.py                              adapted RAG² and verification
-        ├── scoring.py, stats.py, analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py  analysis, statistics and tables
-        ├── ad_subgroup.py, ad_case_study.py                                                         the Alzheimer's-named questions of the Alzheimer's disease set
-        ├── label_audit.py, verdict_consistency.py                                                   audits of the reference labels and of the stated verdicts
+        │                       commands (each is run as a module of experiments.medchange, see How to Run)
+        ├── build_benchmark.py, ad_benchmark.py, fresh_supply.py, fresh_benchmark.py, ad_cochrane_supply.py   the benchmark, the Alzheimer's disease set, the unused questions and the fresh split (counts only for new reviews)
+        ├── pubmed_asof.py, freeze_candidates.py                                                              as-of evidence and the candidate pools
+        ├── generate_answers.py, rag2_run.py, rag2_pipeline.py                                                standard answering (B0, B1), adapted RAG² and verification, and one command per phase
+        ├── analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py                       analysis and tables
+        ├── ad_subgroup.py, ad_case_study.py                                                                  the Alzheimer's-named questions of the Alzheimer's disease set
+        ├── label_audit.py, verdict_consistency.py                                                            audits of the reference labels and of the stated verdicts
+        │                       libraries (imported by the commands; no library imports a command)
+        ├── benchmark.py, selection.py, released_answers.py                                                   the MedChange release as as-of items, the questions no split uses, the release's closed-book answers
+        ├── eutils.py, abstracts.py, encoders.py                                                              PubMed access, what is read from a record, the retrieval models
+        ├── prompts.py, arms.py, generator.py, files.py                                                       prompts and verdict parsing, the arms, the local model with its recorded configuration, file helpers
+        ├── rag2.py, pipeline_support.py                                                                      adapted RAG² and verification, helpers of the phase driver
+        ├── analysis.py, scoring.py, stats.py                                                                 measurements on the answers, scoring and statistics
+        ├── manifest.json, manifest_ad.json, manifest_fresh.json                                              counts, hashes and item lists of the three question sets (no question text)
         ├── stage1/             the evidence records and the recency formula of the earlier approach (result of record)
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```

@@ -24,14 +24,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import shutil
 import sys
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from .benchmark import LABELS, read_csv
-from .generate_answers import check_config, config_path, file_sha256, llama_generator, llama_version, load_jsonl
+from .files import file_sha256, load_jsonl
+from .generator import check_config, config_path, llama_generator, llama_version
+from .prompts import parse_label
 
 HERE = Path(__file__).resolve().parent
 
@@ -50,17 +51,10 @@ TEMPLATE = (
     "Answer with exactly one line: LABEL: <label>\n\n"
     "QUESTION: {question}\nOBJECTIVES: {objectives}\nAUTHOR'S CONCLUSIONS: {conclusions}")
 
-_LABEL = re.compile(r"LABEL\s*:\s*\**\s*(NOT\s+ENOUGH\s+INFORMATION|SUPPORTED|REFUTED)", re.IGNORECASE)
-
 
 def build_prompt(question: str, objectives: str, conclusions: str) -> str:
     return TEMPLATE.format(question=question.strip(), objectives=(objectives or "").strip(),
                            conclusions=(conclusions or "").strip())
-
-
-def parse_label(text: str) -> Optional[str]:
-    m = _LABEL.search(text or "")
-    return re.sub(r"\s+", " ", m.group(1).upper()) if m else None
 
 
 def cohens_kappa(pairs: Sequence[tuple[str, str]]) -> Optional[float]:

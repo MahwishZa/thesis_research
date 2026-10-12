@@ -19,27 +19,20 @@ It writes ``rag2_analysis_fresh.json`` and ``RAG2_FINDINGS_FRESH.md`` to the res
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
-
-from . import analyze_rag2 as A
+from . import analysis as A
 from .benchmark import LABELS
-from .class_balance import macro_f1, recall
-from .scoring import ALPHA, paired, summarize
+from .scoring import ALPHA, DIGITS, bootstrap_difference, hashed_rng, macro_f1, paired, recall, summarize, vectors
 
 HERE = Path(__file__).resolve().parent
 ARMS = ("R2", "R2C", "R2V")
 EXPECTED = 850
 ITERATIONS = 10000
 PRIMARY_SEED = "fresh-macro-f1"
-#: Decimals kept in stored differences and intervals. Six, not four: the decision rule compares the lower end of the interval with 0, and an
-#: end stored to four decimals can be rounded onto the wrong side of 0 (the same reason as ``scoring.DIGITS``).
-DIGITS = 6
 
 
 class Blinded(Exception):
@@ -51,20 +44,11 @@ def completeness(items: dict, answers: dict) -> dict:
     return {"items": len(items), "answered": answered, "complete": bool(items) and all(v == len(items) for v in answered.values())}
 
 
-def _rng(seed: str) -> np.random.Generator:
-    return np.random.default_rng(int(hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16], 16))
-
-
 def paired_interval(gold, pa, pb, metric, seed: str, iterations: int = ITERATIONS) -> dict:
-    rng = _rng(seed)
-    n = len(gold)
-    point = metric(gold, pa) - metric(gold, pb)
-    diffs = np.empty(iterations)
-    for k in range(iterations):
-        s = rng.integers(0, n, n)
-        diffs[k] = metric(gold[s], pa[s]) - metric(gold[s], pb[s])
-    lo, hi = np.percentile(diffs, [2.5, 97.5])
-    return {"difference": round(float(point), DIGITS), "ci95": [round(float(lo), DIGITS), round(float(hi), DIGITS)]}
+    """The pre-registered interval: the generator is seeded from the SHA-256 of the whole seed text (``scoring.hashed_rng``). Differences are
+    stored with ``scoring.DIGITS`` (six) decimals: the decision rule compares the lower end with 0, and an end stored to four decimals can be
+    rounded onto the wrong side of 0."""
+    return bootstrap_difference(gold, pa, pb, metric, hashed_rng(seed), iterations)
 
 
 def read_primary(d: dict) -> dict:
@@ -92,10 +76,7 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
     comp = completeness(items, answers)
     if not comp["complete"] or len(items) != expected:
         raise Blinded(f"not complete: {comp['answered']} of {len(items)} answered (expected {expected} questions); no result is computed")
-    ids = sorted(items)
-    idx = {l: k for k, l in enumerate(LABELS)}
-    gold = np.array([idx[items[i]["newest"]["label"]] for i in ids])
-    pred = {a: np.array([idx.get(answers[(i, a)]["verdict"], len(LABELS)) for i in ids]) for a in ARMS}      # unparsed: a fourth code, wrong everywhere
+    gold, pred = vectors(items, {k: r["verdict"] for k, r in answers.items()}, ARMS)      # an unparsed answer is a fourth code, wrong everywhere
     f1 = lambda a: round(macro_f1(gold, pred[a]), DIGITS)
     primary = paired_interval(gold, pred["R2V"], pred["R2"], macro_f1, PRIMARY_SEED, iterations)
     primary.update(read_primary(primary), metric="macro-F1, R2V minus R2")
@@ -108,7 +89,7 @@ def analyse(items: dict, answers: dict, *, expected: int = EXPECTED, iterations:
     arms = {a: {"macro_f1": f1(a), "predicted_share": {l: round(float((pred[a] == k).mean()), DIGITS) for k, l in enumerate(LABELS)},
                 "unparsed": int((pred[a] == len(LABELS)).sum()),
                 "recall": {l: round(recall(gold, pred[a], k), DIGITS) for k, l in enumerate(LABELS)}} for a in ARMS}
-    rep = {"split": "fresh", "n": len(ids), "iterations": iterations, "primary": primary, "secondary": sec, "arms": arms,
+    rep = {"split": "fresh", "n": len(gold), "iterations": iterations, "primary": primary, "secondary": sec, "arms": arms,
            "accuracy": {a: v["all"] for a, v in summarize(items, answers, ARMS).items()},
            "gold_share": {l: round(float((gold == k).mean()), DIGITS) for k, l in enumerate(LABELS)}, "verification": verification}
     if class_balance:
@@ -169,7 +150,7 @@ def main(argv=None) -> int:
     ap.add_argument("--expected", type=int, default=EXPECTED)
     a = ap.parse_args(argv)
     data, results = Path(a.data_dir), Path(a.results_dir)
-    items, answers = A.load(data, "fresh")
+    items, answers = A.load_split(data, "fresh")
     try:
         cbp, aup = results / "class_balance.json", results / "label_audit_fresh.json"
         rep = analyse(items, answers, expected=a.expected,

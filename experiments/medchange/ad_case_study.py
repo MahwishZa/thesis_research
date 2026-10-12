@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-from .generate_answers import load_jsonl
+from .files import load_jsonl
 
 HERE = Path(__file__).resolve().parent
 SEED = "ad-case-v1"

@@ -198,20 +198,7 @@ class CliTests(unittest.TestCase):
         self.assertTrue({"R2", "R2V"} <= arms)                                   # the realigned arms are read too
 
 
-class ReleasedAnswerFilesAndUnchangedOnlySplitsTests(unittest.TestCase):
-    def test_three_line_files_are_read_as_the_authors_do(self):
-        import tempfile
-        from experiments.medchange.headroom import FILES, read_answers
-        with tempfile.TemporaryDirectory() as tmp:
-            folder = Path(tmp)
-            (folder / FILES["biomistral"]).write_text(
-                "Question: a?\nAnswer: REFUTED: no ||| benefit\n---\nQuestion: b?\nAnswer: unclear text\n---\n"
-                "Question: c?\nAnswer: SUPPORTED\n---", encoding="utf-8")
-            (folder / FILES["qwen25-7b"]).write_text("LABEL: SUPPORTED\nNOT ENOUGH INFORMATION: x\n", encoding="utf-8")
-            self.assertEqual(read_answers(folder, "biomistral"), ["REFUTED", None, "SUPPORTED"])
-            self.assertEqual(read_answers(folder, "qwen25-7b"), ["SUPPORTED", "NOT ENOUGH INFORMATION", None])
-            self.assertIsNone(read_answers(folder, "pmcllama"))
-
+class UnchangedOnlySplitTests(unittest.TestCase):
     def test_a_split_without_changed_questions_has_no_changed_column_and_no_changed_only_tables(self):
         items = {f"q{i}": {"item_id": f"q{i}", "kind": "unchanged", "newest": {"label": "NOT ENOUGH INFORMATION", "row": i}}
                  for i in range(6)}

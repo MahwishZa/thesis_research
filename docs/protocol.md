@@ -439,7 +439,7 @@ the analysis is blinded, and no partial answer file was opened.
    rounded twice (`class_balance.py` was changed the same way: 19.0476% had been shown as 19.1%; the regenerated file shows 19.0%).
 5. *Wording filter.* §10.3 says the wording of a fresh question does not name dementia or Alzheimer's disease; the filter applied is the one that built
    the Alzheimer's disease set (§8): the question must not contain dementia, Alzheimer, mild cognitive impairment, cognitive decline, cognitively
-   impaired or cognitive impairment (`ad_benchmark.AD_QUESTION`), so no question on cognitive impairment is in the fresh test either.
+   impaired or cognitive impairment (`selection.AD_QUESTION`), so no question on cognitive impairment is in the fresh test either.
 6. *Cut-off.* §10.6 (5) says the reviews are older than the generator's training cut-off. Most are; 302 of the 7,880 qualifying questions are dated
    2023-04-01 or later, after the cut-off stated for the generator (§10.3).
 7. *Wording of the readings.* On 2026-10-12, at the researcher's request, the documents stopped measuring verdict accuracy against a minimum gain of one
