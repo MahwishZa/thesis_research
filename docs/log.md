@@ -1628,7 +1628,9 @@ after two weak spots were closed (the pause between retries of JSON requests was
 (ambiguous one-letter names, lambda assignments, import order). The data, the model files and the design.
 
 *Open (needs the researcher's computer, no manual step).* The label audit of the Alzheimer's disease set (`label_audit --split ad`, about an hour) and the analysis rerun with it; the item-level file of the fresh audit
-(`label_audit --split fresh --sample 300`, finished items are skipped); optionally `analyze_rag2` for the three splits, which must give the files already committed.
+(`label_audit --split fresh --sample 300`, finished items are skipped); optionally `analyze_rag2` for the three splits (for dev and confirm it replaces the four B1 retrieval figures that were carried over with four decimals by exact ones).
 
-*Later the same day.* At the researcher's request the Overview of the README was condensed from four paragraphs (240 words) to one (150 words): the problem, the extra check, what it is compared with, the domain, the outcome
-of the three tests and the pointer to the paper. `ReadmeStructureTests` now requires a single paragraph of at most 170 words, and `FreshResultQuotedTests` checks its outcome sentence against the committed analysis (385 tests, on Python 3.11, 3.12 and 3.13).
+*Later the same day.* At the researcher's request the Overview of the README was condensed to one paragraph (150 words instead of 240); the researcher then shortened it further (commits `b76f8b0` and `161d60c`) to 90 words
+(the problem, the extra check, the domain and the pointer to the paper). After the pull, two guards that quoted sentences of the first condensed version failed on the researcher's computer, as they should; they were
+adapted to the shorter text. The sentence that the baseline is an adaptation of the published method and not a full reproduction of it, which the Overview no longer carries, moved to the first paragraph of Research
+Results (`ReadmeStructureTests` still requires it). `ReadmeStructureTests` requires one paragraph of at most 150 words.

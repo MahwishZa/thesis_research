@@ -268,7 +268,7 @@ update-window share, the share of questions with update-window evidence and the 
 only on the researcher's computer, and were carried over unchanged from the first versions. Regenerating the first versions with four
 decimals in the same way gave the committed files again, byte for byte (the development file only lacked the key `context_truncated`,
 added later), and the Alzheimer's disease set's analysis, written with six decimals from the start, is reproduced exactly by the same
-procedure. Rerunning `analyze_rag2` on the researcher's computer, where the pools exist, gives the same files.
+procedure. Rerunning `analyze_rag2` on the researcher's computer, where the pools exist, computes the four figures exactly, with six decimals, and replaces the carried-over values (`log.md`, Phase 79).
 
 ### 6.6 Alzheimer's disease and related dementias set (secondary, run once)
 

@@ -15,7 +15,8 @@ AI chatbots can give wrong medical answers, rely on studies that do not address 
 review's date so that only earlier studies can be used: 528 general-medicine questions and 208 questions on Alzheimer's disease and related dementias, of
 which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither (other cognitive impairment). The 48 are reported as a subgroup; the 208 are not an Alzheimer's-only evaluation. Each answer is one of three verdicts
 (*supported*, *refuted*, *not enough information*) and counts as correct when it matches the verdict of the Cochrane review;
-*accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short).
+*accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short). The baseline, adapted RAG²,
+is this study's adaptation of a published medical RAG method (RAG²), not a full reproduction of it.
 
 | System (same language model, same studies) | General medicine (n = 528) | Alzheimer's disease set (n = 208) |
 |---|---|---|
