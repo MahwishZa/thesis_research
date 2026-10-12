@@ -53,7 +53,7 @@ Reading (`docs/evaluation.md` §5): **development estimate only (exploratory; re
 
 | Arm | admitted | none admitted | SR/MA / RCT / other | update-window share | mean age (y) | overlap with B1 | directness@k |
 |---|---|---|---|---|---|---|---|
-| B1 | 5.0 | 0.0% | 9.2% / 20.4% / 70.3% | 46.6% | 10.9 | — | 28.1% |
+| B1 | 5.0 | 0.0% | 9.2% / 20.4% / 70.4% | 46.6% | 10.9 | — | 28.1% |
 | R2 | 3.07 | 16.4% | 25.3% / 37.5% / 37.2% | 47.9% | 9.57 | 22.7% | 62.5% |
 | R2C | 3.07 | 16.4% | 25.3% / 37.5% / 37.2% | 47.9% | 9.57 | 22.7% | 62.5% |
 | R2V | 3.07 | 16.4% | 25.3% / 37.5% / 37.2% | 47.9% | 9.57 | 22.7% | 62.5% |

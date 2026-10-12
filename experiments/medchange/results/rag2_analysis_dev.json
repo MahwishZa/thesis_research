@@ -337,12 +337,12 @@
       "mean_admitted": 5.0,
       "share_without_evidence": 0.0,
       "evidence_mix": {
-        "SR/MA": 0.092,
-        "RCT": 0.2044,
-        "other": 0.7035
+        "SR/MA": 0.092035,
+        "RCT": 0.204425,
+        "other": 0.70354
       },
-      "update_window_share": 0.4664,
-      "items_with_update_window_evidence": 0.8319,
+      "update_window_share": 0.466372,
+      "items_with_update_window_evidence": 0.831858,
       "mean_age_years": 10.9,
       "jaccard_with_B1": null,
       "directness_at_k": 0.281416
