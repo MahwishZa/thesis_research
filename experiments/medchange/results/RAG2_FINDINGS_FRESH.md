@@ -11,7 +11,7 @@ Reading: **no evidence**.
 
 * Macro-F1, R2V − R2C: +0.034 (+0.004 to +0.065).
 * REFUTED recall, R2V − R2: +1.5 points (-2.1 to +5.1).
-* Verdict accuracy, R2V − R2: -1.8 points (95% interval -4.2 to +0.8; exact McNemar p = 0.1953). Reading by the rules of `docs/evaluation.md` §5: not met (the 1-point requirement is not re-read from this test alone).
+* Verdict accuracy, R2V − R2: -1.8 points (95% interval -4.2 to +0.8; exact McNemar p = 0.1953). Reading by the rule of `docs/evaluation.md` §5: no evidence.
 * Verdict accuracy, R2V − R2C: +2.5 points (95% interval +0.0 to +4.9; exact McNemar p = 0.0572).
 
 | System | Accuracy | Macro-F1 | Predicted SUPPORTED | REFUTED recall |

@@ -41,7 +41,7 @@
       "b_only_correct": 66,
       "mcnemar_p": 0.1953,
       "confirmed": false,
-      "reading": "not met"
+      "reading": "no evidence"
     },
     "accuracy_R2V_minus_R2C": {
       "a": "R2V",
