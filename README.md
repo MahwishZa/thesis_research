@@ -2,9 +2,7 @@
 
 ## Overview
 
-AI chatbots can give wrong medical answers, rely on studies that do not address the question, or repeat advice that newer research
-has overturned. This research tests whether a small language model answers medical questions more correctly when *retrieval-augmented generation* (RAG), which looks up scientific studies before answering, adds one check of its draft against plain rules of evidence (for example, newer evidence takes precedence). Answers with the check are compared with an adapted published medical RAG method (RAG²; not a full reproduction of it), standard retrieval and no retrieval, on Cochrane-review questions asked as of each review's date. 
-The research domain is Alzheimer's disease and related dementias. The full academic account is in the accompanying research paper: [title and link to be added].
+AI chatbots can give wrong medical answers, rely on studies that do not address the question, or repeat advice that newer research has overturned. This research tests whether a small language model answers medical questions more correctly when *retrieval-augmented generation* (RAG), which looks up scientific studies before answering, adds one check of its draft against plain rules of evidence (for example, newer evidence takes precedence). The research domain is Alzheimer's disease and related dementias. The full academic account is in the accompanying research paper: [title and link to be added].
 
 ## Research Objectives
 
