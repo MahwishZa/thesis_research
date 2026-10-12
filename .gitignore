@@ -37,3 +37,10 @@ experiments/baseline/
 
 # Local data of the archived Alzheimer's question-set builder (publisher text); the code is in Git history, see docs/protocol.md section 8.
 experiments/adkqa/data/
+
+# Tool caches that appear when the tests are measured or linted.
+.coverage
+htmlcov/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
