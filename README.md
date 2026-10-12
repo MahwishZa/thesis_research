@@ -59,7 +59,6 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
 ```
 .
 ├── README.md
-├── CLAUDE.md                   the researcher's working rules: one branch (main), no pull requests, no manual steps
 ├── pyproject.toml              packaging and the dependency list
 ├── docs/
 │   ├── data.md                 datasets: sources, construction, preprocessing, temporal information, usage
