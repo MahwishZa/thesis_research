@@ -71,15 +71,18 @@ controls and the earlier approaches that did not work are in `docs/evaluation.md
 │   ├── common/                 the Evidence and Candidate record types
 │   └── temporal_filter/        the recency formula of the earlier approach (result of record)
 ├── evaluation/
-│   ├── stats.py                exact McNemar test, paired bootstrap interval, Holm correction
-│   └── tests/                  the unit-test suite and the check that it leaves the repository unchanged
+│   └── stats.py                exact McNemar test, paired bootstrap interval, Holm correction
+├── tests/                      the test suite, one file per module (test_<module>.py), and check_hermetic.py, which fails if the suite changes any file
 └── experiments/
     └── medchange/              the pipeline and the general medical (as-of) benchmark
-        ├── build_benchmark.py, ad_benchmark.py, benchmark.py, manifest.json, manifest_ad.json    the benchmark and its splits
-        ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                       as-of evidence and retrieval models
-        ├── prompts.py, arms.py, generate_answers.py                                              standard answering (B0, B1)
-        ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                     adapted RAG² and verification
-        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, subgroup_ad.py, ad_case_study.py, class_balance.py, fresh_supply.py, cochrane_ad_supply.py, fresh_benchmark.py, report.py, headroom.py, label_audit.py, consistency_auto.py   analysis and audits
+        ├── build_benchmark.py, benchmark.py, ad_benchmark.py, manifest.json, manifest_ad.json       the benchmark and the Alzheimer's disease set
+        ├── fresh_supply.py, fresh_benchmark.py, manifest_fresh.json, ad_cochrane_supply.py         the unused questions and the fresh split; new Alzheimer's disease reviews (counts only)
+        ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                          as-of evidence and retrieval models
+        ├── prompts.py, arms.py, generate_answers.py                                                 standard answering (B0, B1)
+        ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                        adapted RAG² and verification
+        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py  analysis and tables
+        ├── ad_subgroup.py, ad_case_study.py                                                         the Alzheimer's-named questions of the Alzheimer's disease set
+        ├── label_audit.py, verdict_consistency.py                                                   audits of the reference labels and of the stated verdicts
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 
@@ -92,7 +95,7 @@ Commands are run from the repository root; model files and platform notes are in
 ```bash
 # Install (numpy only; the model backends come with the extras) and run every test
 pip install -e .
-python -m unittest discover -s evaluation -t .
+python -m unittest discover -s tests -t .
 
 # Rebuild the benchmark from the MedChange release (once)
 git clone https://github.com/jvladika/MedChange ../MedChange
@@ -105,7 +108,7 @@ python -m experiments.medchange.rag2_pipeline confirm --go --model-path models/M
 python -m experiments.medchange.rag2_pipeline ad --go --model-path models/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models/Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit
 
 # Questions of the Alzheimer's disease set that name Alzheimer's disease (from the answers on file; no model is run)
-python -m experiments.medchange.subgroup_ad
+python -m experiments.medchange.ad_subgroup
 
 # Per-verdict behaviour: predicted shares, recall per verdict, macro-F1 (from the answers on file; no model is run)
 python -m experiments.medchange.class_balance
@@ -114,7 +117,7 @@ python -m experiments.medchange.class_balance
 python -m experiments.medchange.fresh_supply --medchange-dir ../MedChange
 
 # Count new Cochrane reviews on Alzheimer's disease and dementia published after MedRevQA's newest review (counts only; needs the network)
-python -m experiments.medchange.cochrane_ad_supply --medchange-dir ../MedChange
+python -m experiments.medchange.ad_cochrane_supply --medchange-dir ../MedChange
 
 # The pre-registered test on fresh questions: select the questions, then (after the freeze, docs/reproducibility.md section 11) run and analyse it
 python -m experiments.medchange.fresh_benchmark --medchange-dir ../MedChange
