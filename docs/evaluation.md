@@ -172,7 +172,7 @@ Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory.
 | Earlier stages (§6.3) | | negative results of record | general medicine |
 | The questions of that set that name Alzheimer's disease (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
 | Alzheimer's-specific question set AD-KQA (§6.8) | | construction stopped at gate 1; no system was run on it | Alzheimer's disease |
-| Pre-registered test on fresh questions (§6.9) | 850 | registered before its data existed; analysed blind; confirmatory for the macro-F1 hypothesis only | general medicine |
+| Pre-registered test on fresh questions (§6.9) | 850 | completed once; registered before its data existed; analysed blind; confirmatory for the macro-F1 hypothesis only (not confirmed) | general medicine |
 
 ### 6.1 Realigned study, development split (226 questions; exploratory)
 
@@ -253,7 +253,7 @@ without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev e
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
 earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
 estimate is reported with its interval. The 208-question Alzheimer's disease set was run afterwards, once (§6.6); it gives
-the same reading, with a larger and equally unconfirmed gain.
+the same reading, with a larger and equally unconfirmed gain. The pre-registered test on 850 new questions (§6.9) then found no evidence of a gain in macro-F1.
 
 ### 6.5 Rounding in the committed analysis files
 
@@ -324,7 +324,7 @@ verdict-balanced question set of useful size cannot be built from this source, a
 researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The code is in
 Git history (commit `4ab9d1b`) and the counts are in `experiments/medchange/results/earlier_stages/adkqa/`.
 
-### 6.9 Pre-registered test on fresh questions (850 questions; in force since 2026-10-10)
+### 6.9 Pre-registered test on fresh questions (850 questions; in force since 2026-10-10; run once, completed 2026-10-12)
 
 **What it asks.** Whether evidence-criteria verification (R2V) raises the macro-F1 of the adapted RAG² baseline (R2), on questions that played no part in
 the design or in choosing the metric. The questions are 850 general-medicine questions of reviews dated 2010 or later that no other split uses,
@@ -347,5 +347,32 @@ R2V − R2 and R2V − R2C, the first read by the rule of §5; how many answers 
 seeded sample of 300 reference labels; and, descriptively, the macro-F1 difference on the Alzheimer's disease set with the statement whether its sign
 agrees. The test cannot show an effect for Alzheimer's disease: the fresh questions contain practically none (`data.md` §3).
 
-**Result.** None yet: the analysis computes nothing until all 850 questions have an answer for all three arms, and no partial answer file is opened. This
-section is completed from `results/rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` when the run is complete, whatever the outcome.
+**Result.** The hypothesis is **not confirmed**: there is no evidence that evidence-criteria verification raises the macro-F1 of the adapted RAG² baseline. The
+analysis computed nothing until all 850 questions had an answer for all three arms (10,000 bootstrap resamples; `results/rag2_analysis_fresh.json`,
+`results/RAG2_FINDINGS_FRESH.md`).
+
+| System | Accuracy (95% Wilson interval) | Macro-F1 | Predicted SUPPORTED | Recall: SUPPORTED / REFUTED / NOT ENOUGH INFORMATION |
+|---|---|---|---|---|
+| R2 (baseline) | 47.2% (43.8–50.5) | 0.395 | 70.0% | 84.7% / 14.6% / 29.6% |
+| R2C | 42.9% (39.7–46.3) | 0.359 | 70.5% | 79.9% / 15.3% / 24.2% |
+| R2V (proposed) | 45.4% (42.1–48.8) | 0.393 | 61.6% | 72.4% / 16.1% / 34.8% |
+
+Gold verdicts of the 850 questions: SUPPORTED 36.2%, REFUTED 16.1%, NOT ENOUGH INFORMATION 47.6%.
+
+* **Primary (H1).** Macro-F1, R2V − R2 = **−0.002** (95% interval −0.027 to +0.023): **no evidence**. The interval excludes a gain as large as the held-out
+  estimate (+0.045) but not a gain of 0.02, because its upper end is 0.023.
+* **Secondary (no confirmatory claim).** Macro-F1, R2V − R2C: +0.034 (+0.004 to +0.065). REFUTED recall, R2V − R2: +1.5 points (−2.1 to +5.1). Verdict accuracy,
+  R2V − R2: −1.8 points (95% interval −4.2 to +0.8; 51 / 66 discordant; exact McNemar p = 0.195), reading by §5: no evidence. Verdict accuracy, R2V − R2C: +2.5 points
+  (+0.0 to +4.9; 66 / 45 discordant; p = 0.057).
+* **What the verification did.** It changed 19.5% of the 697 answers it verified (136): 51 fixed, 66 broken, 19 stayed wrong. Most of its changes (90 of 136) turned SUPPORTED
+  into NOT ENOUGH INFORMATION. R2C, which states the criteria without checking a draft, changed 22.2% of the same answers: 44 fixed, 80 broken.
+* **Alzheimer's disease set (descriptive).** Macro-F1, R2V − R2 on its 208 questions: +0.080 (+0.024 to +0.135); its sign differs from the fresh result.
+* **Reference labels.** In the sample of 300, agreement with the independent model 83.0%, kappa 0.7332 (`results/label_audit_fresh.md`).
+
+**Reading.** With 850 questions the test could confirm a true gain of 0.04 with a probability of 81% and a gain of 0.045 with 89% (`protocol.md` §10.3); it found
+none. The gains of the exploratory analyses (§6.2, §6.6) therefore did not hold on new questions. The REFUTED recall, which drove them, rose by 7.1 points on the
+held-out split (11.9% to 19.0%) and by 16.2 points on the Alzheimer's disease set (5.9% to 22.1%), but by 1.5 points here (14.6% to 16.1%). The criteria alone (R2C),
+which gained as much as R2V on the Alzheimer's disease set, did worse than the baseline here (macro-F1 0.359, accuracy 42.9%). R2V made the model more cautious: the recall
+of NOT ENOUGH INFORMATION rose (29.6% to 34.8%) and that of SUPPORTED fell (84.7% to 72.4%); the two cancelled in macro-F1, and the net cost was 1.8 points of
+accuracy, which cannot be told from chance. The result is for one generator (an 8B model on a laptop), one prompt design and general-medicine questions; it says nothing
+about other models, and the fresh questions contain practically none on Alzheimer's disease (`data.md` §3).

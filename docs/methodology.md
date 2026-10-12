@@ -37,7 +37,7 @@ baseline's answer (§6). How a difference is read, and what can be concluded fro
 `protocol.md` §1 and `evaluation.md` §§4–5.
 After the held-out result (positive but not confirmed), a second question was registered before its data existed: whether
 the verification step makes the three verdicts more balanced (macro-F1, which gives each verdict the same weight), tested on questions
-that played no part in the design (§2 and `protocol.md` §10).
+that played no part in the design (§2 and `protocol.md` §10). It found no evidence that it does (`evaluation.md` §6.9).
 
 ## 2. Study design at a glance
 
@@ -50,7 +50,7 @@ that played no part in the design (§2 and `protocol.md` §10).
 | Evidence | PubMed abstracts first public strictly before the question date | the same | the same |
 | Systems | B0, B1, R2, R2C, R2V, R2V-ND | B0, B1, R2, R2C, R2V | R2, R2C, R2V |
 | Primary outcome | verdict accuracy, R2V − R2 | the same, read as a secondary result | macro-F1, R2V − R2 (`protocol.md` §10.2) |
-| Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) | run once after its pre-registration was in force; analysed blind (`evaluation.md` §6.9) |
+| Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) | run once after its pre-registration was in force; analysed blind; completed, no evidence of a gain (`evaluation.md` §6.9) |
 
 The research domain is Alzheimer's disease and related dementias; the secondary setting is the Alzheimer's disease set. An Alzheimer's-only question set was specified on 2026-10-09 and its construction was stopped
 at gate 1 (`protocol.md` §8), so the Alzheimer's disease set is the evidence there is for the domain: it covers Alzheimer's disease and related dementias, and only 48 of its 208 questions name Alzheimer's disease. The other

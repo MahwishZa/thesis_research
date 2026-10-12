@@ -80,7 +80,7 @@ record is pushed.
 | dev | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | checks; rationales; candidate lists; filter; answers R2, R2C, R2V, R2V-ND; analysis; dev report with the pre-declared dev check; design record; environment record; commit. `--ablations` adds R2-RQ, R2-BR and R2-NF; `--judge-path` adds the directness judge | **measured 20.4 h** for the 226 questions with the judge (5.4 min per question) |
 | held-out | `python -m experiments.medchange.rag2_pipeline confirm --go --model-path ... --commit` | the same steps on the 528 held-out questions, then `RAG2_FINDINGS.md`; `--no-temporal-ablation` leaves R2V-ND out (decided before the run) | **measured 49.2 h** with the judge (5.6 min per question) |
 | `ad` | `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit` | as-of PubMed records (network); candidate pools and abstracts; B0 and B1 answers; then rationales, lists, filter and answers R2, R2C, R2V; analysis; `RAG2_FINDINGS_AD.md` | **measured 22.7 h** with the judge: records 0.4 h, pools 3.7 h, B0 and B1 4.3 h, rationales 0.8 h, lists 2.8 h, filter 2.4 h, answers 6.1 h, judge 2.1 h |
-| `fresh` | `python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` (after the steps of §11) | as-of PubMed records and abstracts (network, no MedCPT pools); rationales; candidate lists; filter; answers R2, R2C, R2V (no B0, B1 or judge); the blinded analysis `analyze_fresh`; publishing; commit | *estimated* 57 to 68 h for 850 questions (`protocol.md` §10.5); measured step times are in `log.md` |
+| `fresh` | `python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` (after the steps of §11) | as-of PubMed records and abstracts (network, no MedCPT pools); rationales; candidate lists; filter; answers R2, R2C, R2V (no B0, B1 or judge); the blinded analysis `analyze_fresh`; publishing; commit | **measured about 66 h** on the clock for 850 questions (58 h of work and an 8-hour pause of the process): records 1.8 h, rationales 3.5 h, candidate lists 14.0 h, filter 12.4 h of work, answers 26.6 h (`log.md`, Phase 77); estimated beforehand 57 to 68 h (`protocol.md` §10.5) |
 
 Measured per question in the held-out run, from the recorded durations: rationale 16 s, filter 48 s (eight judgements), the four
 answers 175 s (R2 54 s, R2C 52 s, R2V 14 s, R2V-ND 55 s) and the directness judge 42 s; the remainder of the 5.6 minutes is
@@ -198,7 +198,7 @@ writes `results/ad_cochrane_supply.json` (counts and PubMed identifiers, no titl
 
 ## 11. The pre-registered test on fresh questions (protocol §10)
 
-Order of work, in PowerShell from the repository folder (the run itself is about 57 to 68 hours [estimate], resumable; plug in the laptop and disable sleep and hibernation, §1):
+Order of work, in PowerShell from the repository folder (the run itself took about 66 hours on the clock, resumable; plug in the laptop and disable sleep and hibernation, §1):
 ```
 python -m experiments.medchange.fresh_benchmark --medchange-dir ..\MedChange       # selects the 850 questions, writes manifest_fresh.json
 git add experiments\medchange\manifest_fresh.json ; git commit -m "Fresh question selection" ; git push origin main
@@ -211,5 +211,6 @@ git push origin main                                                            
 The pipeline refuses to start unless the freeze is complete, and after an interruption the same command resumes. `analyze_fresh` is blinded: it computes nothing until
 all 850 questions have answers for R2, R2C and R2V, and it writes `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` only then. The pipeline runs it as its
 last analysis step (`python -m experiments.medchange.analyze_fresh` regenerates the two files, identically, from the answers on file; until the answers are complete it
-prints only a count). Do not open partial answer files. `label_audit` writes its summary and a copy of its item-level file to `results\`, and the pipeline's commit includes them.
+prints only a count). Do not open partial answer files. `label_audit` writes its summary and a copy of its item-level file to `results\`, and the pipeline's commit includes them. The run of 2026-10-10 to 2026-10-12 followed these
+steps; its result is in `evaluation.md` §6.9.
 

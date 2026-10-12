@@ -22,7 +22,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Added comparisons (all eight released-answer models, constant-answer baseline, label audit of the Alzheimer's disease set) | added 2026-10-09 (§8); the label audit of the Alzheimer's disease set is not run |
 | Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
 | More Alzheimer's disease data (new Cochrane reviews; other neurodegenerative questions) | counted 2026-10-10 (§8): 7 usable new reviews (rule: 30 to build) and 25 questions on other neurodegenerative diseases; nothing was built |
-| Pre-registered test on fresh questions, 850 questions (§10) | in force since 2026-10-10; the question list was committed and pushed before any answer; the label audit of a 300-question sample was done before the run; results: `evaluation.md` §6.9 |
+| Pre-registered test on fresh questions, 850 questions (§10) | completed once, 2026-10-10 to 2026-10-12 (about 66 hours on the clock); the question list was committed and pushed before any answer and the label audit of a 300-question sample was done before the run; the hypothesis is **not confirmed** (macro-F1, R2V − R2 = −0.002, 95% interval −0.027 to +0.023: no evidence); results: `evaluation.md` §6.9 |
 
 The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the set of 208 questions of §8, of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
 stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
@@ -451,3 +451,15 @@ the analysis is blinded, and no partial answer file was opened.
    the file it reads; `freeze_candidates.py` closes the file it reads and prints "abstracts only" in that mode; the docstrings of `encoders.py` and
    `src/common/evidence.py` no longer describe the removed corpus. The eight modules that produce the answers (`rag2`, `rag2_run`, `prompts`, `arms`,
    `generate_answers`, `abstracts`, `benchmark`, `runner`) are byte-identical to the freeze commit `a303705`, and so are the manifests and the design record.
+9. *Final wording of the findings (2026-10-12).* The findings written by the pipeline at the end of the run carried the earlier reading text of the accuracy
+   difference ("not met", with a sentence about the minimum of item 7). The two files `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` were regenerated from
+   the same answers with the wording of item 7 (commit `1b2319d`); the only differences are that reading text in each file. Every number is the same.
+
+### 10.10 Outcome (2026-10-12)
+
+The test was run once, with the frozen design, and analysed blind by `analyze_fresh` as §10.2 specifies; the environment record is `results/rag2_environment_fresh.json`
+(2026-10-12 21:17 UTC, code commit `3c61751`, no tracked code modified; the eight modules that produce the answers are identical at that commit and at the freeze
+`a303705`). **H1 is not confirmed.** Macro-F1, R2V − R2 = −0.002 (95% interval −0.027 to +0.023), reading *no evidence*; a gain of 0.02 or more is not excluded
+(the upper end is 0.023), a gain as large as the held-out estimate (+0.045) is. The secondary outcomes, the descriptive comparison on the Alzheimer's disease set (+0.080,
+its sign differs) and the label audit are in `evaluation.md` §6.9 and `results/RAG2_FINDINGS_FRESH.md`. The run took about 66 hours on the clock (58 hours of work and an
+8-hour pause of the process, most likely the laptop sleeping), against the estimate of 57 to 68 hours (§10.5); the step times are in `log.md`, Phase 77.

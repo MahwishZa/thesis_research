@@ -1544,3 +1544,28 @@ scheme: tests in `tests/` named after a module or a feature, `ad_` as a prefix, 
 `ExperimentResult` of `src/common/evidence.py`; renaming `runner.py`, whose name is easily confused with `rag2_run.py`; and writing the held-out findings as
 `RAG2_FINDINGS_CONFIRM.md` like the other split-named files. All of them touch files that produced the fresh answers, so none is done until the test
 has finished and its results are pushed.
+
+## Phase 77 — The pre-registered test on fresh questions: result (Oct 12)
+
+The run finished on 2026-10-12 (environment record 21:17 UTC). The pipeline's commit (13 result files, `7148ecc`) was merged with the commits pushed meanwhile (`aef352d`, default
+merge message) and pushed; the merged tree equals the preceding commit plus those 13 files, so nothing of either side was lost. The two findings files were regenerated with the
+final wording of Phase 75 (`1b2319d`; only the reading text of the accuracy difference changed). The suite passed on the researcher's laptop with the real data (304 tests,
+2 skipped).
+
+*Result* (`results/rag2_analysis_fresh.json`, `results/RAG2_FINDINGS_FRESH.md`; `evaluation.md` §6.9). **H1 is not confirmed.** Macro-F1, R2V − R2 = −0.002 (95% interval −0.027 to +0.023),
+reading *no evidence*; a gain of 0.02 or more is not excluded (upper end 0.023), the held-out estimate of +0.045 is. R2 47.2% accuracy and macro-F1 0.395, R2C 42.9% and 0.359,
+R2V 45.4% and 0.393. Secondary: R2V − R2C macro-F1 +0.034 (+0.004 to +0.065); REFUTED recall +1.5 points (−2.1 to +5.1); accuracy R2V − R2 −1.8 points (−4.2 to +0.8; 51 / 66 discordant;
+p = 0.195). R2V changed 136 of 697 answers (51 fixed, 66 broken), 90 of them from SUPPORTED to NOT ENOUGH INFORMATION. The Alzheimer's disease set's macro-F1 difference (+0.080)
+has the opposite sign. The REFUTED-recall gain that drove the exploratory macro-F1 gains (+7.1 points held-out, +16.2 points Alzheimer's disease set) was +1.5 points here, and R2C,
+which had gained as much as R2V on the Alzheimer's disease set, scored lowest. Label audit of the sample of 300: 83.0%, kappa 0.7332.
+
+*Measured durations* (the console of the run; seconds on the process clock). As-of records 6,521 s (1.8 h; 7.7 s per question); abstracts (123,393 fetched; not timed); rationales 12,466 s (3.5 h; 14.7 s);
+candidate lists 50,222 s (14.0 h; 59 s); filter 73,238 s for 6,792 judgements (20.3 h on the clock, of which about 7.9 h were a pause between the 1,710th and 1,720th judgement, most likely the
+laptop sleeping; 12.4 h of work, 53 s per question); answers 95,885 s for 2,550 answers (26.6 h; 37.6 s per answer, 113 s per question for the three arms, close to the 120 s of the held-out run: 54 + 52 + 14 s).
+Together 66.2 h on the clock, 58.3 h of work, against the estimate of 57 to 68 h.
+
+*Environment* (`results/rag2_environment_fresh.json`). Windows 11, Python 3.12.6, numpy 1.26.4, torch 2.4.1+cu121, transformers 4.51.3, llama-cpp-python 0.3.35; generator
+`Meta-Llama-3-8B-Instruct-Q4_K_M.gguf`; repository commit `3c61751`, no tracked code modified. The eight modules that produce the answers are identical at that commit and at the freeze.
+
+*Documents.* README, `evaluation.md` §6.0, §6.4 and §6.9, `methodology.md`, `reproducibility.md` (measured duration) and `protocol.md` (status row, §10.9 item 9, new §10.10) now state the result. The guard that
+required "None yet" in §6.9 while no analysis was committed was replaced by tests that quote the committed analysis exactly (`FreshResultQuotedTests`).

@@ -404,6 +404,122 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         self.assertEqual(self.ad["reading"], "positive but not confirmed")
 
 
+class FreshResultQuotedTests(unittest.TestCase):
+    """The result of the pre-registered test is typed by hand in the README, ``docs/evaluation.md`` §6.9, ``docs/protocol.md`` §10.10 and the log;
+    this checks every figure against the committed analysis, so that none can drift from the file it claims to come from."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))
+        cls.class_balance = json.loads(text(RESULTS / "class_balance.json"))["splits"]
+        cls.readme = " ".join(text(README).replace("**", "").split())
+        evaluation = " ".join(text(DOCS / "evaluation.md").replace("**", "").split())
+        cls.evaluation = evaluation.split("### 6.9", 1)[1]
+        cls.evaluation_all = evaluation
+        protocol = " ".join(text(DOCS / "protocol.md").replace("**", "").replace("*", "").split())
+        cls.outcome = protocol.split("### 10.10 Outcome", 1)[1]
+        cls.protocol = protocol
+
+    @staticmethod
+    def f3(x):
+        return f"{x:+.3f}".replace("-", "−")
+
+    @staticmethod
+    def pc(x):
+        return f"{100 * x:.1f}%"
+
+    def test_the_hypothesis_is_reported_as_not_confirmed_in_every_document(self):
+        p = self.r["primary"]
+        self.assertEqual(p["reading"], "no evidence")
+        self.assertFalse(p["gain_of_0.02_or_more_excluded"])
+        head = f"R2V − R2 = {self.f3(p['difference'])} (95% interval {self.f3(p['ci95'][0])} to {self.f3(p['ci95'][1])})"
+        self.assertIn(f"Macro-F1, {head}: no evidence", self.evaluation)
+        self.assertIn(f"Macro-F1, {head}, reading no evidence", self.outcome)
+        self.assertIn(f"its upper end is {p['ci95'][1]:.3f}", self.evaluation)
+        self.assertIn(f"the upper end is {p['ci95'][1]:.3f}", self.outcome)
+        self.assertIn("H1 is not confirmed", self.outcome)
+        self.assertIn("The hypothesis is not confirmed", self.evaluation)
+
+    def test_the_readme_quotes_the_primary_and_the_accuracy_result(self):
+        p, a = self.r["primary"], self.r["secondary"]["accuracy_R2V_minus_R2"]
+        self.assertIn(f"the proposed check minus the baseline was {self.f3(p['difference'])} (95% range {self.f3(p['ci95'][0])} to {self.f3(p['ci95'][1])}), "
+                      "which counts as no evidence of an improvement", self.readme)
+        acc = self.r["accuracy"]
+        self.assertIn(f"Accuracy was {self.pc(acc['R2V']['accuracy'])} with the extra check and {self.pc(acc['R2']['accuracy'])} for the baseline "
+                      f"({_pp(a['diff_a_minus_b'])} points, range {_pp(a['ci95'][0])} to {_pp(a['ci95'][1])}", self.readme)
+        self.assertIn("It found no evidence that the extra step improves that measure", self.readme)
+        self.assertIn(str(self.r["n"]), self.readme)
+
+    def test_the_evaluation_table_quotes_each_system(self):
+        for arm, label in (("R2", "R2 (baseline)"), ("R2C", "R2C"), ("R2V", "R2V (proposed)")):
+            acc, lo, hi = self.r["accuracy"][arm]["accuracy"], *self.r["accuracy"][arm]["wilson95"]
+            a = self.r["arms"][arm]
+            rec = " / ".join(self.pc(a["recall"][k]) for k in ("SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"))
+            row = (f"| {label} | {self.pc(acc)} ({100 * lo:.1f}–{100 * hi:.1f}) | {a['macro_f1']:.3f} | "
+                   f"{self.pc(a['predicted_share']['SUPPORTED'])} | {rec} |")
+            self.assertIn(row, self.evaluation, arm)
+        gold = self.r["gold_share"]
+        self.assertIn("Gold verdicts of the 850 questions: SUPPORTED " + self.pc(gold["SUPPORTED"]) + ", REFUTED " + self.pc(gold["REFUTED"])
+                      + ", NOT ENOUGH INFORMATION " + self.pc(gold["NOT ENOUGH INFORMATION"]), self.evaluation)
+
+    def test_the_evaluation_quotes_the_secondary_outcomes(self):
+        s = self.r["secondary"]
+        m = s["macro_f1_R2V_minus_R2C"]
+        self.assertIn(f"Macro-F1, R2V − R2C: {self.f3(m['difference'])} ({self.f3(m['ci95'][0])} to {self.f3(m['ci95'][1])})", self.evaluation)
+        rr = s["refuted_recall_R2V_minus_R2"]
+        self.assertIn(f"REFUTED recall, R2V − R2: {_pp(rr['difference'])} points ({_pp(rr['ci95'][0])} to {_pp(rr['ci95'][1])})", self.evaluation)
+        a = s["accuracy_R2V_minus_R2"]
+        self.assertIn(f"R2V − R2: {_pp(a['diff_a_minus_b'])} points (95% interval {_pp(a['ci95'][0])} to {_pp(a['ci95'][1])}; "
+                      f"{a['a_only_correct']} / {a['b_only_correct']} discordant; exact McNemar p = {a['mcnemar_p']:.3f}), reading by §5: {a['reading']}", self.evaluation)
+        c = s["accuracy_R2V_minus_R2C"]
+        self.assertIn(f"R2V − R2C: {_pp(c['diff_a_minus_b'])} points ({_pp(c['ci95'][0])} to {_pp(c['ci95'][1])}; "
+                      f"{c['a_only_correct']} / {c['b_only_correct']} discordant; p = {c['mcnemar_p']:.3f})", self.evaluation)
+
+    def test_the_evaluation_quotes_what_the_verification_did(self):
+        v, c = self.r["verification"]["R2V"], self.r["verification"]["R2C"]
+        changed = sum(v["transitions"].values())
+        self.assertEqual(round(v["changed_rate"] * v["n_with_evidence"]), changed)
+        self.assertIn(f"It changed {self.pc(v['changed_rate'])} of the {v['n_with_evidence']} answers it verified ({changed}): "
+                      f"{v['changes_fixed']} fixed, {v['changes_broke']} broken, {changed - v['changes_fixed'] - v['changes_broke']} stayed wrong", self.evaluation)
+        self.assertIn(f"({v['transitions']['SUPPORTED -> NOT ENOUGH INFORMATION']} of {changed}) turned SUPPORTED into NOT ENOUGH INFORMATION", self.evaluation)
+        self.assertIn(f"changed {self.pc(c['changed_rate'])} of the same answers: {c['changes_fixed']} fixed, {c['changes_broke']} broken", self.evaluation)
+
+    def test_the_descriptive_comparison_and_the_label_audit_are_quoted(self):
+        d = self.r["alzheimers_dementia_descriptive"]
+        m = d["macro_f1_R2V_minus_R2"]
+        self.assertFalse(d["sign_agrees_with_fresh"])
+        self.assertIn(f"on its {d['n']} questions: {self.f3(m['difference'])} ({self.f3(m['ci95'][0])} to {self.f3(m['ci95'][1])}); its sign differs", self.evaluation)
+        au = self.r["label_audit"]
+        self.assertIn(f"In the sample of {au['n_items']}, agreement with the independent model {self.pc(au['agreement'])}, kappa {au['kappa']}", self.evaluation)
+
+    def test_the_reading_compares_the_refuted_recall_with_the_earlier_sets(self):
+        recall = lambda split, arm: self.class_balance[split]["arms"][arm]["recall"]["REFUTED"]
+        fresh = lambda arm: self.r["arms"][arm]["recall"]["REFUTED"]
+        for split, label in (("confirm", "held-out split"), ("ad", "Alzheimer's disease set")):
+            gain = recall(split, "R2V") - recall(split, "R2")
+            self.assertIn(f"{100 * gain:.1f} points on the {label} ({self.pc(recall(split, 'R2'))} to {self.pc(recall(split, 'R2V'))})", self.evaluation)
+        self.assertIn(f"by {100 * (fresh('R2V') - fresh('R2')):.1f} points here ({self.pc(fresh('R2'))} to {self.pc(fresh('R2V'))})", self.evaluation)
+        for arm in ("R2", "R2V"):
+            self.assertIn(self.pc(self.r["arms"][arm]["recall"]["NOT ENOUGH INFORMATION"]), self.evaluation)
+        r2c = self.r["arms"]["R2C"]
+        self.assertIn(f"(macro-F1 {r2c['macro_f1']:.3f}, accuracy {self.pc(self.r['accuracy']['R2C']['accuracy'])})", self.evaluation)
+        self.assertIn("81%", self.evaluation)                      # the registered power at 0.04 and 0.045, checked against the formula in FreshTestDocumentsTests
+        self.assertIn("89%", self.evaluation)
+
+    def test_the_status_row_of_the_protocol_and_the_methodology_report_the_result(self):
+        p = self.r["primary"]
+        self.assertIn(f"macro-F1, R2V − R2 = {self.f3(p['difference'])}, 95% interval {self.f3(p['ci95'][0])} to {self.f3(p['ci95'][1])}: no evidence", self.protocol)
+        self.assertIn("It found no evidence that it does", " ".join(text(DOCS / "methodology.md").split()))
+        self.assertIn("## Phase 77", text(DOCS / "log.md"))
+
+    def test_the_findings_file_is_the_rendering_of_the_committed_analysis(self):
+        md = text(RESULTS / "RAG2_FINDINGS_FRESH.md")
+        p = self.r["primary"]
+        self.assertIn(f"Macro-F1, R2V − R2 = **{p['difference']:+.3f}** (95% interval {p['ci95'][0]:+.3f} to {p['ci95'][1]:+.3f}; {self.r['iterations']} bootstrap resamples).", md)
+        self.assertIn(f"Reading: **{p['reading']}**.", md)
+        self.assertNotIn("not met", md)
+
+
 class CompletedVersusPlannedTests(unittest.TestCase):
     """What the documents call "not run" must be absent from the committed results. The checks run one way only:
     once a result exists the statement may stay stale for a while, but a result must never be claimed that does
@@ -417,12 +533,14 @@ class CompletedVersusPlannedTests(unittest.TestCase):
         for rel in CURRENT_DOCS:
             self.assertNotIn("not yet run", flat(ROOT / rel), rel)
 
-    def test_the_fresh_test_is_reported_as_without_a_result_until_its_analysis_is_committed(self):
-        """The reverse guard of the one above: while ``rag2_analysis_fresh.json`` is not committed, no document may quote a result of the fresh test."""
-        if (RESULTS / "rag2_analysis_fresh.json").exists():
-            self.skipTest("the fresh test has a committed analysis: quote it in docs/evaluation.md §6.9 and README.md")
-        self.assertIn("None yet", flat(DOCS / "evaluation.md").split("### 6.9", 1)[1])
-        self.assertFalse((RESULTS / "RAG2_FINDINGS_FRESH.md").exists())
+    def test_the_fresh_test_is_reported_as_completed_because_its_analysis_is_committed(self):
+        """Its blinded analysis is committed (2026-10-12), so the documents must report it as run and none may still say that no result exists
+        (the figures themselves are checked by ``FreshResultQuotedTests``)."""
+        self.assertTrue((RESULTS / "rag2_analysis_fresh.json").exists())
+        self.assertTrue((RESULTS / "RAG2_FINDINGS_FRESH.md").exists())
+        self.assertIn("### 10.10 Outcome", text(DOCS / "protocol.md"))
+        self.assertIn("completed once", flat(DOCS / "protocol.md"))
+        self.assertNotIn("None yet", flat(DOCS / "evaluation.md").split("### 6.9", 1)[1])
 
     def test_the_baseline_ablations_are_reported_as_not_run_until_an_answer_exists(self):
         arms = {json.loads(line)["arm"] for line in text(RESULTS / "rag2_answers_dev.jsonl").splitlines() if line.strip()}
