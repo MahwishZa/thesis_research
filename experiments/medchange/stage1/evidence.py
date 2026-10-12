@@ -1,8 +1,8 @@
-"""Shared evidence and experiment data structures.
+"""The evidence records of the stage-1 arms.
 
 These classes carry a candidate passage and its dates to the admission score of the stage-1
-arms (``src.temporal_filter``, called by ``experiments/medchange/arms.py``). The current
-systems (``experiments/medchange/rag2.py``) work on plain dictionaries and do not use them.
+arms (``experiments/medchange/stage1/scorer.py``, called by ``experiments/medchange/arms.py``). The
+current systems (``experiments/medchange/rag2.py``) work on plain dictionaries and do not use them.
 """
 
 from __future__ import annotations
@@ -77,49 +77,3 @@ class Candidate:
     metadata: Mapping[str, Any] = field(
         default_factory=dict
     )
-
-
-@dataclass(frozen=True)
-class ExperimentResult:
-    """Standardized output from an experimental system."""
-
-    sample_id: str
-    experiment_id: str
-    variant: str
-
-    prediction: Optional[str]
-    output_state: Optional[str]
-
-    admitted_evidence_ids: tuple[str, ...] = ()
-    rejected_evidence_ids: tuple[str, ...] = ()
-
-    candidate_count: int = 0
-
-    rationale: Optional[str] = None
-    generated_text: Optional[str] = None
-    confidence: Optional[float] = None
-
-    metadata: Mapping[str, Any] = field(
-        default_factory=dict
-    )
-
-    def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serializable representation."""
-        return {
-            "sample_id": self.sample_id,
-            "experiment_id": self.experiment_id,
-            "variant": self.variant,
-            "prediction": self.prediction,
-            "output_state": self.output_state,
-            "admitted_evidence_ids": list(
-                self.admitted_evidence_ids
-            ),
-            "rejected_evidence_ids": list(
-                self.rejected_evidence_ids
-            ),
-            "candidate_count": self.candidate_count,
-            "rationale": self.rationale,
-            "generated_text": self.generated_text,
-            "confidence": self.confidence,
-            "metadata": dict(self.metadata),
-        }

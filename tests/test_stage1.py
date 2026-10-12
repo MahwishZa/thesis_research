@@ -1,14 +1,13 @@
 """The Temporal Filter's recency term and admission score (stage 1, a result of record).
 
-``src/temporal_filter/temporal.py`` computes T(s, q, t_q) = 2^(-age / H); ``scorer.py`` combines it with a rank-normalised
+``stage1/temporal.py`` computes T(s, q, t_q) = 2^(-age / H); ``scorer.py`` combines it with a rank-normalised
 relevance, A(s) = (1 - lambda) * rho(s) + lambda * T(s). ``experiments/medchange/arms.py`` calls both.
 """
 
 import unittest
 from datetime import date
 
-from src.common.evidence import Candidate, Evidence
-from src.temporal_filter import AdmissionScorer, TemporalPolicy, TemporalState
+from experiments.medchange.stage1 import AdmissionScorer, Candidate, Evidence, TemporalPolicy, TemporalState
 
 TQ = date(2026, 1, 1)
 

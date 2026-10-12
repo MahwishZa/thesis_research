@@ -102,7 +102,7 @@ def main(argv=None) -> int:
     if not a.freeze and not a.medchange_dir:
         ap.error("--medchange-dir is required unless --freeze is given")
     if a.freeze:
-        from .runner import frozen_is_pushed
+        from .pipeline_support import frozen_is_pushed
         rel = "experiments/medchange/manifest_fresh.json"
         ok, why = frozen_is_pushed(rel)
         if not ok:

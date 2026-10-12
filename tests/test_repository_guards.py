@@ -185,7 +185,7 @@ class DocumentSetTests(unittest.TestCase):
     def test_there_are_no_readme_files_in_the_subfolders(self):
         """The README at the root is the only one. Only the tracked folders are searched: a computer that built the
         first design also holds ignored folders (``corpus/``, ``_archive/``) with files of their own."""
-        found = sorted(str(p.relative_to(ROOT)) for folder in ("docs", "src", "evaluation", "tests", "experiments")
+        found = sorted(str(p.relative_to(ROOT)) for folder in ("docs", "tests", "experiments")
                        for p in (ROOT / folder).rglob("README.md")
                        if "data" not in p.relative_to(ROOT).parts[:3] and "baseline" not in p.relative_to(ROOT).parts[:2])
         self.assertEqual(found, [])
@@ -550,7 +550,7 @@ class CompletedVersusPlannedTests(unittest.TestCase):
             self.assertTrue("not run" in flat(ROOT / rel), f"{rel} must say the ablations were not run")
 
     def test_the_held_out_split_is_reported_as_run_once(self):
-        self.assertTrue((RESULTS / "RAG2_FINDINGS.md").is_file())
+        self.assertTrue((RESULTS / "RAG2_FINDINGS_CONFIRM.md").is_file())
         self.assertIn("completed once", flat(DOCS / "protocol.md"))
 
 
@@ -717,7 +717,7 @@ class StatedResultsTests(unittest.TestCase):
         self.assertEqual(offenders, [])
 
     def test_the_code_and_the_committed_results_do_not_measure_the_accuracy_against_a_minimum_gain(self):
-        files = [p for p in (ROOT / "experiments" / "medchange").glob("*.py")] + [ROOT / "evaluation" / "__init__.py"]
+        files = list((ROOT / "experiments" / "medchange").glob("*.py")) + list((ROOT / "experiments" / "medchange" / "stage1").glob("*.py"))
         files += [p for p in RESULTS.glob("*.md")] + [p for p in RESULTS.glob("*.json") if "answers" not in p.name and "rationales" not in p.name]
         files += list((RESULTS / "report_confirm").glob("*.md")) + list((RESULTS / "report_ad").glob("*.md"))
         offenders = [str(p.relative_to(ROOT)) for p in files if self.OLD_WORDING.search(re.sub(r"\s+", " ", text(p)))]
@@ -753,13 +753,18 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "evaluation/tests/unit/test_scope_invariants.py", "evaluation/tests/unit/test_medchange_rag2.py",
         "experiments/medchange/subgroup_ad.py", "experiments/medchange/cochrane_ad_supply.py",
         "experiments/medchange/consistency_auto.py",
+        # folded into the pipeline package on 2026-10-12 (``src/`` and ``evaluation/`` no longer exist), renamed or moved
+        "src/__init__.py", "src/common/__init__.py", "src/common/evidence.py", "src/temporal_filter/__init__.py",
+        "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "evaluation/__init__.py", "evaluation/stats.py",
+        "experiments/medchange/runner.py", "experiments/medchange/results/RAG2_FINDINGS.md",
+        "tests/test_runner.py", "tests/test_temporal_filter.py",
     )
     ACTIVE = (
         "experiments/medchange/encoders.py", "experiments/medchange/abstracts.py", "experiments/medchange/scoring.py",
-        "experiments/medchange/runner.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
+        "experiments/medchange/pipeline_support.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
-        "src/temporal_filter/scorer.py", "src/temporal_filter/temporal.py", "src/common/evidence.py",
-        "evaluation/stats.py", "tests/check_hermetic.py", "docs/protocol.md", "docs/evaluation.md",
+        "experiments/medchange/stage1/scorer.py", "experiments/medchange/stage1/temporal.py", "experiments/medchange/stage1/evidence.py",
+        "experiments/medchange/stats.py", "tests/check_hermetic.py", "docs/protocol.md", "docs/evaluation.md",
     )
 
     def test_removed_work_is_gone_and_the_active_work_is_present(self):
@@ -797,7 +802,7 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         names = set(re.findall(r"[\w./-]+\.(?:py|md|json|toml)\b", block))
         # only the tracked parts of the tree: a computer that built the first design also holds multi-GB ignored folders
         existing = {p.name for p in ROOT.glob("*") if p.is_file()}
-        for folder in ("docs", "src", "evaluation", "tests", "experiments"):
+        for folder in ("docs", "tests", "experiments"):
             existing |= {p.name for p in (ROOT / folder).rglob("*")
                          if p.is_file() and "__pycache__" not in p.parts and "data" not in p.relative_to(ROOT).parts[:3]}
         self.assertEqual(sorted(n for n in names if Path(n).name not in existing), [])
@@ -813,13 +818,15 @@ class NamingTests(unittest.TestCase):
     FEATURE_TESTS = {"audits", "fresh_pipeline", "repository_guards"}
 
     def _modules(self):
-        return {p.stem for p in self.PACKAGE.glob("*.py") if p.name != "__init__.py"}
+        """The modules of the pipeline package and its subpackages (``stage1``)."""
+        modules = {p.stem for p in self.PACKAGE.glob("*.py") if p.name != "__init__.py"}
+        return modules | {p.name for p in self.PACKAGE.iterdir() if p.is_dir() and (p / "__init__.py").is_file()}
 
     def test_every_test_file_is_in_tests_and_named_after_a_module_or_a_feature(self):
-        stray = sorted(str(p.relative_to(ROOT)) for folder in ("src", "evaluation", "experiments", "docs")
+        stray = sorted(str(p.relative_to(ROOT)) for folder in ("experiments", "docs")
                        for p in (ROOT / folder).rglob("test_*.py") if "__pycache__" not in p.parts)
         self.assertEqual(stray, [], "tests belong in tests/")
-        allowed = self._modules() | {"stats", "temporal_filter", "check_hermetic"} | self.FEATURE_TESTS
+        allowed = self._modules() | {"check_hermetic"} | self.FEATURE_TESTS
         misnamed = sorted(p.name for p in (ROOT / "tests").glob("test_*.py") if p.stem[len("test_"):] not in allowed)
         self.assertEqual(misnamed, [])
 
@@ -831,6 +838,13 @@ class NamingTests(unittest.TestCase):
         names = [m for m in self._modules() if m.endswith("_auto") or "_auto_" in m]
         names += [p.name for p in RESULTS.iterdir() if "_auto" in p.name]
         self.assertEqual(names, [])
+
+    def test_the_folding_of_src_and_evaluation_is_recorded(self):
+        """``src/`` and ``evaluation/`` were folded into the pipeline package on 2026-10-12 (Phase 78 of the log); the pipeline's own record of the change is in the protocol."""
+        self.assertIn("## Phase 78", text(DOCS / "log.md"))
+        self.assertIn("Phase 78", text(DOCS / "protocol.md"))
+        self.assertTrue((self.PACKAGE / "stage1" / "__init__.py").is_file())
+        self.assertTrue((self.PACKAGE / "stats.py").is_file())
 
     def test_the_committed_reports_are_one_folder_per_split(self):
         folders = sorted(p.name for p in RESULTS.iterdir() if p.is_dir() and p.name.startswith("report"))
@@ -934,9 +948,9 @@ class DocumentationIntegrityTests(unittest.TestCase):
     #: Code that moved on 2026-10-05, by its old active path. A current document that names one of these points at
     #: a path that no longer exists; a path inside another path (preceded by ``/``) is not matched.
     MOVED_CODE = re.compile(
-        r"(?<![\w./-])(?:experiments/shared|experiments/results|src/baseline|src/proposed"
-        r"|src/common/(?:generator|hf_generator|system)"
-        r"|evaluation/(?:runner|freezing|questions|accuracy|rag_metrics|annotation)\.py"
+        r"(?<![\w./-])(?:experiments/shared|experiments/results|src/(?:baseline|proposed|common|temporal_filter)"
+        r"|evaluation/(?:runner|freezing|questions|accuracy|rag_metrics|annotation|stats)\.py"
+        r"|experiments/medchange/runner\.py|RAG2_FINDINGS\.md"
         r"|evaluation/tests"
         r"|corpus/(?:scripts|config|metadata|reports|data|logs))")
 

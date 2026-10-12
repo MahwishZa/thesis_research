@@ -42,7 +42,7 @@ from typing import Optional, Sequence
 
 from . import rag2 as R
 from .generate_answers import file_sha256, load_jsonl
-from .runner import EXPECTED_ITEMS, commit_results, execute, frozen_is_pushed, print_checks, py
+from .pipeline_support import EXPECTED_ITEMS, commit_results, execute, frozen_is_pushed, print_checks, py
 
 HERE = Path(__file__).resolve().parent
 DESIGN = "/".join(("experiments", "medchange", "results", "rag2_design.json"))   # written by the dev phase
@@ -51,7 +51,7 @@ DEV_ARMS = ("R2", "R2C", "R2V", "R2V-ND")
 ABLATION_ARMS = ("R2-NF", "R2-RQ", "R2-BR")
 AD_ARMS = ("R2", "R2C", "R2V")
 FRESH_ARMS = ("R2", "R2C", "R2V")
-FINDINGS = {"confirm": "RAG2_FINDINGS.md", "ad": "RAG2_FINDINGS_AD.md"}
+FINDINGS = {"confirm": "RAG2_FINDINGS_CONFIRM.md", "ad": "RAG2_FINDINGS_AD.md"}
 MANIFEST_FRESH = "/".join(("experiments", "medchange", "manifest_fresh.json"))
 IN_FORCE = re.compile(r"\*\*Status\.\*\* This section is IN FORCE since \d{4}-\d{2}-\d{2}")
 MAX_UNPARSED = 0.05
@@ -344,9 +344,9 @@ def status(data: Path, results: Path) -> int:
                       "dev_check": dev_check(dev)["status"] if dev else None,
                       "design_record_pushed": pushed,
                       "confirm_answers": len(load_jsonl(data / "rag2_answers_confirm.jsonl")),
-                      "findings": (results / "RAG2_FINDINGS.md").is_file(),
+                      "findings": (results / FINDINGS["confirm"]).is_file(),
                       "ad_answers": len(load_jsonl(data / "rag2_answers_ad.jsonl")),
-                      "ad_findings": (results / "RAG2_FINDINGS_AD.md").is_file(),
+                      "ad_findings": (results / FINDINGS["ad"]).is_file(),
                       "fresh_answers": len(load_jsonl(data / "rag2_answers_fresh.jsonl")),
                       "fresh_findings": (results / "RAG2_FINDINGS_FRESH.md").is_file()}, indent=2))
     return 0

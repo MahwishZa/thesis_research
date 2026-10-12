@@ -449,8 +449,8 @@ the analysis is blinded, and no partial answer file was opened.
 8. *Evidence-collection code and descriptions (audit of 2026-10-12).* After the freeze, and without changing what any of them computes: `pubmed_asof.py`
    retries after a reset connection as well as after a timeout or a URL error (a wider list of network errors; the records fetched are the same) and closes
    the file it reads; `freeze_candidates.py` closes the file it reads and prints "abstracts only" in that mode; the docstrings of `encoders.py` and
-   `src/common/evidence.py` no longer describe the removed corpus. The eight modules that produce the answers (`rag2`, `rag2_run`, `prompts`, `arms`,
-   `generate_answers`, `abstracts`, `benchmark`, `runner`) are byte-identical to the freeze commit `a303705`, and so are the manifests and the design record.
+   the evidence-type module of stage 1 no longer describe the removed corpus. The eight modules that produce the answers (`rag2`, `rag2_run`, `prompts`, `arms`,
+   `generate_answers`, `abstracts`, `benchmark` and `runner`, now `pipeline_support`) are byte-identical to the freeze commit `a303705`, and so are the manifests and the design record.
 9. *Final wording of the findings (2026-10-12).* The findings written by the pipeline at the end of the run carried the earlier reading text of the accuracy
    difference ("not met", with a sentence about the minimum of item 7). The two files `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` were regenerated from
    the same answers with the wording of item 7 (commit `1b2319d`); the only differences are that reading text in each file. Every number is the same.
@@ -462,4 +462,5 @@ The test was run once, with the frozen design, and analysed blind by `analyze_fr
 `a303705`). **H1 is not confirmed.** Macro-F1, R2V − R2 = −0.002 (95% interval −0.027 to +0.023), reading *no evidence*; a gain of 0.02 or more is not excluded
 (the upper end is 0.023), a gain as large as the held-out estimate (+0.045) is. The secondary outcomes, the descriptive comparison on the Alzheimer's disease set (+0.080,
 its sign differs) and the label audit are in `evaluation.md` §6.9 and `results/RAG2_FINDINGS_FRESH.md`. The run took about 66 hours on the clock (58 hours of work and an
-8-hour pause of the process, most likely the laptop sleeping), against the estimate of 57 to 68 hours (§10.5); the step times are in `log.md`, Phase 77.
+8-hour pause of the process, most likely the laptop sleeping), against the estimate of 57 to 68 hours (§10.5); the step times are in `log.md`, Phase 77. After the run the code was reorganised (folders and names only; `log.md`, Phase 78): the code that produced the answers is the code at commit `3c61751`, and the
+changes to it since are import lines, the name of one findings file and one unused class that was deleted (an AST comparison in Phase 78 shows nothing else).

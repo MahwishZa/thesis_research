@@ -1,8 +1,8 @@
-"""Paired statistics (``evaluation/stats.py``): the exact McNemar test, the paired bootstrap interval, Holm."""
+"""Paired statistics (``experiments/medchange/stats.py``): the exact McNemar test, the paired bootstrap interval, Holm."""
 
 import unittest
 
-from evaluation import stats as st
+from experiments.medchange import stats as st
 
 
 class StatsTests(unittest.TestCase):

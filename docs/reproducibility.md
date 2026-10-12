@@ -36,7 +36,7 @@ Environment notes that cost time once:
 ```bash
 python -m unittest discover -s tests -t .           # no network, no models, no real data
 python -m tests.check_hermetic                       # the suite must leave the repository unchanged
-python -m pyflakes src evaluation experiments tests   # optional static check (pip install pyflakes)
+python -m pyflakes experiments tests                  # optional static check (pip install pyflakes)
 ```
 
 The suite needs neither torch nor transformers nor network: model-dependent code is exercised through interfaces and fake
@@ -78,7 +78,7 @@ record is pushed.
 | Phase | Command | What it does | Cost |
 |---|---|---|---|
 | dev | `python -m experiments.medchange.rag2_pipeline dev --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` | checks; rationales; candidate lists; filter; answers R2, R2C, R2V, R2V-ND; analysis; dev report with the pre-declared dev check; design record; environment record; commit. `--ablations` adds R2-RQ, R2-BR and R2-NF; `--judge-path` adds the directness judge | **measured 20.4 h** for the 226 questions with the judge (5.4 min per question) |
-| held-out | `python -m experiments.medchange.rag2_pipeline confirm --go --model-path ... --commit` | the same steps on the 528 held-out questions, then `RAG2_FINDINGS.md`; `--no-temporal-ablation` leaves R2V-ND out (decided before the run) | **measured 49.2 h** with the judge (5.6 min per question) |
+| held-out | `python -m experiments.medchange.rag2_pipeline confirm --go --model-path ... --commit` | the same steps on the 528 held-out questions, then `RAG2_FINDINGS_CONFIRM.md`; `--no-temporal-ablation` leaves R2V-ND out (decided before the run) | **measured 49.2 h** with the judge (5.6 min per question) |
 | `ad` | `python -m experiments.medchange.rag2_pipeline ad --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --judge-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf --commit` | as-of PubMed records (network); candidate pools and abstracts; B0 and B1 answers; then rationales, lists, filter and answers R2, R2C, R2V; analysis; `RAG2_FINDINGS_AD.md` | **measured 22.7 h** with the judge: records 0.4 h, pools 3.7 h, B0 and B1 4.3 h, rationales 0.8 h, lists 2.8 h, filter 2.4 h, answers 6.1 h, judge 2.1 h |
 | `fresh` | `python -m experiments.medchange.rag2_pipeline fresh --go --model-path models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf --commit` (after the steps of §11) | as-of PubMed records and abstracts (network, no MedCPT pools); rationales; candidate lists; filter; answers R2, R2C, R2V (no B0, B1 or judge); the blinded analysis `analyze_fresh`; publishing; commit | **measured about 66 h** on the clock for 850 questions (58 h of work and an 8-hour pause of the process): records 1.8 h, rationales 3.5 h, candidate lists 14.0 h, filter 12.4 h of work, answers 26.6 h (`log.md`, Phase 77); estimated beforehand 57 to 68 h (`protocol.md` §10.5) |
 

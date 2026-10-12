@@ -1569,3 +1569,28 @@ Together 66.2 h on the clock, 58.3 h of work, against the estimate of 57 to 68 h
 
 *Documents.* README, `evaluation.md` §6.0, §6.4 and §6.9, `methodology.md`, `reproducibility.md` (measured duration) and `protocol.md` (status row, §10.9 item 9, new §10.10) now state the result. The guard that
 required "None yet" in §6.9 while no analysis was committed was replaced by tests that quote the committed analysis exactly (`FreshResultQuotedTests`).
+
+## Phase 78 — Reorganisation after the run (Oct 12)
+
+Done after the fresh test had finished and its results were pushed, as announced in Phase 76: the two one-file packages and the legacy package were folded into the pipeline package,
+and two names that were easy to confuse or inconsistent were changed.
+
+| Before | After |
+|---|---|
+| `src/common/evidence.py`, `src/temporal_filter/temporal.py`, `scorer.py`, `__init__.py` (packages `src.common`, `src.temporal_filter`) | `experiments/medchange/stage1/evidence.py`, `temporal.py`, `scorer.py`, `__init__.py` (package `stage1`) |
+| `evaluation/stats.py` (package `evaluation`) | `experiments/medchange/stats.py` |
+| `experiments/medchange/runner.py` | `experiments/medchange/pipeline_support.py` |
+| `results/RAG2_FINDINGS.md` | `results/RAG2_FINDINGS_CONFIRM.md` (`FINDINGS` of `rag2_pipeline`; `status` reads it from there) |
+| `tests/test_runner.py`, `tests/test_temporal_filter.py` | `tests/test_pipeline_support.py`, `tests/test_stage1.py` |
+| `src/`, `evaluation/` | removed; `pyproject.toml` lists `experiments`, `experiments.medchange`, `experiments.medchange.stage1` |
+
+The unused class `ExperimentResult` (left over from the removed framework) was deleted, and `report.py` no longer names a findings file in its note (it said `RAG2_FINDINGS.md` for both splits); the two committed
+`REPORT.md` files were regenerated from their stored data. `NamingTests` and the layout guards were updated (subpackages count as modules; the old paths are listed as removed).
+
+*Verification.* The syntax trees, docstrings removed, of every changed module were compared with the version before the change. `arms.py` differs in three import lines, `scoring.py` in one,
+`fresh_benchmark.py` in one (a late import), `rag2_pipeline.py` in one import, the `FINDINGS` constant and the status line, `report.py` in one sentence, `stage1/temporal.py` and `stage1/scorer.py` in one import each,
+`stage1/evidence.py` by the deleted class; `pipeline_support.py` (was `runner.py`) and `stats.py` are identical. The settings hash of `arms` (`bfc6da6de9d7`) and of the design (`1743afd7045b`) are unchanged and the
+design-record test passes. The suite (313 tests) passes on Python 3.11, 3.12 and 3.13 and in a clean clone.
+
+*Not changed, deliberately.* The folder `experiments/medchange/` and its `data/` and `results/`, the manifests, the module names that the pre-registration cites, and the flat layout of `results/` (the file names follow
+`rag2_<artifact>_<split>.<ext>`). Nothing further is planned.

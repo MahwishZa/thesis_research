@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from experiments.medchange import runner as RN
+from experiments.medchange import pipeline_support as RN
 
 
 def git(repo, *args):

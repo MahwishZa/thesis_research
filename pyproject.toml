@@ -33,10 +33,7 @@ medchange = [
 
 [tool.setuptools]
 packages = [
-    "src",
-    "src.common",
-    "src.temporal_filter",
-    "evaluation",
     "experiments",
     "experiments.medchange",
+    "experiments.medchange.stage1",
 ]

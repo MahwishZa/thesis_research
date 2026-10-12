@@ -295,7 +295,7 @@ gates and numbers.
 crossed the relevance signal (cross-encoder rank or an untrained zero-shot Flan-T5-large "helpfulness" probability) with
 recency: B2 (helpfulness, no recency), B3 (cross-encoder with recency, in the manner of TempRALM), P (helpfulness with
 recency) and C1 (P with publication dates shuffled, a falsification control). The helpfulness score was an untrained
-stand-in for RAG²'s filter, not a RAG² reproduction. The formula lives in `src/temporal_filter/`, which `arms.py` still
+stand-in for RAG²'s filter, not a RAG² reproduction. The formula lives in `experiments/medchange/stage1/`, which `arms.py` still
 imports, and `arms.py` still holds the admission rules (the B0 and B1 answers carry its settings hash); only B0 and B1 are
 run by the current pipeline. Result: recency lowered accuracy and the shuffled-date control did as well, so the stage
 failed its gate.

@@ -25,7 +25,7 @@ from datetime import date
 from enum import Enum
 from typing import Callable, Optional
 
-from ..common.evidence import Evidence
+from .evidence import Evidence
 
 
 class TemporalState(str, Enum):

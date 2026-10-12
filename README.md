@@ -72,11 +72,6 @@ seen earlier on the other two sets, which led to this test, did not repeat on ne
 │   ├── evaluation.md           metrics, comparison methodology, statistics, interpretation rules, results
 │   ├── reproducibility.md      install, tests, commands, costs, recorded configuration
 │   └── log.md                  dated research log: decisions, progress, problems, changes
-├── src/
-│   ├── common/                 the Evidence and Candidate record types
-│   └── temporal_filter/        the recency formula of the earlier approach (result of record)
-├── evaluation/
-│   └── stats.py                exact McNemar test, paired bootstrap interval, Holm correction
 ├── tests/                      the test suite, one file per module (test_<module>.py), and check_hermetic.py, which fails if the suite changes any file
 └── experiments/
     └── medchange/              the pipeline and the general medical (as-of) benchmark
@@ -84,10 +79,11 @@ seen earlier on the other two sets, which led to this test, did not repeat on ne
         ├── fresh_supply.py, fresh_benchmark.py, manifest_fresh.json, ad_cochrane_supply.py         the unused questions and the fresh split; new Alzheimer's disease reviews (counts only)
         ├── pubmed_asof.py, freeze_candidates.py, encoders.py, abstracts.py                          as-of evidence and retrieval models
         ├── prompts.py, arms.py, generate_answers.py                                                 standard answering (B0, B1)
-        ├── rag2.py, rag2_run.py, rag2_pipeline.py, runner.py                                        adapted RAG² and verification
-        ├── scoring.py, analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py  analysis and tables
+        ├── rag2.py, rag2_run.py, rag2_pipeline.py, pipeline_support.py                              adapted RAG² and verification
+        ├── scoring.py, stats.py, analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py  analysis, statistics and tables
         ├── ad_subgroup.py, ad_case_study.py                                                         the Alzheimer's-named questions of the Alzheimer's disease set
         ├── label_audit.py, verdict_consistency.py                                                   audits of the reference labels and of the stated verdicts
+        ├── stage1/             the evidence records and the recency formula of the earlier approach (result of record)
         └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
 ```
 

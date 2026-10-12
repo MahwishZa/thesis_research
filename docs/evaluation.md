@@ -88,7 +88,7 @@ medical evidence, and clinician validation is a stated limitation.
 
 ## 3. Statistical analysis
 
-Paired over the same questions. The accuracy comparisons use standard-library statistics (`evaluation/stats.py`,
+Paired over the same questions. The accuracy comparisons use standard-library statistics (`experiments/medchange/stats.py`,
 `experiments/medchange/scoring.py`); the macro-F1 and per-verdict analyses use numpy for the bootstrap (`class_balance.py`, `analyze_fresh.py`):
 
 * **Exact McNemar test** on the discordant pairs (two-sided exact binomial).
@@ -227,7 +227,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
   DeepSeek-V3 52.3%, Llama-3.3-70B and Mistral-24B 50.8%, OLMo-13B 50.0%, BioMistral 45.1%, PMC-LLaMA 34.8%. The local
   8B systems (46.6–50.0%) are below the five best, level with OLMo-13B at best and above the two medical models.
 
-Full tables: `experiments/medchange/results/rag2_analysis_confirm.md`, `RAG2_FINDINGS.md`,
+Full tables: `experiments/medchange/results/rag2_analysis_confirm.md`, `RAG2_FINDINGS_CONFIRM.md`,
 `results/report_confirm/REPORT.md`.
 
 ### 6.3 Earlier stages (completed, superseded)

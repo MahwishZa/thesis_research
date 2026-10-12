@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from experiments.medchange import analyze_rag2 as A
-from experiments.medchange import runner as P
+from experiments.medchange import pipeline_support as P
 from experiments.medchange import rag2 as R
 from experiments.medchange import rag2_pipeline as RP
 from experiments.medchange import rag2_run as RR
@@ -527,7 +527,7 @@ class PipelineTests(unittest.TestCase):
             self.assertIn("Pre-declared dev check", (res / "RAG2_DEV_REPORT.md").read_text(encoding="utf-8"))
             (res / "rag2_analysis_confirm.json").write_text(json.dumps(self._rep()), encoding="utf-8")
             self.assertTrue(RP.write_findings(res)[0])
-            self.assertIn("Reading:", (res / "RAG2_FINDINGS.md").read_text(encoding="utf-8"))
+            self.assertIn("Reading:", (res / "RAG2_FINDINGS_CONFIRM.md").read_text(encoding="utf-8"))
 
     def test_publish_strips_publisher_text(self):
         with TemporaryDirectory() as tmp:

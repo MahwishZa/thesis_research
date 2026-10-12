@@ -10,8 +10,8 @@ zero-shot P(helpful) from the stage-1 helpfulness step, removed from the reposit
 
 The recency term T and the admission score A = (1 - lambda) * rho + lambda * T are NOT
 re-implemented here: they are computed by the project's reference implementation of the
-proposed system, ``src.temporal_filter.temporal.TemporalPolicy`` and
-``src.temporal_filter.scorer.AdmissionScorer``, so the formula exists in exactly one place.
+proposed system, ``stage1.temporal.TemporalPolicy`` and
+``stage1.scorer.AdmissionScorer``, so the formula exists in exactly one place.
 Here rho is the within-pool rank normalisation of the arm's relevance signal (ties broken
 by cross-encoder rank), and passages are admitted by top-``BUDGET`` score (no theta
 threshold: the MedChange arms are fixed-budget, see the stage-1 protocol, the file experiment_plan.md at commit 92e3aaf).
@@ -34,9 +34,9 @@ import json
 import random
 from typing import Sequence
 
-from src.common.evidence import Candidate, Evidence
-from src.temporal_filter.scorer import AdmissionScorer
-from src.temporal_filter.temporal import TemporalPolicy
+from .stage1.evidence import Candidate, Evidence
+from .stage1.scorer import AdmissionScorer
+from .stage1.temporal import TemporalPolicy
 
 BUDGET = 5
 HALF_LIFE_DAYS = 1095.0          # ~3 years, a typical Cochrane update horizon
@@ -66,7 +66,7 @@ def _evidence(c: dict) -> Evidence:
 
 def recency(c: dict, cutoff: str, half_life_days: float = HALF_LIFE_DAYS) -> float:
     """T = 2 ** (-age_days / H), age from the passage to the question date, clamped at 0
-    (``src.temporal_filter.temporal.TemporalPolicy``)."""
+    (``stage1.temporal.TemporalPolicy``)."""
     policy = TemporalPolicy(half_life_days=half_life_days, undated_score=0.0)
     return policy.score(_evidence(c), question="", question_date=_date(cutoff)).score
 

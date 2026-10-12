@@ -74,11 +74,11 @@ class ArmTests(unittest.TestCase):
 
     def test_scores_come_from_the_reference_implementation(self):
         """The arms must not carry their own copy of the formula: compare with a direct
-        call of src.proposed on the same inputs."""
+        call of the stage-1 modules on the same inputs."""
         from datetime import date
-        from src.common.evidence import Candidate, Evidence
-        from src.temporal_filter.scorer import AdmissionScorer
-        from src.temporal_filter.temporal import TemporalPolicy
+        from experiments.medchange.stage1.evidence import Candidate, Evidence
+        from experiments.medchange.stage1.scorer import AdmissionScorer
+        from experiments.medchange.stage1.temporal import TemporalPolicy
         p = pool()
         got = A.admission_scores(p, [-c["rank"] for c in p], p, CUTOFF, 0.5)
         scorer = AdmissionScorer(0.5)

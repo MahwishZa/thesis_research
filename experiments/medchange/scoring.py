@@ -1,5 +1,5 @@
 """Scoring helpers shared by the analysis and the report: accuracy with intervals, per-class recall and macro-F1,
-paired comparisons (exact McNemar + paired bootstrap, ``evaluation/stats.py``) and Holm-adjusted families.
+paired comparisons (exact McNemar + paired bootstrap, ``stats.py``) and Holm-adjusted families.
 
 ``paired(items, answers, a, b, kinds)`` compares arm ``a`` with arm ``b`` over the same questions; a result in a
 family is *confirmed* only if its Holm-adjusted p is below ``ALPHA``, its 95% interval excludes 0 and the difference
@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 from typing import Optional, Sequence
 
-from evaluation.stats import holm, mcnemar, paired_bootstrap_ci
+from .stats import holm, mcnemar, paired_bootstrap_ci
 
 from .benchmark import LABELS
 from .generate_answers import load_jsonl
