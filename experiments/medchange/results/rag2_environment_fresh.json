@@ -1,0 +1,18 @@
+{
+  "generator_file": "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "git_commit": "3c61751fc796dab6fdd487140fa5d328cf18f8f9",
+  "judge_file": null,
+  "machine": "AMD64",
+  "packages": {
+    "llama-cpp-python": "0.3.35",
+    "matplotlib": null,
+    "numpy": "1.26.4",
+    "torch": "2.4.1+cu121",
+    "transformers": "4.51.3"
+  },
+  "phase": "fresh",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.6",
+  "recorded_utc": "2026-10-12T21:17:09Z",
+  "tracked_code_modified": false
+}

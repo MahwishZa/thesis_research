@@ -1,0 +1,10 @@
+{
+  "encoders": {
+    "article": "ncbi/MedCPT-Article-Encoder",
+    "query": "ncbi/MedCPT-Query-Encoder",
+    "reranker": "ncbi/MedCPT-Cross-Encoder"
+  },
+  "keep": 8,
+  "quota": 8,
+  "settings_sha256": "1743afd7045b"
+}

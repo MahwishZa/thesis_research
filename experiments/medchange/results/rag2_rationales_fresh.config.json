@@ -1,0 +1,10 @@
+{
+  "max_new_tokens": 128,
+  "model_file": "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+  "n_ctx": 1024,
+  "seed": 42,
+  "system_sha256": "7ae5c6e51bd515d580e70fdc5a784550ca30088ed39b19d45eed8997bd23c3ad",
+  "temperature": 0.0,
+  "template_sha256": "eac58bf70017b2ae18a7836817f3528aec8aef78ff781d9561d09540a539635c"
+}
