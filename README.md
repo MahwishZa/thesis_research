@@ -2,22 +2,14 @@
 
 ## Overview
 
-AI chatbots are increasingly used to answer medical questions, but they can be wrong, base an answer on studies that do not
-really address the question, or repeat advice that newer research has overturned. A common remedy is *retrieval-augmented
-generation* (RAG): before answering, the system looks up scientific studies and reads them.
-
-This research tests whether a small language model running on an ordinary laptop answers medical questions more correctly when
-RAG gets one extra step: after drafting an answer from the studies it found, the model checks the draft against plain rules of
-evidence (only studies that really test the treatment count, trials and systematic reviews weigh most, newer evidence takes
-precedence). The step is compared with an adapted version of a published medical RAG method (RAG²; not a full reproduction of
-it), with standard retrieval and with no retrieval. The research domain is Alzheimer's disease and related dementias.
-
-A last test asks the question again on 850 new questions that played no part in the design, with a measure that gives each of the
-three verdicts the same weight (macro-F1). Its hypothesis, questions and decision rule were registered before any of its questions was
-answered (`docs/protocol.md` §10). It found no evidence that the extra step improves that measure (`docs/evaluation.md` §6.9).
-
-The complete academic account (background, related work, methodology, detailed results, statistical analysis, discussion,
-limitations and references) is in the accompanying research paper: [title and link to be added].
+AI chatbots can give wrong medical answers, rely on studies that do not address the question, or repeat advice that newer research
+has overturned. This research tests whether a small language model on an ordinary laptop answers medical questions more correctly
+when *retrieval-augmented generation* (RAG), which looks up scientific studies before answering, adds one check of its draft against
+plain rules of evidence (for example, newer evidence takes precedence). Answers with the check are compared with an adapted published
+medical RAG method (RAG²; not a full reproduction of it), standard retrieval and no retrieval, on Cochrane-review questions asked as
+of each review's date. The research domain is Alzheimer's disease and related dementias. No improvement was confirmed in any of three
+tests, the last on 850 new questions, registered before any was answered (`docs/evaluation.md` §6.9). The full academic account is in
+the accompanying research paper: [title and link to be added].
 
 ## Research Objectives
 

@@ -1629,3 +1629,6 @@ after two weak spots were closed (the pause between retries of JSON requests was
 
 *Open (needs the researcher's computer, no manual step).* The label audit of the Alzheimer's disease set (`label_audit --split ad`, about an hour) and the analysis rerun with it; the item-level file of the fresh audit
 (`label_audit --split fresh --sample 300`, finished items are skipped); optionally `analyze_rag2` for the three splits, which must give the files already committed.
+
+*Later the same day.* At the researcher's request the Overview of the README was condensed from four paragraphs (240 words) to one (150 words): the problem, the extra check, what it is compared with, the domain, the outcome
+of the three tests and the pointer to the paper. `ReadmeStructureTests` now requires a single paragraph of at most 170 words, and `FreshResultQuotedTests` checks its outcome sentence against the committed analysis (385 tests, on Python 3.11, 3.12 and 3.13).
