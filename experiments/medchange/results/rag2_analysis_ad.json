@@ -2879,5 +2879,16 @@
       "R2V": 79
     },
     "n": 208
+  },
+  "label_stable": {
+    "n": 169,
+    "R2V_minus_R2": {
+      "n": 169,
+      "diff_a_minus_b": 0.065089
+    },
+    "R2_minus_B1": {
+      "n": 169,
+      "diff_a_minus_b": 0.017751
+    }
   }
 }

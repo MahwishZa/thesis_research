@@ -1,0 +1,300 @@
+{"item_id": "FR-00725", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "846a722a40497c7e"}
+{"item_id": "FR-03135", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7bb2311867b40917"}
+{"item_id": "FR-07991", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1753267611224124"}
+{"item_id": "FR-03991", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c38db2351a555915"}
+{"item_id": "FR-02782", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "45416c0dea38c894"}
+{"item_id": "FR-01917", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "4f49d3e4c1c8b8e4"}
+{"item_id": "FR-02129", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2d6ec22c84e59dd7"}
+{"item_id": "FR-00551", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "762cd5f8db2c512b"}
+{"item_id": "FR-07125", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "fb2401f04a9879ed"}
+{"item_id": "FR-05424", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "47fe135f1499931e"}
+{"item_id": "FR-09822", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "917b1a2c85904f45"}
+{"item_id": "FR-10130", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3624545f922295b2"}
+{"item_id": "FR-00853", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "34a82bb39da4ccac"}
+{"item_id": "FR-06618", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6d877f583c087e97"}
+{"item_id": "FR-00323", "which": "newest", "gold": "REFUTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "01f85cb0e44b36f2"}
+{"item_id": "FR-01094", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ec60d373c10acad6"}
+{"item_id": "FR-04305", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b607b56313e40208"}
+{"item_id": "FR-06963", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "aa600fc8dba52571"}
+{"item_id": "FR-07683", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7aecc1f8489fc9e3"}
+{"item_id": "FR-01136", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8560bfd324c12619"}
+{"item_id": "FR-00445", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "39b0ead38b1ad674"}
+{"item_id": "FR-02169", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "431308e2f29d6c67"}
+{"item_id": "FR-03373", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "661e7932e2a21646"}
+{"item_id": "FR-09155", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "680a8acffd6ac72f"}
+{"item_id": "FR-04270", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "554ab04c322a10b3"}
+{"item_id": "FR-08832", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "be26500f40496911"}
+{"item_id": "FR-06914", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b36fd8ac9aea7fb1"}
+{"item_id": "FR-01023", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a3fd5a295ef7f9ac"}
+{"item_id": "FR-06502", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c2cb9d838965f933"}
+{"item_id": "FR-08279", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b6fa65e5a31bedb1"}
+{"item_id": "FR-04242", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "bcbb0855ae4cf327"}
+{"item_id": "FR-08568", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4ff625e160ad6e14"}
+{"item_id": "FR-04638", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "9d63cd5f83881a94"}
+{"item_id": "FR-00030", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0442b2e28f2636b3"}
+{"item_id": "FR-00722", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ce03a7e538929cc8"}
+{"item_id": "FR-02497", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c4639d8e9c8e6666"}
+{"item_id": "FR-03039", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1d8f3aae0b2e9237"}
+{"item_id": "FR-08593", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a9215865c18778cf"}
+{"item_id": "FR-08861", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4804cd10cb53749c"}
+{"item_id": "FR-01179", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "383383510871feae"}
+{"item_id": "FR-00825", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "21a6b5bf5b5e3d72"}
+{"item_id": "FR-04001", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4b3b41dc7e4e4e23"}
+{"item_id": "FR-08931", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c990cc55af6877bc"}
+{"item_id": "FR-09072", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "52c2c9857ef466f9"}
+{"item_id": "FR-04581", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b2210b9126930cc1"}
+{"item_id": "FR-01605", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8fc43d1315392d93"}
+{"item_id": "FR-00132", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5f33169e6fbfc928"}
+{"item_id": "FR-07217", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8cd1ce9007c6299f"}
+{"item_id": "FR-03361", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "574ac7dbdc9cb328"}
+{"item_id": "FR-00151", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ae73d3c8dd4e549a"}
+{"item_id": "FR-00439", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c9922df6556793c1"}
+{"item_id": "FR-08710", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a74c69f1c417946d"}
+{"item_id": "FR-01278", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "42d4e2654f009929"}
+{"item_id": "FR-05216", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a657d10c94b84606"}
+{"item_id": "FR-05989", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6b8bccbe2c5c0bda"}
+{"item_id": "FR-00513", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "dac65d83e7ed8a23"}
+{"item_id": "FR-01417", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "27a089350e46d344"}
+{"item_id": "FR-04526", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2f48d68333202967"}
+{"item_id": "FR-05985", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "f96f585d14af05b5"}
+{"item_id": "FR-07713", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "cf25a1b3d6332a21"}
+{"item_id": "FR-02349", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ee5155a6ada11032"}
+{"item_id": "FR-00515", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "0971ffa4f9aa6119"}
+{"item_id": "FR-08081", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6f8d3e8b9db0a17d"}
+{"item_id": "FR-00936", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bf24d3d9e7402e34"}
+{"item_id": "FR-01264", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1da51d474582d108"}
+{"item_id": "FR-09398", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "376f04b1728155ac"}
+{"item_id": "FR-00286", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "48fa667ad4f519a4"}
+{"item_id": "FR-00925", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ba46d6c00bbe4dbc"}
+{"item_id": "FR-08899", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a3ed5a33f0c57e11"}
+{"item_id": "FR-04422", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "dcc17e024372eb89"}
+{"item_id": "FR-07308", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "477364ce216b1c8c"}
+{"item_id": "FR-01263", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "352abe8024af87c1"}
+{"item_id": "FR-04925", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7e0f9cd5436c6e51"}
+{"item_id": "FR-07557", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c329965c3d09a6a6"}
+{"item_id": "FR-08500", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1027bf495bbe818c"}
+{"item_id": "FR-07420", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ef1daaaea2bf8fa1"}
+{"item_id": "FR-06886", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "de8c76f57aec25a2"}
+{"item_id": "FR-00049", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c321aa7aeda3d75c"}
+{"item_id": "FR-01085", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "cd88ec0fa1cf2826"}
+{"item_id": "FR-06103", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c37b93f4ab5edbb7"}
+{"item_id": "FR-10091", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "1d068a33b6bdd5ad"}
+{"item_id": "FR-00584", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "eb9a490343996a86"}
+{"item_id": "FR-00906", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "1d3b49b93ee433ec"}
+{"item_id": "FR-08518", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2f19dc40655be282"}
+{"item_id": "FR-08771", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "0faf3ce2d05c60fc"}
+{"item_id": "FR-04775", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b1a1b38b4f077ee0"}
+{"item_id": "FR-10127", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6423399c2073b02a"}
+{"item_id": "FR-01420", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a7a4a64fb0633a90"}
+{"item_id": "FR-02694", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "abb94b750221470f"}
+{"item_id": "FR-04135", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c1d7fc5c7f489f5c"}
+{"item_id": "FR-07333", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "82dac5c0d97b9900"}
+{"item_id": "FR-03749", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c2ac2f145b6cd6f3"}
+{"item_id": "FR-06619", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f5de79ce5e17696a"}
+{"item_id": "FR-04391", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e44acbd1f6fe8343"}
+{"item_id": "FR-05231", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a43d824d5117237a"}
+{"item_id": "FR-03253", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e0a9c80341f169b2"}
+{"item_id": "FR-04845", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "055aa1d2ff1b73ce"}
+{"item_id": "FR-03432", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c6d6d6f204354afa"}
+{"item_id": "FR-05863", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c34ffcc1663daa76"}
+{"item_id": "FR-04419", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "43582b8ed8f0b65f"}
+{"item_id": "FR-04988", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "0af1485fa133272d"}
+{"item_id": "FR-01682", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "91ba6a9c8347b7c2"}
+{"item_id": "FR-03134", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "39a2c23cefca0c94"}
+{"item_id": "FR-01720", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c0b2656e76a9e5c8"}
+{"item_id": "FR-00022", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "614884ff27e8b730"}
+{"item_id": "FR-10090", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a2ff5dcaf0a7ca86"}
+{"item_id": "FR-02220", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "34244862c2186309"}
+{"item_id": "FR-01433", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bcee4000b01dbcc4"}
+{"item_id": "FR-06160", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6409e065b1ba8cb3"}
+{"item_id": "FR-09777", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "15b7b00adc1a8be3"}
+{"item_id": "FR-00490", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4fb5c6f07f73770d"}
+{"item_id": "FR-08189", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d0f40fdaa003f5cf"}
+{"item_id": "FR-07927", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2e24a36e395ac375"}
+{"item_id": "FR-07588", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "57fd59e72443f96d"}
+{"item_id": "FR-02546", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bf3ad00e045814be"}
+{"item_id": "FR-00198", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2bc0e22df02c4760"}
+{"item_id": "FR-08720", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "6e766026e710bc52"}
+{"item_id": "FR-07672", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ff01f491a8cb18c9"}
+{"item_id": "FR-00054", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "879f4d1415f3a8ef"}
+{"item_id": "FR-08229", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "fcf1574ba42562c5"}
+{"item_id": "FR-03297", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4f8a85ab1bc7ea9e"}
+{"item_id": "FR-04032", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2406fb484ea85975"}
+{"item_id": "FR-00357", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "a5f629cee43e81ac"}
+{"item_id": "FR-10150", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d6f54df1fb573602"}
+{"item_id": "FR-04034", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e1f8175b94a30591"}
+{"item_id": "FR-04090", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "954f57f691ee96d0"}
+{"item_id": "FR-02728", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3957ce9085df1015"}
+{"item_id": "FR-01992", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "391bbfd052ca2865"}
+{"item_id": "FR-01032", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6318d44e9b59833f"}
+{"item_id": "FR-01391", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "5d804d1bc70784eb"}
+{"item_id": "FR-02569", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6b80b6c4b87a89e9"}
+{"item_id": "FR-00502", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "c499a520f119c6e6"}
+{"item_id": "FR-04403", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "998ecb74d1328d35"}
+{"item_id": "FR-00287", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5bd2dfa5916d8818"}
+{"item_id": "FR-00441", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "804df71ed64c2653"}
+{"item_id": "FR-09806", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "eeefe8ac1cf25bfe"}
+{"item_id": "FR-02434", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b6af44ba69146d25"}
+{"item_id": "FR-00597", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "10211be74c9ccd40"}
+{"item_id": "FR-02565", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b3a20e15c3608979"}
+{"item_id": "FR-01288", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "cdea422acbb5f7a1"}
+{"item_id": "FR-02996", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "2df2ab690d17126b"}
+{"item_id": "FR-00393", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "91aa9fefac045ad9"}
+{"item_id": "FR-03856", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "7eb9008240c539e3"}
+{"item_id": "FR-08649", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f24b79bbb49f38c6"}
+{"item_id": "FR-03641", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8751d04d34b5c35a"}
+{"item_id": "FR-02265", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2e1ea3ef161a645c"}
+{"item_id": "FR-08607", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "61613e995b7190b0"}
+{"item_id": "FR-00973", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6eda794ac3033d83"}
+{"item_id": "FR-07426", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "dde94c3c76694429"}
+{"item_id": "FR-07383", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "da1a929dd0a836fa"}
+{"item_id": "FR-02844", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "b5db07064963b484"}
+{"item_id": "FR-09257", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "202474b60de46891"}
+{"item_id": "FR-01570", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "a6aff3e61d8943ba"}
+{"item_id": "FR-02283", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2db58dc930309103"}
+{"item_id": "FR-02423", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "62699666e486537e"}
+{"item_id": "FR-08577", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ffe0be753b644438"}
+{"item_id": "FR-08572", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4491d60e6deb6500"}
+{"item_id": "FR-01480", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e8132e5db9d2aa20"}
+{"item_id": "FR-00088", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "457f2ea47bfc2412"}
+{"item_id": "FR-09061", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "46b2da77cac54c25"}
+{"item_id": "FR-00007", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4db794ce87a60c25"}
+{"item_id": "FR-08164", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "e93bdff73768e5ac"}
+{"item_id": "FR-04123", "which": "newest", "gold": "REFUTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c0b7b2c307f47e0d"}
+{"item_id": "FR-10315", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "68d8510ffac9661b"}
+{"item_id": "FR-01474", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "9fe9132f8f532c11"}
+{"item_id": "FR-05962", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "d260fea1a46ab2df"}
+{"item_id": "FR-03946", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "18825f61b7ae2dfc"}
+{"item_id": "FR-01468", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "ac4434916da24d23"}
+{"item_id": "FR-09441", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "5444ac33f01533df"}
+{"item_id": "FR-00398", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "2b80d6f48f57fccf"}
+{"item_id": "FR-03684", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "be29de40c9bc26cf"}
+{"item_id": "FR-01895", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "24fd6d491a0917ef"}
+{"item_id": "FR-01239", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "acc9f1669bf77822"}
+{"item_id": "FR-06022", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "f9b680f5a2ab4349"}
+{"item_id": "FR-09533", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "62abc92686dab4c6"}
+{"item_id": "FR-08754", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e8ff8a7eea1f5ef8"}
+{"item_id": "FR-00947", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8edd9224b90e410f"}
+{"item_id": "FR-06379", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "faf7527915e08ee9"}
+{"item_id": "FR-02802", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "06b1919df5bc3c0f"}
+{"item_id": "FR-04219", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "de8998b10d664e79"}
+{"item_id": "FR-08111", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c115fed9b3791e57"}
+{"item_id": "FR-00527", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "71f6b4aaed688bd8"}
+{"item_id": "FR-04952", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f9ddb2e2ee3f4ed7"}
+{"item_id": "FR-05925", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2695276101cdbcf6"}
+{"item_id": "FR-03404", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "5f36799a9ba69c12"}
+{"item_id": "FR-09389", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "5f40456422846fb2"}
+{"item_id": "FR-04255", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8deeac1286c8df08"}
+{"item_id": "FR-00347", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "98d60d37cbab0a2b"}
+{"item_id": "FR-02683", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "1c7b2ceed02d895e"}
+{"item_id": "FR-09812", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ba584e44200042f2"}
+{"item_id": "FR-05079", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "1bcd3cf7ad6dd598"}
+{"item_id": "FR-00887", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0aefa13ba7500477"}
+{"item_id": "FR-05663", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "922ba9905f1909ff"}
+{"item_id": "FR-10296", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "9f1cad4d9e82609c"}
+{"item_id": "FR-09055", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3ec84d0c719acef4"}
+{"item_id": "FR-08537", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3796d4546c3a57a5"}
+{"item_id": "FR-09302", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "03581de943dab027"}
+{"item_id": "FR-01589", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ddc4feef9ff2c082"}
+{"item_id": "FR-05474", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0ef3abdc950e80f2"}
+{"item_id": "FR-00653", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "5cb9a2ee47dd42b5"}
+{"item_id": "FR-02163", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3dd87dd8abf32fec"}
+{"item_id": "FR-01739", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e702f6a81aabb011"}
+{"item_id": "FR-06212", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "1e0c9c8351eb54a4"}
+{"item_id": "FR-06534", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "fe1d8b57dda29f01"}
+{"item_id": "FR-08007", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0e42115a2d0f7e9d"}
+{"item_id": "FR-03257", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "785ea05f0cb9f230"}
+{"item_id": "FR-08795", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e44ce5bf4b00779c"}
+{"item_id": "FR-02253", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "e79394b5d9962cab"}
+{"item_id": "FR-05803", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b6dff6399be6791a"}
+{"item_id": "FR-09699", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "74d8748908e1a4bc"}
+{"item_id": "FR-05399", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "45e095aed4bc4466"}
+{"item_id": "FR-00190", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "53116e5d1b5941f4"}
+{"item_id": "FR-08205", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b59a7bbae0cb02bb"}
+{"item_id": "FR-01323", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4d8c138bccaed207"}
+{"item_id": "FR-02321", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "174f1b0093126b98"}
+{"item_id": "FR-03315", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "920aa787b0ceece8"}
+{"item_id": "FR-05076", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "de3e0a6dc37a9268"}
+{"item_id": "FR-01163", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ff2dd711558cd295"}
+{"item_id": "FR-02382", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d17808c032d1fc2a"}
+{"item_id": "FR-09770", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "87aa100e36ab12bc"}
+{"item_id": "FR-01287", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b11e259cd005b58a"}
+{"item_id": "FR-01749", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "96a193d3b61d5166"}
+{"item_id": "FR-06325", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c1cf91ca0db2d451"}
+{"item_id": "FR-09501", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4f21d2c7912cd31c"}
+{"item_id": "FR-03053", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6c381df798ffcd5c"}
+{"item_id": "FR-02161", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "d1703b39abf6a2da"}
+{"item_id": "FR-00078", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f85e7d36bedb6738"}
+{"item_id": "FR-01242", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e562cd414f92bcb9"}
+{"item_id": "FR-01035", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bda06facba1686d7"}
+{"item_id": "FR-05675", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "0a29dd19ea326a07"}
+{"item_id": "FR-08665", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3231ddcc341dd9c3"}
+{"item_id": "FR-02781", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6a02a8075e74e48f"}
+{"item_id": "FR-03905", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "488082ac1bfc8bf5"}
+{"item_id": "FR-10145", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "af7107e91a5ee4ea"}
+{"item_id": "FR-03210", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "21a7c1a0013f006f"}
+{"item_id": "FR-05073", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "9e5d3aca97859deb"}
+{"item_id": "FR-04467", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c604e107e2f10012"}
+{"item_id": "FR-08231", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f8fe3ca1db844b74"}
+{"item_id": "FR-09640", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "8a98520e7af77e4e"}
+{"item_id": "FR-01820", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "c832e21236302804"}
+{"item_id": "FR-04253", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "092a49074d71c7c7"}
+{"item_id": "FR-00509", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "664e3c354bf89b1a"}
+{"item_id": "FR-02570", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "6ba97426e155070e"}
+{"item_id": "FR-02476", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "fdb3bf67da7e2d77"}
+{"item_id": "FR-06127", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "3278cefcd9b4aa3d"}
+{"item_id": "FR-00668", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "c2cb492330a7ed19"}
+{"item_id": "FR-03385", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "f6e2ffba2e9a28c8"}
+{"item_id": "FR-09586", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "abfdc9c76ac846e0"}
+{"item_id": "FR-05830", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "576bdb6368ec87fc"}
+{"item_id": "FR-08587", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9b31f005115762bd"}
+{"item_id": "FR-05028", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f269bc14ef2fe471"}
+{"item_id": "FR-08480", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "729f3663db8dfefc"}
+{"item_id": "FR-09115", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9c23968765205d7a"}
+{"item_id": "FR-00391", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6b745a171554b7fe"}
+{"item_id": "FR-07453", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ff6c09699f455692"}
+{"item_id": "FR-07567", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f64d6ddaf1f21e7d"}
+{"item_id": "FR-05041", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "e670c5cd9098f43a"}
+{"item_id": "FR-06616", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "7b1f01b1cf636bf5"}
+{"item_id": "FR-08612", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "445db3a7d2be826e"}
+{"item_id": "FR-07844", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "f12499bbb7218b17"}
+{"item_id": "FR-00486", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d9d5d5ee2953d7ed"}
+{"item_id": "FR-00499", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "2e5ff97d4a450e40"}
+{"item_id": "FR-06553", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d4ed39787d4930ca"}
+{"item_id": "FR-09965", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "cfd6943c1b20ed49"}
+{"item_id": "FR-03786", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "fda0ca0e7c253ede"}
+{"item_id": "FR-00218", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b23d4d2265507bf8"}
+{"item_id": "FR-09436", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3b189cbe2e7ed57d"}
+{"item_id": "FR-09111", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "92e40faee407b5d9"}
+{"item_id": "FR-09721", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "0c00fbf72ed1aff6"}
+{"item_id": "FR-08955", "which": "newest", "gold": "SUPPORTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "0b5cf5142f481f34"}
+{"item_id": "FR-08149", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "8a5f0a5b02d94bdf"}
+{"item_id": "FR-03332", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "3aa0e4e1b45cc416"}
+{"item_id": "FR-03093", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "9fc9ba62ddc75b06"}
+{"item_id": "FR-09978", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "8bd2ddd5ae63d429"}
+{"item_id": "FR-00523", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "4b326b9804cfd37b"}
+{"item_id": "FR-08668", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "513bcf75c54d01ed"}
+{"item_id": "FR-08700", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "96e49dfbdd9c4a75"}
+{"item_id": "FR-10290", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "b7422ff3d78f3a9b"}
+{"item_id": "FR-07979", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3dd18099f949855c"}
+{"item_id": "FR-00337", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "79fe2471ac2d7b8b"}
+{"item_id": "FR-03629", "which": "newest", "gold": "SUPPORTED", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "00ac7aabfe4943b5"}
+{"item_id": "FR-01009", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b791bae271109e72"}
+{"item_id": "FR-03312", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "ff6152bf638ffbe1"}
+{"item_id": "FR-04731", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "d526f0956e556ad5"}
+{"item_id": "FR-04482", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "bf20cc512768e196"}
+{"item_id": "FR-02392", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "b5785be7173111c7"}
+{"item_id": "FR-04119", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "3a3d0fa34cf89319"}
+{"item_id": "FR-07839", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "6fc3f724bc7f2f7f"}
+{"item_id": "FR-06808", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "593f01649e336e2b"}
+{"item_id": "FR-07574", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "879a8c3c3c940fd9"}
+{"item_id": "FR-08571", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "de9b3ebd7eff7357"}
+{"item_id": "FR-02539", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "4c6aa2dcdb0fbd40"}
+{"item_id": "FR-09461", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bc8021d91b853e3b"}
+{"item_id": "FR-02981", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "fa8736f842bdd9a7"}
+{"item_id": "FR-04552", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "bf4f117ce2e046ab"}
+{"item_id": "FR-04461", "which": "newest", "gold": "REFUTED", "relabel": "REFUTED", "raw": "LABEL: REFUTED", "prompt_sha256": "10bed7fc0aec66f2"}
+{"item_id": "FR-09150", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "aa3eaeb35901eb8e"}
+{"item_id": "FR-01438", "which": "newest", "gold": "NOT ENOUGH INFORMATION", "relabel": "NOT ENOUGH INFORMATION", "raw": "LABEL: NOT ENOUGH INFORMATION", "prompt_sha256": "ea5f3cc9323eca53"}
+{"item_id": "FR-08556", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "515248304879b0ca"}
+{"item_id": "FR-06428", "which": "newest", "gold": "SUPPORTED", "relabel": "SUPPORTED", "raw": "LABEL: SUPPORTED", "prompt_sha256": "952b04538be2a72e"}
