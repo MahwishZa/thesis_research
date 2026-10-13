@@ -20,6 +20,7 @@ is this study's adaptation of a published medical RAG method (RAG²), not a full
 
 | System (same language model, same studies) | General medicine (n = 528) | Alzheimer's disease set (n = 208) |
 |---|---|---|
+| Always the most frequent verdict (no model) | 44.3% | 42.3% |
 | No retrieval | 46.6% | 33.2% |
 | Standard retrieval | 48.1% | 30.8% |
 | Adapted RAG² (baseline) | 48.7% | 34.6% |
@@ -30,7 +31,8 @@ is this study's adaptation of a published medical RAG method (RAG²), not a full
 | General medicine | +1.3 | −1.9 to +4.7 | 0.51 |
 | Alzheimer's disease set | +3.4 | −1.9 to +8.7 | 0.28 |
 
-**How to read this.** The 95% range is the span of differences that fits the data, and the p-value is the chance of seeing a gap at
+**How to read this.** The first row is what a "system" scores that always gives the most frequent verdict of the Cochrane reviews and reads nothing. On general
+medicine the four systems are 2 to 6 points above it; on the Alzheimer's disease set all four are below it. The 95% range is the span of differences that fits the data, and the p-value is the chance of seeing a gap at
 least this large if the two systems were really equally accurate (below 0.05 would count as evidence). The extra check scored 1.3 points
 higher on general medicine and 3.4 points higher on the Alzheimer's disease set, but both ranges include zero and negative values, so
 the gaps cannot be told apart from chance: they are **positive but not confirmed**. With these numbers of questions only gains of
@@ -40,7 +42,7 @@ language model; a second, independent model reproduces 81.4% of them on the gene
 
 **The pre-registered test.** The last test asked the question again on 850 new general-medicine questions, with a measure that gives each of the three verdicts the
 same weight (macro-F1). The extra check did not change it: the proposed check minus the baseline was −0.002 (95% range −0.027 to +0.023), which counts as **no evidence**
-of an improvement. Accuracy was 45.4% with the extra check and 47.2% for the baseline (−1.8 points, range −4.2 to +0.8, which cannot be told apart from chance). The gains
+of an improvement. Accuracy was 45.4% with the extra check and 47.2% for the baseline (−1.8 points, range −4.2 to +0.8, which cannot be told apart from chance); always answering "not enough information" would have scored 47.6%. The gains
 seen earlier on the other two sets, which led to this test, did not repeat on new questions. Further tables, controls, the earlier approaches that did not work, the answers to the research questions (§7) and the limitations (§8) are in
 `docs/evaluation.md`.
 
@@ -65,18 +67,17 @@ seen earlier on the other two sets, which led to this test, did not repeat on ne
         ├── build_benchmark.py, ad_benchmark.py, fresh_supply.py, fresh_benchmark.py, ad_cochrane_supply.py   the benchmark, the Alzheimer's disease set, the unused questions and the fresh split (counts only for new reviews)
         ├── pubmed_asof.py, freeze_candidates.py                                                              as-of evidence and the candidate pools
         ├── generate_answers.py, rag2_run.py, rag2_pipeline.py                                                standard answering (B0, B1), adapted RAG² and verification, and one command per phase
-        ├── analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py, headroom.py                       analysis and tables
+        ├── analyze_rag2.py, analyze_fresh.py, class_balance.py, report.py                                    analysis and tables
         ├── ad_subgroup.py, ad_case_study.py                                                                  the Alzheimer's-named questions of the Alzheimer's disease set
         ├── label_audit.py, verdict_consistency.py                                                            audits of the reference labels and of the stated verdicts
         │                       libraries (imported by the commands; no library imports a command)
         ├── benchmark.py, selection.py, released_answers.py                                                   the MedChange release as as-of items, the questions no split uses, the release's closed-book answers
         ├── eutils.py, abstracts.py, encoders.py                                                              PubMed access, what is read from a record, the retrieval models
-        ├── prompts.py, arms.py, generator.py, files.py                                                       prompts and verdict parsing, the arms, the local model with its recorded configuration, file helpers
+        ├── prompts.py, arms.py, generator.py, files.py                                                       prompts and verdict parsing, the standard arms B0 and B1, the local model with its recorded configuration, file helpers
         ├── rag2.py, pipeline_support.py                                                                      adapted RAG² and verification, helpers of the phase driver
         ├── analysis.py, scoring.py, stats.py                                                                 measurements on the answers, scoring and statistics
         ├── manifest.json, manifest_ad.json, manifest_fresh.json                                              counts, hashes and item lists of the three question sets (no question text)
-        ├── stage1/             the evidence records and the recency formula of the earlier approach (result of record)
-        └── results/            committed results without source text; results/earlier_stages/ holds the earlier approaches
+        └── results/            committed results without source text; results/earlier_stages/ holds the results of the earlier approaches (their code is in Git history)
 ```
 
 The working data (`experiments/medchange/data/`) and model files (`models/`) are not committed.
