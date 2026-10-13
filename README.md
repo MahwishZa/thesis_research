@@ -11,14 +11,7 @@ AI chatbots can give wrong medical answers, rely on studies that do not address 
 
 ## Research Results
 
-**What was measured.** Medical-evidence questions taken from Cochrane systematic reviews, each asked as of its
-review's date so that only earlier studies can be used. The **primary set** is the research domain: 208 questions on Alzheimer's disease and related dementias, of
-which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither (other cognitive impairment). The 48 are reported as a subgroup; the 208 are not an Alzheimer's-only evaluation. The **secondary set** is general
-medicine: 528 held-out questions (226 more were used while the study was built) and, for a pre-registered test, 850 new questions. Presenting the Alzheimer's disease set as primary was decided after all results were known: the
-protocol of 2026-10-05 had named the held-out general-medicine questions as the primary test (`docs/protocol.md` §8), and one rule reads a difference on every set. Each answer is one of three verdicts
-(*supported*, *refuted*, *not enough information*) and counts as correct when it matches the verdict of the Cochrane review;
-*accuracy* is the share of correct answers, and differences are given in percentage points ("points" for short). The baseline, adapted RAG²,
-is this study's adaptation of a published medical RAG method (RAG²), not a full reproduction of it.
+**What was done.** The proposed extra check was built and run end to end, with the baseline and four control systems, under one frozen design, on Cochrane-review questions asked as of each review's date (only earlier studies can be used). The **primary set** is the research domain: 208 questions on Alzheimer's disease and related dementias, of which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither; it is not an Alzheimer's-only evaluation. The **secondary set** is general medicine: 528 held-out questions (226 more were used while the study was built) and, for a pre-registered test, 850 new questions. Presenting the Alzheimer's disease set as primary was decided after all results were known: the protocol of 2026-10-05 had named the held-out general-medicine questions as the primary test (`docs/protocol.md` §8), and one rule reads a difference on every set. Accuracy is the share of answers that match the verdict of the Cochrane review (*supported*, *refuted*, *not enough information*); differences are in percentage points ("points"). The baseline, adapted RAG², is this study's adaptation of a published medical RAG method (RAG²), not a full reproduction of it.
 
 | System (same language model, same studies) | Primary set: Alzheimer's disease (n = 208) | Secondary set: general medicine (n = 528) |
 |---|---|---|
@@ -33,20 +26,7 @@ is this study's adaptation of a published medical RAG method (RAG²), not a full
 | Primary set: Alzheimer's disease | +3.4 | −1.9 to +8.7 | 0.28 |
 | Secondary set: general medicine | +1.3 | −1.9 to +4.7 | 0.51 |
 
-**How to read this.** The first row is what a "system" scores that always gives the most frequent verdict of the Cochrane reviews and reads nothing. On the Alzheimer's disease set all four systems are below it; on general
-medicine they are 2 to 6 points above it. The 95% range is the span of differences that fits the data, and the p-value is the chance of seeing a gap at
-least this large if the two systems were really equally accurate (below 0.05 would count as evidence). The extra check scored 3.4 points
-higher on the Alzheimer's disease set and 1.3 points higher on general medicine, but both ranges include zero and negative values, so
-the gaps cannot be told apart from chance: they are **positive but not confirmed**. With these numbers of questions only gains of
-roughly 6 to 10 points (Alzheimer's disease set) or 4 to 6 points (general medicine) could be confirmed. The results do not show that
-the extra check improves accuracy, and the Alzheimer's-named subgroup (48 questions) is too small to describe Alzheimer's disease on its own. The reference answers were produced by a
-language model; a second, independent model reproduces 81.2% of them on the Alzheimer's disease set and 81.4% on the general-medicine questions.
-
-**The pre-registered test (secondary set).** The last test asked the question again on 850 new general-medicine questions, because too few new questions on Alzheimer's disease exist to run it there (`docs/protocol.md` §8, entry of 2026-10-10), with a measure that gives each of the three verdicts the
-same weight (macro-F1). The extra check did not change it: the proposed check minus the baseline was −0.002 (95% range −0.027 to +0.023), which counts as **no evidence**
-of an improvement. Accuracy was 45.4% with the extra check and 47.2% for the baseline (−1.8 points, range −4.2 to +0.8, which cannot be told apart from chance); always answering "not enough information" would have scored 47.6%. The gains
-seen earlier on the other two sets, which led to this test, did not repeat on new questions. Further tables, controls, the earlier approaches that did not work, the answers to the research questions (§7) and the limitations (§8) are in
-`docs/evaluation.md`.
+**Reading.** The first table's first row is what a "system" scores that always gives the most frequent verdict of the Cochrane reviews and reads nothing. On the Alzheimer's disease set all four systems are below it; on general medicine they are 2 to 6 points above it. The extra check scored 3.4 points higher on the Alzheimer's disease set and 1.3 points higher on general medicine (where it is the highest of the six systems), but both ranges include zero and negative values, so the gaps cannot be told apart from chance: they are **positive but not confirmed**. With these numbers of questions only gains of roughly 6 to 10 points (Alzheimer's disease set) or 4 to 6 points (general medicine) could be confirmed, and the results do not show that the extra check improves accuracy. **The pre-registered test (secondary set).** The last test asked the question again on 850 new general-medicine questions a measure that gives each verdict the same weight (macro-F1) was unchanged: the proposed check minus the baseline was −0.002 (95% range −0.027 to +0.023), which counts as **no evidence** of an improvement. Accuracy was 45.4% with the extra check and 47.2% for the baseline (−1.8 points, range −4.2 to +0.8, which cannot be told apart from chance); always answering "not enough information" would have scored 47.6%. The reference answers were produced by a language model; a second, independent model reproduces 81.2% of them on the Alzheimer's disease set and 81.4% on the general-medicine questions. Tables, controls, answers to the research questions (§7) and limitations (§8) are in `docs/evaluation.md`.
 
 ## Repository Structure
 
