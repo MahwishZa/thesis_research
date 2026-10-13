@@ -13,7 +13,7 @@ The full academic account is in the accompanying research paper: [title and link
 
 ## Research Results
 
-**What was done.** The proposed extra check was built and run end to end, with the baseline and four control systems, under one frozen design, on Cochrane-review questions asked as of each review's date (only earlier studies can be used). The **primary set** is the research domain: 208 questions on Alzheimer's disease and related dementias, of which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither; it is not an Alzheimer's-only evaluation. The **secondary set** is general medicine: 528 held-out questions (226 more were used while the study was built) and, for a pre-registered test, 850 new questions. Presenting the Alzheimer's disease set as primary was decided after all results were known: the protocol had named the held-out general-medicine questions as the primary test (`docs/protocol.md` §8), and one rule reads a difference on every set. Accuracy is the share of answers that match the verdict of the Cochrane review (*supported*, *refuted*, *not enough information*); differences are in percentage points ("points"). The baseline, adapted RAG², is this study's adaptation of a published medical RAG method (RAG²), not a full reproduction of it.
+**What was done.** The proposed system was built and run end to end, with the baseline and four control systems, under one frozen design, on Cochrane-review questions asked as of each review's date (only earlier studies can be used). The **primary set** is the research domain: 208 questions on Alzheimer's disease and related dementias, of which 48 name Alzheimer's disease (23%), 156 name dementia (15 name both) and 19 name neither; it is not an Alzheimer's-only evaluation. The **secondary set** is general medicine: 528 held-out questions (226 more were used while the study was built) and, for a pre-registered test, 850 new questions. Presenting the Alzheimer's disease set as primary was decided after all results were known: the protocol had named the held-out general-medicine questions as the primary test (`docs/protocol.md` §8), and one rule reads a difference on every set. Accuracy is the share of answers that match the verdict of the Cochrane review (*supported*, *refuted*, *not enough information*); differences are in percentage points ("points"). The baseline, adapted RAG², is this study's adaptation of a published medical RAG method (RAG²), not a full reproduction of it.
 
 | System (same language model, same studies) | Primary set: Alzheimer's disease (n = 208) | Secondary set: general medicine (n = 528) |
 |---|---|---|
@@ -21,9 +21,9 @@ The full academic account is in the accompanying research paper: [title and link
 | No retrieval | 33.2% | 46.6% |
 | Standard retrieval | 30.8% | 48.1% |
 | Adapted RAG² (baseline) | 34.6% | 48.7% |
-| Proposed extra check | 38.0% | 50.0% |
+| Proposed system | 38.0% | 50.0% |
 
-| Proposed extra check minus baseline | Difference (points) | 95% range | p-value |
+| Proposed system minus baseline | Difference (points) | 95% range | p-value |
 |---|---|---|---|
 | Primary set: Alzheimer's disease | +3.4 | −1.9 to +8.7 | 0.28 |
 | Secondary set: general medicine | +1.3 | −1.9 to +4.7 | 0.51 |
