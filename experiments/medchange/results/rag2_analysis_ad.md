@@ -1,4 +1,4 @@
-# Adapted RAG² and evidence-criteria verification, ad split (secondary held-out test, Alzheimer's disease set)
+# Adapted RAG² and evidence-criteria verification, ad split (held-out test, Alzheimer's disease set)
 
 Items: 208. Arms: B0, B1, R2, R2C, R2V. Protocol: `docs/protocol.md`.
 

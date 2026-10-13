@@ -1,4 +1,4 @@
-# Findings of the realigned study (Alzheimer's disease set, secondary test set, run once)
+# Findings of the realigned study (Alzheimer's disease set, run once)
 
 Each conclusion follows the rules of `docs/evaluation.md` §5: a difference is confirmed only when its p-value is below .05 and its 95% interval excludes 0.
 

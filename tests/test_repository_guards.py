@@ -37,6 +37,9 @@ History of the guards (each date is a change of what is true; older wording is i
 * 2026-10-12 (later): the code that several commands need left the command modules for libraries (``LayeringTests``), the tests were split
   to one file per module (``NamingTests``), and the committed run of the pre-registered test is checked against the registered question
   list (``CommittedFreshRunTests``).
+* 2026-10-13: the Alzheimer's disease set is presented as the primary set and general medicine as the secondary set, as a decision about presentation taken
+  after every result was known; the pre-declared roles stay on record in the protocol and the pre-registered result stays in the documents
+  (``PrimarySetFramingTests``).
 """
 
 import ast
@@ -51,7 +54,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.medchange import analyze_fresh, fresh_benchmark, label_audit, pipeline_support, report
+from experiments.medchange import analyze_fresh, analyze_rag2, fresh_benchmark, label_audit, pipeline_support, rag2_pipeline, report
 from experiments.medchange.files import load_jsonl
 from experiments.medchange.scoring import detectable_range, wilson
 
@@ -157,7 +160,7 @@ class ReadmeStructureTests(unittest.TestCase):
         """The README says what the extra check achieved and that the gaps cannot be told apart from chance at this
         sample size; dropping either would turn a hedged result into an unqualified claim."""
         body = flat(README)
-        for needle in ("positive but not confirmed", "cannot be told apart from chance", "only gains of roughly 4 to 6 points",
+        for needle in ("positive but not confirmed", "cannot be told apart from chance", "only gains of roughly 6 to 10 points",
                        "do not show that the extra check improves accuracy"):
             self.assertIn(needle, body)
 
@@ -310,13 +313,15 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
     def test_the_readme_accuracy_table_is_quoted_exactly(self):
         rows = _table(self.readme, "System (same language model, same studies)")
         for arm, label in self.README_ROWS.items():
-            cells = [f"{_pct(*_rate(sj['generation'][arm]['all']))}%" for sj in (self.confirm, self.ad)]
+            cells = [f"{_pct(*_rate(sj['generation'][arm]['all']))}%" for sj in (self.ad, self.confirm)]
             row = self._row(rows, label)
             self.assertEqual([c.strip() for c in row.strip("|").split("|")[1:]], cells, label)
+        self.assertIn(f"| System (same language model, same studies) | Primary set: Alzheimer's disease (n = {self.ad['items']}) | "
+                      f"Secondary set: general medicine (n = {self.confirm['items']}) |", self.readme)
 
     def test_the_readme_difference_table_and_its_reading_are_quoted_exactly(self):
         rows = _table(self.readme, "Proposed extra check minus baseline")
-        for label, sj in (("General medicine", self.confirm), ("Alzheimer's disease set", self.ad)):
+        for label, sj in (("Primary set: Alzheimer's disease", self.ad), ("Secondary set: general medicine", self.confirm)):
             p = sj["primary"]
             expected = (f"| {label} | {_pp(p['diff_a_minus_b'])} | {_pp(p['ci95'][0])} to {_pp(p['ci95'][1])} | "
                         f"{_p(p['mcnemar_p'])} |")
@@ -326,18 +331,20 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
             self.assertLess(p["ci95"][0], 0, "the README says the range includes negative values")
             self.assertGreater(p["ci95"][1], 0)
             self.assertFalse(p["confirmed"])
-        self.assertIn(f"The extra check scored {100 * self.confirm['primary']['diff_a_minus_b']:.1f} points higher on general medicine and "
-                      f"{100 * self.ad['primary']['diff_a_minus_b']:.1f} points higher on the Alzheimer's disease set", self.readme_flat)
+        self.assertIn(f"The extra check scored {100 * self.ad['primary']['diff_a_minus_b']:.1f} points higher on the Alzheimer's disease set and "
+                      f"{100 * self.confirm['primary']['diff_a_minus_b']:.1f} points higher on general medicine", self.readme_flat)
         self.assertIn("they are positive but not confirmed", self.readme_flat)
 
     def test_the_sample_size_limits_in_the_readme_follow_from_the_formula(self):
         (a, b), (c, d) = detectable_range(self.confirm["items"]), detectable_range(self.ad["items"])
-        self.assertIn(f"roughly {a} to {b} points (general medicine) or {c} to {d} points (Alzheimer's disease set)",
+        self.assertIn(f"roughly {c} to {d} points (Alzheimer's disease set) or {a} to {b} points (general medicine)",
                       self.readme_flat)
 
     def test_the_scope_sentences_of_the_readme_follow_from_the_data(self):
-        self.assertIn(f"{self.confirm['items']} general-medicine questions and {self.ad['items']} questions on Alzheimer's disease and related dementias",
-                      self.readme_flat)
+        fresh = json.loads(text(PACKAGE / "manifest_fresh.json"))
+        self.assertIn(f"The primary set is the research domain: {self.ad['items']} questions on Alzheimer's disease and related dementias", self.readme_flat)
+        self.assertIn(f"The secondary set is general medicine: {self.confirm['items']} held-out questions ({self.dev['items']} more were used while the study was built) and, "
+                      f"for a pre-registered test, {fresh['items']} new questions", self.readme_flat)
         manifest = json.loads(text(ROOT / "experiments" / "medchange" / "manifest_ad.json"))
         self.assertEqual(manifest["items"], self.ad["items"])
         benchmark = ROOT / "experiments" / "medchange" / "data" / "benchmark.jsonl"
@@ -348,7 +355,9 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         self.assertIn("of which 48 name Alzheimer's disease", self.readme_flat)
 
     def test_the_reliability_sentence_is_quoted_exactly(self):
-        self.assertIn(f"reproduces {100 * self.audit['agreement']:.1f}% of them", self.readme_flat)
+        ad_audit = json.loads(text(RESULTS / "label_audit_ad.json"))
+        self.assertIn(f"reproduces {100 * ad_audit['agreement']:.1f}% of them on the Alzheimer's disease set and {100 * self.audit['agreement']:.1f}% on the general-medicine questions",
+                      self.readme_flat)
         for needle in (f"Agreement {100 * self.audit['agreement']:.1f}%", f"kappa {self.audit['kappa']}",
                        f"{self.audit['n_stable']} of {self.audit['n_items']} questions label-stable"):
             self.assertIn(needle, self.evaluation)
@@ -428,11 +437,11 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         confirm_best, ad_best = const(self.report), const(self.report_ad)
         fresh = json.loads(text(PACKAGE / "manifest_fresh.json"))
         fresh_best = max(fresh["labels"].values()) / fresh["items"]
-        self.assertIn(f"| Always the most frequent verdict (no model) | {pc(confirm_best)} | {pc(ad_best)} |", self.readme)
+        self.assertIn(f"| Always the most frequent verdict (no model) | {pc(ad_best)} | {pc(confirm_best)} |", self.readme)
         above = {a: self.confirm["generation"][a]["all"]["accuracy"] - confirm_best for a in ("B0", "B1", "R2", "R2C", "R2V", "R2V-ND")}
         self.assertEqual((f"{100 * min(above.values()):.1f}", f"{100 * max(above.values()):.1f}"), ("2.3", "5.7"))
         self.assertEqual((min(above, key=above.get), max(above, key=above.get)), ("B0", "R2V"))
-        self.assertIn("the four systems are 2 to 6 points above it; on the Alzheimer's disease set all four are below it", self.readme_flat)
+        self.assertIn("On the Alzheimer's disease set all four systems are below it; on general medicine they are 2 to 6 points above it", self.readme_flat)
         self.assertTrue(all(self.ad["generation"][a]["all"]["accuracy"] < ad_best for a in ("B0", "B1", "R2", "R2C", "R2V")))
         fresh_run = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))
         self.assertTrue(all(fresh_run["accuracy"][a]["accuracy"] < fresh_best for a in ("R2", "R2C", "R2V")))
@@ -459,7 +468,7 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
                       f"({by_class['REFUTED']['n']}) and NOT ENOUGH INFORMATION {pc(by_class['NOT ENOUGH INFORMATION']['agreement'])} ({by_class['NOT ENOUGH INFORMATION']['n']}); "
                       f"{au['n_stable']} of the {au['n_items']} questions are label-stable. On those {au['n_stable']}, R2V − R2 = {_pp(ls['R2V_minus_R2']['diff_a_minus_b'])} pp and "
                       f"R2 − B1 = {_pp(ls['R2_minus_B1']['diff_a_minus_b'])} pp", self.evaluation_flat)
-        self.assertIn(f"and {pc(au['agreement'])} on the Alzheimer's disease set", self.readme_flat)
+        self.assertIn(f"reproduces {pc(au['agreement'])} of them on the Alzheimer's disease set", self.readme_flat)
         protocol, data = flat(DOCS / "protocol.md"), flat(DOCS / "data.md")
         self.assertIn(f"the label audit was run on 2026-10-13 (agreement {pc(au['agreement'])}, kappa {au['kappa']};", protocol)
         self.assertIn(f"The independent model reproduces {pc(au['agreement'])} of the {au['n_items']} labels (kappa {au['kappa']}); {au['n_stable']} are label-stable, and on them "
@@ -617,7 +626,7 @@ class AnswersAndLimitationsTests(unittest.TestCase):
         return f"{_pp(r['ci95'][0])} to {_pp(r['ci95'][1])}"
 
     def test_the_sections_exist_and_answer_every_question_of_the_protocol(self):
-        for needle in ("Primary (`protocol.md` §1)", "(a)", "(b)", "(c)", "(d)", "Pre-registered", "Objective 1", "Objective 2"):
+        for needle in ("Primary set (`protocol.md` §1", "(a)", "(b)", "(c)", "(d)", "Pre-registered", "Objective 1", "Objective 2"):
             self.assertIn(needle, self.s7)
         self.assertIn("(d) How do the evidence sets that R2 admits differ from those of B1?", self.s7)
         protocol = flat(DOCS / "protocol.md")
@@ -627,9 +636,11 @@ class AnswersAndLimitationsTests(unittest.TestCase):
 
     def test_the_three_primary_answers_are_those_of_the_committed_analyses(self):
         c, a, f = self.confirm["primary"], self.ad["primary"], self.fresh["primary"]
-        self.assertIn(f"{self.acc(self.confirm, 'R2V')}% against {self.acc(self.confirm, 'R2')}% (528 questions): {_pp(c['diff_a_minus_b'])} points, 95% interval {self.ci(c)}, "
-                      f"exact McNemar p = {c['mcnemar_p']:.2f} (§6.2)", self.s7)
-        self.assertIn(f"{self.acc(self.ad, 'R2V')}% against {self.acc(self.ad, 'R2')}%: {_pp(a['diff_a_minus_b'])} points, {self.ci(a)}, p = {a['mcnemar_p']:.2f} (§6.6)", self.s7)
+        self.assertIn(f"{self.acc(self.ad, 'R2V')}% against {self.acc(self.ad, 'R2')}%: {_pp(a['diff_a_minus_b'])} points, 95% interval {self.ci(a)}, "
+                      f"exact McNemar p = {a['mcnemar_p']:.2f} (§6.6)", self.s7)
+        self.assertIn(f"{self.acc(self.confirm, 'R2V')}% against {self.acc(self.confirm, 'R2')}%: {_pp(c['diff_a_minus_b'])} points, {self.ci(c)}, p = {c['mcnemar_p']:.2f} (§6.2)", self.s7)
+        self.assertLess(self.s7.index("(§6.6)"), self.s7.index("(§6.2)"), "the primary set is answered first, then the held-out split, then the pre-registered test")
+        self.assertLess(self.s7.index("(§6.2)"), self.s7.index("(§6.9)"))
         m = lambda arm: f"{self.fresh['arms'][arm]['macro_f1']:.3f}"
         f3 = lambda x: f"{x:+.3f}".replace("-", "−")
         self.assertIn(f"{m('R2V')} against {m('R2')}: {f3(f['difference'])}, 95% interval {f3(f['ci95'][0])} to {f3(f['ci95'][1])} (§6.9)", self.s7)
@@ -638,13 +649,13 @@ class AnswersAndLimitationsTests(unittest.TestCase):
     def test_the_secondary_answers_quote_the_comparisons(self):
         cs, as_ = self.confirm["secondary"], self.ad["secondary"]
         diff = lambda r: f"{_pp(r['diff_a_minus_b'])} ({self.ci(r)})"
-        self.assertIn(f"Held-out: R2 {self.acc(self.confirm, 'R2')}%, B1 {self.acc(self.confirm, 'B1')}%, B0 {self.acc(self.confirm, 'B0')}%; R2 − B1 = {_pp(cs['R2 vs B1']['diff_a_minus_b'])} points ({self.ci(cs['R2 vs B1'])}). "
-                      f"Alzheimer's disease set: R2 {self.acc(self.ad, 'R2')}%, B1 {self.acc(self.ad, 'B1')}%, B0 {self.acc(self.ad, 'B0')}%; R2 − B1 = {diff(as_['R2 vs B1'])}", self.s7)
-        self.assertIn(f"Held-out: R2C − R2 = {diff(cs['R2C vs R2'])}, R2V − R2C = {diff(cs['R2V vs R2C'])}. Alzheimer's disease set: {diff(as_['R2C vs R2'])} and {diff(as_['R2V vs R2C'])}.", self.s7)
+        self.assertIn(f"Alzheimer's disease set: R2 {self.acc(self.ad, 'R2')}%, B1 {self.acc(self.ad, 'B1')}%, B0 {self.acc(self.ad, 'B0')}%; R2 − B1 = {diff(as_['R2 vs B1'])}. "
+                      f"Held-out: R2 {self.acc(self.confirm, 'R2')}%, B1 {self.acc(self.confirm, 'B1')}%, B0 {self.acc(self.confirm, 'B0')}%; R2 − B1 = {_pp(cs['R2 vs B1']['diff_a_minus_b'])} points ({self.ci(cs['R2 vs B1'])})", self.s7)
+        self.assertIn(f"Alzheimer's disease set: R2C − R2 = {diff(as_['R2C vs R2'])} and R2V − R2C = {diff(as_['R2V vs R2C'])}. Held-out: {diff(cs['R2C vs R2'])} and {diff(cs['R2V vs R2C'])}.", self.s7)
         s = self.fresh["secondary"]["macro_f1_R2V_minus_R2C"]
         f3 = lambda x: f"{x:+.3f}".replace("-", "−")
         self.assertIn(f"Fresh macro-F1: R2V − R2C = {f3(s['difference'])} ({f3(s['ci95'][0])} to {f3(s['ci95'][1])})", self.s7)
-        self.assertIn(f"Held-out: {_pp(cs['R2V vs R2V-ND']['diff_a_minus_b'])} points ({self.ci(cs['R2V vs R2V-ND'])}); not run on the other sets", self.s7)
+        self.assertIn(f"Held-out (secondary set): {_pp(cs['R2V vs R2V-ND']['diff_a_minus_b'])} points ({self.ci(cs['R2V vs R2V-ND'])}); not run on the other sets", self.s7)
         self.assertFalse(any(v["confirmed"] for v in list(cs.values()) + list(as_.values())))
 
     def test_the_retrieval_answer_and_the_objectives_quote_the_files(self):
@@ -655,13 +666,22 @@ class AnswersAndLimitationsTests(unittest.TestCase):
                       f"{pc(r['evidence_mix']['RCT'])} against {pc(b['evidence_mix']['RCT'])}; {pc(r['directness_at_k'])} are judged direct by the independent model against {pc(b['directness_at_k'])}", self.s7)
         p = {k: self.confirm["primary"] if k == "confirm" else self.ad["primary"] for k in ("confirm", "ad")}
         fresh_difference = f"{self.fresh['primary']['difference']:+.3f}".replace("-", "−")
-        self.assertIn(f"{_pp(p['confirm']['diff_a_minus_b'])} and {_pp(p['ad']['diff_a_minus_b'])} points and the macro-F1 difference on new questions was {fresh_difference}", self.s7)
-        self.assertIn(f"gains of {100 * p['confirm']['ci95'][1]:.1f}, {100 * p['ad']['ci95'][1]:.1f} and {self.fresh['primary']['ci95'][1]:.3f} (macro-F1)", self.s7)
+        self.assertIn(f"{_pp(p['ad']['diff_a_minus_b'])} points on the primary set (Alzheimer's disease) and {_pp(p['confirm']['diff_a_minus_b'])} on the held-out split of the secondary set "
+                      f"(general medicine), and the macro-F1 difference on the secondary set's new questions was {fresh_difference}", self.s7)
+        self.assertIn(f"gains of {100 * p['ad']['ci95'][1]:.1f}, {100 * p['confirm']['ci95'][1]:.1f} and {self.fresh['primary']['ci95'][1]:.3f} (macro-F1)", self.s7)
         released = {x["name"]: x["all"]["accuracy"] for x in self.report["systems"] if x["group"].startswith("Closed-book")}
         self.assertEqual((min(released, key=released.get), max(released.values())), ("PMC-LLaMA", released["Qwen2.5-7B"]))
         self.assertIn(f"from {pc(min(released.values()))} (PMC-LLaMA) to {pc(max(released.values()))} (Qwen2.5-7B and GPT-4o-mini)", self.s7)
         local = [self.confirm["generation"][a]["all"]["accuracy"] for a in ("B0", "B1", "R2", "R2C", "R2V", "R2V-ND")]
         self.assertIn(f"the local systems ({pc(min(local))} to {pc(max(local))})", self.s7)
+        report_ad = json.loads(text(RESULTS / "report_ad" / "report_data_ad.json"))
+        released_ad = {x["name"]: x["all"]["accuracy"] for x in report_ad["systems"] if x["group"].startswith("Closed-book")}
+        best_local_ad = max(self.ad["generation"][a]["all"]["accuracy"] for a in ("B0", "B1", "R2", "R2C", "R2V"))
+        self.assertEqual((min(released_ad, key=released_ad.get), {k for k, v in released_ad.items() if v == max(released_ad.values())}),
+                         ("BioMistral", {"Llama-3.3-70B", "PMC-LLaMA"}))
+        self.assertEqual(sum(v > best_local_ad for v in released_ad.values()), 5)
+        self.assertIn(f"on the Alzheimer's disease set they score from {pc(min(released_ad.values()))} (BioMistral) to {pc(max(released_ad.values()))} (Llama-3.3-70B and PMC-LLaMA), "
+                      f"and the best local system ({pc(best_local_ad)}) scores below five of them (§6.6)", self.s7)
 
     def test_every_statement_of_the_label_reproducibility_in_the_current_documents_is_the_audit_value(self):
         audit = {"held-out": json.loads(text(RESULTS / "label_audit_confirm.json")), "development": json.loads(text(RESULTS / "label_audit_dev.json")),
@@ -686,19 +706,108 @@ class AnswersAndLimitationsTests(unittest.TestCase):
         self.assertNotIn("the label audit of the Alzheimer's disease set,", self.s8)
         lo, hi = detectable_range(528)
         lo2, hi2 = detectable_range(208)
-        self.assertIn(f"With 528 questions only gains of roughly {lo} to {hi} points can be confirmed, with 208 only {lo2} to {hi2}", self.s8)
+        self.assertIn(f"With 208 questions (primary set) only gains of roughly {lo2} to {hi2} points can be confirmed, with 528 (secondary set) only {lo} to {hi}", self.s8)
         manifests = {n: json.loads(text(PACKAGE / f"manifest{n}.json")) for n in ("", "_ad", "_fresh")}
         ad, fresh = manifests["_ad"], manifests["_fresh"]
         self.assertIn(f"{ad['items']} questions come from {ad['reviews']} reviews", self.s8)
-        self.assertIn(f"Of the {fresh['items']} fresh questions, {fresh['single_version']} come from reviews with a single version, and so do {ad['single_version']} of the {ad['items']} of the Alzheimer's disease set", self.s8)
+        self.assertIn(f"Of the {ad['items']} questions of the Alzheimer's disease set, {ad['single_version']} come from reviews with a single version, and so do {fresh['single_version']} of the {fresh['items']} fresh questions", self.s8)
         counts = manifests[""]["counts"]["ad_related"]
-        self.assertIn(f"The main benchmark has {sum(counts.values())} Alzheimer's-related questions", self.s8)
+        self.assertIn(f"its benchmark has {sum(counts.values())} Alzheimer's-related questions", self.s8)
         changed = self.confirm["generation"]["B0"]["changed"]["n"]
         self.assertIn(f"({changed} of the {self.confirm['items']} held-out questions)", self.s8)
         supply = json.loads(text(RESULTS / "ad_cochrane_supply.json"))
         self.assertIn(f"{supply['usable']} usable new reviews were found, 30 were needed", self.s8)
         self.assertEqual(json.loads(text(RESULTS / "ad_subgroup_alzheimer.json"))["n"], 48)
         self.assertIn("48 questions name Alzheimer's disease", self.s8)
+        self.assertIn("The Alzheimer's disease set was presented as the primary set on 2026-10-13, after every result was known; the protocol of 2026-10-05 had named the held-out split as the primary test", self.s8)
+
+
+class PrimarySetFramingTests(unittest.TestCase):
+    """Since 2026-10-13 the Alzheimer's disease set (Alzheimer's disease and related dementias, 208 questions) is presented as the primary set and general medicine
+    (development, held-out and fresh questions) as the secondary set. It is a decision about presentation taken after every result was known: the protocol of
+    2026-10-05 named the held-out split as the primary test, and that history stays as written. These tests keep the two things apart, so that the current
+    documents say the new roles in every place, the old roles remain only as dated history, the rule that reads a difference is the same on every set, and the
+    result of the pre-registered test is not dropped when it moves to the secondary set."""
+
+    CURRENT = ("README.md", "docs/data.md", "docs/methodology.md", "docs/evaluation.md", "docs/reproducibility.md")
+    #: Phrases that call the Alzheimer's disease set secondary in the present tense (dated history in ``docs/protocol.md`` and ``docs/log.md`` is not checked).
+    OLD_ROLE = (r"secondary held-out", r"secondary test set", r"secondary evaluation", r"Alzheimer's disease set \(secondary", r"Secondary: Alzheimer",
+                r"\(secondary; split `ad`\)", r"Alzheimer's disease set is secondary")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.readme = flat(README).replace("**", "")
+        cls.evaluation = flat(DOCS / "evaluation.md").replace("**", "")
+        cls.protocol = flat(DOCS / "protocol.md").replace("**", "")
+        cls.methodology = flat(DOCS / "methodology.md").replace("**", "")
+        cls.data = flat(DOCS / "data.md").replace("**", "")
+
+    def test_the_readme_names_the_primary_set_before_the_secondary_set_and_says_when_that_was_decided(self):
+        self.assertIn("The primary set is the research domain: ", self.readme)
+        self.assertLess(self.readme.index("The primary set is"), self.readme.index("The secondary set is general medicine"))
+        self.assertIn("Presenting the Alzheimer's disease set as primary was decided after all results were known: the protocol of 2026-10-05 had named the held-out "
+                      "general-medicine questions as the primary test (`docs/protocol.md` §8), and one rule reads a difference on every set.", self.readme)
+        table = self.readme.split("| System (same language model, same studies) |", 1)[1].split("|---|", 1)[0]
+        self.assertLess(table.index("Primary set"), table.index("Secondary set"))
+
+    def test_the_current_documents_give_the_roles_in_every_place_that_states_them(self):
+        table = self.evaluation.split("### 6.0 What each result is", 1)[1].split("### 6.1", 1)[0]
+        for fragment, role in (("The Alzheimer's disease set, i.e. Alzheimer's disease and related dementias (§6.6) | 208 | primary set;", "primary set"),
+                               ("held-out split (§6.2) | 528 | secondary set;", "secondary set"),
+                               ("Pre-registered test on fresh questions (§6.9) | 850 | secondary set;", "secondary set"),
+                               ("development split (§6.1) | 226 | secondary set;", "secondary set")):
+            self.assertIn(fragment, table, role)
+        self.assertIn("The Alzheimer's disease set was presented as the primary set on 2026-10-13, after every result was known; the protocol of 2026-10-05 had named the held-out split "
+                      "as the primary (pre-declared, confirmatory) test", table)
+        for heading in ("### 6.2 Realigned study, held-out split (528 questions; secondary set;", "### 6.6 Alzheimer's disease and related dementias set (primary set, run once)",
+                        "### 6.9 Pre-registered test on fresh questions (850 questions; secondary set;"):
+            self.assertIn(heading, " ".join(text(DOCS / "evaluation.md").split()))
+        self.assertIn("| Primary: Alzheimer's disease and related dementias set (split `ad`) | Secondary: MedChange as-of benchmark", self.methodology)
+        self.assertIn("The Alzheimer's disease set (§2) is the primary set and general medicine (§1, §3) the secondary set.", self.data)
+        self.assertIn("## 2. Alzheimer's disease and related dementias set (primary; split `ad`)", text(DOCS / "data.md"))
+        self.assertIn("a primary set of questions on Alzheimer's disease and related dementias and a secondary set of general-medicine Cochrane questions", text(ROOT / "pyproject.toml"))
+
+    def test_the_old_roles_survive_only_as_dated_history(self):
+        for rel in self.CURRENT:
+            body = flat(ROOT / rel)
+            for pattern in self.OLD_ROLE:
+                self.assertIsNone(re.search(pattern, body), f"{rel}: {pattern}")
+        # the history is kept as it was written
+        self.assertIn("on 2026-10-05 the held-out general-medicine split was the primary test and the Alzheimer's disease set a secondary result", self.protocol)
+        self.assertIn("**Primary question.** On held-out Cochrane questions asked as of the newest review's date", flat(DOCS / "protocol.md"))
+        self.assertIn("2026-10-05, Alzheimer's/dementia secondary test set", self.protocol)
+        self.assertIn("the protocol of 2026-10-05 had named the held-out split as the primary (pre-declared, confirmatory) test and the Alzheimer's disease set as a secondary result", self.evaluation)
+        self.assertIn("a decision taken after every result was known", self.methodology)
+
+    def test_the_protocol_records_the_change_as_a_decision_about_presentation(self):
+        self.assertIn("| 2026-10-13 | Present the Alzheimer's disease set as the primary set and general medicine as the secondary set", self.protocol)
+        self.assertIn("2026-10-13, which set is primary. At the researcher's request the documents present the Alzheimer's disease set", self.protocol)
+        self.assertIn("It is a decision about presentation, taken after every result, including that of the pre-registered test, was known; it is not a pre-declaration.", self.protocol)
+        self.assertIn("Nothing else changed: the systems, settings and prompts, the design record, the rule that reads a difference (`evaluation.md` §5), every analysis and every number.", self.protocol)
+        self.assertIn("12. *Wording of generated files (2026-10-13).*", flat(DOCS / "protocol.md"))
+
+    def test_one_rule_reads_a_difference_on_every_set(self):
+        self.assertIn("applied unchanged to every set", self.evaluation)
+        for name in ("ad", "confirm"):
+            self.assertEqual(json.loads(text(RESULTS / f"rag2_analysis_{name}.json"))["reading"], "positive but not confirmed", name)
+        self.assertEqual(json.loads(text(RESULTS / "rag2_analysis_fresh.json"))["primary"]["reading"], "no evidence")
+
+    def test_the_pre_registered_result_stays_in_the_record_as_a_result_of_the_secondary_set(self):
+        self.assertIn("The pre-registered test (secondary set).", self.readme)
+        self.assertIn("counts as no evidence of an improvement", self.readme)
+        self.assertIn("Pre-registered (`protocol.md` §10; secondary set): on 850 new general-medicine questions, does R2V raise the macro-F1 of R2?", self.evaluation)
+        self.assertIn("no evidence; the hypothesis is not confirmed", self.evaluation)
+        self.assertIn("**H1 is not confirmed.**", text(DOCS / "protocol.md"))
+        self.assertIn("it belongs to the secondary set and is the only test of the macro-F1 hypothesis that played no part in forming it", self.protocol)
+
+    def test_the_files_the_code_writes_do_not_call_the_alzheimers_disease_set_secondary(self):
+        for rel in ("experiments/medchange/analyze_rag2.py", "experiments/medchange/rag2_pipeline.py", "experiments/medchange/report.py", "experiments/medchange/ad_benchmark.py",
+                    "experiments/medchange/results/rag2_analysis_ad.md", "experiments/medchange/results/RAG2_FINDINGS_AD.md",
+                    "experiments/medchange/results/report_ad/REPORT.md", "experiments/medchange/results/report_ad/tables.tex",
+                    "experiments/medchange/results/report_ad/report_data_ad.json"):
+            self.assertIsNone(re.search(r"secondary (held-out|test)", text(ROOT / rel)), rel)
+        self.assertIn("(held-out test, Alzheimer's disease set)", text(RESULTS / "rag2_analysis_ad.md").splitlines()[0])
+        self.assertIn("(Alzheimer's disease set, run once)", text(RESULTS / "RAG2_FINDINGS_AD.md").splitlines()[0])
 
 
 class CompletedVersusPlannedTests(unittest.TestCase):
@@ -1293,6 +1402,28 @@ class CommittedReportsTests(unittest.TestCase):
             self.assertTrue({row["arm"] for row in d["systems"] if not row["arm"].startswith("R:")} <= {"B0", "B1", "R2", "R2C", "R2V", "R2V-ND"}, split)
             for name in ("REPORT.md", "tables.tex", f"report_data_{split}.json"):
                 self.assertNotIn("stage", text(RESULTS / f"report_{split}" / name).lower(), f"{split}/{name}")
+
+
+class CommittedAnalysesTests(unittest.TestCase):
+    """Each committed table and findings file is what the code writes from the stored numbers beside it (2026-10-13). The stored numbers (``rag2_analysis_<split>.json``)
+    can be recomputed only where the frozen pools are, which is the researcher's computer; the wording around them follows the code in the repository, so a change of
+    wording in the code that is not carried to the committed files fails here (the roles of the sets were reworded once and five generated files had to follow)."""
+
+    def test_the_analysis_tables_are_what_the_code_writes_from_the_stored_numbers(self):
+        for split in ("dev", "confirm", "ad"):
+            stored = json.loads(text(RESULTS / f"rag2_analysis_{split}.json"))
+            self.assertEqual(text(RESULTS / f"rag2_analysis_{split}.md"), analyze_rag2.to_markdown(stored), split)
+
+    def test_the_findings_are_what_the_code_writes_from_the_stored_numbers(self):
+        for split, name in rag2_pipeline.FINDINGS.items():
+            with tempfile.TemporaryDirectory() as tmp:
+                (Path(tmp) / f"rag2_analysis_{split}.json").write_text(text(RESULTS / f"rag2_analysis_{split}.json"), encoding="utf-8", newline="\n")
+                self.assertEqual(rag2_pipeline.write_findings(Path(tmp), split), (True, f"wrote {name}"))
+                self.assertEqual(text(RESULTS / name), text(Path(tmp) / name), split)
+
+    def test_the_findings_of_the_fresh_test_are_what_the_code_writes_from_the_stored_numbers(self):
+        stored = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))
+        self.assertEqual(text(RESULTS / "RAG2_FINDINGS_FRESH.md"), analyze_fresh.to_markdown(stored))
 
 
 class PortabilityTests(unittest.TestCase):

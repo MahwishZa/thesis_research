@@ -7,14 +7,16 @@ retrieval consumes them is explained in `methodology.md`; how to rebuild anythin
 
 | Dataset | Role | Source | In the repository? | Rebuilt by |
 |---|---|---|---|---|
-| MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | evaluation of the realigned study (general medicine): questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
-| Alzheimer's disease and related dementias set (`ad`): 208 questions | secondary held-out evaluation | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
-| Fresh questions (`fresh`): 850 questions | the pre-registered confirmatory test (`protocol.md` §10); general medicine | the same release (questions no other split uses) | no; only `experiments/medchange/manifest_fresh.json` | `fresh_benchmark` |
+| MedChange as-of benchmark: 754 usable Cochrane questions (development 226, held-out 528) | evaluation of the realigned study (general medicine; the secondary set): questions and gold verdicts | MedChange release (`MedRevQA`, `AllStudyGroups`, `MedChangeQA`) | no (no licence stated); only `experiments/medchange/manifest.json` | `build_benchmark` |
+| Alzheimer's disease and related dementias set (`ad`): 208 questions | the primary set: held-out evaluation of the domain | the same release | no; only `experiments/medchange/manifest_ad.json` | `ad_benchmark` |
+| Fresh questions (`fresh`): 850 questions | the pre-registered confirmatory test (`protocol.md` §10); general medicine (the secondary set) | the same release (questions no other split uses) | no; only `experiments/medchange/manifest_fresh.json` | `fresh_benchmark` |
 | As-of PubMed records, abstracts, frozen pools | the evidence systems may read | PubMed (NCBI E-utilities) | no (publisher text) | `pubmed_asof`, `freeze_candidates` |
 | Study outputs (rationales, filter judgements, answers, analyses, reports, design record) | results of the runs | produced by the pipelines | yes, in `experiments/medchange/results/` (no source text) | the pipelines |
 | Earlier-stage outputs | results of record of stages 1 and 2 | produced by the removed stage code | yes, in `results/earlier_stages/` | not rebuilt (code in Git history) |
 
-## 1. MedChange benchmark (general medicine; the realigned study's evaluation)
+The Alzheimer's disease set (§2) is the primary set and general medicine (§1, §3) the secondary set. The sections keep the order in which the sets were built.
+
+## 1. MedChange benchmark (general medicine; secondary set; the realigned study's evaluation)
 
 **Source.** Vladika, Dhaini and Matthes, *Facts Fade Fast: Evaluating Memorization of Outdated Medical Knowledge in Large
 Language Models* (Findings of EMNLP 2025); repository `github.com/jvladika/MedChange`. `MedRevQA` holds 16,501 questions
@@ -59,11 +61,11 @@ are Alzheimer's-related (the flag `ad_related`: the question or the review's obj
 memantine, donepezil, cholinesterase or amyloid; a wider rule than the question wording that defines the `ad` set), too few for any test; the `ad` set exists for that reason (§2). (4) The question text was written by
 a model.
 
-## 2. Alzheimer's disease and related dementias set (secondary; split `ad`)
+## 2. Alzheimer's disease and related dementias set (primary; split `ad`)
 
 **Why it exists.** The research proposal names Alzheimer's disease as the domain, and the main benchmark holds only 14
-related questions. `experiments/medchange/ad_benchmark.py` builds a second held-out set from the same release by the same
-rules (`protocol.md` §8).
+related questions. `experiments/medchange/ad_benchmark.py` builds a held-out set of the domain from the same release by the same
+rules (`protocol.md` §8). It was a secondary result when it was built and run (2026-10-05) and has been presented as the primary set since 2026-10-13, after every result was known (`protocol.md` §8).
 
 **Construction.** Every `MedRevQA` question whose text matches `dementia`, `alzheimer`, `mild cognitive impairment`,
 `cognitive decline`, `cognitively impaired` or `cognitive impairment`, from a review that is in neither the development nor
@@ -89,7 +91,7 @@ low: only effects of about 6 to 10 points can be confirmed (`evaluation.md` §4)
 independent model reproduces 81.2% of the labels of the Alzheimer's disease set (kappa 0.7134; 169 of the 208 are label-stable, `evaluation.md` §6.6), and no clinician
 validated them. (7) The set was run once (`evaluation.md` §6.6).
 
-## 3. Fresh questions (the pre-registered test; split `fresh`)
+## 3. Fresh questions (the pre-registered test; secondary set; split `fresh`)
 
 **Why it exists.** Every question of the other splits was seen while the design was built or while its results were read, and the metric
 of the confirmatory test (macro-F1) was chosen after the first results were known (`protocol.md` §10.1). Testing the verification effect

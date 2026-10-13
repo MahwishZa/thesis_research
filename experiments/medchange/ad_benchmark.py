@@ -1,4 +1,4 @@
-"""The Alzheimer's disease set (split "ad"): questions on Alzheimer's disease and related dementias, a held-out secondary test set.
+"""The Alzheimer's disease set (split "ad"): questions on Alzheimer's disease and related dementias, a held-out test set.
 
     python -m experiments.medchange.ad_benchmark --medchange-dir ..\\MedChange
 

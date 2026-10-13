@@ -12,8 +12,8 @@ Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` (B0 a
 ``results/rag2_answers_<split>.jsonl`` (R2, R2C, R2V, R2V-ND), the label audit and, for the closed-book rows, the
 benchmark authors' released answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report_<split>/REPORT.md``,
 ``tables.tex``, ``report_data_<split>.json`` and two PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
-Every number is computed from those files; nothing is typed in. Only the confirmatory split supports claims
-(``docs/evaluation.md``).
+Every number is computed from those files; nothing is typed in. Only the held-out splits (``confirm``, ``ad``) are read as results
+(``docs/evaluation.md`` §5); the development split is exploratory.
 """
 
 from __future__ import annotations
@@ -327,7 +327,7 @@ def build(split: str, items: dict, answers: dict, released: Sequence[str], audit
     present = sorted({arm for (_, arm) in answers if not arm.startswith("R:")})
     n = {k: sum(it["kind"] in kinds for it in items.values()) for k, kinds in KINDS.items()}
     has_changed = n["changed"] > 0
-    status = {"confirm": "confirmatory", "ad": "secondary held-out test"}.get(split, "exploratory")
+    status = {"confirm": "confirmatory", "ad": "held-out test"}.get(split, "exploratory")
     return {"split": split, "status": status, "n": n,
             "systems": system_rows(items, answers, present, released),
             "filtering": filtering_rows(items, answers, present) if has_changed else [],

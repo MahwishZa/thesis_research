@@ -32,29 +32,28 @@ excluded, so no system can read the review it is being tested against or anythin
 therefore sees only what the review's authors could have seen.
 
 **What the study tests.** Whether the proposed system gives a higher verdict accuracy than an adapted RAG² baseline,
-genuinely and reproducibly. The proposed system is a second reading step, *evidence-criteria verification*, applied to the
+genuinely and reproducibly, on Alzheimer's disease and related dementias (the primary set) and on general medicine (the secondary set). The proposed system is a second reading step, *evidence-criteria verification*, applied to the
 baseline's answer (§6). How a difference is read, and what can be concluded from a given sample size, is fixed in
 `protocol.md` §1 and `evaluation.md` §§4–5.
-After the held-out result (positive but not confirmed), a second question was registered before its data existed: whether
+After the held-out result (positive but not confirmed) and the result on the Alzheimer's disease set (positive but not confirmed), a second question was registered before its data existed: whether
 the verification step makes the three verdicts more balanced (macro-F1, which gives each verdict the same weight), tested on questions
 that played no part in the design (§2 and `protocol.md` §10). It found no evidence that it does (`evaluation.md` §6.9).
 
 ## 2. Study design at a glance
 
-**Three evaluation settings.**
+**Three evaluation settings.** The Alzheimer's disease set is the primary set and general medicine the secondary set. That is how the results are presented since 2026-10-13, a decision taken after every result was known; the protocol of 2026-10-05 had named the held-out general-medicine split as the primary test (`protocol.md` §1, §8). One rule reads a difference on every set (`evaluation.md` §5).
 
-| | MedChange as-of benchmark (general medicine; the realigned study's primary test) | Secondary: Alzheimer's disease and related dementias set (split `ad`) | Pre-registered test on fresh questions (split `fresh`; general medicine) |
+| | Primary: Alzheimer's disease and related dementias set (split `ad`) | Secondary: MedChange as-of benchmark (general medicine; splits `dev` and `confirm`) | Secondary: pre-registered test on fresh questions (split `fresh`; general medicine) |
 |---|---|---|---|
-| Questions | 754 usable Cochrane questions: 504 whose verdict changed between review versions, 250 unchanged controls. Development split (`dev`) 226, held-out split (`confirm`) 528 | 208 questions from 159 reviews that are in neither split, on dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline. All have unchanged verdicts (202 come from reviews with a single version) | 850 questions from 831 reviews dated 2010 or later that no other split uses and whose wording names neither dementia nor Alzheimer's disease, chosen by a seeded hash order. All have unchanged verdicts (`data.md` §3) |
+| Questions | 208 questions from 159 reviews that are in neither split, on dementia, Alzheimer's disease, mild cognitive impairment or cognitive decline. All have unchanged verdicts (202 come from reviews with a single version) | 754 usable Cochrane questions: 504 whose verdict changed between review versions, 250 unchanged controls. Development split (`dev`) 226, held-out split (`confirm`) 528 | 850 questions from 831 reviews dated 2010 or later that no other split uses and whose wording names neither dementia nor Alzheimer's disease, chosen by a seeded hash order. All have unchanged verdicts (`data.md` §3) |
 | Question date | the newest review's publication date | the same | the same |
 | Evidence | PubMed abstracts first public strictly before the question date | the same | the same |
-| Systems | B0, B1, R2, R2C, R2V, R2V-ND | B0, B1, R2, R2C, R2V | R2, R2C, R2V |
-| Primary outcome | verdict accuracy, R2V − R2 | the same, read as a secondary result | macro-F1, R2V − R2 (`protocol.md` §10.2) |
-| Use | the held-out split is the primary test, run once after the design was frozen | run once after the freeze, as a secondary result; completed (`evaluation.md` §6.6) | run once after its pre-registration was in force; analysed blind; completed, no evidence of a gain (`evaluation.md` §6.9) |
+| Systems | B0, B1, R2, R2C, R2V | B0, B1, R2, R2C, R2V, R2V-ND | R2, R2C, R2V |
+| Primary outcome | verdict accuracy, R2V − R2 | the same | macro-F1, R2V − R2 (`protocol.md` §10.2) |
+| Use | run once after the design was frozen; completed (`evaluation.md` §6.6); the protocol of 2026-10-05 called it a secondary result | the held-out split was the pre-declared primary test, run once after the design was frozen (`evaluation.md` §6.2) | run once after its pre-registration was in force; analysed blind; completed, no evidence of a gain (`evaluation.md` §6.9) |
 
-The research domain is Alzheimer's disease and related dementias; the secondary setting is the Alzheimer's disease set. An Alzheimer's-only question set was specified on 2026-10-09 and its construction was stopped
-at gate 1 (`protocol.md` §8), so the Alzheimer's disease set is the evidence there is for the domain: it covers Alzheimer's disease and related dementias, and only 48 of its 208 questions name Alzheimer's disease. The other
-two settings are general medicine; the fresh questions contain practically none on the domain (`data.md` §3), so the pre-registered test supports the mechanism and not an effect for Alzheimer's disease.
+The research domain is Alzheimer's disease and related dementias, and the Alzheimer's disease set is the evidence there is for it: it covers Alzheimer's disease and related dementias, and only 48 of its 208 questions name Alzheimer's disease. An Alzheimer's-only question set was specified on 2026-10-09 and its construction was stopped
+at gate 1 (`protocol.md` §8), so no Alzheimer's-only evaluation exists. The two general-medicine settings are the secondary set; the fresh questions contain practically none on the domain (`data.md` §3), so the pre-registered test checks the mechanism on questions outside the domain and could not have shown an effect for Alzheimer's disease.
 
 **The comparison in one line.** Every system answers the same questions with the same generator, decoding and candidate
 records. The baseline systems differ in *what* they read (B0, B1, R2); the R2 family differs only in *how* the same
@@ -383,13 +382,13 @@ stronger generator, a trained filter and a larger sample are the natural next st
 | Term | Meaning |
 |---|---|
 | **Verdict**, **gold verdict** | SUPPORTED, REFUTED or NOT ENOUGH INFORMATION; the gold verdict is the newest Cochrane review's, as labelled by gpt-4o-mini |
-| **Verdict accuracy** | share of questions whose parsed verdict equals the gold verdict; the primary outcome of the held-out split and the Alzheimer's disease set |
+| **Verdict accuracy** | share of questions whose parsed verdict equals the gold verdict; the outcome of the Alzheimer's disease set (primary) and of the held-out split (secondary) |
 | **Macro-F1** | the unweighted mean of the F1 of the three verdicts (an F1 is 0 when a verdict is never predicted correctly); the primary outcome of the pre-registered test |
 | **Pre-registration**, **blinded analysis** | a hypothesis, metric, sample and decision rule fixed before the data exist (`protocol.md` §10); an analysis that computes nothing until every answer exists |
 | **Changed / unchanged question** | the newest verdict differs from / equals an earlier version's; unchanged questions are controls |
 | **As-of protocol**, **question date *t_q*** | each question is asked at the newest review's date with only evidence first public strictly before it, Cochrane records excluded |
 | **Update window** | the interval after the previous review version and up to the newest, when the evidence that could change a verdict appeared |
-| **Development (`dev`), held-out (`confirm`), `ad`, `fresh`** | the 226-question split used to find defects and apply the dev check; the 528-question split run once as the primary test; the 208-question Alzheimer's disease set (Alzheimer's disease and related dementias) run once as a secondary result; the 850 fresh general-medicine questions of the pre-registered test |
+| **Development (`dev`), held-out (`confirm`), `ad`, `fresh`** | the 226-question general-medicine split used to find defects and apply the dev check; the 528-question general-medicine split run once (the pre-declared primary test of the protocol of 2026-10-05, now part of the secondary set); the 208-question Alzheimer's disease set (Alzheimer's disease and related dementias), the primary set, run once; the 850 fresh general-medicine questions of the pre-registered test (secondary set) |
 | **Frozen pool** | the 20 candidates kept for one question, with date bounds and an order-sensitive hash |
 | **Dense retrieval**, **cross-encoder**, **MedCPT** | similarity of text vectors; a model that scores a question and an article together; the biomedical encoder family used for both |
 | **Rationale** | a short closed-book account of the question written by the generator, used as the dense query in R2 |

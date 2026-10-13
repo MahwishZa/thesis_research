@@ -19,7 +19,7 @@ analysis, findings, publishing and, with ``--commit``, commit (never push).
 the pre-registration is in force, ``manifest_fresh.json`` is on origin/main and the items match it, and the guards of ``confirm`` hold; as-of
 records and abstracts (network), rationales, candidate lists, filter, answers R2, R2C and R2V, then the blinded analysis ``analyze_fresh``.
 
-``ad`` (once, same guards as ``confirm``): the Alzheimer's disease set, a secondary test set built by ``ad_benchmark``:
+``ad`` (once, same guards as ``confirm``): the Alzheimer's disease set, built by ``ad_benchmark``:
 as-of PubMed records and abstracts (network), B0 and B1 answers, then R2, R2C and R2V, analysis, findings.
 
 Every step is resumable: after an interruption, rerun the same command.
@@ -212,7 +212,7 @@ def write_findings(results: Path, split: str = "confirm") -> tuple[bool, str]:
     if rep is None:
         return False, f"no {split} analysis"
     p = rep["primary"]
-    title = {"confirm": "confirmatory split", "ad": "Alzheimer's disease set, secondary test set"}[split]
+    title = {"confirm": "confirmatory split", "ad": "Alzheimer's disease set"}[split]
     lines = [f"# Findings of the realigned study ({title}, run once)", "",
              "Each conclusion follows the rules of `docs/evaluation.md` §5: a difference is confirmed only when its p-value is below .05 and "
              "its 95% interval excludes 0.", "",

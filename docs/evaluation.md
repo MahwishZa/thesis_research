@@ -19,8 +19,8 @@ version.
 * An answer with no parsable verdict counts as wrong and is counted separately (`unparsed`). A verification output
   without a final verdict keeps the draft verdict and is counted as invalid.
 * The outcome is independent of the mechanism under test: the gold label is not visible to any system.
-* The primary comparison is accuracy over **all** questions of the held-out split, between the proposed system R2V and
-  the adapted RAG² baseline R2 (pooling changed and unchanged questions raises power).
+* The comparison is accuracy over **all** questions of a set, between the proposed system R2V and the adapted RAG² baseline R2
+  (pooling changed and unchanged questions raises power). It is read on the Alzheimer's disease set (the primary set) and on the held-out split (secondary set) by the same rule (§5).
 * The pre-registered test on fresh questions (`protocol.md` §10, results in §6.9) has a different primary outcome, the macro-F1 of
   R2V − R2 (§1.2), because it asks a different question: whether verification makes the three verdicts more balanced. The two outcomes are
   not interchangeable and neither is re-read from the other.
@@ -115,8 +115,8 @@ is right:
 | 0.15 | 1.7 pp | 0.43 / 0.84 | 4.7 pp |
 | 0.25 | 2.2 pp | 0.28 / 0.63 | 6.1 pp |
 
-With 528 questions only effects of about 4–6 pp or more can be confirmed, so a smaller gain may be real and still go
-unconfirmed. For the 208-question Alzheimer's disease set the standard error is 2.2–3.5 pp and the 80%-power effect 6–10 pp.
+With the 528 held-out questions (secondary set) only effects of about 4–6 pp or more can be confirmed, so a smaller gain may be real and still go
+unconfirmed. For the 208-question Alzheimer's disease set (primary set) the standard error is 2.2–3.5 pp and the 80%-power effect 6–10 pp, so it can confirm still less.
 
 For the macro-F1 hypothesis of the pre-registered test the standard error of R2V − R2 is about 0.41 / √N, estimated from the intervals of
 `class_balance.py`; with N = 850 questions it is about 0.014, the chance of confirming a true gain of 0.045 (about what the held-out split
@@ -127,8 +127,8 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
 
 * **Confirmed.** A comparison is *confirmed* only if its Holm-adjusted p is below .05, its 95% interval excludes 0 and
   the difference is positive. Everything else is an estimate with an interval, not a finding.
-* **Reading of the primary accuracy difference.** Δ = R2V − R2 on the held-out split. The condition for *confirmed* is the one fixed before
-  any held-out output existed:
+* **Reading of the accuracy difference.** Δ = R2V − R2 on a set. The condition for *confirmed* is the one fixed on 2026-10-05, before
+  any held-out output existed, and it is applied unchanged to every set:
 
   | Reading | Condition |
   |---|---|
@@ -136,8 +136,8 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
   | positive but not confirmed | Δ > 0 otherwise |
   | no evidence | Δ ≤ 0 |
 
-  Whichever reading applies is reported with the interval. A dev result is never read as a finding. On the
-  Alzheimer's disease set the same rule gives a secondary reading; the held-out split stays primary.
+  Whichever reading applies is reported with the interval. A dev result is never read as a finding. The Alzheimer's disease set (primary set) and the held-out split (secondary set) are read by this one rule. The protocol of
+  2026-10-05 had named the held-out split as the primary test and the Alzheimer's disease set as a secondary reading; the order of presentation was changed on 2026-10-13, after every result was known (`protocol.md` §8).
 * **Pre-registered test.** Its hypothesis is *confirmed* only if the lower end of the 95% bootstrap interval of the macro-F1 difference R2V − R2 is above 0;
   otherwise it is *positive but not confirmed* (point estimate above 0) or *no evidence*, and when the upper end is below 0.02 a gain of 0.02 or more is
   excluded (`protocol.md` §10.2). Every other outcome of that test is secondary and carries no confirmatory claim.
@@ -155,23 +155,21 @@ below about 0.03 may therefore go unconfirmed, and the interval is then reported
 
 ### 6.0 What each result is
 
-The research domain is Alzheimer's disease and related dementias. Its evidence is the 208-question Alzheimer's disease set (§6.6; 48 questions name Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
-construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only confirmatory evaluation exists; the Alzheimer's disease results are secondary and descriptive. The pre-declared
-confirmatory evidence remains the held-out split of the as-of Cochrane benchmark (general medicine); the
-Alzheimer's disease set is secondary and its Alzheimer's-named part exploratory. The macro-F1 hypothesis registered afterwards is tested on
+The research domain is Alzheimer's disease and related dementias. Its evidence, the **primary set**, is the 208-question Alzheimer's disease set (§6.6; 48 questions name Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment), reported whole and with the Alzheimer's-named subgroup. General medicine is the **secondary set**: the held-out split of the as-of Cochrane benchmark (§6.2), its development split (§6.1) and the 850 fresh questions of the pre-registered test (§6.9). The Alzheimer's disease set was presented as the primary set on 2026-10-13, after every result was known; the protocol of 2026-10-05 had named the held-out split as the primary (pre-declared, confirmatory) test and the Alzheimer's disease set as a secondary result (`protocol.md` §1, §8). An Alzheimer's-only question set was specified on 2026-10-09 (`protocol.md` §8) and its
+construction was stopped at gate 1 the same day (§6.8), so no Alzheimer's-only evaluation exists; the Alzheimer's-named part of the primary set is exploratory. The macro-F1 hypothesis registered afterwards is tested on
 850 fresh general-medicine questions (§6.9). Nothing below is an Alzheimer's-only evaluation.
 
 | Result set | Questions | Class | Scope |
 |---|---|---|---|
-| As-of Cochrane questions, held-out split (§6.2) | 528 | completed once; pre-declared and confirmatory under the protocol of 2026-10-05 | general medicine |
-| The Alzheimer's disease set, i.e. Alzheimer's disease and related dementias (§6.6) | 208 | completed once; secondary | Alzheimer's disease and related dementias: 48 questions name Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment |
-| As-of Cochrane questions, development split (§6.1) | 226 | exploratory; used to find defects | general medicine |
+| The Alzheimer's disease set, i.e. Alzheimer's disease and related dementias (§6.6) | 208 | primary set; completed once (the protocol of 2026-10-05 called it a secondary result) | Alzheimer's disease and related dementias: 48 questions name Alzheimer's disease, 156 dementia (15 name both), 19 other cognitive impairment |
+| The questions of that set that name Alzheimer's disease (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
+| As-of Cochrane questions, held-out split (§6.2) | 528 | secondary set; completed once; the pre-declared primary and confirmatory test of the protocol of 2026-10-05 | general medicine |
+| Pre-registered test on fresh questions (§6.9) | 850 | secondary set; completed once; registered before its data existed; analysed blind; confirmatory for the macro-F1 hypothesis only (not confirmed) | general medicine |
+| As-of Cochrane questions, development split (§6.1) | 226 | secondary set; exploratory; used to find defects | general medicine |
 | Ablation arms, retrieval diagnostics, label audits (§6.2) | | secondary or descriptive | general medicine |
 | Released answers of eight other models (§6.2, §6.6) | 8 | context; other prompts, no retrieval | not a controlled comparison |
 | Earlier stages (§6.3) | | negative results of record | general medicine |
-| The questions of that set that name Alzheimer's disease (§6.7) | 48 | exploratory; defined after the results were known | Alzheimer's disease (description only) |
 | Alzheimer's-specific question set AD-KQA (§6.8) | | construction stopped at gate 1; no system was run on it | Alzheimer's disease |
-| Pre-registered test on fresh questions (§6.9) | 850 | completed once; registered before its data existed; analysed blind; confirmatory for the macro-F1 hypothesis only (not confirmed) | general medicine |
 
 ### 6.1 Realigned study, development split (226 questions; exploratory)
 
@@ -190,7 +188,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
 (c) direction R2V − R2 ≥ 0 failed. The one allowed revision was not used (`protocol.md` §7). Full tables:
 `experiments/medchange/results/rag2_analysis_dev.md`.
 
-### 6.2 Realigned study, held-out split (528 questions; run once, 2026-10-06 to 2026-10-08)
+### 6.2 Realigned study, held-out split (528 questions; secondary set; run once, 2026-10-06 to 2026-10-08)
 
 | System | All (95% CI) | Changed (353) | Unchanged (175) |
 |---|---|---|---|
@@ -203,7 +201,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
 
 | Comparison | Difference | 95% CI | Exact McNemar p (Holm) | Reading |
 |---|---|---|---|---|
-| **R2V − R2 (primary)** | **+1.3 pp** | −1.9 to +4.7 | 0.51 | **positive but not confirmed** |
+| **R2V − R2** | **+1.3 pp** | −1.9 to +4.7 | 0.51 | **positive but not confirmed** |
 | R2V − R2, changed questions | +3.4 pp | −0.8 to +7.4 | 0.15 (0.89) | not confirmed |
 | R2 − B1 | +0.6 pp | −3.0 to +4.2 | 0.84 (1.0) | not confirmed |
 | R2V − B1 | +1.9 pp | −2.5 to +6.1 | 0.44 (1.0) | not confirmed |
@@ -245,15 +243,19 @@ Files: `experiments/medchange/results/earlier_stages/` (records) and `results/` 
 
 ### 6.4 Reading
 
-R2V scored 1.3 points above R2 on the held-out split, but the data cannot separate that from zero, and with 528
+**Primary set (Alzheimer's disease and related dementias, §6.6).** R2V scored 3.4 points above R2 (38.0% against 34.6%), but the data cannot separate that from zero (95% interval −1.9 to +8.7, p = 0.28), and with 208
+questions only effects of about 6–10 pp could be confirmed (§4). The set was run once, after the held-out split, and none of the five systems scores above the constant answer (42.3%). R2V's gain over standard retrieval
+(+7.2 pp, Holm-adjusted p = 0.25) and R2's (+3.8 pp, 0.46) are also unconfirmed. The controls do not isolate a single cause: R2C (criteria without a draft) is 4.8 points above R2 (0.26) and R2V is 1.4 points below R2C (0.68),
+and none of these is confirmed.
+
+**Secondary set (general medicine).** R2V scored 1.3 points above R2 on the held-out split, but the data cannot separate that from zero, and with 528
 questions only effects of about 4–6 pp could be confirmed (§4): a gap of +1.3 pp or more in R2V's favour arises by chance
 alone about a quarter of the time if the two systems are equally good (one-sided p ≈ 0.25). R2V's gain over standard retrieval (+1.9 pp) is also unconfirmed, and R2
 itself is not better than standard retrieval (+0.6 pp). The controls do not isolate a single cause: R2C (criteria
 without a draft) equals R2, and R2V − R2C is +1.5 pp, not confirmed. The dev estimate (−0.4 pp) and the held-out
 estimate (+1.3 pp) differ by less than their intervals, which is what noise around a small effect looks like. The
 earlier gain of retrieval over no retrieval (+8.6 pp on dev) did not replicate (+1.5 pp held-out). The point
-estimate is reported with its interval. The 208-question Alzheimer's disease set was run afterwards, once (§6.6); it gives
-the same reading, with a larger and equally unconfirmed gain. The pre-registered test on 850 new questions (§6.9) then found no evidence of a gain in macro-F1.
+estimate is reported with its interval. The pre-registered test on 850 new general-medicine questions (§6.9) then found no evidence of a gain in macro-F1.
 
 ### 6.5 Rounding in the committed analysis files
 
@@ -271,7 +273,7 @@ added later), and the Alzheimer's disease set's analysis, written with six decim
 procedure. On 2026-10-13 `analyze_rag2` was rerun on the researcher's computer, where the pools exist: it computed the four figures exactly, with six decimals, and the committed
 files are those. The only change that shows in a table is the third share of B1's evidence mix in the development file (70.3% became 70.4%; `log.md`, Phase 79).
 
-### 6.6 Alzheimer's disease and related dementias set (secondary, run once)
+### 6.6 Alzheimer's disease and related dementias set (primary set, run once)
 
 208 questions from 159 reviews, none with a changed verdict; gold NOT ENOUGH INFORMATION 42.3%, REFUTED 32.7%, SUPPORTED
 25.0%. Pools were complete (median 20 candidates, none empty); R2 admitted at least one abstract for 177 of 208
@@ -334,10 +336,10 @@ verdict-balanced question set of useful size cannot be built from this source, a
 researcher stopped the construction (2026-10-09). No test question was drafted; no system was run on any AD-KQA question. The code is in
 Git history (commit `4ab9d1b`) and the counts are in `experiments/medchange/results/earlier_stages/adkqa/`.
 
-### 6.9 Pre-registered test on fresh questions (850 questions; in force since 2026-10-10; run once, completed 2026-10-12)
+### 6.9 Pre-registered test on fresh questions (850 questions; secondary set; in force since 2026-10-10; run once, completed 2026-10-12)
 
 **What it asks.** Whether evidence-criteria verification (R2V) raises the macro-F1 of the adapted RAG² baseline (R2), on questions that played no part in
-the design or in choosing the metric. The questions are 850 general-medicine questions of reviews dated 2010 or later that no other split uses,
+the design or in choosing the metric. The questions are 850 general-medicine questions (the secondary set) of reviews dated 2010 or later that no other split uses,
 chosen by a seeded hash order (`data.md` §3); the arms are R2, R2C (the criteria control) and R2V; the design, settings and prompts are those of
 the held-out run (settings hash `1743afd7045b`, `results/rag2_design.json`). The decision rule is fixed in `protocol.md` §10.2 and summarised in §5.
 
@@ -396,13 +398,13 @@ answer: it shows which gains the data rule out and which they leave open.
 
 | Question | Answer | Reading |
 |---|---|---|
-| Primary (`protocol.md` §1): on the held-out split of general-medicine questions, does evidence-criteria verification (R2V) give a higher verdict accuracy than the adapted RAG² baseline (R2)? | 50.0% against 48.7% (528 questions): +1.3 points, 95% interval −1.9 to +4.7, exact McNemar p = 0.51 (§6.2) | positive but not confirmed |
-| The same on the Alzheimer's disease set (secondary; 208 questions) | 38.0% against 34.6%: +3.4 points, −1.9 to +8.7, p = 0.28 (§6.6) | positive but not confirmed |
-| Pre-registered (`protocol.md` §10): on 850 new questions, does R2V raise the macro-F1 of R2? | 0.393 against 0.395: −0.002, 95% interval −0.027 to +0.023 (§6.9) | no evidence; the hypothesis is not confirmed |
-| (a) Does R2 beat standard retrieval (B1) and no retrieval (B0)? | Held-out: R2 48.7%, B1 48.1%, B0 46.6%; R2 − B1 = +0.6 points (−3.0 to +4.2). Alzheimer's disease set: R2 34.6%, B1 30.8%, B0 33.2%; R2 − B1 = +3.8 (−1.4 to +9.1) | not confirmed |
-| (b) How much of a gain comes from stating the criteria alone (R2C) and how much from verifying a draft (R2V − R2C)? | Held-out: R2C − R2 = −0.2 (−3.6 to +3.4), R2V − R2C = +1.5 (−1.7 to +4.7). Alzheimer's disease set: +4.8 (+0.0 to +9.6) and −1.4 (−5.8 to +2.9). Fresh macro-F1: R2V − R2C = +0.034 (+0.004 to +0.065), a secondary outcome | none confirmed; on the Alzheimer's disease set the criteria alone gained as much as the verification, on the fresh questions they did worse than the baseline |
-| (c) Does the currency criterion (publication dates, newer evidence takes precedence) contribute (R2V − R2V-ND)? | Held-out: +0.9 points (−1.1 to +3.0); not run on the other sets | not confirmed |
-| (d) How do the evidence sets that R2 admits differ from those of B1? | Held-out: R2 admits 3.3 abstracts per question against 5.0 and none for 15.3% of the questions; systematic reviews or meta-analyses are 24.6% of its abstracts against 10.9%, trials 32.9% against 17.1%; 57.3% are judged direct by the independent model against 28.6% (§6.2) | descriptive |
+| Primary set (`protocol.md` §1, asked of the Alzheimer's disease set; 208 questions): does evidence-criteria verification (R2V) give a higher verdict accuracy than the adapted RAG² baseline (R2)? | 38.0% against 34.6%: +3.4 points, 95% interval −1.9 to +8.7, exact McNemar p = 0.28 (§6.6) | positive but not confirmed |
+| The same on the held-out split of general-medicine questions (secondary set; 528 questions; the primary test of the protocol of 2026-10-05) | 50.0% against 48.7%: +1.3 points, −1.9 to +4.7, p = 0.51 (§6.2) | positive but not confirmed |
+| Pre-registered (`protocol.md` §10; secondary set): on 850 new general-medicine questions, does R2V raise the macro-F1 of R2? | 0.393 against 0.395: −0.002, 95% interval −0.027 to +0.023 (§6.9) | no evidence; the hypothesis is not confirmed |
+| (a) Does R2 beat standard retrieval (B1) and no retrieval (B0)? | Alzheimer's disease set: R2 34.6%, B1 30.8%, B0 33.2%; R2 − B1 = +3.8 (−1.4 to +9.1). Held-out: R2 48.7%, B1 48.1%, B0 46.6%; R2 − B1 = +0.6 points (−3.0 to +4.2) | not confirmed |
+| (b) How much of a gain comes from stating the criteria alone (R2C) and how much from verifying a draft (R2V − R2C)? | Alzheimer's disease set: R2C − R2 = +4.8 (+0.0 to +9.6) and R2V − R2C = −1.4 (−5.8 to +2.9). Held-out: −0.2 (−3.6 to +3.4) and +1.5 (−1.7 to +4.7). Fresh macro-F1: R2V − R2C = +0.034 (+0.004 to +0.065), a secondary outcome | none confirmed; on the Alzheimer's disease set the criteria alone gained as much as the verification, on the fresh questions they did worse than the baseline |
+| (c) Does the currency criterion (publication dates, newer evidence takes precedence) contribute (R2V − R2V-ND)? | Held-out (secondary set): +0.9 points (−1.1 to +3.0); not run on the other sets | not confirmed |
+| (d) How do the evidence sets that R2 admits differ from those of B1? | Held-out (secondary set): R2 admits 3.3 abstracts per question against 5.0 and none for 15.3% of the questions; systematic reviews or meta-analyses are 24.6% of its abstracts against 10.9%, trials 32.9% against 17.1%; 57.3% are judged direct by the independent model against 28.6% (§6.2) | descriptive |
 
 **Objective 1, to implement and validate the proposed system with predefined metrics for retrieval and generation.** The adapted RAG² baseline (R2), the criteria control (R2C), the
 verification step (R2V) and its ablation (R2V-ND) are implemented (`methodology.md` §5 to §7) and were run under one frozen design (`results/rag2_design.json`, settings hash
@@ -410,10 +412,11 @@ verification step (R2V) and its ablation (R2V-ND) are implemented (`methodology.
 automatically, and the three question sets are rebuilt identically from the public release (`reproducibility.md` §2).
 
 **Objective 2, to determine the extent to which the proposed system improves retrieval and generation compared with baselines and existing works.** Generation: no improvement was
-confirmed on any of the three sets. The point estimates of verdict accuracy were +1.3 and +3.4 points and the macro-F1 difference on new questions was −0.002; the intervals include no gain at all
-and, at most, gains of 4.7, 8.7 and 0.023 (macro-F1) respectively. Retrieval: the verification step reads the abstracts that the baseline admits (R2C and R2V use R2's lists), so the
+confirmed on any of the three sets. The point estimates of verdict accuracy were +3.4 points on the primary set (Alzheimer's disease) and +1.3 on the held-out split of the secondary set (general medicine), and the macro-F1 difference on the secondary set's new questions was −0.002; the intervals include no gain at all
+and, at most, gains of 8.7, 4.7 and 0.023 (macro-F1) respectively. Retrieval: the verification step reads the abstracts that the baseline admits (R2C and R2V use R2's lists), so the
 proposed step does not change what is retrieved; the retrieval that differs from standard retrieval is the adapted baseline's, as in (d). Existing works: RAG² as published is not comparable (a different
 task, scale, corpus and filter; `methodology.md` §5.1), so the adapted baseline stands in for it. The closed-book answers that the MedChange authors released for eight other models give context: on the
+Alzheimer's disease set they score from 34.1% (BioMistral) to 43.3% (Llama-3.3-70B and PMC-LLaMA), and the best local system (39.4%) scores below five of them (§6.6); on the
 held-out questions they score from 34.8% (PMC-LLaMA) to 52.8% (Qwen2.5-7B and GPT-4o-mini), and the local systems (46.6% to 50.0%) are below the five best of them (§6.2).
 
 ## 8. Limitations and threats to validity
@@ -425,12 +428,12 @@ What the results do and do not support, in one place. The first group limits wha
 1. *Reference labels are model-made.* The verdicts were labelled by gpt-4o-mini from the reviews' conclusions. An independent model of another family reproduces 81.4% of the held-out
    labels (kappa 0.7161), 83.2% of the development labels, 83.0% of a sample of 300 fresh labels (kappa 0.7332) and 81.2% of the labels of the Alzheimer's disease set (kappa 0.7134). No clinician
    validated any of them (nobody involved in the study is a medical expert), so label reproducibility bounds what any accuracy can mean (§1.4).
-2. *Sample sizes.* With 528 questions only gains of roughly 4 to 6 points can be confirmed, with 208 only 6 to 10 (§4), and with 850 fresh questions a macro-F1 gain of about 0.039 (`protocol.md` §10.3). A true gain
+2. *Sample sizes.* With 208 questions (primary set) only gains of roughly 6 to 10 points can be confirmed, with 528 (secondary set) only 4 to 6 (§4), and with 850 fresh questions a macro-F1 gain of about 0.039 (`protocol.md` §10.3). A true gain
    below these may go unconfirmed; the Alzheimer's-named subgroup (48 questions) is too small for any conclusion.
 3. *Questions are not independent.* Several questions can come from one review (208 questions come from 159 reviews), and the paired tests treat them as independent, which slightly understates the uncertainty.
 4. *The order of discovery.* The labels and the standard-retrieval results of the held-out split had been seen before the design was fixed, and the Alzheimer's disease set was run before the pre-registered test and
    helped form its hypothesis (`data.md` §8). Only the 850 fresh questions played no part in choosing the hypothesis, and the metric (macro-F1) was chosen after the accuracy results were known; the pre-registered test is what
-   makes it a result at all.
+   makes it a result at all. The Alzheimer's disease set was presented as the primary set on 2026-10-13, after every result was known; the protocol of 2026-10-05 had named the held-out split as the primary test (`protocol.md` §8).
 5. *The model may have seen the answers.* The reviews are older than the generator's training cut-off, so it may have seen some conclusions; the as-of rule limits only the evidence it is shown (`protocol.md` §10.6).
 6. *As-of evidence is approximate.* A record is admitted only if its publication dates prove that it preceded the review; the records that cannot be proven are dropped. The text of an abstract is the one PubMed holds
    today, and only records that have an abstract can be retrieved (full texts are not used).
@@ -441,11 +444,11 @@ What the results do and do not support, in one place. The first group limits wha
    models, sizes, prompts or seeds, and the variation over seeds and prompts was not measured. The generator is also close to the level of the most frequent verdict (§6.2, §6.6, §6.9): on the Alzheimer's
    disease set and on the fresh questions no system scores above it in accuracy, so there is little room for a verification step to raise accuracy.
 8. *An adaptation, not a reproduction, of RAG².* The trained filter, the corpus and the task differ from the published method (`methodology.md` §5.1, §12), so no claim is made about RAG² itself.
-9. *General medicine, not Alzheimer's disease.* The main benchmark has 14 Alzheimer's-related questions; the Alzheimer's disease set (208 questions) is a dementia and cognitive-impairment set of which 48 questions name
-   Alzheimer's disease; the 850 fresh questions contain practically none. An Alzheimer's-only question set could not be built (§6.8; 7 usable new reviews were found, 30 were needed), so no confirmatory result for
-   Alzheimer's disease exists.
-10. *Mostly questions without a change of verdict.* Of the 850 fresh questions, 783 come from reviews with a single version, and so do 202 of the 208 of the Alzheimer's disease set. They test whether the answer matches the
-    review's verdict, not whether a system notices that newer evidence has changed a verdict; only the development and held-out splits contain changed verdicts (353 of the 528 held-out questions).
+9. *The primary set is Alzheimer's disease and related dementias, not Alzheimer's disease alone.* The Alzheimer's disease set (208 questions) is a dementia and cognitive-impairment set of which 48 questions name
+   Alzheimer's disease. The secondary set is general medicine: its benchmark has 14 Alzheimer's-related questions and the 850 fresh questions contain practically none, so the pre-registered test checks the mechanism outside the domain.
+   An Alzheimer's-only question set could not be built (§6.8; 7 usable new reviews were found, 30 were needed), so no confirmatory result for Alzheimer's disease exists.
+10. *The primary set has no questions with a change of verdict.* Of the 208 questions of the Alzheimer's disease set, 202 come from reviews with a single version, and so do 783 of the 850 fresh questions. They test whether the answer matches the
+    review's verdict, not whether a system notices that newer evidence has changed a verdict; only the development and held-out splits of the secondary set contain changed verdicts (353 of the 528 held-out questions).
 
 **What was not done.**
 

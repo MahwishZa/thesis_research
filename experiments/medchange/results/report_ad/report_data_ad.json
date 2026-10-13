@@ -1,6 +1,6 @@
 {
   "split": "ad",
-  "status": "secondary held-out test",
+  "status": "held-out test",
   "n": {
     "changed": 0,
     "unchanged": 208,

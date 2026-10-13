@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "thesis-research"
 version = "0.3.0"
-description = "Retrieval-augmented medical question answering evaluated as of a date: an adapted RAG2 baseline and an evidence-criteria verification extension, on MedChangeQA (Cochrane questions whose verdict changed), with a secondary test set on Alzheimer's disease and related dementias and a pre-registered test on fresh questions."
+description = "Retrieval-augmented medical question answering evaluated as of a date: an adapted RAG2 baseline and an evidence-criteria verification extension, on a primary set of questions on Alzheimer's disease and related dementias and a secondary set of general-medicine Cochrane questions (MedChangeQA, and fresh questions for a pre-registered test)."
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 

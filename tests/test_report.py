@@ -207,7 +207,7 @@ class UnchangedOnlySplitTests(unittest.TestCase):
         answers = {(i, "B1"): {"verdict": "NOT ENOUGH INFORMATION" if n % 2 else "SUPPORTED"} for n, i in enumerate(items)}
         d = R.build("ad", items, answers, [], None)
         text = R.report_markdown(d, {})
-        self.assertEqual((d["filtering"], d["classes"], d["status"]), ([], [], "secondary held-out test"))
+        self.assertEqual((d["filtering"], d["classes"], d["status"]), ([], [], "held-out test"))
         self.assertNotIn("Changed", text)
         self.assertIn("All (n = 6)", text)
         self.assertNotIn("Unchanged", text)

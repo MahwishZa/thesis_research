@@ -25,14 +25,19 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Pre-registered test on fresh questions, 850 questions (§10) | completed once, 2026-10-10 to 2026-10-12 (about 66 hours on the clock); the question list was committed and pushed before any answer and the label audit of a 300-question sample was done before the run; the hypothesis is **not confirmed** (macro-F1, R2V − R2 = −0.002, 95% interval −0.027 to +0.023: no evidence); results: `evaluation.md` §6.9 |
 
 The research domain is Alzheimer's disease and related dementias (Alzheimer's disease is the most common dementia). The Alzheimer's disease set is the set of 208 questions of §8, of which 48 questions name Alzheimer's disease; it is not an Alzheimer's-only set. On 2026-10-09 an Alzheimer's-specific question set was specified and its construction was
-stopped at gate 1 (§8, close-out), so the questions, systems and results in §1 to §7 and in `evaluation.md` §6 (the realigned study on the
-as-of Cochrane benchmark, general medicine) remain the main evidence, with the Alzheimer's disease set secondary; no
-Alzheimer's-only confirmatory evaluation exists.
+stopped at gate 1 (§8, close-out), so no Alzheimer's-only evaluation exists.
+
+**Which set is primary.** Since 2026-10-13 the documents present the Alzheimer's disease set as the primary set and general medicine (the development and held-out splits of §1 to §7 and the fresh questions of §10) as the
+secondary set. That is a decision about presentation, taken after every result was known (§7, §8, entry of that date). §1 to §7, the status table above and the earlier entries of §8 are kept as they were written: on 2026-10-05 the held-out
+general-medicine split was the primary test and the Alzheimer's disease set a secondary result.
 
 ## 1. Questions
 
 **Aim.** The study asks whether the proposed system improves verdict accuracy over the selected baseline, an adapted
 RAG² system. A gain must be genuine: no tuning on the test split, no change of metric, no selection of questions.
+
+**Status of the questions (2026-10-13).** The questions below were written on 2026-10-05, when the held-out general-medicine split was the primary test, and they are unchanged. Since 2026-10-13 the Alzheimer's disease set is
+presented as the primary set (Status above); the primary question is asked of it as well and read by the same rule (`evaluation.md` §5).
 
 **Primary question.** On held-out Cochrane questions asked as of the newest review's date, does evidence-criteria
 verification (R2V, §4) give a higher verdict accuracy than the adapted RAG² baseline (R2)?
@@ -198,10 +203,13 @@ is tested on.
 | 2026-10-10 | Reduce N from 1,500 to 850 (through 1,000), for run time on a laptop; arms, settings and rules unchanged | power calculations and run-time estimates only; no fresh question was selected; the dementia and held-out answers were already known |
 | 2026-10-10 | Select the 850 questions, commit the list and mark §10 in force (§10.8) | the selection manifest (verdict counts and dates of the selected questions); no answer to a fresh question existed. The audit of a seeded sample of 300 reference labels followed the freeze and changed nothing |
 | 2026-10-12 | Read accuracy differences by the confirmation rule alone (confirmed / positive but not confirmed / no evidence), without a minimum size of gain; wording only, no analysis or number changed (§8) | the held-out and Alzheimer's disease set results were known; no result of the fresh test existed |
+| 2026-10-13 | Present the Alzheimer's disease set as the primary set and general medicine as the secondary set, because the research domain is Alzheimer's disease and related dementias; the pre-declared roles stay on record; the systems, rule and every number are unchanged (§8) | every result of every set, including the pre-registered test |
 
 Earlier ledgers (stages 1 and 2) are in the repository history (§9).
 
 ## 8. Amendments
+
+The entries are history and keep the words of their dates. Where an entry calls the held-out split primary or the Alzheimer's disease set secondary, that was the status on that date; since 2026-10-13 the roles are the reverse (entry of that date, below).
 
 **2026-10-05, Alzheimer's/dementia secondary test set** (decided before the dev run; the only realigned output that
 existed was a three-question smoke test of the pipeline on dev, whose answers were not analysed). The research
@@ -317,6 +325,14 @@ Alzheimer's disease set (+3.4 points, −1.9 to +8.7, p = 0.28) are both *positi
 estimate, not confirmed". The change was made after both results were known and before any result of the fresh test existed (§10.9, item 7). Earlier
 entries of this section were reworded where they named the minimum or the earlier readings (their facts and numbers are unchanged); `log.md` and the
 results of the earlier stages keep the words they were written in. The earlier wording is in Git history.
+
+**2026-10-13, which set is primary.** At the researcher's request the documents present the Alzheimer's disease set (the entry of 2026-10-05 above) as the primary set and general medicine (the development and held-out
+splits, §1 to §7, and the fresh questions, §10) as the secondary set, because the research domain is Alzheimer's disease and related dementias. It is a decision about presentation, taken after every result, including that of the
+pre-registered test, was known; it is not a pre-declaration. The protocol of 2026-10-05 named the held-out general-medicine split as the primary test (§1) and the Alzheimer's disease set as a secondary result, and those texts, the status table
+and the earlier entries of this section are kept as they were written. Nothing else changed: the systems, settings and prompts, the design record, the rule that reads a difference (`evaluation.md` §5), every analysis and every number. The
+reading on the Alzheimer's disease set is still *positive but not confirmed* (+3.4 points, 95% interval −1.9 to +8.7, p = 0.28), no Alzheimer's-only evaluation exists, and the pre-registered test (§10) stays in force with its result
+(macro-F1, R2V − R2 = −0.002, *no evidence*): it belongs to the secondary set and is the only test of the macro-F1 hypothesis that played no part in forming it. Generated files that had called the Alzheimer's disease set
+"secondary" were regenerated from their stored numbers with neutral wording (§10.9, item 12).
 
 ## 9. Earlier stages (completed, superseded)
 
@@ -467,6 +483,10 @@ the analysis is blinded, and no partial answer file was opened.
     design record and the R2 family were not touched, and every analysis, manifest, plan and status that the offline commands regenerate is byte-identical before and after. Only the
     reports changed: they no longer list the stage-1 rows of the development split, and the committed held-out and Alzheimer's disease reports lost a stale "stage 1" label of the
     reference systems (the figure of the held-out split carried it too) and, for the Alzheimer's disease set, gained its label audit.
+12. *Wording of generated files (2026-10-13).* When the Alzheimer's disease set was presented as the primary set (§8, entry of that date), `analyze_rag2.py`, `rag2_pipeline.py`, `report.py` and `ad_benchmark.py`
+    stopped calling it "secondary" in the text they write. The five generated files that carried the word, `rag2_analysis_ad.md`, `RAG2_FINDINGS_AD.md` and the three files of `report_ad/` (`REPORT.md`, `tables.tex`,
+    `report_data_ad.json`), were regenerated from the numbers already stored; the only difference in each is that one line, and every number is identical. The stored analyses (`rag2_analysis_*.json`), the answers and the
+    files of the pre-registered test were not touched.
 
 ### 10.10 Outcome (2026-10-12)
 
