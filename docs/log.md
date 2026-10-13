@@ -1720,3 +1720,7 @@ At the researcher's request the documents now present the Alzheimer's disease se
 *Closed since Phase 80.* The laptop was updated and the suite run there: `fcd917f` to `a614469` by fast-forward, one branch, no stash, `Ran 382 tests`, `OK (skipped=2)` in 192 s on Python 3.12.6 for Windows.
 
 *Open (the researcher).* The README title and the link to the paper; a licence for the repository; a backup of `experiments\medchange\data\` and `models\`; the choice whether to run the optional diagnostics; a pull on the laptop followed by the test run.
+
+## Phase 82 — README condensed (Oct 13)
+
+The Research Results section of the README was shortened to two paragraphs and the two small tables (what was done and the sets; the reading with the pre-registered result). Every number and the reading (*positive but not confirmed*; *no evidence* for the pre-registered test) are unchanged; the detail, the controls and the limitations stay in `docs/evaluation.md` §6 to §8, which were not changed.
