@@ -35,5 +35,4 @@ medchange = [
 packages = [
     "experiments",
     "experiments.medchange",
-    "experiments.medchange.stage1",
 ]

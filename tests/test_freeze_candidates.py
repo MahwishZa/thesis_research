@@ -10,9 +10,9 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from experiments.medchange import freeze_candidates as FC
-from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
 from experiments.medchange.eutils import EUtils
 from experiments.medchange.freeze_candidates import fetch_abstracts, freeze_item, parse_efetch_xml, pool_hash
+from tests.fixtures import HashingEncoder, LexicalOverlapReranker
 
 
 XML = """<PubmedArticleSet>

@@ -264,7 +264,7 @@
       }
     },
     {
-      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "group": "Llama-3-8B-Instruct, local, reference systems (this thesis)",
       "arm": "B0",
       "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",
       "changed": {
@@ -296,7 +296,7 @@
       }
     },
     {
-      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "group": "Llama-3-8B-Instruct, local, reference systems (this thesis)",
       "arm": "B1",
       "name": "B1: + MedCPT retrieval, top-5 (standard RAG)",
       "changed": {

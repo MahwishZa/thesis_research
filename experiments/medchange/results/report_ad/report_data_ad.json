@@ -200,7 +200,7 @@
       }
     },
     {
-      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "group": "Llama-3-8B-Instruct, local, reference systems (this thesis)",
       "arm": "B0",
       "name": "B0: Llama-3-8B-Instruct (Q4_K_M), no retrieval",
       "changed": null,
@@ -224,7 +224,7 @@
       }
     },
     {
-      "group": "Llama-3-8B-Instruct, local (this thesis, stage 1)",
+      "group": "Llama-3-8B-Instruct, local, reference systems (this thesis)",
       "arm": "B1",
       "name": "B1: + MedCPT retrieval, top-5 (standard RAG)",
       "changed": null,
@@ -334,5 +334,25 @@
       "NOT ENOUGH INFORMATION": 0.4230769230769231
     }
   },
-  "label_audit": null
+  "label_audit": {
+    "agreement": 0.8125,
+    "kappa": 0.7134,
+    "n_items": 208,
+    "n_stable": 169,
+    "label_change_reproduced": null,
+    "per_gold_class": {
+      "SUPPORTED": {
+        "n": 52,
+        "agreement": 0.7308
+      },
+      "REFUTED": {
+        "n": 68,
+        "agreement": 1.0
+      },
+      "NOT ENOUGH INFORMATION": {
+        "n": 88,
+        "agreement": 0.7159
+      }
+    }
+  }
 }

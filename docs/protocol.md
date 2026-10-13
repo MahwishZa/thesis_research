@@ -186,7 +186,7 @@ is tested on.
 | 2026-10-09 | Re-declare the primary evaluation as an Alzheimer's-specific question set (AD-KQA); keep the as-of Cochrane results as secondary evidence | all held-out and dementia results of every system and the label audits; no AD-KQA question, label or output exists; the reason is scope, not outcome (§8) |
 | 2026-10-09 | Correct the Stage 0 instrument after run 1 (prevention qualifier, warning filter, information-only counts); thresholds and window unchanged | run 1 counts per area were seen (total 866; prevention 0 by the query error; progression 58; care 20); the criterion was not changed to fit them; the decision after run 2 is the researcher's (§8) |
 | 2026-10-09 | Cover only the core areas with at least 100 source records (four of seven); Stage 0 needs 4 covered areas and 650 covered records; test minimum 200 (up to 300) | the counts of Stage 0 runs 1 and 2 were seen (original criterion failed twice); no question, label or output exists; every other threshold is unchanged; the amendment is a scope decision, not a test of the original criterion (§8) |
-| 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec is in `spec.py` and compared with the protocol text by a test |
+| 2026-10-09 | Fix the AD-KQA templates, reading cues, topic-cluster split and seed, source freeze and secondary measures (§8) | nothing about the questions: no abstract read, no draft, no answer; the cues come from the audit prompt's definitions and general wording; the spec was in `spec.py` and compared with the protocol text by a test (the AD-KQA code left the tree, `git checkout 4ab9d1b -- experiments/adkqa`) |
 | 2026-10-09 | Read a verifier reply by `spec.parse_verdict` ("LABEL:" anywhere, or a first line that begins with the verdict) and re-score the stored replies; thresholds unchanged | qualification run 1 (55.8% unparsed; 85.0% agreement on the 100 read) and eight unparsed replies were seen; the repaired reading is applied to every reply alike (§8) |
 | 2026-10-09 | Widen the conclusion rule (discussion tail, last three sentences of an unlabelled abstract) and raise the development share in steps of 0.05 until 150 records; all gates and thresholds unchanged | `prepare` counts (292 of 710 without a conclusion; development pool 110) and `diagnose` labels and sentence starts were seen; no draft or output exists (§8, amendment B) |
 | 2026-10-09 | Use short-form templates when a copied span names Alzheimer's disease | five development drafts were read (reply text only); no verdict of any system, no retrieval and no answer exists; every gate and threshold unchanged (§8, amendment C) |
@@ -459,6 +459,14 @@ the analysis is blinded, and no partial answer file was opened.
     admitted per question, the share of questions with none, the evidence-type mix and the mean age of the evidence (descriptive, `evaluation.md` §6.9; §10.2 did not
     list it). `rag2_analysis_fresh.json` and `RAG2_FINDINGS_FRESH.md` were regenerated from the same answers; the only difference is the added block `retrieval`, and
     every other number is identical. No outcome and no decision depends on it.
+11. *Unused code removed (2026-10-13, `log.md` Phase 80).* After the run, the recency arms of stage 1 (B2, B3, P, C1) with their package `stage1/`, the helpfulness handling of
+    `generate_answers.py`, the pre-study command `headroom.py` and two stand-in classes of `encoders.py` that only the tests used left the package; `point_date`, the one function of
+    `arms.py` that the analysis used, moved to `analysis.py`. Two of the eight modules that produced answers changed, `arms.py` and `generate_answers.py`, which made the B0 and B1
+    answers of the development, held-out and Alzheimer's disease sets (the fresh test did not use them). B0 and B1 admit the same passages as before (1,163 random pools, with ties and a
+    budget of 3), the dictionary `arms.SETTINGS` and its hash `bfc6da6de9d7` are unchanged (the hash is in every committed B0 and B1 record, and a test compares them), the prompts, the
+    design record and the R2 family were not touched, and every analysis, manifest, plan and status that the offline commands regenerate is byte-identical before and after. Only the
+    reports changed: they no longer list the stage-1 rows of the development split, and the committed held-out and Alzheimer's disease reports lost a stale "stage 1" label of the
+    reference systems (the figure of the held-out split carried it too) and, for the Alzheimer's disease set, gained its label audit.
 
 ### 10.10 Outcome (2026-10-12)
 
@@ -470,4 +478,5 @@ its sign differs) and the label audit are in `evaluation.md` §6.9 and `results/
 8-hour pause of the process, most likely the laptop sleeping), against the estimate of 57 to 68 hours (§10.5); the step times are in `log.md`, Phase 77. After the run the code was reorganised (folders and names only; `log.md`, Phase 78): the code that produced the answers is the code at commit `3c61751`, and the
 changes to it since are import lines, the name of one findings file and one unused class that was deleted (an AST comparison in Phase 78 shows nothing else). A second
 reorganisation moved the functions that several commands share out of the command modules into libraries (`log.md`, Phase 79): every moved definition is AST-identical to the one
-that produced the answers, and the analyses, tables, manifests and plans regenerated afterwards are byte-identical.
+that produced the answers, and the analyses, tables, manifests and plans regenerated afterwards are byte-identical. A third step (`log.md`, Phase 80) removed unused code, with the same
+comparison before and after (§10.9, item 11).

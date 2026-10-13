@@ -46,11 +46,12 @@ import io
 import json
 import os
 import re
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.medchange import analyze_fresh, fresh_benchmark, label_audit, pipeline_support
+from experiments.medchange import analyze_fresh, fresh_benchmark, label_audit, pipeline_support, report
 from experiments.medchange.files import load_jsonl
 from experiments.medchange.scoring import detectable_range, wilson
 
@@ -419,6 +420,33 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
                       self.evaluation_flat)
         self.assertIn(self.ad["reading"], self.evaluation)
         self.assertEqual(self.ad["reading"], "positive but not confirmed")
+
+    def test_the_no_model_reference_is_quoted_where_it_is_stated(self):
+        """The best constant answer (always the most frequent verdict of the reviews) and where the systems stand against it: README, §6.2, §6.9 and §8."""
+        pc = lambda x: f"{100 * x:.1f}%"
+        const = lambda report: max(report["constant"]["all"].values())
+        confirm_best, ad_best = const(self.report), const(self.report_ad)
+        fresh = json.loads(text(PACKAGE / "manifest_fresh.json"))
+        fresh_best = max(fresh["labels"].values()) / fresh["items"]
+        self.assertIn(f"| Always the most frequent verdict (no model) | {pc(confirm_best)} | {pc(ad_best)} |", self.readme)
+        above = {a: self.confirm["generation"][a]["all"]["accuracy"] - confirm_best for a in ("B0", "B1", "R2", "R2C", "R2V", "R2V-ND")}
+        self.assertEqual((f"{100 * min(above.values()):.1f}", f"{100 * max(above.values()):.1f}"), ("2.3", "5.7"))
+        self.assertEqual((min(above, key=above.get), max(above, key=above.get)), ("B0", "R2V"))
+        self.assertIn("the four systems are 2 to 6 points above it; on the Alzheimer's disease set all four are below it", self.readme_flat)
+        self.assertTrue(all(self.ad["generation"][a]["all"]["accuracy"] < ad_best for a in ("B0", "B1", "R2", "R2C", "R2V")))
+        fresh_run = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))
+        self.assertTrue(all(fresh_run["accuracy"][a]["accuracy"] < fresh_best for a in ("R2", "R2C", "R2V")))
+        self.assertIn(f'always answering "not enough information" would have scored {pc(fresh_best)}', self.readme_flat)
+        k = lambda labels: max(labels.values())
+        self.assertIn(f"Always answering SUPPORTED, the most frequent verdict of the reviews, scores {pc(confirm_best)} ({k(self.report['constant']['counts'])} of {self.confirm['items']})"
+                      if "counts" in self.report["constant"] else f"scores {pc(confirm_best)} (234 of {self.confirm['items']}); the six local systems score 2.3 (B0) to 5.7 (R2V) points above it", self.evaluation_flat)
+        macro = lambda arm: f"{fresh_run['arms'][arm]['macro_f1']:.3f}"
+        constant_f1 = (2 * fresh_best / (1 + fresh_best)) / 3
+        self.assertIn(f"would score {pc(fresh_best)} ({max(fresh['labels'].values())} of {fresh['items']}): R2 ({pc(fresh_run['accuracy']['R2']['accuracy'])}), R2V ({pc(fresh_run['accuracy']['R2V']['accuracy'])}) "
+                      f"and R2C ({pc(fresh_run['accuracy']['R2C']['accuracy'])}) are all below it, while their macro-F1 ({macro('R2')}, {macro('R2V')} and {macro('R2C')}) is far above that of the constant answer ({constant_f1:.3f})",
+                      self.evaluation_flat)
+        self.assertIn("The generator is also close to the level of the most frequent verdict (§6.2, §6.6, §6.9): on the Alzheimer's disease set and on the fresh questions "
+                      "no system scores above it in accuracy, so there is little room for a verification step to raise accuracy.", self.evaluation_flat)
 
     def test_the_label_audit_of_the_alzheimers_disease_set_is_quoted_where_it_is_stated(self):
         au, ls = json.loads(text(RESULTS / "label_audit_ad.json")), self.ad["label_stable"]
@@ -903,7 +931,7 @@ class StatedResultsTests(unittest.TestCase):
         self.assertEqual(offenders, [])
 
     def test_the_code_and_the_committed_results_do_not_measure_the_accuracy_against_a_minimum_gain(self):
-        files = list((ROOT / "experiments" / "medchange").glob("*.py")) + list((ROOT / "experiments" / "medchange" / "stage1").glob("*.py"))
+        files = list((ROOT / "experiments" / "medchange").glob("*.py"))
         files += [p for p in RESULTS.glob("*.md")] + [p for p in RESULTS.glob("*.json") if "answers" not in p.name and "rationales" not in p.name]
         files += list((RESULTS / "report_confirm").glob("*.md")) + list((RESULTS / "report_ad").glob("*.md"))
         offenders = [str(p.relative_to(ROOT)) for p in files if self.OLD_WORDING.search(re.sub(r"\s+", " ", text(p)))]
@@ -946,12 +974,14 @@ class ActiveTreeLayoutTests(unittest.TestCase):
         "tests/test_runner.py", "tests/test_temporal_filter.py",
         # split to one test file per module on 2026-10-12 (the shared code left the command modules the same day)
         "tests/test_audits.py", "tests/test_fresh_pipeline.py",
+        # the stage-1 recency arms and their package, and the pre-study headroom check, left the tree on 2026-10-13 (Phase 80 of the log)
+        "experiments/medchange/stage1/__init__.py", "experiments/medchange/stage1/evidence.py", "experiments/medchange/stage1/scorer.py",
+        "experiments/medchange/stage1/temporal.py", "experiments/medchange/headroom.py", "tests/test_stage1.py", "tests/test_headroom.py",
     )
     ACTIVE = (
         "experiments/medchange/encoders.py", "experiments/medchange/abstracts.py", "experiments/medchange/scoring.py",
         "experiments/medchange/pipeline_support.py", "experiments/medchange/rag2.py", "experiments/medchange/rag2_run.py",
         "experiments/medchange/rag2_pipeline.py", "experiments/medchange/analyze_rag2.py",
-        "experiments/medchange/stage1/scorer.py", "experiments/medchange/stage1/temporal.py", "experiments/medchange/stage1/evidence.py",
         "experiments/medchange/stats.py", "tests/check_hermetic.py", "docs/protocol.md", "docs/evaluation.md",
         "experiments/medchange/analysis.py", "experiments/medchange/eutils.py", "experiments/medchange/files.py",
         "experiments/medchange/generator.py", "experiments/medchange/selection.py", "experiments/medchange/released_answers.py",
@@ -1009,7 +1039,7 @@ class NamingTests(unittest.TestCase):
     GUARDS = {"repository_guards"}
 
     def _modules(self):
-        """The modules of the pipeline package and its subpackages (``stage1``)."""
+        """The modules of the pipeline package (it has no subpackage)."""
         modules = {p.stem for p in self.PACKAGE.glob("*.py") if p.name != "__init__.py"}
         return modules | {p.name for p in self.PACKAGE.iterdir() if p.is_dir() and (p / "__init__.py").is_file()}
 
@@ -1038,7 +1068,6 @@ class NamingTests(unittest.TestCase):
         """``src/`` and ``evaluation/`` were folded into the pipeline package on 2026-10-12 (Phase 78 of the log); the pipeline's own record of the change is in the protocol."""
         self.assertIn("## Phase 78", text(DOCS / "log.md"))
         self.assertIn("Phase 78", text(DOCS / "protocol.md"))
-        self.assertTrue((self.PACKAGE / "stage1" / "__init__.py").is_file())
         self.assertTrue((self.PACKAGE / "stats.py").is_file())
 
     def test_the_committed_reports_are_one_folder_per_split(self):
@@ -1057,9 +1086,7 @@ class LayeringTests(unittest.TestCase):
 
     @staticmethod
     def _sources():
-        out = {p.stem: p for p in PACKAGE.glob("*.py") if p.name != "__init__.py"}
-        out.update({f"stage1.{p.stem}": p for p in (PACKAGE / "stage1").glob("*.py") if p.name != "__init__.py"})
-        return out
+        return {p.stem: p for p in PACKAGE.glob("*.py") if p.name != "__init__.py"}
 
     @staticmethod
     def _is_command(tree):
@@ -1067,15 +1094,14 @@ class LayeringTests(unittest.TestCase):
                    and n.test.left.id == "__name__" for n in tree.body)
 
     @staticmethod
-    def _imported(name, tree):
+    def _imported(tree):
         """The pipeline modules that a module imports, relative or absolute, under their names in ``_sources``."""
-        package = name.rpartition(".")[0]                     # "stage1" for a module of the subpackage, "" for the others
         found = set()
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom):
                 continue
             if node.level:
-                base = (package + "." if package and node.level == 1 else "") + (node.module or "")
+                base = node.module or ""
             elif (node.module or "").startswith("experiments.medchange"):
                 base = node.module[len("experiments.medchange"):].lstrip(".")
             else:
@@ -1090,9 +1116,9 @@ class LayeringTests(unittest.TestCase):
     def test_no_module_imports_a_command(self):
         sources = self._sources()
         commands = self._commands()
-        offenders = sorted(f"{n} imports {m}" for n, p in sources.items() for m in self._imported(n, ast.parse(text(p))) if m in commands)
+        offenders = sorted(f"{n} imports {m}" for n, p in sources.items() for m in self._imported(ast.parse(text(p))) if m in commands)
         self.assertEqual(offenders, [])
-        self.assertGreaterEqual(len(commands), 19)
+        self.assertGreaterEqual(len(commands), 18)
 
     def test_the_commands_and_the_libraries_are_those_the_readme_lists(self):
         block = text(README).split("## Repository Structure", 1)[1].split("```", 2)[1]
@@ -1100,7 +1126,7 @@ class LayeringTests(unittest.TestCase):
         libraries_part = block.split("libraries (", 1)[1].split("manifest.json", 1)[0]
         listed_commands = set(re.findall(r"(\w+)\.py\b", commands_part))
         listed_libraries = set(re.findall(r"(\w+)\.py\b", libraries_part))
-        modules = {n for n in self._sources() if "." not in n}
+        modules = set(self._sources())
         self.assertEqual(listed_commands, self._commands())
         self.assertEqual(listed_libraries, modules - self._commands())
 
@@ -1233,6 +1259,90 @@ class RebuildFromTheReleaseTests(unittest.TestCase):
                 self.assertEqual(rebuilt, committed, name)
 
 
+class CommittedReportsTests(unittest.TestCase):
+    """The committed reports (``results/report_<split>/``) are derived files: each ``REPORT.md`` and ``tables.tex`` is what ``report`` writes from the report data
+    beside it, the data carry the label audit of their split, and no row, legend or sentence refers to the removed stage-1 arms (2026-10-13; the report of the
+    Alzheimer's disease set had been written before its audit existed and the figure of the held-out split still named the reference systems "stage 1")."""
+
+    SPLITS = ("confirm", "ad")
+
+    @staticmethod
+    def data(split):
+        return json.loads(text(RESULTS / f"report_{split}" / f"report_data_{split}.json"))
+
+    def test_the_markdown_and_the_latex_are_what_the_report_code_writes_from_the_data_beside_them(self):
+        for split in self.SPLITS:
+            folder, d = RESULTS / f"report_{split}", self.data(split)
+            figures = {"fig1": (folder / "fig1_accuracy_by_system.png").is_file(), "fig2": (folder / "fig2_class_recall.png").is_file()}
+            self.assertEqual(text(folder / "REPORT.md"), report.report_markdown(d, figures), split)
+            caption = f"Verdict accuracy (\\%) on the MedChange {d['split']} split ({d['status']}); not comparable with multiple-choice benchmarks."
+            self.assertEqual(text(folder / "tables.tex"), report.to_latex(d["systems"], caption, f"tab:systems-{d['split']}"), split)
+
+    def test_each_report_carries_the_label_audit_of_its_split(self):
+        for split in self.SPLITS:
+            audit = json.loads(text(RESULTS / f"label_audit_{split}.json"))
+            keys = ("agreement", "kappa", "n_items", "n_stable", "label_change_reproduced", "per_gold_class")
+            self.assertEqual(self.data(split)["label_audit"], {k: audit[k] for k in keys}, split)
+            self.assertIn(f"agreement {100 * audit['agreement']:.1f}%, kappa {audit['kappa']}", text(RESULTS / f"report_{split}" / "REPORT.md"))
+
+    def test_the_reports_name_only_the_arms_and_groups_of_the_current_study(self):
+        for split in self.SPLITS:
+            d = self.data(split)
+            groups = {row["group"] for row in d["systems"]}
+            self.assertLessEqual(groups, {"Closed-book LLMs, released answers (existing work)", report.REFERENCE_GROUP, report.REALIGNED_GROUP}, split)
+            self.assertTrue({row["arm"] for row in d["systems"] if not row["arm"].startswith("R:")} <= {"B0", "B1", "R2", "R2C", "R2V", "R2V-ND"}, split)
+            for name in ("REPORT.md", "tables.tex", f"report_data_{split}.json"):
+                self.assertNotIn("stage", text(RESULTS / f"report_{split}" / name).lower(), f"{split}/{name}")
+
+
+class PortabilityTests(unittest.TestCase):
+    """The only computer that runs the study is a Windows laptop with a long folder path (2026-10-13): text is read and written with an explicit encoding (the
+    default there is cp1252, not UTF-8), no tracked file name is invalid on Windows or differs from another only by case, and no tracked path is long."""
+
+    LAPTOP_PREFIX = len("C:\\Users\\mahwi\\Documents\\MS SE\\4th semester\\research_thesis\\")
+
+    def test_text_files_are_read_and_written_with_an_explicit_encoding(self):
+        offenders = []
+        for folder in ("experiments", "tests"):
+            for path in sorted((ROOT / folder).rglob("*.py")):
+                if "__pycache__" in path.parts or path.relative_to(ROOT).parts[:3] == ("experiments", "medchange", "data"):
+                    continue
+                for node in ast.walk(ast.parse(text(path), filename=str(path))):
+                    if not isinstance(node, ast.Call):
+                        continue
+                    name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", "")
+                    keywords = {k.arg for k in node.keywords}
+                    mode = next((a.value for a in node.args[1:2] if isinstance(a, ast.Constant)), None)
+                    mode = next((k.value.value for k in node.keywords if k.arg == "mode" and isinstance(k.value, ast.Constant)), mode)
+                    if (name == "open" and "b" not in str(mode) and "encoding" not in keywords) or (name in ("read_text", "write_text") and "encoding" not in keywords):
+                        offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}: {name}() without encoding")
+        self.assertEqual(offenders, [])
+
+    def _tracked(self):
+        try:
+            done = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            self.skipTest("git is not available")
+        if done.returncode != 0:
+            self.skipTest("not a git checkout")
+        return [line for line in done.stdout.splitlines() if line]
+
+    def test_no_tracked_file_name_is_invalid_on_windows_or_collides_by_case(self):
+        tracked = self._tracked()
+        lowered = {}
+        for name in tracked:
+            lowered.setdefault(name.lower(), []).append(name)
+        self.assertEqual([v for v in lowered.values() if len(v) > 1], [])
+        reserved = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+        invalid = [n for n in tracked if re.search(r'[<>:"|?*]', n) or n.endswith((" ", "."))
+                   or any(part.split(".")[0].upper() in reserved for part in n.split("/"))]
+        self.assertEqual(invalid, [])
+
+    def test_the_longest_tracked_path_fits_below_the_windows_limit_under_the_laptops_folder(self):
+        longest = max(self._tracked(), key=len)
+        self.assertLess(self.LAPTOP_PREFIX + len(longest), 200, longest)
+
+
 class DocumentationIntegrityTests(unittest.TestCase):
     """Every repository path and every ``python -m`` command that the current documents name must exist.
     Dangling references were the most common defect found in the audits; this makes them fail loudly."""
@@ -1274,7 +1384,7 @@ class DocumentationIntegrityTests(unittest.TestCase):
         for package, module in [("medchange", m) for m in (
                 "rag2_pipeline", "rag2_run", "analyze_rag2", "report", "build_benchmark", "ad_benchmark", "pubmed_asof",
                 "freeze_candidates", "generate_answers", "label_audit", "fresh_benchmark", "fresh_supply", "analyze_fresh", "ad_subgroup",
-                "class_balance", "ad_cochrane_supply", "ad_case_study", "headroom", "verdict_consistency")]:
+                "class_balance", "ad_cochrane_supply", "ad_case_study", "verdict_consistency")]:
             tree = ast.parse(text(ROOT / "experiments" / package / f"{module}.py"))
             flags[(package, module)] = {a.value for node in ast.walk(tree)
                                         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "add_argument"

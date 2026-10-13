@@ -1,10 +1,15 @@
 """Synthetic data and fakes shared by the tests of the realigned study (no model, no MedCPT download, no network)."""
 
+import hashlib
 import json
 from pathlib import Path
+from typing import Sequence
+
+import numpy as np
 
 from experiments.medchange import rag2 as R
 from experiments.medchange.benchmark import load_groups
+from experiments.medchange.encoders import CrossEncoderReranker, Encoder
 
 S, F_, N = "SUPPORTED", "REFUTED", "NOT ENOUGH INFORMATION"
 TYPES = {"SR/MA": ["Systematic Review"], "RCT": ["Randomized Controlled Trial"], "other": ["Journal Article"]}
@@ -123,3 +128,47 @@ def fixture():
         {"Group_ID": "3", "Study_ID": "4"}, {"Group_ID": "", "Study_ID": "5"},
     ])
     return medrev, groups
+
+
+class HashingEncoder(Encoder):
+    """Deterministic stand-in for tests. **Never a thesis result.**
+
+    Produces a stable pseudo-random vector per text by hashing. It has no
+    semantics whatsoever: it exists so the index, retrieval and freezing code
+    can be exercised on a machine without torch. Any retrieval quality it
+    appears to show is an artifact of hashing.
+    """
+
+    name = "hashing-stub"
+
+    def __init__(self, dim: int = 32) -> None:
+        self.dim = dim
+
+    def encode(self, texts: Sequence[str]) -> np.ndarray:
+        rows = []
+        for text in texts:
+            digest = hashlib.sha256(text.encode("utf-8")).digest()
+            seed = int.from_bytes(digest[:8], "big")
+            rows.append(np.random.default_rng(seed).standard_normal(self.dim))
+        return (np.asarray(rows, dtype=np.float32) if rows
+                else np.zeros((0, self.dim), dtype=np.float32))
+
+
+class LexicalOverlapReranker(CrossEncoderReranker):
+    """Deterministic stand-in reranker for tests. **Never a thesis result.**
+
+    Scores by token overlap with the query. Unlike the hashing encoder this
+    is weakly meaningful, which is useful for asserting that reranking
+    reorders a candidate list at all - but it is not MedCPT and must never
+    stand in for it in a run that produces numbers.
+    """
+
+    name = "lexical-overlap-stub"
+
+    def score(self, query: str, passages: Sequence[str]) -> np.ndarray:
+        wanted = set(query.lower().split())
+        return np.asarray(
+            [len(wanted & set(p.lower().split())) / (len(wanted) or 1)
+             for p in passages],
+            dtype=np.float32,
+        )

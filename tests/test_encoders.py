@@ -7,11 +7,14 @@ from unittest import mock
 import numpy as np
 
 from experiments.medchange import encoders as E
+from tests.fixtures import HashingEncoder, LexicalOverlapReranker
 
 
 class DoubleTests(unittest.TestCase):
+    """The stand-ins of ``tests/fixtures.py`` (they are not part of the pipeline package)."""
+
     def test_the_hashing_encoder_is_deterministic_and_has_one_row_per_text(self):
-        enc = E.HashingEncoder(dim=8)
+        enc = HashingEncoder(dim=8)
         a, b = enc.encode(["one", "two"]), enc.encode(["one", "two"])
         self.assertEqual(a.shape, (2, 8))
         np.testing.assert_array_equal(a, b)
@@ -19,12 +22,17 @@ class DoubleTests(unittest.TestCase):
         self.assertEqual(enc.encode([]).shape, (0, 8))
 
     def test_the_lexical_reranker_scores_the_share_of_query_words_a_passage_contains(self):
-        scores = E.LexicalOverlapReranker().score("cranberry juice infection", ["cranberry juice", "nothing here", "cranberry juice infection"])
+        scores = LexicalOverlapReranker().score("cranberry juice infection", ["cranberry juice", "nothing here", "cranberry juice infection"])
         np.testing.assert_allclose(scores, [2 / 3, 0.0, 1.0], rtol=1e-6)
-        self.assertEqual(E.LexicalOverlapReranker().score("q", []).shape, (0,))
+        self.assertEqual(LexicalOverlapReranker().score("q", []).shape, (0,))
 
 
 class MedCPTTests(unittest.TestCase):
+    def test_the_package_holds_only_the_two_abstract_bases_and_the_medcpt_classes(self):
+        """The stand-ins are in ``tests/fixtures.py`` (2026-10-13): a stand-in inside the package could be used by mistake in a run that produces numbers."""
+        classes = sorted(n for n, o in vars(E).items() if isinstance(o, type) and o.__module__ == E.__name__)
+        self.assertEqual(classes, ["CrossEncoderReranker", "Encoder", "MedCPTEncoder", "MedCPTReranker"])
+
     def test_the_published_checkpoints_and_input_limits(self):
         query, article = E.medcpt_query_encoder(), E.medcpt_article_encoder()
         self.assertEqual((query.name, query.max_tokens), ("ncbi/MedCPT-Query-Encoder", 64))

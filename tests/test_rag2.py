@@ -3,8 +3,7 @@
 import unittest
 
 from experiments.medchange import rag2 as R
-from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
-from tests.fixtures import F_, N, S, TYPES, abstracts, cand, item, lists_for, records, scores_for
+from tests.fixtures import F_, N, S, TYPES, HashingEncoder, LexicalOverlapReranker, abstracts, cand, item, lists_for, records, scores_for
 
 
 class RetrievalTests(unittest.TestCase):

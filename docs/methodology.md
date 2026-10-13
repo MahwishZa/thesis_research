@@ -285,9 +285,10 @@ label, `evaluation.md` §1.4) and the *unchanged questions* (no system should lo
 ## 10. Earlier approaches (completed, superseded)
 
 Two stages preceded the current design. Each was run to a pre-declared gate on the development split and did not pass it.
-They are results of record and are not part of the present system; their code is in Git history (commit `f721bbb`), and
-their outputs are in `experiments/medchange/results/earlier_stages/`. `protocol.md` §9 and `evaluation.md` §6.3 give the
-gates and numbers.
+They are results of record and are not part of the present system. Their code is in Git history: commit `f721bbb` holds both stages as they
+ran, and commit `24aac42` the last place of the admission rules and the recency formula of stage 1 in the package (they left it on 2026-10-13).
+Their outputs are in `experiments/medchange/results/earlier_stages/` and, for the stage-1 answers, in `results/answers_dev.jsonl` (the arms B2,
+B3, P and C1). `protocol.md` §9 and `evaluation.md` §6.3 give the gates and numbers.
 
 **Stage 1: recency-aware admission (the "Temporal Filter").** Passages were admitted by a score
 *A(s) = (1 − λ)·ρ(s) + λ·T(s)*, where ρ is the passage's relevance rank within the pool (best = 1, worst = 0) and
@@ -295,9 +296,9 @@ gates and numbers.
 crossed the relevance signal (cross-encoder rank or an untrained zero-shot Flan-T5-large "helpfulness" probability) with
 recency: B2 (helpfulness, no recency), B3 (cross-encoder with recency, in the manner of TempRALM), P (helpfulness with
 recency) and C1 (P with publication dates shuffled, a falsification control). The helpfulness score was an untrained
-stand-in for RAG²'s filter, not a RAG² reproduction. The formula lives in `experiments/medchange/stage1/`, which `arms.py` still
-imports, and `arms.py` still holds the admission rules (the B0 and B1 answers carry its settings hash); only B0 and B1 are
-run by the current pipeline. Result: recency lowered accuracy and the shuffled-date control did as well, so the stage
+stand-in for RAG²'s filter, not a RAG² reproduction. Only B0 and B1 are run by the current pipeline, and `arms.py` holds only their rules;
+it keeps its settings dictionary unchanged, including the parameters above, because the hash of that dictionary is in every committed B0 and B1
+record (`tests/test_arms.py` compares them). Result: recency lowered accuracy and the shuffled-date control did as well, so the stage
 failed its gate.
 
 **Stage 2: evidence-synthesis layer.** Instead of changing what the generator reads, the layer judged each of the first

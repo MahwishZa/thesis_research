@@ -8,7 +8,7 @@ are not comparable with theirs; only the layout is.
 
     python -m experiments.medchange.report --split confirm --medchange-dir ..\\MedChange
 
-Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` (B0, B1 and the other stage-1 arms),
+Reads ``benchmark.jsonl`` (gold labels), ``results/answers_<split>.jsonl`` (B0 and B1),
 ``results/rag2_answers_<split>.jsonl`` (R2, R2C, R2V, R2V-ND), the label audit and, for the closed-book rows, the
 benchmark authors' released answers (``Code/GeneratedAnswers`` of their repository). Writes ``results/report_<split>/REPORT.md``,
 ``tables.tex``, ``report_data_<split>.json`` and two PNG figures (matplotlib, optional: ``pip install -e ".[report]"``).
@@ -33,12 +33,9 @@ HERE = Path(__file__).resolve().parent
 RELEASED = {"qwen25-7b": "Qwen2.5-7B", "mistral-24b": "Mistral-24B", "llama33-70b": "Llama-3.3-70B",
             "gpt4o-mini": "GPT-4o-mini", "deepsek-v3": "DeepSeek-V3", "biomistral": "BioMistral",
             "pmcllama": "PMC-LLaMA", "olmo-13b": "OLMo-13B"}      # keys of released_answers.FILES
-STAGE1 = (("B0", "Llama-3-8B-Instruct (Q4_K_M), no retrieval"),
-          ("B1", "+ MedCPT retrieval, top-5 (standard RAG)"),
-          ("B2", "+ zero-shot helpfulness filter (untrained RAG²-style stand-in)"),
-          ("B3", "+ recency re-ranking (TempRALM-style)"),
-          ("P", "+ helpfulness + recency (stage-1 Temporal Filter)"),
-          ("C1", "+ helpfulness + shuffled dates (control)"))
+REFERENCE = (("B0", "Llama-3-8B-Instruct (Q4_K_M), no retrieval"),
+             ("B1", "+ MedCPT retrieval, top-5 (standard RAG)"))
+REFERENCE_GROUP = "Llama-3-8B-Instruct, local, reference systems (this thesis)"
 REALIGNED = (("R2", "adapted RAG²: rationale query + type-balanced retrieval + LLM filter (baseline)"),
              ("R2C", "R2's evidence read once with explicit evidence criteria (control)"),
              ("R2V", "R2's answer verified against the evidence criteria (proposed)"),
@@ -85,9 +82,9 @@ def system_rows(items: dict, answers: dict, arms_present: Sequence[str], release
 
     for model in released:
         add("Closed-book LLMs, released answers (existing work)", RELEASED.get(model, model), f"R:{model}")
-    for arm, name in STAGE1:
+    for arm, name in REFERENCE:
         if arm in arms_present:
-            add("Llama-3-8B-Instruct, local (this thesis, stage 1)", f"{arm}: {name}", arm)
+            add(REFERENCE_GROUP, f"{arm}: {name}", arm)
     for arm, name in REALIGNED:
         if arm in arms_present:
             add(REALIGNED_GROUP, f"{arm}: {name}", arm)
@@ -97,7 +94,7 @@ def system_rows(items: dict, answers: dict, arms_present: Sequence[str], release
 def filtering_rows(items: dict, answers: dict, arms_present: Sequence[str], baseline: str = "B1") -> list[dict]:
     """The Table-3-style rows: one generator, different admission methods, paired against the baseline."""
     rows = []
-    for arm, name in STAGE1 + REALIGNED:
+    for arm, name in REFERENCE + REALIGNED:
         if arm not in arms_present or arm == "B0":
             continue
         cell = accuracy_cell(items, answers, arm, ("changed",))
@@ -109,7 +106,7 @@ def filtering_rows(items: dict, answers: dict, arms_present: Sequence[str], base
 
 def class_rows(items: dict, answers: dict, arms_present: Sequence[str]) -> list[dict]:
     rows = []
-    for arm, name in (("B0", "no retrieval"),) + tuple(STAGE1[1:]) + REALIGNED:
+    for arm, name in (("B0", "no retrieval"),) + tuple(REFERENCE[1:]) + REALIGNED:
         ids = [i for i, it in items.items() if it["kind"] == "changed" and (i, arm) in answers]
         if arm not in arms_present or not ids:
             continue
@@ -240,8 +237,7 @@ def _plt():
     return plt
 
 
-SHORT = {"B0": "B0 no retrieval", "B1": "B1 + MedCPT top-5", "B2": "B2 + helpfulness filter", "B3": "B3 + recency re-rank",
-         "P": "P helpfulness + recency", "C1": "C1 shuffled-date control",
+SHORT = {"B0": "B0 no retrieval", "B1": "B1 + MedCPT top-5",
          "R2": "R2 adapted RAG² (baseline)", "R2C": "R2C criteria only", "R2V": "R2V verification (proposed)",
          "R2V-ND": "R2V-ND no dates"}
 GROUP_COLOURS = {"Closed-book": BLUE, "Llama-3-8B": ORANGE, "Adapted RAG²": VIOLET}
@@ -386,9 +382,6 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
                     "of this table are descriptive, and none is confirmed. " + _context_sentence(d["systems"]))
     note.append(_constant_sentence(d["constant"]))
     note.append("Bold: best per column.")
-    if arms & {"B2", "P", "C1"}:
-        note.append("B2/P/C1 use an untrained zero-shot Flan-T5 helpfulness score, **not** RAG²'s trained filter (its checkpoint is "
-                    "not distributed); for 18.5% of its inputs the question was cut off by truncation (`docs/log.md`, Phase 28).")
     lines += ["## Table 1. Verdict accuracy (%) of LLMs and RAG variants", "", table_systems(d["systems"], n), " ".join(note), ""]
     if figures.get("fig1"):
         lines += ["![Accuracy by system](fig1_accuracy_by_system.png)", ""]
@@ -414,8 +407,7 @@ def report_markdown(d: dict, figures: dict[str, bool]) -> str:
               "accuracy). What is comparable is the experimental design, a fixed generator with different evidence-admission methods "
               "(Table 2) and the comparison with existing systems on identical inputs (Table 1). The closed-book rows are other "
               "models answering the same questions without retrieval, so they put the local 8B system in context; they are not a "
-              "controlled comparison (different sizes, training and prompts). Recency-aware retrieval (TempRALM) corresponds to "
-              "the stage-1 rows B3 and P.", ""]
+              "controlled comparison (different sizes, training and prompts).", ""]
     return "\n".join(lines)
 
 

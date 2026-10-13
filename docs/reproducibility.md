@@ -51,7 +51,7 @@ There is one test file per module (`tests/test_<module>.py`; `python -m unittest
 documents and the committed results to the code are in `tests/test_repository_guards.py`, and `tests/fixtures.py` holds the synthetic data the tests
 share. One guard is skipped unless it is asked for: with a clone of the MedChange release it rebuilds the three question sets and requires their
 manifests to equal the committed ones byte for byte (a few seconds; PowerShell: `$env:MEDCHANGE_DIR = "..\MedChange"` before the command, bash:
-`MEDCHANGE_DIR=../MedChange python -m unittest tests.test_repository_guards`). It passed on 2026-10-12 against a fresh clone of the public release.
+`MEDCHANGE_DIR=../MedChange python -m unittest tests.test_repository_guards`). It passed on 2026-10-13 against a fresh clone of the public release.
 
 ## 3. Rebuilding the data (once)
 
@@ -183,9 +183,11 @@ more, *estimated*), so close other programs before a run. MedCPT encoding on the
 
 ## 9. Earlier stages and removed work
 
-The code of stages 1 and 2 (recency-aware admission and the evidence-synthesis layer) was removed from the active tree on
-2026-10-08 after the current pipeline was verified not to need it; `git checkout f721bbb` restores that state, and
-`git show f721bbb:docs/reproducibility.md` has the commands. Their outputs are in `results/earlier_stages/`. The first,
+The code of stages 1 and 2 (recency-aware admission and the evidence-synthesis layer) left the active tree in two steps. The stage-2 code, the
+helpfulness step and the analyses of both stages were removed on 2026-10-08 after the current pipeline was verified not to need them
+(`git checkout f721bbb` restores the state in which both stages ran, and `git show f721bbb:docs/reproducibility.md` has the commands). The
+admission rules and the recency formula of stage 1, which the module of the B0 and B1 arms still imported, stayed until 2026-10-13 and are last
+present at commit `24aac42`. Their outputs are in `results/earlier_stages/` and, for the stage-1 answers, in `results/answers_dev.jsonl`. The first,
 Alzheimer's-specific design (corpus, question pool, three-arm runner, filter retraining) was removed on 2026-10-06
 (`git show 5e03540:_archive/README.md`; `git checkout 5e03540 -- _archive` restores the folder, whose tests need PyYAML,
 requests and pypdf).

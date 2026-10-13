@@ -22,7 +22,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from . import arms as A
 from .files import file_sha256, load_jsonl
@@ -33,16 +33,7 @@ HERE = Path(__file__).resolve().parent
 MAX_NEW_TOKENS = 160
 
 
-def merge_helpfulness(pool: list[dict], rec: Optional[dict]) -> list[dict]:
-    """Attach cached helpfulness scores, refusing a pool/score mismatch."""
-    if rec is None:
-        return pool
-    if rec["pmids"] != [c["pmid"] for c in pool]:
-        raise ValueError("helpfulness scores were computed for a different pool")
-    return [dict(c, helpful=s) for c, s in zip(pool, rec["helpful"])]
-
-
-def run(items: list[dict], pools: dict[str, dict], helpful: dict[str, dict], arm_list: list[str],
+def run(items: list[dict], pools: dict[str, dict], arm_list: list[str],
         out: Path, generate: Callable[[str, str], str], *, clock=time.time,
         on_progress: Callable[[int, int], None] = lambda a, b: None) -> int:
     done = {(r["item_id"], r["arm"]) for r in load_jsonl(out)}
@@ -50,8 +41,7 @@ def run(items: list[dict], pools: dict[str, dict], helpful: dict[str, dict], arm
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "a", encoding="utf-8", newline="\n") as h:
         for k, (it, arm) in enumerate(todo, 1):
-            pool = merge_helpfulness(pools[it["item_id"]]["candidates"], helpful.get(it["item_id"]))
-            admitted = A.admit(arm, pool, it["newest"]["date"], item_id=it["item_id"])
+            admitted = A.admit(arm, pools[it["item_id"]]["candidates"])
             prompt = build_prompt(it["question"], admitted)
             t0 = clock()
             text = generate(SYSTEM, prompt)
@@ -72,7 +62,7 @@ def main(argv=None) -> int:
                                  formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--split", default="dev", choices=("dev", "confirm", "ad"))
     ap.add_argument("--arms", nargs="+", default=["B0", "B1"], choices=list(A.ARMS),
-                    help="B0 and B1 are the arms of the current study; B2, B3, P and C1 belong to the completed stage 1")
+                    help="B0: no retrieval; B1: standard retrieval (the top 5 of the frozen pool)")
     ap.add_argument("--model-path", required=True)
     ap.add_argument("--out", default=None)
     ap.add_argument("--limit", type=int, default=None, help="first N items only")
@@ -90,12 +80,6 @@ def main(argv=None) -> int:
     if missing:
         print(f"no frozen pool for {len(missing)} items (run freeze_candidates): {missing[:3]}",
               file=sys.stderr)
-        return 2
-    helpful = {r["item_id"]: r for r in load_jsonl(d / f"helpfulness_{args.split}.jsonl")}
-    needs = any(a in ("B2", "P", "C1") for a in args.arms)
-    if needs and any(i["item_id"] not in helpful for i in items):
-        print("B2/P/C1 (the completed stage-1 arms) need zero-shot helpfulness scores for every item; the step that "
-              "produced them was removed from the repository (Git history, commit f721bbb)", file=sys.stderr)
         return 2
     if not Path(args.model_path).is_file():
         print(f"model file not found: {args.model_path}", file=sys.stderr)
@@ -117,7 +101,7 @@ def main(argv=None) -> int:
     gen = llama_generator(args.model_path, args.n_ctx, args.n_threads, args.n_gpu_layers,
                           args.max_new_tokens)
     t0 = time.time()
-    n = run(items, pools, helpful, args.arms, out, gen,
+    n = run(items, pools, args.arms, out, gen,
             on_progress=lambda k, t: print(f"  {k}/{t} ({time.time() - t0:.0f}s)", flush=True)
             if k % 5 == 0 or k == t else None)
     print(f"generated {n} answers -> {out}")

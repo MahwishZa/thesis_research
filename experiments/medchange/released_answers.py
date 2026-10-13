@@ -1,7 +1,7 @@
 """The closed-book answers of other language models that the MedChange release contains (``Code/GeneratedAnswers``), read as verdicts.
 
-Used by ``headroom`` (how often a model without retrieval already gives the current verdict) and by ``report`` (the closed-book
-rows of the tables). The release holds one answer per MedRevQA row for each of eight models.
+Used by ``report`` (the closed-book rows of the tables, the existing models of the comparison). The release holds one answer per
+MedRevQA row for each of eight models.
 """
 
 from __future__ import annotations

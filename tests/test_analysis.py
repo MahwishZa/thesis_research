@@ -8,6 +8,14 @@ from experiments.medchange import analysis as A
 from tests.fixtures import N, S, answer, item, world, write
 
 
+class PointDateTests(unittest.TestCase):
+    def test_the_date_of_a_passage_is_the_midpoint_of_the_bounds_on_its_first_availability(self):
+        import datetime as dt
+        self.assertEqual(A.point_date({"lower": "2020-01-01", "upper": "2020-01-31"}), dt.date(2020, 1, 16))
+        self.assertEqual(A.point_date({"lower": "2020-03-05", "upper": "2020-03-05"}), dt.date(2020, 3, 5))
+        self.assertEqual(A.point_date({"lower": "2012-01-01", "upper": "2012-12-31"}), dt.date(2012, 7, 1))
+
+
 class AnalysisTests(unittest.TestCase):
     def test_a_positive_difference_has_no_minimum_size_and_zero_is_no_evidence(self):
         primary = {"diff_a_minus_b": 0.001, "ci95": [-0.02, 0.04], "mcnemar_p": 0.5, "confirmed": False}

@@ -9,8 +9,7 @@ from tempfile import TemporaryDirectory
 
 from experiments.medchange import rag2 as R
 from experiments.medchange import rag2_run as RR
-from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
-from tests.fixtures import F_, N, S, FakeScorer, abstracts, fake_generate, item, lists_for, records, scores_for
+from tests.fixtures import F_, N, S, FakeScorer, HashingEncoder, LexicalOverlapReranker, abstracts, fake_generate, item, lists_for, records, scores_for
 
 
 class RunnerTests(unittest.TestCase):

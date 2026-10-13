@@ -1649,3 +1649,50 @@ The documents that said the audit had not been run (README, `evaluation.md` §1.
 audit summaries and reports from the item-level file beside it and checks that the same model made all four, that the audited questions are the registered ones and that the analyses used these audits; the figures
 quoted in the documents are checked against the files. Seventeen faults planted one at a time (a changed figure in each document, a flipped label in an item-level file, a changed report, a stale sentence, a different
 labeller) were all caught.
+
+## Phase 80 — Third audit: synchronization, the code of the abandoned direction, the committed reports and a feasibility review (Oct 13)
+
+At the researcher's request the repository and its GitHub counterpart were inspected as a whole before anything was changed, and the research design, the pipeline and the evidence were assessed for feasibility. Nothing in the
+frozen design, the pre-registration or any answer changed.
+
+*Inspected.* **GitHub and the sandbox copy:** one branch (`main`, `24aac42` at the start), no tag, no stash, no issue, no open pull request; eight pull requests (#1 to #8, 2026-09-11 to 2026-10-09) are closed and their branches
+are gone (GitHub keeps their hidden `refs/pull/*`; nothing to do). The working tree equalled `origin/main`: nothing modified, nothing untracked; 209 tracked files (30 MB) and a 16 MB history of 134 commits (it still holds files of the
+removed first design, the largest 41 MB; nothing was rewritten). **The laptop** cannot be inspected from here; its last reported state (after `fcd917f`) was clean and equal to `origin/main`, plus the untracked, now ignored
+`MedChange/` folder. **Portability to it:** no file name that Windows cannot hold or that collides by case, the longest tracked path is 84 characters (144 under the laptop's folder), LF endings only, UTF-8 without a byte-order mark,
+no executable bit and no symbolic link; no secret, e-mail address or machine-specific path in any tracked file. **Code:** every command's `--help`, the 70 flags, 272 path-like names and 127 section references that the current documents
+cite, pyflakes, a scan for definitions that no code references, for duplicated function bodies, for TODO markers and for text read or written without an encoding. **Documents:** all six and the README against the code and the committed
+results, the placeholders, the two research objectives. **Results:** all 57 JSON and 31 JSON-lines files parse strictly, no answer, filter or directness record is duplicated and the item counts equal the registered ones (226, 528, 208, 850).
+
+*Found and corrected.*
+
+| Finding | Correction |
+|---|---|
+| the committed report of the held-out split and its figure called the reference systems B0 and B1 "stage 1", and both committed reports ended with a sentence about stage-1 rows B3 and P that they do not contain | the label became "reference systems", the sentence was removed, both reports (and the legend of the first figure; the second figure is byte-identical) were regenerated from the committed answers; the numbers are unchanged |
+| the committed report of the Alzheimer's disease set had been written before its label audit existed (a regeneration added the audit section) | regenerated; `CommittedReportsTests` requires each report to be what `report` writes from the data beside it and to carry the audit of its split |
+| the stage-1 recency arms (B2, B3, P, C1), their package `stage1/` and the helpfulness handling of `generate_answers.py` were still in the active modules although three of the four arms could not run (the step that made their scores left on 2026-10-08) and the current study uses only B0 and B1 | removed; the dictionary `arms.SETTINGS` is kept as it was because its hash is in every committed B0 and B1 record (the reason this code stayed in Phase 42), and `point_date`, the one function the analysis used, moved to `analysis.py`; B0 and B1 admit the same passages on 1,163 random pools; `tests/test_arms.py` compares the hash with the committed records; the last commit with the code is `24aac42` (`protocol.md` §10.9, item 11) |
+| `headroom.py`, a pre-study command with no documented use, no committed output and no result quoted anywhere (Phase 42 kept it because `report` imported it; since Phase 79 `report` does not) | removed with its tests |
+| two stand-in classes of the encoders ("never a thesis result") lived in the pipeline's `encoders.py` and only the tests used them | moved to `tests/fixtures.py`; a test requires the package to hold only the real classes |
+| `reproducibility.md` §9 said the stage-1 code had left the tree on 2026-10-08, `methodology.md` §10 said it was still imported | both now state the two steps and the commits |
+| no document said what answering the most frequent verdict, without a model, scores: 44.3% on the held-out split (the systems are 2.3 to 5.7 points above it), 42.3% on the Alzheimer's disease set and 47.6% on the fresh questions, where every system is below it | a row and sentences in the README, a bullet each in `evaluation.md` §6.2 and §6.9 and a sentence in §8, item 7, all checked against the files |
+| `data.md` did not say what makes 14 questions of the main benchmark "Alzheimer's-related" (a wider rule than the wording that defines the 208) | the rule is stated |
+| the decision ledger of `protocol.md` cited `spec.py`, which no longer exists | the commit is cited |
+| two test lines read or wrote text without an explicit encoding (the Windows default is not UTF-8) | fixed; `PortabilityTests` checks every module and test, the file names and the longest path |
+
+*Examined and left unchanged, deliberately.* The flat package and the flat `results/` folder (moving either changes every command and file name that the documents, the recorded configurations and this log cite); the two
+`except Exception` in `selection.py` and `ad_cochrane_supply.py` (the first is part of the registered fresh selection and the manifests rebuild byte for byte); the missing final newline of `manifest.json` (the rebuild guard compares bytes); the
+G0 line that `pubmed_asof` still prints; `ad_case_study`, `fresh_supply`, `ad_cochrane_supply` and `results/earlier_stages/` (descriptive tools and results of record that the documents cite); the amendment record about the former minimum gain in
+`protocol.md` (a protocol change made after results were known is kept on the record).
+
+*Verification.* The offline commands (the analyses of three splits and of the fresh test, `class_balance`, `ad_subgroup`, `fresh_supply`, `ad_case_study`, the three question-set builders with their manifests, the dry-run plans, `status`) were run on the full rebuilt benchmark
+before and after the change: every output is byte-identical except the reports. The three manifests rebuild byte for byte from the public release (`jvladika/MedChange`, `474f969`). The suite passes on Python 3.11, 3.12 and 3.13, the hermetic check and pyflakes are clean (one intentional import), the line and
+branch coverage of the package is 89%. Seventeen faults planted one at a time in the new guards (a changed figure in each document, a stale label in a report, an edited settings dictionary, a stand-in class back in the package, a read without encoding, a command listed again) were all caught after one guard was
+strengthened.
+
+*Feasibility (review; the sources are the committed results and documents).* **Confirmed.** All planned runs are complete: four question sets, one frozen design, one pre-registered test, which found no evidence of a gain (macro-F1 −0.002, 95% interval −0.027 to +0.023); the measured laptop time was about 158 hours (20.4, 49.2, 22.7 and about 66
+including an 8-hour pause), while every table regenerates from the committed files in seconds. The design can confirm only gains of about 4 to 6 points (528 questions), 6 to 10 (208) and 0.039 macro-F1 (850), so the data leave gains up to 4.7, 8.7 points and 0.023 open. Headroom is small: the most frequent verdict scores 44.3%, 42.3% and 47.6% and the systems 46.6 to 50.0%, 30.8 to 39.4% and 42.9
+to 47.2%. The benchmark has no relevance judgements, so retrieval can be described (admitted abstracts, evidence types, age, directness judged by a 7B model) but not scored, and the proposed step reads the baseline's list and cannot change retrieval; the second objective's retrieval half is answered descriptively and only for the
+adapted baseline against standard retrieval. The reference labels are model-made (81 to 83% reproduced by an independent model). **Not verified (assumptions).** That the frozen pools, the abstract cache and the two model files exist only on the laptop (as the documents state), so that one disk failure would lose them (the committed lists, filter judgements and answers would remain);
+that another machine reproduces the generated text (an earlier check found different wording in 9 of 17 pairs with the same verdict) or that PubMed returns the same records later; that the Hugging Face model repositories and the MedChange repository stay available. **Recommendations (not done).** A private backup of `experiments/medchange/data/` and `models/` with their SHA-256 values; a CI run of the suite on each push if the supervisor wants a
+visible check; the optional diagnostics stay optional (§8, item 11).
+
+*Open (the researcher).* The README title and the link to the paper; a licence for the repository (none exists, and the MedChange data it depends on state none); a pull on the laptop followed by the test run; the choice whether to run the optional diagnostics.

@@ -16,7 +16,6 @@ from typing import Optional, Sequence
 
 from . import rag2 as R
 from .abstracts import study_type
-from .arms import point_date
 from .files import load_jsonl
 from .scoring import ALPHA, DIGITS, holm_family, paired, stable_difference, summarize
 
@@ -111,6 +110,12 @@ def verifier_rows(items: dict, answers: dict, arms: Sequence[str]) -> dict:
 # --------------------------------------------------------------------------------------
 # Retrieval
 # --------------------------------------------------------------------------------------
+
+def point_date(c: dict) -> date:
+    """The date taken for a passage: the midpoint of the bounds ``lower`` and ``upper`` on its first public availability."""
+    lo, hi = date.fromisoformat(c["lower"]), date.fromisoformat(c["upper"])
+    return lo + (hi - lo) / 2
+
 
 def _admitted_meta(item_id: str, rec: dict, frozen: dict) -> list[dict]:
     if "admitted_stratum" in rec:

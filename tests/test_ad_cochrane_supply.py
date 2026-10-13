@@ -81,7 +81,7 @@ class CollectTests(unittest.TestCase):
     def test_snapshot_end_falls_back_to_benchmark(self):
         with tempfile.TemporaryDirectory() as d:
             b = Path(d) / "b.jsonl"
-            b.write_text(json.dumps({"newest": {"date": "2023-05-01"}}) + "\n" + json.dumps({"newest": {"date": "2024-01-08"}}) + "\n")
+            b.write_text(json.dumps({"newest": {"date": "2023-05-01"}}) + "\n" + json.dumps({"newest": {"date": "2024-01-08"}}) + "\n", encoding="utf-8")
             self.assertEqual(C.snapshot_end(None, b), "2024-01-08")
 
 

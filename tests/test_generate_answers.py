@@ -15,21 +15,13 @@ from experiments.medchange.generate_answers import run
 CUTOFF = "2020-01-01"
 
 
-def cand(pmid, rank, year, helpful=None, month="01"):
-    c = {"pmid": pmid, "rank": rank, "lower": f"{year}-{month}-01", "upper": f"{year}-{month}-01",
-         "title": f"T{pmid}", "abstract": f"abstract {pmid}", "pubtypes": [], "journal": "J"}
-    if helpful is not None:
-        c["helpful"] = helpful
-    return c
+def cand(pmid, rank, year, month="01"):
+    return {"pmid": pmid, "rank": rank, "lower": f"{year}-{month}-01", "upper": f"{year}-{month}-01",
+            "title": f"T{pmid}", "abstract": f"abstract {pmid}", "pubtypes": [], "journal": "J"}
 
 
-def pool(n=10, with_helpful=True):
-    # rank 1 is the OLDEST; helpfulness is highest for rank 3
-    out = []
-    for r in range(1, n + 1):
-        out.append(cand(f"{r:03d}", r, 2000 + r * 2,
-                        helpful=(0.9 if r == 3 else 0.1 + 0.01 * (n - r)) if with_helpful else None))
-    return out
+def pool(n=10):
+    return [cand(f"{r:03d}", r, 2000 + r * 2) for r in range(1, n + 1)]
 
 
 def item(iid, kind, newest, previous="REFUTED"):
@@ -42,7 +34,6 @@ class RunTests(unittest.TestCase):
     def setUp(self):
         self.items = [item("a", "changed", "SUPPORTED"), item("b", "changed", "REFUTED")]
         self.pools = {i["item_id"]: {"candidates": pool()} for i in self.items}
-        self.helpful = {}
 
     def test_resume_skips_finished_pairs_and_tolerates_truncated_last_line(self):
         calls = []
@@ -51,11 +42,11 @@ class RunTests(unittest.TestCase):
             return "VERDICT: SUPPORTED\nok"
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "ans.jsonl"
-            n1 = run(self.items, self.pools, self.helpful, ["B0", "B1"], out, gen)
+            n1 = run(self.items, self.pools, ["B0", "B1"], out, gen)
             self.assertEqual((n1, len(calls)), (4, 4))
-            with open(out, "a") as f:
+            with open(out, "a", encoding="utf-8") as f:
                 f.write('{"item_id": "zz", "arm": "B0", "text": "trunc')    # killed mid-write
-            n2 = run(self.items, self.pools, self.helpful, ["B0", "B1"], out, gen)
+            n2 = run(self.items, self.pools, ["B0", "B1"], out, gen)
             self.assertEqual(n2, 0)
             self.assertEqual(len(calls), 4)
             rows = load_jsonl(out)
@@ -68,7 +59,7 @@ class RunTests(unittest.TestCase):
     def test_prompt_hash_differs_between_arms_that_admit_different_evidence(self):
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "a.jsonl"
-            run(self.items[:1], self.pools, self.helpful, ["B0", "B1"], out, lambda s, u: "x")
+            run(self.items[:1], self.pools, ["B0", "B1"], out, lambda s, u: "x")
             r = load_jsonl(out)
         self.assertNotEqual(r[0]["prompt_sha256"], r[1]["prompt_sha256"])
 

@@ -16,8 +16,7 @@ from experiments.medchange import pipeline_support as P
 from experiments.medchange import rag2 as R
 from experiments.medchange import rag2_pipeline as RP
 from experiments.medchange import rag2_run as RR
-from experiments.medchange.encoders import HashingEncoder, LexicalOverlapReranker
-from tests.fixtures import F_, N, S, fake_generate, item, lists_for, records, write
+from tests.fixtures import F_, N, S, HashingEncoder, LexicalOverlapReranker, fake_generate, item, lists_for, records, write
 
 
 class PipelineTests(unittest.TestCase):

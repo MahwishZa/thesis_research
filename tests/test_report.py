@@ -81,9 +81,9 @@ class NumbersTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0]["all"]["accuracy"], 4 / 10)            # 4 of 10 gold labels are SUPPORTED
 
     def test_filtering_rows_pair_each_arm_with_b1(self):
-        answers = make_answers(make_items(40, 0), perfect=("B1",), wrong=("B2",))
-        rows = R.filtering_rows(make_items(40, 0), answers, ["B1", "B2"])
-        self.assertEqual([r["arm"] for r in rows], ["B1", "B2"])
+        answers = make_answers(make_items(40, 0), perfect=("B1",), wrong=("R2",))
+        rows = R.filtering_rows(make_items(40, 0), answers, ["B1", "R2"])
+        self.assertEqual([r["arm"] for r in rows], ["B1", "R2"])
         self.assertIsNone(rows[0]["diff_vs_baseline"])
         self.assertLess(rows[1]["diff_vs_baseline"]["diff_a_minus_b"], 0)
 
@@ -111,12 +111,12 @@ class TextTests(unittest.TestCase):
         self.assertNotIn("**", text.split("| B0:")[1].split("\n")[0])
 
     def test_filtering_and_class_tables_render_every_row(self):
-        answers = make_answers(make_items(40, 0), perfect=("B1",), wrong=("B2",))
+        answers = make_answers(make_items(40, 0), perfect=("B1",), wrong=("R2",))
         items = make_items(40, 0)
-        t = R.table_filtering(R.filtering_rows(items, answers, ["B1", "B2"]))
+        t = R.table_filtering(R.filtering_rows(items, answers, ["B1", "R2"]))
         self.assertIn("exact McNemar p", t)
         self.assertEqual(t.count("\n"), 4)
-        c = R.table_classes(R.class_rows(items, answers, ["B1", "B2"]))
+        c = R.table_classes(R.class_rows(items, answers, ["B1", "R2"]))
         self.assertIn("macro-F1 (%)", c)
 
     def test_latex_escapes_and_marks_best(self):
@@ -131,7 +131,7 @@ class AssemblyTests(unittest.TestCase):
 
     def build(self, split="dev"):
         items = make_items(40, 20)
-        answers = make_answers(items, perfect=("B1", "R2V"), wrong=("B0", "B2", "B3", "P", "C1", "R2"))
+        answers = make_answers(items, perfect=("B1", "R2V"), wrong=("B0", "R2"))
         audit = {"agreement": 0.83, "kappa": 0.74, "n_items": 226, "n_stable": 188, "label_change_reproduced": 0.68,
                  "per_gold_class": {}}
         return R.build(split, items, answers, [], audit)
@@ -144,6 +144,8 @@ class AssemblyTests(unittest.TestCase):
             self.assertIn(needle, text)
         self.assertNotIn("fig2_class_recall.png", text)                          # only figures that exist are linked
         self.assertNotIn("Table 4", text)
+        self.assertIn(R.REFERENCE_GROUP, text)                                   # B0 and B1 are the reference systems of this study ...
+        self.assertNotIn("stage", text.lower())                                  # ... and no row, note or sentence refers to the removed stage-1 arms
 
     def test_write_report_without_figures_writes_markdown_latex_and_data(self):
         with TemporaryDirectory() as tmp:

@@ -222,6 +222,7 @@ breaking 19. Dev check: (a) parsing and validity ≥ 95% passed; (b) R2 ≥ B1 �
 * **Label reproducibility.** Agreement 81.4%, kappa 0.7161; 430 of 528 questions label-stable; per gold class:
   SUPPORTED 86.8%, REFUTED 91.3%, NOT ENOUGH INFORMATION 66.7%; 72.5% of the 353 label changes between versions
   reproduced.
+* **Reference without a model.** Always answering SUPPORTED, the most frequent verdict of the reviews, scores 44.3% (234 of 528); the six local systems score 2.3 (B0) to 5.7 (R2V) points above it.
 * **Existing models, closed-book, same questions** (released answers): Qwen2.5-7B and GPT-4o-mini 52.8%,
   DeepSeek-V3 52.3%, Llama-3.3-70B and Mistral-24B 50.8%, OLMo-13B 50.0%, BioMistral 45.1%, PMC-LLaMA 34.8%. The local
   8B systems (46.6–50.0%) are below the five best, level with OLMo-13B at best and above the two medical models.
@@ -377,6 +378,7 @@ Gold verdicts of the 850 questions: SUPPORTED 36.2%, REFUTED 16.1%, NOT ENOUGH I
   into NOT ENOUGH INFORMATION. R2C, which states the criteria without checking a draft, changed 22.2% of the same answers: 44 fixed, 80 broken.
 * **Retrieval (descriptive; added after the run, `protocol.md` §10.9, item 10).** R2 admitted 3.0 abstracts per question on average and none for 18.0% of the questions (held-out split: 3.3 and 15.3%); of the admitted abstracts 20.9% are systematic reviews or meta-analyses, 33.9% trials and 45.2% other studies, and their mean age at the review date is 8.58 years. R2C and R2V read the same abstracts. The update-window measures of the other analyses do not apply: 783 of the 850 questions come from reviews with a single version.
 * **Alzheimer's disease set (descriptive).** Macro-F1, R2V − R2 on its 208 questions: +0.080 (+0.024 to +0.135); its sign differs from the fresh result.
+* **Reference without a model.** Always answering NOT ENOUGH INFORMATION, the most frequent verdict of the reviews, would score 47.6% (405 of 850): R2 (47.2%), R2V (45.4%) and R2C (42.9%) are all below it, while their macro-F1 (0.395, 0.393 and 0.359) is far above that of the constant answer (0.215).
 * **Reference labels.** In the sample of 300, agreement with the independent model 83.0%, kappa 0.7332 (`results/label_audit_fresh.md`).
 
 **Reading.** With 850 questions the test could confirm a true gain of 0.04 with a probability of 81% and a gain of 0.045 with 89% (`protocol.md` §10.3); it found
@@ -436,7 +438,8 @@ What the results do and do not support, in one place. The first group limits wha
 **How far the results reach.**
 
 7. *One generator, one prompt design.* All systems use one 8-billion-parameter model quantised to 4 bits, run on a CPU with greedy decoding and one seed; the prompts were fixed once. The results say nothing about other
-   models, sizes, prompts or seeds, and the variation over seeds and prompts was not measured.
+   models, sizes, prompts or seeds, and the variation over seeds and prompts was not measured. The generator is also close to the level of the most frequent verdict (§6.2, §6.6, §6.9): on the Alzheimer's
+   disease set and on the fresh questions no system scores above it in accuracy, so there is little room for a verification step to raise accuracy.
 8. *An adaptation, not a reproduction, of RAG².* The trained filter, the corpus and the task differ from the published method (`methodology.md` §5.1, §12), so no claim is made about RAG² itself.
 9. *General medicine, not Alzheimer's disease.* The main benchmark has 14 Alzheimer's-related questions; the Alzheimer's disease set (208 questions) is a dementia and cognitive-impairment set of which 48 questions name
    Alzheimer's disease; the 850 fresh questions contain practically none. An Alzheimer's-only question set could not be built (§6.8; 7 usable new reviews were found, 30 were needed), so no confirmatory result for
