@@ -1619,7 +1619,7 @@ fresh test covers exactly the 850 registered questions, once per arm; `class_bal
 *Verification.* The syntax trees (docstrings removed) of 60 moved definitions are identical to those of commit `ee07e33`; the new code (`EUtils.efetch`, `load_split`, `bootstrap_difference`, the shared
 candidate list) is covered by tests. A regression run of every command that needs no model or network (`analyze_rag2` for three splits, `analyze_fresh`, `class_balance`, `ad_subgroup`, `report` for three splits,
 `fresh_supply`, `headroom`, `ad_case_study`, `build_benchmark`, `ad_benchmark`, `fresh_benchmark`, the dry-run plans and `status`) on the full rebuilt benchmark gave byte-identical output before and after the change
-(the plan of the ad phase differs by the added flag). The suite grew from 314 to 392 tests (new tests for `files`, `eutils`, `selection`, `encoders`, `build_benchmark`, the commands `freeze_candidates`, `pubmed_asof`,
+(the plan of the ad phase differs by the added flag). The suite grew from 314 to 398 tests (new tests for `files`, `eutils`, `selection`, `encoders`, `build_benchmark`, the commands `freeze_candidates`, `pubmed_asof`,
 `verdict_consistency`, `ad_subgroup`, `class_balance`, the vector metrics and the guards listed above); the line and branch coverage of the pipeline package rose from 80% to 89% (it passes on Python 3.11, 3.12 and 3.13). Twenty-one faults planted one at a time
 (a command imported by a library, a dropped line of the fresh answers, a drifting figure in a document, a changed seeding rule, an interval from the wrong percentiles, a retry that no longer pauses, ...) were all caught
 after two weak spots were closed (the pause between retries of JSON requests was untested, and one statement of the label agreement in `evaluation.md` §5 was not checked against the audit).
@@ -1627,8 +1627,7 @@ after two weak spots were closed (the pause between retries of JSON requests was
 *Not changed, deliberately.* The flat package `experiments/medchange/`: sub-packages would change every command that the documents, the environment records and this log cite. Style-only findings of the linters
 (ambiguous one-letter names, lambda assignments, import order). The data, the model files and the design.
 
-*Open (needs the researcher's computer, no manual step).* The label audit of the Alzheimer's disease set (`label_audit --split ad`, about an hour) and the analysis rerun with it; the item-level file of the fresh audit
-(`label_audit --split fresh --sample 300`, finished items are skipped); optionally `analyze_rag2` for the three splits (for dev and confirm it replaces the four B1 retrieval figures that were carried over with four decimals by exact ones).
+*Open at the time (all of it needed the researcher's computer; no manual step), closed on 2026-10-13, see the last note of this entry:* the label audit of the Alzheimer's disease set and the analysis rerun with it; the item-level file of the fresh audit; `analyze_rag2` for the development and held-out splits, which replaces the four B1 retrieval figures that were carried over with four decimals by exact ones.
 
 *Later the same day.* At the researcher's request the Overview of the README was condensed to one paragraph (150 words instead of 240); the researcher then shortened it further (commits `b76f8b0` and `161d60c`) to 90 words
 (the problem, the extra check, the domain and the pointer to the paper). After the pull, two guards that quoted sentences of the first condensed version failed on the researcher's computer, as they should; they were
@@ -1641,3 +1640,12 @@ table is the third share of the evidence mix of B1 in the development table (70.
 `analyze_fresh` reproduced its two files unchanged. The first start of the label audit stopped with `FileNotFoundError` because the MedChange release was not in `..\MedChange` on that computer. `label_audit` now checks the folder
 before it loads the model: a missing `Datasets\MedRevQA.csv` or one whose hash differs from the manifest of the split stops with a message, and so does a split without items in `benchmark.jsonl` (it used to write an empty report). The release also turned up as an untracked folder `MedChange\` inside the repository
 folder (a clone made from the repository root): with it present the suite passes, and `.gitignore` now lists `/MedChange/` (with a guard) so that a `git add .` cannot commit a dataset that states no licence.
+
+*On the researcher's computer, 2026-10-13.* After the pull the 392 tests passed (158 s) and the three recomputed files were committed (`a702594`). The label audit of the Alzheimer's disease set then ran in under 20 minutes
+for its 208 questions (`fcd917f`). The independent model (Qwen2.5-7B-Instruct, the judge of the other audits) reproduces 81.2% of the labels (kappa 0.7134; none unparsed); per gold class SUPPORTED 73.1% (52 questions),
+REFUTED 100.0% (68) and NOT ENOUGH INFORMATION 71.6% (88); 169 questions are label-stable, and on them R2V − R2 = +6.5 pp and R2 − B1 = +1.8 pp (descriptive; the primary analysis keeps all 208). No question of the set has
+a changed verdict, so the reproduction of label changes does not apply. The item-level file of the fresh audit (300 questions) was copied to `results`; its summary is unchanged (83.0%, kappa 0.7332).
+The documents that said the audit had not been run (README, `evaluation.md` §1.4, §6.6 and §8, `protocol.md` status table and §8, `data.md` §2) now state the result. `CommittedAuditsTests` recomputes each of the four
+audit summaries and reports from the item-level file beside it and checks that the same model made all four, that the audited questions are the registered ones and that the analyses used these audits; the figures
+quoted in the documents are checked against the files. Seventeen faults planted one at a time (a changed figure in each document, a flipped label in an item-level file, a changed report, a stale sentence, a different
+labeller) were all caught.

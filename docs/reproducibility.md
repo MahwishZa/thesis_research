@@ -75,7 +75,7 @@ development and held-out splits; step 3 must have been run before the `ad` phase
 `--medchange-dir` is the folder of the MedChange release (the folder that holds `Datasets\`; it need not be `..\MedChange`: a copy in the repository folder, `MedChange\`, works the same and is ignored by git). The label audit reads
 the review text from `Datasets\MedRevQA.csv` by row number, so before it loads a model it compares that file's hash with the one in the manifest
 of the split and stops with a message when the folder or the file is missing or is another version of the release. The label audit of the Alzheimer's disease set
-(`--split ad`, about an hour) and the analysis rerun that uses it:
+(`--split ad`; under 20 minutes for its 208 questions, measured on 2026-10-13) and the analysis rerun that uses it:
 
 ```
 python -m experiments.medchange.label_audit --split ad --medchange-dir ..\MedChange --model-path models\Qwen2.5-7B-Instruct-Q4_K_M.gguf

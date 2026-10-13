@@ -57,8 +57,7 @@ objective of the first pilot, so the proposed system would have won it by constr
   Cohen's kappa, per-class agreement and whether label changes between versions are reproduced. Questions on which it
   agrees with the gold label are *label-stable*; the analysis repeats the key differences on that subset (descriptive).
   This measures reproducibility, not medical truth: two models can share a bias. No clinician has validated the labels. The audit
-  covers the development and held-out splits and, for the pre-registered test, a seeded sample of 300 fresh questions (§6.9); the audit of the Alzheimer's disease
-  set is run separately (`label_audit --split ad`), and until it exists that analysis has no label-stable subset.
+  covers the development and held-out splits, the Alzheimer's disease set (§6.6) and, for the pre-registered test, a seeded sample of 300 fresh questions (§6.9).
 * **Stated-verdict consistency** (`verdict_consistency.py`). On a seeded sample of standard answers, an independent judge
   states which verdict the answer expresses; its agreement with the parsed verdict is a diagnostic of the parser.
 
@@ -268,7 +267,8 @@ update-window share, the share of questions with update-window evidence and the 
 only on the researcher's computer, and were carried over unchanged from the first versions. Regenerating the first versions with four
 decimals in the same way gave the committed files again, byte for byte (the development file only lacked the key `context_truncated`,
 added later), and the Alzheimer's disease set's analysis, written with six decimals from the start, is reproduced exactly by the same
-procedure. Rerunning `analyze_rag2` on the researcher's computer, where the pools exist, computes the four figures exactly, with six decimals, and replaces the carried-over values (`log.md`, Phase 79).
+procedure. On 2026-10-13 `analyze_rag2` was rerun on the researcher's computer, where the pools exist: it computed the four figures exactly, with six decimals, and the committed
+files are those. The only change that shows in a table is the third share of B1's evidence mix in the development file (70.3% became 70.4%; `log.md`, Phase 79).
 
 ### 6.6 Alzheimer's disease and related dementias set (secondary, run once)
 
@@ -291,8 +291,12 @@ R2 − B1 +3.8 pp (0.46), R2V − B1 +7.2 pp (0.25), R2C − R2 +4.8 pp (0.26), 
 R2V changed 20.9% of the answers it verified (19 fixed, 12 broken); its commonest change was SUPPORTED to NOT ENOUGH
 INFORMATION (17). None of the five local systems scores above the constant answer. The released answers of the eight models score
 Qwen2.5-7B 42.3%, GPT-4o-mini 37.0%, DeepSeek-V3 39.4%, Llama-3.3-70B 43.3%, Mistral-24B 42.3%, OLMo-13B 41.3%, BioMistral
-34.1% and PMC-LLaMA 43.3%; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer. The labels of this set have not been audited by a second model, and the update-window
-column of `rag2_analysis_ad.md` does not apply to it. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`,
+34.1% and PMC-LLaMA 43.3%; Llama-3.3-70B and PMC-LLaMA are two questions above the constant answer.
+
+Label reproducibility (`label_audit --split ad`, run on 2026-10-13): the independent model reproduces 81.2% of the labels of this set (kappa 0.7134; 208 labelled, none unparsed); per gold
+class SUPPORTED 73.1% (52 questions), REFUTED 100.0% (68) and NOT ENOUGH INFORMATION 71.6% (88); 169 of the 208 questions are label-stable. On those 169, R2V − R2 = +6.5 pp and
+R2 − B1 = +1.8 pp (descriptive; the primary analysis keeps all 208). No question of this set has a changed verdict, so the reproduction of label changes cannot be computed.
+The update-window column of `rag2_analysis_ad.md` does not apply to it either. Files: `results/RAG2_FINDINGS_AD.md`, `rag2_analysis_ad.*`, `label_audit_ad.*`,
 `results/report_ad/REPORT.md`.
 
 ### 6.7 The questions of the Alzheimer's disease set that name Alzheimer's disease (exploratory; no model run)
@@ -417,7 +421,7 @@ What the results do and do not support, in one place. The first group limits wha
 **What the evidence can show.**
 
 1. *Reference labels are model-made.* The verdicts were labelled by gpt-4o-mini from the reviews' conclusions. An independent model of another family reproduces 81.4% of the held-out
-   labels (kappa 0.7161), 83.2% of the development labels and 83.0% of a sample of 300 fresh labels (kappa 0.7332); the labels of the Alzheimer's disease set have not been audited. No clinician
+   labels (kappa 0.7161), 83.2% of the development labels, 83.0% of a sample of 300 fresh labels (kappa 0.7332) and 81.2% of the labels of the Alzheimer's disease set (kappa 0.7134). No clinician
    validated any of them (nobody involved in the study is a medical expert), so label reproducibility bounds what any accuracy can mean (§1.4).
 2. *Sample sizes.* With 528 questions only gains of roughly 4 to 6 points can be confirmed, with 208 only 6 to 10 (§4), and with 850 fresh questions a macro-F1 gain of about 0.039 (`protocol.md` §10.3). A true gain
    below these may go unconfirmed; the Alzheimer's-named subgroup (48 questions) is too small for any conclusion.
@@ -442,6 +446,6 @@ What the results do and do not support, in one place. The first group limits wha
 
 **What was not done.**
 
-11. *Not run:* the ablations of the baseline (R2-RQ, R2-BR, R2-NF; optional, `protocol.md` §5), the label audit of the Alzheimer's disease set, the consistency check of the stated verdicts on the Alzheimer's disease set and the
+11. *Not run:* the ablations of the baseline (R2-RQ, R2-BR, R2-NF; optional, `protocol.md` §5), the consistency check of the stated verdicts on the Alzheimer's disease set and the
     fresh questions, and the directness judge on the fresh questions. No result of any of them is claimed.
 12. *Only automatic checks.* By design no step needs a person to label, check or edit anything, so the answers were not read for medical correctness; the indicators of unsupported answers (§6.2) are automatic and rough.

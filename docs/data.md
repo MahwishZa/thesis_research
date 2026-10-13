@@ -84,9 +84,9 @@ so changed-question and update-window results cannot be computed for it. (3) Its
 before 2005 (14 of the main benchmark's 762 are), 46 dates are to the year only and the earliest is 2000, so as-of evidence
 will be thinner for many questions; the pools, once built, had a median of 20 candidates and none was empty, and R2 admitted at least one abstract for 177 of the 208 (85.1%). (4) 208 questions come from
 159 reviews, and the paired tests treat questions as independent, which slightly understates the uncertainty. (5) Its power is
-low: only effects of about 6 to 10 points can be confirmed (`evaluation.md` §4). (6) Its labels have not been audited by an
-independent model (the audit covers the development and held-out splits; `label_audit --split ad` is available), so it has no
-label-stable subset yet. (7) The set was run once (`evaluation.md` §6.6).
+low: only effects of about 6 to 10 points can be confirmed (`evaluation.md` §4). (6) Its labels are model-made, like those of the main benchmark: an
+independent model reproduces 81.2% of the labels of the Alzheimer's disease set (kappa 0.7134; 169 of the 208 are label-stable, `evaluation.md` §6.6), and no clinician
+validated them. (7) The set was run once (`evaluation.md` §6.6).
 
 ## 3. Fresh questions (the pre-registered test; split `fresh`)
 

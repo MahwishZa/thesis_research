@@ -50,7 +50,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from experiments.medchange import analyze_fresh, fresh_benchmark, pipeline_support
+from experiments.medchange import analyze_fresh, fresh_benchmark, label_audit, pipeline_support
 from experiments.medchange.files import load_jsonl
 from experiments.medchange.scoring import detectable_range, wilson
 
@@ -420,6 +420,24 @@ class DocumentsQuoteTheCommittedResultsTests(unittest.TestCase):
         self.assertIn(self.ad["reading"], self.evaluation)
         self.assertEqual(self.ad["reading"], "positive but not confirmed")
 
+    def test_the_label_audit_of_the_alzheimers_disease_set_is_quoted_where_it_is_stated(self):
+        au, ls = json.loads(text(RESULTS / "label_audit_ad.json")), self.ad["label_stable"]
+        pc = lambda x: f"{100 * x:.1f}%"
+        by_class = au["per_gold_class"]
+        self.assertEqual((au["n_items"], au["n_unparsed"], au["changed_items_both_versions_labelled"]), (self.ad["items"], 0, 0))
+        self.assertEqual((ls["n"], ls["R2V_minus_R2"]["n"], ls["R2_minus_B1"]["n"]), (au["n_stable"],) * 3)
+        self.assertIn(f"reproduces {pc(au['agreement'])} of the labels of this set (kappa {au['kappa']}; {au['n_items']} labelled, none unparsed); per gold class "
+                      f"SUPPORTED {pc(by_class['SUPPORTED']['agreement'])} ({by_class['SUPPORTED']['n']} questions), REFUTED {pc(by_class['REFUTED']['agreement'])} "
+                      f"({by_class['REFUTED']['n']}) and NOT ENOUGH INFORMATION {pc(by_class['NOT ENOUGH INFORMATION']['agreement'])} ({by_class['NOT ENOUGH INFORMATION']['n']}); "
+                      f"{au['n_stable']} of the {au['n_items']} questions are label-stable. On those {au['n_stable']}, R2V − R2 = {_pp(ls['R2V_minus_R2']['diff_a_minus_b'])} pp and "
+                      f"R2 − B1 = {_pp(ls['R2_minus_B1']['diff_a_minus_b'])} pp", self.evaluation_flat)
+        self.assertIn(f"and {pc(au['agreement'])} on the Alzheimer's disease set", self.readme_flat)
+        protocol, data = flat(DOCS / "protocol.md"), flat(DOCS / "data.md")
+        self.assertIn(f"the label audit was run on 2026-10-13 (agreement {pc(au['agreement'])}, kappa {au['kappa']};", protocol)
+        self.assertIn(f"The independent model reproduces {pc(au['agreement'])} of the {au['n_items']} labels (kappa {au['kappa']}); {au['n_stable']} are label-stable, and on them "
+                      f"R2V − R2 = {_pp(ls['R2V_minus_R2']['diff_a_minus_b'])} pp", protocol)
+        self.assertIn(f"reproduces {pc(au['agreement'])} of the labels of the Alzheimer's disease set (kappa {au['kappa']}; {au['n_stable']} of the {au['n_items']} are label-stable", data)
+
 
 class FreshResultQuotedTests(unittest.TestCase):
     """The result of the pre-registered test is typed by hand in the README, ``docs/evaluation.md`` §6.9, ``docs/protocol.md`` §10.10 and the log;
@@ -618,23 +636,26 @@ class AnswersAndLimitationsTests(unittest.TestCase):
         self.assertIn(f"the local systems ({pc(min(local))} to {pc(max(local))})", self.s7)
 
     def test_every_statement_of_the_label_reproducibility_in_the_current_documents_is_the_audit_value(self):
-        audit = {"held-out": json.loads(text(RESULTS / "label_audit_confirm.json")), "development": json.loads(text(RESULTS / "label_audit_dev.json"))}
-        seen = 0
+        audit = {"held-out": json.loads(text(RESULTS / "label_audit_confirm.json")), "development": json.loads(text(RESULTS / "label_audit_dev.json")),
+                 "Alzheimer's disease set": json.loads(text(RESULTS / "label_audit_ad.json"))}
+        seen = {name: 0 for name in audit}
         for rel in CURRENT_DOCS:
             body = " ".join(text(ROOT / rel).replace("**", "").split())
-            for m in re.finditer(r"(\d+\.\d)% of the (held-out|development) (?:gold )?labels", body):
-                seen += 1
-                self.assertEqual(m.group(1), f"{100 * audit[m.group(2)]['agreement']:.1f}", f"{rel}: {m.group(0)}")
-        self.assertGreaterEqual(seen, 3)
+            for m in re.finditer(r"(\d+\.\d)% of the (?:(held-out|development) (?:gold )?labels|labels of the (Alzheimer's disease set))", body):
+                which = m.group(2) or m.group(3)
+                seen[which] += 1
+                self.assertEqual(m.group(1), f"{100 * audit[which]['agreement']:.1f}", f"{rel}: {m.group(0)}")
+        self.assertGreaterEqual(sum(seen.values()), 4)
+        self.assertGreaterEqual(seen["Alzheimer's disease set"], 2)
 
     def test_the_limitations_quote_the_audits_the_sample_sizes_and_the_sets(self):
         audit = lambda split: json.loads(text(RESULTS / f"label_audit_{split}.json"))
         pc = lambda x: f"{100 * x:.1f}%"
-        self.assertIn(f"{pc(audit('confirm')['agreement'])} of the held-out labels (kappa {audit('confirm')['kappa']}), {pc(audit('dev')['agreement'])} of the development labels and "
-                      f"{pc(audit('fresh')['agreement'])} of a sample of {audit('fresh')['n_items']} fresh labels (kappa {audit('fresh')['kappa']})", self.s8)
-        audited = (RESULTS / "label_audit_ad.json").exists()
-        self.assertEqual("have not been audited" in self.s8, not audited, "§8 must say whether the labels of the Alzheimer's disease set have been audited")
-        self.assertEqual("the label audit of the Alzheimer's disease set," in self.s8, not audited)
+        self.assertIn(f"{pc(audit('confirm')['agreement'])} of the held-out labels (kappa {audit('confirm')['kappa']}), {pc(audit('dev')['agreement'])} of the development labels, "
+                      f"{pc(audit('fresh')['agreement'])} of a sample of {audit('fresh')['n_items']} fresh labels (kappa {audit('fresh')['kappa']}) and "
+                      f"{pc(audit('ad')['agreement'])} of the labels of the Alzheimer's disease set (kappa {audit('ad')['kappa']})", self.s8)
+        self.assertNotIn("have not been audited", self.s8)
+        self.assertNotIn("the label audit of the Alzheimer's disease set,", self.s8)
         lo, hi = detectable_range(528)
         lo2, hi2 = detectable_range(208)
         self.assertIn(f"With 528 questions only gains of roughly {lo} to {hi} points can be confirmed, with 208 only {lo2} to {hi2}", self.s8)
@@ -664,6 +685,15 @@ class CompletedVersusPlannedTests(unittest.TestCase):
         self.assertIn("run once", flat(DOCS / "evaluation.md"))
         for rel in CURRENT_DOCS:
             self.assertNotIn("not yet run", flat(ROOT / rel), rel)
+
+    def test_the_label_audit_of_the_alzheimers_disease_set_is_reported_as_run_because_its_result_exists(self):
+        """The audit of the 208 labels was run on 2026-10-13; no current document may still say that it has not been run or that the analysis has no label-stable subset."""
+        self.assertTrue((RESULTS / "label_audit_ad.json").exists())
+        for rel in CURRENT_DOCS:
+            body = flat(ROOT / rel)
+            for stale in ("have not been audited", "has not been audited", "not audited by", "audit of the Alzheimer's disease set is not run",
+                          "has no label-stable subset", "until it exists that analysis"):
+                self.assertNotIn(stale, body, f"{rel}: {stale}")
 
     def test_the_fresh_test_is_reported_as_completed_because_its_analysis_is_committed(self):
         """Its blinded analysis is committed (2026-10-12), so the documents must report it as run and none may still say that no result exists
@@ -1134,6 +1164,53 @@ class CommittedFreshRunTests(unittest.TestCase):
         self.assertEqual(cfg["model_sha256"], design["generator_model_sha256"])
         self.assertEqual(cfg["model_file"], env["generator_file"])
         self.assertFalse((RESULTS / "rag2_directness_fresh.jsonl").exists())        # the fresh test has no directness judge
+
+
+class CommittedAuditsTests(unittest.TestCase):
+    """The four label audits (development, held-out, Alzheimer's disease set, a sample of the fresh questions) are consistent with each other and with the
+    analyses that use them: each summary is what ``label_audit.summarize`` computes from the item-level file beside it, its report is what ``to_markdown`` writes,
+    one independent model made all four, and the audited questions are the registered ones (2026-10-13)."""
+
+    SPLITS = ("dev", "confirm", "ad", "fresh")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.summary = {s: json.loads(text(RESULTS / f"label_audit_{s}.json")) for s in cls.SPLITS}
+        cls.rows = {s: load_jsonl(RESULTS / f"label_audit_{s}.jsonl") for s in cls.SPLITS}
+        cls.ids = {s: {r["item_id"] for r in cls.rows[s]} for s in cls.SPLITS}
+
+    def test_every_summary_is_computed_from_the_item_level_file_beside_it(self):
+        for split in self.SPLITS:
+            which = {}
+            for r in self.rows[split]:
+                which.setdefault(r["item_id"], set()).add(r["which"])
+            items = {i: {"kind": "changed" if len(w) == 2 else "unchanged"} for i, w in which.items()}      # the older version is labelled for changed items only
+            computed = label_audit.summarize(self.rows[split], items)
+            self.assertEqual({k: self.summary[split][k] for k in computed}, computed, split)
+            self.assertEqual(text(RESULTS / f"label_audit_{split}.md"), label_audit.to_markdown(split, self.summary[split], self.summary[split]["labeler"]), split)
+
+    def test_one_independent_model_made_all_four_audits(self):
+        self.assertEqual({a["labeler"] for a in self.summary.values()}, {"Qwen2.5-7B-Instruct-Q4_K_M.gguf"})
+        self.assertEqual(len({a["labeler_sha256"] for a in self.summary.values()}), 1)
+        self.assertRegex(self.summary["ad"]["labeler_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual([a["split"] for a in self.summary.values()], list(self.SPLITS))
+
+    def test_the_audited_questions_are_the_registered_ones(self):
+        manifests = {n: json.loads(text(PACKAGE / f"manifest{n}.json")) for n in ("", "_ad", "_fresh")}
+        for split in ("dev", "confirm"):
+            self.assertLessEqual(self.ids[split], set(manifests[""]["splits"][split]), split)
+        self.assertEqual({s: len(self.ids[s]) for s in self.SPLITS}, {"dev": 226, "confirm": 528, "ad": 208, "fresh": 300})
+        self.assertEqual(hashlib.sha256(json.dumps(sorted(self.ids["ad"])).encode()).hexdigest(), manifests["_ad"]["item_ids_sha256"])
+        sample = label_audit.audit_sample([{"item_id": f"FR-{row:05d}"} for row in manifests["_fresh"]["rows"]], 300)
+        self.assertEqual(self.ids["fresh"], {x["item_id"] for x in sample})
+
+    def test_the_analyses_used_these_audits(self):
+        """The label-stable subset of an analysis is the set of questions on which both labellers agree, so its size is the audit's."""
+        for split in ("dev", "confirm", "ad"):
+            analysis = json.loads(text(RESULTS / f"rag2_analysis_{split}.json"))
+            self.assertEqual(analysis["label_stable"]["n"], self.summary[split]["n_stable"], split)
+        described = json.loads(text(RESULTS / "rag2_analysis_fresh.json"))["label_audit"]
+        self.assertEqual(described, {k: self.summary["fresh"][k] for k in described})
 
 
 @unittest.skipUnless(os.environ.get("MEDCHANGE_DIR"), "set MEDCHANGE_DIR to a clone of jvladika/MedChange to rebuild the question sets from the release")

@@ -19,7 +19,7 @@ stage 1 (recency-aware admission) and stage 2 (an evidence-synthesis layer), whi
 | Held-out run, 528 questions | started 2026-10-06 after the freeze, completed once on 2026-10-08 (results: `evaluation.md` §6) |
 | Baseline ablations R2-RQ, R2-BR, R2-NF (development split, optional) | implemented and tested, **not run**; no result exists |
 | Alzheimer's disease and related dementias run, 208 questions | completed once, 2026-10-08 to 2026-10-09 (about 22.7 h with the judge; results: `evaluation.md` §6.6) |
-| Added comparisons (all eight released-answer models, constant-answer baseline, label audit of the Alzheimer's disease set) | added 2026-10-09 (§8); the label audit of the Alzheimer's disease set is not run |
+| Added comparisons (all eight released-answer models, constant-answer baseline, label audit of the Alzheimer's disease set) | added 2026-10-09 (§8); the first two were scored the same day, the label audit was run on 2026-10-13 (agreement 81.2%, kappa 0.7134; `evaluation.md` §6.6) |
 | Alzheimer's-specific question set (AD-KQA) | specified 2026-10-09 (§8); the development build failed gate 1 and the construction was stopped the same day (§8, close-out); no test question was drafted and no system was run on it |
 | More Alzheimer's disease data (new Cochrane reviews; other neurodegenerative questions) | counted 2026-10-10 (§8): 7 usable new reviews (rule: 30 to build) and 25 questions on other neurodegenerative diseases; nothing was built |
 | Pre-registered test on fresh questions, 850 questions (§10) | completed once, 2026-10-10 to 2026-10-12 (about 66 hours on the clock); the question list was committed and pushed before any answer and the label audit of a 300-question sample was done before the run; the hypothesis is **not confirmed** (macro-F1, R2V − R2 = −0.002, 95% interval −0.027 to +0.023: no evidence); results: `evaluation.md` §6.9 |
@@ -247,7 +247,8 @@ scored on the held-out and dementia questions, not only the five first chosen. (
 the most frequent gold class) is reported as a no-model reference. (3) The 208 dementia labels are audited with the
 same independent judge as the main benchmark's (`label_audit --split ad`). All three are descriptive context. They are
 included whatever they score; nothing is added, removed or tuned according to a result, and none of them changes how
-the primary difference is read.
+the primary difference is read. *Outcome of (3), 2026-10-13.* The independent model reproduces 81.2% of the 208 labels (kappa 0.7134); 169 are label-stable, and on them R2V − R2 = +6.5 pp
+(`evaluation.md` §6.6).
 
 **2026-10-09, an Alzheimer's-specific question set (AD-KQA): specified, built to a gate, stopped (code archived; this is the condensed record).**
 After the held-out and dementia results of every system were known, the researcher re-declared the primary evaluation as an Alzheimer's-specific

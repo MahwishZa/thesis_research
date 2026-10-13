@@ -36,7 +36,7 @@ higher on general medicine and 3.4 points higher on the Alzheimer's disease set,
 the gaps cannot be told apart from chance: they are **positive but not confirmed**. With these numbers of questions only gains of
 roughly 4 to 6 points (general medicine) or 6 to 10 points (Alzheimer's disease set) could be confirmed. The results do not show that
 the extra check improves accuracy, and the Alzheimer's-named subgroup (48 questions) is too small to describe Alzheimer's disease on its own. The reference answers were produced by a
-language model; a second, independent model reproduces 81.4% of them on the general-medicine questions.
+language model; a second, independent model reproduces 81.4% of them on the general-medicine questions and 81.2% on the Alzheimer's disease set.
 
 **The pre-registered test.** The last test asked the question again on 850 new general-medicine questions, with a measure that gives each of the three verdicts the
 same weight (macro-F1). The extra check did not change it: the proposed check minus the baseline was −0.002 (95% range −0.027 to +0.023), which counts as **no evidence**
