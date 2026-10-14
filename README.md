@@ -18,9 +18,9 @@ This thesis studies retrieval-augmented generation (RAG), in which a language mo
 ├── README.md
 ├── pyproject.toml   packaging; dependencies are added when a step needs them
 ├── docs/            research documentation; docs/log.md is the dated research log
-├── src/medrag/      the pipeline parts, added one step at a time
+├── src/             empty for now; the pipeline parts will be added here as folders, one step at a time
 ├── experiments/     one numbered folder per experiment (see experiments/README.md)
-├── tests/           automatic checks for src/medrag/
+├── tests/           automatic checks
 └── _archive/        the previous implementation and its experiments (reference only)
 ```
 
