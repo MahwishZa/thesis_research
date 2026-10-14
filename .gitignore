@@ -53,3 +53,10 @@ htmlcov/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
+
+# New pipeline: large or machine-local outputs inside an experiment folder, and local environments.
+experiments/**/outputs/
+experiments/**/data/
+local/
+.venv/
+venv/

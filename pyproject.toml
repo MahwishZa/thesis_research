@@ -1,0 +1,23 @@
+# Packaging for the rebuilt pipeline. Install with `pip install -e .` from the repository root.
+# Dependencies are added here only when a step of the pipeline needs them.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thesis-research"
+version = "0.0.1"
+description = "Retrieval-augmented medical question answering for Alzheimer's disease and related dementias, rebuilt step by step."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Keep the previous implementation in _archive/ out of test discovery and linting.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["_archive"]
+
+[tool.ruff]
+extend-exclude = ["_archive"]
