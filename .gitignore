@@ -23,7 +23,12 @@ ram_monitor.csv
 experiments/results/index/
 experiments/results/index_pilot_reduced_scope/
 /corpus/
-_archive/
+# Local-only artefacts that may sit inside the archive on a computer that built them.
+_archive/**/data/
+_archive/**/labels/
+_archive/**/checkpoints/
+_archive/**/index/
+_archive/**/.textbook_index_cache/
 
 # MedChange-derived questions, fetched PubMed abstracts, frozen candidate pools and raw
 # working outputs. The MedChange release states no licence and abstracts are publisher
