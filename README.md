@@ -16,9 +16,9 @@ This thesis studies retrieval-augmented generation (RAG), in which a language mo
 ```
 .
 ├── README.md
-├── pyproject.toml   packaging; dependencies are added when a step needs them
+├── pyproject.toml   packaging; the packages for the model and the encoder are optional extras
 ├── docs/            research documentation; docs/log.md is the dated research log
-├── src/             empty for now; the pipeline parts will be added here as folders, one step at a time
+├── src/             the pipeline parts, one folder each: rationale_query/ is Part 1 of RAG²; the others follow, one step at a time
 ├── experiments/     one numbered folder per experiment (see experiments/README.md)
 ├── tests/           automatic checks
 └── _archive/        the previous implementation and its experiments (reference only)
@@ -33,4 +33,11 @@ pip install -e .
 python -m unittest discover -s tests -t .
 ```
 
-The pipeline itself is being rebuilt step by step; there is nothing else to run yet.
+The tests that run the real llama.cpp on a tiny stand-in model need one more package (`pip install -e ".[test]"`); without
+it those tests are skipped and say so.
+
+Part 1 of RAG² is built: a language model writes a step-by-step rationale for a question, and the rationale alone becomes the
+search query. It needs the model files in `models/` and the packages `llama-cpp-python`, `numpy`, `torch` and `transformers`
+(`pip install -e ".[rationale]"`). The commands, the settings and what the comparison of writers shows are in
+[`experiments/01_rationale_writers/NOTES.md`](experiments/01_rationale_writers/NOTES.md); `python -m rationale_query --help` lists
+the tool's commands. Parts 2 and 3 are not built yet.
