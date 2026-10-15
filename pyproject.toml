@@ -1,5 +1,5 @@
 # Packaging for the rebuilt pipeline. Install with `pip install -e .` from the repository root.
-# Dependencies are added here only when a step of the pipeline needs them.
+# Dependencies are added here only when a step of the pipeline needs them; until then they are optional extras.
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -10,6 +10,13 @@ version = "0.0.1"
 description = "Retrieval-augmented medical question answering for Alzheimer's disease and related dementias, rebuilt step by step."
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+# Part 1 (src/rationale_query): the model that writes the rationales and the encoder that turns them into queries.
+# Checked together: Python 3.12, llama-cpp-python 0.3.35, numpy 1.26.4, torch 2.4.1, transformers 4.51.3.
+rationale = ["llama-cpp-python>=0.3.35", "numpy>=1.26", "torch>=2.4", "transformers>=4.51"]
+# The tests that run the real llama.cpp on a tiny synthetic model write its file with the gguf package (0.19.0 was used).
+test = ["gguf"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

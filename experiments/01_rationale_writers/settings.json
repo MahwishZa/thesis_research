@@ -1,0 +1,19 @@
+{
+  "about": "The language models that write the rationales in experiment 01. Every other generation setting is a default of rationale_query.generator.GenerationSettings and is recorded in config.json of each output folder.",
+  "writers": [
+    {
+      "name": "llama3-8b-instruct-q4km",
+      "model_file": "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+      "sha256": "8ba9baf3a7345f705a11878397500fb25174034f0fd784e83aa4a96aaa47735f",
+      "chat_format": "llama-3",
+      "role": "baseline writer: the model of the RAG2 paper, with 4-bit weights"
+    },
+    {
+      "name": "qwen25-7b-instruct-q4km",
+      "model_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+      "sha256": "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423",
+      "chat_format": "gguf",
+      "role": "second writer: another instruction-tuned model of similar size, with the chat template stored in its file"
+    }
+  ]
+}

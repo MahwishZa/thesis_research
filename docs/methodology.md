@@ -2,8 +2,9 @@
 
 Status: **specification of the RAG² baseline and of its Alzheimer's-scoped adaptation.** Revised 2026-10-15 after the researcher
 approved the direction of the evidence report (restore the baseline faithfully first, then test one extension). Supervisor
-approval (A2) is pending. Nothing is built yet. The requirements below are written as executable acceptance tests in
-`tests/test_spec_*.py`; each test skips until the part it checks exists (section 11).
+approval (A2) is pending. Part 1 (rationale-based query formulation) is built in `src/rationale_query/`; Parts 2 and 3 are
+not. The requirements below are written as executable acceptance tests in `tests/test_spec_*.py`; each test skips until the
+part it checks exists (section 11).
 
 The evaluation dataset is **not decided here**; its approval is a separate step.
 
@@ -40,11 +41,24 @@ All other models are used as released.
 | Query used for search | The rationale alone. The initial question is **not** added: both together exceed the retriever's maximum length and gave worse results in the authors' tests. | Paper p.4–5 |
 | Who writes it | The same language model that answers (Llama-3-8B-Instruct in the main experiments). | Paper p.5 |
 | Query encoder | `ncbi/MedCPT-Query-Encoder`, first-token vector, **`max_length=512`**. (MedCPT's own example uses 64 for short queries.) | Code `retriever/query_encode.py`; MedCPT README |
-| Sentence separators | The code can insert `[SEP]` between sentences before encoding; the flag defaults to off in RAG² and on in Self-BioRAG. Whether the corpora were embedded with separators is not stated. | Code; **[Open]** |
+| Sentence separators | `main.py` inserts `[SEP]` only into the instruction-set queries, and only when `--use_spacy` is given; a rationale query is encoded as written. Whether the corpora were embedded with separators is not stated. This implementation never inserts one. | Code; **[Open]** for the corpora |
 | Decoding | Greedy, temperature 0, served with vLLM; no quantisation described. | Paper p.13 (A.3) |
 | Maximum rationale length | Not stated. | **[Open]** |
 | Answer-generation prompt | Not published; the README step 4 is prose only. | Code README; **[Open]** |
 | Empty rationale | A failed rationale is an error and is reported as such; it is never silently replaced by the question, because that would change the method. | **[Rule]** |
+
+How Part 1 is built here (`src/rationale_query/`; the experiment that runs it is `experiments/01_rationale_writers/`):
+
+| Item | Choice | Status |
+|---|---|---|
+| Generator | Llama-3-8B-Instruct as a 4-bit GGUF file, run with llama.cpp through llama-cpp-python (0.3.35 was used) | Declared deviation (allowed if declared, section 8) |
+| Prompt | The paper's text with one line break before "Here is the question:", sent as one user turn with no system prompt, in the Llama-3-Instruct chat format. This code writes that format itself and hands llama.cpp the token list, so the start-of-text token appears once; the template stored in the model file is rendered and compared, and a file whose template differs is refused. | **[Open]** line break and system prompt; **[Rule]** the rest |
+| Decoding | Every sampling value is written out (temperature 0, top-k 1, neutral penalties) because the library's own defaults are not greedy; the cache is emptied before every question | **[Rule]** |
+| Rationale length | At most 512 new tokens (the encoder reads at most 512 tokens); a rationale cut at the limit is flagged | **[Decision]**; the paper is silent |
+| Context | 8192 tokens, the window of Llama-3; a prompt that does not fit is an error and is never shortened | **[Rule]** |
+| Encoder | One query at a time, first-token vector, 512 tokens, 32-bit, not normalised; the token count and whether the text was cut are recorded | **[Code]** |
+| Records | One line per question, written and flushed at once; the settings that can change a rationale are recorded and bind the output folder, so a run with other settings or a question whose text changed is refused; a failure is recorded, never hidden, and five failures in a row stop the run | **[Rule]** |
+| Other writers | Any instruction-tuned model in GGUF form can write the rationales with the chat template stored in its file; the writers compared are listed in `experiments/01_rationale_writers/settings.json` | **[Decision]** |
 
 ## 4. Part 2: balanced retrieval
 
@@ -165,11 +179,13 @@ capacity and ethics. The boundary is checked by the share of development questio
 
 Every snippet carries: corpus, document key, chunk index, text, source date, licence group, corpus version. Only sources whose
 licence a script can read are included; anything else is left out and stated as a limitation. Licences were **not** verified.
+The authors' own downloads (`CPG_128`, `Textbook_128`, `PMC_128`, `PubMed_128` of Self-BioRAG) were not reachable from the
+researcher's laptop on 2026-10-15.
 
 | Corpus | Source and keys | Version and maintenance | Counts on file |
 |---|---|---|---|
 | PubMed | Title, abstract, date, MeSH and publication types for records matching the archived query bank (MeSH and title/abstract terms), English, with an abstract, retractions removed. Keys: PMID, DOI. Obtained once through the E-utilities service or from NLM's baseline and update files. | A named snapshot; a new version only on purpose. The core query grows by about 17,000 to 20,000 records a year. | 255,907 records on 2026-09-13 (archived log) |
-| PMC | Open-access full text for the PubMed set (PMC Open Access subset). Keys: PMCID, PMID, DOI; licence group kept per article; only the latest version of an article. | Add open-access articles whose PMIDs join the PubMed set; keep the version table. | 114,256 articles, 4,377,041 chunks of 256 tokens (32-token overlap) and a 12.5 GB vector file on the researcher's laptop |
+| PMC | Open-access full text for the PubMed set (PMC Open Access subset). Keys: PMCID, PMID, DOI; licence group kept per article; only the latest version of an article. | Add open-access articles whose PMIDs join the PubMed set; keep the version table. | 114,256 articles, 4,377,041 chunks of 256 tokens (32-token overlap) and a 12.5 GB vector file on the researcher's laptop. The stored vectors have unit length (norms 0.9999998 to 1.0000001, checked 2026-10-15) while the authors' retriever uses the unnormalised MedCPT vectors, so inner-product fidelity needs re-embedding (D8). |
 | Guidelines | Dementia and neighbouring guidance, current versions only; candidate sources: the public Meditron guideline set and publishers' own files. Keys: DOI or URL with version, supersedes, superseded by. | Check yearly. | none yet; the first design's registry was empty |
 | Textbooks | Dementia and neighbouring chapters; edition recorded. Keys: edition, chapter, chunk. | Static editions. | none yet; the first design's registry was empty |
 
@@ -270,7 +286,8 @@ Checklist (pass, fail or declared; no score):
 3. What "5%" means, how many snippets per question were labelled, and which.
 4. Whether one filter was trained per backbone model.
 5. The Flan-T5 size, and whether a checkpoint still exists.
-6. The answer-generation prompt and the maximum rationale length.
+6. The answer-generation prompt, the maximum rationale length, and whether a system prompt or one or two line breaks before
+   "Here is the question:" were used.
 7. PubMed grouping at retrieval, whether sentence separators were used when embedding, and whether the re-ranker scored the
    question or the rationale.
 8. Which MedMCQA split is reported (Table 1 lists 6,150 test questions; Self-BioRAG's test file has 4,183).
@@ -283,8 +300,8 @@ dataset (section 2) and the input format of the filter.
 
 The requirements above that can be checked without models are written as tests in `tests/test_spec_*.py`. They fix behaviour, not
 code: each test calls a function that `tests/spec_targets.py` maps to a module under `src/`; that file also lists the arguments of
-every function. The names below are provisional. When one changes, change `tests/spec_targets.py` and this table together; a
-guard test fails if they differ.
+every function. The names of the parts that are not built yet are provisional; those of `rationale_query` are final. When one
+changes, change `tests/spec_targets.py` and this table together; a guard test fails if they differ.
 
 | Requirement | Module and function | Test file |
 |---|---|---|
@@ -298,6 +315,17 @@ guard test fails if they differ.
 | Share per corpus and cross-corpus duplicate rate of a final list | `balanced_retrieval.diagnostics`: `corpus_share`, `duplicate_rate` | `test_spec_retrieval.py` |
 | Split by question (independent of row order, process and other questions); disjoint roles | `data_roles.splits`: `split_by_question`, `assert_disjoint` | `test_spec_data_roles.py` |
 | The tests themselves: the target map, the skip rule and the link to this document | none | `test_spec_guard.py` |
+
+**Tests of the built part.** `src/rationale_query` has its own tests, which check the code rather than the requirements:
+`test_rationale_generator.py` (prompt tokens, greedy settings, limits, template checks, with a stand-in for llama.cpp),
+`test_rationale_prompt.py` (the exact layout of the prompt, which the acceptance tests squeeze), `test_rationale_store.py`
+and `test_rationale_run.py` (records, resuming, refusals), `test_rationale_encoder.py`, `test_rationale_diagnostics.py`,
+`test_rationale_cli.py`, `test_rationale_study.py` (the settings and runner of the experiment) and `test_rationale_layout.py`
+(every module has a docstring and a test, importing the commands loads no heavy package, and this section names every test
+file). `test_rationale_integration.py` runs the real llama.cpp and a real torch encoder on tiny synthetic models written by
+`tests/tiny_models.py`; it needs llama-cpp-python and gguf, or torch and transformers, and skips a class whose packages are
+missing. `test_rationale_models.py` checks the real Llama-3 file and `ncbi/MedCPT-Query-Encoder`; it runs only when
+`RATIONALE_LLAMA3_GGUF` or `RATIONALE_MEDCPT` is set (see `experiments/01_rationale_writers/NOTES.md`).
 
 **Skipping.** A test is skipped only while its part has not been started, that is, while no Python file exists under
 `src/<package>/` for its module. Once the folder holds code, a missing module, a missing function or a failing check is an error,
@@ -316,7 +344,7 @@ irrelevant passage, with the rule and sample size fixed in advance.
 
 | Part | Faithful (F), adapted (A) or substitute (S) | State |
 |---|---|---|
-| 1 Rationale query | to be set when built | not built |
+| 1 Rationale query | **F**, with the allowed deviation of a 4-bit generator and two open items (the line break before the question; the length limit) | built; the tests above pass, including the real llama.cpp and a real encoder on tiny stand-in models; the checks on the real Llama-3 file and MedCPT are written and wait for the researcher's laptop |
 | 2 Balanced retrieval | to be set when built | not built |
 | 3 Rationale-guided filter | to be set when built | not built |
 
@@ -325,7 +353,7 @@ A part is called "RAG²" only if it is F, or A with its deviation written down. 
 Acceptance tests (section 11): written for the three parts and for the data roles. Before they were committed they were run
 against a throwaway reference implementation, which they accept, and against planted faults (a wrong tie rule, a dropped discard
 branch, a changed order, a removed check, a split that depends on row order), which they reject. That implementation is not part
-of the repository, so every test skips until its part is started.
+of the repository. The tests of Part 1 now run against `src/rationale_query` and pass; the others skip until their part is started.
 
 ## Revision note (2026-10-15)
 
@@ -337,3 +365,6 @@ acceptance-test map added; decisions D7 to D10 added.
 Added with the acceptance tests: the rules for pooling (no borrowing; unknown corpus or failed search is an error), for the label
 inputs, for the document key and for the stability of the split; section 11 rewritten (skip rule, strict run, checks outside the
 unit tests); the tests validated as described in section 12.
+
+Part 1 built (2026-10-15): the implementation table in section 3, the unit-level facts in section 7.3 from the researcher's own
+checks, the `[SEP]` row made precise, the tests of the built part in section 11 and the state of Part 1 in section 12.
