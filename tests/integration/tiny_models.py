@@ -15,7 +15,7 @@ from __future__ import annotations
 import itertools
 from pathlib import Path
 
-from tests.rationale_support import LLAMA3_JINJA
+from tests.support import LLAMA3_JINJA
 
 ANSWER_TEXT = " The answer is B."
 ANSWER_TOKENS = 5  # " The", " answer", " is", " B", "."

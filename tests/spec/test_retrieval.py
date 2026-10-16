@@ -1,7 +1,7 @@
 """Acceptance tests for docs/methodology.md sections 4 and 7.4 (balanced retrieval). They skip until src/balanced_retrieval exists."""
 
 
-from tests.spec.spec_targets import CORPUS_ORDER, SpecTestCase, resolve
+from tests.spec.targets import CORPUS_ORDER, SpecTestCase, resolve
 
 NAN = float("nan")
 SCORES = {"textbooks:0": 9.0, "pmc:2": 8.0, "pubmed:1": 7.0}  # relevance scores in the wiring tests; every other candidate scores 0

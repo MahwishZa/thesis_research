@@ -16,7 +16,7 @@ from rationale_query.store import (
     read_questions,
     write_atomic,
 )
-from tests.rationale_support import QUESTIONS, TempDirTestCase, question_lines
+from tests.support import QUESTIONS, TempDirTestCase, question_lines
 
 
 def ok(question_id, text="a rationale", question="a question", **fields):

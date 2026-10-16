@@ -52,7 +52,7 @@ SAMPLING = {
 #: Fields of ``config`` that can change what a rationale says. A folder whose recorded values differ is refused.
 #: The thread counts and the seed are recorded but not listed: greedy decoding does not use the seed, and the number of
 #: threads is not expected to change the numbers (llama.cpp gives each output value to one thread). The real-file check
-#: in tests/integration/test_rationale_models.py compares one thread with the default on the real model.
+#: in tests/integration/test_real_models.py compares one thread with the default on the real model.
 RESULT_RELEVANT = (
     "model_sha256",
     "chat_format",

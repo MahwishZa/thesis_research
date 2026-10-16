@@ -22,6 +22,11 @@ class RepositoryFolderTests(unittest.TestCase):
             self.assertTrue((ROOT / name).is_dir(), name)
 
 
+def part1_tests():
+    """The test files of the built part: every test file in the unit, integration and experiments folders."""
+    return sorted(path for folder in ("unit", "integration", "experiments") for path in (TESTS / folder).glob("test_*.py"))
+
+
 class PackageLayoutTests(unittest.TestCase):
     def test_every_module_has_a_docstring(self):
         for path in PACKAGE.glob("*.py"):
@@ -35,7 +40,7 @@ class PackageLayoutTests(unittest.TestCase):
                 self.assertRegex(doc, rf"(?m)^\s+{name}\s{{2,}}\S")
 
     def test_every_module_is_named_by_a_test(self):
-        tests = "".join(path.read_text(encoding="utf-8") for path in TESTS.rglob("test_rationale_*.py"))
+        tests = "".join(path.read_text(encoding="utf-8") for path in part1_tests())
         for name in modules():
             with self.subTest(module=name):
                 self.assertRegex(tests, rf"rationale_query(\.| import .*\b){name}\b")
@@ -45,7 +50,7 @@ class PackageLayoutTests(unittest.TestCase):
             "import sys\n"
             f"sys.path.insert(0, {str(SRC)!r})\n"
             "import rationale_query, rationale_query.cli, rationale_query.generator, rationale_query.store\n"
-            "import rationale_query.run, rationale_query.diagnostics, rationale_query.prompt, rationale_query.query\n"
+            "import rationale_query.batch, rationale_query.diagnostics, rationale_query.prompt, rationale_query.search_text\n"
             "print(' '.join(name for name in ('numpy', 'torch', 'transformers', 'llama_cpp') if name in sys.modules))\n"
         )
         done = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, check=False)
@@ -56,7 +61,7 @@ class PackageLayoutTests(unittest.TestCase):
 class SpecificationTests(unittest.TestCase):
     def test_the_specification_names_every_test_file_of_the_built_part(self):
         text = METHODOLOGY.read_text(encoding="utf-8")
-        for path in sorted(TESTS.rglob("test_rationale_*.py")):
+        for path in part1_tests():
             with self.subTest(file=path.name):
                 self.assertIn(path.name, text)
 

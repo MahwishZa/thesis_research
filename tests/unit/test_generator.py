@@ -27,7 +27,7 @@ from rationale_query.generator import (
     text_sha256,
 )
 from rationale_query.prompt import RATIONALE_PROMPT, build_rationale_prompt
-from tests.rationale_support import (
+from tests.support import (
     LLAMA3_JINJA,
     FakeLlama,
     TempDirTestCase,

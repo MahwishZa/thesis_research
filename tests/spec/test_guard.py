@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest import mock
 
 from tests import ROOT
-from tests.spec import spec_targets
-from tests.spec.spec_targets import (
+from tests.spec import targets
+from tests.spec.targets import (
     FILTER_INSTRUCTION,
     RATIONALE_PROMPT,
     TARGETS,
@@ -53,7 +53,7 @@ class TargetMapTests(unittest.TestCase):
 
     def test_every_target_is_used_by_a_test_and_every_use_is_a_target(self):
         used = set()
-        for path in Path(__file__).parent.glob("test_spec_*.py"):
+        for path in Path(__file__).parent.glob("test_*.py"):
             if path.name == Path(__file__).name:
                 continue
             source = path.read_text(encoding="utf-8")
@@ -174,20 +174,20 @@ class SpecTestCaseTests(unittest.TestCase):
         return unittest.TextTestRunner(stream=io.StringIO()).run(suite), ran
 
     def test_an_unimplemented_target_skips_the_test_before_its_body_runs(self):
-        with mock.patch.object(spec_targets, "resolve", side_effect=unittest.SkipTest("not implemented yet")):
+        with mock.patch.object(targets, "resolve", side_effect=unittest.SkipTest("not implemented yet")):
             result, ran = self.run_probe()
         self.assertEqual(len(result.skipped), 1)
         self.assertEqual(ran, [])
 
     def test_a_failing_resolution_is_an_error_not_a_skip(self):
-        with mock.patch.object(spec_targets, "resolve", side_effect=AssertionError("module missing")):
+        with mock.patch.object(targets, "resolve", side_effect=AssertionError("module missing")):
             result, ran = self.run_probe()
         self.assertEqual(len(result.skipped), 0)
         self.assertEqual(len(result.failures) + len(result.errors), 1)
         self.assertEqual(ran, [])
 
     def test_resolved_targets_let_the_body_run(self):
-        with mock.patch.object(spec_targets, "resolve", return_value=len) as patched:
+        with mock.patch.object(targets, "resolve", return_value=len) as patched:
             result, ran = self.run_probe()
         self.assertTrue(result.wasSuccessful())
         self.assertEqual(ran, [True])

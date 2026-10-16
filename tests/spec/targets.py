@@ -1,6 +1,6 @@
 """Where each testable requirement of docs/methodology.md lives in the code, and how a test finds it.
 
-The acceptance tests (test_spec_*.py) fix behaviour, not code. Each asks `resolve(name)` for the function
+The acceptance tests (test_*.py) fix behaviour, not code. Each asks `resolve(name)` for the function
 that implements a requirement. This file is the only place that maps a name to a module under src/. When an
 interface changes while the code is written, change it here and in section 11 of docs/methodology.md.
 
@@ -22,7 +22,7 @@ Contract (plain Python values only, no models, no third-party packages; names af
     keep_helpful(items, decisions) -> list
   rationale_query.prompt
     build_rationale_prompt(question) -> str
-  rationale_query.query
+  rationale_query.search_text
     dense_query(rationale) -> str
     rerank_query(*, question, rationale, against="question") -> str      (against is "question" or "rationale")
   balanced_retrieval.pool
@@ -75,8 +75,8 @@ TARGETS = {
     "judge_snippets": ("rationale_filter.inference", "judge_snippets"),
     "keep_helpful": ("rationale_filter.inference", "keep_helpful"),
     "build_rationale_prompt": ("rationale_query.prompt", "build_rationale_prompt"),
-    "dense_query": ("rationale_query.query", "dense_query"),
-    "rerank_query": ("rationale_query.query", "rerank_query"),
+    "dense_query": ("rationale_query.search_text", "dense_query"),
+    "rerank_query": ("rationale_query.search_text", "rerank_query"),
     "pool_candidates": ("balanced_retrieval.pool", "pool_candidates"),
     "rerank": ("balanced_retrieval.pool", "rerank"),
     "balanced_retrieve": ("balanced_retrieval.retrieve", "balanced_retrieve"),

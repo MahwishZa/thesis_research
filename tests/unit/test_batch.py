@@ -1,16 +1,16 @@
-"""Tests of src/rationale_query/run.py: the loop that writes one record per question and can be started again."""
+"""Tests of src/rationale_query/batch.py: the loop that writes one record per question and can be started again."""
 
 import itertools
 import unittest
 
-from rationale_query.generator import RESULT_RELEVANT, ContextOverflowError
-from rationale_query.prompt import build_rationale_prompt
-from rationale_query.run import (
+from rationale_query.batch import (
     MAX_CONSECUTIVE_ERRORS,
     RunAborted,
     generate_rationales,
     plan,
 )
+from rationale_query.generator import RESULT_RELEVANT, ContextOverflowError
+from rationale_query.prompt import build_rationale_prompt
 from rationale_query.store import (
     ConfigMismatch,
     Question,
@@ -19,7 +19,7 @@ from rationale_query.store import (
     RationaleStore,
     question_hash,
 )
-from tests.rationale_support import (
+from tests.support import (
     QUESTIONS,
     ScriptedGenerator,
     TempDirTestCase,

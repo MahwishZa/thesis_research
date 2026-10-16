@@ -1,16 +1,16 @@
-"""Exact-text tests of src/rationale_query/prompt.py and query.py.
+"""Exact-text tests of src/rationale_query/prompt.py and search_text.py.
 
-The acceptance tests (test_spec_query.py) compare the prompt with white space squeezed, because the paper's PDF does not
+The acceptance tests (test_query.py) compare the prompt with white space squeezed, because the paper's PDF does not
 show where its line break falls. These tests fix the layout this code actually sends, so a change to it is deliberate.
 """
 
 import unittest
 
 from rationale_query.prompt import RATIONALE_PROMPT, build_rationale_prompt
-from rationale_query.query import dense_query, rerank_query
-from tests.spec.spec_targets import RATIONALE_PROMPT as PAPERS_PROMPT
+from rationale_query.search_text import dense_query, rerank_query
+from tests.spec.targets import RATIONALE_PROMPT as PAPERS_PROMPT
 
-# The words of the paper (kept once, in tests/spec/spec_targets.py, with the layout squeezed out); the layout is pinned below.
+# The words of the paper (kept once, in tests/spec/targets.py, with the layout squeezed out); the layout is pinned below.
 PAPER_TEXT = PAPERS_PROMPT.removesuffix(" Here is the question:")
 
 

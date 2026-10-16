@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from rationale_query.batch import generate_rationales
 from rationale_query.generator import (
     ContextOverflowError,
     GenerationError,
@@ -27,7 +28,6 @@ from rationale_query.generator import (
     llama3_prompt_tokens,
 )
 from rationale_query.prompt import build_rationale_prompt
-from rationale_query.run import generate_rationales
 from rationale_query.store import RationaleStore
 from tests.integration.tiny_models import (
     ANSWER_TEXT,
@@ -35,7 +35,7 @@ from tests.integration.tiny_models import (
     write_tiny_bert,
     write_tiny_gguf,
 )
-from tests.rationale_support import (
+from tests.support import (
     QUESTIONS,
     TempDirTestCase,
     load_study_runner,
@@ -408,7 +408,7 @@ class TorchEncoderIntegrationTests(unittest.TestCase):
         self.np.testing.assert_allclose(on_gpu, on_cpu, atol=1e-3)
 
     def test_the_command_encodes_the_rationales_of_a_folder(self):
-        from tests.rationale_support import ScriptedGenerator, ok
+        from tests.support import ScriptedGenerator, ok
 
         with tempfile.TemporaryDirectory(prefix="rq cli ", ignore_cleanup_errors=True) as name:
             base = Path(name)

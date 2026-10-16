@@ -21,7 +21,7 @@ from rationale_query.store import (
     read_questions,
 )
 from tests import SRC
-from tests.rationale_support import (
+from tests.support import (
     QUESTIONS,
     FakeModel,
     FakeTokenizer,

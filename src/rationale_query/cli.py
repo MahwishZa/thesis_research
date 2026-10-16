@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TextIO
 
+from .batch import RunAborted, generate_rationales, plan
 from .diagnostics import agreement, format_table, provenance, summarise
 from .generator import (
     CHAT_FORMATS,
@@ -33,8 +34,7 @@ from .generator import (
     text_sha256,
 )
 from .prompt import build_rationale_prompt
-from .query import dense_query
-from .run import RunAborted, generate_rationales, plan
+from .search_text import dense_query
 from .store import (
     CONFIG_FILE,
     RATIONALES_FILE,

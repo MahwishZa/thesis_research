@@ -4,10 +4,10 @@ The language model writes a step-by-step rationale for the question. The rationa
 is the query that the MedCPT query encoder turns into a vector for the search in Part 2.
 
     prompt       the paper's prompt text
-    query        which text is searched with and which text the re-ranker reads
+    search_text  which text is searched with and which text the re-ranker reads
     generator    the language model behind one interface (llama.cpp), with every setting recorded
     store        questions in, one resumable record per question out
-    run          the loop that turns questions into rationale records
+    batch        the loop that turns questions into rationale records
     encoder      the MedCPT query encoder (first-token vector, 512 tokens)
     diagnostics  what the rationales look like: length, truncation, final option
     cli          python -m rationale_query ...

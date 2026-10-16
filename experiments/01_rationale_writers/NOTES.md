@@ -117,7 +117,7 @@ same code on the real files; run them once on the laptop and keep the output:
 ```powershell
 $env:RATIONALE_LLAMA3_GGUF = "models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
 $env:RATIONALE_MEDCPT = "1"
-python -m unittest tests.integration.test_rationale_models -v
+python -m unittest tests.integration.test_real_models -v
 ```
 
 The first run downloads the encoder (about 440 MB), and the model file is hashed and loaded more than once, so allow
@@ -137,4 +137,4 @@ for example an 8-bit Llama-3 file, answers the question how much the 4-bit weigh
 - The paper does not give a limit for the rationale length or a system prompt. The values above are choices, recorded
   in `config.json` of every folder.
 - The authors' retriever gives the cross-encoder the rationale where the paper says the question; that belongs to
-  Part 2 and is handled there (`rerank_query` in `src/rationale_query/query.py` offers both).
+  Part 2 and is handled there (`rerank_query` in `src/rationale_query/search_text.py` offers both).

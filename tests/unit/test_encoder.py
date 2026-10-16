@@ -5,7 +5,7 @@ import types
 import unittest
 from unittest import mock
 
-from tests.rationale_support import FakeModel, FakeTokenizer, RecordingNoGrad, np
+from tests.support import FakeModel, FakeTokenizer, RecordingNoGrad, np
 
 try:
     from rationale_query.encoder import ENCODER_NAME, MAX_LENGTH, POOLING, QueryEncoder
@@ -124,7 +124,7 @@ class QueryEncoderTests(unittest.TestCase):
 
 @unittest.skipIf(QueryEncoder is None, "numpy is not installed")
 class FromPretrainedTests(unittest.TestCase):
-    """The loading code with stand-ins for torch and transformers; the real ones are used in test_rationale_integration."""
+    """The loading code with stand-ins for torch and transformers; the real ones are used in test_real_libraries."""
 
     def load(self, *, cuda, commit="0123456789abcdef0123456789abcdef01234567", **kwargs):
         calls, made = [], []

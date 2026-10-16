@@ -4,7 +4,7 @@ In PowerShell, from the repository folder (the paths are examples):
 
     $env:RATIONALE_LLAMA3_GGUF = "C:\\Users\\mahwi\\...\\models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
     $env:RATIONALE_MEDCPT = "1"
-    python -m unittest tests.integration.test_rationale_models -v
+    python -m unittest tests.integration.test_real_models -v
 
 ``RATIONALE_MEDCPT=1`` loads ncbi/MedCPT-Query-Encoder (downloaded on first use, then read from the Hugging Face cache).
 Any other value is taken as another encoder: a hub name, or a folder, which is then loaded without the network.
@@ -22,7 +22,7 @@ from rationale_query.generator import (
     llama3_prompt_tokens,
 )
 from rationale_query.prompt import build_rationale_prompt
-from tests.rationale_support import pinned_sha256
+from tests.support import pinned_sha256
 
 LLAMA3_FILE = os.environ.get("RATIONALE_LLAMA3_GGUF", "")
 ENCODER = os.environ.get("RATIONALE_MEDCPT", "")

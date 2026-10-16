@@ -7,7 +7,7 @@ import json
 import unittest
 
 from tests import ROOT
-from tests.rationale_support import (
+from tests.support import (
     STUDY_FOLDER,
     TempDirTestCase,
     load_study_runner,
