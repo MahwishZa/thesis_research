@@ -1,4 +1,4 @@
-"""Tests of src/rationale_query against the real libraries, using tiny synthetic models (tests/tiny_models.py).
+"""Tests of src/rationale_query against the real libraries, using tiny synthetic models (tests/integration/tiny_models.py).
 
 The llama.cpp tests need llama-cpp-python, gguf and numpy; the encoder tests need torch, transformers and numpy. A
 class skips, with the reason, when its packages are missing. Nothing is downloaded and no real model is needed.
@@ -29,18 +29,18 @@ from rationale_query.generator import (
 from rationale_query.prompt import build_rationale_prompt
 from rationale_query.run import generate_rationales
 from rationale_query.store import RationaleStore
+from tests.integration.tiny_models import (
+    ANSWER_TEXT,
+    ANSWER_TOKENS,
+    write_tiny_bert,
+    write_tiny_gguf,
+)
 from tests.rationale_support import (
     QUESTIONS,
     TempDirTestCase,
     load_study_runner,
     question_lines,
     run_cli,
-)
-from tests.tiny_models import (
-    ANSWER_TEXT,
-    ANSWER_TOKENS,
-    write_tiny_bert,
-    write_tiny_gguf,
 )
 
 MESSAGE = build_rationale_prompt("Which drug is a cholinesterase inhibitor? A) Donepezil B) Aspirin C) Insulin D) Warfarin")

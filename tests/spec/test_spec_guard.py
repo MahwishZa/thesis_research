@@ -12,11 +12,11 @@ import uuid
 from pathlib import Path
 from unittest import mock
 
-from tests import spec_targets
-from tests.spec_targets import (
+from tests import ROOT
+from tests.spec import spec_targets
+from tests.spec.spec_targets import (
     FILTER_INSTRUCTION,
     RATIONALE_PROMPT,
-    ROOT,
     TARGETS,
     SpecTestCase,
     part_started,
@@ -53,7 +53,7 @@ class TargetMapTests(unittest.TestCase):
 
     def test_every_target_is_used_by_a_test_and_every_use_is_a_target(self):
         used = set()
-        for path in (ROOT / "tests").glob("test_spec_*.py"):
+        for path in Path(__file__).parent.glob("test_spec_*.py"):
             if path.name == Path(__file__).name:
                 continue
             source = path.read_text(encoding="utf-8")

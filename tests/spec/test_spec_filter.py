@@ -2,7 +2,7 @@
 
 import random
 
-from tests.spec_targets import FILTER_INSTRUCTION, SpecTestCase, resolve
+from tests.spec.spec_targets import FILTER_INSTRUCTION, SpecTestCase, resolve
 
 NAN = float("nan")
 INF = float("inf")

@@ -4,7 +4,7 @@ In PowerShell, from the repository folder (the paths are examples):
 
     $env:RATIONALE_LLAMA3_GGUF = "C:\\Users\\mahwi\\...\\models\\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
     $env:RATIONALE_MEDCPT = "1"
-    python -m unittest tests.test_rationale_models -v
+    python -m unittest tests.integration.test_rationale_models -v
 
 ``RATIONALE_MEDCPT=1`` loads ncbi/MedCPT-Query-Encoder (downloaded on first use, then read from the Hugging Face cache).
 Any other value is taken as another encoder: a hub name, or a folder, which is then loaded without the network.
@@ -12,7 +12,6 @@ Without the variables every test here is skipped and says why.
 """
 
 import contextlib
-import json
 import os
 import unittest
 from pathlib import Path
@@ -23,11 +22,10 @@ from rationale_query.generator import (
     llama3_prompt_tokens,
 )
 from rationale_query.prompt import build_rationale_prompt
-from tests.spec_targets import ROOT
+from tests.rationale_support import pinned_sha256
 
 LLAMA3_FILE = os.environ.get("RATIONALE_LLAMA3_GGUF", "")
 ENCODER = os.environ.get("RATIONALE_MEDCPT", "")
-SETTINGS = ROOT / "experiments" / "01_rationale_writers" / "settings.json"
 
 QUESTION_A = build_rationale_prompt(
     "A 68-year-old man is brought in by his wife because of progressive forgetfulness over two years. He now gets lost "
@@ -39,15 +37,6 @@ QUESTION_B = build_rationale_prompt(
     "the following is the most likely diagnosis? A) Rheumatoid arthritis B) Systemic lupus erythematosus "
     "C) Polymyositis D) Gout"
 )
-
-
-def pinned_sha256(file_name):
-    """The SHA-256 that the study settings pin for this model file name, or None if it is not listed."""
-    try:
-        writers = json.loads(SETTINGS.read_text(encoding="utf-8")).get("writers", [])
-    except (OSError, ValueError):
-        return None
-    return next((w.get("sha256") for w in writers if w.get("model_file") == file_name), None)
 
 
 @unittest.skipUnless(LLAMA3_FILE, "set RATIONALE_LLAMA3_GGUF to a Llama-3-8B-Instruct .gguf file to run these checks")

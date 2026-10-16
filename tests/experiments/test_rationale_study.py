@@ -6,14 +6,14 @@ import io
 import json
 import unittest
 
+from tests import ROOT
 from tests.rationale_support import (
     STUDY_FOLDER,
     TempDirTestCase,
     load_study_runner,
+    pinned_sha256,
     question_lines,
 )
-from tests.spec_targets import ROOT
-from tests.test_rationale_models import pinned_sha256
 
 ARCHIVED_RESULTS = ROOT / "_archive" / "rag2_adaptation_v1" / "experiments" / "medchange" / "results"
 

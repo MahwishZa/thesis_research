@@ -1,7 +1,7 @@
 """Acceptance tests for docs/methodology.md section 3 (rationale query). They skip until src/rationale_query exists."""
 
 
-from tests.spec_targets import RATIONALE_PROMPT, SpecTestCase, resolve
+from tests.spec.spec_targets import RATIONALE_PROMPT, SpecTestCase, resolve
 
 QUESTION = (
     "A 72-year-old woman has progressive memory loss over two years. Which of the following is the most "

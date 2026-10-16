@@ -48,10 +48,8 @@ import importlib
 import os
 import sys
 import unittest
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
+from tests import ROOT, SRC  # noqa: F401 - ROOT is re-exported to the acceptance tests
 
 HELPFUL = "helpful"
 NOT_HELPFUL = "not_helpful"

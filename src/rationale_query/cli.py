@@ -259,6 +259,10 @@ def _generate(args: argparse.Namespace, streams: Streams, factory: Callable[[arg
     return 0
 
 
+def _needs_packages(exc: ImportError) -> ImportError:
+    return ImportError(f"encoding needs numpy, torch and transformers ({exc})")
+
+
 def _default_encoder(args: argparse.Namespace) -> Any:
     try:
         from .encoder import QueryEncoder
@@ -271,14 +275,14 @@ def _default_encoder(args: argparse.Namespace) -> Any:
             local_files_only=args.local_files_only,
         )
     except ImportError as exc:
-        raise ImportError(f"encoding needs numpy, torch and transformers ({exc})") from exc
+        raise _needs_packages(exc) from exc
 
 
 def _encode(args: argparse.Namespace, streams: Streams, factory: Callable[[argparse.Namespace], Any]) -> int:
     try:
         import numpy as np
     except ImportError as exc:
-        raise ImportError(f"encoding needs numpy, torch and transformers ({exc})") from exc
+        raise _needs_packages(exc) from exc
 
     vectors_path = args.rationales / VECTORS_FILE
     meta_path = args.rationales / VECTORS_META

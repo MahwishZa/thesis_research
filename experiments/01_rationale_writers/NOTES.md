@@ -117,7 +117,7 @@ same code on the real files; run them once on the laptop and keep the output:
 ```powershell
 $env:RATIONALE_LLAMA3_GGUF = "models\Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
 $env:RATIONALE_MEDCPT = "1"
-python -m unittest tests.test_rationale_models -v
+python -m unittest tests.integration.test_rationale_models -v
 ```
 
 The first run downloads the encoder (about 440 MB), and the model file is hashed and loaded more than once, so allow

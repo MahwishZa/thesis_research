@@ -3,7 +3,7 @@
 Status: **specification of the RAG² baseline and of its Alzheimer's-scoped adaptation.** Revised 2026-10-15 after the researcher
 approved the direction of the evidence report (restore the baseline faithfully first, then test one extension). Supervisor
 approval (A2) is pending. Part 1 (rationale-based query formulation) is built in `src/rationale_query/`; Parts 2 and 3 are
-not. The requirements below are written as executable acceptance tests in `tests/test_spec_*.py`; each test skips until the
+not. The requirements below are written as executable acceptance tests in `tests/spec/test_spec_*.py`; each test skips until the
 part it checks exists (section 11).
 
 The evaluation dataset is **not decided here**; its approval is a separate step.
@@ -298,10 +298,10 @@ dataset (section 2) and the input format of the filter.
 
 ## 11. Acceptance tests
 
-The requirements above that can be checked without models are written as tests in `tests/test_spec_*.py`. They fix behaviour, not
-code: each test calls a function that `tests/spec_targets.py` maps to a module under `src/`; that file also lists the arguments of
+The requirements above that can be checked without models are written as tests in `tests/spec/test_spec_*.py`. They fix behaviour, not
+code: each test calls a function that `tests/spec/spec_targets.py` maps to a module under `src/`; that file also lists the arguments of
 every function. The names of the parts that are not built yet are provisional; those of `rationale_query` are final. When one
-changes, change `tests/spec_targets.py` and this table together; a guard test fails if they differ.
+changes, change `tests/spec/spec_targets.py` and this table together; a guard test fails if they differ.
 
 | Requirement | Module and function | Test file |
 |---|---|---|
@@ -316,14 +316,15 @@ changes, change `tests/spec_targets.py` and this table together; a guard test fa
 | Split by question (independent of row order, process and other questions); disjoint roles | `data_roles.splits`: `split_by_question`, `assert_disjoint` | `test_spec_data_roles.py` |
 | The tests themselves: the target map, the skip rule and the link to this document | none | `test_spec_guard.py` |
 
-**Tests of the built part.** `src/rationale_query` has its own tests, which check the code rather than the requirements:
+**Tests of the built part.** `src/rationale_query` has its own tests, which check the code rather than the requirements. They sit in
+`tests/unit/` (with stand-ins, no model needed), `tests/integration/` (real libraries, real files) and `tests/experiments/`; `tests/README.md` explains the folders:
 `test_rationale_generator.py` (prompt tokens, greedy settings, limits, template checks, with a stand-in for llama.cpp),
 `test_rationale_prompt.py` (the exact layout of the prompt, which the acceptance tests squeeze), `test_rationale_store.py`
 and `test_rationale_run.py` (records, resuming, refusals), `test_rationale_encoder.py`, `test_rationale_diagnostics.py`,
-`test_rationale_cli.py`, `test_rationale_study.py` (the settings and runner of the experiment) and `test_rationale_layout.py`
+`test_rationale_cli.py`, `test_rationale_study.py` (the settings and runner of the experiment) and `tests/repository/test_layout.py`
 (every module has a docstring and a test, importing the commands loads no heavy package, and this section names every test
 file). `test_rationale_integration.py` runs the real llama.cpp and a real torch encoder on tiny synthetic models written by
-`tests/tiny_models.py`; it needs llama-cpp-python and gguf, or torch and transformers, and skips a class whose packages are
+`tests/integration/tiny_models.py`; it needs llama-cpp-python and gguf, or torch and transformers, and skips a class whose packages are
 missing. `test_rationale_models.py` checks the real Llama-3 file and `ncbi/MedCPT-Query-Encoder`; it runs only when
 `RATIONALE_LLAMA3_GGUF` or `RATIONALE_MEDCPT` is set (see `experiments/01_rationale_writers/NOTES.md`).
 

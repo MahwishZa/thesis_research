@@ -20,6 +20,7 @@ from rationale_query.store import (
     question_hash,
     read_questions,
 )
+from tests import SRC
 from tests.rationale_support import (
     QUESTIONS,
     FakeModel,
@@ -32,7 +33,6 @@ from tests.rationale_support import (
     question_lines,
     run_cli,
 )
-from tests.spec_targets import SRC
 
 try:
     from rationale_query.encoder import QueryEncoder

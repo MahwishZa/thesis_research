@@ -5,7 +5,8 @@ import random
 import subprocess
 import sys
 
-from tests.spec_targets import SRC, TARGETS, SpecTestCase, resolve
+from tests import SRC
+from tests.spec.spec_targets import TARGETS, SpecTestCase, resolve
 
 FRACTIONS = {"train": 0.8, "validation": 0.1, "test": 0.1}
 IDS = [f"q{i:05d}" for i in range(20000)]

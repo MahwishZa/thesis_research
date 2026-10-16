@@ -29,13 +29,23 @@ from rationale_query.generator import (
     llama3_prompt_text,
 )
 from rationale_query.store import Question
+from tests import ROOT
 
 try:
     import numpy as np
 except ImportError:  # the encoder stand-ins and their tests need numpy; everything else does not
     np = None
 
-STUDY_FOLDER = Path(__file__).resolve().parent.parent / "experiments" / "01_rationale_writers"
+STUDY_FOLDER = ROOT / "experiments" / "01_rationale_writers"
+
+
+def pinned_sha256(file_name):
+    """The SHA-256 that the study settings pin for this model file name, or None if it is not listed."""
+    try:
+        writers = json.loads((STUDY_FOLDER / "settings.json").read_text(encoding="utf-8")).get("writers", [])
+    except (OSError, ValueError):
+        return None
+    return next((w.get("sha256") for w in writers if w.get("model_file") == file_name), None)
 
 
 def load_study_runner():

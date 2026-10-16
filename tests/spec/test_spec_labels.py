@@ -3,7 +3,7 @@
 import itertools
 import random
 
-from tests.spec_targets import (
+from tests.spec.spec_targets import (
     DISCARD,
     HELPFUL,
     NOT_HELPFUL,

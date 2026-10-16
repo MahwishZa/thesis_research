@@ -8,9 +8,9 @@ import unittest
 
 from rationale_query.prompt import RATIONALE_PROMPT, build_rationale_prompt
 from rationale_query.query import dense_query, rerank_query
-from tests.spec_targets import RATIONALE_PROMPT as PAPERS_PROMPT
+from tests.spec.spec_targets import RATIONALE_PROMPT as PAPERS_PROMPT
 
-# The words of the paper (kept once, in tests/spec_targets.py, with the layout squeezed out); the layout is pinned below.
+# The words of the paper (kept once, in tests/spec/spec_targets.py, with the layout squeezed out); the layout is pinned below.
 PAPER_TEXT = PAPERS_PROMPT.removesuffix(" Here is the question:")
 
 
