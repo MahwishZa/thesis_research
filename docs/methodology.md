@@ -317,7 +317,7 @@ changes, change `tests/spec/targets.py` and this table together; a guard test fa
 | The tests themselves: the target map, the skip rule and the link to this document | none | `test_guard.py` |
 
 **Tests of the built part.** `src/rationale_query` has its own tests, which check the code rather than the requirements. They sit in
-`tests/unit/` (with stand-ins, no model needed), `tests/integration/` (real libraries, real files) and `tests/experiments/`; `tests/README.md` explains the folders:
+`tests/unit/` (with stand-ins, no model needed), `tests/integration/` (real libraries, real files); `tests/README.md` explains the folders:
 `test_generator.py` (prompt tokens, greedy settings, limits, template checks, with a stand-in for llama.cpp),
 `test_prompt.py` (the exact layout of the prompt, which the acceptance tests squeeze), `test_store.py`
 and `test_batch.py` (records, resuming, refusals), `test_encoder.py`, `test_diagnostics.py`,

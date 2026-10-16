@@ -23,8 +23,8 @@ class RepositoryFolderTests(unittest.TestCase):
 
 
 def part1_tests():
-    """The test files of the built part: every test file in the unit, integration and experiments folders."""
-    return sorted(path for folder in ("unit", "integration", "experiments") for path in (TESTS / folder).glob("test_*.py"))
+    """The test files of the built part: every test file in the unit and integration folders."""
+    return sorted(path for folder in ("unit", "integration") for path in (TESTS / folder).glob("test_*.py"))
 
 
 class PackageLayoutTests(unittest.TestCase):
