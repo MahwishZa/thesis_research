@@ -511,7 +511,7 @@ class ModuleEntryPointTests(TempDirTestCase):
     def test_the_module_runs_from_any_folder(self):
         done = self.run_module("show-prompt", "--question", "Which drug? A) x B) y")
         self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertTrue(done.stdout.decode("utf-8").startswith("--- sent to the model as one user turn ---\n"))
+        self.assertTrue(done.stdout.decode("utf-8").replace("\r\n", "\n").startswith("--- sent to the model as one user turn ---\n"))
 
     def test_a_console_that_cannot_show_a_character_does_not_make_the_command_fail(self):
         done = self.run_module("show-prompt", "--question", "β-amyloid ≥ 5? A) x B) y", PYTHONIOENCODING="ascii")

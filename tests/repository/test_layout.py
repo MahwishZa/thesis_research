@@ -27,6 +27,18 @@ def part1_tests():
     return sorted(path for folder in ("unit", "integration") for path in (TESTS / folder).glob("test_*.py"))
 
 
+def experiment_folders():
+    """The folders of experiments/ that are part of the repository (a computer may also hold ignored local leftovers)."""
+    try:
+        done = subprocess.run(
+            ["git", "ls-files", "experiments"], capture_output=True, text=True, cwd=ROOT, check=True
+        )
+        names = {line.split("/")[1] for line in done.stdout.splitlines() if line.count("/") >= 2}
+    except (OSError, subprocess.CalledProcessError):
+        return sorted((ROOT / "experiments").iterdir())
+    return sorted(ROOT / "experiments" / name for name in names)
+
+
 class PackageLayoutTests(unittest.TestCase):
     def test_every_module_has_a_docstring(self):
         for path in PACKAGE.glob("*.py"):
@@ -68,7 +80,7 @@ class SpecificationTests(unittest.TestCase):
 
 class ExperimentFolderTests(unittest.TestCase):
     def test_every_experiment_folder_follows_the_convention_of_experiments_readme(self):
-        for folder in sorted((ROOT / "experiments").iterdir()):
+        for folder in experiment_folders():
             if folder.is_dir():
                 with self.subTest(folder=folder.name):
                     self.assertRegex(folder.name, r"^\d\d_[a-z0-9_]+$")  # numbered, and none of the names the ignore rules hide
