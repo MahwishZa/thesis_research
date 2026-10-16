@@ -14,7 +14,7 @@ This thesis studies retrieval-augmented generation (RAG), in which a language mo
 ## Repository Structure
 
 ```
-.
+thesis_research/
 ├── README.md
 ├── pyproject.toml   packaging; the packages for the model and the encoder are optional extras
 ├── docs/            research documentation (see docs/README.md); docs/log.md is the dated research log
