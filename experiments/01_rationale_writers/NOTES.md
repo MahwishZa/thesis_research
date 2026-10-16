@@ -63,13 +63,13 @@ A quick trial on two questions (a few minutes: loading a model takes about a min
 minute):
 
 ```powershell
-python experiments\01_rationale_writers\run_study.py --questions experiments\01_rationale_writers\example_questions.jsonl --run-name trial --limit 2
+python experiments\01_rationale_writers\run_experiment.py --questions experiments\01_rationale_writers\example_questions.jsonl --run-name trial --limit 2
 ```
 
 The full run on a questions file, with the query vectors as well:
 
 ```powershell
-python experiments\01_rationale_writers\run_study.py --questions path\to\questions.jsonl --run-name my_run --encode
+python experiments\01_rationale_writers\run_experiment.py --questions path\to\questions.jsonl --run-name my_run --encode
 ```
 
 - Every writer whose model file is in `models\` runs, one after the other, and each takes about half a day for a thousand

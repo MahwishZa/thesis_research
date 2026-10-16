@@ -2,7 +2,7 @@
 
 One numbered folder per experiment, for example `01_baseline/`. Each folder holds:
 
-- the run script and its settings (including the paths to any large local data),
+- the run script `run_experiment.py` (this name in every experiment folder) and its settings (including the paths to any large local data),
 - `results/` with small result files that are committed,
 - `NOTES.md`: what was tried, why, and the exact command to run it again.
 

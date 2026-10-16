@@ -38,7 +38,7 @@ from tests.integration.tiny_models import (
 from tests.support import (
     QUESTIONS,
     TempDirTestCase,
-    load_study_runner,
+    load_experiment_runner,
     question_lines,
     run_cli,
 )
@@ -242,7 +242,7 @@ class LlamaCppIntegrationTests(TempDirTestCase):
         self.assertEqual(run_cli(other_model)[0], 0)  # all done already: nothing is generated, so no model is loaded
 
     def test_the_study_runner_writes_with_two_writers_and_compares_them(self):
-        runner = load_study_runner()
+        runner = load_experiment_runner()
         sha = {name: hashlib.sha256((self.models / f"{name}.gguf").read_bytes()).hexdigest() for name in ("answer", "loop")}
         settings = {
             "writers": [

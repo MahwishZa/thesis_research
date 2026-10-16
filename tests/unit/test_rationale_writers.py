@@ -8,9 +8,9 @@ import unittest
 
 from tests import ROOT
 from tests.support import (
-    STUDY_FOLDER,
+    EXPERIMENT_FOLDER,
     TempDirTestCase,
-    load_study_runner,
+    load_experiment_runner,
     pinned_sha256,
     question_lines,
 )
@@ -21,7 +21,7 @@ LLAMA3_FILE = "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"
 QWEN_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
 
 
-run_study = load_study_runner()
+run_experiment = load_experiment_runner()
 SHA_A, SHA_B = "a" * 64, "b" * 64
 
 
@@ -32,15 +32,15 @@ def writer(name, **changes):
 
 class CommittedSettingsTests(unittest.TestCase):
     def test_the_settings_of_the_study_are_valid(self):
-        settings = run_study.load_settings()
+        settings = run_experiment.load_settings()
         self.assertEqual([w["name"] for w in settings["writers"]], ["llama3-8b-instruct-q4km", "qwen25-7b-instruct-q4km"])
 
     def test_the_baseline_writer_is_the_paper_model_in_the_llama3_format(self):
-        first = run_study.load_settings()["writers"][0]
+        first = run_experiment.load_settings()["writers"][0]
         self.assertEqual((first["model_file"], first["chat_format"]), (LLAMA3_FILE, "llama-3"))
 
     def test_the_second_writer_uses_the_template_of_its_own_file(self):
-        second = run_study.load_settings()["writers"][1]
+        second = run_experiment.load_settings()["writers"][1]
         self.assertEqual((second["model_file"], second["chat_format"]), (QWEN_FILE, "gguf"))
 
     def test_the_pinned_hashes_are_those_the_earlier_runs_recorded_for_the_same_files(self):
@@ -52,24 +52,24 @@ class CommittedSettingsTests(unittest.TestCase):
             name = config.get("model_file") or str(config.get("backend", "")).rpartition(":")[2]
             if name and config.get("model_sha256"):
                 recorded.setdefault(name, set()).add(config["model_sha256"])
-        for entry in run_study.load_settings()["writers"]:
+        for entry in run_experiment.load_settings()["writers"]:
             with self.subTest(writer=entry["name"]):
                 self.assertEqual(recorded.get(entry["model_file"]), {entry["sha256"]})
 
     def test_the_model_checks_read_the_pins_of_the_same_file(self):
-        for entry in run_study.load_settings()["writers"]:
+        for entry in run_experiment.load_settings()["writers"]:
             self.assertEqual(pinned_sha256(entry["model_file"]), entry["sha256"])
         self.assertIsNone(pinned_sha256("not-listed.gguf"))
 
     def test_the_folder_holds_what_the_experiment_convention_asks_for(self):
-        for name in ("settings.json", "run_study.py", "NOTES.md"):
-            self.assertTrue((STUDY_FOLDER / name).is_file(), name)
+        for name in ("settings.json", "run_experiment.py", "NOTES.md"):
+            self.assertTrue((EXPERIMENT_FOLDER / name).is_file(), name)
 
 
 class LoadSettingsTests(TempDirTestCase):
     def load(self, data):
         text = data if isinstance(data, str) else json.dumps(data)
-        return run_study.load_settings(self.write("settings.json", text))
+        return run_experiment.load_settings(self.write("settings.json", text))
 
     def test_a_valid_file_is_returned(self):
         data = {"writers": [writer("one"), writer("two", sha256=None, chat_format="gguf")]}
@@ -95,12 +95,12 @@ class LoadSettingsTests(TempDirTestCase):
             "hash not text": {"writers": [writer("one", sha256=5)]},
         }
         for label, data in cases.items():
-            with self.subTest(case=label), self.assertRaises(run_study.StudyError):
+            with self.subTest(case=label), self.assertRaises(run_experiment.StudyError):
                 self.load(data)
 
     def test_a_missing_file_is_refused(self):
-        with self.assertRaises(run_study.StudyError):
-            run_study.load_settings(self.dir / "absent.json")
+        with self.assertRaises(run_experiment.StudyError):
+            run_experiment.load_settings(self.dir / "absent.json")
 
 
 class ChooseWritersTests(TempDirTestCase):
@@ -114,38 +114,38 @@ class ChooseWritersTests(TempDirTestCase):
 
     def test_without_names_every_writer_with_a_file_runs_and_the_others_are_passed_over(self):
         self.have("one", "three")
-        chosen, skipped = run_study.choose_writers(self.settings, None, self.dir)
+        chosen, skipped = run_experiment.choose_writers(self.settings, None, self.dir)
         self.assertEqual([w["name"] for w in chosen], ["one", "three"])
         self.assertEqual([w["name"] for w in skipped], ["two"])
 
     def test_named_writers_run_in_the_order_given_without_repeats(self):
         self.have("one", "two", "three")
-        chosen, skipped = run_study.choose_writers(self.settings, ["three", "one", "three"], self.dir)
+        chosen, skipped = run_experiment.choose_writers(self.settings, ["three", "one", "three"], self.dir)
         self.assertEqual([w["name"] for w in chosen], ["three", "one"])
         self.assertEqual(skipped, [])
 
     def test_a_named_writer_that_is_not_in_the_settings_is_refused(self):
         self.have("one")
-        with self.assertRaises(run_study.StudyError) as caught:
-            run_study.choose_writers(self.settings, ["one", "nine"], self.dir)
+        with self.assertRaises(run_experiment.StudyError) as caught:
+            run_experiment.choose_writers(self.settings, ["one", "nine"], self.dir)
         self.assertIn("nine", str(caught.exception))
 
     def test_a_named_writer_without_its_file_is_refused_not_passed_over(self):
         self.have("one")
-        with self.assertRaises(run_study.StudyError) as caught:
-            run_study.choose_writers(self.settings, ["one", "two"], self.dir)
+        with self.assertRaises(run_experiment.StudyError) as caught:
+            run_experiment.choose_writers(self.settings, ["one", "two"], self.dir)
         self.assertIn("two.gguf", str(caught.exception))
 
     def test_no_file_at_all_is_refused_and_the_names_are_listed(self):
-        with self.assertRaises(run_study.StudyError) as caught:
-            run_study.choose_writers(self.settings, None, self.dir)
+        with self.assertRaises(run_experiment.StudyError) as caught:
+            run_experiment.choose_writers(self.settings, None, self.dir)
         self.assertIn("one.gguf", str(caught.exception))
         self.assertIn(str(self.dir), str(caught.exception))
 
 
 class GenerateCommandTests(TempDirTestCase):
     def test_the_command_names_everything_the_writer_needs(self):
-        argv = run_study.generate_command(
+        argv = run_experiment.generate_command(
             writer("one"), questions=self.dir / "q.jsonl", out=self.dir / "out", models_dir=self.dir / "models", limit=None
         )
         self.assertEqual(
@@ -158,19 +158,19 @@ class GenerateCommandTests(TempDirTestCase):
         )  # fmt: skip
 
     def test_a_writer_without_a_pinned_hash_gets_no_hash_check(self):
-        argv = run_study.generate_command(
+        argv = run_experiment.generate_command(
             writer("one", sha256=None), questions=self.dir / "q", out=self.dir / "o", models_dir=self.dir, limit=None
         )
         self.assertNotIn("--model-sha256", argv)
 
     def test_the_template_switch_is_passed_on_only_when_given(self):
         kwargs = {"questions": self.dir / "q", "out": self.dir / "o", "models_dir": self.dir, "limit": None}
-        self.assertNotIn("--allow-template-mismatch", run_study.generate_command(writer("one"), **kwargs))
-        argv = run_study.generate_command(writer("one"), allow_template_mismatch=True, **kwargs)
+        self.assertNotIn("--allow-template-mismatch", run_experiment.generate_command(writer("one"), **kwargs))
+        argv = run_experiment.generate_command(writer("one"), allow_template_mismatch=True, **kwargs)
         self.assertEqual(argv[-1], "--allow-template-mismatch")
 
     def test_a_limit_is_passed_on(self):
-        argv = run_study.generate_command(writer("one"), questions=self.dir / "q", out=self.dir / "o", models_dir=self.dir, limit=7)
+        argv = run_experiment.generate_command(writer("one"), questions=self.dir / "q", out=self.dir / "o", models_dir=self.dir, limit=7)
         self.assertEqual(argv[-2:], ["--limit", "7"])
 
 
@@ -201,7 +201,7 @@ class MainTests(TempDirTestCase):
             argv += ["--settings", str(self.settings)]
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            status = run_study.main([*argv, *extra], cli_main=cli_main or self.fake_cli())
+            status = run_experiment.main([*argv, *extra], cli_main=cli_main or self.fake_cli())
         return status, out.getvalue(), err.getvalue()
 
     def test_every_writer_writes_then_the_writers_are_compared(self):

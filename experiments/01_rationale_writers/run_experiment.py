@@ -1,6 +1,6 @@
 """Experiment 01: let each writer in settings.json write the rationales of one questions file, then compare them.
 
-    python experiments/01_rationale_writers/run_study.py --questions PATH [--run-name NAME] [--writers NAME ...]
+    python experiments/01_rationale_writers/run_experiment.py --questions PATH [--run-name NAME] [--writers NAME ...]
                                                          [--models-dir DIR] [--limit N] [--encode]
 
 The command can be repeated after an interruption or a failure: finished questions are not written again, and a

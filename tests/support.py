@@ -36,21 +36,21 @@ try:
 except ImportError:  # the encoder stand-ins and their tests need numpy; everything else does not
     np = None
 
-STUDY_FOLDER = ROOT / "experiments" / "01_rationale_writers"
+EXPERIMENT_FOLDER = ROOT / "experiments" / "01_rationale_writers"
 
 
 def pinned_sha256(file_name):
     """The SHA-256 that the study settings pin for this model file name, or None if it is not listed."""
     try:
-        writers = json.loads((STUDY_FOLDER / "settings.json").read_text(encoding="utf-8")).get("writers", [])
+        writers = json.loads((EXPERIMENT_FOLDER / "settings.json").read_text(encoding="utf-8")).get("writers", [])
     except (OSError, ValueError):
         return None
     return next((w.get("sha256") for w in writers if w.get("model_file") == file_name), None)
 
 
-def load_study_runner():
-    """experiments/01_rationale_writers/run_study.py as a module (the folder name is not a name that can be imported)."""
-    spec = importlib.util.spec_from_file_location("run_study", STUDY_FOLDER / "run_study.py")
+def load_experiment_runner():
+    """experiments/01_rationale_writers/run_experiment.py as a module (the folder name is not a name that can be imported)."""
+    spec = importlib.util.spec_from_file_location("run_experiment", EXPERIMENT_FOLDER / "run_experiment.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
