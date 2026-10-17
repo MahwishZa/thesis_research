@@ -93,6 +93,14 @@ class WriteCorpusTests(CorpusTestCase):
 
 
 class ReadCorpusTests(CorpusTestCase):
+    def test_a_corpus_can_be_rewritten_while_an_old_reader_is_still_open(self):
+        # Windows refuses to replace a file that is still memory-mapped, so the reader must not keep one mapped.
+        write_corpus(self.dir, "pubmed", DOCUMENTS)
+        old = Corpus(self.dir, "pubmed")
+        write_corpus(self.dir, "pubmed", [("k", "only one")], overwrite=True)
+        self.assertEqual(len(Corpus(self.dir, "pubmed")), 1)
+        self.assertEqual(len(old), 4)  # the old reader keeps what it read when it was opened
+
     def test_a_passage_comes_back_as_it_was_written(self):
         write_corpus(self.dir, "pubmed", DOCUMENTS)
         corpus = Corpus(self.dir, "pubmed")

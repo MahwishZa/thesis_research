@@ -146,7 +146,8 @@ class Corpus:
         except (OSError, json.JSONDecodeError) as exc:
             raise CorpusError(f"{self.directory} holds no usable corpus (no readable {MANIFEST_FILE}): {exc}") from exc
         try:
-            self._offsets = np.load(self.directory / OFFSETS_FILE, mmap_mode="r")
+            # Read into memory (8 bytes a passage), not memory-mapped: Windows cannot replace a file that is still mapped.
+            self._offsets = np.load(self.directory / OFFSETS_FILE)
         except (OSError, ValueError) as exc:
             raise CorpusError(f"cannot read {self.directory / OFFSETS_FILE}: {exc}") from exc
         if len(self._offsets) != self.manifest["passages"]:
