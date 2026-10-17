@@ -35,6 +35,13 @@ number of best passages is taken from each, the lists are joined in a fixed orde
 
 | File | What it does |
 |---|---|
+| `scope.py` | the search string that defines the Alzheimer's-scoped PubMed corpus (and so the PMC corpus) |
+| `ncbi.py` | a polite E-utilities client and the date-window search that gets past the 10,000-hit limit |
+| `documents.py` | a resumable batch download of documents into one JSON-lines file |
+| `pubmed.py` | the PubMed corpus: titles and abstracts of the records in the scope |
+| `pmc.py` | the PMC corpus: open-access full text of those records |
+| `guidelines.py` | the guidelines corpus: the open guidelines of the Meditron collection |
+| `textbooks.py` | the textbooks corpus: the 18 MedQA textbooks, joined back into books |
 | `pool.py` | joining the four candidate lists, and ordering a pool by score |
 | `retrieve.py` | one question through the four searches, the pool and the re-ranking |
 | `diagnostics.py` | each corpus's share of the final lists and the duplicate rate across corpora |
@@ -44,14 +51,19 @@ number of best passages is taken from each, the lists are joined in a fixed orde
 | `search.py` | exact inner-product search, block by block, so a corpus need not fit in memory |
 | `scorer.py` | the MedCPT cross-encoder that scores a query against each pooled passage |
 | `records.py` | one resumable record per question, bound to the settings of the run |
-| `cli.py` | the commands of `python -m balanced_retrieval`: `chunk`, `embed`, `check`, `retrieve`, `report` |
+| `cli.py` | the commands of `python -m balanced_retrieval`: `fetch`, `chunk`, `embed`, `check`, `retrieve`, `report` |
 
 It needs numpy, torch and transformers for the commands that read or write vectors (`pip install -e ".[retrieval]"`); the list
 operations, the diagnostics and the chunking need nothing. Keep the corpus folders in `retrieval_corpora\` (git ignores it); the
 folder `corpus\` of earlier work is never read by this code.
 
 ```powershell
-python -m balanced_retrieval chunk --corpus textbooks --documents textbooks.jsonl --root retrieval_corpora
+python -m balanced_retrieval fetch pubmed --as-of 2026-10-18 --count-only
+python -m balanced_retrieval fetch pubmed --as-of 2026-10-18 --out retrieval_corpora\documents\pubmed.jsonl
+python -m balanced_retrieval fetch pmc --pubmed-file retrieval_corpora\documents\pubmed.jsonl --out retrieval_corpora\documents\pmc.jsonl
+python -m balanced_retrieval fetch guidelines --out retrieval_corpora\documents\guidelines.jsonl
+python -m balanced_retrieval fetch textbooks --out retrieval_corpora\documents\textbooks.jsonl
+python -m balanced_retrieval chunk --corpus textbooks --documents retrieval_corpora\documents\textbooks.jsonl --root retrieval_corpora
 python -m balanced_retrieval embed --root retrieval_corpora --corpus textbooks
 python -m balanced_retrieval check --root retrieval_corpora
 python -m balanced_retrieval retrieve --questions questions.jsonl --rationales outputs\my_run\llama3-8b-instruct-q4km --root retrieval_corpora --out retrieved --top-k 32

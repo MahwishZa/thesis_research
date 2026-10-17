@@ -1,5 +1,6 @@
 """``python -m balanced_retrieval``: build the four corpora, search them with the rationales, and describe the result.
 
+    fetch     download the documents of one corpus (pubmed, pmc, guidelines or textbooks) as JSON lines
     chunk     cut documents (JSON lines) into passages and write one corpus folder
     embed     write the MedCPT article vectors of one corpus (resumable)
     check     list the corpora under a folder, with their sizes next to the paper's
@@ -48,6 +49,17 @@ RELEVANT = ("top_k", "rerank_against", "corpora", "query_encoder", "cross_encode
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="balanced_retrieval", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
+
+    fetch = sub.add_parser("fetch", help="download the documents of one corpus into a JSON-lines file")
+    fetch.add_argument("source", choices=CORPUS_ORDER)
+    fetch.add_argument("--out", type=Path, required=True, help="the JSON-lines file to write (a pubmed or pmc download can be resumed)")
+    fetch.add_argument("--as-of", help="pubmed: only records published up to this date, YYYY-MM-DD (names the snapshot)")
+    fetch.add_argument("--count-only", action="store_true", help="pubmed: only say how many records the scope finds")
+    fetch.add_argument("--pubmed-file", type=Path, help="pmc: the pubmed download whose records get their full text")
+    fetch.add_argument("--limit", type=int, default=None, help="pubmed, pmc: stop after this many identifiers (a trial run)")
+    fetch.add_argument("--file", default=None, help="guidelines: the file of epfl-llm/guidelines to use (default: the open one)")
+    fetch.add_argument("--revision", default=None, help="guidelines, textbooks: the revision of the dataset on the hub")
+    fetch.add_argument("--quiet", action="store_true", help="no progress lines")
 
     chunk = sub.add_parser("chunk", help="cut documents into passages and write one corpus folder")
     chunk.add_argument("--corpus", choices=CORPUS_ORDER, required=True)
@@ -101,11 +113,14 @@ def main(
     query_encoder_factory: Callable[[argparse.Namespace], Any] | None = None,
     scorer_factory: Callable[[argparse.Namespace], Any] | None = None,
     streams: Streams | None = None,
+    client_factory: Callable[[], Any] | None = None,
 ) -> int:
     streams = streams or Streams(sys.stdout, sys.stderr)
     tolerate_unencodable(streams.out, streams.err)
     args = _parser().parse_args(argv)
     try:
+        if args.command == "fetch":
+            return _fetch(args, streams, client_factory)
         if args.command == "chunk":
             return _chunk(args, streams)
         if args.command == "embed":
@@ -134,6 +149,54 @@ def _disk() -> Any:
     except ImportError as exc:
         raise _needs_packages(exc) from exc
     return corpus
+
+
+def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[[], Any] | None) -> int:
+    last = 0
+
+    def progress(done: int, total: int) -> None:
+        nonlocal last
+        if not args.quiet and (done == total or done - last >= 5000):
+            last = done
+            streams.err.write(f"  {done} of {total} identifiers fetched\n")
+
+    if args.source in ("pubmed", "pmc"):
+        from datetime import date
+
+        from .ncbi import Client, count_hits
+        from .pmc import fetch_pmc
+        from .pubmed import fetch_pubmed
+        from .scope import pubmed_scope
+
+        client = client_factory() if client_factory else Client()
+        if args.source == "pubmed":
+            if not args.as_of:
+                raise ValueError("fetch pubmed needs --as-of YYYY-MM-DD, the date that names the snapshot")
+            as_of = date.fromisoformat(args.as_of)
+            if args.count_only:
+                streams.out.write(f"the scope finds {count_hits(client, 'pubmed', pubmed_scope(), as_of):,} records up to {as_of}\n")
+                return 0
+            state = fetch_pubmed(client, args.out, as_of=as_of, limit=args.limit, progress=progress)
+        else:
+            if not args.pubmed_file:
+                raise ValueError("fetch pmc needs --pubmed-file, the pubmed download whose records get their full text")
+            state = fetch_pmc(client, args.out, pubmed_file=args.pubmed_file, limit=args.limit, progress=progress)
+        streams.out.write(
+            f"{args.source}: {state['documents']} documents from {state['done']} of {state['ids']} identifiers in {args.out}\n"
+        )
+        if state["done"] < state["ids"]:
+            streams.out.write("  not finished; run the same command again to continue\n")
+        return 0
+    if args.source == "guidelines":
+        from .guidelines import download_guidelines
+
+        info = download_guidelines(args.out, file=args.file, revision=args.revision)
+    else:
+        from .textbooks import download_textbooks
+
+        info = download_textbooks(args.out, revision=args.revision)
+    streams.out.write(f"{args.source}: {info['documents']} documents from {info['source']} (revision {info['revision']}) in {args.out}\n")
+    return 0
 
 
 def _chunk(args: argparse.Namespace, streams: Streams) -> int:

@@ -7,6 +7,13 @@ without removing duplicates, and one cross-encoder orders the pool; the best k a
     pool         joining the four candidate lists, and ordering a pool by score
     retrieve     one question through the four searches, the pool and the re-ranking
     diagnostics  what the final lists look like: each corpus's share and the duplicate rate across corpora
+    scope        the search string that defines the Alzheimer's-scoped PubMed corpus (and so the PMC corpus)
+    ncbi         a polite E-utilities client and the date-window search that gets past the 10,000-hit limit
+    documents    a resumable batch download of documents into one JSON-lines file
+    pubmed       the PubMed corpus: titles and abstracts of the records in the scope
+    pmc          the PMC corpus: open-access full text of those records
+    guidelines   the guidelines corpus: the open guidelines of the Meditron collection
+    textbooks    the textbooks corpus: the 18 MedQA textbooks, joined back into books
     chunking     cutting a document into passages of 128 words that overlap by 32
     corpus       one corpus on disk: passages, a row-aligned embedding file, and a manifest of how they were made
     embedding    the MedCPT article encoder and the resumable writer of a corpus's embeddings

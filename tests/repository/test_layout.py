@@ -14,7 +14,7 @@ TESTS = ROOT / "tests"
 #: The modules of each package that must import without loading numpy, torch, transformers or llama_cpp.
 LIGHT_MODULES = {
     "rationale_query": ("cli", "generator", "store", "batch", "diagnostics", "prompt", "search_text"),
-    "balanced_retrieval": ("cli", "pool", "retrieve", "diagnostics", "chunking", "records"),
+    "balanced_retrieval": ("cli", "pool", "retrieve", "diagnostics", "chunking", "records", "scope", "ncbi", "documents", "pubmed", "pmc", "guidelines", "textbooks"),
 }
 
 
