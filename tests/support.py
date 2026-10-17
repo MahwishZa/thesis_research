@@ -1,9 +1,10 @@
-"""Shared helpers and stand-ins for the tests of src/rationale_query. No model, no network, no third-party package
-is needed except numpy for the encoder stand-ins, which a test skips without.
+"""Shared helpers and stand-ins for the tests of src/rationale_query and src/balanced_retrieval. No model, no network,
+no third-party package is needed except numpy for the encoder stand-ins, which a test skips without.
 
     FakeLlama          the part of llama_cpp.Llama that the generator uses, with the Llama-3 special tokens
     ScriptedGenerator  a generator whose answers are listed in the test
     FakeTokenizer / FakeModel / FakeTensor   a tokenizer and encoder over numpy arrays (words as tokens)
+    FakePairTokenizer / FakeClassifier       a tokenizer of [query, passage] pairs and a cross-encoder over numpy arrays
     TempDirTestCase    a test case with a fresh temporary folder whose name contains spaces, as on the researcher's laptop
 """
 
@@ -296,6 +297,9 @@ class FakeTensor:
     def __getitem__(self, index: Any) -> FakeTensor:
         return FakeTensor(self.array[index])
 
+    def squeeze(self, dim: int) -> FakeTensor:
+        return FakeTensor(np.squeeze(self.array, axis=dim))
+
 
 class FakeTokenizer:
     """Words are tokens; [CLS] and [SEP] are added. Records every call so a test can check the arguments."""
@@ -359,6 +363,48 @@ class FakeModel:
             for t in range(1, width):  # other positions differ, so taking the wrong position would show
                 hidden[b, t, :] = -1.0 * (t + 1)
         return FakeOutput(FakeTensor(hidden))
+
+
+class FakePairTokenizer:
+    """Tokenizes [query, passage] pairs: words are tokens, and [CLS] query [SEP] passage [SEP] is cut at ``max_length``."""
+
+    PAD, CLS, SEP = 0, 1, 2
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def __call__(self, pairs: list[list[str]], **kwargs: Any) -> dict:
+        self.calls.append({"pairs": [list(p) for p in pairs], **kwargs})
+        rows = []
+        for query, passage in pairs:
+            ids = [self.CLS] + [FakeTokenizer._word_id(w) for w in query.split()] + [self.SEP]
+            ids += [FakeTokenizer._word_id(w) for w in passage.split()] + [self.SEP]
+            limit = kwargs.get("max_length")
+            if kwargs.get("truncation") and limit is not None and len(ids) > limit:
+                ids = ids[: limit - 1] + [self.SEP]
+            rows.append(ids)
+        width = max(len(r) for r in rows)
+        ids = np.array([r + [self.PAD] * (width - len(r)) for r in rows])
+        mask = np.array([[1] * len(r) + [0] * (width - len(r)) for r in rows])
+        return {"input_ids": FakeTensor(ids), "attention_mask": FakeTensor(mask)}
+
+
+class FakeClassifierOutput:
+    def __init__(self, logits: FakeTensor) -> None:
+        self.logits = logits
+
+
+class FakeClassifier:
+    """The score of a pair is the sum of its real token ids divided by 1000, so it does not depend on padding."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __call__(self, input_ids: FakeTensor, attention_mask: FakeTensor) -> FakeClassifierOutput:
+        self.calls += 1
+        ids, mask = input_ids.array, attention_mask.array
+        scores = np.array([[float(ids[b][mask[b] == 1].sum()) / 1000.0] for b in range(ids.shape[0])])
+        return FakeClassifierOutput(FakeTensor(scores))
 
 
 class RecordingNoGrad:

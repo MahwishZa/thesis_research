@@ -18,7 +18,7 @@ thesis_research/
 ├── README.md
 ├── pyproject.toml   packaging; the packages for the model and the encoder are optional extras
 ├── docs/            research documentation (see docs/README.md); docs/log.md is the dated research log
-├── src/             the pipeline parts, one folder each: rationale_query/ is Part 1 of RAG²; the others follow, one step at a time (see src/README.md)
+├── src/             the pipeline parts, one folder each: rationale_query/ is Part 1 of RAG² and balanced_retrieval/ is Part 2; the others follow, one step at a time (see src/README.md)
 ├── experiments/     one numbered folder per experiment (see experiments/README.md)
 ├── tests/           automatic checks, in folders by purpose (see tests/README.md)
 └── _archive/        the previous implementation and its experiments (reference only)
@@ -40,4 +40,9 @@ Part 1 of RAG² is built: a language model writes a step-by-step rationale for a
 search query. It needs the model files in `models/` and the packages `llama-cpp-python`, `numpy`, `torch` and `transformers`
 (`pip install -e ".[rationale]"`). The commands, the settings and what the comparison of writers shows are in
 [`experiments/01_rationale_writers/NOTES.md`](experiments/01_rationale_writers/NOTES.md); `python -m rationale_query --help` lists
-the tool's commands. Parts 2 and 3 are not built yet.
+the tool's commands.
+
+Part 2 of RAG² is built: the rationale is searched in four corpora, the best passages of each are pooled, and one cross-encoder orders the
+pool. The corpora themselves (PubMed and PMC for Alzheimer's disease and its neighbours; the guidelines and textbooks of the paper) are
+built with `python -m balanced_retrieval chunk` and `embed` and are not in the repository; the commands are in [`src/README.md`](src/README.md)
+(`pip install -e ".[retrieval]"`). Part 3, the filter, is not built yet.
