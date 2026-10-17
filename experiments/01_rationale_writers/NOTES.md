@@ -72,15 +72,16 @@ The full run on a questions file, with the query vectors as well:
 python experiments\01_rationale_writers\run_experiment.py --questions path\to\questions.jsonl --run-name my_run --encode
 ```
 
-- Every writer whose model file is in `models\` runs, one after the other, and each takes about half a day for a thousand
+- Every writer whose model file is in `models\` runs, one after the other, and each takes more than a day for a thousand
   questions; the others are reported as passed over. To start with the paper's writer alone, add
   `--writers llama3-8b-instruct-q4km`; the second writer can be added later with the same `--run-name`.
   `--models-dir D:\models` points to another folder.
 - **It can be stopped and started again.** Press Ctrl+C, or close the laptop, and later run **the same command**: a
   question that has its rationale is not written again, and a writer that is complete is passed over at once. If a
   question failed, the run says so and the same command tries it again.
-- The speed on this laptop is about 9 new tokens per second on the processor, so a rationale of 300 tokens takes
-  about 45 seconds. A thousand questions take roughly half a day per writer. The run prints the time left.
+- The speed on this laptop was measured in a two-question trial (2026-10-16): the median time per question was 103 s for
+  Llama-3 and 90 s for Qwen, about 3.4 new tokens per second on the processor. A thousand questions take about 29 hours
+  per writer (Llama-3). The run prints the time left.
 - Per writer, the folder `outputs\<run name>\<writer name>\` holds `rationales.jsonl` (one line per question),
   `config.json` (every setting that shapes the rationales, with the SHA-256 of the model file) and, with `--encode`,
   `query_vectors.npy` and `query_vectors.json`. These are not committed.
@@ -121,7 +122,15 @@ python -m unittest tests.integration.test_real_models -v
 ```
 
 The first run downloads the encoder (about 440 MB), and the model file is hashed and loaded more than once, so allow
-about ten minutes. Every test should say `ok`; none should be skipped.
+about ten minutes. Every test should say `ok`; none should be skipped. One of them runs the lines of the authors' own
+`query_encode.py` on two texts and requires exactly the same vectors as `rationale_query` gives.
+
+The two models of Part 2 (about 440 MB each on first use) are checked the same way:
+
+```powershell
+$env:RETRIEVAL_MEDCPT = "1"
+python -m unittest tests.integration.test_real_models.RealRetrievalModelTests -v
+```
 
 ## Adding a writer
 

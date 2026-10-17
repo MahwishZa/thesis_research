@@ -140,11 +140,14 @@ def read_questions(path: str | Path) -> list[Question]:
 
 
 class RationaleStore:
-    """One output folder."""
+    """One output folder. A subclass for another kind of record sets ``records_file`` and ``record_type``."""
+
+    records_file = RATIONALES_FILE
+    record_type = RationaleRecord
 
     def __init__(self, directory: str | Path) -> None:
         self.directory = Path(directory)
-        self.records_path = self.directory / RATIONALES_FILE
+        self.records_path = self.directory / self.records_file
         self.config_path = self.directory / CONFIG_FILE
         self.recovered_partial_line = False
         self._size: int | None = None  # size of the records file after this object last read or wrote it
@@ -208,7 +211,7 @@ class RationaleStore:
             if not line:
                 continue
             try:
-                record = RationaleRecord.from_dict(json.loads(line))
+                record = self.record_type.from_dict(json.loads(line))
             except (ValueError, TypeError) as exc:
                 raise CorruptStore(f"{self.records_path}, line {number} is damaged: {exc}") from exc
             records[record.id] = record

@@ -1,1 +1,1 @@
-"""Unit tests of src/rationale_query with stand-ins for the model and the encoder (no model, no network)."""
+"""Unit tests, one folder per package of src/: rationale_query (Part 1) and balanced_retrieval (Part 2). No model, no network."""

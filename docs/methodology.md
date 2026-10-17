@@ -2,8 +2,8 @@
 
 Status: **specification of the RAG² baseline and of its Alzheimer's-scoped adaptation.** Revised 2026-10-15 after the researcher
 approved the direction of the evidence report (restore the baseline faithfully first, then test one extension). Supervisor
-approval (A2) is pending. Part 1 (rationale-based query formulation) is built in `src/rationale_query/`; Parts 2 and 3 are
-not. The requirements below are written as executable acceptance tests in `tests/spec/test_*.py`; each test skips until the
+approval (A2) is pending. Part 1 (rationale-based query formulation) is built in `src/rationale_query/` and Part 2 (balanced
+retrieval) in `src/balanced_retrieval/`; Part 3 is not. The requirements below are written as executable acceptance tests in `tests/spec/test_*.py`; each test skips until the
 part it checks exists (section 11).
 
 The evaluation dataset is **not decided here**; its approval is a separate step.
@@ -73,6 +73,20 @@ How Part 1 is built here (`src/rationale_query/`; the experiment that runs it is
 | Pooling | The four lists are concatenated in the order PubMed, PMC, guidelines, textbooks, with **no duplicate removal**. A corpus that holds fewer snippets than asked for adds fewer; the gap is not filled from another corpus. An unknown corpus name, or a search that fails, is an error, never a silently dropped corpus. | Code `rerank.py`; the last two sentences are a **[Rule]** |
 | Balance | Equal candidates per corpus before re-ranking only; nothing keeps the final list balanced. | Paper p.5; Code |
 | Re-ranker | `ncbi/MedCPT-Cross-Encoder`, `max_length=512`, scores the pair [query, snippet]; descending order, equal scores keep pool order (a stable sort); the best k are kept. The paper says the query is **the original question**; the released code uses the retrieval text (the rationale). | Paper p.5; Code — **[Open: they disagree]** |
+
+How Part 2 is built here (`src/balanced_retrieval/`; the plan was approved by the researcher on 2026-10-17, the supervisor's approval is pending):
+
+| Item | Choice | Status |
+|---|---|---|
+| Corpora | A hybrid: PubMed and PMC scoped to Alzheimer's disease and its neighbours (decision D9); clinical guidelines and textbooks general and whole, from the paper's own sources (the public part of the Meditron guideline set; the 18 MedQA textbooks). Licences of the last two are unchecked. | **[Decision]**, declared adaptation of scope and size |
+| Passages | 128 words with 32 words of overlap, cut by `chunking.py`; a word is a run between white space and the last window is the one that reaches the end of the text | Self-BioRAG's sizes **[Paper p.13]**; how it split words and ended the last window is **[Open]** |
+| Vectors | `ncbi/MedCPT-Article-Encoder`, first-token vector, 512 tokens, 32-bit, not normalised (16-bit storage is an option and is recorded); a passage is encoded as one text, whereas MedCPT's own example passes title and abstract as a pair | Usage as the query encoder **[Code]**; the authors' choice for snippets is **[Open]**; the stored PMC vectors have unit length and are not reused (D8) |
+| Search | Exact inner product over a memory-mapped matrix, block by block, so a corpus larger than memory can be searched; ties go to the lower row number | Same arithmetic as `faiss.IndexFlatIP` **[Code]**; the block-wise reading replaces the authors' in-memory index **[Rule]** |
+| k | One value for the candidates per corpus and for the final list, required on the command line (no default) | **[Code]** |
+| Pooling and re-ranking | As in the table above: fixed order, nothing removed, a short corpus not topped up, stable ordering, no quota; the cross-encoder reads the pairs in batches, which gives the same scores up to rounding | **[Code]**, **[Rule]** |
+| Re-ranker input | The original question (the paper); the rationale (the released code) is selectable and is a labelled sensitivity check | **[Open: they disagree]** |
+| Output | One record per question in `retrieved.jsonl`: the final passages with corpus, document key, chunk, row, dense score, re-ranking score and text; settings, corpora hashes and the hash of the rationale are bound to the folder, so another setting is refused | **[Rule]** |
+| Diagnostics | Share of each corpus in the final lists and the cross-corpus duplicate rate (section 7.4), reported by `report` | **[Rule]** |
 
 Corpus ablation (MedQA, Llama-3-8B-Instruct, best accuracy over k, **[Figure]**, p.15): PubMed alone about 59.8 (k = 32), PMC
 about 58.4 (k = 16), guidelines about 58, textbooks about 55.5 (k = 16); stacked retrieval about 59.5, stacked with re-ranking
@@ -274,7 +288,7 @@ Checklist (pass, fail or declared; no score):
 | D5 | How to obtain the filter | **Adopted:** ask the authors (labels first) and prepare a scale-reduced build in parallel; request not yet sent |
 | D6 | What "matches the paper" means | **Adopted:** directional agreement with section 6 |
 | D7 | k and evaluation size | **Open** until the calibration run |
-| D8 | PMC chunks: keep the existing 256-token chunks or re-chunk to 128-word windows | **Open** |
+| D8 | PMC chunks: keep the existing 256-token chunks or re-chunk to 128-word windows | **Adopted default** (hybrid plan, 2026-10-17): re-chunk to 128 words with 32 overlap and re-embed with raw vectors; supervisor approval pending |
 | D9 | Boundary of "neighbours" of Alzheimer's disease | **Open** |
 | D10 | Evaluation dataset | **Not decided**; separate approval |
 
@@ -316,17 +330,23 @@ changes, change `tests/spec/targets.py` and this table together; a guard test fa
 | Split by question (independent of row order, process and other questions); disjoint roles | `data_roles.splits`: `split_by_question`, `assert_disjoint` | `test_data_roles.py` |
 | The tests themselves: the target map, the skip rule and the link to this document | none | `test_guard.py` |
 
-**Tests of the built part.** `src/rationale_query` has its own tests, which check the code rather than the requirements. They sit in
-`tests/unit/` (with stand-ins, no model needed), `tests/integration/` (real libraries, real files); `tests/README.md` explains the folders:
+**Tests of the built parts.** `src/rationale_query` and `src/balanced_retrieval` have their own tests, which check the code rather than the
+requirements. They sit in `tests/unit/<package>/` (with stand-ins, no model needed) and `tests/integration/` (real libraries, real
+files); `tests/README.md` explains the folders. For `rationale_query`:
 `test_generator.py` (prompt tokens, greedy settings, limits, template checks, with a stand-in for llama.cpp),
 `test_prompt.py` (the exact layout of the prompt, which the acceptance tests squeeze), `test_store.py`
 and `test_batch.py` (records, resuming, refusals), `test_encoder.py`, `test_diagnostics.py`,
-`test_cli.py`, `test_rationale_writers.py` (the settings and runner of the experiment) and `tests/repository/test_layout.py`
-(every module has a docstring and a test, importing the commands loads no heavy package, and this section names every test
-file). `test_real_libraries.py` runs the real llama.cpp and a real torch encoder on tiny synthetic models written by
-`tests/integration/tiny_models.py`; it needs llama-cpp-python and gguf, or torch and transformers, and skips a class whose packages are
-missing. `test_real_models.py` checks the real Llama-3 file and `ncbi/MedCPT-Query-Encoder`; it runs only when
-`RATIONALE_LLAMA3_GGUF` or `RATIONALE_MEDCPT` is set (see `experiments/01_rationale_writers/NOTES.md`).
+`test_cli.py`, `test_rationale_writers.py` (the settings and runner of the experiment). For `balanced_retrieval`: `test_pool.py` and
+`test_retrieve.py` (argument handling and the order of calls, beyond the acceptance tests), `test_diagnostics.py`, `test_chunking.py`
+(the windows), `test_corpus.py` (the corpus folder), `test_embedding.py` (the resumable embedding), `test_search.py` (the exact
+search against a brute-force check), `test_scorer.py`, `test_records.py` and `test_cli.py` (the commands end to end with stand-in
+models). `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
+package, and this section names every test file). `test_real_libraries.py` runs the real llama.cpp and a real torch encoder on tiny
+synthetic models written by `tests/integration/tiny_models.py`; `test_real_retrieval.py` runs the article encoder, the cross-encoder and
+the whole `balanced_retrieval` command chain on tiny synthetic BERT models, and compares them with the authors' own lines of code. They need
+llama-cpp-python and gguf, or torch and transformers, and skip a class whose packages are missing. `test_real_models.py` checks the real
+Llama-3 file and the MedCPT models; it runs only when `RATIONALE_LLAMA3_GGUF`, `RATIONALE_MEDCPT` or `RETRIEVAL_MEDCPT` is set (see
+`experiments/01_rationale_writers/NOTES.md`).
 
 **Skipping.** A test is skipped only while its part has not been started, that is, while no Python file exists under
 `src/<package>/` for its module. Once the folder holds code, a missing module, a missing function or a failing check is an error,
@@ -346,7 +366,7 @@ irrelevant passage, with the rule and sample size fixed in advance.
 | Part | Faithful (F), adapted (A) or substitute (S) | State |
 |---|---|---|
 | 1 Rationale query | **F**, with the allowed deviation of a 4-bit generator and two open items (the line break before the question; the length limit) | built; the tests above pass, including the real llama.cpp and a real encoder on tiny stand-in models; the checks on the real Llama-3 file and MedCPT are written and wait for the researcher's laptop |
-| 2 Balanced retrieval | to be set when built | not built |
+| 2 Balanced retrieval | **F** in the arithmetic, the pooling and the re-ranking; **A** in the scope and size of PubMed and PMC and in the block-wise search; two open items (how the authors embedded snippets; question or rationale for the re-ranker) | built; the acceptance and unit tests pass, including real torch on tiny stand-in models; the real MedCPT checks and the corpora themselves wait for the researcher's laptop |
 | 3 Rationale-guided filter | to be set when built | not built |
 
 A part is called "RAG²" only if it is F, or A with its deviation written down. An S part is always named a substitute.
@@ -354,7 +374,7 @@ A part is called "RAG²" only if it is F, or A with its deviation written down. 
 Acceptance tests (section 11): written for the three parts and for the data roles. Before they were committed they were run
 against a throwaway reference implementation, which they accept, and against planted faults (a wrong tie rule, a dropped discard
 branch, a changed order, a removed check, a split that depends on row order), which they reject. That implementation is not part
-of the repository. The tests of Part 1 now run against `src/rationale_query` and pass; the others skip until their part is started.
+of the repository. The tests of Parts 1 and 2 now run against `src/rationale_query` and `src/balanced_retrieval` and pass; the others skip until their part is started.
 
 ## Revision note (2026-10-15)
 
@@ -366,6 +386,9 @@ acceptance-test map added; decisions D7 to D10 added.
 Added with the acceptance tests: the rules for pooling (no borrowing; unknown corpus or failed search is an error), for the label
 inputs, for the document key and for the stability of the split; section 11 rewritten (skip rule, strict run, checks outside the
 unit tests); the tests validated as described in section 12.
+
+Part 2 built (2026-10-17): the implementation table in section 4, decision D8 adopted as a default, the tests of the built parts in section 11 and the state
+of Part 2 in section 12.
 
 Part 1 built (2026-10-15): the implementation table in section 3, the unit-level facts in section 7.3 from the researcher's own
 checks, the `[SEP]` row made precise, the tests of the built part in section 11 and the state of Part 1 in section 12.

@@ -8,7 +8,9 @@ In PowerShell, from the repository folder (the paths are examples):
 
 ``RATIONALE_MEDCPT=1`` loads ncbi/MedCPT-Query-Encoder (downloaded on first use, then read from the Hugging Face cache).
 Any other value is taken as another encoder: a hub name, or a folder, which is then loaded without the network.
-Without the variables every test here is skipped and says why.
+
+``RETRIEVAL_MEDCPT=1`` loads ncbi/MedCPT-Article-Encoder and ncbi/MedCPT-Cross-Encoder, the two models of Part 2 (each
+about 440 MB on first use). Without the variables every test here is skipped and says why.
 """
 
 import contextlib
@@ -26,6 +28,7 @@ from tests.support import pinned_sha256
 
 LLAMA3_FILE = os.environ.get("RATIONALE_LLAMA3_GGUF", "")
 ENCODER = os.environ.get("RATIONALE_MEDCPT", "")
+RETRIEVAL_MODELS = os.environ.get("RETRIEVAL_MEDCPT", "")
 
 QUESTION_A = build_rationale_prompt(
     "A 68-year-old man is brought in by his wife because of progressive forgetfulness over two years. He now gets lost "
@@ -145,6 +148,26 @@ class RealEncoderTests(unittest.TestCase):
             self.np.array_equal(self.encoder.encode(list(self.TEXTS)), self.encoder.encode(list(self.TEXTS)))
         )
 
+    def test_the_vectors_are_those_of_the_authors_code(self):
+        """The lines of the authors' retriever/query_encode.py, with their graphics card replaced by the processor."""
+        import torch
+        from transformers import AutoModel, AutoTokenizer
+
+        name = self.encoder.name
+        local = Path(name).is_dir()
+        model = AutoModel.from_pretrained(name, local_files_only=local)
+        model.eval()
+        tokenizer = AutoTokenizer.from_pretrained(name, local_files_only=local)
+        queries = []
+        input_list = list(self.TEXTS)
+        for i in range(0, len(input_list), 1):
+            split_queries = input_list[i : i + 1]
+            with torch.no_grad():
+                encoded = tokenizer(split_queries, truncation=True, padding=True, return_tensors="pt", max_length=512)
+                embeds = model(**encoded).last_hidden_state[:, 0, :]
+                queries.extend(embeds.detach().cpu().numpy())
+        self.assertTrue(self.np.array_equal(self.encoder.encode(input_list), self.np.vstack(queries)))
+
     def test_token_counts_are_the_real_lengths_and_long_texts_are_cut_at_512(self):
         tokenizer = self.encoder.tokenizer
         long_text = " ".join(["patient"] * 700)
@@ -153,6 +176,56 @@ class RealEncoderTests(unittest.TestCase):
         self.assertGreater(counts[2], 512)
         self.assertEqual(len(tokenizer(long_text, truncation=True, max_length=512)["input_ids"]), 512)
         self.assertEqual(self.encoder.encode([long_text]).shape[0], 1)
+
+
+@unittest.skipUnless(RETRIEVAL_MODELS, "set RETRIEVAL_MEDCPT=1 to run these checks with the MedCPT article encoder and cross-encoder")
+class RealRetrievalModelTests(unittest.TestCase):
+    RELEVANT = "Cholinesterase inhibitors such as donepezil are first-line treatment for mild Alzheimer disease."
+    IRRELEVANT = "Systemic lupus erythematosus presents with a malar rash and anti-dsDNA antibodies."
+    QUERY = "Which drug treats memory loss in Alzheimer disease?"
+
+    @classmethod
+    def setUpClass(cls):
+        import numpy
+
+        from balanced_retrieval.embedding import ArticleEncoder
+        from balanced_retrieval.scorer import CrossEncoderScorer
+
+        cls.np = numpy
+        cls.articles = ArticleEncoder.from_pretrained(device="cpu")
+        cls.scorer = CrossEncoderScorer.from_pretrained(device="cpu", batch_size=2)
+
+    def test_the_article_encoder_gives_unnormalised_float32_vectors_of_width_768(self):
+        vectors = self.articles.encode([self.RELEVANT, self.IRRELEVANT])
+        self.assertEqual((vectors.shape, vectors.dtype), ((2, 768), self.np.float32))
+        norms = self.np.linalg.norm(vectors, axis=1)
+        self.assertTrue(self.np.all(self.np.abs(norms - 1.0) > 0.05), norms)
+        self.assertFalse(self.articles.model.training)
+
+    def test_a_passage_about_the_topic_is_closer_to_the_query_than_an_unrelated_one(self):
+        from rationale_query.encoder import QueryEncoder
+
+        query = QueryEncoder.from_pretrained(device="cpu").encode([self.QUERY])[0]
+        near, far = self.articles.encode([self.RELEVANT, self.IRRELEVANT]) @ query
+        self.assertGreater(near, far)
+
+    def test_the_cross_encoder_scores_the_passage_about_the_topic_higher(self):
+        candidates = [{"text": self.IRRELEVANT}, {"text": self.RELEVANT}]
+        irrelevant, relevant = self.scorer(self.QUERY, candidates)
+        self.assertGreater(relevant, irrelevant)
+        self.assertFalse(self.scorer.model.training)
+
+    def test_the_cross_encoder_scores_do_not_depend_on_the_batch_size(self):
+        candidates = [{"text": self.IRRELEVANT}, {"text": self.RELEVANT}, {"text": "Aspirin lowers the risk of stroke."}]
+        from balanced_retrieval.scorer import CrossEncoderScorer
+
+        one_call = CrossEncoderScorer(self.scorer.tokenizer, self.scorer.model, batch_size=3, no_grad=self.scorer._no_grad)
+        self.np.testing.assert_allclose(self.scorer(self.QUERY, candidates), one_call(self.QUERY, candidates), atol=1e-3)
+
+    def test_a_pair_longer_than_512_tokens_is_cut_and_scored(self):
+        long_text = " ".join(["patient"] * 700)
+        self.assertEqual(len(self.scorer(self.QUERY, [{"text": long_text}])), 1)
+        self.assertEqual(self.articles.encode([long_text]).shape[0], 1)
 
 
 if __name__ == "__main__":

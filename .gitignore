@@ -22,6 +22,8 @@ ram_monitor.csv
 experiments/results/index/
 experiments/results/index_pilot_reduced_scope/
 /corpus/
+# Part 2 corpora (passages and embeddings, multi-GB): built locally by `python -m balanced_retrieval`, never committed.
+/retrieval_corpora/
 # Local-only artefacts that may sit inside the archive on a computer that built them.
 _archive/**/data/
 _archive/**/labels/

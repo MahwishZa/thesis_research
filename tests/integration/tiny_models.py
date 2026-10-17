@@ -8,6 +8,7 @@ tokenised, the start-of-text token, the stop and length endings, the cache, and 
 
 ``write_tiny_bert`` needs ``torch`` and ``transformers`` and writes a BERT with random weights, two layers and a
 vocabulary of a few dozen words into a folder that ``from_pretrained`` reads, to exercise the real encoder code.
+``write_tiny_cross_encoder`` writes the same kind of BERT with a one-number classification head, for the cross-encoder.
 """
 
 from __future__ import annotations
@@ -109,23 +110,38 @@ def write_tiny_gguf(
     writer.close()
 
 
-def write_tiny_bert(folder: str | Path) -> None:
-    import torch
-    from transformers import BertConfig, BertModel, BertTokenizerFast
+def _tiny_bert_config(folder: Path, **extra):
+    from transformers import BertConfig, BertTokenizerFast
 
-    folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     words = "the patient has memory loss and alzheimer disease is likely donepezil a b c d answer option ##s ##ing . , ? ) ( -"
     vocabulary = ["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", *words.split()]
     (folder / "vocab.txt").write_text("\n".join(vocabulary) + "\n", encoding="utf-8")
     BertTokenizerFast(vocab_file=str(folder / "vocab.txt"), do_lower_case=True).save_pretrained(folder)
-    torch.manual_seed(0)
-    config = BertConfig(
+    return BertConfig(
         vocab_size=len(vocabulary),
         hidden_size=32,
         num_hidden_layers=2,
         num_attention_heads=2,
         intermediate_size=64,
         max_position_embeddings=512,
+        **extra,
     )
-    BertModel(config).save_pretrained(folder)
+
+
+def write_tiny_bert(folder: str | Path) -> None:
+    import torch
+    from transformers import BertModel
+
+    folder = Path(folder)
+    torch.manual_seed(0)
+    BertModel(_tiny_bert_config(folder)).save_pretrained(folder)
+
+
+def write_tiny_cross_encoder(folder: str | Path) -> None:
+    import torch
+    from transformers import BertForSequenceClassification
+
+    folder = Path(folder)
+    torch.manual_seed(1)
+    BertForSequenceClassification(_tiny_bert_config(folder, num_labels=1)).save_pretrained(folder)

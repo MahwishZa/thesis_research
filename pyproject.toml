@@ -15,6 +15,8 @@ dependencies = []
 # Part 1 (src/rationale_query): the model that writes the rationales and the encoder that turns them into queries.
 # Checked together: Python 3.12, llama-cpp-python 0.3.35, numpy 1.26.4, torch 2.4.1, transformers 4.51.3.
 rationale = ["llama-cpp-python>=0.3.35", "numpy>=1.26", "torch>=2.4", "transformers>=4.51"]
+# Part 2 (src/balanced_retrieval): the MedCPT article encoder and cross-encoder, and the exact search over the vectors.
+retrieval = ["numpy>=1.26", "torch>=2.4", "transformers>=4.51"]
 # The tests that run the real llama.cpp on a tiny synthetic model write its file with the gguf package (0.19.0 was used).
 test = ["gguf"]
 
