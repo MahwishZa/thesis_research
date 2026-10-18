@@ -292,6 +292,7 @@ Checklist (pass, fail or declared; no score):
 | D8 | PMC chunks: keep the existing 256-token chunks or re-chunk to 128-word windows | **Adopted default** (hybrid plan, 2026-10-17): re-chunk to 128 words with 32 overlap and re-embed with raw vectors; supervisor approval pending |
 | D9 | Boundary of "neighbours" of Alzheimer's disease | **Open** |
 | D10 | Evaluation dataset | **Not decided**; separate approval |
+| D11 | Arithmetic of the article encoder for the PubMed and PMC passages: 32-bit as for the textbooks and guidelines, or 16-bit | **Adopted default** (2026-10-18), supervisor approval pending: on 1,000 guideline passages on the researcher's RTX 2050, 16-bit ran at 105 passages a second against 22 in 32-bit (the 32-bit embedding of the guidelines ran at 27 to 34), the cosine between the two vectors of a passage was 0.999999 on average and 0.999998 at the lowest, the same 10 nearest passages were found 99.8% of the time and the same nearest passage 100%. The vectors are still stored as 32-bit numbers; the setting is recorded in each corpus |
 
 ## 10. Questions for the authors
 
