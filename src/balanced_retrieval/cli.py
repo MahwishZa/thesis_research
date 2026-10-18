@@ -17,6 +17,7 @@ import argparse
 import io
 import json
 import sys
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -240,13 +241,21 @@ def _embed(args: argparse.Namespace, streams: Streams, factory: Callable[[argpar
     corpus = _disk().Corpus(args.root, args.corpus)
     encoder = factory(args)
     last = 0
+    first: tuple[float, int] | None = None  # when and where this run's first batch was finished
 
     def progress(done: int, total: int) -> None:
-        nonlocal last
+        nonlocal last, first
+        now = time.monotonic()
+        if first is None:
+            first = (now, done)
         if args.quiet or (done < total and done - last < 10_000):
             return
         last = done
-        streams.err.write(f"  embedded {done} of {total} passages\n")
+        speed = ""
+        if done > first[1] and now > first[0]:
+            rate = (done - first[1]) / (now - first[0])
+            speed = f" ({rate:.0f} passages a second; about {(total - done) / rate / 60:.0f} minutes left)"
+        streams.err.write(f"  embedded {done} of {total} passages{speed}\n")
 
     state = embed_corpus(corpus, encoder, batch_size=args.batch_size, save_every=args.save_every, dtype=args.dtype, progress=progress)
     streams.out.write(f"{args.corpus}: {state['rows']} vectors written to {corpus.directory} ({args.dtype}, not normalised)\n")
