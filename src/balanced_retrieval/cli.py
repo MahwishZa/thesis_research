@@ -52,7 +52,7 @@ def _parser() -> argparse.ArgumentParser:
 
     fetch = sub.add_parser("fetch", help="download the documents of one corpus into a JSON-lines file")
     fetch.add_argument("source", choices=CORPUS_ORDER)
-    fetch.add_argument("--out", type=Path, required=True, help="the JSON-lines file to write (a pubmed or pmc download can be resumed)")
+    fetch.add_argument("--out", type=Path, default=None, help="the JSON-lines file to write (a pubmed or pmc download can be resumed)")
     fetch.add_argument("--as-of", help="pubmed: only records published up to this date, YYYY-MM-DD (names the snapshot)")
     fetch.add_argument("--count-only", action="store_true", help="pubmed: only say how many records the scope finds")
     fetch.add_argument("--pubmed-file", type=Path, help="pmc: the pubmed download whose records get their full text")
@@ -152,6 +152,8 @@ def _disk() -> Any:
 
 
 def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[[], Any] | None) -> int:
+    if args.out is None and not args.count_only:
+        raise ValueError("fetch needs --out, the JSON-lines file to write")
     last = 0
 
     def progress(done: int, total: int) -> None:

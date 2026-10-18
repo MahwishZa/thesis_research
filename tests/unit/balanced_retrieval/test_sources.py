@@ -468,10 +468,15 @@ class FetchCommandTests(TempDirTestCase):
 
     def test_count_only_reports_the_size_of_the_scope_without_downloading(self):
         service = FakeService([("1", "2019-01-01"), ("2", "2020-01-01")])
-        status, out, _ = self.run_cli(["fetch", "pubmed", "--out", str(self.dir / "p.jsonl"), "--as-of", "2026-09-13", "--count-only"], service)
+        status, out, _ = self.run_cli(["fetch", "pubmed", "--as-of", "2026-09-13", "--count-only"], service)
         self.assertEqual(status, 0)
         self.assertIn("finds 2 records up to 2026-09-13", out)
-        self.assertFalse((self.dir / "p.jsonl").exists())
+        self.assertEqual(list(self.dir.iterdir()), [])
+
+    def test_a_download_without_an_output_file_is_refused(self):
+        status, _, err = self.run_cli(["fetch", "pubmed", "--as-of", "2026-09-13"], FakeService([]))
+        self.assertEqual(status, 1)
+        self.assertIn("--out", err)
 
     def test_pubmed_needs_a_date_and_pmc_needs_a_pubmed_file(self):
         for argv, words in (
