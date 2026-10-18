@@ -84,6 +84,7 @@ class Client:
             term=term,
             retmode="json",
             retmax=retmax,
+            sort="pub_date",  # newest first inside a window; ESearch's default order is by relevance
             datetype="pdat",
             mindate=mindate.strftime("%Y/%m/%d"),
             maxdate=maxdate.strftime("%Y/%m/%d"),
@@ -104,7 +105,7 @@ def count_hits(client: Client, db: str, term: str, until: date) -> int:
 
 
 def search_ids(client: Client, db: str, term: str, until: date) -> list[str]:
-    """Every identifier that ``term`` finds among records published up to ``until``, in publication-window order."""
+    """Every identifier that ``term`` finds among records published up to ``until``, newest publication window first."""
     found: list[str] = []
     seen: set[str] = set()
 
@@ -116,8 +117,8 @@ def search_ids(client: Client, db: str, term: str, until: date) -> list[str]:
             if start == end:
                 raise NcbiError(f"{total} hits on the single day {start}; the search cannot be cut further")
             middle = start + timedelta(days=(end - start).days // 2)
+            take(middle + timedelta(days=1), end)  # the newest first, so that a trial run holds recent records
             take(start, middle)
-            take(middle + timedelta(days=1), end)
             return
         _, ids = client.search(db, term, start, end, retmax=total)
         if len(ids) != total:

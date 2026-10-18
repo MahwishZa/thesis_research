@@ -9,6 +9,7 @@ date, so that a corpus has a name and can be made again.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -44,8 +45,12 @@ def _date(citation: ET.Element) -> str:
     return ""
 
 
-def parse_pubmed(xml: bytes | str) -> list[dict[str, Any]]:
-    """The documents of one ``efetch`` answer (a ``PubmedArticleSet``); an empty list when nothing is usable."""
+def parse_pubmed(xml: bytes | str, left_out: Counter[str] | None = None) -> list[dict[str, Any]]:
+    """The documents of one ``efetch`` answer (a ``PubmedArticleSet``); an empty list when nothing is usable.
+
+    ``left_out``, if given, counts the records that were not kept, by reason.
+    """
+    left_out = Counter() if left_out is None else left_out
     try:
         root = ET.fromstring(xml)
     except ET.ParseError as exc:
@@ -60,6 +65,7 @@ def parse_pubmed(xml: bytes | str) -> list[dict[str, Any]]:
             continue
         types = {_text(t) for t in citation.iterfind("Article/PublicationTypeList/PublicationType")}
         if "Retracted Publication" in types:
+            left_out["retracted"] += 1
             continue
         parts = []
         for node in citation.iterfind("Article/Abstract/AbstractText"):
@@ -67,6 +73,7 @@ def parse_pubmed(xml: bytes | str) -> list[dict[str, Any]]:
             if body:
                 parts.append(f"{label}: {body}" if label else body)
         if not parts:
+            left_out["no abstract"] += 1
             continue
         title = _text(citation.find("Article/ArticleTitle"))
         ids = {node.get("IdType"): _text(node) for node in article.iterfind("PubmedData/ArticleIdList/ArticleId")}
@@ -96,8 +103,10 @@ def fetch_pubmed(
     term = query or pubmed_scope()
     settings = {"source": "pubmed", "query": term, "as_of": as_of.isoformat()}
 
-    def fetch_batch(ids: list[str]) -> list[dict[str, Any]]:
-        return parse_pubmed(client.call("efetch.fcgi", db="pubmed", id=",".join(ids), retmode="xml", rettype="abstract"))
+    def fetch_batch(ids: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+        left_out: Counter[str] = Counter()
+        found = parse_pubmed(client.call("efetch.fcgi", db="pubmed", id=",".join(ids), retmode="xml", rettype="abstract"), left_out)
+        return found, dict(left_out)
 
     return download_in_batches(
         out,

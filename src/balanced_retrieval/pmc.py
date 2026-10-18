@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -67,8 +68,12 @@ def licence_group(article: ET.Element) -> str:
     return "other"
 
 
-def parse_pmc(xml: bytes | str) -> list[dict[str, Any]]:
-    """The documents of one ``efetch`` answer (a ``pmc-articleset``): articles in English that have a body."""
+def parse_pmc(xml: bytes | str, left_out: Counter[str] | None = None) -> list[dict[str, Any]]:
+    """The documents of one ``efetch`` answer (a ``pmc-articleset``): articles in English that have a body.
+
+    ``left_out``, if given, counts the articles that were not kept, by reason.
+    """
+    left_out = Counter() if left_out is None else left_out
     try:
         root = ET.fromstring(xml)
     except ET.ParseError as exc:
@@ -77,7 +82,11 @@ def parse_pmc(xml: bytes | str) -> list[dict[str, Any]]:
     for article in root.iter("article"):
         language = article.get(_LANG, "en")
         body = article.find("body")
-        if not language.lower().startswith("en") or body is None:
+        if not language.lower().startswith("en"):
+            left_out["not English"] += 1
+            continue
+        if body is None:
+            left_out["no full text (not open access, or a scan)"] += 1
             continue
         ids = {node.get("pub-id-type"): _clean("".join(node.itertext())) for node in article.iterfind("front/article-meta/article-id")}
         pmcid = ids.get("pmc") or ids.get("pmcid") or ""
@@ -94,6 +103,7 @@ def parse_pmc(xml: bytes | str) -> list[dict[str, Any]]:
         _prose(body, lines)
         text = "\n".join(line for line in lines if line)
         if not text or not (pmcid or pmid):
+            left_out["no text or no identifier"] += 1
             continue
         documents.append(
             {
@@ -131,8 +141,11 @@ def fetch_pmc(
     """Download the full text of the PMC identifiers of ``pubmed_file`` into ``out`` (resumable)."""
     settings = {"source": "pmc", "from": pubmed_file.name, "pubmed_state": _pubmed_signature(pubmed_file)}
 
-    def fetch_batch(ids: list[str]) -> list[dict[str, Any]]:
-        return parse_pmc(client.call("efetch.fcgi", db="pmc", id=",".join(ids), retmode="xml"))
+    def fetch_batch(ids: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+        left_out: Counter[str] = Counter()
+        found = parse_pmc(client.call("efetch.fcgi", db="pmc", id=",".join(ids), retmode="xml"), left_out)
+        left_out["not returned"] += len(ids) - len(found) - sum(left_out.values())
+        return found, {reason: number for reason, number in left_out.items() if number}
 
     return download_in_batches(out, settings, lambda: pmc_ids_of(pubmed_file), fetch_batch, batch_size=BATCH, limit=limit, progress=progress)
 

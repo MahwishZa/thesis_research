@@ -186,6 +186,8 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
         streams.out.write(
             f"{args.source}: {state['documents']} documents from {state['done']} of {state['ids']} identifiers in {args.out}\n"
         )
+        for reason, number in sorted(state.get("notes", {}).items()):
+            streams.out.write(f"  left out: {number} ({reason})\n")
         if state["done"] < state["ids"]:
             streams.out.write("  not finished; run the same command again to continue\n")
         return 0

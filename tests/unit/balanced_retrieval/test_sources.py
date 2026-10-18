@@ -123,7 +123,7 @@ class FakeService:
         name, params = self.calls[-1]
         if name == "esearch.fcgi":
             low, high = params["mindate"][0].replace("/", "-"), params["maxdate"][0].replace("/", "-")
-            hits = [i for i, d in self.records if low <= d <= high]
+            hits = [i for i, d in sorted(self.records, key=lambda r: r[1], reverse=params["sort"] == ["pub_date"]) if low <= d <= high]
             ids = hits[: int(params["retmax"][0])]
             return json.dumps({"esearchresult": {"count": str(len(hits)), "idlist": ids}}).encode()
         return b"<ok/>"
@@ -187,6 +187,11 @@ class SearchIdsTests(unittest.TestCase):
         self.assertEqual(sorted(found), sorted(i for i, _ in records))
         self.assertEqual(len(found), len(set(found)))
 
+    def test_the_newest_window_comes_first_so_that_a_trial_run_holds_recent_records(self):
+        records = [(str(n), f"20{10 + n}-06-15") for n in range(10)]
+        found = ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2030, 1, 1))
+        self.assertEqual(found, [str(n) for n in range(9, -1, -1)])
+
     def test_only_records_up_to_the_date_are_found(self):
         records = [("1", "2019-05-01"), ("2", "2020-05-01"), ("3", "2021-05-01")]
         found = ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2020, 12, 31))
@@ -228,6 +233,13 @@ class ParsePubmedTests(unittest.TestCase):
         self.assertEqual((first["doc_key"], first["doi"], first["pmcid"], first["date"]), ("PMID:111", "10.1/abc", "PMC555", "2020-03-05"))
         self.assertEqual((self.documents[1]["doi"], self.documents[1]["pmcid"], self.documents[1]["date"]), ("", "", "2015"))
 
+    def test_the_records_that_were_not_kept_are_counted_by_reason(self):
+        from collections import Counter
+
+        left_out = Counter()
+        pubmed.parse_pubmed(PUBMED_XML, left_out)
+        self.assertEqual(dict(left_out), {"no abstract": 1, "retracted": 1})
+
     def test_a_broken_answer_is_an_error(self):
         with self.assertRaises(StoreError):
             pubmed.parse_pubmed("<PubmedArticleSet><oops>")
@@ -254,6 +266,13 @@ class ParsePmcTests(unittest.TestCase):
 
     def test_the_key_is_the_pubmed_number_when_there_is_one_else_the_pmc_number(self):
         self.assertEqual([d["doc_key"] for d in self.documents], ["PMID:111", "PMCID:PMC999"])
+
+    def test_the_articles_that_were_not_kept_are_counted_by_reason(self):
+        from collections import Counter
+
+        left_out = Counter()
+        pmc.parse_pmc(PMC_XML, left_out)
+        self.assertEqual(dict(left_out), {"no full text (not open access, or a scan)": 1, "not English": 1})
 
     def test_the_licence_group_is_read_from_the_licence_statement(self):
         self.assertEqual([d["licence"] for d in self.documents], ["cc-by-nc", "none"])
@@ -325,6 +344,11 @@ class DownloadInBatchesTests(TempDirTestCase):
         with self.assertRaises(StoreError):
             self.run_download(out, ["1"])
         self.assertEqual(out.read_text(), "old\n")
+
+    def test_the_reasons_a_batch_gives_for_leaving_documents_out_are_added_up_in_the_state(self):
+        out = self.dir / "docs.jsonl"
+        state = documents.download_in_batches(out, {}, lambda: ["1", "2", "3"], lambda ids: ([], {"no abstract": len(ids)}), batch_size=2)
+        self.assertEqual(state["notes"], {"no abstract": 3})
 
     def test_a_batch_may_return_fewer_documents_than_identifiers(self):
         out = self.dir / "docs.jsonl"
