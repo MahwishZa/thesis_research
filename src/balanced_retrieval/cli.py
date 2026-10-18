@@ -240,6 +240,9 @@ def _embed(args: argparse.Namespace, streams: Streams, factory: Callable[[argpar
         raise _needs_packages(exc) from exc
     corpus = _disk().Corpus(args.root, args.corpus)
     encoder = factory(args)
+    device = getattr(encoder, "info", {}).get("device") if isinstance(getattr(encoder, "info", None), dict) else None
+    if device and not args.quiet:
+        streams.err.write(f"  encoding on the {device}\n")
     last = 0
     first: tuple[float, int] | None = None  # when and where this run's first batch was finished
 

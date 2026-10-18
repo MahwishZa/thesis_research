@@ -202,6 +202,7 @@ class EmbedAndCheckTests(CliTestCase):
         status, _, err = run(["embed", "--root", str(self.root), "--corpus", "pubmed", "--batch-size", "2"], article_encoder_factory=lambda a: BagEncoder())
         self.assertEqual(status, 0)
         self.assertIn("embedded 3 of 3 passages", err)
+        self.assertIn("encoding on the cpu", err)
 
 
 class RetrieveCommandTests(CliTestCase):
