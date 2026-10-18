@@ -8,6 +8,7 @@ every window holds fewer. Nothing here needs more than the standard library.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import time
@@ -70,7 +71,7 @@ class Client:
             except urllib.error.HTTPError as exc:
                 if exc.code not in (429, 500, 502, 503, 504) or attempt == self.retries:
                     raise NcbiError(f"{endpoint}: the service answered {exc.code} {exc.reason}") from exc
-            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            except (urllib.error.URLError, http.client.HTTPException, TimeoutError, ConnectionError, OSError) as exc:  # a dropped connection too
                 if attempt == self.retries:
                     raise NcbiError(f"{endpoint}: cannot reach the service ({exc})") from exc
             self.sleep(min(2.0 ** (attempt + 1), 60.0))

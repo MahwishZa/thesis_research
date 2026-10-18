@@ -24,7 +24,7 @@ from balanced_retrieval import (
 from balanced_retrieval.cli import main
 from rationale_query.cli import Streams
 from rationale_query.store import ConfigMismatch, StoreError
-from tests.support import TempDirTestCase
+from tests.support import TempDirTestCase, np
 
 PUBMED_XML = """<?xml version="1.0"?>
 <PubmedArticleSet>
@@ -163,6 +163,21 @@ class NcbiClientTests(unittest.TestCase):
         self.assertEqual(client.call("einfo.fcgi"), b"<ok/>")
         self.assertEqual(len(service.calls), 3)
         self.assertEqual([s for s in client.sleeps if s >= 2], [2.0, 4.0])
+
+    def test_a_connection_that_drops_in_the_middle_of_an_answer_is_tried_again(self):
+        import http.client
+
+        answers = [http.client.IncompleteRead(b"half"), ConnectionResetError("reset"), b"<ok/>"]
+
+        def opener(url, data):
+            answer = answers.pop(0)
+            if isinstance(answer, BaseException):
+                raise answer
+            return answer
+
+        client = quiet_client(opener)
+        self.assertEqual(client.call("efetch.fcgi"), b"<ok/>")
+        self.assertEqual(answers, [])
 
     def test_a_request_that_keeps_failing_ends_in_an_error_that_says_so(self):
         with self.assertRaisesRegex(ncbi.NcbiError, "503"):
@@ -518,6 +533,26 @@ class FetchCommandTests(TempDirTestCase):
                 status, _, err = self.run_cli(argv, FakeService([]))
                 self.assertEqual(status, 1)
                 self.assertIn(words, err)
+
+    def test_a_download_that_was_not_finished_is_not_chunked_or_given_full_text_unless_allowed(self):
+        pubmed_file = self.dir / "p.jsonl"
+        documents.download_in_batches(pubmed_file, {}, lambda: ["1", "2", "3"], lambda ids: [{"doc_key": f"PMID:{i}", "text": "t", "pmcid": f"PMC{i}"} for i in ids], batch_size=1, limit=1)
+        for argv in (
+            ["chunk", "--corpus", "pubmed", "--documents", str(pubmed_file), "--root", str(self.dir / "corpora")],
+            ["fetch", "pmc", "--pubmed-file", str(pubmed_file), "--out", str(self.dir / "c.jsonl")],
+        ):
+            with self.subTest(command=argv[0]):
+                status, _, err = self.run_cli(argv, FakeService([]))
+                self.assertEqual(status, 1)
+                self.assertIn("holds only 1 of 3 identifiers", err)
+                self.assertIn("--allow-partial", err)
+
+    @unittest.skipIf(np is None, "numpy is not installed")
+    def test_allow_partial_lets_a_trial_through(self):
+        pubmed_file = self.dir / "p.jsonl"
+        documents.download_in_batches(pubmed_file, {}, lambda: ["1", "2", "3"], lambda ids: [{"doc_key": f"PMID:{i}", "text": "some words", "pmcid": ""} for i in ids], batch_size=1, limit=1)
+        status, _, err = self.run_cli(["chunk", "--corpus", "pubmed", "--documents", str(pubmed_file), "--root", str(self.dir / "corpora"), "--allow-partial"])
+        self.assertEqual(status, 0, err)
 
     def test_a_trial_download_stops_at_the_limit_and_says_how_to_continue(self):
         class Service(FakeService):

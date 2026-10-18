@@ -33,6 +33,14 @@ def read_state(out: Path) -> dict[str, Any] | None:
         raise StoreError(f"cannot read {_state_path(out)}: {exc}") from exc
 
 
+def unfinished(out: Path) -> str | None:
+    """A sentence saying how far a download at ``out`` got, if it was started and not finished; else None."""
+    state = read_state(Path(out))
+    if state is None or state["done"] >= state["ids"]:
+        return None
+    return f"{out} holds only {state['done']} of {state['ids']} identifiers; run the fetch command again to finish it"
+
+
 def download_in_batches(
     out: Path,
     settings: dict[str, Any],

@@ -61,6 +61,7 @@ def _parser() -> argparse.ArgumentParser:
     fetch.add_argument("--limit", type=int, default=None, help="pubmed, pmc: stop after this many identifiers (a trial run)")
     fetch.add_argument("--file", default=None, help="guidelines: the file of epfl-llm/guidelines to use (default: the open one)")
     fetch.add_argument("--revision", default=None, help="guidelines, textbooks: the revision of the dataset on the hub")
+    fetch.add_argument("--allow-partial", action="store_true", help="pmc: use a pubmed download that was not finished (a trial)")
     fetch.add_argument("--quiet", action="store_true", help="no progress lines")
 
     chunk = sub.add_parser("chunk", help="cut documents into passages and write one corpus folder")
@@ -70,6 +71,7 @@ def _parser() -> argparse.ArgumentParser:
     chunk.add_argument("--words", type=int, default=DEFAULT_WORDS, help="passage length in words")
     chunk.add_argument("--overlap", type=int, default=DEFAULT_OVERLAP, help="words shared by neighbouring passages")
     chunk.add_argument("--overwrite", action="store_true", help="replace an existing corpus (its embeddings go too)")
+    chunk.add_argument("--allow-partial", action="store_true", help="use a download that was not finished (a trial)")
 
     embed = sub.add_parser("embed", help="write the MedCPT article vectors of one corpus (resumable)")
     embed.add_argument("--root", type=Path, required=True)
@@ -212,6 +214,7 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
         else:
             if not args.pubmed_file:
                 raise ValueError("fetch pmc needs --pubmed-file, the pubmed download whose records get their full text")
+            _refuse_unfinished(args.pubmed_file, args.allow_partial)
             state = fetch_pmc(client, args.out, pubmed_file=args.pubmed_file, limit=args.limit, progress=progress)
         streams.out.write(
             f"{args.source}: {state['documents']} documents from {state['done']} of {state['ids']} identifiers in {args.out}\n"
@@ -233,7 +236,16 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
     return 0
 
 
+def _refuse_unfinished(path: Path, allowed: bool) -> None:
+    from .documents import unfinished
+
+    problem = unfinished(path)
+    if problem and not allowed:
+        raise ValueError(f"{problem} (or add --allow-partial to use what is there)")
+
+
 def _chunk(args: argparse.Namespace, streams: Streams) -> int:
+    _refuse_unfinished(args.documents, args.allow_partial)
     disk = _disk()
     manifest = disk.write_corpus(
         args.root, args.corpus, disk.read_documents(args.documents), words=args.words, overlap=args.overlap, overwrite=args.overwrite
