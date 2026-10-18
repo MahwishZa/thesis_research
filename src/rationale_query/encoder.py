@@ -33,6 +33,7 @@ class QueryEncoder:
         no_grad: Callable[[], Any] | None = None,
         name: str = ENCODER_NAME,
         revision: str | None = None,
+        compute_dtype: str = "float32",
     ) -> None:
         if not isinstance(batch_size, int) or batch_size < 1:
             raise ValueError("batch_size must be a positive integer")
@@ -46,6 +47,7 @@ class QueryEncoder:
         self._no_grad = no_grad or contextlib.nullcontext
         self.name = name
         self.revision = revision
+        self.compute_dtype = compute_dtype
 
     @classmethod
     def from_pretrained(
@@ -56,6 +58,7 @@ class QueryEncoder:
         device: str = "auto",
         batch_size: int = 1,
         local_files_only: bool = False,
+        compute_dtype: str = "float32",
     ) -> QueryEncoder:
         import torch
         from transformers import AutoModel, AutoTokenizer
@@ -64,14 +67,18 @@ class QueryEncoder:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         tokenizer = AutoTokenizer.from_pretrained(name, revision=revision, local_files_only=local_files_only)
         model = AutoModel.from_pretrained(name, revision=revision, local_files_only=local_files_only)
+        if compute_dtype not in ("float32", "float16"):
+            raise ValueError(f"compute_dtype must be float32 or float16, got {compute_dtype!r}")
+        if compute_dtype == "float16":
+            model.half()  # the arithmetic of the encoder only; the vectors that come out are still returned as float32
         model.eval()
         model.to(device)
         resolved = getattr(model.config, "_commit_hash", None) or revision
-        return cls(tokenizer, model, device=device, batch_size=batch_size, no_grad=torch.no_grad, name=name, revision=resolved)
+        return cls(tokenizer, model, device=device, batch_size=batch_size, no_grad=torch.no_grad, name=name, revision=resolved, compute_dtype=compute_dtype)
 
     @property
     def info(self) -> dict[str, Any]:
-        return {
+        info = {
             "encoder": self.name,
             "revision": self.revision,
             "max_length": self.max_length,
@@ -81,6 +88,9 @@ class QueryEncoder:
             "device": self.device,
             "batch_size": self.batch_size,
         }
+        if self.compute_dtype != "float32":  # named only when it differs, so that every earlier description stays as it was
+            info["compute_dtype"] = self.compute_dtype
+        return info
 
     def token_counts(self, texts: Sequence[str]) -> list[int]:
         """Number of tokens each text would have, special tokens included, before truncation."""

@@ -17,6 +17,7 @@ try:
     from balanced_retrieval.embedding import (
         ARTICLE_ENCODER_NAME,
         ArticleEncoder,
+        compare_precision,
         embed_corpus,
     )
 except ImportError:  # numpy is not installed
@@ -40,6 +41,41 @@ class CountingEncoder:
             raise RuntimeError("out of memory")
         self.encoded += len(texts)
         return self.inner.encode(texts)
+
+
+class NoisyEncoder:
+    """Gives the vectors of another encoder plus a fixed small disturbance, as a lower precision would."""
+
+    def __init__(self, inner, noise):
+        self.inner, self.noise = inner, noise
+        self.info = inner.info
+
+    def encode(self, texts):
+        vectors = self.inner.encode(texts)
+        return vectors + self.noise * np.sin(np.arange(vectors.size, dtype=np.float32).reshape(vectors.shape))
+
+
+@unittest.skipIf(ArticleEncoder is None, "numpy is not installed")
+class ComparePrecisionTests(unittest.TestCase):
+    def setUp(self):
+        self.full = CountingEncoder()
+
+    def test_two_identical_encoders_agree_completely(self):
+        result = compare_precision(TEXTS, self.full, CountingEncoder(), queries=5, top=3)
+        self.assertAlmostEqual(result["cosine_mean"], 1.0)
+        self.assertAlmostEqual(result["cosine_min"], 1.0)
+        self.assertEqual((result["top3_overlap"], result["nearest_same"], result["texts"]), (1.0, 1.0, 11))
+
+    def test_a_disturbed_encoder_lowers_the_cosine_and_may_change_the_neighbours(self):
+        result = compare_precision(TEXTS, self.full, NoisyEncoder(CountingEncoder(), 2000.0), queries=11, top=3)
+        self.assertLess(result["cosine_min"], 0.99)
+        self.assertLessEqual(result["cosine_min"], result["cosine_mean"])
+        self.assertLess(result["top3_overlap"], 1.0)
+
+    def test_the_time_of_each_encoder_is_measured(self):
+        ticks = iter([0.0, 2.0, 3.0])
+        result = compare_precision(TEXTS, self.full, CountingEncoder(), queries=2, top=2, clock=lambda: next(ticks))
+        self.assertEqual((result["seconds_full"], result["seconds_half"]), (2.0, 1.0))
 
 
 @unittest.skipIf(ArticleEncoder is None, "numpy is not installed")
@@ -132,6 +168,19 @@ class EmbedCorpusTests(TempDirTestCase):
             embed_corpus(self.corpus, CountingEncoder(max_length=64), batch_size=4, save_every=4)
         with self.assertRaisesRegex(CorpusError, "other settings"):
             embed_corpus(self.corpus, CountingEncoder(), batch_size=4, save_every=4, dtype="float16")
+
+    def test_half_precision_arithmetic_is_recorded_and_never_mixed_with_the_full_kind(self):
+        failing = CountingEncoder(compute_dtype="float16")
+        failing.fail_after = 4
+        with self.assertRaises(RuntimeError):
+            embed_corpus(self.corpus, failing, batch_size=4, save_every=4)
+        self.assertEqual(self.corpus.embedding_state()["settings"]["compute_dtype"], "float16")
+        with self.assertRaisesRegex(CorpusError, "compute_dtype"):
+            embed_corpus(self.corpus, CountingEncoder(), batch_size=4, save_every=4)
+
+    def test_the_usual_arithmetic_leaves_no_trace_in_the_state_so_earlier_embeddings_stay_valid(self):
+        embed_corpus(self.corpus, CountingEncoder(), batch_size=4, save_every=4)
+        self.assertNotIn("compute_dtype", self.corpus.embedding_state()["settings"])
 
     def test_half_precision_halves_the_file_and_keeps_the_values_to_half_precision(self):
         embed_corpus(self.corpus, CountingEncoder(), batch_size=4, save_every=4, dtype="float16")

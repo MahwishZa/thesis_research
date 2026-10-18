@@ -121,6 +121,10 @@ class QueryEncoderTests(unittest.TestCase):
         )
         self.assertEqual(ENCODER_NAME, "ncbi/MedCPT-Query-Encoder")
 
+    def test_half_precision_arithmetic_is_named_in_the_info_only_when_it_is_used(self):
+        self.assertNotIn("compute_dtype", self.make().info)
+        self.assertEqual(self.make(compute_dtype="float16").info["compute_dtype"], "float16")
+
 
 @unittest.skipIf(QueryEncoder is None, "numpy is not installed")
 class FromPretrainedTests(unittest.TestCase):

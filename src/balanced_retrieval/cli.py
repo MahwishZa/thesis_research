@@ -3,6 +3,7 @@
     fetch     download the documents of one corpus (pubmed, pmc, guidelines or textbooks) as JSON lines
     chunk     cut documents (JSON lines) into passages and write one corpus folder
     embed     write the MedCPT article vectors of one corpus (resumable)
+    precision-check  compare 32-bit and 16-bit encoding of a sample (speed, and how much the vectors differ)
     check     list the corpora under a folder, with their sizes next to the paper's
     retrieve  for every question: search all corpora with its rationale, pool, re-rank, keep the best k (resumable)
     report    describe the evidence lists of one ``retrieve`` folder
@@ -78,9 +79,20 @@ def _parser() -> argparse.ArgumentParser:
     embed.add_argument("--device", default="auto", help="auto, cpu or cuda")
     embed.add_argument("--batch-size", type=int, default=32)
     embed.add_argument("--dtype", choices=("float32", "float16"), default="float32", help="how the vectors are stored")
+    embed.add_argument("--compute-dtype", choices=("float32", "float16"), default="float32", help="the arithmetic of the encoder; float16 is faster and is recorded")
     embed.add_argument("--save-every", type=int, default=2048, help="rows between two saves of the progress")
     embed.add_argument("--local-files-only", action="store_true", help="do not contact the Hugging Face hub")
     embed.add_argument("--quiet", action="store_true", help="no progress lines")
+
+    prec = sub.add_parser("precision-check", help="compare 32-bit and 16-bit encoding of a sample of one corpus (speed and difference)")
+    prec.add_argument("--root", type=Path, required=True)
+    prec.add_argument("--corpus", choices=CORPUS_ORDER, required=True)
+    prec.add_argument("--samples", type=int, default=1000, help="passages in the sample, spread evenly over the corpus")
+    prec.add_argument("--encoder", default="ncbi/MedCPT-Article-Encoder")
+    prec.add_argument("--revision", default=None)
+    prec.add_argument("--device", default="auto", help="auto, cpu or cuda")
+    prec.add_argument("--batch-size", type=int, default=32)
+    prec.add_argument("--local-files-only", action="store_true", help="do not contact the Hugging Face hub")
 
     check = sub.add_parser("check", help="list the corpora under a folder, with the paper's sizes")
     check.add_argument("--root", type=Path, required=True)
@@ -126,6 +138,8 @@ def main(
             return _chunk(args, streams)
         if args.command == "embed":
             return _embed(args, streams, article_encoder_factory or _default_article_encoder)
+        if args.command == "precision-check":
+            return _precision_check(args, streams, article_encoder_factory or _default_article_encoder)
         if args.command == "check":
             return _check(args, streams)
         if args.command == "retrieve":
@@ -227,7 +241,12 @@ def _default_article_encoder(args: argparse.Namespace) -> Any:
         from .embedding import ArticleEncoder
 
         return ArticleEncoder.from_pretrained(
-            args.encoder, revision=args.revision, device=args.device, batch_size=args.batch_size, local_files_only=args.local_files_only
+            args.encoder,
+            revision=args.revision,
+            device=args.device,
+            batch_size=args.batch_size,
+            local_files_only=args.local_files_only,
+            compute_dtype=getattr(args, "compute_dtype", "float32"),
         )
     except ImportError as exc:
         raise _needs_packages(exc) from exc
@@ -261,7 +280,33 @@ def _embed(args: argparse.Namespace, streams: Streams, factory: Callable[[argpar
         streams.err.write(f"  embedded {done} of {total} passages{speed}\n")
 
     state = embed_corpus(corpus, encoder, batch_size=args.batch_size, save_every=args.save_every, dtype=args.dtype, progress=progress)
-    streams.out.write(f"{args.corpus}: {state['rows']} vectors written to {corpus.directory} ({args.dtype}, not normalised)\n")
+    arithmetic = "" if args.compute_dtype == "float32" else f", {args.compute_dtype} arithmetic"
+    streams.out.write(f"{args.corpus}: {state['rows']} vectors written to {corpus.directory} ({args.dtype}{arithmetic}, not normalised)\n")
+    return 0
+
+
+def _precision_check(args: argparse.Namespace, streams: Streams, factory: Callable[[argparse.Namespace], Any]) -> int:
+    try:
+        from .embedding import compare_precision
+    except ImportError as exc:
+        raise _needs_packages(exc) from exc
+    if args.samples < 2:
+        raise ValueError("--samples must be at least 2")
+    corpus = _disk().Corpus(args.root, args.corpus)
+    step = max(1, len(corpus) // args.samples)
+    rows = list(range(0, len(corpus), step))[: args.samples]
+    texts = [passage["text"] for passage in corpus.passages(rows)]
+    full = factory(argparse.Namespace(**{**vars(args), "compute_dtype": "float32"}))
+    half = factory(argparse.Namespace(**{**vars(args), "compute_dtype": "float16"}))
+    result = compare_precision(texts, full, half)
+    top = next(key for key in result if key.endswith("_overlap"))
+    streams.out.write(
+        f"{args.corpus}: {result['texts']} passages encoded twice on the {full.info.get('device')}\n"
+        f"  speed: {result['texts'] / result['seconds_full']:.0f} a second in 32-bit, {result['texts'] / result['seconds_half']:.0f} a second in 16-bit\n"
+        f"  cosine between the two vectors of a passage: mean {result['cosine_mean']:.6f}, lowest {result['cosine_min']:.6f}\n"
+        f"  with {result['queries']} passages as queries: the same {top.removesuffix('_overlap')[3:]} nearest passages {result[top]:.1%} of the time, "
+        f"the same nearest passage {result['nearest_same']:.1%} of the time\n"
+    )
     return 0
 
 

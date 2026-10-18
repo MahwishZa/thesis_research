@@ -205,6 +205,39 @@ class EmbedAndCheckTests(CliTestCase):
         self.assertIn("encoding on the cpu", err)
 
 
+class PrecisionCheckCommandTests(CliTestCase):
+    def test_both_kinds_of_arithmetic_are_asked_for_and_the_comparison_is_reported(self):
+        self.build(("pubmed",))
+        asked = []
+
+        def factory(args):
+            asked.append(args.compute_dtype)
+            return BagEncoder()
+
+        status, out, err = run(["precision-check", "--root", str(self.root), "--corpus", "pubmed", "--samples", "3"], article_encoder_factory=factory)
+        self.assertEqual(status, 0, err)
+        self.assertEqual(asked, ["float32", "float16"])
+        self.assertIn("pubmed: 3 passages encoded twice on the cpu", out)
+        self.assertIn("cosine between the two vectors of a passage: mean 1.000000, lowest 1.000000", out)
+        self.assertIn("the same nearest passage 100.0% of the time", out)
+
+    def test_embed_passes_the_chosen_arithmetic_to_the_encoder(self):
+        self.build(("pubmed",))
+        asked = []
+
+        def factory(args):
+            asked.append(args.compute_dtype)
+            return BagEncoder()
+
+        for extra, expected in (([], "float32"), (["--compute-dtype", "float16"], "float16")):
+            asked.clear()
+            status, out, err = run(["embed", "--root", str(self.root), "--corpus", "pubmed", "--quiet", *extra], article_encoder_factory=factory)
+            self.assertEqual((status, asked), (0, [expected]), err)
+            (self.root / "pubmed" / "embeddings.npy").unlink()
+            (self.root / "pubmed" / "embeddings.json").unlink()
+        self.assertIn("float16 arithmetic", out)
+
+
 class RetrieveCommandTests(CliTestCase):
     def test_every_question_gets_its_best_passages_from_all_corpora(self):
         self.build_and_embed()

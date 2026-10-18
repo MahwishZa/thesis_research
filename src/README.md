@@ -51,7 +51,7 @@ number of best passages is taken from each, the lists are joined in a fixed orde
 | `search.py` | exact inner-product search, block by block, so a corpus need not fit in memory |
 | `scorer.py` | the MedCPT cross-encoder that scores a query against each pooled passage |
 | `records.py` | one resumable record per question, bound to the settings of the run |
-| `cli.py` | the commands of `python -m balanced_retrieval`: `fetch`, `chunk`, `embed`, `check`, `retrieve`, `report` |
+| `cli.py` | the commands of `python -m balanced_retrieval`: `fetch`, `chunk`, `embed`, `precision-check`, `check`, `retrieve`, `report` |
 
 It needs numpy, torch and transformers for the commands that read or write vectors (`pip install -e ".[retrieval]"`); the list
 operations, the diagnostics and the chunking need nothing. Keep the corpus folders in `retrieval_corpora\` (git ignores it); the

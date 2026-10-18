@@ -80,6 +80,19 @@ class TinyRetrievalTests(unittest.TestCase):
         self.assertTrue(self.np.array_equal(ours, self.np.vstack(theirs)))
         self.assertEqual((ours.dtype, ours.shape), (self.np.float32, (3, 32)))
 
+    def test_half_precision_arithmetic_gives_vectors_close_to_the_full_kind_and_the_check_reports_it(self):
+        root = self.work / "corpora"
+        path = self.work / "pubmed.jsonl"
+        path.write_text("".join(json.dumps({"doc_key": f"k{i}", "text": t}) + "\n" for i, t in enumerate(DOCUMENTS["pubmed"] + DOCUMENTS["pmc"])), encoding="utf-8", newline="\n")
+        status, _, err = self.run_main(["chunk", "--corpus", "pubmed", "--documents", str(path), "--root", str(root)])
+        self.assertEqual(status, 0, err)
+        status, out, err = self.run_main(
+            ["precision-check", "--root", str(root), "--corpus", "pubmed", "--samples", "5", "--encoder", str(self.encoder_folder), "--device", "cpu", "--local-files-only"]
+        )
+        self.assertEqual(status, 0, err)
+        self.assertIn("5 passages encoded twice on the cpu", out)
+        self.assertRegex(out, r"mean (0\.99\d+|1\.000000), lowest (0\.99\d+|1\.000000)")
+
     def test_the_cross_encoder_gives_the_scores_of_the_authors_code_whatever_the_batch_size(self):
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 

@@ -61,6 +61,8 @@ def embed_corpus(
         raise ValueError("save_every must be a whole number of at least batch_size")
     total = len(corpus)
     settings = {key: encoder.info.get(key) for key in ENCODER_FIELDS} | {"dtype": dtype}
+    if encoder.info.get("compute_dtype", "float32") != "float32":
+        settings["compute_dtype"] = encoder.info["compute_dtype"]  # named only when it differs: earlier embeddings stay valid
     state_path = corpus.directory / EMBEDDINGS_STATE
     matrix_path = corpus.directory / EMBEDDINGS_FILE
     state = corpus.embedding_state()
@@ -70,7 +72,7 @@ def embed_corpus(
         state = {"settings": settings, "rows": total, "rows_done": 0, "complete": False}
     else:
         if state["settings"] != settings:
-            differing = {k: (state["settings"].get(k), settings.get(k)) for k in settings if state["settings"].get(k) != settings.get(k)}
+            differing = {k: (state["settings"].get(k), settings.get(k)) for k in settings | state["settings"] if state["settings"].get(k) != settings.get(k)}
             raise CorpusError(f"{corpus.name} was embedded with other settings (recorded, now): {differing}")
         if state["rows"] != total:
             raise CorpusError(f"{corpus.name} has {total} passages but its embeddings were started for {state['rows']}")
@@ -119,3 +121,36 @@ def embed_corpus(
     state = dict(state, rows_done=done, complete=True)
     write_atomic(state_path, json.dumps(state, indent=2) + "\n")
     return state
+
+
+def compare_precision(texts: list[str], full: Any, half: Any, *, queries: int = 200, top: int = 10, clock: Callable[[], float] | None = None) -> dict[str, Any]:
+    """How much half-precision arithmetic changes the vectors of the same texts, and how much faster it is.
+
+    ``full`` and ``half`` are two encoders over the same model. Reported: the cosine between the two vectors of each text
+    (mean and lowest), and, for the first ``queries`` texts used as queries against all texts by inner product, the share of
+    the ``top`` nearest texts that both kinds of vector agree on and how often the single nearest text is the same.
+    """
+    import time
+
+    clock = clock or time.monotonic
+    started = clock()
+    a = full.encode(texts).astype(np.float64)
+    middle = clock()
+    b = half.encode(texts).astype(np.float64)
+    ended = clock()
+    cosine = (a * b).sum(axis=1) / (np.linalg.norm(a, axis=1) * np.linalg.norm(b, axis=1))
+    count = min(queries, len(texts))
+    top = min(top, len(texts))
+    first = np.argsort(-(a[:count] @ a.T), axis=1, kind="stable")[:, :top]
+    second = np.argsort(-(b[:count] @ b.T), axis=1, kind="stable")[:, :top]
+    overlap = [len(set(x) & set(y)) / top for x, y in zip(first, second, strict=True)]
+    return {
+        "texts": len(texts),
+        "queries": count,
+        "cosine_mean": float(cosine.mean()),
+        "cosine_min": float(cosine.min()),
+        f"top{top}_overlap": float(np.mean(overlap)),
+        "nearest_same": float(np.mean(first[:, 0] == second[:, 0])),
+        "seconds_full": middle - started,
+        "seconds_half": ended - middle,
+    }
