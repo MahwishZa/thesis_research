@@ -98,6 +98,7 @@ def fetch_pubmed(
     query: str | None = None,
     limit: int | None = None,
     progress: Callable[[int, int], None] | None = None,
+    found_so_far: Callable[[int], None] | None = None,
 ) -> dict[str, Any]:
     """Download the records of the scope published up to ``as_of`` into the JSON-lines file ``out`` (resumable)."""
     term = query or pubmed_scope()
@@ -111,7 +112,7 @@ def fetch_pubmed(
     return download_in_batches(
         out,
         settings,
-        lambda: search_ids(client, "pubmed", term, as_of),
+        lambda: search_ids(client, "pubmed", term, as_of, found_so_far),
         fetch_batch,
         batch_size=BATCH,
         limit=limit,

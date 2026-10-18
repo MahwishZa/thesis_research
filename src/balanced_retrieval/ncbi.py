@@ -104,7 +104,7 @@ def count_hits(client: Client, db: str, term: str, until: date) -> int:
     return client.search(db, term, EARLIEST, until)[0]
 
 
-def search_ids(client: Client, db: str, term: str, until: date) -> list[str]:
+def search_ids(client: Client, db: str, term: str, until: date, found_so_far: Callable[[int], None] | None = None) -> list[str]:
     """Every identifier that ``term`` finds among records published up to ``until``, newest publication window first."""
     found: list[str] = []
     seen: set[str] = set()
@@ -127,6 +127,8 @@ def search_ids(client: Client, db: str, term: str, until: date) -> list[str]:
             if i not in seen:
                 seen.add(i)
                 found.append(i)
+        if found_so_far:
+            found_so_far(len(found))
 
     take(EARLIEST, until)
     return found

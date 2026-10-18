@@ -192,6 +192,13 @@ class SearchIdsTests(unittest.TestCase):
         found = ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2030, 1, 1))
         self.assertEqual(found, [str(n) for n in range(9, -1, -1)])
 
+    def test_the_number_found_so_far_is_reported_after_every_window(self):
+        records = [(str(n), f"20{10 + n}-06-15") for n in range(10)]
+        reported = []
+        ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2030, 1, 1), reported.append)
+        self.assertEqual(reported[-1], 10)
+        self.assertEqual(reported, sorted(reported))
+
     def test_only_records_up_to_the_date_are_found(self):
         records = [("1", "2019-05-01"), ("2", "2020-05-01"), ("3", "2021-05-01")]
         found = ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2020, 12, 31))

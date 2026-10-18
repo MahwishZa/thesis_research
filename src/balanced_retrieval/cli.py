@@ -166,6 +166,11 @@ def _disk() -> Any:
     return corpus
 
 
+def documents_missing(out: Path) -> bool:
+    """True when no download has been started at this output file, so the identifiers still have to be searched."""
+    return not out.with_name(out.name + ".state.json").exists()
+
+
 def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[[], Any] | None) -> int:
     if args.out is None and not args.count_only:
         raise ValueError("fetch needs --out, the JSON-lines file to write")
@@ -193,7 +198,17 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
             if args.count_only:
                 streams.out.write(f"the scope finds {count_hits(client, 'pubmed', pubmed_scope(), as_of):,} records up to {as_of}\n")
                 return 0
-            state = fetch_pubmed(client, args.out, as_of=as_of, limit=args.limit, progress=progress)
+            counted = 0
+
+            def found_so_far(number: int) -> None:
+                nonlocal counted
+                if not args.quiet and number - counted >= 20_000:
+                    counted = number
+                    streams.err.write(f"  searching: {number} identifiers found so far\n")
+
+            if not args.quiet and documents_missing(args.out):
+                streams.err.write("  searching PubMed for the scope; this takes a few minutes and then the download starts\n")
+            state = fetch_pubmed(client, args.out, as_of=as_of, limit=args.limit, progress=progress, found_so_far=found_so_far)
         else:
             if not args.pubmed_file:
                 raise ValueError("fetch pmc needs --pubmed-file, the pubmed download whose records get their full text")
