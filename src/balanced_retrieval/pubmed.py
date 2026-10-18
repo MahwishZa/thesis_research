@@ -107,7 +107,8 @@ def fetch_pubmed(
     def fetch_batch(ids: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
         left_out: Counter[str] = Counter()
         found = parse_pubmed(client.call("efetch.fcgi", db="pubmed", id=",".join(ids), retmode="xml", rettype="abstract"), left_out)
-        return found, dict(left_out)
+        left_out["not returned, or not a journal article"] += len(ids) - len(found) - sum(left_out.values())
+        return found, {reason: number for reason, number in left_out.items() if number}
 
     return download_in_batches(
         out,

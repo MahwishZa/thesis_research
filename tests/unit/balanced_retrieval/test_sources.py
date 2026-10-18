@@ -398,6 +398,20 @@ class FetchPubmedAndPmcTests(TempDirTestCase):
         self.assertEqual(state["ids"], 450)
         self.assertEqual(documents.read_state(out)["settings"], {"source": "pubmed", "query": scope.pubmed_scope(), "as_of": "2026-09-13"})
 
+    def test_identifiers_the_service_does_not_return_are_counted_as_left_out(self):
+        out = self.dir / "pubmed.jsonl"
+        service = FakeService([(str(n), "2020-01-01") for n in range(1, 21)])
+        original = service.__call__
+
+        def answering(url, data):
+            return PUBMED_XML.encode() if url.endswith("efetch.fcgi") else original(url, data)
+
+        pubmed.fetch_pubmed(quiet_client(answering), out, as_of=date(2026, 9, 13))
+        notes = documents.read_state(out)["notes"]
+        self.assertEqual(notes["no abstract"], 1)
+        self.assertEqual(notes["retracted"], 1)
+        self.assertEqual(notes["not returned, or not a journal article"], 20 - 2 - 2)
+
     def test_pmc_fetches_the_pmc_numbers_of_the_pubmed_download_without_repeats(self):
         pubmed_file = self.write(
             "pubmed.jsonl",
