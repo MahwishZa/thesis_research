@@ -57,6 +57,8 @@ htmlcov/
 
 # New pipeline: large or machine-local outputs inside an experiment folder, and local environments.
 experiments/**/outputs/
+# Working outputs of the commands, at the repository root (rationales, retrieved evidence, trial runs).
+/outputs/
 experiments/**/data/
 local/
 .venv/
