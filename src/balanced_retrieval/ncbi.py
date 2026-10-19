@@ -15,8 +15,11 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter
 from collections.abc import Callable
 from datetime import date, timedelta
+from pathlib import Path
+from typing import Any
 
 from rationale_query.store import StoreError
 
@@ -26,7 +29,14 @@ EARLIEST = date(1800, 1, 1)
 
 
 class NcbiError(StoreError):
-    """The service refused a request, kept failing, or answered something that is not what was asked for."""
+    """The service refused a request, kept failing, or answered something that is not what was asked for.
+
+    ``status`` is the HTTP status when the service answered with one.
+    """
+
+    def __init__(self, *args: object, status: int | None = None) -> None:
+        super().__init__(*args)
+        self.status = status
 
 
 def _fetch(url: str, data: bytes) -> bytes:
@@ -70,7 +80,7 @@ class Client:
                 return self.opener(BASE + endpoint, data)
             except urllib.error.HTTPError as exc:
                 if exc.code not in (429, 500, 502, 503, 504) or attempt == self.retries:
-                    raise NcbiError(f"{endpoint}: the service answered {exc.code} {exc.reason}") from exc
+                    raise NcbiError(f"{endpoint}: the service answered {exc.code} {exc.reason}", status=exc.code) from exc
             except (urllib.error.URLError, http.client.HTTPException, TimeoutError, ConnectionError, OSError) as exc:  # a dropped connection too
                 if attempt == self.retries:
                     raise NcbiError(f"{endpoint}: cannot reach the service ({exc})") from exc
@@ -99,6 +109,43 @@ class Client:
             return int(result["count"]), [str(i) for i in result.get("idlist", [])]
         except (ValueError, KeyError, TypeError) as exc:
             raise NcbiError(f"esearch answered something unexpected: {raw[:200]!r}") from exc
+
+
+def fetch_isolating(client: Client, ids: list[str], fetch: Callable[[list[str]], list[Any]], rejected: list[str], _top: bool = True) -> list[Any]:
+    """``fetch(ids)``, and when the service answers 400 for a list, ask for halves of it until the one identifier it refuses stands alone.
+
+    A refused identifier is asked for once more after a pause, then left out and added to ``rejected``. If the whole list of five or
+    more is refused, the request itself is wrong and the error is raised instead of leaving everything out. Other errors are raised.
+    """
+    try:
+        return fetch(ids)
+    except NcbiError as exc:
+        if exc.status != 400:
+            raise
+        if len(ids) == 1:
+            client.sleep(5.0)
+            try:
+                return fetch(ids)
+            except NcbiError as again:
+                if again.status != 400:
+                    raise
+                rejected.append(ids[0])
+                return []
+        before = len(rejected)
+        middle = len(ids) // 2
+        found = fetch_isolating(client, ids[:middle], fetch, rejected, False) + fetch_isolating(client, ids[middle:], fetch, rejected, False)
+        if _top and len(ids) >= 5 and len(rejected) - before == len(ids):
+            raise
+        return found
+
+
+def note_rejected(out: Path, rejected: list[str], left_out: Counter[str]) -> None:
+    """Count the identifiers the service refused and list them beside the download (``<out>.rejected.txt``)."""
+    if not rejected:
+        return
+    left_out["rejected by the service (400 Bad Request)"] += len(rejected)
+    with open(out.with_name(out.name + ".rejected.txt"), "a", encoding="utf-8", newline="\n") as handle:
+        handle.writelines(identifier + "\n" for identifier in rejected)
 
 
 def count_hits(client: Client, db: str, term: str, until: date) -> int:

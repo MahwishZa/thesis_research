@@ -18,7 +18,7 @@ from typing import Any
 from rationale_query.store import StoreError
 
 from .documents import download_in_batches
-from .ncbi import Client, search_ids
+from .ncbi import Client, fetch_isolating, note_rejected, search_ids
 from .scope import pubmed_scope
 
 BATCH = 200
@@ -106,7 +106,11 @@ def fetch_pubmed(
 
     def fetch_batch(ids: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
         left_out: Counter[str] = Counter()
-        found = parse_pubmed(client.call("efetch.fcgi", db="pubmed", id=",".join(ids), retmode="xml", rettype="abstract"), left_out)
+        rejected: list[str] = []
+        found = fetch_isolating(
+            client, ids, lambda part: parse_pubmed(client.call("efetch.fcgi", db="pubmed", id=",".join(part), retmode="xml", rettype="abstract"), left_out), rejected
+        )
+        note_rejected(out, rejected, left_out)
         left_out["not returned, or not a journal article"] += len(ids) - len(found) - sum(left_out.values())
         return found, {reason: number for reason, number in left_out.items() if number}
 

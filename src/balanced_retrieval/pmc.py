@@ -20,7 +20,7 @@ from typing import Any
 from rationale_query.store import StoreError
 
 from .documents import download_in_batches
-from .ncbi import Client
+from .ncbi import Client, fetch_isolating, note_rejected
 
 BATCH = 25
 _SKIP = {"table-wrap", "fig", "fig-group", "disp-formula", "inline-formula", "supplementary-material", "ref-list", "xref", "label", "graphic", "media"}
@@ -143,7 +143,9 @@ def fetch_pmc(
 
     def fetch_batch(ids: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
         left_out: Counter[str] = Counter()
-        found = parse_pmc(client.call("efetch.fcgi", db="pmc", id=",".join(ids), retmode="xml"), left_out)
+        rejected: list[str] = []
+        found = fetch_isolating(client, ids, lambda part: parse_pmc(client.call("efetch.fcgi", db="pmc", id=",".join(part), retmode="xml"), left_out), rejected)
+        note_rejected(out, rejected, left_out)
         left_out["not returned"] += len(ids) - len(found) - sum(left_out.values())
         return found, {reason: number for reason, number in left_out.items() if number}
 

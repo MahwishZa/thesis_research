@@ -185,9 +185,65 @@ class NcbiClientTests(unittest.TestCase):
 
     def test_a_refusal_that_will_not_pass_is_not_repeated(self):
         service = FakeService([], fail_first=99, status=400)
-        with self.assertRaisesRegex(ncbi.NcbiError, "400"):
+        with self.assertRaisesRegex(ncbi.NcbiError, "400") as caught:
             quiet_client(service).call("einfo.fcgi")
         self.assertEqual(len(service.calls), 1)
+        self.assertEqual(caught.exception.status, 400)
+
+
+class FetchIsolatingTests(unittest.TestCase):
+    """A list that the service refuses with 400 is split until the one identifier it dislikes stands alone."""
+
+    def make(self, bad):
+        calls = []
+
+        def fetch(part):
+            calls.append(list(part))
+            if any(i in bad for i in part):
+                raise ncbi.NcbiError("refused", status=400)
+            return [f"doc{i}" for i in part]
+
+        return fetch, calls
+
+    def test_the_other_identifiers_are_fetched_and_the_refused_one_is_listed(self):
+        fetch, calls = self.make({"7"})
+        rejected = []
+        found = ncbi.fetch_isolating(quiet_client(FakeService([])), [str(i) for i in range(1, 11)], fetch, rejected)
+        self.assertEqual(sorted(found), sorted(f"doc{i}" for i in range(1, 11) if i != 7))
+        self.assertEqual(rejected, ["7"])
+        self.assertLess(len(calls), 20)  # a few extra requests, not one per identifier
+
+    def test_a_refused_identifier_is_asked_for_once_more_after_a_pause(self):
+        fetch, calls = self.make({"3"})
+        client = quiet_client(FakeService([]))
+        ncbi.fetch_isolating(client, ["3"], fetch, [])
+        self.assertEqual(calls, [["3"], ["3"]])
+        self.assertIn(5.0, client.sleeps)
+
+    def test_a_refusal_that_was_only_a_glitch_loses_nothing(self):
+        state = {"first": True}
+
+        def fetch(part):
+            if state["first"]:
+                state["first"] = False
+                raise ncbi.NcbiError("glitch", status=400)
+            return [f"doc{i}" for i in part]
+
+        rejected = []
+        found = ncbi.fetch_isolating(quiet_client(FakeService([])), ["1", "2", "3"], fetch, rejected)
+        self.assertEqual((sorted(found), rejected), (["doc1", "doc2", "doc3"], []))
+
+    def test_when_every_identifier_of_a_list_is_refused_the_request_itself_is_wrong(self):
+        fetch, _ = self.make({"1", "2", "3", "4", "5"})
+        with self.assertRaisesRegex(ncbi.NcbiError, "refused"):
+            ncbi.fetch_isolating(quiet_client(FakeService([])), ["1", "2", "3", "4", "5"], fetch, [])
+
+    def test_other_errors_are_not_swallowed(self):
+        def fetch(part):
+            raise ncbi.NcbiError("down", status=503)
+
+        with self.assertRaisesRegex(ncbi.NcbiError, "down"):
+            ncbi.fetch_isolating(quiet_client(FakeService([])), ["1", "2"], fetch, [])
 
 
 class SearchIdsTests(unittest.TestCase):
@@ -411,6 +467,20 @@ class FetchPubmedAndPmcTests(TempDirTestCase):
         self.assertEqual(notes["no abstract"], 1)
         self.assertEqual(notes["retracted"], 1)
         self.assertEqual(notes["not returned, or not a journal article"], 20 - 2 - 2)
+
+    def test_a_pmc_number_the_service_refuses_is_left_out_and_listed_and_the_download_goes_on(self):
+        pubmed_file = self.write("pubmed.jsonl", "".join(json.dumps({"pmcid": f"PMC{n}"}) + "\n" for n in (5, 6, 666, 8, 9, 10, 11)))
+
+        def opener(url, data):
+            if "666" in parse_qs(data.decode())["id"][0].split(","):
+                raise urllib.error.HTTPError(url, 400, "Bad Request", {}, None)
+            return PMC_XML.encode()
+
+        out = self.dir / "pmc.jsonl"
+        state = pmc.fetch_pmc(quiet_client(opener), out, pubmed_file=pubmed_file)
+        self.assertEqual(state["done"], state["ids"])
+        self.assertEqual(state["notes"]["rejected by the service (400 Bad Request)"], 1)
+        self.assertEqual((self.dir / "pmc.jsonl.rejected.txt").read_text().split(), ["666"])
 
     def test_pmc_fetches_the_pmc_numbers_of_the_pubmed_download_without_repeats(self):
         pubmed_file = self.write(
