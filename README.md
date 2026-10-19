@@ -44,5 +44,5 @@ the tool's commands.
 
 Part 2 of RAG² is built: the rationale is searched in four corpora, the best passages of each are pooled, and one cross-encoder orders the
 pool. The corpora themselves (PubMed and PMC for Alzheimer's disease and its neighbours; the guidelines and textbooks of the paper) are
-built with `python -m balanced_retrieval fetch`, `chunk` and `embed` and are not in the repository; the commands are in [`src/README.md`](src/README.md)
+built with `python -m balanced_retrieval fetch`, `chunk` and `embed` (about 10 million passages; built and checked on 2026-10-20) and are not in the repository; the commands are in [`src/README.md`](src/README.md)
 (`pip install -e ".[retrieval]"`). Part 3, the filter, is not built yet.
