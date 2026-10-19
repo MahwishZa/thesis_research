@@ -71,6 +71,7 @@ class ComparePrecisionTests(unittest.TestCase):
         self.assertLess(result["cosine_min"], 0.99)
         self.assertLessEqual(result["cosine_min"], result["cosine_mean"])
         self.assertLess(result["top3_overlap"], 1.0)
+        self.assertLess(result["nearest_same"], 1.0)
 
     def test_the_time_of_each_encoder_is_measured(self):
         ticks = iter([0.0, 2.0, 3.0])

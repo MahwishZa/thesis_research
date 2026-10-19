@@ -64,7 +64,9 @@ def book_documents(files: dict[str, Iterable[str]]) -> list[dict[str, Any]]:
 def download_textbooks(out: Path, *, revision: str | None = None, hub: Any = None) -> dict[str, Any]:
     """Write the textbooks as documents into ``out``; returns what was used. ``hub`` is the ``huggingface_hub`` module."""
     if hub is None:
-        import huggingface_hub as hub
+        import huggingface_hub
+
+        hub = huggingface_hub
     names = sorted(n for n in hub.HfApi().list_repo_files(REPO, repo_type="dataset", revision=revision) if n.startswith("chunk/") and n.endswith(".jsonl"))
     if not names:
         raise StoreError(f"{REPO} holds no chunk/*.jsonl files")

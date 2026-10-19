@@ -73,6 +73,23 @@ python -m balanced_retrieval report retrieved
 `--documents` is a JSON-lines file with one `{"doc_key": ..., "text": ...}` per document; `doc_key` is the canonical identity (PMID,
 else PMCID, DOI or normalised title) and may be missing. Every command can be stopped and started again with the same arguments.
 
+**Building the four corpora (as done on 2026-10-18 to 2026-10-20 on an RTX 2050 laptop).** Run the steps one at a time and read
+the last line of each before going on; `chunk` and `fetch pmc` refuse a download that was not finished (`--allow-partial` is for
+trials). Repeat `chunk` and `embed` for each corpus; `embed` for PubMed and PMC used `--compute-dtype float16` (decision D11).
+
+| Corpus | Passages | Time to fetch | Time to embed | Vector file |
+|---|---|---|---|---|
+| textbooks | 133,903 | minutes | about 77 min (32-bit) | 0.4 GB |
+| guidelines | 721,364 | minutes | about 6 h (32-bit) | 2.2 GB |
+| pubmed | 1,048,208 | about 1 h | about 85 min (16-bit arithmetic) | 3.2 GB |
+| pmc | 8,205,229 | a few hours | about 11 h (16-bit arithmetic) | 25.2 GB |
+
+`fetch pubmed` names its snapshot by publication date (`--as-of`). PubMed adds records for old dates later, so searching again
+with the same date can find a few more; the identifiers of a download are kept in `<out>.ids.txt` and are what the corpus is. Set
+`NCBI_API_KEY` (free) to search at ten requests a second instead of three; NCBI asks for large downloads at night or at weekends
+(US time). The service's warnings about the search terms are printed after `fetch pubmed`, because a term it does not know
+silently changes what is found. Do not delete `retrieval_corpora\documents\`: fetching it again takes hours.
+
 ## How to use it
 
 From the repository root, after `pip install -e .`:

@@ -80,8 +80,12 @@ python experiments\01_rationale_writers\run_experiment.py --questions path\to\qu
   question that has its rationale is not written again, and a writer that is complete is passed over at once. If a
   question failed, the run says so and the same command tries it again.
 - The speed on this laptop was measured in a two-question trial (2026-10-16): the median time per question was 103 s for
-  Llama-3 and 90 s for Qwen, about 3.4 new tokens per second on the processor. A thousand questions take about 29 hours
-  per writer (Llama-3). The run prints the time left.
+  Llama-3 and 90 s for Qwen, about 3.4 new tokens per second on the processor. A thousand questions would take about 29 hours
+  per writer (Llama-3). Two later runs of the same two example questions with Llama-3 (2026-10-18 and 2026-10-20) took 45 s per
+  question (49 and 41 s; 384 and 329 new tokens, about 8 tokens a second), which would be about 12.5 hours for a thousand
+  questions. The two measurements differ by a factor of two and the cause was not investigated (the laptop may have been
+  busy with other work in the first); the calibration run before the evaluation size is fixed (decision D7) settles it. The run
+  prints the time left.
 - Per writer, the folder `outputs\<run name>\<writer name>\` holds `rationales.jsonl` (one line per question),
   `config.json` (every setting that shapes the rationales, with the SHA-256 of the model file) and, with `--encode`,
   `query_vectors.npy` and `query_vectors.json`. These are not committed.

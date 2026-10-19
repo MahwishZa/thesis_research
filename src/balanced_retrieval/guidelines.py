@@ -52,7 +52,9 @@ def choose_file(names: list[str]) -> str:
 def download_guidelines(out: Path, *, file: str | None = None, revision: str | None = None, hub: Any = None) -> dict[str, Any]:
     """Write the guidelines as documents into ``out``; returns what was used. ``hub`` is the ``huggingface_hub`` module."""
     if hub is None:
-        import huggingface_hub as hub  # imported here: a plain install of the package does not need it
+        import huggingface_hub  # imported here: a plain install of the package does not need it
+
+        hub = huggingface_hub
     name = file or choose_file(hub.HfApi().list_repo_files(REPO, repo_type="dataset", revision=revision))
     path = hub.hf_hub_download(REPO, name, repo_type="dataset", revision=revision)
     sha = hub.HfApi().dataset_info(REPO, revision=revision).sha

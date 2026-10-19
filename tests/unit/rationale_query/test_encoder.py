@@ -137,7 +137,11 @@ class FromPretrainedTests(unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.config = types.SimpleNamespace(_commit_hash=commit)
-                self.evaluated, self.moved_to = False, None
+                self.evaluated, self.moved_to, self.halved = False, None, False
+
+            def half(self):
+                self.halved = True
+                return self
 
             def eval(self):
                 self.evaluated = True
@@ -178,6 +182,13 @@ class FromPretrainedTests(unittest.TestCase):
     def test_a_named_device_is_used_as_it_is(self):
         encoder, model, _, _ = self.load(cuda=True, device="cpu")
         self.assertEqual((encoder.device, model.moved_to), ("cpu", "cpu"))
+
+    def test_half_precision_arithmetic_is_applied_only_when_asked_for_and_other_values_are_refused(self):
+        _, usual, _, _ = self.load(cuda=False)
+        encoder, halved, _, _ = self.load(cuda=False, compute_dtype="float16")
+        self.assertEqual((usual.halved, halved.halved, encoder.info["compute_dtype"]), (False, True, "float16"))
+        with self.assertRaisesRegex(ValueError, "compute_dtype"):
+            self.load(cuda=False, compute_dtype="bfloat16")
 
     def test_the_model_is_put_in_evaluation_mode(self):
         _, model, _, _ = self.load(cuda=False)

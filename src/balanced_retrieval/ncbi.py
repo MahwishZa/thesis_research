@@ -62,6 +62,7 @@ class Client:
         self.email = email if email is not None else os.environ.get("NCBI_EMAIL")
         self.opener, self.sleep, self.clock, self.retries = opener, sleep, clock, retries
         self.interval = 0.11 if self.api_key else 0.34
+        self.warnings: list[str] = []  # what the search service said about the query (a term it did not know, say), once each
         self._last = -1e9
 
     def call(self, endpoint: str, **params: object) -> bytes:
@@ -104,8 +105,13 @@ class Client:
             result = json.loads(raw)["esearchresult"]
             if "ERROR" in result:
                 raise NcbiError(f"the search was refused: {result['ERROR']}")
-            if result.get("errorlist"):
-                raise NcbiError(f"the search was refused: {result['errorlist']}")
+            errors = {name: found for name, found in (result.get("errorlist") or {}).items() if found}
+            if errors:
+                raise NcbiError(f"the search was refused: {errors}")
+            for kind, found in (result.get("warninglist") or {}).items():
+                for message in found if isinstance(found, list) else [found]:
+                    if message and f"{kind}: {message}" not in self.warnings:
+                        self.warnings.append(f"{kind}: {message}")
             return int(result["count"]), [str(i) for i in result.get("idlist", [])]
         except (ValueError, KeyError, TypeError) as exc:
             raise NcbiError(f"esearch answered something unexpected: {raw[:200]!r}") from exc

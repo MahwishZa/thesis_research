@@ -168,6 +168,12 @@ def _disk() -> Any:
     return corpus
 
 
+def _say_warnings(client: Any, streams: Streams) -> None:
+    """What the search service said about the query, if it said anything: a term it does not know changes what is found."""
+    for message in getattr(client, "warnings", ()):
+        streams.err.write(f"warning from the search service: {message}\n")
+
+
 def documents_missing(out: Path) -> bool:
     """True when no download has been started at this output file, so the identifiers still have to be searched."""
     return not out.with_name(out.name + ".state.json").exists()
@@ -199,6 +205,7 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
             as_of = date.fromisoformat(args.as_of)
             if args.count_only:
                 streams.out.write(f"the scope finds {count_hits(client, 'pubmed', pubmed_scope(), as_of):,} records up to {as_of}\n")
+                _say_warnings(client, streams)
                 return 0
             counted = 0
 
@@ -211,6 +218,7 @@ def _fetch(args: argparse.Namespace, streams: Streams, client_factory: Callable[
             if not args.quiet and documents_missing(args.out):
                 streams.err.write("  searching PubMed for the scope; this takes a few minutes and then the download starts\n")
             state = fetch_pubmed(client, args.out, as_of=as_of, limit=args.limit, progress=progress, found_so_far=found_so_far)
+            _say_warnings(client, streams)
         else:
             if not args.pubmed_file:
                 raise ValueError("fetch pmc needs --pubmed-file, the pubmed download whose records get their full text")

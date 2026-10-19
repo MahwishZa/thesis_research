@@ -109,11 +109,13 @@ class ScopeTests(unittest.TestCase):
 class FakeService:
     """Answers esearch and efetch from a list of (id, 'YYYY-MM-DD') records."""
 
-    def __init__(self, records, fail_first=0, status=503):
+    def __init__(self, records, fail_first=0, status=503, double=(), drop=0):
         self.records = records
         self.calls = []
         self.fail = fail_first
         self.status = status
+        self.double = list(double)  # identifiers that every window finds, as a record with a year-only date may be
+        self.drop = drop  # identifiers left off the end of every list, as a service that miscounts would
 
     def __call__(self, url, data):
         self.calls.append((url.rsplit("/", 1)[1], parse_qs(data.decode())))
@@ -124,7 +126,10 @@ class FakeService:
         if name == "esearch.fcgi":
             low, high = params["mindate"][0].replace("/", "-"), params["maxdate"][0].replace("/", "-")
             hits = [i for i, d in sorted(self.records, key=lambda r: r[1], reverse=params["sort"] == ["pub_date"]) if low <= d <= high]
-            ids = hits[: int(params["retmax"][0])]
+            hits += self.double
+            ids = hits[: min(int(params["retmax"][0]), ncbi.MAX_HITS)]  # the real service never lists more than its limit
+            if ids and self.drop:
+                ids = ids[: -self.drop]
             return json.dumps({"esearchresult": {"count": str(len(hits)), "idlist": ids}}).encode()
         return b"<ok/>"
 
@@ -239,11 +244,15 @@ class FetchIsolatingTests(unittest.TestCase):
             ncbi.fetch_isolating(quiet_client(FakeService([])), ["1", "2", "3", "4", "5"], fetch, [])
 
     def test_other_errors_are_not_swallowed(self):
+        calls = []
+
         def fetch(part):
+            calls.append(list(part))
             raise ncbi.NcbiError("down", status=503)
 
         with self.assertRaisesRegex(ncbi.NcbiError, "down"):
             ncbi.fetch_isolating(quiet_client(FakeService([])), ["1", "2"], fetch, [])
+        self.assertEqual(calls, [["1", "2"]])  # no splitting and no second try for an error that is not a 400
 
 
 class SearchIdsTests(unittest.TestCase):
@@ -270,6 +279,16 @@ class SearchIdsTests(unittest.TestCase):
         self.assertEqual(reported[-1], 10)
         self.assertEqual(reported, sorted(reported))
 
+    def test_a_record_that_several_windows_find_is_returned_once(self):
+        records = [(str(n), f"20{10 + n}-06-15") for n in range(10)]
+        found = ncbi.search_ids(quiet_client(FakeService(records, double=["X"])), "pubmed", "x", date(2030, 1, 1))
+        self.assertEqual(found.count("X"), 1)
+        self.assertEqual(sorted(i for i in found if i != "X"), sorted(i for i, _ in records))
+
+    def test_a_window_that_lists_fewer_identifiers_than_it_counts_is_an_error(self):
+        with self.assertRaisesRegex(ncbi.NcbiError, "hits but"):
+            ncbi.search_ids(quiet_client(FakeService([("1", "2020-01-01"), ("2", "2020-01-02")], drop=1)), "pubmed", "x", date(2030, 1, 1))
+
     def test_only_records_up_to_the_date_are_found(self):
         records = [("1", "2019-05-01"), ("2", "2020-05-01"), ("3", "2021-05-01")]
         found = ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2020, 12, 31))
@@ -284,6 +303,23 @@ class SearchIdsTests(unittest.TestCase):
         records = [(str(n), "2020-01-01") for n in range(10)]
         with self.assertRaisesRegex(ncbi.NcbiError, "single day"):
             ncbi.search_ids(quiet_client(FakeService(records)), "pubmed", "x", date(2021, 1, 1))
+
+    def test_what_the_service_says_about_the_query_is_kept_once_for_the_user(self):
+        def answer(url, data):
+            return json.dumps({"esearchresult": {"count": "0", "idlist": [], "warninglist": {"quotedphrasesnotfound": ["Dementi[Mesh]"], "outputmessages": ["Quoted phrase not found"]}}}).encode()
+
+        client = quiet_client(answer)
+        client.search("pubmed", "x", date(2000, 1, 1), date(2001, 1, 1))
+        client.search("pubmed", "x", date(2001, 1, 2), date(2002, 1, 1))
+        self.assertEqual(client.warnings, ["quotedphrasesnotfound: Dementi[Mesh]", "outputmessages: Quoted phrase not found"])
+
+    def test_an_empty_error_list_is_not_an_error_but_a_filled_one_is(self):
+        def make(errorlist):
+            return lambda url, data: json.dumps({"esearchresult": {"count": "3", "idlist": [], "errorlist": errorlist}}).encode()
+
+        self.assertEqual(quiet_client(make({"phrasesnotfound": [], "fieldsnotfound": []})).search("pubmed", "x", date(2000, 1, 1), date(2001, 1, 1)), (3, []))
+        with self.assertRaisesRegex(ncbi.NcbiError, "Dementi"):
+            quiet_client(make({"phrasesnotfound": ["Dementi"]})).search("pubmed", "x", date(2000, 1, 1), date(2001, 1, 1))
 
     def test_a_search_the_service_refuses_is_an_error_with_its_message(self):
         def refuse(url, data):
@@ -345,6 +381,15 @@ class ParsePmcTests(unittest.TestCase):
     def test_the_key_is_the_pubmed_number_when_there_is_one_else_the_pmc_number(self):
         self.assertEqual([d["doc_key"] for d in self.documents], ["PMID:111", "PMCID:PMC999"])
 
+    def test_a_table_or_figure_inside_a_paragraph_is_left_out_of_the_paragraph(self):
+        xml = (
+            '<pmc-articleset><article xml:lang="en"><front><article-meta><article-id pub-id-type="pmid">5</article-id></article-meta></front>'
+            "<body><p>Before <table-wrap><caption><p>TABLEWORDS</p></caption></table-wrap> and <fig><caption>FIGWORDS</caption></fig>"
+            " and <disp-formula>FORMULA</disp-formula> after.</p></body></article></pmc-articleset>"
+        )
+        text = pmc.parse_pmc(xml)[0]["text"]
+        self.assertEqual(" ".join(text.split()), "Before and and after.")
+
     def test_the_articles_that_were_not_kept_are_counted_by_reason(self):
         from collections import Counter
 
@@ -403,6 +448,15 @@ class DownloadInBatchesTests(TempDirTestCase):
             handle.write(b'{"doc_key":"half')
         self.run_download(out, [])
         self.assertEqual([json.loads(line)["doc_key"] for line in out.read_text().splitlines()], [f"PMID:{i}" for i in range(1, 5)])
+
+    def test_bytes_after_a_finished_download_are_cut_off_when_it_is_opened_again(self):
+        out = self.dir / "docs.jsonl"
+        self.run_download(out, ["1", "2"])
+        finished = out.read_bytes()
+        with open(out, "ab") as handle:
+            handle.write(b"stray bytes that no batch wrote")
+        self.run_download(out, [])
+        self.assertEqual(out.read_bytes(), finished)
 
     def test_a_limit_stops_early_and_a_later_run_without_it_finishes(self):
         out = self.dir / "docs.jsonl"
@@ -607,6 +661,15 @@ class FetchCommandTests(TempDirTestCase):
         status, _, err = self.run_cli(["fetch", "pubmed", "--as-of", "2026-09-13"], FakeService([]))
         self.assertEqual(status, 1)
         self.assertIn("--out", err)
+
+    def test_the_warnings_of_the_service_are_shown_after_the_count(self):
+        def answer(url, data):
+            return json.dumps({"esearchresult": {"count": "2", "idlist": [], "warninglist": {"quotedphrasesnotfound": ["Dementi[Mesh]"]}}}).encode()
+
+        status, out, err = self.run_cli(["fetch", "pubmed", "--as-of", "2026-09-13", "--count-only"], answer)
+        self.assertEqual(status, 0)
+        self.assertIn("finds 2 records", out)
+        self.assertIn("warning from the search service: quotedphrasesnotfound: Dementi[Mesh]", err)
 
     def test_pubmed_needs_a_date_and_pmc_needs_a_pubmed_file(self):
         for argv, words in (

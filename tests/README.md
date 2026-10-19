@@ -8,7 +8,7 @@ with its dotted name, for example `python -m unittest tests.unit.rationale_query
 |---|---|---|
 | `spec/` | The requirements of `docs/methodology.md`, as acceptance tests (`test_*.py`) that skip until their part is built, and the guard that ties them to the document. `targets.py` maps each requirement to the function that implements it. | nothing |
 | `unit/rationale_query/` | `src/rationale_query` module by module, and the settings and runner of the experiment folders (`test_rationale_writers.py`), with stand-ins for the model and the encoder (`support.py`) | nothing; the encoder tests need numpy and skip without it |
-| `unit/balanced_retrieval/` | `src/balanced_retrieval` module by module, with stand-in encoders and a stand-in cross-encoder | nothing; the tests of corpora, vectors and search need numpy and skip without it |
+| `unit/balanced_retrieval/` | `src/balanced_retrieval` module by module, with stand-in encoders and a stand-in cross-encoder, and the downloads of the corpora (`test_sources.py`) with a stand-in for NCBI's service and for the Hugging Face hub | nothing; the tests of corpora, vectors and search need numpy and skip without it |
 | `integration/` | The real llama.cpp and real torch encoders on tiny synthetic models (`tiny_models.py`; `test_real_libraries.py` for Part 1, `test_real_retrieval.py` for Part 2), and, only when asked, the real Llama-3 file and the MedCPT models (`test_real_models.py`, see `experiments/01_rationale_writers/NOTES.md`) | llama-cpp-python and gguf, or torch and transformers; a class skips, with the reason, when its packages are missing |
 | `repository/` | The layout: folders, package docstrings, light imports, and that the specification names every test file of the built parts | nothing |
 
