@@ -17,7 +17,7 @@ This thesis studies retrieval-augmented generation (RAG), in which a language mo
 thesis_research/
 ├── README.md
 ├── pyproject.toml   packaging; the packages for the model and the encoder are optional extras
-├── docs/            research documentation (see docs/README.md); docs/log.md is the dated research log
+├── docs/            research documentation (see docs/README.md)
 ├── src/             the pipeline parts, one folder each: rationale_query/ is Part 1 of RAG² and balanced_retrieval/ is Part 2; the others follow, one step at a time (see src/README.md)
 ├── experiments/     one numbered folder per experiment (see experiments/README.md)
 ├── tests/           automatic checks, in folders by purpose (see tests/README.md)
