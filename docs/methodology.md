@@ -472,7 +472,10 @@ and `test_batch.py` (records, resuming, refusals), `test_encoder.py`, `test_diag
 `test_retrieve.py` (argument handling and the order of calls, beyond the acceptance tests), `test_diagnostics.py`, `test_chunking.py`
 (the windows), `test_corpus.py` (the corpus folder), `test_embedding.py` (the resumable embedding), `test_search.py` (the exact
 search against a brute-force check), `test_scorer.py`, `test_records.py`, `test_sources.py` (the four downloads, with a stand-in for NCBI's service and for the Hugging Face hub) and `test_cli.py` (the commands end to end with stand-in
-models). For `data_roles`: `test_splits.py` (the hash rule pinned, the order of the role names, the messages). For `rationale_filter`:
+models). For `data_roles`: `test_splits.py` (the hash rule pinned, the order of the role names, the messages), `test_questions.py` (the three readers
+and what they refuse, the inline form of a question), `test_overlap.py` (exact and near repeats between splits) and `test_cli.py` (the
+commands end to end). For `answer_evaluation`: `test_prompt.py` (the layout of the answer prompt) and `test_reader.py` (the strict reading of the
+final answer). For `rationale_filter`:
 `test_labels.py` and `test_inference.py` (types, blank parts and messages beyond the acceptance tests, which share the first name; the unit
 files are in `tests/unit/rationale_filter/`). `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
 package, and this section names every test file). `test_real_libraries.py` runs the real llama.cpp and a real torch encoder on tiny

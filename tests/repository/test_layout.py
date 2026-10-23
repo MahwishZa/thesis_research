@@ -15,7 +15,8 @@ TESTS = ROOT / "tests"
 LIGHT_MODULES = {
     "rationale_query": ("cli", "generator", "store", "batch", "diagnostics", "prompt", "search_text"),
     "balanced_retrieval": ("cli", "pool", "retrieve", "diagnostics", "chunking", "records", "scope", "ncbi", "documents", "pubmed", "pmc", "guidelines", "textbooks"),
-    "data_roles": ("splits",),
+    "data_roles": ("splits", "questions", "overlap", "cli"),
+    "answer_evaluation": ("prompt", "reader"),
     "rationale_filter": ("labels", "inference"),
 }
 
