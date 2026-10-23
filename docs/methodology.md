@@ -472,7 +472,9 @@ and `test_batch.py` (records, resuming, refusals), `test_encoder.py`, `test_diag
 `test_retrieve.py` (argument handling and the order of calls, beyond the acceptance tests), `test_diagnostics.py`, `test_chunking.py`
 (the windows), `test_corpus.py` (the corpus folder), `test_embedding.py` (the resumable embedding), `test_search.py` (the exact
 search against a brute-force check), `test_scorer.py`, `test_records.py`, `test_sources.py` (the four downloads, with a stand-in for NCBI's service and for the Hugging Face hub) and `test_cli.py` (the commands end to end with stand-in
-models). `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
+models). For `data_roles`: `test_splits.py` (the hash rule pinned, the order of the role names, the messages). For `rationale_filter`:
+`test_labels.py` and `test_inference.py` (types, blank parts and messages beyond the acceptance tests, which share the first name; the unit
+files are in `tests/unit/rationale_filter/`). `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
 package, and this section names every test file). `test_real_libraries.py` runs the real llama.cpp and a real torch encoder on tiny
 synthetic models written by `tests/integration/tiny_models.py`; `test_real_retrieval.py` runs the article encoder, the cross-encoder and
 the whole `balanced_retrieval` command chain on tiny synthetic BERT models, and compares them with the authors' own lines of code. They need

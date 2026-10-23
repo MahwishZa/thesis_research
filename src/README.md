@@ -6,7 +6,8 @@ The code of the pipeline. Each part of RAG² (Sohn et al., NAACL 2025) gets its 
 |---|---|---|
 | `rationale_query/` | Part 1: rationale-based query formulation (section 3.3) | built |
 | `balanced_retrieval/` | Part 2: balanced retrieval over four corpora (section 3.4) | built |
-| (not created yet) | Part 3: rationale-guided filtering and answer generation | not built |
+| `rationale_filter/` | Part 3: rationale-guided filtering (section 3.2) | label rule, filter input and decision built; labelling, training data and the rest follow |
+| `data_roles/` | which question is training, validation or test | the split built |
 
 ## What is in `rationale_query/`
 
