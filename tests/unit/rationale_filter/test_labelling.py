@@ -8,10 +8,10 @@ from rationale_filter.label_records import PairStore
 from rationale_filter.labelling import PairTask
 from rationale_query.batch import MAX_CONSECUTIVE_ERRORS, RunAborted
 from rationale_query.generator import GenerationResult
-from rationale_query.store import QuestionChanged
+from rationale_query.store import QuestionChanged, StoreError
 from tests.support import TempDirTestCase
 
-QUESTION = "Which drug is a cholinesterase inhibitor? A) Donepezil B) Aspirin C) Insulin D) Warfarin"
+STEM = QUESTION = "Which drug is a cholinesterase inhibitor? A) Donepezil B) Aspirin C) Insulin D) Warfarin"
 RIGHT = "Therefore, the answer is (A) Donepezil."
 WRONG = "Therefore, the answer is (B) Aspirin."
 
@@ -182,6 +182,99 @@ class LoopTests(TempDirTestCase):
         tau, labelled = label_records.label_records(records)
         self.assertEqual(len(labelled), 2)
         self.assertEqual(records["q1#3"].status, "skipped")
+
+
+def write_inputs(case):
+    """Write what the earlier steps leave behind: rationales (Part 1), evidence lists (Part 2) and an answer key, into ``case.dir``."""
+    from balanced_retrieval.records import RetrievalRecord, RetrievalStore
+    from rationale_query.generator import text_sha256
+    from rationale_query.search_text import dense_query
+    from rationale_query.store import Question, RationaleRecord, RationaleStore, question_hash
+
+    case.Question = Question
+    case.questions = [Question("q1", STEM), Question("q2", STEM + " Extra.")]
+    rationales = RationaleStore(case.dir / "rationales")
+    rationales.bind({"model_sha256": "m"}, ())
+    rationales.load()
+    retrieved = RetrievalStore(case.dir / "retrieved")
+    retrieved.bind({"top_k": 4}, ())
+    retrieved.load()
+    case.rationale = {question.id: f"Rationale for {question.id}. Therefore, the answer is (A) Donepezil." for question in case.questions}
+    for question in case.questions:
+        rationales.append(RationaleRecord(id=question.id, question_sha256=question_hash(question.text), status="ok", rationale=case.rationale[question.id]))
+        retrieved.append(
+            RetrievalRecord(
+                id=question.id, question_sha256=question_hash(question.text),
+                rationale_sha256=text_sha256(dense_query(case.rationale[question.id])), pool_size=8,
+                evidence=[{"corpus": "textbooks", "text": f"snippet {n} of {question.id}"} for n in range(1, 4)],
+            )
+        )
+    case.answers = case.write("answers.jsonl", '{"id": "q1", "answer": "A"}\n{"id": "q2", "answer": "C"}\n')
+
+
+class FileGlueTests(TempDirTestCase):
+    """read_answers and build_tasks: the files of the earlier steps become pair tasks, or the call stops and says why."""
+
+    def setUp(self):
+        super().setUp()
+        write_inputs(self)
+
+    def tasks(self, snippets=2, questions=None):
+        return labelling.build_tasks(
+            questions or self.questions, labelling.read_answers(self.answers), self.dir / "rationales", self.dir / "retrieved", snippets
+        )
+
+    def test_the_answers_are_read_as_a_dictionary(self):
+        self.assertEqual(labelling.read_answers(self.answers), {"q1": "A", "q2": "C"})
+
+    def test_refused_answer_files(self):
+        for name, text in {
+            "letter outside": '{"id": "q1", "answer": "E"}\n',
+            "no id": '{"answer": "A"}\n',
+            "repeated id": '{"id": "q1", "answer": "A"}\n{"id": "q1", "answer": "B"}\n',
+            "broken line": "{broken\n",
+            "empty": "\n",
+        }.items():
+            path = self.write(f"{name}.jsonl", text)
+            with self.subTest(name), self.assertRaises(StoreError):
+                labelling.read_answers(path)
+        with self.assertRaises(StoreError):
+            labelling.read_answers(self.dir / "missing.jsonl")
+
+    def test_one_task_per_question_and_rank_in_the_order_of_the_list(self):
+        tasks = self.tasks(snippets=2)
+        self.assertEqual([task.id for task in tasks], ["q1#1", "q1#2", "q2#1", "q2#2"])
+        self.assertEqual(tasks[1].snippet, "snippet 2 of q1")
+        self.assertEqual((tasks[2].gold, tasks[2].question, tasks[2].rationale), ("C", STEM + " Extra.", self.rationale["q2"]))
+
+    def test_a_question_with_fewer_snippets_than_asked_gets_as_many_as_it_has(self):
+        self.assertEqual(len(self.tasks(snippets=10)), 6)
+
+    def test_a_missing_answer_key_evidence_or_rationale_stops_everything(self):
+        extra = self.questions + [self.Question("q3", "A third question? A) a B) b C) c D) d")]
+        with self.assertRaises(StoreError):
+            self.tasks(questions=extra)  # the rationales folder has no q3
+
+    def test_evidence_found_for_another_rationale_is_refused(self):
+        from rationale_query.store import RationaleRecord, RationaleStore, question_hash
+
+        folder = RationaleStore(self.dir / "rationales2")
+        folder.bind({"model_sha256": "m"}, ())
+        folder.load()
+        folder.append(RationaleRecord(id="q1", question_sha256=question_hash(STEM), status="ok", rationale="Another rationale. the answer is (B)"))
+        with self.assertRaises(StoreError) as caught:
+            labelling.build_tasks([self.questions[0]], {"q1": "A"}, self.dir / "rationales2", self.dir / "retrieved", 2)
+        self.assertIn("another question or rationale", str(caught.exception))
+
+    def test_a_missing_answer_key_for_a_question_is_named(self):
+        with self.assertRaises(StoreError) as caught:
+            labelling.build_tasks(self.questions, {"q1": "A"}, self.dir / "rationales", self.dir / "retrieved", 2)
+        self.assertIn("q2 has no answer key", str(caught.exception))
+
+    def test_bad_snippet_counts_are_refused(self):
+        for bad in (0, -1, True, 1.5):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.tasks(snippets=bad)
 
 
 if __name__ == "__main__":

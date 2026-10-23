@@ -6,8 +6,9 @@ The code of the pipeline. Each part of RAG² (Sohn et al., NAACL 2025) gets its 
 |---|---|---|
 | `rationale_query/` | Part 1: rationale-based query formulation (section 3.3) | built |
 | `balanced_retrieval/` | Part 2: balanced retrieval over four corpora (section 3.4) | built |
-| `rationale_filter/` | Part 3: rationale-guided filtering (section 3.2) | label rule, filter input and decision built; labelling, training data and the rest follow |
-| `data_roles/` | which question is training, validation or test | the split built |
+| `rationale_filter/` | Part 3: rationale-guided filtering (section 3.2) | the label rule, the labelling loop, the training file and the filter decision are built; the Flan-T5 training and the model that judges snippets are not |
+| `answer_evaluation/` | Part 4: answering and judging the answers | the prompt, the strict reader, the paired statistics, the test-once ledger and the runner are built; the command line and the filter step are not |
+| `data_roles/` | which question belongs to which role, and the three benchmarks | built |
 
 ## What is in `rationale_query/`
 
@@ -90,6 +91,66 @@ with the same date can find a few more; the identifiers of a download are kept i
 `NCBI_API_KEY` (free) to search at ten requests a second instead of three; NCBI asks for large downloads at night or at weekends
 (US time). The service's warnings about the search terms are printed after `fetch pubmed`, because a term it does not know
 silently changes what is found. Do not delete `retrieval_corpora\documents\`: fetching it again takes hours.
+
+## What is in `data_roles/`
+
+The three benchmarks (MedQA, MedMCQA, MMLU-Med) as one kind of question record, and which question belongs to which role.
+
+| File | What it does |
+|---|---|
+| `splits.py` | one role per question id from SHA-256 of the seed and the id, so a question never moves when others are added; a check that no id has two roles |
+| `questions.py` | the readers of the three datasets (`cop` of MedMCQA counted from 0, its withheld test split refused by name), a question with its options inline, a manifest of hashes |
+| `overlap.py` | questions of one split that repeat questions of another, exact or near (five-word shingles) |
+| `cli.py` | `python -m data_roles check`, `export` (questions, answer key and manifest) and `overlap` |
+
+```powershell
+python -m data_roles check --dataset medmcqa --hub openlifescienceai/medmcqa --split validation
+python -m data_roles check --dataset medmcqa --hub openlifescienceai/medmcqa --split test      # exit status 3: the answers are withheld
+python -m data_roles overlap --dataset medmcqa --reference-hub openlifescienceai/medmcqa --reference-split train --candidate-hub openlifescienceai/medmcqa --candidate-split validation
+python -m data_roles export --dataset medqa --hub awinml/medqa --config questions --split validation --questions-out q.jsonl --answers-out a.jsonl --manifest-out m.json
+```
+
+`--hub` needs the `datasets` package; a local JSON, JSON-lines or Parquet file works with `--file` (Parquet needs pyarrow). The
+commands only read; `export` refuses to overwrite.
+
+## What is in `rationale_filter/`
+
+For each question and each of its first N re-ranked snippets, the answer without and with the snippet is read and the rationale
+is scored twice; the labels follow from all the records together (Figure 2 of the paper).
+
+| File | What it does |
+|---|---|
+| `labels.py` | the label rule with both discard branches, the training tokens, and τ as the top 25% of the perplexity differences |
+| `inference.py` | the filter input, the decision between the two label tokens, and keeping the helpful snippets |
+| `perplexity.py` | perplexity from token log-probabilities; one rationale scored without and with a snippet |
+| `scorer.py` | the log-probability of each token of a text under a Llama-3 prompt, with llama.cpp (a second, smaller context) |
+| `label_records.py` | one resumable record per pair, bound to its settings; τ and the labels from the records |
+| `labelling.py` | the loop over pairs (strict answers first, then the two perplexities) and the reading of the earlier steps' files |
+| `training_data.py` | the training file in the format of the released sample, refusing to overwrite |
+| `filter_eval.py` | accuracy per class, the majority rate and the AUC on held-out labels |
+| `cli.py` | `python -m rationale_filter label` and `labels` |
+
+```powershell
+python -m rationale_filter label --questions q.jsonl --answers a.jsonl --rationales outputs\rationales --retrieved retrieved --out pairs --dataset medqa --split train --model models\llama3.gguf --limit 20
+python -m rationale_filter labels --questions q.jsonl --answers a.jsonl --rationales outputs\rationales --retrieved retrieved --out pairs --training-file labels\medqa_train.json
+```
+
+`label --limit 20` is the timing pilot: the last line gives the seconds per pair. Run it on training or validation questions;
+the command refuses a test split. Every command can be stopped and started again with the same arguments.
+
+## What is in `answer_evaluation/`
+
+| File | What it does |
+|---|---|
+| `prompt.py` | the answer prompt: the paper's wording with an Evidence section when snippets are kept |
+| `reader.py` | the strict reading of "the answer is (X)"; an unreadable answer is wrong for scoring and skipped for labelling |
+| `paired_tests.py` | exact McNemar, the paired bootstrap interval and Holm's adjustment |
+| `ledger.py` | an append-only record of the test sets that were scored; refuses a second scoring of the same system |
+| `records.py` | one resumable record per answer: question, system and k |
+| `runner.py` | every question answered by every system, resumable; a test run needs the ledger |
+| `results.py` | accuracy per system, the paired comparison, and k chosen on validation data |
+
+Not built yet: the Flan-T5 training, the model that judges snippets at answer time, and the command line of this package.
 
 ## How to use it
 

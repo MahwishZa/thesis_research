@@ -12,6 +12,7 @@ rationale, without and with the snippet (Figure 2 of the paper).
     labelling      the loop that turns pairs into records: strict answers first, then the two perplexities
     training_data  the training file in the format of the released sample, refusing to overwrite labels
     filter_eval    accuracy per class, the majority rate and the AUC of the filter on held-out labels
+    cli            python -m rationale_filter label | labels
 
 Importing the package loads nothing heavy: numpy and llama_cpp are imported only inside the scorer, where they are used.
 """

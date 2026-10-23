@@ -17,7 +17,7 @@ LIGHT_MODULES = {
     "balanced_retrieval": ("cli", "pool", "retrieve", "diagnostics", "chunking", "records", "scope", "ncbi", "documents", "pubmed", "pmc", "guidelines", "textbooks"),
     "data_roles": ("splits", "questions", "overlap", "cli"),
     "answer_evaluation": ("prompt", "reader", "paired_tests", "ledger", "records", "runner", "results"),
-    "rationale_filter": ("labels", "inference", "perplexity", "scorer", "label_records", "labelling", "training_data", "filter_eval"),
+    "rationale_filter": ("labels", "inference", "perplexity", "scorer", "label_records", "labelling", "training_data", "filter_eval", "cli"),
 }
 
 

@@ -9,16 +9,20 @@ records together, because τ is a quantile of the whole pool.
 
 from __future__ import annotations
 
+import json
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 from answer_evaluation.prompt import build_answer_prompt
-from answer_evaluation.reader import labelling_correct
+from answer_evaluation.reader import LETTERS, labelling_correct
+from balanced_retrieval.records import RetrievalStore
 from rationale_query.batch import MAX_CONSECUTIVE_ERRORS, RunAborted
 from rationale_query.generator import GenerationResult, text_sha256
-from rationale_query.store import QuestionChanged
+from rationale_query.search_text import dense_query
+from rationale_query.store import Question, QuestionChanged, StoreError, load_rationales, question_hash
 
 from .label_records import PairRecord, PairStore, pair_id
 from .perplexity import perplexity
@@ -154,3 +158,61 @@ def label_pairs(
             raise RunAborted(f"{consecutive} pairs in a row failed (last: {record.error}). Fix the cause and run the same command again.")
     summary.seconds = clock() - started
     return summary
+
+
+def read_answers(path: str | Path) -> dict[str, str]:
+    """The answer key: JSON lines of ``id`` and ``answer`` (a letter from A to D), as ``python -m data_roles export`` writes it."""
+    try:
+        raw = Path(path).read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise StoreError(f"cannot read {path}: {exc}") from exc
+    answers: dict[str, str] = {}
+    for number, line in enumerate(raw.split("\n"), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise StoreError(f"{path}, line {number} is not valid JSON: {exc}") from exc
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str) or row.get("answer") not in tuple(LETTERS):
+            raise StoreError(f"{path}, line {number}: every row needs an 'id' and an 'answer' from A to D")
+        if row["id"] in answers:
+            raise StoreError(f"{path}, line {number}: the id {row['id']} appears twice")
+        answers[row["id"]] = row["answer"]
+    if not answers:
+        raise StoreError(f"{path} holds no answers")
+    return answers
+
+
+def build_tasks(
+    questions: Sequence[Question],
+    answers: Mapping[str, str],
+    rationales_dir: str | Path,
+    retrieved_dir: str | Path,
+    snippets: int,
+) -> list[PairTask]:
+    """One task per question and per rank up to ``snippets``, in the order of the questions and of the re-ranked list.
+
+    Every question needs an answer key, a successful rationale and an evidence list that was found for that rationale (the
+    hashes of the question and of the search text must agree), or the whole call raises; nothing is left out quietly.
+    A question with fewer snippets than ``snippets`` gets as many tasks as it has snippets.
+    """
+    if isinstance(snippets, bool) or not isinstance(snippets, int) or snippets < 1:
+        raise ValueError("snippets must be a whole number from 1")
+    rationales = load_rationales(rationales_dir, questions)
+    retrieved = RetrievalStore(retrieved_dir).load()
+    tasks: list[PairTask] = []
+    for question in questions:
+        if question.id not in answers:
+            raise StoreError(f"{question.id} has no answer key")
+        record = retrieved.get(question.id)
+        if record is None:
+            raise StoreError(f"{question.id} has no evidence in {retrieved_dir}")
+        if record.question_sha256 != question_hash(question.text) or record.rationale_sha256 != text_sha256(dense_query(rationales[question.id])):
+            raise StoreError(f"{question.id}: the evidence in {retrieved_dir} was found for another question or rationale")
+        for rank, passage in enumerate(record.evidence[:snippets], start=1):
+            text = passage.get("text") if isinstance(passage, Mapping) else None
+            if not isinstance(text, str) or not text.strip():
+                raise StoreError(f"{question.id}: snippet {rank} has no text")
+            tasks.append(PairTask(question.id, question.text, answers[question.id], rationales[question.id], rank, text))
+    return tasks

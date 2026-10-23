@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ class LedgerError(RuntimeError):
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 class Ledger:
