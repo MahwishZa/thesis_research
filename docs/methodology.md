@@ -474,8 +474,10 @@ and `test_batch.py` (records, resuming, refusals), `test_encoder.py`, `test_diag
 search against a brute-force check), `test_scorer.py`, `test_records.py`, `test_sources.py` (the four downloads, with a stand-in for NCBI's service and for the Hugging Face hub) and `test_cli.py` (the commands end to end with stand-in
 models). For `data_roles`: `test_splits.py` (the hash rule pinned, the order of the role names, the messages), `test_questions.py` (the three readers
 and what they refuse, the inline form of a question), `test_overlap.py` (exact and near repeats between splits) and `test_cli.py` (the
-commands end to end). For `answer_evaluation`: `test_prompt.py` (the layout of the answer prompt) and `test_reader.py` (the strict reading of the
-final answer). For `rationale_filter`:
+commands end to end). For `answer_evaluation`: `test_prompt.py` (the layout of the answer prompt), `test_reader.py` (the strict reading of the
+final answer), `test_paired_tests.py` (exact McNemar, the bootstrap, Holm, with exact values and the archived tests), `test_ledger.py`
+(a test set is scored once per system), `test_records.py` (the record and its store), `test_runner.py` (every system on every question,
+resuming, the refusals and the ledger on a test split) and `test_results.py` (accuracy per system, the paired comparison, k chosen on validation). For `rationale_filter`:
 `test_labels.py` and `test_inference.py` (types, blank parts and messages beyond the acceptance tests, which share the first name; the unit
 files are in `tests/unit/rationale_filter/`), `test_perplexity.py` (the formula and the pairing of the two prompts), `test_scorer.py` (the
 llama.cpp scorer against a stand-in whose outputs the test fixes, so the alignment of the scores is checked), `test_label_records.py`
