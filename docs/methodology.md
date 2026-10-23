@@ -477,7 +477,11 @@ and what they refuse, the inline form of a question), `test_overlap.py` (exact a
 commands end to end). For `answer_evaluation`: `test_prompt.py` (the layout of the answer prompt) and `test_reader.py` (the strict reading of the
 final answer). For `rationale_filter`:
 `test_labels.py` and `test_inference.py` (types, blank parts and messages beyond the acceptance tests, which share the first name; the unit
-files are in `tests/unit/rationale_filter/`). `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
+files are in `tests/unit/rationale_filter/`), `test_perplexity.py` (the formula and the pairing of the two prompts), `test_scorer.py` (the
+llama.cpp scorer against a stand-in whose outputs the test fixes, so the alignment of the scores is checked), `test_label_records.py`
+(the record, the store, τ over the pool), `test_labelling.py` (one pair and the resumable loop), `test_training_data.py` (the released format,
+the matching of labels to pairs, refusing to overwrite) and `test_filter_eval.py` (accuracy per class, the majority rate, the AUC);
+`tests/integration/test_real_scoring.py` runs the scorer against the real llama.cpp on the tiny synthetic model. `tests/repository/test_layout.py` checks every package (every module has a docstring and a test, importing the commands loads no heavy
 package, and this section names every test file). `test_real_libraries.py` runs the real llama.cpp and a real torch encoder on tiny
 synthetic models written by `tests/integration/tiny_models.py`; `test_real_retrieval.py` runs the article encoder, the cross-encoder and
 the whole `balanced_retrieval` command chain on tiny synthetic BERT models, and compares them with the authors' own lines of code. They need
