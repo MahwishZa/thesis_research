@@ -1,5 +1,6 @@
-# Packaging for the rebuilt pipeline. Install with `pip install -e .` from the repository root.
-# Dependencies are added here only when a step of the pipeline needs them; until then they are optional extras.
+# Packaging for the RAG² baseline. Install with `pip install -e .` from the repository root.
+# The packages needed by each component of the baseline (docs/methodology.md) are optional extras,
+# so that a component installs only what it uses.
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -7,21 +8,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "thesis-research"
 version = "0.0.1"
-description = "Retrieval-augmented medical question answering for Alzheimer's disease and related dementias, rebuilt step by step."
+description = "Improving RAG for medical question answering: a rebuild of the RAG2 baseline (Sohn et al., NAACL 2025), step by step."
 requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-# Part 1 (src/rationale_query): the model that writes the rationales and the encoder that turns them into queries.
-# Checked together: Python 3.12, llama-cpp-python 0.3.35, numpy 1.26.4, torch 2.4.1, transformers 4.51.3.
+# Components 1 and 4: the language model that writes the rationale and the answer (llama.cpp), and the query encoder.
 rationale = ["llama-cpp-python>=0.3.35", "numpy>=1.26", "torch>=2.4", "transformers>=4.51"]
-# Part 2 (src/balanced_retrieval): the MedCPT article encoder and cross-encoder, and the exact search over the vectors;
-# huggingface-hub fetches the guideline and textbook datasets (transformers needs it too; 0.36.2 was used).
+# Component 2: the MedCPT article encoder and cross-encoder, and the search over the vectors;
+# huggingface-hub downloads the guideline and textbook datasets.
 retrieval = ["numpy>=1.26", "torch>=2.4", "transformers>=4.51", "huggingface-hub>=0.30"]
-# Part 3 (src/rationale_filter): the Flan-T5 filter, its training and its judging of snippets.
+# Component 3: the Flan-T5 filter and its training.
 filter = ["torch>=2.4", "transformers>=4.51", "tokenizers", "sentencepiece"]
-# The tests that run the real llama.cpp on a tiny synthetic model write its file with the gguf package (0.19.0 was used).
-test = ["gguf"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
