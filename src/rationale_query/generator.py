@@ -2,9 +2,10 @@
 
 What the paper fixes, and what this file does about it:
 
-* The paper's prompt is sent as one user message and nothing else is added: no system message (section 3.3 shows only
-  the prompt text). Meerkat's own chat template, from its ``tokenizer_config.json``, turns one user message into
-  ``USER: <message> ASSISTANT: ``; the tokenizer then adds the start token once.
+* The model reads the paper's prompt text and nothing else: no system message and no chat wrapper such as Meerkat's
+  ``USER: ... ASSISTANT:``, because the paper shows only the prompt text (section 3.3) and never mentions a chat format.
+  The only thing added is the start-of-text token that every tokenizer adds, once, at the beginning. Meerkat's own chat
+  format stays available as a named setting for a later, labelled check; it is off by default.
 * Decoding is greedy: the most likely next word every time, no randomness (the paper: temperature 0, appendix A.3).
 * The paper gives no limit for the length of a rationale. This file sets none of its own: the model writes until it stops
   by itself. The only hard stop is the memory window. Meerkat-7B was trained with a maximum length of 2048 tokens
@@ -22,7 +23,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-CHAT_FORMAT = "meerkat"
+#: "none": the prompt text alone, as the paper shows it. "meerkat": Meerkat's own chat template for one user message.
+CHAT_FORMATS = ("none", "meerkat")
+DEFAULT_CHAT_FORMAT = "none"
 
 #: Every sampling value is written out, because the library's own defaults are not greedy.
 SAMPLING = {
@@ -49,12 +52,15 @@ class GenerationSettings:
     n_threads: int | None = None
     n_gpu_layers: int = 0
     seed: int = 42
+    chat_format: str = DEFAULT_CHAT_FORMAT
 
     def __post_init__(self) -> None:
         for name in ("n_ctx", "seed"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError(f"{name} must be a whole number from 1, got {value!r}")
+        if self.chat_format not in CHAT_FORMATS:
+            raise ValueError(f"chat_format must be one of {CHAT_FORMATS}, got {self.chat_format!r}")
 
 
 @dataclass(frozen=True)
@@ -65,11 +71,15 @@ class GenerationResult:
     completion_tokens: int
 
 
-def render_user_message(prompt: str) -> str:
-    """Meerkat's chat template for one user message and no system message: ``USER: <message> ASSISTANT: ``."""
+def render_model_input(prompt: str, chat_format: str = DEFAULT_CHAT_FORMAT) -> str:
+    """The text the model reads. ``"none"``: the prompt itself. ``"meerkat"``: ``USER: <prompt> ASSISTANT: `` (Meerkat's template)."""
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("the prompt must be non-empty text")
-    return f"USER: {prompt} ASSISTANT: "
+    if chat_format == "none":
+        return prompt
+    if chat_format == "meerkat":
+        return f"USER: {prompt} ASSISTANT: "
+    raise ValueError(f"chat_format must be one of {CHAT_FORMATS}, got {chat_format!r}")
 
 
 def file_sha256(path: str | Path, chunk: int = 1 << 24) -> str:
@@ -121,14 +131,14 @@ class LlamaGenerator:
             logits_all=False, verbose=verbose,
         )
         self.config: dict[str, Any] = {
-            "model_file": path.name, "model_sha256": sha, "chat_format": CHAT_FORMAT, "n_ctx": s.n_ctx, "seed": s.seed,
+            "model_file": path.name, "model_sha256": sha, "chat_format": s.chat_format, "n_ctx": s.n_ctx, "seed": s.seed,
             "sampling": dict(SAMPLING), "n_threads": s.n_threads, "n_gpu_layers": s.n_gpu_layers,
             "llama_cpp_python": _library_version(),
         }
 
     def prompt_tokens(self, prompt: str) -> list[int]:
-        """The token list the model reads: the start token once, then the text of the chat template."""
-        text = render_user_message(prompt)
+        """The token list the model reads: the start token once, then the text."""
+        text = render_model_input(prompt, self.settings.chat_format)
         tokens = list(self.llm.tokenize(text.encode("utf-8"), add_bos=True, special=False))
         bos = self.llm.token_bos()
         if not tokens or tokens[0] != bos or bos in tokens[1:]:

@@ -5,7 +5,7 @@ import json
 import unittest
 
 from rationale_query import cli
-from rationale_query.generator import GenerationSettings, LlamaGenerator, render_user_message
+from rationale_query.generator import GenerationSettings, LlamaGenerator, render_model_input
 from rationale_query.prompt import build_rationale_prompt
 from rationale_query.store import RationaleStore
 from tests.support import TempDirTestCase
@@ -28,9 +28,9 @@ else:
 class RealLlamaTests(TempDirTestCase):
     WINDOW = 1024
 
-    def make(self, eos_push):
+    def make(self, eos_push, chat_format="none"):
         path = write_tiny_llama(self.dir / f"tiny_{eos_push}.gguf", eos_push=eos_push, context_length=self.WINDOW)
-        generator = LlamaGenerator(path, GenerationSettings(n_ctx=self.WINDOW, n_threads=1))
+        generator = LlamaGenerator(path, GenerationSettings(n_ctx=self.WINDOW, n_threads=1, chat_format=chat_format))
         self.addCleanup(generator.close)
         return generator
 
@@ -40,12 +40,17 @@ class RealLlamaTests(TempDirTestCase):
         self.assertEqual(tokens[0], generator.llm.token_bos())
         self.assertNotIn(generator.llm.token_bos(), tokens[1:])
 
-    def test_the_tokens_spell_meerkats_format_and_the_paper_prompt(self):
+    def test_the_tokens_spell_the_papers_prompt_and_nothing_else(self):
         generator = self.make(-5.0)
         prompt = build_rationale_prompt("Which? (A) a (B) b")
-        tokens = generator.prompt_tokens(prompt)
-        spelled = generator.llm.detokenize(tokens[1:]).decode("utf-8")
-        self.assertEqual(spelled.lstrip(" "), render_user_message(prompt))
+        spelled = generator.llm.detokenize(generator.prompt_tokens(prompt)[1:]).decode("utf-8")
+        self.assertEqual(spelled.lstrip(" "), prompt)
+
+    def test_meerkats_template_is_added_only_when_asked_for(self):
+        generator = self.make(-5.0, chat_format="meerkat")
+        prompt = build_rationale_prompt("Which? (A) a (B) b")
+        spelled = generator.llm.detokenize(generator.prompt_tokens(prompt)[1:]).decode("utf-8")
+        self.assertEqual(spelled.lstrip(" "), render_model_input(prompt, "meerkat"))
 
     def test_a_model_that_wants_to_stop_stops_and_reports_it(self):
         generator = self.make(+5.0)

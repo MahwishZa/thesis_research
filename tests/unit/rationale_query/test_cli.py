@@ -15,7 +15,7 @@ RATIONALE = "The patient has COPD. Therefore, the answer is (A) BiPAP."
 
 
 class Generator:
-    config = {"model_sha256": "m" * 64, "chat_format": "meerkat", "n_ctx": 2048, "sampling": {"temperature": 0.0}}
+    config = {"model_sha256": "m" * 64, "chat_format": "none", "n_ctx": 2048, "sampling": {"temperature": 0.0}}
 
     def __init__(self, fail_on=()):
         self.fail_on = fail_on
@@ -86,8 +86,10 @@ class CliTests(TempDirTestCase):
         status, out, _ = self.run_cli("show-prompt", "--question", FIGURE_4_QUESTION)
         self.assertEqual(status, 0)
         self.assertIn(build_rationale_prompt(FIGURE_4_QUESTION), out)
+        self.assertNotIn("USER:", out)
+        self.assertIn("chat format: none; no system message", out)
+        status, out, _ = self.run_cli("show-prompt", "--question", FIGURE_4_QUESTION, "--chat-format", "meerkat")
         self.assertIn("USER: " + build_rationale_prompt(FIGURE_4_QUESTION) + " ASSISTANT: ", out)
-        self.assertIn("no system message", out)
 
     def test_export_queries_writes_the_list_in_the_order_of_the_questions(self):
         self.generate()

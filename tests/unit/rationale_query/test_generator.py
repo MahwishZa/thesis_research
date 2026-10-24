@@ -1,4 +1,4 @@
-"""rationale_query.generator: Meerkat's chat format, greedy decoding, no length limit of our own, and the refusals.
+"""rationale_query.generator: the paper's text alone, greedy decoding, no length limit of our own, and the refusals.
 
 A scripted stand-in takes the place of llama.cpp, so that the test can see exactly what the model is given.
 """
@@ -74,27 +74,39 @@ class GeneratorTestCase(TempDirTestCase):
 
 
 class FormatTests(unittest.TestCase):
-    def test_one_user_message_becomes_meerkats_template_text(self):
-        self.assertEqual(generator.render_user_message("PROMPT"), "USER: PROMPT ASSISTANT: ")
+    def test_by_default_the_model_reads_the_papers_text_alone(self):
+        self.assertEqual(GenerationSettings().chat_format, "none")
+        self.assertEqual(generator.render_model_input("PROMPT"), "PROMPT")
+        self.assertEqual(generator.render_model_input("PROMPT", "none"), "PROMPT")
 
-    def test_nothing_is_added_before_the_user_turn(self):
-        self.assertTrue(generator.render_user_message("PROMPT").startswith("USER: "))
+    def test_meerkats_own_template_is_a_named_option_for_a_labelled_check(self):
+        self.assertEqual(generator.render_model_input("PROMPT", "meerkat"), "USER: PROMPT ASSISTANT: ")
 
-    def test_a_blank_prompt_is_refused(self):
+    def test_a_blank_prompt_or_an_unknown_format_is_refused(self):
         for bad in ("", "  ", None, 3):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
-                generator.render_user_message(bad)
+                generator.render_model_input(bad)
+        with self.assertRaises(ValueError):
+            generator.render_model_input("PROMPT", "vicuna")
+        with self.assertRaises(ValueError):
+            GenerationSettings(chat_format="vicuna")
 
 
 class GenerateTests(GeneratorTestCase):
-    def test_the_model_reads_the_papers_prompt_inside_meerkats_format(self):
+    def test_the_model_reads_the_papers_prompt_and_nothing_else(self):
         gen = self.make()
         prompt = build_rationale_prompt(FIGURE_4_QUESTION)
         gen.generate(prompt)
         text, add_bos, special = self.made[0].tokenized[-1]
-        self.assertEqual(text.decode("utf-8"), "USER: " + prompt + " ASSISTANT: ")
+        self.assertEqual(text.decode("utf-8"), prompt)
         self.assertTrue(add_bos)
         self.assertFalse(special, "text inside a question must never be read as a special token")
+
+    def test_meerkats_template_is_used_only_when_asked_for(self):
+        gen = self.make(settings=GenerationSettings(chat_format="meerkat"))
+        gen.generate("a b c")
+        self.assertEqual(self.made[0].tokenized[-1][0].decode("utf-8"), "USER: a b c ASSISTANT: ")
+        self.assertEqual(gen.config["chat_format"], "meerkat")
 
     def test_the_prompt_is_given_as_a_token_list_with_the_start_token_once(self):
         gen = self.make()
@@ -122,10 +134,10 @@ class GenerateTests(GeneratorTestCase):
 
     def test_there_is_no_length_limit_except_the_window(self):
         gen = self.make(settings=GenerationSettings(n_ctx=300))
-        result = gen.generate("a b c d e")  # start token, "USER:", five words, "ASSISTANT:"
+        result = gen.generate("a b c d e")  # start token and five words
         call = self.made[0].calls[0]
-        self.assertEqual(result.prompt_tokens, 8)
-        self.assertEqual(call["max_tokens"], 300 - 8)
+        self.assertEqual(result.prompt_tokens, 6)
+        self.assertEqual(call["max_tokens"], 300 - 6)
 
     def test_the_memory_of_the_previous_question_is_emptied_first(self):
         gen = self.make()
@@ -138,7 +150,7 @@ class GenerateTests(GeneratorTestCase):
         gen = self.make()
         result = gen.generate("a b c")
         self.assertEqual(result.text, "step by step. Therefore, the answer is (C) Intubation.")
-        self.assertEqual((result.finish_reason, result.prompt_tokens, result.completion_tokens), ("stop", 6, 9))  # start token, "USER:", a b c, "ASSISTANT:"
+        self.assertEqual((result.finish_reason, result.prompt_tokens, result.completion_tokens), ("stop", 4, 9))  # start token, a b c
 
     def test_a_full_window_is_reported_as_length_and_the_text_is_kept(self):
         gen = self.make()
@@ -159,7 +171,7 @@ class GenerateTests(GeneratorTestCase):
     def test_a_prompt_that_does_not_fit_is_refused_and_never_shortened(self):
         gen = self.make(settings=GenerationSettings(n_ctx=5))
         with self.assertRaises(ContextOverflowError):
-            gen.generate("a b c d e f")
+            gen.generate("a b c d e")
         self.assertEqual(self.made[0].calls, [])
 
 
@@ -176,7 +188,7 @@ class ModelFileTests(GeneratorTestCase):
     def test_the_configuration_records_the_file_by_its_hash(self):
         gen = self.make()
         self.assertEqual(gen.config["model_sha256"], hashlib.sha256(b"not a real model").hexdigest())
-        self.assertEqual(gen.config["chat_format"], "meerkat")
+        self.assertEqual(gen.config["chat_format"], "none")
         self.assertEqual(gen.config["sampling"], generator.SAMPLING)
         self.assertEqual(gen.config["n_ctx"], 2048)
 

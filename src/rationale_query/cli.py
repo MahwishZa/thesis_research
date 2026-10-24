@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TextIO
 
-from .generator import CHAT_FORMAT, GenerationError, GenerationSettings, LlamaGenerator, render_user_message
+from .generator import CHAT_FORMATS, DEFAULT_CHAT_FORMAT, GenerationError, GenerationSettings, LlamaGenerator, render_model_input
 from .prompt import INSTRUCTION, LEAD_IN, SEPARATOR, build_rationale_prompt
 from .query import export_queries, queries_for
 from .run import RunAborted, generate_rationales
@@ -55,6 +55,7 @@ def _parser() -> argparse.ArgumentParser:
     gen.add_argument("--model", type=Path, required=True, help="path of the GGUF model file (Meerkat-7B)")
     gen.add_argument("--model-sha256", help="stop unless the file has this SHA-256")
     gen.add_argument("--n-ctx", type=int, default=GenerationSettings.n_ctx, help="memory window in tokens; the length Meerkat-7B was trained with")
+    gen.add_argument("--chat-format", choices=CHAT_FORMATS, default=DEFAULT_CHAT_FORMAT, help="none: the paper's text alone (default); meerkat: Meerkat's own template, for a labelled check")
     gen.add_argument("--n-threads", type=int, default=None)
     gen.add_argument("--n-gpu-layers", type=int, default=0)
     gen.add_argument("--limit", type=int, default=None, help="only the first N questions of the file")
@@ -63,6 +64,7 @@ def _parser() -> argparse.ArgumentParser:
 
     show = sub.add_parser("show-prompt", help="print what the model is given for one question")
     show.add_argument("--question", required=True, help="the question, with its options")
+    show.add_argument("--chat-format", choices=CHAT_FORMATS, default=DEFAULT_CHAT_FORMAT)
 
     export = sub.add_parser("export-queries", help="write the rationales as a JSON list of queries for the retriever")
     export.add_argument("--questions", type=Path, required=True)
@@ -104,13 +106,13 @@ def _show_prompt(args: argparse.Namespace, streams: Streams) -> int:
     prompt = build_rationale_prompt(args.question)
     streams.out.write("The paper's prompt (section 3.3), with the question in place of [initial_query]:\n\n")
     streams.out.write(prompt + "\n\n")
-    streams.out.write(f"What the model reads ({CHAT_FORMAT} chat format, one user message, no system message; the tokenizer adds the start token):\n\n")
-    streams.out.write(render_user_message(prompt) + "\n")
+    streams.out.write(f"What the model reads (chat format: {args.chat_format}; no system message; the tokenizer adds the start token once):\n\n")
+    streams.out.write(render_model_input(prompt, args.chat_format) + "\n")
     return 0
 
 
 def _default_generator(args: argparse.Namespace, streams: Streams) -> LlamaGenerator:
-    settings = GenerationSettings(n_ctx=args.n_ctx, n_threads=args.n_threads, n_gpu_layers=args.n_gpu_layers)
+    settings = GenerationSettings(n_ctx=args.n_ctx, n_threads=args.n_threads, n_gpu_layers=args.n_gpu_layers, chat_format=args.chat_format)
     streams.err.write(f"checking and loading {args.model.name} (the SHA-256 of a large file takes about half a minute)\n")
     return LlamaGenerator(args.model, settings, expected_sha256=args.model_sha256, verbose=args.verbose)
 
