@@ -1,4 +1,4 @@
-# Thesis Title (Temporary Placeholder)
+# Improving RAG for Medical Question Answering
 
 ## Overview
 
@@ -10,6 +10,8 @@ This thesis studies retrieval-augmented generation (RAG), in which a language mo
 2. To determine the extent to which the proposed system improves retrieval and generation performance compared with relevant baseline models and existing works.
 
 ## Results
+
+No results yet. The baseline (a faithful, smaller-scale reproduction of RAG²) is built but has not been run on the real models and corpora.
 
 ## Repository Structure
 
@@ -45,4 +47,13 @@ the tool's commands.
 Part 2 of RAG² is built: the rationale is searched in four corpora, the best passages of each are pooled, and one cross-encoder orders the
 pool. The corpora themselves (PubMed and PMC for Alzheimer's disease and its neighbours; the guidelines and textbooks of the paper) are
 built with `python -m balanced_retrieval fetch`, `chunk` and `embed` (about 10 million passages; built and checked on 2026-10-20) and are not in the repository; the commands are in [`src/README.md`](src/README.md)
-(`pip install -e ".[retrieval]"`). Part 3, the filter, is not built yet.
+(`pip install -e ".[retrieval]"`).
+
+Part 3 of RAG² is built: a small Flan-T5 filter judges each retrieved snippet as helpful or not helpful. `python -m rationale_filter` makes the
+training labels (`label`, `labels`), prepares and trains the filter (`prepare-model`, `train`), tests whether the training fits in memory
+(`memory-test`) and scores a trained filter (`evaluate`); it needs `pip install -e ".[filter]"` for the training. Part 4 is built: `python -m answer_evaluation`
+answers the questions with each system (no retrieval, retrieval without the filter, retrieval with the filter) and reports accuracy and the
+paired comparison. `python -m data_roles` reads the three question sets (MedQA, MedMCQA, MMLU-Med) and fixes which question is used for
+training, validation or test. All of it is tested on stand-in models; it has not yet been run end to end on the real Llama-3 file and the
+real corpora, so the baseline has no result yet. The commands are in [`src/README.md`](src/README.md), the decisions and what is still open
+in [`docs/methodology.md`](docs/methodology.md).
