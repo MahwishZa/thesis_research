@@ -38,7 +38,9 @@ The paper also applies the method to Meerkat-7B and GPT-4o. The baseline here is
 - The query encoder is `ncbi/MedCPT-Query-Encoder`. The query vector is the first-token vector (`last_hidden_state[:, 0, :]`), with truncation at 512 tokens [Code `query_encode.py`].
 - The code adds `[SEP]` between sentences only for the instruction-set (training) queries, and only if `--use_spacy` is set. A rationale query is encoded as written [Code `main.py`].
 - Generation is greedy (temperature 0), run with vLLM on one H100 [Paper A.3].
-- **[Not stated]:** the maximum rationale length, and the exact system prompt and chat template.
+- The prompt follows Kim et al. (2024), the Meerkat paper [Paper §3.3]. Meerkat's model card gives a similar instruction as a system message for MedQA-style questions: "The following is a multiple-choice question about medical knowledge. Solve this in a step-by-step fashion, starting by summarizing the available information. Output a single option from the given options as the final answer. You are strongly required to follow the specified output format; conclude your response with the phrase "the answer is ([option_id]) [answer_string]"." The RAG² box differs from it in wording, drops the format sentence, and adds "Here is the question: [initial_query]" [Paper §3.3; Meerkat-7B model card].
+- **Meerkat-7B as the language model** [Paper §4.2; Kim et al. 2025]. It is initialized from Mistral-7B-v0.1, instruction-tuned with a maximum length of 2048 tokens, and evaluated with vLLM, BF16 and greedy decoding. Its chat template turns one user message into `USER: <message> ASSISTANT: ` and adds the start token `<s>`; with a system message the system text stands in front, as in `<system text>USER: <message> ASSISTANT: ` [Meerkat-7B `tokenizer_config.json`]. The model card trains and evaluates with the instruction as a system message and the question as the user message.
+- **[Not stated]:** the maximum rationale length; whether a system message or a chat format was used; whether, for Meerkat-7B, the box was sent as one user message or split into a system message and a user message; and the line break before "Here is the question:" (the PDF cannot show whether the box has a line break there or only wraps).
 
 ## 3. Component 2: balanced retrieval
 
@@ -151,7 +153,7 @@ Filter ablation, Llama-3-8B-Instruct, top-1 snippet, original question as the qu
 
 These points are not specified by either source. They are listed so that nothing is assumed silently:
 
-- the maximum length of the rationale, and the answer prompt;
+- the maximum length of the rationale, the answer prompt, and whether a system message and a chat format were used for the rationale prompt (including the line break before "Here is the question:");
 - the window size and overlap used to cut documents into snippets;
 - how many PubMed groups the authors used (the code default is one; the README of the code mentions four);
 - whether the re-ranker read the question or the rationale (the paper and the code differ, see section 3);
