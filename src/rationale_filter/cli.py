@@ -1,8 +1,12 @@
 """The commands of ``python -m rationale_filter``: make the pair records, then the labels and the training file.
 
-    label    for each question, label its first N re-ranked snippets (resumable); prints the seconds per pair, so a run with
-             ``--limit 20`` is the timing pilot
-    labels   τ, the labels and a summary from the records; with ``--training-file`` also the training file for the filter
+    label         for each question, label its first N re-ranked snippets (resumable); prints the seconds per pair, so a run
+                  with ``--limit 20`` is the timing pilot
+    labels        τ, the labels and a summary from the records; with ``--training-file`` also the training file for the filter
+    prepare-model add the two label tokens to a base Flan-T5 and save it into a new folder
+    memory-test   one training step on the longest inputs: does a run fit, and how long does a step take
+    train         fine-tune the prepared model on a training file (resumable), validating after every epoch
+    evaluate      accuracy, accuracy per class, majority rate and AUC of a trained filter on a labelled file
 
 Inputs are the files of the earlier steps: the questions and the answer key (``python -m data_roles export``), the rationales
 (``python -m rationale_query generate``) and the evidence lists (``python -m balanced_retrieval retrieve``).
@@ -28,8 +32,10 @@ from rationale_query.generator import RESULT_RELEVANT, GenerationError, Generati
 from rationale_query.store import StoreError, read_questions
 
 from .label_records import RELEVANT, PairRecord, PairStore, label_records, summarise
+from .filter_model import DOC_STRIDE, MAX_ANSWER_LENGTH, MAX_SEQ_LENGTH, FilterModel, FilterModelError, prepare_model
 from .labelling import PairTask, build_tasks, label_pairs, read_answers
 from .scorer import LlamaLogprobScorer
+from .training import TrainingError, TrainSettings, evaluate_examples, memory_test, read_examples, train, write_report
 from .training_data import label_balance, training_records, write_training_file
 
 #: The cap on the answers written with a snippet (decision D15). The rationale of Part 1 is cut at its own cap (512 by default).
@@ -63,6 +69,40 @@ def _parser() -> argparse.ArgumentParser:
     labels = sub.choices["labels"]
     labels.add_argument("--training-file", type=Path, default=None, help="also write the filter's training file here (never overwrites)")
     labels.add_argument("--dataset-name", default=None, help="the dataset_name field of the training file (default: the name bound to the folder)")
+
+    prepare = sub.add_parser("prepare-model", help="add the two label tokens to a base Flan-T5 (needs torch and transformers)")
+    prepare.add_argument("--base", required=True, help="a hub name such as google/flan-t5-base, or a local folder")
+    prepare.add_argument("--out", type=Path, required=True, help="a new, empty folder")
+    prepare.add_argument("--local-files-only", action="store_true", help="never go to the hub")
+
+    for name, text in (("train", "fine-tune the prepared model (resumable)"), ("memory-test", "one training step on the longest inputs")):
+        command = sub.add_parser(name, help=text)
+        command.add_argument("--model", type=Path, required=True, help="the folder made by prepare-model")
+        command.add_argument("--train-file", type=Path, required=True, help="the training file (from the labels command)")
+        command.add_argument("--epochs", type=int, default=40, help="the authors' value")
+        command.add_argument("--batch-size", type=int, default=16, help="per-device batch size; the authors' value")
+        command.add_argument("--learning-rate", type=float, default=3e-5, help="the authors' value")
+        command.add_argument("--weight-decay", type=float, default=0.0)
+        command.add_argument("--max-seq-length", type=int, default=MAX_SEQ_LENGTH)
+        command.add_argument("--doc-stride", type=int, default=DOC_STRIDE)
+        command.add_argument("--grad-accum", type=int, default=1, help="batches per optimizer step; 1 is the authors' setting")
+        command.add_argument("--seed", type=int, default=42)
+        command.add_argument("--device", default=None, help="cuda, cpu, ...; default: cuda when there is one")
+    trainer = sub.choices["train"]
+    trainer.add_argument("--validation-file", type=Path, default=None, help="a labelled file; the filter is scored on it after every epoch")
+    trainer.add_argument("--out", type=Path, required=True, help="the output folder (new, or the same as an earlier run)")
+    trainer.add_argument("--eval-batch-size", type=int, default=8)
+    trainer.add_argument("--save-every", type=int, default=0, help="also keep the model of every N-th epoch (0: only last, best and final)")
+    trainer.add_argument("--quiet", action="store_true", help="no line per epoch")
+
+    evaluator = sub.add_parser("evaluate", help="score a trained filter on a labelled file")
+    evaluator.add_argument("--model", type=Path, required=True, help="a trained folder, for example the best or final folder of a run")
+    evaluator.add_argument("--file", type=Path, required=True, help="a labelled file, in the format of the training file")
+    evaluator.add_argument("--report-out", type=Path, default=None, help="write the report and the predictions here (never overwrites)")
+    evaluator.add_argument("--batch-size", type=int, default=8)
+    evaluator.add_argument("--max-seq-length", type=int, default=MAX_SEQ_LENGTH)
+    evaluator.add_argument("--doc-stride", type=int, default=DOC_STRIDE)
+    evaluator.add_argument("--device", default=None)
     return parser
 
 
@@ -117,14 +157,22 @@ def main(
     try:
         if args.command == "label":
             return _label(args, streams, generator_factory or _default_generator, scorer_factory or _default_scorer)
-        return _labels(args, streams)
+        if args.command == "labels":
+            return _labels(args, streams)
+        if args.command == "prepare-model":
+            return _prepare(args, streams)
+        if args.command == "train":
+            return _train(args, streams)
+        if args.command == "memory-test":
+            return _memory_test(args, streams)
+        return _evaluate(args, streams)
     except RunAborted as exc:
         streams.err.write(f"stopped: {exc}\n")
         return 2
     except KeyboardInterrupt:
         streams.err.write("\ninterrupted; run the same command again to continue\n")
         return 130
-    except (StoreError, GenerationError, OSError, ValueError, ImportError) as exc:
+    except (StoreError, GenerationError, FilterModelError, TrainingError, OSError, ValueError, ImportError) as exc:
         streams.err.write(f"error: {exc}\n")
         return 1
 
@@ -189,4 +237,53 @@ def _labels(args: argparse.Namespace, streams: Streams) -> int:
         write_training_file(args.training_file, rows)
         report["training_file"] = {"path": str(args.training_file), "records": len(rows), **label_balance(rows)}
     streams.out.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    return 0
+
+
+def _settings(args: argparse.Namespace) -> TrainSettings:
+    return TrainSettings(
+        model_dir=str(args.model), train_file=str(args.train_file), out_dir=str(getattr(args, "out", None) or "-"),
+        validation_file=str(args.validation_file) if getattr(args, "validation_file", None) else None, epochs=args.epochs,
+        batch_size=args.batch_size, learning_rate=args.learning_rate, weight_decay=args.weight_decay, max_seq_length=args.max_seq_length,
+        doc_stride=args.doc_stride, max_answer_length=MAX_ANSWER_LENGTH, gradient_accumulation_steps=args.grad_accum, seed=args.seed,
+        eval_batch_size=getattr(args, "eval_batch_size", 8), save_every=getattr(args, "save_every", 0),
+    )
+
+
+def _prepare(args: argparse.Namespace, streams: Streams) -> int:
+    info = prepare_model(args.base, args.out, local_files_only=args.local_files_only)
+    streams.out.write(json.dumps(info, indent=2, sort_keys=True) + "\n")
+    return 0
+
+
+def _train(args: argparse.Namespace, streams: Streams) -> int:
+    settings = _settings(args)
+
+    def progress(event: dict[str, Any]) -> None:
+        if event["event"] != "epoch" or args.quiet:
+            return
+        valid = event.get("validation")
+        text = f", validation accuracy {valid['accuracy']} (majority {valid['majority_rate']})" if valid else ""
+        streams.err.write(f"[epoch {event['epoch']}/{settings.epochs}] loss {event['mean_loss']}{text}, {duration(event['seconds'])}\n")
+
+    summary = train(settings, device=args.device, progress=progress)
+    streams.out.write(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    return 0
+
+
+def _memory_test(args: argparse.Namespace, streams: Streams) -> int:
+    result = memory_test(_settings(args), device=args.device)
+    streams.out.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    return 0 if result.get("fits") else 3
+
+
+def _evaluate(args: argparse.Namespace, streams: Streams) -> int:
+    examples = read_examples(args.file)
+    filter_model = FilterModel.load(args.model, device=args.device, max_seq_length=args.max_seq_length, doc_stride=args.doc_stride)
+    result = evaluate_examples(filter_model, examples, batch_size=args.batch_size)
+    result["report"]["windowed_inputs"] = filter_model.windowed_inputs
+    result["report"]["windowed_share"] = filter_model.windowed_share()
+    if args.report_out is not None:
+        write_report(args.report_out, result)
+    streams.out.write(json.dumps(result["report"], indent=2, sort_keys=True) + "\n")
     return 0

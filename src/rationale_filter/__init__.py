@@ -12,7 +12,9 @@ rationale, without and with the snippet (Figure 2 of the paper).
     labelling      the loop that turns pairs into records: strict answers first, then the two perplexities
     training_data  the training file in the format of the released sample, refusing to overwrite labels
     filter_eval    accuracy per class, the majority rate and the AUC of the filter on held-out labels
-    cli            python -m rationale_filter label | labels
+    filter_model   Flan-T5 with the two label tokens: the first-step logits, windows of 512 tokens, batched judging (needs torch)
+    training       the authors' fine-tuning of the filter, a memory test, and evaluation on labelled files (needs torch)
+    cli            python -m rationale_filter label | labels | prepare-model | train | memory-test | evaluate
 
-Importing the package loads nothing heavy: numpy and llama_cpp are imported only inside the scorer, where they are used.
+Importing the package loads nothing heavy: numpy, llama_cpp, torch and transformers are imported only inside the functions that use them.
 """

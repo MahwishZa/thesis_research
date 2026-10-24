@@ -48,6 +48,21 @@ def judge_snippets(*, question: str, snippets: Sequence[str], judge: Callable[[s
     return [bool(judge(build_filter_input(evidence=snippet, question=question))) for snippet in snippets]
 
 
+def decisions_for(*, question: str, snippets: Sequence[str], judge_many: Callable[[list[str]], Sequence[bool]]) -> list[bool]:
+    """The same decisions as ``judge_snippets``, with one call for all the snippets of a question so that a model can batch them.
+
+    ``judge_many`` gets the filter inputs of all the snippets, in order, and returns one decision for each. A snippet is still
+    judged from its own input only; the batch changes nothing but speed. A count that does not match is an error.
+    """
+    inputs = [build_filter_input(evidence=snippet, question=question) for snippet in snippets]
+    if not inputs:
+        return []
+    answers = list(judge_many(inputs))
+    if len(answers) != len(inputs):
+        raise ValueError(f"{len(inputs)} snippets but {len(answers)} decisions")
+    return [bool(answer) for answer in answers]
+
+
 def keep_helpful(items: Sequence[T], decisions: Sequence[bool]) -> list[T]:
     """The items whose decision is True, in their original order, as a new list of the very same objects."""
     if len(items) != len(decisions):

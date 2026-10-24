@@ -11,6 +11,8 @@ with paired statistics.
     records       one resumable record per answer: question, system and k
     runner        every question answered by every system, resumable; a test run needs the ledger
     results       accuracy per system, the paired comparison of two systems, and the choice of k on validation data
+    evidence      the snippets each system reads: the re-ranked list as it is, or only the snippets the filter calls helpful
+    cli           python -m answer_evaluation run | report
 
 Importing the package loads nothing heavy; these modules need no third-party package.
 """

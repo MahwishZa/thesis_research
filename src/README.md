@@ -6,8 +6,8 @@ The code of the pipeline. Each part of RAG² (Sohn et al., NAACL 2025) gets its 
 |---|---|---|
 | `rationale_query/` | Part 1: rationale-based query formulation (section 3.3) | built |
 | `balanced_retrieval/` | Part 2: balanced retrieval over four corpora (section 3.4) | built |
-| `rationale_filter/` | Part 3: rationale-guided filtering (section 3.2) | the label rule, the labelling loop, the training file and the filter decision are built; the Flan-T5 training and the model that judges snippets are not |
-| `answer_evaluation/` | Part 4: answering and judging the answers | the prompt, the strict reader, the paired statistics, the test-once ledger and the runner are built; the command line and the filter step are not |
+| `rationale_filter/` | Part 3: rationale-guided filtering (section 3.2) | the label rule, the labelling loop, the training file, the filter decision, the Flan-T5 training, the memory test and the evaluation are built (tested on a tiny random T5 only) |
+| `answer_evaluation/` | Part 4: answering and judging the answers | the prompt, the strict reader, the paired statistics, the test-once ledger, the runner, the evidence step and the command line are built |
 | `data_roles/` | which question belongs to which role, and the three benchmarks | built |
 
 ## What is in `rationale_query/`
@@ -128,12 +128,24 @@ is scored twice; the labels follow from all the records together (Figure 2 of th
 | `labelling.py` | the loop over pairs (strict answers first, then the two perplexities) and the reading of the earlier steps' files |
 | `training_data.py` | the training file in the format of the released sample, refusing to overwrite |
 | `filter_eval.py` | accuracy per class, the majority rate and the AUC on held-out labels |
-| `cli.py` | `python -m rationale_filter label` and `labels` |
+| `filter_model.py` | Flan-T5 with the two label tokens: first-step logits, windows of 512 tokens with stride 128, batched judging (needs torch) |
+| `training.py` | the authors' fine-tuning (AdamW 3e-5, batch 16, 40 epochs), resumable; the memory test; evaluation on labelled files (needs torch) |
+| `cli.py` | `python -m rationale_filter label`, `labels`, `prepare-model`, `train`, `memory-test` and `evaluate` |
 
 ```powershell
 python -m rationale_filter label --questions q.jsonl --answers a.jsonl --rationales outputs\rationales --retrieved retrieved --out pairs --dataset medqa --split train --model models\llama3.gguf --limit 20
 python -m rationale_filter labels --questions q.jsonl --answers a.jsonl --rationales outputs\rationales --retrieved retrieved --out pairs --training-file labels\medqa_train.json
 ```
+
+```powershell
+python -m rationale_filter prepare-model --base google/flan-t5-base --out filters\base0
+python -m rationale_filter memory-test --model filters\base0 --train-file labels\medqa_train.json
+python -m rationale_filter train --model filters\base0 --train-file labels\medqa_train.json --validation-file labels\medqa_val.json --out filters\base
+python -m rationale_filter evaluate --model filters\base\best --file labels\medqa_val.json
+```
+
+Run `memory-test` first: it does one training step on the longest inputs and says whether batch 16 fits (exit status 3 if not;
+then use `--grad-accum`). Flan-T5-large will not fit on a 4 GB card. `train` can be stopped and started again.
 
 `label --limit 20` is the timing pilot: the last line gives the seconds per pair. Run it on training or validation questions;
 the command refuses a test split. Every command can be stopped and started again with the same arguments.
@@ -149,8 +161,16 @@ the command refuses a test split. Every command can be stopped and started again
 | `records.py` | one resumable record per answer: question, system and k |
 | `runner.py` | every question answered by every system, resumable; a test run needs the ledger |
 | `results.py` | accuracy per system, the paired comparison, and k chosen on validation data |
+| `evidence.py` | the snippets each system reads: the re-ranked list, or only the snippets the filter calls helpful (each judged once) |
+| `cli.py` | `python -m answer_evaluation run` and `report` |
 
-Not built yet: the Flan-T5 training, the model that judges snippets at answer time, and the command line of this package.
+```powershell
+python -m answer_evaluation run --questions q.jsonl --answers a.jsonl --rationales outputs\rationales --retrieved 4=retrieved4 --retrieved 8=retrieved8 --filter-model filters\base\best --out answers_val --dataset medqa --split validation --model models\llama3.gguf
+python -m answer_evaluation report --out answers_val --choose-k rag2 --baseline rag2_no_filter 4 --proposed rag2 4
+```
+
+Each k has its own retrieval folder, because the authors' retriever uses one top_k for both the candidates and the final list.
+A test split needs `--ledger` and `--system`.
 
 ## How to use it
 

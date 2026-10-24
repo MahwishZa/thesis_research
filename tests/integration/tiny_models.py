@@ -145,3 +145,40 @@ def write_tiny_cross_encoder(folder: str | Path) -> None:
     folder = Path(folder)
     torch.manual_seed(1)
     BertForSequenceClassification(_tiny_bert_config(folder, num_labels=1)).save_pretrained(folder)
+
+
+#: The words of the tiny filter tokenizer. Anything else becomes ``<unk>``. They cover the filter input of the tests.
+TINY_T5_WORDS = (
+    "Given the following evidence , determine whether it helps answer provided question . Evidence : Question : "
+    "yes no good bad A ) B C D which drug is a donepezil aspirin insulin warfarin cholinesterase inhibitor dementia "
+    "snippet one two three four five six seven eight nine ten the of and to in"
+).split()
+
+
+def write_tiny_t5(folder: str | Path, *, extra_rows: int = 8) -> None:
+    """A Flan-T5-shaped model with random weights (two layers, 32 numbers wide) and a word-level tokenizer, into ``folder``.
+
+    The tokenizer is a fast tokenizer that puts ``</s>`` at the end of every text, like T5's. The embedding has ``extra_rows``
+    rows more than the tokenizer has tokens, as T5's real embedding has 28 more rows than its tokenizer, so that adding the two
+    label tokens and resizing the embedding to the tokenizer's length behaves as it does for the real model.
+    Needs ``torch``, ``transformers`` and ``tokenizers``.
+    """
+    import torch
+    from tokenizers import Tokenizer, models, pre_tokenizers, processors
+    from transformers import PreTrainedTokenizerFast, T5Config, T5ForConditionalGeneration
+
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    words = ["<pad>", "</s>", "<unk>", *dict.fromkeys(TINY_T5_WORDS)]
+    backend = Tokenizer(models.WordLevel({word: number for number, word in enumerate(words)}, unk_token="<unk>"))
+    backend.pre_tokenizer = pre_tokenizers.Whitespace()
+    backend.post_processor = processors.TemplateProcessing(single="$A </s>", special_tokens=[("</s>", 1)])
+    PreTrainedTokenizerFast(
+        tokenizer_object=backend, pad_token="<pad>", eos_token="</s>", unk_token="<unk>", model_max_length=512
+    ).save_pretrained(folder)
+    torch.manual_seed(0)
+    config = T5Config(
+        vocab_size=len(words) + extra_rows, d_model=32, d_kv=8, d_ff=64, num_layers=2, num_decoder_layers=2, num_heads=4,
+        decoder_start_token_id=0, pad_token_id=0, eos_token_id=1, tie_word_embeddings=False,
+    )
+    T5ForConditionalGeneration(config).save_pretrained(folder)

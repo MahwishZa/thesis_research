@@ -18,6 +18,8 @@ rationale = ["llama-cpp-python>=0.3.35", "numpy>=1.26", "torch>=2.4", "transform
 # Part 2 (src/balanced_retrieval): the MedCPT article encoder and cross-encoder, and the exact search over the vectors;
 # huggingface-hub fetches the guideline and textbook datasets (transformers needs it too; 0.36.2 was used).
 retrieval = ["numpy>=1.26", "torch>=2.4", "transformers>=4.51", "huggingface-hub>=0.30"]
+# Part 3 (src/rationale_filter): the Flan-T5 filter, its training and its judging of snippets.
+filter = ["torch>=2.4", "transformers>=4.51", "tokenizers", "sentencepiece"]
 # The tests that run the real llama.cpp on a tiny synthetic model write its file with the gguf package (0.19.0 was used).
 test = ["gguf"]
 
