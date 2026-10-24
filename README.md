@@ -2,7 +2,7 @@
 
 ## Overview
 
-This thesis studies retrieval-augmented generation (RAG), in which a language model looks up scientific studies before answering, for medical question answering in Alzheimer's disease and related dementias, building on RAG² (Sohn et al., NAACL 2025). The research is being rebuilt step by step; the previous implementation and its experiments are kept for reference in `_archive/`.
+This thesis studies retrieval-augmented generation (RAG), in which a language model looks up scientific studies before answering, for medical question answering, building on RAG² (Sohn et al., NAACL 2025). The first goal is a faithful, smaller-scale reproduction of the RAG² baseline on MedQA, MedMCQA and MMLU-Med; the scope of the retrieval corpora is still to be decided with the supervisor. The research is being rebuilt step by step; the previous implementation and its experiments are kept for reference in `_archive/`.
 
 ## Research Objectives
 
