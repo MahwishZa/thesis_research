@@ -448,7 +448,7 @@ dataset (section 2) and the input format of the filter.
 
 The requirements above that can be checked without models are written as tests in `tests/spec/test_*.py`. They fix behaviour, not
 code: each test calls a function that `tests/spec/targets.py` maps to a module under `src/`; that file also lists the arguments of
-every function. The names of the parts that are not built yet are provisional; those of `rationale_query` are final. When one
+every function. Every part named here is built. When a name
 changes, change `tests/spec/targets.py` and this table together; a guard test fails if they differ.
 
 | Requirement | Module and function | Test file |
