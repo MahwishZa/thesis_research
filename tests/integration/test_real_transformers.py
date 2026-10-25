@@ -5,7 +5,11 @@ import json
 import unittest
 
 from rationale_query import cli
-from rationale_query.generator import ContextOverflowError, GenerationSettings, TransformersGenerator
+from rationale_query.generator import (
+    ContextOverflowError,
+    GenerationSettings,
+    TransformersGenerator,
+)
 from rationale_query.prompt import build_rationale_prompt
 from rationale_query.store import RationaleStore
 from tests.integration.tiny_models import split_words

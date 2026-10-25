@@ -8,7 +8,11 @@ import unittest
 
 from rationale_query import generator
 from rationale_query.generator import (
-    ContextOverflowError, GenerationError, GenerationSettings, ModelMismatchError, TransformersGenerator,
+    ContextOverflowError,
+    GenerationError,
+    GenerationSettings,
+    ModelMismatchError,
+    TransformersGenerator,
 )
 from rationale_query.prompt import build_rationale_prompt
 from tests.support import TempDirTestCase
@@ -36,8 +40,20 @@ class FakeTokenizer:
         return " ".join(f"w{i}" for i in ids if not (skip_special_tokens and i in (BOS, EOS)))
 
 
+class FakeParameter:
+    def __init__(self, dtype):
+        self.dtype = dtype
+
+
 class FakeModel:
-    pass
+    """A stand-in with no weights, or with one weight of the given precision."""
+
+    def __init__(self, dtype=None):
+        self._dtype = dtype
+
+    def parameters(self):
+        if self._dtype is not None:
+            yield FakeParameter(self._dtype)
 
 
 class ModelFolderTestCase(TempDirTestCase):
@@ -169,6 +185,16 @@ class ModelFolderTests(ModelFolderTestCase):
         (self.folder / "model-00001-of-00001.safetensors").unlink()
         with self.assertRaises(GenerationError):
             TransformersGenerator(self.folder, loader=self.loader)
+
+    def test_the_model_must_really_be_in_bf16(self):
+        for dtype, accepted in (("torch.bfloat16", True), ("torch.float32", False), ("torch.float16", False)):
+            with self.subTest(dtype):
+                loader = lambda folder, settings, dtype=dtype: (FakeModel(dtype), self.tokenizer)  # noqa: E731
+                if accepted:
+                    TransformersGenerator(self.folder, loader=loader)
+                else:
+                    with self.assertRaises(GenerationError):
+                        TransformersGenerator(self.folder, loader=loader)
 
     def test_the_settings_reach_the_loader(self):
         seen = {}

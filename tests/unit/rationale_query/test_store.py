@@ -4,7 +4,14 @@ import json
 import unittest
 
 from rationale_query.store import (
-    ConfigMismatch, CorruptStore, Question, RationaleRecord, RationaleStore, StoreError, question_hash, read_questions,
+    ConfigMismatch,
+    CorruptStore,
+    Question,
+    RationaleRecord,
+    RationaleStore,
+    StoreError,
+    question_hash,
+    read_questions,
 )
 from tests.support import TempDirTestCase
 

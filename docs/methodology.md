@@ -25,11 +25,11 @@ Only stage 3 is trained. Every other model is used as released [Paper §3, §4.2
 
 | Stage | Model |
 |---|---|
-| Rationale and answer | Llama-3-8B-Instruct, used as is, no fine-tuning [Paper §4.2]. The same LLM writes the rationale and answers [Paper §3.3]. |
+| Rationale and answer | One backbone LLM, the same for both [Paper §3.3]. The paper uses three: Llama-3-8B-Instruct (used as is), Meerkat-7B (fine-tuned by its authors on medical data) and GPT-4o [Paper §4.2]. **This baseline uses Meerkat-7B**, run in BF16 with greedy decoding. |
 | Query encoder, article encoder, re-ranker | MedCPT: `ncbi/MedCPT-Query-Encoder`, `ncbi/MedCPT-Article-Encoder`, `ncbi/MedCPT-Cross-Encoder` [Paper §3.4, A.3; Code]. |
 | Filter | Flan-T5-large (770 million parameters), fine-tuned [Paper §3.2, §4.2]. |
 
-The paper also applies the method to Meerkat-7B and GPT-4o. The baseline here is the Llama-3-8B-Instruct system.
+The paper's own models are the same in all three systems; only the backbone LLM changes. This baseline is the Meerkat-7B system; the Llama-3-8B-Instruct system is the paper's main anchor and is to follow. GPT-4o is not used (paid, online only).
 
 ## 2. Component 1: rationale-based query
 
@@ -135,9 +135,19 @@ The target is the single token `[HELPFUL]` or `[NOT_HELPFUL]`. The rationale is 
 
 [Paper Table 1]. All three are closed-book multiple choice with four options [Paper §4.1]. The metric is accuracy [Paper §4.3].
 
-**Number of snippets k.** k takes the values 1, 2, 4, 8, 16 and 32. It is chosen on validation data for each dataset [Paper §4.2, Figure 3, Figure A1]. For Llama-3-8B-Instruct the best k read off the figures is 32 on MedQA, 16 on MedMCQA and 8 on MMLU-Med [Figure]. The comparison systems MedCPT and MedCPT+Rationale use k = 1; Adaptive-RAG uses k = 1 and InstructRAG-ICL uses k = 5 [Paper §4.2].
+**Number of snippets k.** k takes the values 1, 2, 4, 8, 16 and 32. It is chosen on validation data for each dataset [Paper §4.2, Figure 3, Figure A1]. For Meerkat-7B the best k read off the figures is about 2 on MedQA, 16 on MedMCQA and about 4 on MMLU-Med [Figure 3, Figure A1]; its accuracy falls at large k, which the authors attribute to its 2K training context [Paper §5.1]. For Llama-3-8B-Instruct the best k is 32 on MedQA, 16 on MedMCQA and 8 on MMLU-Med [Figure]. The comparison systems MedCPT and MedCPT+Rationale use k = 1; Adaptive-RAG uses k = 1 and InstructRAG-ICL uses k = 5 [Paper §4.2].
 
-**Reference results** (Llama-3-8B-Instruct, accuracy, [Paper Table 2]):
+**Reference results** (accuracy, [Paper Table 2]). Meerkat-7B, the backbone of this baseline:
+
+| System | MedQA | MedMCQA | MMLU-Med | Average |
+|---|---|---|---|---|
+| No retrieval (0-shot) | 71.2 | 60.8 | 73.8 | 68.6 |
+| MedCPT, k = 1 | 71.8 | 57.9 | 74.0 | 67.9 |
+| MedCPT + Rationale, k = 1 | 73.3 | 58.4 | 75.7 | 69.1 |
+| MedRAG | 67.9 | 60.6 | 76.1 | 68.2 |
+| RAG² | 75.6 | 63.0 | 78.7 | 72.4 |
+
+Llama-3-8B-Instruct, the paper's main anchor:
 
 | System | MedQA | MedMCQA | MMLU-Med | Average |
 |---|---|---|---|---|

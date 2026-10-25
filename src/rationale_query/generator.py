@@ -160,6 +160,9 @@ class TransformersGenerator:
         if expected_sha256 is not None and sha != expected_sha256.lower():
             raise ModelMismatchError(f"{folder.name} has hash {sha}, not the pinned {expected_sha256}")
         self.model, self.tokenizer = (loader or load_with_transformers)(folder, self.settings)
+        actual = _model_dtype(self.model)
+        if actual is not None and actual != f"torch.{DTYPE}":
+            raise GenerationError(f"the model was loaded as {actual}, not {DTYPE}; the paper's runs were in BF16")
         #: Called with the number of tokens written so far, every ``PROGRESS_EVERY`` tokens; set by the caller if wanted.
         self.progress: Callable[[int], None] | None = None
         s = self.settings
@@ -221,6 +224,16 @@ class TransformersGenerator:
 
     def close(self) -> None:
         self.model = None
+
+
+def _model_dtype(model: Any) -> str | None:
+    """The precision of the first weight of the model, or None for a stand-in that has no weights."""
+    parameters = getattr(model, "parameters", None)
+    if parameters is None:
+        return None
+    for parameter in parameters():
+        return str(parameter.dtype)
+    return None
 
 
 def _engine_versions() -> str:

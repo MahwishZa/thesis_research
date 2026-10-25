@@ -3,10 +3,15 @@
 import unittest
 
 from rationale_query import run
-from rationale_query.generator import GenerationResult
+from rationale_query.generator import ContextOverflowError, GenerationResult
 from rationale_query.prompt import build_rationale_prompt
 from rationale_query.run import MAX_CONSECUTIVE_ERRORS, RunAborted, generate_rationales
-from rationale_query.store import ConfigMismatch, Question, QuestionChanged, RationaleStore
+from rationale_query.store import (
+    ConfigMismatch,
+    Question,
+    QuestionChanged,
+    RationaleStore,
+)
 from tests.support import TempDirTestCase
 from tests.unit.rationale_query.examples import FIGURE_4_QUESTION
 
@@ -95,6 +100,13 @@ class RunTests(TempDirTestCase):
         with self.assertRaises(RunAborted):
             self.go(questions=many, generator=generator)
         self.assertEqual(len(generator.prompts), MAX_CONSECUTIVE_ERRORS)
+
+    def test_a_question_that_is_too_long_is_a_failure_of_that_question_and_does_not_stop_the_run(self):
+        many = [Question(f"q{i}", f"Question {i}? (A) x (B) y") for i in range(MAX_CONSECUTIVE_ERRORS + 3)]
+        generator = Generator([ContextOverflowError("the prompt has 3000 tokens; the window holds 2048")] * len(many))
+        summary, store, _ = self.go(questions=many, generator=generator)
+        self.assertEqual(len(summary.errors), len(many))
+        self.assertTrue(all(r.status == "error" for r in store.load().values()))
 
     def test_a_success_between_failures_resets_the_count(self):
         many = [Question(f"q{i}", f"Question {i}? (A) x (B) y") for i in range(10)]

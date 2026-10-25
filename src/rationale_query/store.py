@@ -100,7 +100,11 @@ class RationaleRecord:
             raise ValueError("not a rationale record")
         if data["status"] == "ok" and not (isinstance(data.get("rationale"), str) and data["rationale"].strip()):
             raise ValueError("an ok record needs a rationale")
-        return cls(**{name: data.get(name) for name in cls.__dataclass_fields__})
+        return cls(
+            id=data["id"], question_sha256=data["question_sha256"], status=data["status"], rationale=data.get("rationale"),
+            finish_reason=data.get("finish_reason"), prompt_tokens=data.get("prompt_tokens"), completion_tokens=data.get("completion_tokens"),
+            seconds=data.get("seconds"), error=data.get("error"),
+        )
 
 
 def write_atomic(path: str | Path, text: str) -> None:

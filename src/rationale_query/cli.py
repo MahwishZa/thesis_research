@@ -15,14 +15,28 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, TextIO
 
-from .generator import CHAT_FORMATS, DEFAULT_CHAT_FORMAT, GenerationError, GenerationSettings, TransformersGenerator, render_model_input
+from .generator import (
+    CHAT_FORMATS,
+    DEFAULT_CHAT_FORMAT,
+    GenerationError,
+    GenerationSettings,
+    TransformersGenerator,
+    render_model_input,
+)
 from .prompt import INSTRUCTION, LEAD_IN, SEPARATOR, build_rationale_prompt
 from .query import export_queries, queries_for
 from .run import RunAborted, generate_rationales
-from .store import RationaleRecord, RationaleStore, StoreError, question_hash, read_questions
+from .store import (
+    RationaleRecord,
+    RationaleStore,
+    StoreError,
+    question_hash,
+    read_questions,
+)
 
 #: The settings that decide what a rationale is. A folder made with other values is refused.
 RELEVANT = ("model_sha256", "dtype", "chat_format", "n_ctx", "decoding", "prompt_sha256")
@@ -130,8 +144,6 @@ def _generate(args: argparse.Namespace, streams: Streams, factory: Callable[[arg
     store = RationaleStore(args.out)
     generator = factory(args, streams)
     try:
-        from hashlib import sha256
-
         config = {**generator.config, "prompt_sha256": sha256((INSTRUCTION + SEPARATOR + LEAD_IN).encode("utf-8")).hexdigest()}
         saved = store.load() if store.records_path.exists() else {}
         pending = sum(1 for q in questions if not (q.id in saved and saved[q.id].status == "ok" and saved[q.id].question_sha256 == question_hash(q.text)))

@@ -62,6 +62,14 @@ class ExportTests(TempDirTestCase):
         export_queries(["first rationale", "second °F rationale\nline two"], path)
         self.assertEqual(json.loads(path.read_text(encoding="utf-8")), ["first rationale", "second °F rationale\nline two"])
 
+    def test_the_file_is_plain_ascii_so_that_any_computer_reads_it_the_same_way(self):
+        path = self.dir / "queries.json"
+        text = "Vitals: T 98.7\u00b0F \u2013 stable"
+        export_queries([text], path)
+        raw = path.read_bytes()
+        self.assertTrue(raw.isascii())
+        self.assertEqual(json.loads(raw.decode("ascii")), [text])
+
     def test_an_existing_file_is_never_overwritten(self):
         path = self.write("queries.json", "[]")
         with self.assertRaises(StoreError):

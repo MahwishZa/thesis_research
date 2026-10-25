@@ -46,9 +46,13 @@ def queries_for(questions: Sequence[Question], records: Mapping[str, RationaleRe
 
 
 def export_queries(queries: Sequence[str], path: str | Path) -> None:
-    """Write the queries as a JSON list for the retriever. An existing file is never overwritten."""
+    """Write the queries as a JSON list for the retriever. An existing file is never overwritten.
+
+    Non-ASCII characters are written as escapes, so that the authors' script (which opens the file with the computer's own
+    encoding) reads the same text on any computer.
+    """
     target = Path(path)
     if target.exists():
         raise StoreError(f"{target} exists; this command does not overwrite")
     target.parent.mkdir(parents=True, exist_ok=True)
-    write_atomic(target, json.dumps(list(queries), ensure_ascii=False, indent=2) + "\n")
+    write_atomic(target, json.dumps(list(queries), ensure_ascii=True, indent=2) + "\n")

@@ -7,9 +7,15 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from .generator import GenerationResult
+from .generator import ContextOverflowError, GenerationResult
 from .prompt import build_rationale_prompt
-from .store import Question, QuestionChanged, RationaleRecord, RationaleStore, question_hash
+from .store import (
+    Question,
+    QuestionChanged,
+    RationaleRecord,
+    RationaleStore,
+    question_hash,
+)
 
 #: A run stops after this many failures in a row: something is wrong with the model or the machine, not with one question.
 MAX_CONSECUTIVE_ERRORS = 5
@@ -64,6 +70,7 @@ def generate_rationales(
             summary.already_done += 1
             continue
         begun = clock()
+        about_this_question_only = False
         try:
             result = generator.generate(build_rationale_prompt(question.text))
             if not result.text.strip():
@@ -74,6 +81,7 @@ def generate_rationales(
             )
         except Exception as exc:  # noqa: BLE001 - saved per question; the run goes on
             message = f"{type(exc).__name__}: {exc}"
+            about_this_question_only = isinstance(exc, ContextOverflowError)
             record = RationaleRecord(id=question.id, question_sha256=digest, status="error", seconds=round(clock() - begun, 3), error=message)
         store.append(record)
         if record.status == "ok":
@@ -81,7 +89,7 @@ def generate_rationales(
             summary.written += 1
             summary.cut_off += int(record.finish_reason == "length")
         else:
-            in_a_row += 1
+            in_a_row += 0 if about_this_question_only else 1  # a prompt that is too long says nothing about the model or the machine
             summary.errors.append((question.id, record.error or ""))
         if progress is not None:
             progress(position, len(questions), record)
