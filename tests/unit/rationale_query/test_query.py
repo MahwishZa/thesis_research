@@ -22,12 +22,13 @@ class QueryTests(unittest.TestCase):
         self.assertNotIn("BiPAP", query)
         self.assertNotIn(FIGURE_4_QUESTION, query)
 
-    def test_only_the_whitespace_at_the_two_ends_is_removed(self):
-        self.assertEqual(rationale_to_query("\n  a\n\nb  \n"), "a\n\nb")
+    def test_the_query_is_the_rationale_exactly_as_written_even_with_blank_lines_at_the_ends(self):
+        written = "\n\n  Step-by-step explanation:\n\nTherefore, the answer is (C) Intubation.\n"
+        self.assertEqual(rationale_to_query(written), written)
 
     def test_a_long_rationale_is_not_shortened_here(self):
         long = "word " * 5000
-        self.assertEqual(rationale_to_query(long), long.strip())
+        self.assertEqual(rationale_to_query(long), long)
 
     def test_an_empty_or_non_text_rationale_is_refused_never_replaced_by_the_question(self):
         for bad in ("", "  ", "\n"):

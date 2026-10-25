@@ -172,3 +172,16 @@ These points are not specified by either source. They are listed so that nothing
 - how an unreadable answer counts when labelling or scoring;
 - how a filter input longer than 512 tokens is judged;
 - whether one filter was trained on MedQA and MedMCQA together or one per dataset.
+
+## 8. Working choices of this baseline where the paper is silent (Component 1)
+
+The authors could not be reached, so the researcher chose the following. Each is the least invented choice and is reported with every result.
+
+1. **No chat format and no system message.** The model reads the printed prompt text alone, because the paper shows nothing else. Meerkat's own template stays available as a labelled check.
+2. **One line break before "Here is the question:".** The printed box shows it (the line above has room for "Here is", the line spacing is even, "Here" is not indented).
+3. **Memory window of 2048 tokens** for prompt plus rationale, the length Meerkat-7B was trained with [Kim et al. 2025]. The model writes until it stops. No other limit is set.
+4. **A rationale that fills the window is kept as written** and counted, not repaired or replaced. A blank rationale is a failure and is never replaced by the question.
+5. **The query is the rationale exactly as written**, with nothing removed or added. The cut to 512 tokens happens in the retriever, as in the authors' code.
+6. **Options inside the question are written as in the paper's Figure 4**, `(A) … (B) … (C) … (D) …`, for the rationale prompt. (The authors' released filter sample writes `A) … B) …`; the filter input is a separate component.)
+7. **Declared differences from the paper's runs:** Hugging Face Transformers instead of vLLM, and a small laptop instead of an H100. The weights are loaded in BF16 and decoding is greedy, as in the paper; the program checks that the model really is in BF16.
+

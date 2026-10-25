@@ -1,9 +1,10 @@
 """From rationale to retrieval query: the rationale alone is the query (paper, section 3.3).
 
 The question is not added: the paper says both together exceed the retriever's maximum length and gave worse results in the
-authors' tests. The query is the rationale as the model wrote it, with only the whitespace at its two ends removed. The
-authors' retriever later cuts it to 512 tokens when it encodes it (``query_encode.py``); that belongs to the next component,
-so nothing is shortened here. The retriever reads a JSON list of query strings, in the order of its questions.
+authors' tests. The query is the rationale exactly as the model wrote it, with nothing removed or added: the authors' retriever
+reads the string as it is (``query_encode.py``) and cuts it to 512 tokens when it encodes it. That cut belongs to the next
+component, so nothing is shortened here. A blank rationale is an error. The retriever reads a JSON list of query strings, in
+the order of its questions.
 """
 
 from __future__ import annotations
@@ -16,13 +17,15 @@ from .store import Question, RationaleRecord, StoreError, question_hash, write_a
 
 
 def rationale_to_query(rationale: str) -> str:
-    """The retrieval query for one rationale. An empty rationale is an error; it is never replaced by the question."""
+    """The retrieval query for one rationale: the rationale itself, unchanged.
+
+    A blank rationale is an error; it is never replaced by the question.
+    """
     if not isinstance(rationale, str):
         raise TypeError(f"the rationale must be a string, got {type(rationale).__name__}")
-    query = rationale.strip()
-    if not query:
+    if not rationale.strip():
         raise ValueError("the rationale is empty")
-    return query
+    return rationale
 
 
 def queries_for(questions: Sequence[Question], records: Mapping[str, RationaleRecord]) -> list[str]:

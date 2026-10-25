@@ -121,7 +121,7 @@ class RealCommandLineTests(TempDirTestCase):
         target = self.dir / "queries.json"
         status, _, _ = self.run_cli("export-queries", "--questions", str(questions), "--rationales", str(self.dir / "run"), "--out", str(target))
         self.assertEqual(status, 0)
-        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), [records["q1"].rationale.strip(), records["q2"].rationale.strip()])
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), [records["q1"].rationale, records["q2"].rationale])
 
     def test_a_model_that_writes_nothing_is_a_failure_and_the_question_is_not_used_instead(self):
         questions = self.write("q.jsonl", json.dumps({"id": "q1", "question": QUESTION}) + "\n")
