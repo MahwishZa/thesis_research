@@ -18,14 +18,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TextIO
 
-from .generator import CHAT_FORMATS, DEFAULT_CHAT_FORMAT, GenerationError, GenerationSettings, LlamaGenerator, render_model_input
+from .generator import CHAT_FORMATS, DEFAULT_CHAT_FORMAT, GenerationError, GenerationSettings, TransformersGenerator, render_model_input
 from .prompt import INSTRUCTION, LEAD_IN, SEPARATOR, build_rationale_prompt
 from .query import export_queries, queries_for
 from .run import RunAborted, generate_rationales
 from .store import RationaleRecord, RationaleStore, StoreError, question_hash, read_questions
 
 #: The settings that decide what a rationale is. A folder made with other values is refused.
-RELEVANT = ("model_sha256", "chat_format", "n_ctx", "sampling", "prompt_sha256")
+RELEVANT = ("model_sha256", "dtype", "chat_format", "n_ctx", "decoding", "prompt_sha256")
 
 
 @dataclass
@@ -52,15 +52,16 @@ def _parser() -> argparse.ArgumentParser:
     gen = sub.add_parser("generate", help="write a rationale for every question (resumable)")
     gen.add_argument("--questions", type=Path, required=True, help="JSON lines of id and question (the options are part of the question)")
     gen.add_argument("--out", type=Path, required=True, help="the output folder (new, or the same as an earlier run)")
-    gen.add_argument("--model", type=Path, required=True, help="path of the GGUF model file (Meerkat-7B)")
-    gen.add_argument("--model-sha256", help="stop unless the file has this SHA-256")
+    gen.add_argument("--model", type=Path, required=True, help="the folder of the Meerkat-7B weights (as downloaded from Hugging Face)")
+    gen.add_argument("--model-sha256", help="stop unless the model folder has this hash (the generate command prints it)")
     gen.add_argument("--n-ctx", type=int, default=GenerationSettings.n_ctx, help="memory window in tokens; the length Meerkat-7B was trained with")
     gen.add_argument("--chat-format", choices=CHAT_FORMATS, default=DEFAULT_CHAT_FORMAT, help="none: the paper's text alone (default); meerkat: Meerkat's own template, for a labelled check")
-    gen.add_argument("--n-threads", type=int, default=None)
-    gen.add_argument("--n-gpu-layers", type=int, default=0)
+    gen.add_argument("--n-threads", type=int, default=None, help="CPU threads (default: PyTorch's choice)")
+    gen.add_argument("--max-gpu-gib", type=float, default=None, help="memory the graphics card may use, for example 3.2 for a 4 GiB card")
+    gen.add_argument("--max-cpu-gib", type=float, default=None, help="memory the CPU side may use, for example 10; the rest of the model goes to the disk")
+    gen.add_argument("--offload-dir", type=Path, default=None, help="a folder on the disk for the parts of the model that fit nowhere else")
     gen.add_argument("--limit", type=int, default=None, help="only the first N questions of the file")
     gen.add_argument("--quiet", action="store_true", help="no line per question")
-    gen.add_argument("--verbose", action="store_true", help="show llama.cpp's own messages")
 
     show = sub.add_parser("show-prompt", help="print what the model is given for one question")
     show.add_argument("--question", required=True, help="the question, with its options")
@@ -111,10 +112,13 @@ def _show_prompt(args: argparse.Namespace, streams: Streams) -> int:
     return 0
 
 
-def _default_generator(args: argparse.Namespace, streams: Streams) -> LlamaGenerator:
-    settings = GenerationSettings(n_ctx=args.n_ctx, n_threads=args.n_threads, n_gpu_layers=args.n_gpu_layers, chat_format=args.chat_format)
-    streams.err.write(f"checking and loading {args.model.name} (the SHA-256 of a large file takes about half a minute)\n")
-    return LlamaGenerator(args.model, settings, expected_sha256=args.model_sha256, verbose=args.verbose)
+def _default_generator(args: argparse.Namespace, streams: Streams) -> TransformersGenerator:
+    settings = GenerationSettings(
+        n_ctx=args.n_ctx, n_threads=args.n_threads, max_gpu_gib=args.max_gpu_gib, max_cpu_gib=args.max_cpu_gib,
+        offload_dir=str(args.offload_dir) if args.offload_dir else None, chat_format=args.chat_format,
+    )
+    streams.err.write(f"reading {args.model.name} to identify it (a few minutes for 29 GB), then loading it in BF16; parts that do not fit on the graphics card run on the CPU, which is slow\n")
+    return TransformersGenerator(args.model, settings, expected_sha256=args.model_sha256)
 
 
 def _generate(args: argparse.Namespace, streams: Streams, factory: Callable[[argparse.Namespace, Streams], Any]) -> int:
@@ -148,6 +152,7 @@ def _generate(args: argparse.Namespace, streams: Streams, factory: Callable[[arg
         close = getattr(generator, "close", None)
         if close is not None:
             close()
+    streams.out.write(f"model: {generator.config.get('model_folder')}, hash {generator.config.get('model_sha256')}\n")
     streams.out.write(
         f"{summary.total} questions: {summary.already_done} already done, {summary.written} written, {len(summary.errors)} failed, "
         f"{summary.cut_off} stopped by the memory window, {duration(summary.seconds)}\n"

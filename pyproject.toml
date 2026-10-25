@@ -13,8 +13,10 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-# Components 1 and 4: the language model that writes the rationale and the answer (llama.cpp), and the query encoder.
-rationale = ["llama-cpp-python>=0.3.35", "numpy>=1.26", "torch>=2.4", "transformers>=4.51"]
+# Components 1 and 4: the language model that writes the rationale and the answer (Meerkat-7B in BF16 with Transformers).
+# accelerate spreads a model that is larger than the graphics card over the CPU and the disk; sentencepiece and protobuf
+# read the model's tokenizer file.
+rationale = ["torch>=2.4", "transformers>=4.51", "accelerate>=1.0", "sentencepiece", "protobuf"]
 # Component 2: the MedCPT article encoder and cross-encoder, and the search over the vectors;
 # huggingface-hub downloads the guideline and textbook datasets.
 retrieval = ["numpy>=1.26", "torch>=2.4", "transformers>=4.51", "huggingface-hub>=0.30"]
