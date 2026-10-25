@@ -3,11 +3,12 @@
 The paper gives the prompt in a box and says that ``[initial_query]`` is replaced by the initial query x. The question
 passed in already carries its answer options, so the options reach the language model as part of the question.
 
-Two details are not recoverable from the paper and are kept here as one named setting each, so that they can be
-changed without touching anything else:
+Two details are not stated by the paper and are kept as one named setting each, so that they can be changed without touching
+anything else:
 
-* the line break before "Here is the question:" (the paper prints it on a new line; a PDF cannot show whether the
-  authors sent one line break, a blank line or only a space), set to one line break by the researcher's decision;
+* the separator before "Here is the question:". The printed box has one line break there: the line above has room for
+  "Here is", the line spacing is even (no blank line) and "Here" is not indented, so it is neither a wrap, a blank line nor a new
+  paragraph. The setting is therefore one line break. Whether the authors' own string has exactly this break is not stated;
 * the chat format and the system message (the paper shows only this text, so it is sent as one user message and no
   system message is added; that belongs to the generator, not to this file).
 """
@@ -21,7 +22,7 @@ INSTRUCTION = (
 )
 LEAD_IN = "Here is the question:"
 
-#: What stands between the instruction and "Here is the question:". The paper prints a new line there; see the module docstring.
+#: What stands between the instruction and "Here is the question:": one line break, as the printed box shows (see the module docstring).
 SEPARATOR = "\n"
 
 
