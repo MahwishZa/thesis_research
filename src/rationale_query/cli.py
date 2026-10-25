@@ -141,12 +141,21 @@ def _generate(args: argparse.Namespace, streams: Streams, factory: Callable[[arg
         def progress(position: int, total: int, record: RationaleRecord) -> None:
             nonlocal done
             done += 1
+            began[0] = time.perf_counter()
             if args.quiet:
                 return
             left = (time.perf_counter() - begun) / done * max(0, pending - done)
             what = record.error if record.status == "error" else f"{record.completion_tokens} tokens, {record.finish_reason}"
             streams.err.write(f"[{position}/{total}] {record.id}: {what}, {record.seconds} s; about {duration(left)} left\n")
 
+        began = [time.perf_counter()]  # when the current question began
+
+        if not args.quiet and hasattr(generator, "progress"):
+
+            def tokens_written(count: int) -> None:
+                streams.err.write(f"    ... {count} tokens written, {duration(time.perf_counter() - began[0])} since this question began\n")
+
+            generator.progress = tokens_written
         summary = generate_rationales(questions, generator, store, config, RELEVANT, progress=progress)
     finally:
         close = getattr(generator, "close", None)

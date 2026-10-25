@@ -33,6 +33,9 @@ CHAT_FORMATS = ("none", "meerkat")
 DEFAULT_CHAT_FORMAT = "none"
 DTYPE = "bfloat16"
 
+#: While the model writes, a progress report is made after every this many new tokens. It changes no result.
+PROGRESS_EVERY = 25
+
 #: Greedy decoding, every value written out because a library's own defaults need not be greedy.
 DECODING = {"do_sample": False, "num_beams": 1, "repetition_penalty": 1.0}
 
@@ -157,6 +160,8 @@ class TransformersGenerator:
         if expected_sha256 is not None and sha != expected_sha256.lower():
             raise ModelMismatchError(f"{folder.name} has hash {sha}, not the pinned {expected_sha256}")
         self.model, self.tokenizer = (loader or load_with_transformers)(folder, self.settings)
+        #: Called with the number of tokens written so far, every ``PROGRESS_EVERY`` tokens; set by the caller if wanted.
+        self.progress: Callable[[int], None] | None = None
         s = self.settings
         self.config: dict[str, Any] = {
             "model_folder": folder.name, "model_sha256": sha, "dtype": DTYPE, "chat_format": s.chat_format, "n_ctx": s.n_ctx,
@@ -170,13 +175,25 @@ class TransformersGenerator:
 
     def _complete(self, ids: list[int], max_new_tokens: int) -> list[int]:
         import torch
+        from transformers import StoppingCriteria, StoppingCriteriaList
 
         device = getattr(self.model, "device", None)
         inputs = torch.tensor([ids], device=device)
+        start, report = len(ids), self.progress
+
+        class Progress(StoppingCriteria):
+            """Never stops the model; only reports how far it has come."""
+
+            def __call__(self, input_ids: Any, scores: Any, **kwargs: Any) -> Any:
+                written = input_ids.shape[1] - start
+                if report is not None and written % PROGRESS_EVERY == 0:
+                    report(written)
+                return torch.zeros(input_ids.shape[0], dtype=torch.bool, device=input_ids.device)
+
         with torch.inference_mode():
             out = self.model.generate(
                 input_ids=inputs, attention_mask=torch.ones_like(inputs), max_new_tokens=max_new_tokens, temperature=None, top_p=None,
-                top_k=None, pad_token_id=self.tokenizer.eos_token_id, **DECODING,
+                top_k=None, pad_token_id=self.tokenizer.eos_token_id, stopping_criteria=StoppingCriteriaList([Progress()]), **DECODING,
             )
         return [int(token) for token in out[0, len(ids):]]
 

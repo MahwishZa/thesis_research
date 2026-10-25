@@ -74,6 +74,16 @@ class RealTransformersTests(TempDirTestCase):
         generator.generate(build_rationale_prompt(FIGURE_4_QUESTION))
         self.assertEqual(generator.generate(prompt), first)
 
+    def test_progress_is_reported_every_25_tokens_and_changes_nothing(self):
+        generator = self.make(-5.0)
+        prompt = build_rationale_prompt(QUESTION)
+        without = generator.generate(prompt)
+        seen = []
+        generator.progress = seen.append
+        with_report = generator.generate(prompt)
+        self.assertEqual(with_report, without)
+        self.assertEqual(seen, list(range(25, with_report.completion_tokens + 1, 25)))
+
     def test_a_prompt_that_does_not_fit_the_window_is_refused(self):
         generator = self.make(-5.0, n_ctx=20)
         with self.assertRaises(ContextOverflowError):

@@ -29,6 +29,18 @@ class Generator:
         return GenerationResult(text=RATIONALE, finish_reason=reason, prompt_tokens=300, completion_tokens=20)
 
 
+class ReportingGenerator(Generator):
+    """Like the scripted generator, and reports its progress through ``progress`` the way the real one does."""
+
+    progress = None
+
+    def generate(self, prompt):
+        if self.progress is not None:
+            self.progress(25)
+            self.progress(50)
+        return super().generate(prompt)
+
+
 class CliTests(TempDirTestCase):
     def setUp(self):
         super().setUp()
@@ -52,6 +64,15 @@ class CliTests(TempDirTestCase):
         self.assertEqual((status, err), (0, ""))
         self.assertIn("3 questions: 0 already done, 3 written, 0 failed, 1 stopped by the memory window", out)
         self.assertEqual(sorted(RationaleStore(self.dir / "run").load()), ["q1", "q2", "q3"])
+
+    def test_progress_lines_are_shown_unless_quiet(self):
+        arguments = ("generate", "--questions", str(self.questions), "--out", str(self.dir / "run"), "--model", str(self.model), "--limit", "1")
+        status, _, err = self.run_cli(*arguments, generator=ReportingGenerator())
+        self.assertEqual(status, 0)
+        self.assertIn("... 25 tokens written", err)
+        self.assertIn("... 50 tokens written", err)
+        status, _, err = self.run_cli(*arguments, "--out", str(self.dir / "run2"), "--quiet", generator=ReportingGenerator())
+        self.assertNotIn("tokens written", err)
 
     def test_a_second_run_does_nothing_and_a_limit_cuts_the_questions(self):
         self.generate("--limit", "1")
