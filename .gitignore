@@ -1,66 +1,27 @@
+# Python and tool leftovers
 __pycache__/
 *.py[cod]
 *.egg-info/
-# Output of `pip install .` (pip builds in the source tree).
 build/
 dist/
-
-# Large, licensed or machine-local artifacts: never commit these. Several have caused an
-# accidental multi-GB commit when added via `git add -A` or the GitHub web upload UI.
-# Regenerate or re-download them locally instead.
-# (gitignore has no trailing comments: every comment sits on its own line.)
-
-# Trained model checkpoints (the removed RAG2 filter-reproduction attempt).
-checkpoints/
-# Local GGUF model files (root folder only, so a code folder such as src/<package>/models/ is never ignored).
-/models/
-ram_monitor.csv
-# Local leftovers of the first design: the retrieval index (~12.5 GB), the corpus text (multi-GB, at the
-# repository root) and the filter-training labels (16.6 h of compute). A computer that built them still holds
-# them after a `git pull`, and `git add -A` must never pick them up. The leading slash anchors /corpus/ to the
-# repository root.
-experiments/results/index/
-experiments/results/index_pilot_reduced_scope/
-/corpus/
-# Part 2 corpora (passages and embeddings, multi-GB): built locally by `python -m balanced_retrieval`, never committed.
-/retrieval_corpora/
-# Local-only artefacts that may sit inside the archive on a computer that built them.
-_archive/**/data/
-_archive/**/labels/
-_archive/**/checkpoints/
-_archive/**/index/
-_archive/**/.textbook_index_cache/
-
-# MedChange-derived questions, fetched PubMed abstracts, frozen candidate pools and raw
-# working outputs. The MedChange release states no licence and abstracts are publisher
-# text, so they are rebuilt from the manifest, not redistributed. Results worth keeping
-# are kept under _archive/rag2_adaptation_v1/experiments/medchange/results/ (tracked).
-experiments/medchange/data/
-
-# The same folders at their location BEFORE the 2026-10-02 reorganisation. Nothing is
-# tracked there any more; the entry stays so leftover local files can never be committed.
-experiments/baseline/
-
-# Local data of an archived question-set builder (publisher text); its code is in Git history.
-experiments/adkqa/data/
-
-# A copy of the MedChange release inside the repository folder (git clone run from the repository root). The documents place it
-# beside the repository (../MedChange), but a copy here works the same; the release states no licence, so it is never committed.
-/MedChange/
-
-# Tool caches that appear when the tests are measured or linted.
 .coverage
 htmlcov/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
-
-# New pipeline: large or machine-local outputs inside an experiment folder, and local environments.
-experiments/**/outputs/
-# Working outputs of the commands, at the repository root (rationales, retrieved evidence, trial runs).
-/outputs/
-experiments/**/data/
-local/
 .venv/
 venv/
+
+# Large or machine-local data. Never commit these. A `git add -A` once picked up several gigabytes this way;
+# regenerate or re-download them locally instead. The leading slash ties a name to the repository root.
+/models/
+/outputs/
+/corpus/
+/retrieval_corpora/
 filters/
+checkpoints/
+local/
+
+# The old implementation was removed from the repository. A folder of that name inside the repository may still hold
+# local data (indexes, labels, benchmark files) on a computer that built them; Git must never pick it up.
+/_archive/
