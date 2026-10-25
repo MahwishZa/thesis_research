@@ -24,10 +24,5 @@ filter = ["torch>=2.4", "transformers>=4.51", "tokenizers", "sentencepiece"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# Keep the previous implementation in _archive/ out of test discovery and linting.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["_archive"]
-
-[tool.ruff]
-extend-exclude = ["_archive"]
