@@ -59,7 +59,7 @@ def _parser() -> argparse.ArgumentParser:
     gen.add_argument("--n-threads", type=int, default=None, help="CPU threads (default: PyTorch's choice)")
     gen.add_argument("--max-gpu-gib", type=float, default=None, help="memory the graphics card may use, for example 3.2 for a 4 GiB card")
     gen.add_argument("--max-cpu-gib", type=float, default=None, help="memory the CPU side may use, for example 10; the rest of the model goes to the disk")
-    gen.add_argument("--offload-dir", type=Path, default=None, help="a folder on the disk for the parts of the model that fit nowhere else")
+    gen.add_argument("--offload-dir", type=Path, default=None, help="a folder on the disk for the parts of the model that fit nowhere else. On the author's Windows laptop (RTX 2050, 15 GB) this crashed inside PyTorch; --max-gpu-gib 3.0 --max-cpu-gib 11 without it worked")
     gen.add_argument("--limit", type=int, default=None, help="only the first N questions of the file")
     gen.add_argument("--quiet", action="store_true", help="no line per question")
 
