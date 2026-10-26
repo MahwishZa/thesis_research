@@ -11,6 +11,7 @@ outputs) stay outside the repository or in git-ignored folders such as `outputs/
 
 Experiments so far: none.
 
-Do not name an experiment folder `baseline`, `results`, `medchange`, `data` or `outputs`: older ignore rules in
-`.gitignore` hide folders with those names and git would silently leave their files out. Numbered names such as
-`01_baseline/` are safe.
+`.gitignore` hides every folder named `filters`, `checkpoints` or `local`, wherever it is (they are meant for trained
+models and machine-local files), and the large-data folders at the repository root (`models/`, `outputs/`, `corpus/`,
+`retrieval_corpora/`, `_archive/`). Git silently leaves out files in those folders, so do not keep files that must be
+committed there. To check a path: `git check-ignore -v <path>` prints the rule that hides it, or nothing.
