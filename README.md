@@ -2,7 +2,7 @@
 
 ## Overview
 
-Existing medical RAG filters, such as RAG² (Sohn et al., 2025), learn which retrieved passages to keep from labels that compare the model's answer and confidence with and without each passage. This is insufficient when adding any text changes the model's answer, because the labels then credit a passage for changes that an irrelevant passage would also cause. My research will investigate whether labels adjusted with irrelevant control passages address this, using two experiments on MedQA: (A) checking how often the labels call irrelevant passages helpful, and (B) comparing accuracy and harm across no retrieval, unfiltered retrieval, the original filter, the adjusted filter and an equal-budget baseline.
+Existing methods do X. This is insufficient under condition Y because of limitation Z. My research will investigate whether approach W addresses that limitation, using experiments A and B.
 
 ## Research Objectives
 
