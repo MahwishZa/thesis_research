@@ -147,6 +147,17 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(len(preds), 3)
         self.assertEqual({p["label"] for p in preds}, {"melanoma", "nevus"})
 
+    def test_answers_cut_off_at_the_output_limit_are_flagged_in_the_report(self):
+        class Truncated(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": "mela", "finish_reason": "MAX_TOKENS"}
+
+        out = self._run(Truncated(), "test", run_id="t1")
+        text = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("4 answers were cut off at the output limit", text)
+        self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
+        self.assertNotIn("cut off", (self._run(FakeModel(), "dev", run_id="d1") / "report.md").read_text(encoding="utf-8"))
+
     def test_a_missing_key_stops_the_run_before_anything_is_written(self):
         with mock.patch("src.evaluate.models.load", side_effect=ValueError("no key")), self.assertRaises(ValueError):
             evaluate.run(str(self.config), "test", results=self.results)

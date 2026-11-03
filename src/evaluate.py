@@ -263,6 +263,9 @@ def report(run_dir: str | Path) -> Path:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
+              *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
+                 "max_output_tokens is too low for this model's thinking. Results are not valid until it is raised in a new config.**"]
+                if finish.get("MAX_TOKENS") else []),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
     path = run_dir / "report.md"
