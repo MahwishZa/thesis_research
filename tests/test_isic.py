@@ -52,8 +52,8 @@ class IsicTests(unittest.TestCase):
                     ("train", "melanoma", "ISIC_4")]                                         # neither: not checked by default
             with open(manifest, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
-                w.writerow(["split", "label", "isic_id"])
-                w.writerows(rows)
+                w.writerow(["split", "label", "path", "isic_id"])
+                w.writerows((split, label, f"{split}/{label}/{i}.jpg", i) for split, label, i in rows)
             records = {"ISIC_1": LEGACY, "ISIC_2": HIERARCHY, "ISIC_3": {"_error": "not found in the ISIC Archive (404)"}}
             with mock.patch("src.isic.fetch", side_effect=lambda i, *a, **k: records[i]):
                 report = isic.check(manifest, Path(d) / "out", Path(d) / "cache")
@@ -66,6 +66,34 @@ class IsicTests(unittest.TestCase):
             text = report.read_text(encoding="utf-8")
             self.assertIn("conflict: melanoma vs seborrheic keratosis (a copy is in test)", text)
             self.assertIn("| CC-BY-NC | 1 |", text)
+            with open(Path(d) / "out" / "label_corrections.csv", encoding="utf-8") as f:
+                self.assertEqual(list(csv.DictReader(f)), [])  # ISIC_2 confirms its test label; ISIC_3 is undecided
+
+    def test_corrections_list_test_images_that_isic_contradicts(self):
+        with tempfile.TemporaryDirectory() as d:
+            manifest, checked, out = Path(d) / "manifest.csv", Path(d) / "isic_check.csv", Path(d) / "label_corrections.csv"
+            manifest.write_text("split,label,path,isic_id\n"
+                                "test,seborrheic keratosis,Test/sk/ISIC_2.jpg,ISIC_2\n"   # ISIC: melanoma -> corrected
+                                "train,melanoma,Train/mel/ISIC_2.jpg,ISIC_2\n"            # training copy: not a test image
+                                "test,melanoma,Test/mel/ISIC_3.jpg,ISIC_3\n"              # ISIC confirms: unchanged
+                                "test,nevus,Test/nev/ISIC_5.jpg,ISIC_5\n"                 # record not fetched: undecided
+                                "test,nevus,Test/nev/x.jpg,\n", encoding="utf-8")          # no ISIC number: undecided
+            checked.write_text("isic_id,verdict,isic_fields\n"
+                               "ISIC_2,ISIC supports: melanoma,diagnosis_3=Melanoma in situ\n"
+                               "ISIC_3,ISIC supports: melanoma,diagnosis_3=Melanoma\n"
+                               "ISIC_5,not checked: HTTP 503,\n", encoding="utf-8")
+            fixes, undecided = isic.write_corrections(manifest, checked, out)
+            self.assertEqual([(f["path"], f["folder_label"], f["corrected_label"]) for f in fixes],
+                             [("Test/sk/ISIC_2.jpg", "seborrheic keratosis", "melanoma")])
+            self.assertEqual(undecided, ["Test/nev/ISIC_5.jpg", "Test/nev/x.jpg"])
+            labels = ["melanoma", "nevus", "seborrheic keratosis"]
+            self.assertEqual(isic.read_corrections(out, labels, {"Test/sk/ISIC_2.jpg": "seborrheic keratosis"}),
+                             {"Test/sk/ISIC_2.jpg": "melanoma"})
+            self.assertEqual(isic.read_corrections(out, labels, {"Test/mel/ISIC_3.jpg": "melanoma"}), {})
+            with self.assertRaises(ValueError):  # the dataset now labels the image differently
+                isic.read_corrections(out, labels, {"Test/sk/ISIC_2.jpg": "nevus"})
+            with self.assertRaises(ValueError):  # melanoma is not an answer option
+                isic.read_corrections(out, ["nevus", "seborrheic keratosis"], {})
 
 
 if __name__ == "__main__":

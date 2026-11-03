@@ -12,6 +12,7 @@ CONFIG = """name = "fake"
 root = "{root}"
 train = "Train"
 test = "Test"
+corrections = "{corrections}"
 [model]
 provider = "fake"
 id = "fake-1"
@@ -49,8 +50,11 @@ class EvaluateTests(unittest.TestCase):
         base = Path(self.tmp.name)
         make_dataset(base / "data", {"Train": {"melanoma": 3, "nevus": 3}, "Test": {"melanoma": 2, "nevus": 2}})
         (base / "prompt.txt").write_text("Pick one:\n{labels}\nAnswer with the name only.", encoding="utf-8")
+        self.corrections = base / "label_corrections.csv"
+        self._corrections()
         self.config = base / "fake.toml"
-        self.config.write_text(CONFIG.format(root=(base / "data").as_posix(), prompt=(base / "prompt.txt").as_posix()), encoding="utf-8")
+        self.config.write_text(CONFIG.format(root=(base / "data").as_posix(), prompt=(base / "prompt.txt").as_posix(),
+                                             corrections=self.corrections.as_posix()), encoding="utf-8")
         self.results = base / "results"
         patcher = mock.patch("src.evaluate.time.sleep")
         patcher.start()
@@ -58,6 +62,12 @@ class EvaluateTests(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def _corrections(self, *rows):
+        """Writes the corrections file: (path, folder label, corrected label) per row."""
+        lines = ["path,isic_id,folder_label,corrected_label,isic_fields"]
+        lines += [f"{path},{Path(path).stem},{folder},{corrected},diagnosis={corrected}" for path, folder, corrected in rows]
+        self.corrections.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.evaluate.models.load", return_value=model):
@@ -71,10 +81,39 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(preds[1]["attempts"], 2)
         self.assertEqual((preds[0]["image_sent"]["resized"], preds[0]["image_sent"]["width"]), (True, 50))  # 60x45 > 50
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
-        self.assertEqual((metrics["n"], metrics["correct"]), (4, 2))
+        self.assertEqual((metrics["folder_labels"]["n"], metrics["folder_labels"]["correct"]), (4, 2))
+        self.assertIsNone(metrics["corrected_labels"])  # no corrections listed: scored once
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual((card["status"], card["model_versions_returned"]), ("complete", ["fake-1-001"]))
-        self.assertIn("| Accuracy | 50.0% (2/4) |", (out / "report.md").read_text(encoding="utf-8"))
+        text = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("| Accuracy | 50.0% (2/4) |", text)
+        self.assertNotIn("ISIC-corrected labels", text)
+
+    def test_the_same_answers_are_scored_against_folder_and_corrected_labels(self):
+        self._corrections(("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"), ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"),
+                          ("Train/nevus/ISIC_0000004.jpg", "nevus", "melanoma"))  # not in the test run: ignored
+        out = self._run(FakeModel(), "test", run_id="t1")
+        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual(metrics["folder_labels"]["correct"], 2)
+        self.assertEqual(metrics["corrected_labels"]["correct"], 4)
+        self.assertEqual(metrics["corrected_labels"]["balanced_accuracy"], 1.0)  # averaged over melanoma only
+        self.assertEqual(len(metrics["label_corrections"]["applied"]), 2)
+        text = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("| Accuracy | 50.0% (2/4) |", text)
+        self.assertIn("| Accuracy | 100.0% (4/4) |", text)
+        self.assertIn("| nevus | 0 | n/a | n/a | n/a | 0 |", text)  # an answer option with no image under corrected labels
+        self.assertIn("any one of the 2 largest classes (melanoma, nevus) 50.0%", text)  # folder labels: a tie
+        self.assertIn("the largest class (melanoma) 100.0%", text)  # corrected labels
+        self.assertIn("answer options with no image: nevus", text)
+        self.assertIn("| Test/nevus/ISIC_0000009.jpg | nevus | melanoma | melanoma |", text)
+
+    def test_corrections_written_for_other_data_are_refused(self):
+        self._corrections(("Test/nevus/ISIC_0000009.jpg", "melanoma", "nevus"))  # the folder label does not match
+        with self.assertRaises(ValueError):
+            self._run(FakeModel(), "test", run_id="t1")
+        self._corrections(("Test/nevus/ISIC_0000009.jpg", "nevus", "vascular lesion"))  # not an answer option
+        with self.assertRaises(ValueError):
+            self._run(FakeModel(), "test", run_id="t1")
 
     def test_test_split_runs_once_and_refuses_limit(self):
         self._run(FakeModel(), "test", run_id="t1")

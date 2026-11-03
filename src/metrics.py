@@ -66,7 +66,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], n_
     for t, p in zip(y_true, y_pred):
         confusion[t][p if p is not None else UNREADABLE] += 1
     counts = Counter(y_true)
-    majority_label, majority_n = counts.most_common(1)[0] if counts else ("", 0)
+    majority_n = max(counts.values(), default=0)
     return {
         "n": n,
         "correct": correct,
@@ -81,7 +81,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], n_
         "confusion": confusion,
         "baselines": {
             "chance_accuracy": 1 / len(labels) if labels else 0.0,
-            "majority_class": majority_label,
+            "majority_classes": sorted(label for label, k in counts.items() if k == majority_n),  # all of them when tied
             "majority_class_accuracy": majority_n / n if n else 0.0,
         },
         "bootstrap": {"resamples": n_boot, "seed": seed},

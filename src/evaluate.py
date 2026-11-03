@@ -9,6 +9,8 @@
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
 ``test`` is the dataset's own test split. It is run once per config, and a finished test run is never overwritten.
 A run saves every answer as it arrives, so an interrupted run continues where it stopped when started again.
+The report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels
+listed in the file named by ``[data] corrections`` (written by the isic command). The model never sees a label.
 """
 
 from __future__ import annotations
@@ -58,7 +60,7 @@ def _versions() -> dict:
 def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
-    for section, keys in {"data": ("root", "train", "test"), "model": ("provider", "id"), "prompt": ("file",),
+    for section, keys in {"data": ("root", "train", "test", "corrections"), "model": ("provider", "id"), "prompt": ("file",),
                           "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side")}.items():
         for key in keys:
             if key not in config.get(section, {}):
@@ -99,6 +101,7 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     # A seeded random order, so that any drift of a hosted model during a run is not lined up with the classes.
     random.Random(config["run"]["order_seed"]).shuffle(items)
     items = items[: limit or None]
+    isic.read_corrections(config["data"]["corrections"], labels, {r.path: r.label for r in items})  # refuse a bad file now
 
     template = prompt.load_template(config["prompt"]["file"])
     prompt_text = prompt.build(template, labels)
@@ -172,20 +175,63 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     return out
 
 
+def _pct(x: float) -> str:
+    return f"{100 * x:.1f}%"
+
+
+def _ci(pair) -> str:
+    return f"{_pct(pair[0])} to {_pct(pair[1])}"
+
+
+def _scoring(title: str, m: dict, labels: list[str]) -> list[str]:
+    """The results, per-class figures and confusion matrix of one scoring, as report lines."""
+    largest = m["baselines"]["majority_classes"]
+    lines = [f"## {title}", "", "| Metric | Value | 95% interval |", "|---|---|---|",
+             f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} (Wilson) |",
+             f"| Balanced accuracy | {_pct(m['balanced_accuracy'])} | {_ci(m['balanced_accuracy_ci95'])} (bootstrap) |",
+             f"| Macro-F1 | {_pct(m['macro_f1'])} | {_ci(m['macro_f1_ci95'])} (bootstrap) |",
+             f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |", "",
+             f"Reference points: guessing at random {_pct(m['baselines']['chance_accuracy'])}; always answering "
+             + (f"the largest class ({largest[0]})" if len(largest) == 1 else f"any one of the {len(largest)} largest classes "
+                f"({', '.join(largest)})") + f" {_pct(m['baselines']['majority_class_accuracy'])}.", "",
+             "| Class | Images | Recall | Precision | F1 | Times predicted |", "|---|---|---|---|---|---|"]
+    for label in labels:
+        c = m["per_class"][label]
+        has_images, predicted = c["support"] > 0, c["predicted"] > 0
+        lines.append(f"| {label} | {c['support']} | {_pct(c['recall']) if has_images else 'n/a'} | "
+                     f"{_pct(c['precision']) if predicted else 'n/a'} | {_pct(c['f1']) if has_images else 'n/a'} | {c['predicted']} |")
+    columns = labels + [metrics.UNREADABLE]
+    lines += ["", "Confusion matrix (rows: true class; columns: answer):", "",
+              "| True class | " + " | ".join(columns) + " |", "|---|" + "---|" * len(columns)]
+    for label in labels:
+        lines.append(f"| {label} | " + " | ".join(str(m["confusion"][label][c]) for c in columns) + " |")
+    present = [x for x in labels if m["per_class"][x]["support"]]
+    absent = [x for x in labels if not m["per_class"][x]["support"]]
+    small = [f"{x} ({m['per_class'][x]['support']})" for x in present if m["per_class"][x]["support"] < 10]
+    lines += ["", f"- Balanced accuracy and macro-F1 average over the {len(present)} classes that have images in this scoring"
+              + (f"; answer options with no image: {', '.join(absent)} (n/a: not defined)" if absent else "") + ".",
+              f"- Classes with fewer than 10 images (their per-class figures are unreliable): {', '.join(small) or 'none'}", ""]
+    return lines
+
+
 def report(run_dir: str | Path) -> Path:
-    """Writes metrics.json and report.md from a run's predictions."""
+    """Writes metrics.json and report.md from a run's predictions, scored against the folder and the corrected labels."""
     run_dir = Path(run_dir)
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = _read_jsonl(run_dir / "predictions.jsonl")
     labels = card["labels"]
-    m = metrics.summarize([p["label"] for p in preds], [p["prediction"] for p in preds], labels)
-    _write_json(run_dir / "metrics.json", m)
-
-    def pct(x: float) -> str:
-        return f"{100 * x:.1f}%"
-
-    def ci(pair) -> str:
-        return f"{pct(pair[0])} to {pct(pair[1])}"
+    corrections_file = Path(card["config"]["data"]["corrections"])
+    corrections_sha256 = hashlib.sha256(corrections_file.read_bytes()).hexdigest()
+    fixed = isic.read_corrections(corrections_file, labels, {p["path"]: p["label"] for p in preds})
+    answers = [p["prediction"] for p in preds]
+    folder = metrics.summarize([p["label"] for p in preds], answers, labels)
+    corrected = metrics.summarize([fixed.get(p["path"], p["label"]) for p in preds], answers, labels) if fixed else None
+    _write_json(run_dir / "metrics.json", {
+        "folder_labels": folder,
+        "corrected_labels": corrected,
+        "label_corrections": {"file": corrections_file.as_posix(), "sha256": corrections_sha256,
+                              "applied": [{"path": p["path"], "folder_label": p["label"], "corrected_label": fixed[p["path"]]}
+                                          for p in preds if p["path"] in fixed]}})
 
     complete = card["status"] == "complete" and len(preds) == card["n_images"]
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
@@ -199,29 +245,22 @@ def report(run_dir: str | Path) -> Path:
               f"- Generation settings: `{json.dumps(model.get('generation_config'))}`",
               f"- Started {card['started_utc']}, finished {card['finished_utc']} (UTC)",
               f"- Prompt: `{card['prompt_file']}` (SHA-256 `{card['prompt_sha256'][:12]}`); images: {card['n_images']} "
-              f"(hash `{card['images_sha256'][:12]}`); Git commit `{(card['git']['commit'] or 'unknown')[:10]}`", "",
-              "## Results", "", "| Metric | Value | 95% interval |", "|---|---|---|",
-              f"| Accuracy | {pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {ci(m['accuracy_ci95'])} (Wilson) |",
-              f"| Balanced accuracy | {pct(m['balanced_accuracy'])} | {ci(m['balanced_accuracy_ci95'])} (bootstrap) |",
-              f"| Macro-F1 | {pct(m['macro_f1'])} | {ci(m['macro_f1_ci95'])} (bootstrap) |",
-              f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |", "",
-              f"Reference points: guessing at random {pct(m['baselines']['chance_accuracy'])}; always answering the largest class "
-              f"({m['baselines']['majority_class']}) {pct(m['baselines']['majority_class_accuracy'])}.", "",
-              "## Per class", "", "| Class | Images | Recall | Precision | F1 | Times predicted |", "|---|---|---|---|---|---|"]
-    for label in labels:
-        c = m["per_class"][label]
-        lines.append(f"| {label} | {c['support']} | {pct(c['recall'])} | {pct(c['precision'])} | {pct(c['f1'])} | {c['predicted']} |")
-    columns = labels + [metrics.UNREADABLE]
-    lines += ["", "## Confusion matrix (rows: true class; columns: answer)", "",
-              "| True class | " + " | ".join(columns) + " |", "|---|" + "---|" * len(columns)]
-    for label in labels:
-        lines.append(f"| {label} | " + " | ".join(str(m["confusion"][label][c]) for c in columns) + " |")
-    small = [f"{x} ({m['per_class'][x]['support']})" for x in labels if 0 < m["per_class"][x]["support"] < 10]
+              f"(hash `{card['images_sha256'][:12]}`); Git commit `{(card['git']['commit'] or 'unknown')[:10]}`",
+              f"- Label corrections: `{corrections_file.as_posix()}` (SHA-256 `{corrections_sha256[:12]}`): "
+              + (f"{len(fixed)} of these images have an ISIC-corrected label, so the same answers are scored twice."
+                 if fixed else "none of these images has a corrected label, so the answers are scored once."), ""]
+    lines += _scoring("Scored against the dataset's folder labels", folder, labels)
+    if corrected:
+        lines += _scoring("Scored against the ISIC-corrected labels", corrected, labels)
+        lines += ["Images whose label is corrected (evidence: the ISIC record in the corrections file):", "",
+                  "| Image | Folder label | Corrected label | Answer |", "|---|---|---|---|"]
+        lines += [f"| {p['path']} | {p['label']} | {fixed[p['path']]} | {p['prediction'] or metrics.UNREADABLE} |"
+                  for p in sorted(preds, key=lambda p: p["path"]) if p["path"] in fixed]
+        lines.append("")
     finish = {}
     for p in preds:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
-    lines += ["", "## Notes", "",
-              f"- Classes with fewer than 10 images (their per-class figures are unreliable): {', '.join(small) or 'none'}",
+    lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]

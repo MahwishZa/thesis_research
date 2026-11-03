@@ -4,6 +4,10 @@ For each image it fetches the public ISIC record of its ISIC number, keeps every
 (plus benign/malignant, lesion ID and licence), and reports which of the image's dataset labels that record supports.
 The raw records are cached in data/isic_cache/ (not committed) so the check can be resumed and re-read without
 fetching again. By default it checks every image with conflicting labels and every testing image.
+
+From the check it also writes label_corrections.csv: every testing image whose folder label the ISIC record contradicts,
+with the label ISIC supports. A test run is scored against the folder labels and, separately, against these corrected
+labels; the dataset's folders are never changed.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ from pathlib import Path
 API = "https://api.isic-archive.com/api/v2/images/{}/"
 USER_AGENT = "thesis-research-isic-label-check/1.0 (academic research)"
 EXTRA_FIELDS = {"benign_malignant", "lesion_id", "copyright_license"}
+SUPPORTS = "ISIC supports: "  # the verdict when the ISIC record supports exactly one of the image's dataset labels
+CORRECTION_FIELDS = ["path", "isic_id", "folder_label", "corrected_label", "isic_fields"]
 
 # Words in an ISIC diagnosis that support each dataset class. Shown next to the raw diagnosis text, which stays the
 # evidence: a human reads the table, these words only sort it.
@@ -108,7 +114,7 @@ def check(manifest: str | Path, out_dir: str | Path, cache: str | Path = "data/i
             if not any("diagnosis" in k.split(".")[-1] for k in fields):
                 verdict = "no diagnosis in the ISIC record"
             elif len(support) == 1:
-                verdict = f"ISIC supports: {support[0]}"
+                verdict = SUPPORTS + support[0]
             elif support:
                 verdict = "ISIC supports several labels: " + ", ".join(support)
             else:
@@ -148,4 +154,51 @@ def check(manifest: str | Path, out_dir: str | Path, cache: str | Path = "data/i
     lines += [f"| {k} | {v} |" for k, v in licences.most_common()]
     report = out_dir / "isic_check.md"
     report.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+
+    fixes, undecided = write_corrections(manifest, out_dir / "isic_check.csv", out_dir / "label_corrections.csv")
+    print(f"{len(fixes)} testing images have a folder label that ISIC contradicts (label_corrections.csv)")
+    if undecided:
+        print(f"{len(undecided)} testing images could not be decided from ISIC and keep their folder label: {undecided[:10]}")
     return report
+
+
+def write_corrections(manifest: str | Path, check_csv: str | Path, out: str | Path) -> tuple[list[dict], list[str]]:
+    """Writes ``out``: each testing image whose folder label the ISIC record contradicts, with the label ISIC supports.
+
+    Returns the corrections and the testing images that cannot be decided (no ISIC record, or a record that supports none
+    or several of the image's dataset labels); those keep their folder label.
+    """
+    with open(manifest, encoding="utf-8") as f:
+        images = [r for r in csv.DictReader(f) if r["split"] == "test"]
+    with open(check_csv, encoding="utf-8") as f:
+        checked = {r["isic_id"]: r for r in csv.DictReader(f)}
+    fixes, undecided = [], []
+    for image in images:
+        row = checked.get(image["isic_id"])
+        if row is None or not row["verdict"].startswith(SUPPORTS):
+            undecided.append(image["path"])
+        elif row["verdict"][len(SUPPORTS):] != image["label"]:
+            fixes.append({"path": image["path"], "isic_id": image["isic_id"], "folder_label": image["label"],
+                          "corrected_label": row["verdict"][len(SUPPORTS):], "isic_fields": row["isic_fields"]})
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CORRECTION_FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(fixes)
+    return fixes, undecided
+
+
+def read_corrections(path: str | Path, labels: list[str], images: dict[str, str]) -> dict[str, str]:
+    """Corrected label by path for the images in ``images`` (path -> folder label) that label_corrections.csv lists.
+
+    Refuses a corrected label that is not an answer option, and a listed image whose folder label differs from the one
+    in the file (the file was written for another version of the dataset).
+    """
+    with open(path, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    for r in rows:
+        if r["corrected_label"] not in labels:
+            raise ValueError(f"{path}: corrected label {r['corrected_label']!r} of {r['path']} is not an answer option")
+        if r["path"] in images and images[r["path"]] != r["folder_label"]:
+            raise ValueError(f"{path}: {r['path']} is labelled {images[r['path']]!r} in the dataset, "
+                             f"not {r['folder_label']!r}; write the corrections again with the isic command")
+    return {r["path"]: r["corrected_label"] for r in rows if r["path"] in images}

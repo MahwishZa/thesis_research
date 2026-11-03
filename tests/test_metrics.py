@@ -21,6 +21,8 @@ class MetricTests(unittest.TestCase):
         self.assertAlmostEqual(m["macro_f1"], (2 / 3 + 0.5) / 2)
         self.assertEqual(m["confusion"]["b"][metrics.UNREADABLE], 1)
         self.assertEqual(m["baselines"]["chance_accuracy"], 0.5)
+        self.assertEqual(metrics.summarize(["b", "a", "a", "b"], ["a"] * 4, ["a", "b"])["baselines"]["majority_classes"],
+                         ["a", "b"])  # a tie names every largest class, in sorted order
 
     def test_bootstrap_is_seeded(self):
         args = (["a", "b", "b", "a", "a"], ["a", "b", "a", None, "a"], ["a", "b"])
