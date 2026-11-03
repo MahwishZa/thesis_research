@@ -140,7 +140,7 @@ def check(manifest: str | Path, out_dir: str | Path, cache: str | Path = "data/i
         if row["conflict"] == "yes":
             key = "conflict: " + " vs ".join(labels) + (" (a copy is in test)" if row["in_test"] == "yes" else " (training only)")
         else:
-            key = f"test image, no conflict: {labels[0]}"
+            key = ("test" if row["in_test"] == "yes" else "training") + f" image, no conflict: {labels[0]}"
         summary[key][row["verdict"]] += 1
     licences = Counter(row["licence"] for row in table)
     lines = ["# ISIC Archive label check", "",

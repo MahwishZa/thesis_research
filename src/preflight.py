@@ -1,6 +1,6 @@
 """The preflight check: everything a run needs, tested without sending a single dataset image.
 
-    python -m src.evaluate check --config configs/<model>.toml [--thinking-levels]
+    python -m src.evaluate check --config configs/<model>.toml [--thinking-levels] [--list-models]
 
 Run it before every development or test run. Each line says OK, WARN or FAIL; a FAIL says what to do. The model is called
 with a blank synthetic image, so it finds an unavailable model, a refused setting, a wrong key or an overloaded service
@@ -44,7 +44,19 @@ def _probe(model, say) -> tuple[dict | None, str | None]:
     raise AssertionError("unreachable")
 
 
-def check(config: dict, config_path: str, try_variants: bool = False, say=print) -> bool:
+def _show_models(model, say) -> None:
+    """The models the key can use, when the provider can list them (a help only: a failure of it is reported, not raised)."""
+    names = getattr(model, "list_models", None)
+    if names is None:
+        say("       (this provider cannot list its models)")
+        return
+    try:
+        say("       models your key can use: " + ", ".join(names()))
+    except Exception as exc:
+        say(f"       (the model list could not be read: {exc})")
+
+
+def check(config: dict, config_path: str, try_variants: bool = False, say=print, *, list_models: bool = False) -> bool:
     """Prints one line per check and returns True when none failed."""
     failed = False
 
@@ -98,16 +110,14 @@ def check(config: dict, config_path: str, try_variants: bool = False, say=print)
         line("FAIL", "Model adapter and API key", str(exc))
         return False
 
+    if list_models:
+        _show_models(model, say)
     say(f"       asking {settings['id']} one question with a blank image (nothing from the dataset is sent) ...")
     answer, problem = _probe(model, say)
     if answer is None:
         line("FAIL", f"Model {settings['id']}", problem)
-        names = getattr(model, "list_models", None)
-        if names and "HTTP 404" in problem:
-            try:
-                say("       models your key can use: " + ", ".join(names()))
-            except Exception as exc:  # the listing is only a help; any failure of it is reported, not raised
-                say(f"       (the model list could not be read: {exc})")
+        if "HTTP 404" in problem and not list_models:
+            _show_models(model, say)
     else:
         thinking = (answer["usage"] or {}).get("thinking_tokens") or 0
         detail = (f"answered {answer['text']!r}, finish reason {answer['finish_reason']}, thinking tokens {thinking}, "

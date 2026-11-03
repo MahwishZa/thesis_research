@@ -2,7 +2,7 @@
 
     python -m src.evaluate profile --root data --train <train folder> --test <test folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
-    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels]
+    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels] [--list-models]
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test
     python -m src.evaluate report results/gemini-3.8-flash/<run folder>
@@ -328,6 +328,7 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("check", help="test everything a run needs, without sending any dataset image")
     c.add_argument("--config", required=True)
     c.add_argument("--thinking-levels", action="store_true", help="also probe every thinking setting the model might accept")
+    c.add_argument("--list-models", action="store_true", help="also list the models the key can use")
     r = sub.add_parser("run", help="run one model on the dev sample or the test split")
     r.add_argument("--config", required=True)
     r.add_argument("--split", choices=("dev", "test"), required=True)
@@ -346,7 +347,7 @@ def main(argv: list[str] | None = None) -> None:
         elif args.command == "isic":
             print(isic.check(args.manifest, args.out, args.cache, everything=args.all))
         elif args.command == "check":
-            sys.exit(0 if preflight.check(load_config(args.config), args.config, args.thinking_levels) else 1)
+            sys.exit(0 if preflight.check(load_config(args.config), args.config, args.thinking_levels, list_models=args.list_models) else 1)
         elif args.command == "run":
             run(args.config, args.split, args.run_id, args.limit)
         else:

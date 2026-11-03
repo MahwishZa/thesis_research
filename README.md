@@ -65,7 +65,8 @@ Every model run, in this order:
    Every line must say OK (a WARN explains itself). A FAIL line says what to do; fix it and run the check again. If
    Google is temporarily busy the check says so: wait a few minutes and run it again. If the model refuses a thinking
    setting, `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --thinking-levels` shows which settings it
-   accepts. The check sends only a blank synthetic image, never a dataset image.
+   accepts, and `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --list-models` lists the models your key
+   can use. The check sends only a blank synthetic image, never a dataset image.
 6. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5`.
 7. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test`.
    Its report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels.

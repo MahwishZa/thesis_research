@@ -37,10 +37,11 @@ class PreflightTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _check(self, model=None, load_error=None, variants=False):
+    def _check(self, model=None, load_error=None, variants=False, list_models=False):
         lines = []
         with mock.patch("src.preflight.models.load", return_value=model, side_effect=load_error):
-            ok = preflight.check(evaluate.load_config(self.project.config), str(self.project.config), variants, say=lines.append)
+            ok = preflight.check(evaluate.load_config(self.project.config), str(self.project.config), variants, say=lines.append,
+                                 list_models=list_models)
         return ok, "\n".join(lines)
 
     def test_everything_in_order(self):
@@ -60,6 +61,13 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("[FAIL] Model fake-1: Google refused the request (HTTP 404", text)
         self.assertIn("models your key can use: models/gemini-a, models/gemini-b", text)
         self.assertIn("Fix the lines marked FAIL", text)
+
+    def test_the_models_can_be_listed_while_the_model_works(self):
+        ok, text = self._check(ProbeModel(names=["models/gemini-a", "models/gemini-b"]), list_models=True)
+        self.assertTrue(ok)
+        self.assertEqual(text.count("models your key can use: models/gemini-a, models/gemini-b"), 1)
+        ok, text = self._check(ProbeModel(), list_models=True)  # a provider that cannot list them says so
+        self.assertIn("cannot list its models", text)
 
     def test_a_temporary_overload_is_not_blamed_on_the_setup(self):
         model = ProbeModel(error=models.TransientError("HTTP 503 UNAVAILABLE: high demand"))

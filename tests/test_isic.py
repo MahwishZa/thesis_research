@@ -69,6 +69,17 @@ class IsicTests(unittest.TestCase):
             with open(Path(d) / "out" / "label_corrections.csv", encoding="utf-8") as f:
                 self.assertEqual(list(csv.DictReader(f)), [])  # ISIC_2 confirms its test label; ISIC_3 is undecided
 
+    def test_checking_every_image_names_training_and_test_images_correctly(self):
+        with tempfile.TemporaryDirectory() as d:
+            manifest = Path(d) / "manifest.csv"
+            manifest.write_text("split,label,path,isic_id\ntrain,nevus,Train/nevus/ISIC_1.jpg,ISIC_1\n"
+                                "test,nevus,Test/nevus/ISIC_2.jpg,ISIC_2\n", encoding="utf-8")
+            record = {"copyright_license": "CC-0", "metadata": {"clinical": {"diagnosis": "nevus"}}}
+            with mock.patch("src.isic.fetch", return_value=record):
+                text = isic.check(manifest, Path(d) / "out", Path(d) / "cache", everything=True).read_text(encoding="utf-8")
+        self.assertIn("| training image, no conflict: nevus | ISIC supports: nevus | 1 |", text)
+        self.assertIn("| test image, no conflict: nevus | ISIC supports: nevus | 1 |", text)
+
     def test_corrections_list_test_images_that_isic_contradicts(self):
         with tempfile.TemporaryDirectory() as d:
             manifest, checked, out = Path(d) / "manifest.csv", Path(d) / "isic_check.csv", Path(d) / "label_corrections.csv"
