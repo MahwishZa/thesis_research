@@ -44,9 +44,7 @@ class RepoTests(unittest.TestCase):
                 self.assertIn(module.name if module.is_file() else "models/", self.readme, f"the README tree omits {module.name}")
 
     def test_configs_are_valid_and_point_to_files_that_exist(self):
-        configs = sorted((ROOT / "configs").glob("*.toml"))
-        self.assertTrue(configs)
-        for path in configs:
+        for path in sorted((ROOT / "configs").glob("*.toml")):  # there are none until a provider adapter is added
             with self.subTest(path.name):
                 config = evaluate.load_config(path)
                 self.assertEqual(config["name"], path.stem, "the config name is the run folder name and must match the file")
@@ -84,21 +82,23 @@ class RepoTests(unittest.TestCase):
         for path in (".env", ".env.txt", ".env.local", "data/Train/x.jpg", "results/m/dev_1.partial/predictions.jsonl",
                      "src/__pycache__/x.pyc", ".venv/x"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "results/m/dev_1/report.md", "results/EXPERIMENT_LOG.md", "configs/gemini-3.8-flash.toml"):
+        for path in ("README.md", "results/m/dev_1/report.md", "results/EXPERIMENT_LOG.md", "configs/example.toml"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")
     def test_no_key_or_unfinished_run_is_tracked(self):
         tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
         self.assertEqual([p for p in tracked if p.startswith(".env") or ".partial/" in p], [])
-        for path in tracked:  # a Google key looks like "AIza" followed by 35 characters
+        key_formats = re.compile(r"AIza[0-9A-Za-z_-]{35}|\bsk-[A-Za-z0-9_-]{20,}|\bgsk_[A-Za-z0-9]{20,}|\bhf_[A-Za-z0-9]{30,}"
+                                 r"|\bgh[pousr]_[A-Za-z0-9]{30,}|\bgithub_pat_[A-Za-z0-9_]{30,}")  # Google, OpenAI-style, Groq, Hugging Face, GitHub
+        for path in tracked:
             if path and (ROOT / path).suffix in {".py", ".md", ".toml", ".txt", ".csv", ".json", ".jsonl"}:
-                self.assertIsNone(re.search(r"AIza[0-9A-Za-z_-]{35}", (ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
+                self.assertIsNone(key_formats.search((ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
 
     def test_every_imported_package_is_pinned_in_requirements(self):
         pins = {line.split("==")[0].strip().lower() for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
                 if "==" in line}
-        distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx"}  # import name -> package name
+        distribution = {"PIL": "pillow"}  # import name -> package name
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -112,7 +112,7 @@ class RepoTests(unittest.TestCase):
             self.assertIn(distribution[name], pins, f"{name} is imported but {distribution[name]} is not pinned in requirements.txt")
 
     def test_text_files_use_unix_line_endings(self):
-        for path in [ROOT / "README.md", ROOT / "configs" / "gemini-3.8-flash.toml", ROOT / "prompts" / "diagnosis_v1.txt"]:
+        for path in [ROOT / "README.md", ROOT / "prompts" / "diagnosis_v1.txt"]:
             self.assertNotIn(b"\r", path.read_bytes(), f"{path.name} has Windows line endings (.gitattributes should prevent this)")
 
 

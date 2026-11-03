@@ -1,10 +1,10 @@
 """The preflight check: everything a run needs, tested without sending a single dataset image.
 
-    python -m src.evaluate check --config configs/<model>.toml [--thinking-levels] [--list-models] [--model <id>]
+    python -m src.evaluate check --config configs/<model>.toml [--list-models] [--model <id>]
 
-Run it before every development or test run. Each line says OK, WARN or FAIL; a FAIL says what to do. The model is called
-with a blank synthetic image, so it finds an unavailable model, a refused setting, a wrong key or an overloaded service
-before a run is started, and nothing from the dataset is sent.
+Run it before every development or test run. Each line says OK or FAIL; a FAIL says what to do. The model is called once with
+a blank synthetic image, so it finds an unavailable model, a wrong key, a used-up daily quota or an overloaded service before
+a run is started, and nothing from the dataset is sent. That one call counts as one request against the provider's quota.
 """
 
 from __future__ import annotations
@@ -30,21 +30,19 @@ def _blank_image() -> bytes:
     return buffer.getvalue()
 
 
-def _probe(model, say) -> tuple[dict | None, str | None, str]:
-    """(answer, problem, kind) for one blank-image request; kind is ok, temporary, quota or refused.
-    Transient failures are retried a few times; a daily quota and a refusal are not."""
+def _probe(model, say) -> tuple[dict | None, str | None]:
+    """The answer to one blank-image request, or (None, reason) when it failed. Retries transient failures a few times;
+    a used-up daily quota and a refusal are not retried."""
     for attempt in range(1, PROBE_ATTEMPTS + 1):
         try:
-            return model.predict(_blank_image(), "image/png", PROBE_PROMPT), None, "ok"
+            return model.predict(_blank_image(), "image/png", PROBE_PROMPT), None
         except models.TransientError as exc:
             if attempt == PROBE_ATTEMPTS:
-                return None, f"temporary problem, not a setting: {exc}", "temporary"
+                return None, f"temporary problem, not a setting: {exc}"
             say(f"       attempt {attempt}/{PROBE_ATTEMPTS} failed ({exc}); waiting {5 * attempt} s")
             time.sleep(5 * attempt)
-        except models.QuotaExhausted as exc:
-            return None, str(exc), "quota"
-        except models.FatalError as exc:
-            return None, str(exc), "refused"
+        except (models.QuotaExhausted, models.FatalError) as exc:
+            return None, str(exc)
     raise AssertionError("unreachable")
 
 
@@ -61,13 +59,13 @@ def _show_models(model, say) -> None:
         say(f"       (the model list could not be read: {exc})")
 
 
-def check(config: dict, config_path: str, try_variants: bool = False, say=print, *, list_models: bool = False) -> bool:
+def check(config: dict, config_path: str, say=print, *, list_models: bool = False) -> bool:
     """Prints one line per check and returns True when none failed."""
-    failed = warned = False
+    failed = False
 
     def line(status: str, what: str, detail: str = "") -> None:
-        nonlocal failed, warned
-        failed, warned = failed or status == "FAIL", warned or status == "WARN"
+        nonlocal failed
+        failed = failed or status == "FAIL"
         say(f"[{status:>4}] {what}" + (f": {detail}" if detail else ""))
 
     line("OK", "Config", config_path)
@@ -119,49 +117,20 @@ def check(config: dict, config_path: str, try_variants: bool = False, say=print,
         _show_models(model, say)
     say(f"       asking {settings['id']} one question with a blank image (nothing from the dataset is sent; "
         "it counts as one request against the daily quota) ...")
-    answer, problem, kind = _probe(model, say)
+    answer, problem = _probe(model, say)
     if answer is None:
         line("FAIL", f"Model {settings['id']}", problem)
         if "HTTP 404" in problem and not list_models:
             _show_models(model, say)
     else:
-        thinking = (answer["usage"] or {}).get("thinking_tokens") or 0
-        detail = (f"answered {answer['text']!r}, finish reason {answer['finish_reason']}, thinking tokens {thinking}, "
-                  f"version {answer['model_version']}")
+        detail = (f"answered {answer['text']!r}, finish reason {answer['finish_reason']}, version {answer['model_version']}"
+                  + (f", usage {answer['usage']}" if answer["usage"] else ""))
         if answer["finish_reason"] != "STOP" or not answer["text"]:
             line("FAIL", f"Model {settings['id']}", detail + " (the answer was cut off or empty: raise max_output_tokens)")
-        elif thinking and settings.get("thinking_budget") == 0:
-            line("WARN", f"Model {settings['id']}", detail + " (it thinks although thinking_budget = 0)")
         else:
             line("OK", f"Model {settings['id']}", detail)
 
-    if try_variants and kind == "quota":
-        say("       (the thinking settings were not tested: the daily quota is used up)")
-    elif try_variants:
-        variants = models.settings_variants(provider, settings)
-        say("       thinking settings tried with the same blank image (one request each; the configured one was tested above):")
-        for name, variant in variants or []:
-            if variant == settings:
-                continue
-            answer, problem, kind = _probe(models.load(provider, variant), say)
-            if answer is not None:
-                thinking = (answer["usage"] or {}).get("thinking_tokens") or 0
-                say(f"       - {name}: accepted, thinking tokens {thinking}, finish reason {answer['finish_reason']}")
-            elif kind == "refused":
-                say(f"       - {name}: REFUSED: {problem.splitlines()[0]}")
-            else:
-                say(f"       - {name}: not tested: {problem.splitlines()[0]}")
-                if kind == "quota":
-                    line("WARN", "Thinking settings", "the remaining ones were not tested (daily quota used up)")
-                    break
-        if not variants:
-            say(f"       (no alternatives are known for provider {provider})")
-
-    if failed:
-        say("Fix the lines marked FAIL, then run the check again. A temporary problem needs a few minutes; a used-up daily "
-            "quota needs the reset, a paid key or another model (check --model <id> tries one).")
-    elif warned:
-        say("Checks passed, but read the WARN lines before starting the run.")
-    else:
-        say("All checks passed: the run can start.")
+    say("All checks passed: the run can start." if not failed else
+        "Fix the lines marked FAIL, then run the check again. A temporary problem needs a few minutes; a used-up daily quota "
+        "needs the reset, a paid key or another model (check --model <id> tries one).")
     return not failed

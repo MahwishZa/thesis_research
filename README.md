@@ -13,7 +13,7 @@ No model has been evaluated yet. Each finished run is listed here with a link to
 ## Repository Structure
 
 ```
-configs/          one settings file per model run (model, generation settings, prompt, dataset split folders)
+configs/          one settings file per model run (model, generation settings, prompt, dataset split folders); none until a provider is chosen
 prompts/          the frozen prompt; a changed prompt is a new file (diagnosis_v2.txt), never an edit
 src/
   dataset.py      reads the dataset folders, writes the dataset profile, prepares images for sending
@@ -22,7 +22,7 @@ src/
   metrics.py      accuracy, balanced accuracy, macro-F1, per-class figures, confusion matrix, intervals
   preflight.py    the setup check that runs before every model run (no dataset image is sent)
   evaluate.py     the command line: profile, isic, check, run, report
-  models/         one adapter per model provider (Gemini only, for now)
+  models/         one adapter per model provider (none yet: the Gemini adapter was removed, see the log)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, one folder per finished model run, and
                   EXPERIMENT_LOG.md (dated decisions, findings, settings and supervisor approvals)
@@ -54,23 +54,22 @@ Dataset, once:
 3. Check the labels against the ISIC Archive (needs internet; a few minutes): `python -m src.evaluate isic`.
    This writes `results/dataset_profile/isic_check.md`, `isic_check.csv` and `label_corrections.csv` (the testing images
    whose folder label ISIC contradicts, with the label ISIC supports); raw ISIC records stay in `data/isic_cache/`.
-4. Put the API key in a file named `.env` in the repository folder (next to `README.md`). Create it with `notepad .env`,
-   answer "Yes" to create the file, type one line and save: `GEMINI_API_KEY=<your key>` (no quotes needed). Further keys
-   go on further lines. Git ignores `.env`, so it never leaves your computer; never paste a key into a chat or any
-   other file. A key set in the terminal (`$env:GEMINI_API_KEY = "<your key>"`) takes priority over the file.
+4. Put the API key of the chosen provider in a file named `.env` in the repository folder (next to `README.md`). Create it with
+   `notepad .env`, answer "Yes" to create the file, type one line `NAME=<your key>` and save (the name is the one that provider's
+   adapter reads; no quotes needed). Further keys go on further lines. Git ignores `.env`, so it never leaves your computer;
+   never paste a key into a chat or any other file. A key set in the terminal takes priority over the file.
 
-Every model run, in this order:
+Every model run, in this order (there is no provider adapter yet; the commands below work once one is added and a config
+`configs/<model>.toml` exists):
 
-5. Check the setup: `python -m src.evaluate check --config configs/gemini-3.8-flash.toml`.
-   Every line must say OK (a WARN explains itself). A FAIL line says what to do; fix it and run the check again. If
-   Google is temporarily busy the check says so: wait a few minutes and run it again. If the model refuses a thinking
-   setting, `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --thinking-levels` shows which settings it
-   accepts, and `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --list-models` lists the models your key
-   can use (a listed model can still be refused). `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --model gemini-2.5-flash-lite`
-   tries another model without editing the config. The check sends only a blank synthetic image, never a dataset image. Each
-   probe is one request against your daily quota: the check uses one, `--thinking-levels` up to five more.
-6. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5`.
-7. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test`.
+5. Check the setup: `python -m src.evaluate check --config configs/<model>.toml`.
+   Every line must say OK. A FAIL line says what to do; fix it and run the check again. If the provider is temporarily busy
+   the check says so: wait a few minutes and run it again. `python -m src.evaluate check --config configs/<model>.toml --list-models`
+   lists the models your key can use (a listed model can still be refused), and
+   `python -m src.evaluate check --config configs/<model>.toml --model <id>` tries another model without editing the config.
+   The check sends only a blank synthetic image, never a dataset image. It is one request against your quota.
+6. Development check on a few training images: `python -m src.evaluate run --config configs/<model>.toml --split dev --limit 5`.
+7. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/<model>.toml --split test`.
    Its report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels.
 8. Only when a run prints `FINISHED` is its folder complete. Then commit it:
    `git add results`, `git commit -m "<what it is>"`, `git push origin main` (one command at a time).
@@ -84,16 +83,15 @@ continue where it stopped (the folder name follows from the settings, so this al
 
 | Message | What it means | What to do |
 |---|---|---|
-| `no Gemini API key found` | no key in `.env` or the terminal | step 4 |
-| `HTTP 404 ... no longer available` | the model is not available to your key | the check lists the models your key can use; set `id` in a new config file |
-| `HTTP 400 ... Thinking level ... not supported` | the model refuses the thinking setting | `check --thinking-levels`, then change the setting in a new config file |
-| `HTTP 400 ... API key not valid` | wrong key | correct the `GEMINI_API_KEY` line in `.env` |
-| `HTTP 503 ... high demand` | Google is overloaded; temporary | the run retries for about 8 minutes, then stops with `NOT FINISHED`; run the same command again later |
-| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; Google reported 20 per day for `gemini-3.8-flash` on the free tier (2026-11-04), and a test run needs one request per test image | the run stops at once and keeps its answers; run the same command after the reset Google names, or use a paid key, or another model (https://ai.dev/rate-limit shows your limits) |
+| `unknown model provider ... no provider adapter is installed yet` | the config names a provider that has no adapter in `src/models/` | add the adapter, or use a provider that has one |
+| `no ... API key found` | no key in `.env` or the terminal | step 4 |
+| `HTTP 404` | the model is not available to your key | the check lists the models your key can use (if the adapter can); set `id` in a new config file |
+| `HTTP 400` or `401`/`403` about the key | wrong or refused key | correct the key line in `.env` |
+| `HTTP 503` ("high demand") | the provider is overloaded; temporary | the run retries for about 8 minutes, then stops with `NOT FINISHED`; run the same command again later |
+| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; a test run needs one request per test image | the run stops at once and keeps its answers; run the same command after the reset the provider names, or use a paid key, or another model |
 | `HTTP 429` (per minute) | too many requests in a minute | retried automatically; lower `requests_per_minute` in a new config file if it keeps happening |
-| `HTTP 504 DEADLINE_EXCEEDED`, `network problem (ReadTimeout ...)` | Google answered too slowly, or the connection was lost | retried automatically |
-| `network problem` | no connection, or no answer within 120 seconds | check the internet connection, then run the same command again |
-| `answers were cut off at the output limit (MAX_TOKENS)` | the model's thinking used up `max_output_tokens` | raise `max_output_tokens` in a new config file; results are not valid until then |
+| `HTTP 504`, `network problem (... timeout)` | the provider answered too slowly, or the connection was lost | retried automatically |
+| `answers were cut off at the output limit (MAX_TOKENS)` | the answer hit `max_output_tokens` (hidden reasoning can count toward it) | raise `max_output_tokens` in a new config file; results are not valid until then |
 | `images on disk differ from the committed profile` | dataset files changed or are missing | extract the ZIP again, or run steps 2 and 3 again and review the differences |
 | `was started with a different config, prompt or image set` | an explicit `--run-id` was reused after a change | delete that `.partial` folder, or choose another `--run-id` |
 | `a finished test run already exists` | the test split runs once per config | nothing; results are never overwritten |

@@ -2,10 +2,10 @@
 
     python -m src.evaluate profile --root data --train <train folder> --test <test folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
-    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels] [--list-models] [--model <id>]
-    python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5
-    python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test
-    python -m src.evaluate report results/gemini-3.8-flash/<run folder>
+    python -m src.evaluate check --config configs/<model>.toml [--list-models] [--model <id>]
+    python -m src.evaluate run --config configs/<model>.toml --split dev --limit 5
+    python -m src.evaluate run --config configs/<model>.toml --split test
+    python -m src.evaluate report results/<model>/<run-folder>
 
 ``check`` tests everything a run needs, without sending any dataset image. Run it before every run.
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
@@ -53,7 +53,7 @@ def _git() -> dict:
 
 def _versions() -> dict:
     out = {"python": platform.python_version()}
-    for package in ("google-genai", "pillow", "httpx"):
+    for package in ("pillow",):
         try:
             out[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
@@ -304,7 +304,7 @@ def report(run_dir: str | Path) -> Path:
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
               *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
-                 "max_output_tokens is too low for this model's thinking. Results are not valid until it is raised in a new config.**"]
+                 "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
                 if finish.get("MAX_TOKENS") else []),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
@@ -329,7 +329,6 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--all", action="store_true", help="check every image, not only conflicting and testing images")
     c = sub.add_parser("check", help="test everything a run needs, without sending any dataset image")
     c.add_argument("--config", required=True)
-    c.add_argument("--thinking-levels", action="store_true", help="also probe every thinking setting the model might accept")
     c.add_argument("--list-models", action="store_true", help="also list the models the key can use")
     c.add_argument("--model", help="test this model id instead of the config's (the config file is not changed)")
     r = sub.add_parser("run", help="run one model on the dev sample or the test split")
@@ -353,7 +352,7 @@ def main(argv: list[str] | None = None) -> None:
             config = load_config(args.config)
             if args.model:
                 config["model"] = {**config["model"], "id": args.model}
-            sys.exit(0 if preflight.check(config, args.config, args.thinking_levels, list_models=args.list_models) else 1)
+            sys.exit(0 if preflight.check(config, args.config, list_models=args.list_models) else 1)
         elif args.command == "run":
             run(args.config, args.split, args.run_id, args.limit)
         else:

@@ -27,7 +27,7 @@ class FakeModel:
         if self.quota_from and self.calls >= self.quota_from:
             raise models.QuotaExhausted("Daily quota used up for fake-1 (limit 20 requests per day on the free tier)")
         if self.fatal_from and self.calls >= self.fatal_from:
-            raise models.FatalError("Google refused the request (HTTP 404 NOT_FOUND): gone", 404)
+            raise models.FatalError("Provider refused the request (HTTP 404 NOT_FOUND): gone", 404)
         if self.calls in self.fail_on or (self.fail_from and self.calls >= self.fail_from):
             raise models.TransientError("rate limited")
         return {"text": "Melanoma.", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": str(self.calls),

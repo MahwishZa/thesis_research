@@ -19,22 +19,28 @@ class LoadEnvTests(unittest.TestCase):
             return dict(os.environ)
 
     def test_reads_names_and_values(self):
-        env = self._load('# keys\n\nGEMINI_API_KEY = abc123\r\nOTHER="quoted value"\nSINGLE=\'x\'\nno equals sign\nEMPTY=\n')
-        self.assertEqual(env, {"GEMINI_API_KEY": "abc123", "OTHER": "quoted value", "SINGLE": "x"})
+        env = self._load('# keys\n\nEXAMPLE_API_KEY = abc123\r\nOTHER="quoted value"\nSINGLE=\'x\'\nno equals sign\nEMPTY=\n')
+        self.assertEqual(env, {"EXAMPLE_API_KEY": "abc123", "OTHER": "quoted value", "SINGLE": "x"})
 
     def test_a_byte_order_mark_from_an_editor_is_ignored(self):
-        self.assertEqual(self._load(b"\xef\xbb\xbfGEMINI_API_KEY=abc"), {"GEMINI_API_KEY": "abc"})
+        self.assertEqual(self._load(b"\xef\xbb\xbfEXAMPLE_API_KEY=abc"), {"EXAMPLE_API_KEY": "abc"})
 
     def test_a_key_already_set_in_the_terminal_wins(self):
-        self.assertEqual(self._load("GEMINI_API_KEY=from-file", {"GEMINI_API_KEY": "from-terminal"}),
-                         {"GEMINI_API_KEY": "from-terminal"})
+        self.assertEqual(self._load("EXAMPLE_API_KEY=from-file", {"EXAMPLE_API_KEY": "from-terminal"}),
+                         {"EXAMPLE_API_KEY": "from-terminal"})
 
     def test_a_missing_file_is_fine_and_a_wrongly_encoded_file_is_explained(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             models.load_env(Path(tempfile.gettempdir()) / "no-such-folder" / ".env")
             self.assertEqual(dict(os.environ), {})
         with self.assertRaises(ValueError):  # Windows PowerShell's ">" saves UTF-16
-            self._load("GEMINI_API_KEY=abc".encode("utf-16"))
+            self._load("EXAMPLE_API_KEY=abc".encode("utf-16"))
+
+
+class LoadTests(unittest.TestCase):
+    def test_a_provider_without_an_adapter_is_refused_with_an_explanation(self):
+        with self.assertRaisesRegex(ValueError, "unknown model provider: 'nothing'.*no provider adapter is installed"):
+            models.load("nothing", {})
 
 
 if __name__ == "__main__":

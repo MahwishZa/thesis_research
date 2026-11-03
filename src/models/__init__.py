@@ -1,6 +1,14 @@
 """Model adapters. Each adapter answers one image plus one prompt and returns the raw answer and its metadata.
 
-To add a model later: write one file here with a class that has ``predict`` and ``describe``, and add it to ``load``.
+An adapter is one file in this folder with a class that has ``describe()`` (what was asked: provider, model id, settings) and
+``predict(image, mime_type, prompt)``, plus a branch in ``load``. ``predict`` returns a dict with ``text`` (the answer, or None),
+``finish_reason`` ("STOP" for a normal end, "MAX_TOKENS" when the answer was cut off at the output limit, any other value
+passes through), ``model_version`` (as the API returns it), ``response_id`` and ``usage`` (token counts). It raises
+TransientError for a failure worth retrying, QuotaExhausted when a per-day quota is used up, and FatalError (with a message that
+says what to do) for anything retrying cannot fix. An adapter may also offer ``list_models()`` for ``check --list-models``.
+
+No adapter exists yet. The only one so far (Gemini) was removed on 2026-11-04 at the researcher's request; it is in Git history
+at commit 8d1196e.
 """
 
 from __future__ import annotations
@@ -49,18 +57,6 @@ def load_env(path: str | Path = ".env") -> None:
             os.environ.setdefault(name, value)
 
 
-def settings_variants(provider: str, settings: dict) -> list[tuple[str, dict]]:
-    """Alternative settings worth probing for a provider (name, settings); empty when the provider has none."""
-    if provider == "gemini":
-        from .gemini import thinking_variants
-
-        return thinking_variants(settings)
-    return []
-
-
 def load(provider: str, settings: dict):
-    if provider == "gemini":
-        from .gemini import GeminiModel  # imported here so tests and other models do not need the Gemini SDK
-
-        return GeminiModel(settings)
-    raise ValueError(f"unknown model provider: {provider!r}")
+    """The adapter for ``provider`` (a branch per provider goes here, importing its module only when used)."""
+    raise ValueError(f"unknown model provider: {provider!r}; no provider adapter is installed yet (see src/models/__init__.py)")
