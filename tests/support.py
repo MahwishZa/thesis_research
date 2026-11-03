@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image
 
-COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120), "vascular lesion": (220, 30, 60)}
+COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120)}
 
 
 def make_dataset(root: Path, per_class: dict[str, dict[str, int]]) -> None:
