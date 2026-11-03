@@ -26,6 +26,7 @@ src/
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, one folder per finished model run, and
                   EXPERIMENT_LOG.md (dated decisions, findings, settings and supervisor approvals)
+docs/             temporary supervisor-meeting pack (open decisions, RAG data audit); delete later; not used by runs
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
