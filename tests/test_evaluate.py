@@ -147,6 +147,11 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(len(preds), 3)
         self.assertEqual({p["label"] for p in preds}, {"melanoma", "nevus"})
 
+    def test_a_missing_key_stops_the_run_before_anything_is_written(self):
+        with mock.patch("src.evaluate.models.load", side_effect=ValueError("no key")), self.assertRaises(ValueError):
+            evaluate.run(str(self.config), "test", results=self.results)
+        self.assertFalse(self.results.exists())
+
     def test_unreadable_image_stops_the_run(self):
         (Path(self.tmp.name) / "data" / "Test" / "nevus" / "broken.jpg").write_bytes(b"not a jpeg")
         with self.assertRaises(ValueError):

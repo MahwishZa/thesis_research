@@ -7,5 +7,6 @@ venv/
 # The dataset and anything derived from its images stay on your computer, never in Git.
 /data/
 
-# API keys
+# API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env
+.env.*

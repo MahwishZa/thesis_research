@@ -46,7 +46,10 @@ python -m unittest discover -s tests -t .
    This writes `results/dataset_profile/isic_check.md`, `isic_check.csv` and `label_corrections.csv` (the testing images
    whose folder label ISIC contradicts, with the label ISIC supports); raw ISIC records stay in `data/isic_cache/`.
    Running it again re-checks only the records that could not be fetched.
-4. Set the API key for this PowerShell session: `$env:GEMINI_API_KEY = "<your key>"`. Never put the key in a file in the repository.
+4. Put the API key in a file named `.env` in the repository folder (next to `README.md`). Create it with `notepad .env`,
+   answer "Yes" to create the file, type one line and save: `GEMINI_API_KEY=<your key>` (no quotes needed). Further keys
+   go on further lines. Git ignores `.env`, so it never leaves your computer; never paste a key into a chat or any
+   other file. A key set in the terminal (`$env:GEMINI_API_KEY = "<your key>"`) takes priority over the file.
 5. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split dev --limit 5`.
 6. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split test`.
    Its report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels.

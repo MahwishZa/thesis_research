@@ -107,6 +107,8 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     prompt_text = prompt.build(template, labels)
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + dataset.items_hash(items).encode()).hexdigest()
+    models.load_env()
+    model = models.load(config["model"]["provider"], config["model"])  # a missing key stops the run before any file is written
 
     model_dir = results / config["name"]
     out = model_dir / (run_id or f"{datetime.now(timezone.utc):%Y%m%d}_{split}")
@@ -136,7 +138,6 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
         _write_json(card_path, card)
 
-    model = models.load(config["model"]["provider"], config["model"])
     card["model"] = model.describe()
     _write_json(card_path, card)
     done = {p["path"] for p in _read_jsonl(pred_path)}
