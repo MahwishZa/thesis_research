@@ -57,7 +57,8 @@ class IsicTests(unittest.TestCase):
             records = {"ISIC_1": LEGACY, "ISIC_2": HIERARCHY, "ISIC_3": {"_error": "not found in the ISIC Archive (404)"}}
             with mock.patch("src.isic.fetch", side_effect=lambda i, *a, **k: records[i]):
                 report = isic.check(manifest, Path(d) / "out", Path(d) / "cache")
-            table = {r["isic_id"]: r for r in csv.DictReader(open(Path(d) / "out" / "isic_check.csv", encoding="utf-8"))}
+            with open(Path(d) / "out" / "isic_check.csv", encoding="utf-8") as f:
+                table = {r["isic_id"]: r for r in csv.DictReader(f)}
             self.assertEqual(sorted(table), ["ISIC_1", "ISIC_2", "ISIC_3"])
             self.assertEqual(table["ISIC_1"]["verdict"], "ISIC supports: actinic keratosis")
             self.assertEqual(table["ISIC_2"]["verdict"], "ISIC supports: seborrheic keratosis")

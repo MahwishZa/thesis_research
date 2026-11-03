@@ -85,7 +85,8 @@ def fetch(isic_id: str, cache: Path, delay: float = 0.3, attempts: int = 3) -> d
 def check(manifest: str | Path, out_dir: str | Path, cache: str | Path = "data/isic_cache", everything: bool = False,
           delay: float = 0.3) -> Path:
     """Writes isic_check.csv (one row per checked ISIC number) and isic_check.md (summary) to ``out_dir``."""
-    rows = list(csv.DictReader(open(manifest, encoding="utf-8")))
+    with open(manifest, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
     entries = defaultdict(list)  # isic_id -> ["split:label", ...]
     for r in rows:
         if r["isic_id"]:
