@@ -5,7 +5,9 @@ __pycache__/
 venv/
 
 # The dataset and anything derived from its images stay on your computer, never in Git.
-/data/
+# Only data/README.md is committed, so that the folder exists after cloning.
+/data/*
+!/data/README.md
 
 # API keys
 .env

@@ -25,7 +25,7 @@ tests/            unit tests (no API calls, no real data)
 docs/
   experiment_log.md   dated decisions, settings and supervisor approvals
 results/          created by the commands: the dataset profile and one folder per model run
-data/             your extracted dataset; git-ignored, never committed
+data/             put the extracted dataset here; only data/README.md is committed, never the images
 ```
 
 ## How to Run
@@ -39,7 +39,7 @@ pip install -r requirements.txt
 python -m unittest discover -s tests -t .
 ```
 
-1. Extract the dataset into `data\`, so that each split is a folder with one subfolder per class.
+1. Extract the dataset ZIP into `data\` (see `data/README.md`), so that each split is a folder with one subfolder per class.
 2. Profile it (no model, no API): `python -m src.evaluate profile --root data --train <training folder> --test <testing folder>`.
    This writes `results/dataset_profile/` (committed) and thumbnail sheets in `data/contact_sheets/` (not committed).
 3. Write the two folder names into `[data]` in `configs/gemini-2.5-flash.toml`.
