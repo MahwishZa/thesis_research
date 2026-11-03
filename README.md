@@ -22,9 +22,8 @@ src/
   evaluate.py     the command line: profile, run, report
   models/         one adapter per model provider (Gemini only, for now)
 tests/            unit tests (no API calls, no real data)
-docs/
-  experiment_log.md   dated decisions, settings and supervisor approvals
-results/          created by the commands: the dataset profile and one folder per model run
+results/          the dataset profile and one folder per model run
+EXPERIMENT_LOG.md dated decisions, findings, settings and supervisor approvals
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
