@@ -23,8 +23,8 @@ src/
   evaluate.py     the command line: profile, isic, run, report
   models/         one adapter per model provider (Gemini only, for now)
 tests/            unit tests (no API calls, no real data)
-results/          the dataset profile, the ISIC label check and corrections, and one folder per model run
-EXPERIMENT_LOG.md dated decisions, findings, settings and supervisor approvals
+results/          the dataset profile, the ISIC label check and corrections, one folder per model run, and
+                  EXPERIMENT_LOG.md (dated decisions, findings, settings and supervisor approvals)
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
