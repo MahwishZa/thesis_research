@@ -1,27 +1,11 @@
-# Python and tool leftovers
+# Python leftovers and virtual environments
 __pycache__/
 *.py[cod]
-*.egg-info/
-build/
-dist/
-.coverage
-htmlcov/
-.ruff_cache/
-.pytest_cache/
-.mypy_cache/
 .venv/
 venv/
 
-# Large or machine-local data. Never commit these. A `git add -A` once picked up several gigabytes this way;
-# regenerate or re-download them locally instead. The leading slash ties a name to the repository root.
-/models/
-/outputs/
-/corpus/
-/retrieval_corpora/
-filters/
-checkpoints/
-local/
+# The dataset and anything derived from its images stay on your computer, never in Git.
+/data/
 
-# The old implementation was removed from the repository. A folder of that name inside the repository may still hold
-# local data (indexes, labels, benchmark files) on a computer that built them; Git must never pick it up.
-/_archive/
+# API keys
+.env
