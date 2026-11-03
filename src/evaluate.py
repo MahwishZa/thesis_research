@@ -2,7 +2,7 @@
 
     python -m src.evaluate profile --root data --train <train folder> --test <test folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
-    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels] [--list-models]
+    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels] [--list-models] [--model <id>]
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test
     python -m src.evaluate report results/gemini-3.8-flash/<run folder>
@@ -189,15 +189,17 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
                 f.flush()
                 answered += 1
                 print(f"[{i}/{len(items)}] {record.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
-    except (models.TransientError, models.FatalError) as exc:
+    except (models.TransientError, models.QuotaExhausted, models.FatalError) as exc:
         nothing_to_continue = answered == 0 and created
         if nothing_to_continue:
             shutil.rmtree(out)  # an empty folder is only a trap: nothing in it can be continued or committed
         if isinstance(exc, models.FatalError):
             raise SystemExit(f"STOPPED, {answered} of {len(items)} answered. {exc}") from exc
-        print(f"NOT FINISHED: {answered} of {len(items)} answered. Last problem: {exc}\n"
+        quota = isinstance(exc, models.QuotaExhausted)
+        print(f"NOT FINISHED: {answered} of {len(items)} answered. {'' if quota else 'Last problem: '}{exc}\n"
               + ("Nothing was saved. " if nothing_to_continue else f"Your answers are saved in {out} (Git ignores it). ")
-              + "Run the same command again to continue; nothing needs to be committed until it finishes.")
+              + ("Run the same command again once the quota allows it" if quota else "Run the same command again to continue")
+              + "; nothing needs to be committed until it finishes.")
         return out
 
     card["status"], card["finished_utc"] = "complete", _now()
@@ -329,6 +331,7 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--config", required=True)
     c.add_argument("--thinking-levels", action="store_true", help="also probe every thinking setting the model might accept")
     c.add_argument("--list-models", action="store_true", help="also list the models the key can use")
+    c.add_argument("--model", help="test this model id instead of the config's (the config file is not changed)")
     r = sub.add_parser("run", help="run one model on the dev sample or the test split")
     r.add_argument("--config", required=True)
     r.add_argument("--split", choices=("dev", "test"), required=True)
@@ -347,7 +350,10 @@ def main(argv: list[str] | None = None) -> None:
         elif args.command == "isic":
             print(isic.check(args.manifest, args.out, args.cache, everything=args.all))
         elif args.command == "check":
-            sys.exit(0 if preflight.check(load_config(args.config), args.config, args.thinking_levels, list_models=args.list_models) else 1)
+            config = load_config(args.config)
+            if args.model:
+                config["model"] = {**config["model"], "id": args.model}
+            sys.exit(0 if preflight.check(config, args.config, args.thinking_levels, list_models=args.list_models) else 1)
         elif args.command == "run":
             run(args.config, args.split, args.run_id, args.limit)
         else:

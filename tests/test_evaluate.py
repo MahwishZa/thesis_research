@@ -12,17 +12,20 @@ class FakeModel:
     """Says "melanoma" for every image. Calls are counted, including retries.
 
     ``fail_on``: call numbers that fail once with a transient error; ``fail_from``: every call from this number on fails
-    transiently; ``fatal_from``: every call from this number on fails with an error that retrying cannot fix.
+    transiently; ``fatal_from``: every call from this number on fails with an error that retrying cannot fix;
+    ``quota_from``: every call from this number on finds the daily quota used up.
     """
 
-    def __init__(self, fail_on=(), fail_from=None, fatal_from=None):
-        self.calls, self.fail_on, self.fail_from, self.fatal_from = 0, set(fail_on), fail_from, fatal_from
+    def __init__(self, fail_on=(), fail_from=None, fatal_from=None, quota_from=None):
+        self.calls, self.fail_on, self.fail_from, self.fatal_from, self.quota_from = 0, set(fail_on), fail_from, fatal_from, quota_from
 
     def describe(self):
         return {"model_id": "fake-1", "generation_config": {}}
 
     def predict(self, image, mime_type, prompt):
         self.calls += 1
+        if self.quota_from and self.calls >= self.quota_from:
+            raise models.QuotaExhausted("Daily quota used up for fake-1 (limit 20 requests per day on the free tier)")
         if self.fatal_from and self.calls >= self.fatal_from:
             raise models.FatalError("Google refused the request (HTTP 404 NOT_FOUND): gone", 404)
         if self.calls in self.fail_on or (self.fail_from and self.calls >= self.fail_from):
@@ -127,6 +130,32 @@ class EvaluateTests(unittest.TestCase):
         self.assertIn("STOPPED, 0 of 4 answered", str(raised.exception))
         self.assertIn("HTTP 404", str(raised.exception))
         self.assertEqual(list(self.model_dir.iterdir()) if self.model_dir.exists() else [], [])
+
+    def test_a_daily_quota_stops_at_once_keeps_the_answers_and_continues_later(self):
+        model = FakeModel(quota_from=3)
+        partial = self._run(model, "dev", run_id="d1")
+        self.assertEqual((partial, model.calls), (self.model_dir / "d1.partial", 3))  # no retries: waiting minutes cannot help
+        self.assertEqual(len(self._preds(partial)), 2)
+        self.assertFalse([c for c in self.sleep.call_args_list if c.args and c.args[0] >= 10])  # and no waiting either
+        later = FakeModel()
+        self.assertEqual(self._run(later, "dev", run_id="d1"), self.model_dir / "d1")
+        self.assertEqual(later.calls, 2)
+        self._run(FakeModel(quota_from=1), "dev", run_id="d2")  # quota used up before the first answer: nothing is left behind
+        self.assertEqual([p.name for p in self.model_dir.iterdir()], ["d1"])
+
+    def test_the_check_can_try_another_model_without_changing_the_config(self):
+        seen = []
+
+        def load(provider, settings):
+            seen.append(settings["id"])
+            return mock.Mock(predict=mock.Mock(return_value={"text": "ok", "finish_reason": "STOP", "model_version": "v", "response_id": "r",
+                                                             "usage": {}}))
+
+        before = self.config.read_text(encoding="utf-8")
+        with mock.patch("src.preflight.models.load", side_effect=load), self.assertRaises(SystemExit) as raised:
+            evaluate.main(["check", "--config", str(self.config), "--model", "other-model"])
+        self.assertEqual((seen, raised.exception.code), (["other-model"], 0))
+        self.assertEqual(self.config.read_text(encoding="utf-8"), before)  # the file itself is unchanged
 
     def test_a_refusal_after_some_answers_keeps_them(self):
         with self.assertRaises(SystemExit):

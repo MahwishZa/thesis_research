@@ -13,6 +13,10 @@ class TransientError(Exception):
     """A failure worth retrying later (rate limit, server overload, network). The image is left unanswered, not scored."""
 
 
+class QuotaExhausted(Exception):
+    """A per-day quota is used up, so retrying within minutes cannot help. Answers already saved are kept."""
+
+
 class FatalError(Exception):
     """A failure that retrying cannot fix (wrong key, unavailable model, refused setting). The message says what to do."""
 

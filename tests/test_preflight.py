@@ -56,16 +56,17 @@ class PreflightTests(unittest.TestCase):
 
     def test_an_unavailable_model_is_reported_with_the_models_that_are(self):
         error = models.FatalError("Google refused the request (HTTP 404 NOT_FOUND): gone", 404)
-        ok, text = self._check(ProbeModel(error=error, names=["models/gemini-a", "models/gemini-b"]))
+        ok, text = self._check(ProbeModel(error=error, names=["gemini-a", "gemini-b"]))
         self.assertFalse(ok)
         self.assertIn("[FAIL] Model fake-1: Google refused the request (HTTP 404", text)
-        self.assertIn("models your key can use: models/gemini-a, models/gemini-b", text)
+        self.assertIn("models your key can use", text)
+        self.assertIn("gemini-a, gemini-b", text)
         self.assertIn("Fix the lines marked FAIL", text)
 
     def test_the_models_can_be_listed_while_the_model_works(self):
-        ok, text = self._check(ProbeModel(names=["models/gemini-a", "models/gemini-b"]), list_models=True)
+        ok, text = self._check(ProbeModel(names=["gemini-a", "gemini-b"]), list_models=True)
         self.assertTrue(ok)
-        self.assertEqual(text.count("models your key can use: models/gemini-a, models/gemini-b"), 1)
+        self.assertEqual(text.count("gemini-a, gemini-b"), 1)
         ok, text = self._check(ProbeModel(), list_models=True)  # a provider that cannot list them says so
         self.assertIn("cannot list its models", text)
 
@@ -122,8 +123,54 @@ class PreflightTests(unittest.TestCase):
                                                                                     ("thinking_level = LOW", {"thinking_level": "LOW"})]):
             preflight.check(evaluate.load_config(self.project.config), str(self.project.config), True, say=lines.append)
         text = "\n".join(lines)
-        self.assertIn("- thinking_level = MINIMAL: REFUSED or failed: Google refused the request (HTTP 400): MINIMAL not supported", text)
+        self.assertIn("- thinking_level = MINIMAL: REFUSED: Google refused the request (HTTP 400): MINIMAL not supported", text)
         self.assertIn("- thinking_level = LOW: accepted, thinking tokens 0, finish reason STOP", text)
+
+
+    def _variants(self, loads, variants):
+        """The check with ``variants`` probed by the models in ``loads`` (one per call of load, in order); returns (ok, text)."""
+        lines, loaded = [], iter(loads)
+        with mock.patch("src.preflight.models.load", side_effect=lambda provider, settings: next(loaded)), \
+                mock.patch("src.preflight.models.settings_variants", return_value=variants):
+            ok = preflight.check(evaluate.load_config(self.project.config), str(self.project.config), True, say=lines.append)
+        return ok, "\n".join(lines)
+
+    def test_a_used_up_daily_quota_fails_at_once_and_spends_nothing_more(self):
+        quota = models.QuotaExhausted("Daily quota used up for fake-1 (limit 20 requests per day on the free tier)")
+        model = ProbeModel(error=quota)
+        ok, text = self._check(model, variants=True)
+        self.assertFalse(ok)
+        self.assertEqual(model.calls, 1)  # no retries, and the thinking settings are not probed
+        self.assertIn("[FAIL] Model fake-1: Daily quota used up for fake-1", text)
+        self.assertIn("the thinking settings were not tested: the daily quota is used up", text)
+        self.assertIn("a used-up daily quota needs the reset, a paid key or another model", text)
+
+    def test_a_quota_that_runs_out_during_the_thinking_probes_is_a_warning_and_stops_them(self):
+        quota = models.QuotaExhausted("Daily quota used up for fake-1")
+        third = ProbeModel()
+        ok, text = self._variants([ProbeModel(), ProbeModel(), ProbeModel(error=quota), third],
+                                  [("setting A", {"a": 1}), ("setting B", {"b": 1}), ("setting C", {"c": 1})])
+        self.assertTrue(ok)
+        self.assertIn("- setting A: accepted", text)
+        self.assertIn("- setting B: not tested: Daily quota used up", text)
+        self.assertNotIn("setting C", text)
+        self.assertEqual(third.calls, 0)
+        self.assertIn("[WARN] Thinking settings: the remaining ones were not tested", text)
+        self.assertIn("Checks passed, but read the WARN lines", text)
+
+    def test_a_temporary_problem_while_probing_is_not_called_a_refusal(self):
+        busy = ProbeModel(error=models.TransientError("HTTP 503 UNAVAILABLE: busy"))
+        ok, text = self._variants([ProbeModel(), busy, ProbeModel()], [("setting A", {"a": 1}), ("setting B", {"b": 1})])
+        self.assertTrue(ok)
+        self.assertIn("- setting A: not tested: temporary problem, not a setting: HTTP 503", text)
+        self.assertIn("- setting B: accepted", text)
+
+    def test_the_configured_setting_is_not_asked_twice(self):
+        settings = evaluate.load_config(self.project.config)["model"]
+        configured = ProbeModel()
+        ok, text = self._variants([ProbeModel(), configured], [("SKIPPED-SETTING", dict(settings)), ("another", {"x": 1})])
+        self.assertNotIn("SKIPPED-SETTING", text)  # skipped: it was tested above, and every request counts against the quota
+        self.assertIn("- another: accepted", text)
 
 
 if __name__ == "__main__":

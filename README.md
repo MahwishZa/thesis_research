@@ -66,7 +66,9 @@ Every model run, in this order:
    Google is temporarily busy the check says so: wait a few minutes and run it again. If the model refuses a thinking
    setting, `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --thinking-levels` shows which settings it
    accepts, and `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --list-models` lists the models your key
-   can use. The check sends only a blank synthetic image, never a dataset image.
+   can use (a listed model can still be refused). `python -m src.evaluate check --config configs/gemini-3.8-flash.toml --model gemini-2.5-flash-lite`
+   tries another model without editing the config. The check sends only a blank synthetic image, never a dataset image. Each
+   probe is one request against your daily quota: the check uses one, `--thinking-levels` up to five more.
 6. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5`.
 7. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test`.
    Its report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels.
@@ -87,7 +89,9 @@ continue where it stopped (the folder name follows from the settings, so this al
 | `HTTP 400 ... Thinking level ... not supported` | the model refuses the thinking setting | `check --thinking-levels`, then change the setting in a new config file |
 | `HTTP 400 ... API key not valid` | wrong key | correct the `GEMINI_API_KEY` line in `.env` |
 | `HTTP 503 ... high demand` | Google is overloaded; temporary | the run retries for about 8 minutes, then stops with `NOT FINISHED`; run the same command again later |
-| `HTTP 429` | too many requests or quota | wait, or lower `requests_per_minute` in a new config file |
+| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; Google reported 20 per day for `gemini-3.8-flash` on the free tier (2026-11-04), and a test run needs one request per test image | the run stops at once and keeps its answers; run the same command after the reset Google names, or use a paid key, or another model (https://ai.dev/rate-limit shows your limits) |
+| `HTTP 429` (per minute) | too many requests in a minute | retried automatically; lower `requests_per_minute` in a new config file if it keeps happening |
+| `HTTP 504 DEADLINE_EXCEEDED`, `network problem (ReadTimeout ...)` | Google answered too slowly, or the connection was lost | retried automatically |
 | `network problem` | no connection, or no answer within 120 seconds | check the internet connection, then run the same command again |
 | `answers were cut off at the output limit (MAX_TOKENS)` | the model's thinking used up `max_output_tokens` | raise `max_output_tokens` in a new config file; results are not valid until then |
 | `images on disk differ from the committed profile` | dataset files changed or are missing | extract the ZIP again, or run steps 2 and 3 again and review the differences |
