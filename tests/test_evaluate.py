@@ -5,40 +5,27 @@ from pathlib import Path
 from unittest import mock
 
 from src import evaluate, models
-from tests.support import make_dataset
-
-CONFIG = """name = "fake"
-[data]
-root = "{root}"
-train = "Train"
-test = "Test"
-corrections = "{corrections}"
-[model]
-provider = "fake"
-id = "fake-1"
-[prompt]
-file = "{prompt}"
-[run]
-requests_per_minute = 600000
-dev_per_class = 2
-dev_seed = 0
-order_seed = 0
-max_image_side = 50
-"""
+from tests.support import make_project, write_corrections
 
 
 class FakeModel:
-    """Says "melanoma" for every image; fails transiently once on the second call."""
+    """Says "melanoma" for every image. Calls are counted, including retries.
 
-    def __init__(self, fail_on_call=None):
-        self.calls, self.fail_on_call = 0, fail_on_call
+    ``fail_on``: call numbers that fail once with a transient error; ``fail_from``: every call from this number on fails
+    transiently; ``fatal_from``: every call from this number on fails with an error that retrying cannot fix.
+    """
+
+    def __init__(self, fail_on=(), fail_from=None, fatal_from=None):
+        self.calls, self.fail_on, self.fail_from, self.fatal_from = 0, set(fail_on), fail_from, fatal_from
 
     def describe(self):
         return {"model_id": "fake-1", "generation_config": {}}
 
     def predict(self, image, mime_type, prompt):
         self.calls += 1
-        if self.calls == self.fail_on_call:
+        if self.fatal_from and self.calls >= self.fatal_from:
+            raise models.FatalError("Google refused the request (HTTP 404 NOT_FOUND): gone", 404)
+        if self.calls in self.fail_on or (self.fail_from and self.calls >= self.fail_from):
             raise models.TransientError("rate limited")
         return {"text": "Melanoma.", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": str(self.calls),
                 "usage": {}}
@@ -47,35 +34,27 @@ class FakeModel:
 class EvaluateTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        base = Path(self.tmp.name)
-        make_dataset(base / "data", {"Train": {"melanoma": 3, "nevus": 3}, "Test": {"melanoma": 2, "nevus": 2}})
-        (base / "prompt.txt").write_text("Pick one:\n{labels}\nAnswer with the name only.", encoding="utf-8")
-        self.corrections = base / "label_corrections.csv"
-        self._corrections()
-        self.config = base / "fake.toml"
-        self.config.write_text(CONFIG.format(root=(base / "data").as_posix(), prompt=(base / "prompt.txt").as_posix(),
-                                             corrections=self.corrections.as_posix()), encoding="utf-8")
-        self.results = base / "results"
+        self.project = make_project(Path(self.tmp.name))
+        self.config, self.results = self.project.config, self.project.results
+        self.model_dir = self.results / "fake"
         patcher = mock.patch("src.evaluate.time.sleep")
-        patcher.start()
+        self.sleep = patcher.start()
         self.addCleanup(patcher.stop)
 
     def tearDown(self):
         self.tmp.cleanup()
 
-    def _corrections(self, *rows):
-        """Writes the corrections file: (path, folder label, corrected label) per row."""
-        lines = ["path,isic_id,folder_label,corrected_label,isic_fields"]
-        lines += [f"{path},{Path(path).stem},{folder},{corrected},diagnosis={corrected}" for path, folder, corrected in rows]
-        self.corrections.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.evaluate.models.load", return_value=model):
             return evaluate.run(str(self.config), *args, results=self.results, **kwargs)
 
+    def _preds(self, folder):
+        return [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+
     def test_test_run_writes_predictions_metrics_and_report(self):
-        out = self._run(FakeModel(fail_on_call=2), "test", run_id="t1")
-        preds = [json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        out = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
+        self.assertEqual(out, self.model_dir / "t1")
+        preds = self._preds(out)
         self.assertEqual(len(preds), 4)
         self.assertTrue(all(p["prediction"] == "melanoma" for p in preds))
         self.assertEqual(preds[1]["attempts"], 2)
@@ -84,13 +63,15 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual((metrics["folder_labels"]["n"], metrics["folder_labels"]["correct"]), (4, 2))
         self.assertIsNone(metrics["corrected_labels"])  # no corrections listed: scored once
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
-        self.assertEqual((card["status"], card["model_versions_returned"]), ("complete", ["fake-1-001"]))
+        self.assertEqual((card["status"], card["model_versions_returned"], card["run_id"]), ("complete", ["fake-1-001"], "t1"))
         text = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("| Accuracy | 50.0% (2/4) |", text)
         self.assertNotIn("ISIC-corrected labels", text)
+        self.assertEqual([p.name for p in self.model_dir.iterdir()], ["t1"])  # no .partial folder is left behind
 
     def test_the_same_answers_are_scored_against_folder_and_corrected_labels(self):
-        self._corrections(("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"), ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"),
+        write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"),
+                          ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"),
                           ("Train/nevus/ISIC_0000004.jpg", "nevus", "melanoma"))  # not in the test run: ignored
         out = self._run(FakeModel(), "test", run_id="t1")
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
@@ -102,16 +83,16 @@ class EvaluateTests(unittest.TestCase):
         self.assertIn("| Accuracy | 50.0% (2/4) |", text)
         self.assertIn("| Accuracy | 100.0% (4/4) |", text)
         self.assertIn("| nevus | 0 | n/a | n/a | n/a | 0 |", text)  # an answer option with no image under corrected labels
+        self.assertIn("answer options with no image: nevus", text)
         self.assertIn("any one of the 2 largest classes (melanoma, nevus) 50.0%", text)  # folder labels: a tie
         self.assertIn("the largest class (melanoma) 100.0%", text)  # corrected labels
-        self.assertIn("answer options with no image: nevus", text)
         self.assertIn("| Test/nevus/ISIC_0000009.jpg | nevus | melanoma | melanoma |", text)
 
     def test_corrections_written_for_other_data_are_refused(self):
-        self._corrections(("Test/nevus/ISIC_0000009.jpg", "melanoma", "nevus"))  # the folder label does not match
+        write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "melanoma", "nevus"))  # folder label differs
         with self.assertRaises(ValueError):
             self._run(FakeModel(), "test", run_id="t1")
-        self._corrections(("Test/nevus/ISIC_0000009.jpg", "nevus", "vascular lesion"))  # not an answer option
+        write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "vascular lesion"))  # not an option
         with self.assertRaises(ValueError):
             self._run(FakeModel(), "test", run_id="t1")
 
@@ -122,30 +103,96 @@ class EvaluateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._run(FakeModel(), "test", run_id="t3", limit=1)
 
-    def test_interrupted_run_resumes_without_repeating(self):
-        model = FakeModel(fail_on_call=1)
-        with mock.patch("src.evaluate.MAX_ATTEMPTS", 1):
-            out = self._run(model, "dev", run_id="d1")
-        self.assertFalse((out / "predictions.jsonl").read_text(encoding="utf-8").strip())
-        self.assertEqual(json.loads((out / "run_card.json").read_text(encoding="utf-8"))["status"], "running")
+    def test_a_stopped_run_keeps_its_answers_apart_and_resumes(self):
+        with mock.patch("src.evaluate.MAX_ATTEMPTS", 2):
+            partial = self._run(FakeModel(fail_from=3), "dev", run_id="d1")
+        self.assertEqual(partial, self.model_dir / "d1.partial")  # Git ignores *.partial
+        self.assertFalse((self.model_dir / "d1").exists())
+        self.assertEqual(len(self._preds(partial)), 2)
+        self.assertEqual(json.loads((partial / "run_card.json").read_text(encoding="utf-8"))["status"], "running")
         second = FakeModel()
-        self._run(second, "dev", run_id="d1")
-        self.assertEqual(second.calls, 4)
-        self.assertEqual(len((out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()), 4)
+        out = self._run(second, "dev", run_id="d1")
+        self.assertEqual(second.calls, 2)  # only the two unanswered images
+        self.assertEqual(out, self.model_dir / "d1")
+        self.assertEqual(len(self._preds(out)), 4)
+        self.assertEqual([p.name for p in self.model_dir.iterdir()], ["d1"])
+        self.assertTrue((out / "report.md").exists())
 
-    def test_changed_prompt_cannot_continue_an_old_run(self):
-        model = FakeModel(fail_on_call=1)
-        with mock.patch("src.evaluate.MAX_ATTEMPTS", 1):
-            self._run(model, "dev", run_id="d1")
-        (Path(self.tmp.name) / "prompt.txt").write_text("Choose:\n{labels}", encoding="utf-8")
+    def test_a_run_that_answered_nothing_leaves_no_folder(self):
+        with mock.patch("src.evaluate.MAX_ATTEMPTS", 2):
+            self._run(FakeModel(fail_from=1), "dev", run_id="d1")  # overloaded from the first image
+        self.assertEqual(list(self.model_dir.iterdir()) if self.model_dir.exists() else [], [])
+        with self.assertRaises(SystemExit) as raised:  # a refused setting, from the first image
+            self._run(FakeModel(fatal_from=1), "dev", run_id="d1")
+        self.assertIn("STOPPED, 0 of 4 answered", str(raised.exception))
+        self.assertIn("HTTP 404", str(raised.exception))
+        self.assertEqual(list(self.model_dir.iterdir()) if self.model_dir.exists() else [], [])
+
+    def test_a_refusal_after_some_answers_keeps_them(self):
         with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=3), "dev", run_id="d1")
+        self.assertEqual(len(self._preds(self.model_dir / "d1.partial")), 2)
+
+    def test_the_default_folder_follows_from_the_settings(self):
+        with mock.patch("src.evaluate.MAX_ATTEMPTS", 1):
+            partial = self._run(FakeModel(fail_on=[2]), "dev")
+        self.assertRegex(partial.name, r"^dev_[0-9a-f]{8}\.partial$")
+        again = self._run(FakeModel(), "dev")  # the same command continues the same run
+        self.assertEqual(again, self.model_dir / partial.name.removesuffix(".partial"))
+        self.assertEqual(len(self._preds(again)), 4)
+        with self.assertRaises(SystemExit):  # finished: the same command does not run it again
+            self._run(FakeModel(), "dev")
+        self.project.prompt.write_text("Choose:\n{labels}", encoding="utf-8")  # other settings: another folder, no clash
+        other = self._run(FakeModel(), "dev")
+        self.assertNotEqual(other, again)
+
+    def test_a_changed_prompt_cannot_continue_an_old_explicit_run(self):
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=2), "dev", run_id="d1")
+        self.project.prompt.write_text("Choose:\n{labels}", encoding="utf-8")
+        with self.assertRaises(SystemExit) as raised:
             self._run(FakeModel(), "dev", run_id="d1")
+        self.assertIn("different config, prompt or image set", str(raised.exception))
+
+    def test_an_unfinished_test_run_must_be_continued_not_restarted(self):
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=2), "test", run_id="t1")
+        with self.assertRaises(SystemExit) as raised:
+            self._run(FakeModel(), "test", run_id="t2")
+        self.assertIn("--run-id t1", str(raised.exception))
+        self.assertEqual(self._run(FakeModel(), "test", run_id="t1"), self.model_dir / "t1")
+
+    def test_a_folder_that_cannot_be_renamed_is_finished_by_running_the_command_again(self):
+        real_rename = Path.rename
+        with mock.patch.object(Path, "rename", side_effect=PermissionError("in use")), self.assertRaises(SystemExit) as raised:
+            self._run(FakeModel(), "test", run_id="t1")
+        self.assertIn("could not be renamed", str(raised.exception))
+        self.assertTrue((self.model_dir / "t1.partial" / "report.md").exists())
+        self.assertFalse((self.model_dir / "t1").exists())
+        again = FakeModel()
+        with mock.patch.object(Path, "rename", real_rename):
+            out = self._run(again, "test", run_id="t1")  # the test-run guard must not mistake the finished answers for a finished run
+        self.assertEqual((out, again.calls), (self.model_dir / "t1", 0))
+        self.assertEqual(len(self._preds(out)), 4)
+
+    def test_failed_attempts_wait_longer_each_time(self):
+        self._run(FakeModel(fail_on=[1, 2, 3]), "dev", run_id="d1")
+        self.assertEqual([c.args[0] for c in self.sleep.call_args_list if c.args and c.args[0] >= 10][:3], [10, 20, 40])
 
     def test_limit_takes_a_mixed_sample(self):
         out = self._run(FakeModel(), "dev", run_id="d2", limit=3)
-        preds = [json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        preds = self._preds(out)
         self.assertEqual(len(preds), 3)
         self.assertEqual({p["label"] for p in preds}, {"melanoma", "nevus"})
+
+    def test_images_that_differ_from_the_committed_profile_stop_the_run(self):
+        from PIL import Image
+
+        Image.new("RGB", (60, 45), (1, 2, 3)).save(self.project.data / "Test" / "nevus" / "ISIC_0000009.jpg")  # replaced file
+        with self.assertRaises(ValueError) as raised:
+            self._run(FakeModel(), "test", run_id="t1")
+        self.assertIn("1 changed", str(raised.exception))
+        self.assertFalse(self.model_dir.exists())
 
     def test_answers_cut_off_at_the_output_limit_are_flagged_in_the_report(self):
         class Truncated(FakeModel):
@@ -164,7 +211,7 @@ class EvaluateTests(unittest.TestCase):
         self.assertFalse(self.results.exists())
 
     def test_unreadable_image_stops_the_run(self):
-        (Path(self.tmp.name) / "data" / "Test" / "nevus" / "broken.jpg").write_bytes(b"not a jpeg")
+        (self.project.data / "Test" / "nevus" / "broken.jpg").write_bytes(b"not a jpeg")
         with self.assertRaises(ValueError):
             self._run(FakeModel(), "test", run_id="t1")
 
@@ -172,6 +219,11 @@ class EvaluateTests(unittest.TestCase):
         self.config.write_text(self.config.read_text(encoding="utf-8").replace('train = "Train"', 'train = ""'), encoding="utf-8")
         with self.assertRaises(ValueError):
             evaluate.load_config(self.config)
+
+    def test_the_command_line_turns_expected_problems_into_messages(self):
+        with self.assertRaises(SystemExit) as raised:
+            evaluate.main(["run", "--config", str(self.config.with_name("missing.toml")), "--split", "dev"])
+        self.assertTrue(str(raised.exception).startswith("ERROR: "))
 
 
 if __name__ == "__main__":

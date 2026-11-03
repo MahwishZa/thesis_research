@@ -1,14 +1,17 @@
-"""Command line for phase 1: profile the dataset, run one model on one split, and write the report.
+"""Command line for phase 1: profile the dataset, check the setup, run one model on one split, and write the report.
 
     python -m src.evaluate profile --root data --train <train folder> --test <test folder>
+    python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
+    python -m src.evaluate check --config configs/gemini-3.8-flash.toml [--thinking-levels]
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5
     python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test
     python -m src.evaluate report results/gemini-3.8-flash/<run folder>
-    python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
 
+``check`` tests everything a run needs, without sending any dataset image. Run it before every run.
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
 ``test`` is the dataset's own test split. It is run once per config, and a finished test run is never overwritten.
-A run saves every answer as it arrives, so an interrupted run continues where it stopped when started again.
+A run saves every answer as it arrives, in a folder ending in ``.partial`` (ignored by Git). An interrupted run continues
+where it stopped when the same command is run again; a finished run's folder loses the ``.partial`` ending.
 The report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels
 listed in the file named by ``[data] corrections`` (written by the isic command). The model never sees a label.
 """
@@ -21,6 +24,7 @@ import importlib.metadata
 import json
 import platform
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -28,10 +32,10 @@ import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import dataset, isic, metrics, models, prompt
+from . import dataset, isic, metrics, models, preflight, prompt
 
 RESULTS = Path("results")
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 8  # waits of 10, 20, 40, 80, 120, 120, 120 seconds between them: about 8.5 minutes in all
 
 
 def _now() -> str:
@@ -49,7 +53,7 @@ def _git() -> dict:
 
 def _versions() -> dict:
     out = {"python": platform.python_version()}
-    for package in ("google-genai", "pillow"):
+    for package in ("google-genai", "pillow", "httpx"):
         try:
             out[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
@@ -60,7 +64,7 @@ def _versions() -> dict:
 def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
-    for section, keys in {"data": ("root", "train", "test", "corrections"), "model": ("provider", "id"), "prompt": ("file",),
+    for section, keys in {"data": ("root", "train", "test", "corrections", "manifest"), "model": ("provider", "id"), "prompt": ("file",),
                           "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side")}.items():
         for key in keys:
             if key not in config.get(section, {}):
@@ -80,6 +84,21 @@ def _write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
 
+def _ask(model, image: bytes, mime: str, text: str, throttle) -> tuple[dict, int]:
+    """One answer and the number of attempts it took. Waits longer after each transient failure; raises when all fail."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        throttle()
+        try:
+            return model.predict(image, mime, text), attempt
+        except models.TransientError as exc:
+            if attempt == MAX_ATTEMPTS:
+                raise
+            wait = min(120, 10 * 2 ** (attempt - 1))
+            print(f"  attempt {attempt}/{MAX_ATTEMPTS} failed ({exc}); waiting {wait} s")
+            time.sleep(wait)
+    raise AssertionError("unreachable")
+
+
 def run(config_path: str, split: str, run_id: str | None = None, limit: int | None = None, results: Path = RESULTS) -> Path:
     config = load_config(config_path)
     if split == "test" and limit:
@@ -92,6 +111,7 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     unknown = sorted({r.label for r in records if r.split == "test"} - set(labels))
     if unknown:
         raise ValueError(f"test classes missing from training: {unknown}")
+    dataset.verify_against_manifest(records, config["data"]["manifest"])
     if split == "dev":
         items = dataset.dev_subset(records, config["run"]["dev_per_class"], config["run"]["dev_seed"])
     elif split == "test":
@@ -107,73 +127,91 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     prompt_text = prompt.build(template, labels)
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + dataset.items_hash(items).encode()).hexdigest()
+    run_id = run_id or f"{split}_{fingerprint[:8]}"  # the same settings always give the same folder, so a stopped run resumes
     models.load_env()
     model = models.load(config["model"]["provider"], config["model"])  # a missing key stops the run before any file is written
 
     model_dir = results / config["name"]
-    out = model_dir / (run_id or f"{datetime.now(timezone.utc):%Y%m%d}_{split}")
+    final, out = model_dir / run_id, model_dir / f"{run_id}.partial"  # unfinished work lives in the .partial folder (git-ignored)
     card_path, pred_path = out / "run_card.json", out / "predictions.jsonl"
     if split == "test":
         for other in model_dir.glob("*/run_card.json"):
             card = json.loads(other.read_text(encoding="utf-8"))
             if card["split"] != "test":
                 continue
-            if card["status"] == "complete":
+            if not other.parent.name.endswith(".partial"):  # a folder without the .partial ending is a finished run
                 raise SystemExit(f"a finished test run already exists for this config: {other.parent} (results are not overwritten)")
             if other.parent != out:
-                raise SystemExit(f"an unfinished test run exists: {other.parent}; continue it with --run-id {other.parent.name}")
-    if card_path.exists():
-        card = json.loads(card_path.read_text(encoding="utf-8"))
-        if card["status"] == "complete":
-            raise SystemExit(f"{out} is finished; choose another --run-id")
-        if card["fingerprint"] != fingerprint:
-            raise SystemExit(f"{out} was started with a different config, prompt or image set; choose another --run-id")
-    else:
+                raise SystemExit(f"an unfinished test run exists: {other.parent}. Continue it with --run-id "
+                                 f"{other.parent.name.removesuffix('.partial')}; if the config, prompt or images changed since, "
+                                 "delete that folder to start over")
+    if final.exists():
+        raise SystemExit(f"{final} is finished; choose another --run-id to run it again")
+    created = not card_path.exists()
+    if created:
         out.mkdir(parents=True, exist_ok=True)
-        card = {"name": config["name"], "split": split, "run_id": out.name, "status": "running", "fingerprint": fingerprint,
+        card = {"name": config["name"], "split": split, "run_id": run_id, "status": "running", "fingerprint": fingerprint,
                 "config_file": Path(config_path).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": dataset.items_hash(items),
                 "dataset_files_not_images": len(problems), "git": _git(), "versions": _versions(),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
-        _write_json(card_path, card)
-
+    else:
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        if card["fingerprint"] != fingerprint:
+            raise SystemExit(f"{out} was started with a different config, prompt or image set; delete that folder to start "
+                             "over, or choose another --run-id")
     card["model"] = model.describe()
     _write_json(card_path, card)
     done = {p["path"] for p in _read_jsonl(pred_path)}
     todo = [r for r in items if r.path not in done]
     interval = 60.0 / config["run"]["requests_per_minute"]
-    last = 0.0
+    last = [0.0]
+
+    def throttle() -> None:
+        time.sleep(max(0.0, interval - (time.monotonic() - last[0])))
+        last[0] = time.monotonic()
+
     root = Path(config["data"]["root"])
-    print(f"{out}: {len(done)} of {len(items)} answered, {len(todo)} to go")
-    with pred_path.open("a", encoding="utf-8", newline="\n") as f:
-        for i, record in enumerate(todo, start=len(done) + 1):
-            image, mime, sent = dataset.prepare_image(root / record.path, config["run"]["max_image_side"])
-            for attempt in range(1, MAX_ATTEMPTS + 1):
-                time.sleep(max(0.0, interval - (time.monotonic() - last)))
-                last = time.monotonic()
-                try:
-                    answer = model.predict(image, mime, prompt_text)
-                    break
-                except models.TransientError as exc:
-                    if attempt == MAX_ATTEMPTS:
-                        print(f"stopped after {MAX_ATTEMPTS} failed attempts ({exc}); run the same command again later to continue")
-                        return out
-                    time.sleep(min(120, 10 * 2 ** (attempt - 1)))
-            parsed = prompt.parse(answer["text"], labels)
-            line = {"path": record.path, "label": record.label, "prediction": parsed, "raw_text": answer["text"],
-                    "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
-                    "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt, "image_sent": sent,
-                    "answered_utc": _now()}
-            f.write(json.dumps(line, ensure_ascii=False) + "\n")
-            f.flush()
-            print(f"[{i}/{len(items)}] {record.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
+    answered = len(done)
+    print(f"{out}: {answered} of {len(items)} answered, {len(todo)} to go")
+    try:
+        with pred_path.open("a", encoding="utf-8", newline="\n") as f:
+            for i, record in enumerate(todo, start=len(done) + 1):
+                image, mime, sent = dataset.prepare_image(root / record.path, config["run"]["max_image_side"])
+                answer, attempt = _ask(model, image, mime, prompt_text, throttle)
+                parsed = prompt.parse(answer["text"], labels)
+                line = {"path": record.path, "label": record.label, "prediction": parsed, "raw_text": answer["text"],
+                        "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
+                        "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt, "image_sent": sent,
+                        "answered_utc": _now()}
+                f.write(json.dumps(line, ensure_ascii=False) + "\n")
+                f.flush()
+                answered += 1
+                print(f"[{i}/{len(items)}] {record.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
+    except (models.TransientError, models.FatalError) as exc:
+        nothing_to_continue = answered == 0 and created
+        if nothing_to_continue:
+            shutil.rmtree(out)  # an empty folder is only a trap: nothing in it can be continued or committed
+        if isinstance(exc, models.FatalError):
+            raise SystemExit(f"STOPPED, {answered} of {len(items)} answered. {exc}") from exc
+        print(f"NOT FINISHED: {answered} of {len(items)} answered. Last problem: {exc}\n"
+              + ("Nothing was saved. " if nothing_to_continue else f"Your answers are saved in {out} (Git ignores it). ")
+              + "Run the same command again to continue; nothing needs to be committed until it finishes.")
+        return out
 
     card["status"], card["finished_utc"] = "complete", _now()
     card["model_versions_returned"] = sorted({p["model_version"] for p in _read_jsonl(pred_path) if p["model_version"]})
     _write_json(card_path, card)
     report(out)
-    return out
+    try:
+        out.rename(final)
+    except OSError as exc:  # Windows refuses while a program (Explorer, an editor) has the folder open
+        raise SystemExit(f"The run is complete and saved in {out}, but the folder could not be renamed ({exc}). Close any "
+                         "program showing it and run the same command again; no image is sent again.") from exc
+    print(f"FINISHED: {len(items)} of {len(items)} answered. Report: {final / 'report.md'}\n"
+          "This folder is complete and can be committed.")
+    return final
 
 
 def _pct(x: float) -> str:
@@ -273,7 +311,7 @@ def report(run_dir: str | Path) -> Path:
     return path
 
 
-def main(argv: list[str] | None = None) -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.evaluate", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("profile", help="inventory the dataset (no model is run)")
@@ -282,27 +320,39 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--test", required=True, help="testing-split folder inside --root")
     p.add_argument("--out", default="results/dataset_profile", help="manifest.csv and profile.md (committed)")
     p.add_argument("--sheets", default="data/contact_sheets", help="thumbnail sheets (stay out of Git)")
-    r = sub.add_parser("run", help="run one model on the dev sample or the test split")
-    r.add_argument("--config", required=True)
-    r.add_argument("--split", choices=("dev", "test"), required=True)
-    r.add_argument("--run-id")
-    r.add_argument("--limit", type=int, help="first N images of the dev sample (dev only)")
-    rep = sub.add_parser("report", help="rewrite metrics.json and report.md from saved predictions")
-    rep.add_argument("run_dir")
     i = sub.add_parser("isic", help="check the dataset's labels against the diagnoses recorded in the ISIC Archive")
     i.add_argument("--manifest", default="results/dataset_profile/manifest.csv")
     i.add_argument("--out", default="results/dataset_profile")
     i.add_argument("--cache", default="data/isic_cache", help="raw ISIC records (stay out of Git)")
     i.add_argument("--all", action="store_true", help="check every image, not only conflicting and testing images")
-    args = parser.parse_args(argv)
-    if args.command == "profile":
-        print(dataset.profile(args.root, {"train": args.train, "test": args.test}, args.out, args.sheets))
-    elif args.command == "run":
-        print(run(args.config, args.split, args.run_id, args.limit))
-    elif args.command == "report":
-        print(report(args.run_dir))
-    else:
-        print(isic.check(args.manifest, args.out, args.cache, everything=args.all))
+    c = sub.add_parser("check", help="test everything a run needs, without sending any dataset image")
+    c.add_argument("--config", required=True)
+    c.add_argument("--thinking-levels", action="store_true", help="also probe every thinking setting the model might accept")
+    r = sub.add_parser("run", help="run one model on the dev sample or the test split")
+    r.add_argument("--config", required=True)
+    r.add_argument("--split", choices=("dev", "test"), required=True)
+    r.add_argument("--run-id", help="folder name; by default one that follows from the settings, so a stopped run resumes")
+    r.add_argument("--limit", type=int, help="first N images of the dev sample (dev only)")
+    rep = sub.add_parser("report", help="rewrite metrics.json and report.md from saved predictions")
+    rep.add_argument("run_dir")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "profile":
+            print(dataset.profile(args.root, {"train": args.train, "test": args.test}, args.out, args.sheets))
+        elif args.command == "isic":
+            print(isic.check(args.manifest, args.out, args.cache, everything=args.all))
+        elif args.command == "check":
+            sys.exit(0 if preflight.check(load_config(args.config), args.config, args.thinking_levels) else 1)
+        elif args.command == "run":
+            run(args.config, args.split, args.run_id, args.limit)
+        else:
+            print(report(args.run_dir))
+    except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback
+        raise SystemExit(f"ERROR: {exc}") from exc
 
 
 if __name__ == "__main__":

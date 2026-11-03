@@ -10,7 +10,15 @@ from pathlib import Path
 
 
 class TransientError(Exception):
-    """A failure worth retrying later (rate limit, server overload). The image is left unanswered, not scored."""
+    """A failure worth retrying later (rate limit, server overload, network). The image is left unanswered, not scored."""
+
+
+class FatalError(Exception):
+    """A failure that retrying cannot fix (wrong key, unavailable model, refused setting). The message says what to do."""
+
+    def __init__(self, message: str, code: int | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 def load_env(path: str | Path = ".env") -> None:
@@ -35,6 +43,15 @@ def load_env(path: str | Path = ".env") -> None:
             value = value[1:-1]
         if name and value:
             os.environ.setdefault(name, value)
+
+
+def settings_variants(provider: str, settings: dict) -> list[tuple[str, dict]]:
+    """Alternative settings worth probing for a provider (name, settings); empty when the provider has none."""
+    if provider == "gemini":
+        from .gemini import thinking_variants
+
+        return thinking_variants(settings)
+    return []
 
 
 def load(provider: str, settings: dict):

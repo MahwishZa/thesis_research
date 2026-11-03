@@ -7,6 +7,9 @@ venv/
 # The dataset and anything derived from its images stay on your computer, never in Git.
 /data/
 
+# Unfinished runs (a run's folder loses the .partial ending when it finishes)
+*.partial/
+
 # API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env
 .env.*

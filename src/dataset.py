@@ -105,6 +105,21 @@ def dev_subset(records: list[Record], per_class: int, seed: int) -> list[Record]
     return chosen
 
 
+def verify_against_manifest(records: list[Record], manifest: str | Path) -> None:
+    """Stops if the images on disk are not exactly those in the committed profile (and so in the ISIC label check)."""
+    with open(manifest, encoding="utf-8") as f:
+        profiled = {r["path"]: (r["split"], r["label"], r["sha256"]) for r in csv.DictReader(f)}
+    found = {r.path: (r.split, r.label, r.sha256) for r in records}
+    changed = sorted(p for p in found.keys() & profiled.keys() if found[p] != profiled[p])
+    new, missing = sorted(found.keys() - profiled.keys()), sorted(profiled.keys() - found.keys())
+    if changed or new or missing:
+        examples = "; ".join(f"{why}: {items[0]}" for why, items in (("changed", changed), ("not in the profile", new),
+                                                                       ("missing", missing)) if items)
+        raise ValueError(f"the images on disk differ from the committed profile {manifest}: {len(changed)} changed, "
+                         f"{len(new)} not in the profile, {len(missing)} missing ({examples}). Extract the dataset again from the "
+                         "original ZIP, or run the profile and isic commands again and review the differences")
+
+
 def prepare_image(path: str | Path, max_side: int) -> tuple[bytes, str, dict]:
     """The bytes to send for one image, their media type, and a record of what was sent.
 
