@@ -1,9 +1,9 @@
 """Command line for phase 1: profile the dataset, run one model on one split, and write the report.
 
     python -m src.evaluate profile --root data --train <train folder> --test <test folder>
-    python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split dev --limit 5
-    python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split test
-    python -m src.evaluate report results/gemini-2.5-flash/<run folder>
+    python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5
+    python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test
+    python -m src.evaluate report results/gemini-3.8-flash/<run folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
 
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.

@@ -50,9 +50,9 @@ python -m unittest discover -s tests -t .
    answer "Yes" to create the file, type one line and save: `GEMINI_API_KEY=<your key>` (no quotes needed). Further keys
    go on further lines. Git ignores `.env`, so it never leaves your computer; never paste a key into a chat or any
    other file. A key set in the terminal (`$env:GEMINI_API_KEY = "<your key>"`) takes priority over the file.
-   To list the Gemini models your key can use: `python -c "from src import models; models.load_env(); from google import genai; [print(m.name) for m in genai.Client().models.list() if 'gemini' in m.name]"`.
-5. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split dev --limit 5`.
-6. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split test`.
+   To list the Gemini models your key can use: `python -c "from src import models; models.load_env(); from google import genai; c = genai.Client(); [print(m.name) for m in c.models.list() if 'gemini' in m.name]"`.
+5. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split dev --limit 5`.
+6. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-3.8-flash.toml --split test`.
    Its report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels.
 
 A stopped run continues where it ended: run the same command again with `--run-id <run folder name>`.
