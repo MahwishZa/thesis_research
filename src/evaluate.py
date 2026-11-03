@@ -1,6 +1,6 @@
 """Command line for phase 1: profile the dataset, check the setup, run one model on one split, and write the report.
 
-    python -m src.evaluate profile --root data --train <train folder> --test <test folder>
+    python -m src.evaluate profile --root data --train <train-folder> --test <test-folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
     python -m src.evaluate check --config configs/<model>.toml [--list-models] [--model <id>]
     python -m src.evaluate run --config configs/<model>.toml --split dev --limit 5

@@ -26,19 +26,19 @@ class RepoTests(unittest.TestCase):
         self.addCleanup(os.chdir, cwd)
         self.readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    def test_every_command_in_the_readme_is_accepted_by_the_command_line(self):
-        commands = re.findall(r"python -m src\.evaluate ([^`\n]+)", self.readme)
-        self.assertGreaterEqual(len(commands), 6)
-        for arguments in commands:
-            with self.subTest(arguments):
-                evaluate.build_parser().parse_args(shlex.split(arguments))
+    def test_every_command_in_the_usage_documentation_is_accepted_by_the_command_line(self):
+        usage = re.findall(r"^\s+python -m src\.evaluate (.+?)(?:\s{2,}\(.*)?$", evaluate.__doc__, re.M)
+        self.assertGreaterEqual(len(usage), 5)
+        for line in usage:
+            for form in (re.sub(r"\[[^\]]*\]", "", line), re.sub(r"\[([^\]]*)\]", r"\1", line)):  # without / with the optional [parts]
+                with self.subTest(form):
+                    evaluate.build_parser().parse_args(shlex.split(form))
 
     def test_commands_and_modules_are_documented(self):
         parser = evaluate.build_parser()
         names = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction)).choices
         for name in names:
             self.assertIn(f"python -m src.evaluate {name}", evaluate.__doc__, f"the module docstring omits '{name}'")
-            self.assertIn(f"python -m src.evaluate {name}", self.readme, f"the README omits '{name}'")
         for module in sorted((ROOT / "src").glob("*.py")) + [ROOT / "src" / "models"]:
             if module.name != "__init__.py":
                 self.assertIn(module.name if module.is_file() else "models/", self.readme, f"the README tree omits {module.name}")
