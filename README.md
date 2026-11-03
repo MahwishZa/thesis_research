@@ -25,7 +25,7 @@ tests/            unit tests (no API calls, no real data)
 docs/
   experiment_log.md   dated decisions, settings and supervisor approvals
 results/          created by the commands: the dataset profile and one folder per model run
-data/             put the extracted dataset here; only data/README.md is committed, never the images
+data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
 ## How to Run
@@ -39,10 +39,10 @@ pip install -r requirements.txt
 python -m unittest discover -s tests -t .
 ```
 
-1. Extract the dataset ZIP into `data\` (see `data/README.md`), so that each split is a folder with one subfolder per class.
-2. Profile it (no model, no API): `python -m src.evaluate profile --root data --train <training folder> --test <testing folder>`.
+1. Extract the dataset ZIP into `data\`, giving `data\Train\<class>\` and `data\Test\<class>\`.
+2. Profile it (no model, no API): `python -m src.evaluate profile --root data --train Train --test Test`.
    This writes `results/dataset_profile/` (committed) and thumbnail sheets in `data/contact_sheets/` (not committed).
-3. Write the two folder names into `[data]` in `configs/gemini-2.5-flash.toml`.
+3. Check the profile before any model is run.
 4. Set the API key for this PowerShell session: `$env:GEMINI_API_KEY = "<your key>"`. Never put the key in a file in the repository.
 5. Development check on a few training images: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split dev --limit 5`.
 6. Test run, once, after the supervisor approves the settings: `python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split test`.
