@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 IMAGE_EXTENSIONS = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 NEAR_DUPLICATE_DISTANCE = 40  # dHash bits out of 256; a candidate list to check by eye, not a verdict
@@ -103,6 +103,30 @@ def dev_subset(records: list[Record], per_class: int, seed: int) -> list[Record]
         group = sorted(by_label[label], key=lambda r: r.path)
         chosen.extend(sorted(rng.sample(group, min(per_class, len(group))), key=lambda r: r.path))
     return chosen
+
+
+def prepare_image(path: str | Path, max_side: int) -> tuple[bytes, str, dict]:
+    """The bytes to send for one image, their media type, and a record of what was sent.
+
+    An image whose longer side is at most ``max_side`` pixels is sent exactly as stored. A larger one is scaled down so
+    its longer side is ``max_side`` (aspect ratio kept, Lanczos filter) and saved as JPEG quality 95. The same rule applies
+    to every model; it keeps every request within API size limits.
+    """
+    path = Path(path)
+    data = path.read_bytes()
+    with Image.open(io.BytesIO(data)) as im:
+        width, height = im.size
+        if max(width, height) <= max_side:
+            info = {"resized": False, "width": width, "height": height}
+            return data, IMAGE_EXTENSIONS[path.suffix.lower()], info | {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+        scale = max_side / max(width, height)
+        size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        small = ImageOps.exif_transpose(im).convert("RGB").resize(size, Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    small.save(buffer, "JPEG", quality=95)
+    out = buffer.getvalue()
+    info = {"resized": True, "original_width": width, "original_height": height, "width": size[0], "height": size[1]}
+    return out, "image/jpeg", info | {"bytes": len(out), "sha256": hashlib.sha256(out).hexdigest()}
 
 
 def write_manifest(records: list[Record], path: str | Path) -> None:

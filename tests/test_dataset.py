@@ -1,7 +1,10 @@
+import io
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from src import dataset
 from tests.support import make_dataset
@@ -45,6 +48,17 @@ class DatasetTests(unittest.TestCase):
         before = dataset.items_hash(records)
         (self.root / "Train" / "nevus" / "ISIC_0000005.jpg").write_bytes((self.root / "Train" / "melanoma" / "ISIC_0000002.jpg").read_bytes())
         self.assertNotEqual(before, dataset.items_hash(dataset.scan(self.root, SPLITS)[0]))
+
+    def test_small_image_is_sent_unchanged_and_large_one_scaled_down(self):
+        small = self.root / "Train" / "melanoma" / "ISIC_0000001.jpg"
+        data, mime, info = dataset.prepare_image(small, 2048)
+        self.assertEqual((data, mime, info["resized"]), (small.read_bytes(), "image/jpeg", False))
+        big = Path(self.tmp.name) / "big.png"
+        Image.new("RGB", (3000, 1000), (10, 20, 30)).save(big)
+        data, mime, info = dataset.prepare_image(big, 2048)
+        self.assertEqual((mime, info["resized"], info["width"], info["height"]), ("image/jpeg", True, 2048, 683))
+        with Image.open(io.BytesIO(data)) as im:
+            self.assertEqual(im.size, (2048, 683))
 
     def test_profile_reports_cross_split_duplicate(self):
         out = Path(self.tmp.name) / "profile"

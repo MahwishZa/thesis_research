@@ -4,6 +4,7 @@
     python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split dev --limit 5
     python -m src.evaluate run --config configs/gemini-2.5-flash.toml --split test
     python -m src.evaluate report results/gemini-2.5-flash/<run folder>
+    python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
 
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
 ``test`` is the dataset's own test split. It is run once per config, and a finished test run is never overwritten.
@@ -25,7 +26,7 @@ import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import dataset, metrics, models, prompt
+from . import dataset, isic, metrics, models, prompt
 
 RESULTS = Path("results")
 MAX_ATTEMPTS = 5
@@ -58,7 +59,7 @@ def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
     for section, keys in {"data": ("root", "train", "test"), "model": ("provider", "id"), "prompt": ("file",),
-                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed")}.items():
+                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side")}.items():
         for key in keys:
             if key not in config.get(section, {}):
                 raise ValueError(f"{path}: missing [{section}] {key}")
@@ -143,8 +144,7 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     print(f"{out}: {len(done)} of {len(items)} answered, {len(todo)} to go")
     with pred_path.open("a", encoding="utf-8", newline="\n") as f:
         for i, record in enumerate(todo, start=len(done) + 1):
-            image = (root / record.path).read_bytes()
-            mime = dataset.IMAGE_EXTENSIONS[Path(record.path).suffix.lower()]
+            image, mime, sent = dataset.prepare_image(root / record.path, config["run"]["max_image_side"])
             for attempt in range(1, MAX_ATTEMPTS + 1):
                 time.sleep(max(0.0, interval - (time.monotonic() - last)))
                 last = time.monotonic()
@@ -159,7 +159,7 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
             parsed = prompt.parse(answer["text"], labels)
             line = {"path": record.path, "label": record.label, "prediction": parsed, "raw_text": answer["text"],
                     "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
-                    "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
+                    "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt, "image_sent": sent,
                     "answered_utc": _now()}
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
             f.flush()
@@ -222,7 +222,9 @@ def report(run_dir: str | Path) -> Path:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
     lines += ["", "## Notes", "",
               f"- Classes with fewer than 10 images (their per-class figures are unreliable): {', '.join(small) or 'none'}",
-              f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}"]
+              f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
+              f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
+              f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
     path = run_dir / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
@@ -244,13 +246,20 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--limit", type=int, help="first N images of the dev sample (dev only)")
     rep = sub.add_parser("report", help="rewrite metrics.json and report.md from saved predictions")
     rep.add_argument("run_dir")
+    i = sub.add_parser("isic", help="check the dataset's labels against the diagnoses recorded in the ISIC Archive")
+    i.add_argument("--manifest", default="results/dataset_profile/manifest.csv")
+    i.add_argument("--out", default="results/dataset_profile")
+    i.add_argument("--cache", default="data/isic_cache", help="raw ISIC records (stay out of Git)")
+    i.add_argument("--all", action="store_true", help="check every image, not only conflicting and testing images")
     args = parser.parse_args(argv)
     if args.command == "profile":
         print(dataset.profile(args.root, {"train": args.train, "test": args.test}, args.out, args.sheets))
     elif args.command == "run":
         print(run(args.config, args.split, args.run_id, args.limit))
-    else:
+    elif args.command == "report":
         print(report(args.run_dir))
+    else:
+        print(isic.check(args.manifest, args.out, args.cache, everything=args.all))
 
 
 if __name__ == "__main__":

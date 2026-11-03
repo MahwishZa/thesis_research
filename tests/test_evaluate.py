@@ -22,6 +22,7 @@ requests_per_minute = 600000
 dev_per_class = 2
 dev_seed = 0
 order_seed = 0
+max_image_side = 50
 """
 
 
@@ -68,6 +69,7 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(len(preds), 4)
         self.assertTrue(all(p["prediction"] == "melanoma" for p in preds))
         self.assertEqual(preds[1]["attempts"], 2)
+        self.assertEqual((preds[0]["image_sent"]["resized"], preds[0]["image_sent"]["width"]), (True, 50))  # 60x45 > 50
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual((metrics["n"], metrics["correct"]), (4, 2))
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
