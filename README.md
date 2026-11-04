@@ -2,47 +2,17 @@
 
 ## Overview
 
-This thesis investigates retrieval-augmented generation (RAG) for medical question answering. Its base paper, and the template
-for its method and reporting, is *Rationale-Guided Retrieval Augmented Generation for Medical Question Answering* (RAG²; Sohn
-et al., NAACL 2025). The experiments use a skin-lesion image dataset supplied by the supervisor and proceed in three phases;
-each model is reviewed with the supervisor before the next one is started.
-
-| Phase | Description | Status |
-|---|---|---|
-| 1 | Evaluate large language models (LLMs) individually, without retrieval | In progress: Gemini 3.5 Flash-Lite is complete; further LLMs await the supervisor's approval |
-| 2 | Standard RAG | Not started |
-| 3 | RAG² baseline | Not started |
+Existing methods do X. This is insufficient under condition Y because of limitation Z. My research will investigate whether approach W addresses that limitation, using experiments A and B.
 
 ## Research Objectives
 
 1. To implement and validate the proposed system using predefined evaluation metrics for retrieval and generation performance.
-2. To determine the extent to which the proposed system improves retrieval and generation performance compared with relevant
-   models and existing works.
-
-## Dataset
-
-- **Content:** 2,357 dermoscopic skin-lesion images in 9 classes, split by the dataset into 2,239 training and 118 test images
-  (per-class counts: `results/dataset_profile/profile.md`).
-- **Source:** ISIC Archive images; the same set is published on Kaggle as `nodoubttome/skin-cancer9-classesisic`. The images
-  are not part of this repository (`data/` is ignored by Git).
-- **Labels:** the class is the folder name. For 3 test images labelled seborrheic keratosis, the ISIC record (histopathology)
-  gives melanoma; every report scores both the ISIC-corrected and the folder labels (`results/dataset_profile/`).
-
-## Evaluation Protocol (Phase 1)
-
-- **Task:** zero-shot classification. The LLM receives one image and a fixed prompt (`prompts/diagnosis_v1.txt`) listing the
-  9 class names, and must reply with one class name. No LLM is trained or fine-tuned, and none sees a label.
-- **Comparability:** the same prompt, answer reader and image rule for every LLM. An unreadable answer counts as wrong.
-- **Settings:** temperature 0 and one run, as in the base paper; each model's other settings are in its config file in `configs/`.
-- **Metric:** accuracy on the 118 test images with its 95% Wilson interval, main result against the ISIC-corrected labels.
-  Retrieval metrics and any further metrics are added only with the supervisor's approval.
-- **Reproducibility:** the test split is run once per config and never overwritten. Each run saves every answer, its settings,
-  prompt and image-set hashes, package versions and the Git commit (`run_card.json`). Dated decisions are in
-  `results/EXPERIMENT_LOG.md`.
+2. To determine the extent to which the proposed system improves retrieval and generation performance compared with relevant models and existing works.
 
 ## Results
 
-Accuracy (%) on the 118 test images, zero-shot, temperature 0, one run. Each row links to the run's full report.
+Accuracy (%) on the 118 test images, zero-shot, temperature 0, one run. The main figure is scored against the ISIC-corrected
+labels; each row links to the run's full report.
 
 | Model | ISIC-corrected labels (main) | 95% interval | Folder labels | Report |
 |---|---|---|---|---|
@@ -109,9 +79,3 @@ python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split t
 answers: `python -m src.evaluate report results/<model>/<run>`.
 
 **Tests** (no API calls): `python -m unittest discover -s tests`
-
-## Reference
-
-Sohn, J., Park, Y., Yoon, C., Park, S., Hwang, H., Sung, M., Kim, H., and Kang, J. (2025). Rationale-Guided Retrieval
-Augmented Generation for Medical Question Answering. *Proceedings of NAACL 2025*, pp. 12739-12753.
-[ACL Anthology](https://aclanthology.org/2025.naacl-long.635) · [Code](https://github.com/dmis-lab/RAG2)
