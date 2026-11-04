@@ -8,7 +8,12 @@ Existing methods do X. This is insufficient under condition Y because of limitat
 
 ## Results
 
-No model has been evaluated yet. Each finished run is listed here with a link to its report in `results/`.
+Each finished run is listed here with a link to its report in `results/`. Accuracy on the 118 test images, scored against the
+ISIC-corrected labels (the dataset's folder labels in brackets); temperature 0, one run.
+
+| Model | Accuracy (%) | Report |
+|---|---|---|
+| Gemini 3.5 Flash-Lite (0-shot) | 37.3 (36.4) | [report](results/gemini-3.5-flash-lite/test_88d88f32_r1/report.md) |
 
 ## Repository Structure
 
