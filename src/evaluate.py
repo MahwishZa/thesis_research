@@ -11,7 +11,8 @@
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
 ``test`` is the dataset's own test split, run once per config as ``[run] test_runs`` repeats (folders ``..._r1``, ``..._r2``,
 ...), each with its own seed (the config's seed plus 0, 1, 2, ...). One command makes all of them; when the last one is
-finished it writes a summary across the runs (mean and spread of the accuracy, and how often the answers agree).
+finished it writes a summary across the runs (mean and spread of the accuracy, and how often the answers agree); with
+``test_runs = 1`` (the base paper's practice: one run at temperature 0) the single run's report is the result.
 A finished test run is never overwritten.
 A run saves every answer as it arrives, in a folder ending in ``.partial`` (ignored by Git). An interrupted run continues
 where it stopped when the same command is run again; a finished run's folder loses the ``.partial`` ending.
@@ -148,10 +149,13 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     _refuse_other_test_runs(model_dir, group, fingerprint)
     for number in range(1, total + 1):
         if (model_dir / f"{group}_r{number}").exists():
+            print(f"{model_dir / f'{group}_r{number}'} is finished (results are not overwritten)")
             continue  # finished earlier
         out = _run_once(job, f"{group}_r{number}", repeat=(number, total, group))
         if out.name.endswith(".partial"):
             return out  # stopped: the same command continues with this run
+    if total == 1:
+        return model_dir / f"{group}_r1"  # a single run needs no summary: its report is the result
     summary = summarize_test_runs(model_dir, group, total)
     print(f"FINISHED: all {total} test runs. Summary across them: {summary}\nThe run folders and the summary can be committed.")
     return summary
@@ -303,7 +307,7 @@ def report(run_dir: str | Path) -> Path:
 
     complete = card["status"] == "complete" and len(preds) == card["n_images"]
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
-    if card.get("repeat"):
+    if card.get("repeat") and card["repeats"] > 1:
         lines += [f"Test run {card['repeat']} of {card['repeats']} (seed {card['seed']}); the summary across the runs is "
                   f"`{card['repeat_group']}_summary.md` next to this folder.", ""]
     if card["split"] == "dev":

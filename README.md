@@ -41,7 +41,7 @@ data/             the extracted dataset (Train/ and Test/, one subfolder per cla
 | `HTTP 404` | the model is not available to your key | the check lists the models your key can use (if the adapter can); set `id` in a new config file |
 | `HTTP 400` or `401`/`403` about the key | wrong or refused key | correct the key line in `.env` |
 | `HTTP 503` ("high demand") | the provider is overloaded; temporary | the run retries for about 8 minutes, then stops with `NOT FINISHED`; run the same command again later |
-| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; each test run needs one request per test image (3 runs: 354) | the run stops at once and keeps its answers; run the same command after the reset the provider names, or use a paid key, or another model |
+| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; a test run needs one request per test image (118) | the run stops at once and keeps its answers; run the same command after the reset the provider names, or use a paid key, or another model |
 | `HTTP 429` (per minute) | too many requests in a minute | retried automatically; lower `requests_per_minute` in a new config file if it keeps happening |
 | `HTTP 504`, `network problem (... timeout)` | the provider answered too slowly, or the connection was lost | retried automatically |
 | `answers were cut off at the output limit (MAX_TOKENS)` | the answer hit `max_output_tokens` (hidden reasoning can count toward it) | raise `max_output_tokens` in a new config file; results are not valid until then |
@@ -50,5 +50,5 @@ data/             the extracted dataset (Train/ and Test/, one subfolder per cla
 | `a finished test run already exists for this config, made with other settings` | the config, prompt or images changed after the test runs finished | nothing is overwritten; a changed setting needs a new config file |
 | `an unfinished test run made with other settings ... exists` | the config, prompt or images changed during the test runs | undo the change, or delete the `.partial` folder it names to start over |
 | `the test runs of this config already exist under the name ...` | `--run-id` names a different set of test runs | continue them with the `--run-id` the message names |
-| `FINISHED: all 3 test runs` | every test run is done; `<name>_summary.md` gives the mean and spread across them | commit the run folders and the summary |
+| `FINISHED: all N test runs` | only when `test_runs` is above 1: every test run is done; `<name>_summary.md` gives the mean and spread across them | commit the run folders and the summary |
 | `ERROR: ...` | a problem with the config, the data or a path, explained in the message | fix what it names |

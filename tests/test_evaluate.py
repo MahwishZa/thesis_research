@@ -55,9 +55,8 @@ class EvaluateTests(unittest.TestCase):
         return [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
 
     def test_test_run_writes_predictions_metrics_and_report(self):
-        summary = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
-        self.assertEqual(summary, self.model_dir / "t1_summary.md")
-        out = self.model_dir / "t1_r1"
+        out = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
+        self.assertEqual(out, self.model_dir / "t1_r1")  # one test run (test_runs = 1): its report is the result
         preds = self._preds(out)
         self.assertEqual(len(preds), 4)
         self.assertTrue(all(p["prediction"] == "melanoma" for p in preds))
@@ -71,7 +70,10 @@ class EvaluateTests(unittest.TestCase):
         text = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("| Accuracy | 50.0% (2/4) |", text)
         self.assertNotIn("ISIC-corrected labels", text)
-        self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1_r1", "t1_summary.json", "t1_summary.md"])  # no .partial
+        self.assertNotIn("summary across the runs", text)
+        again = FakeModel()  # the same command again: nothing is sent, nothing is overwritten
+        self.assertEqual((self._run(again, "test", run_id="t1"), again.calls), (out, 0))
+        self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1_r1"])  # no .partial, no summary
 
     def test_the_same_answers_are_scored_against_folder_and_corrected_labels(self):
         write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"),
@@ -196,7 +198,7 @@ class EvaluateTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as raised:
             self._run(FakeModel(), "test", run_id="t2")
         self.assertIn("--run-id t1", str(raised.exception))
-        self.assertEqual(self._run(FakeModel(), "test", run_id="t1"), self.model_dir / "t1_summary.md")
+        self.assertEqual(self._run(FakeModel(), "test", run_id="t1"), self.model_dir / "t1_r1")
 
     def _three_runs(self):
         """Config with 3 test runs and a seed; returns a model loader that records the seed of every model it loads."""
@@ -282,7 +284,7 @@ class EvaluateTests(unittest.TestCase):
         again = FakeModel()
         with mock.patch.object(Path, "rename", real_rename):
             out = self._run(again, "test", run_id="t1")  # the test-run guard must not mistake the finished answers for a finished run
-        self.assertEqual((out, again.calls), (self.model_dir / "t1_summary.md", 0))
+        self.assertEqual((out, again.calls), (self.model_dir / "t1_r1", 0))
         self.assertEqual(len(self._preds(self.model_dir / "t1_r1")), 4)
 
     def test_failed_attempts_wait_longer_each_time(self):
