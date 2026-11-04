@@ -90,6 +90,9 @@ class EvaluateTests(unittest.TestCase):
         self.assertIn("any one of the 2 largest classes (melanoma, nevus) 50.0%", text)  # folder labels: a tie
         self.assertIn("the largest class (melanoma) 100.0%", text)  # corrected labels
         self.assertIn("| Test/nevus/ISIC_0000009.jpg | nevus | melanoma | melanoma |", text)
+        main, comparison = text.index("## Main result: scored against the ISIC-corrected labels"), text.index("## For comparison")
+        self.assertLess(main, comparison)  # the corrected labels give the headline figure
+        self.assertLess(text.index("| Accuracy | 100.0% (4/4) |"), comparison)
 
     def test_corrections_written_for_other_data_are_refused(self):
         write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "melanoma", "nevus"))  # folder label differs

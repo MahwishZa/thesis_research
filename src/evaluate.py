@@ -294,9 +294,12 @@ def report(run_dir: str | Path) -> Path:
               f"- Label corrections: `{corrections_file.as_posix()}` (SHA-256 `{corrections_sha256[:12]}`): "
               + (f"{len(fixed)} of these images have an ISIC-corrected label, so the same answers are scored twice."
                  if fixed else "none of these images has a corrected label, so the answers are scored once."), ""]
-    lines += _scoring("Scored against the dataset's folder labels", folder, labels)
+    if corrected:  # the headline figure (decision of 2026-11-04): ISIC histopathology outranks the folder name
+        lines += _scoring("Main result: scored against the ISIC-corrected labels", corrected, labels)
+        lines += _scoring("For comparison: scored against the dataset's folder labels", folder, labels)
+    else:
+        lines += _scoring("Scored against the dataset's folder labels (no label among these images is corrected)", folder, labels)
     if corrected:
-        lines += _scoring("Scored against the ISIC-corrected labels", corrected, labels)
         lines += ["Images whose label is corrected (evidence: the ISIC record in the corrections file):", "",
                   "| Image | Folder label | Corrected label | Answer |", "|---|---|---|---|"]
         lines += [f"| {p['path']} | {p['label']} | {fixed[p['path']]} | {p['prediction'] or metrics.UNREADABLE} |"
