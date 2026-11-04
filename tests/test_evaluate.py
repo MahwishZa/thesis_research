@@ -120,6 +120,9 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(len(self._preds(out)), 4)
         self.assertEqual([p.name for p in self.model_dir.iterdir()], ["d1"])
         self.assertTrue((out / "report.md").exists())
+        stops = json.loads((out / "run_card.json").read_text(encoding="utf-8"))["interruptions"]  # the stop stays on record
+        self.assertEqual([(s["answered"], s["kind"]) for s in stops], [(2, "TransientError")])
+        self.assertIn("Interruptions before the run finished: 1", (out / "report.md").read_text(encoding="utf-8"))
 
     def test_a_run_that_answered_nothing_leaves_no_folder(self):
         with mock.patch("src.evaluate.MAX_ATTEMPTS", 2):
@@ -161,6 +164,8 @@ class EvaluateTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self._run(FakeModel(fatal_from=3), "dev", run_id="d1")
         self.assertEqual(len(self._preds(self.model_dir / "d1.partial")), 2)
+        card = json.loads((self.model_dir / "d1.partial" / "run_card.json").read_text(encoding="utf-8"))
+        self.assertEqual([s["kind"] for s in card["interruptions"]], ["FatalError"])
 
     def test_the_default_folder_follows_from_the_settings(self):
         with mock.patch("src.evaluate.MAX_ATTEMPTS", 1):

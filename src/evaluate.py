@@ -193,6 +193,10 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
         nothing_to_continue = answered == 0 and created
         if nothing_to_continue:
             shutil.rmtree(out)  # an empty folder is only a trap: nothing in it can be continued or committed
+        else:  # the run card keeps every stop, so a finished run shows whether and why it was interrupted
+            card.setdefault("interruptions", []).append({"utc": _now(), "answered": answered, "kind": type(exc).__name__,
+                                                         "message": str(exc)})
+            _write_json(card_path, card)
         if isinstance(exc, models.FatalError):
             raise SystemExit(f"STOPPED, {answered} of {len(items)} answered. {exc}") from exc
         quota = isinstance(exc, models.QuotaExhausted)
@@ -306,6 +310,8 @@ def report(run_dir: str | Path) -> Path:
               *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
                 if finish.get("MAX_TOKENS") else []),
+              f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
+              + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", [])),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
     path = run_dir / "report.md"
