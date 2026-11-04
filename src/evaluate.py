@@ -11,7 +11,7 @@
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
 ``test`` is the dataset's own test split, run once per config as ``[run] test_runs`` repeats (folders ``..._r1``, ``..._r2``,
 ...), each with its own seed (the config's seed plus 0, 1, 2, ...). One command makes all of them; when the last one is
-finished it writes a summary across the runs (mean and spread of every figure, and how often the answers agree).
+finished it writes a summary across the runs (mean and spread of the accuracy, and how often the answers agree).
 A finished test run is never overwritten.
 A run saves every answer as it arrives, in a folder ending in ``.partial`` (ignored by Git). An interrupted run continues
 where it stopped when the same command is run again; a finished run's folder loses the ``.partial`` ending.
@@ -271,46 +271,15 @@ def _pct(x: float) -> str:
     return f"{100 * x:.1f}%"
 
 
-def _kappa(x: float | None) -> str:
-    return "n/a" if x is None else f"{x:.3f}"
-
-
 def _ci(pair) -> str:
     return f"{_pct(pair[0])} to {_pct(pair[1])}"
 
 
-def _scoring(title: str, m: dict, labels: list[str]) -> list[str]:
-    """The results, per-class figures and confusion matrix of one scoring, as report lines."""
-    largest = m["baselines"]["majority_classes"]
-    lines = [f"## {title}", "", "| Metric | Value | 95% interval |", "|---|---|---|",
-             f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} (Wilson) |",
-             f"| Balanced accuracy | {_pct(m['balanced_accuracy'])} | {_ci(m['balanced_accuracy_ci95'])} (bootstrap) |",
-             f"| Macro-F1 | {_pct(m['macro_f1'])} | {_ci(m['macro_f1_ci95'])} (bootstrap) |",
-             f"| Cohen's kappa | {_kappa(m.get('cohen_kappa'))} | "
-             + (f"{_kappa(m['cohen_kappa_ci95'][0])} to {_kappa(m['cohen_kappa_ci95'][1])} (bootstrap) |"
-                if m.get("cohen_kappa") is not None else "|"),
-             f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |", "",
-             f"Reference points: guessing at random {_pct(m['baselines']['chance_accuracy'])}; always answering "
-             + (f"the largest class ({largest[0]})" if len(largest) == 1 else f"any one of the {len(largest)} largest classes "
-                f"({', '.join(largest)})") + f" {_pct(m['baselines']['majority_class_accuracy'])}.", "",
-             "| Class | Images | Recall | Precision | F1 | Times predicted |", "|---|---|---|---|---|---|"]
-    for label in labels:
-        c = m["per_class"][label]
-        has_images, predicted = c["support"] > 0, c["predicted"] > 0
-        lines.append(f"| {label} | {c['support']} | {_pct(c['recall']) if has_images else 'n/a'} | "
-                     f"{_pct(c['precision']) if predicted else 'n/a'} | {_pct(c['f1']) if has_images else 'n/a'} | {c['predicted']} |")
-    columns = labels + [metrics.UNREADABLE]
-    lines += ["", "Confusion matrix (rows: true class; columns: answer):", "",
-              "| True class | " + " | ".join(columns) + " |", "|---|" + "---|" * len(columns)]
-    for label in labels:
-        lines.append(f"| {label} | " + " | ".join(str(m["confusion"][label][c]) for c in columns) + " |")
-    present = [x for x in labels if m["per_class"][x]["support"]]
-    absent = [x for x in labels if not m["per_class"][x]["support"]]
-    small = [f"{x} ({m['per_class'][x]['support']})" for x in present if m["per_class"][x]["support"] < 10]
-    lines += ["", f"- Balanced accuracy and macro-F1 average over the {len(present)} classes that have images in this scoring"
-              + (f"; answer options with no image: {', '.join(absent)} (n/a: not defined)" if absent else "") + ".",
-              f"- Classes with fewer than 10 images (their per-class figures are unreliable): {', '.join(small) or 'none'}", ""]
-    return lines
+def _scoring(title: str, m: dict) -> list[str]:
+    """The accuracy of one scoring, as report lines."""
+    return [f"## {title}", "", "| Metric | Value | 95% interval |", "|---|---|---|",
+            f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} (Wilson) |",
+            f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |", ""]
 
 
 def report(run_dir: str | Path) -> Path:
@@ -323,8 +292,8 @@ def report(run_dir: str | Path) -> Path:
     corrections_sha256 = hashlib.sha256(corrections_file.read_bytes()).hexdigest()
     fixed = isic.read_corrections(corrections_file, labels, {p["path"]: p["label"] for p in preds})
     answers = [p["prediction"] for p in preds]
-    folder = metrics.summarize([p["label"] for p in preds], answers, labels)
-    corrected = metrics.summarize([fixed.get(p["path"], p["label"]) for p in preds], answers, labels) if fixed else None
+    folder = metrics.summarize([p["label"] for p in preds], answers)
+    corrected = metrics.summarize([fixed.get(p["path"], p["label"]) for p in preds], answers) if fixed else None
     _write_json(run_dir / "metrics.json", {
         "folder_labels": folder,
         "corrected_labels": corrected,
@@ -352,10 +321,10 @@ def report(run_dir: str | Path) -> Path:
               + (f"{len(fixed)} of these images have an ISIC-corrected label, so the same answers are scored twice."
                  if fixed else "none of these images has a corrected label, so the answers are scored once."), ""]
     if corrected:  # the headline figure (decision of 2026-11-04): ISIC histopathology outranks the folder name
-        lines += _scoring("Main result: scored against the ISIC-corrected labels", corrected, labels)
-        lines += _scoring("For comparison: scored against the dataset's folder labels", folder, labels)
+        lines += _scoring("Main result: scored against the ISIC-corrected labels", corrected)
+        lines += _scoring("For comparison: scored against the dataset's folder labels", folder)
     else:
-        lines += _scoring("Scored against the dataset's folder labels (no label among these images is corrected)", folder, labels)
+        lines += _scoring("Scored against the dataset's folder labels (no label among these images is corrected)", folder)
     if corrected:
         lines += ["Images whose label is corrected (evidence: the ISIC record in the corrections file):", "",
                   "| Image | Folder label | Corrected label | Answer |", "|---|---|---|---|"]
@@ -370,8 +339,6 @@ def report(run_dir: str | Path) -> Path:
               *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
                 if finish.get("MAX_TOKENS") else []),
-              "- Cohen's kappa: agreement between answers and labels beyond what chance would give (1 = perfect, 0 = chance "
-              "level); an unreadable answer is its own category",
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", [])),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
@@ -382,7 +349,7 @@ def report(run_dir: str | Path) -> Path:
 
 
 def summarize_test_runs(model_dir: Path, group: str, total: int) -> Path:
-    """Writes ``<group>_summary.md`` and ``.json``: every figure of each finished test run, their mean and spread, and how
+    """Writes ``<group>_summary.md`` and ``.json``: the accuracy of each finished test run, their mean and spread, and how
     often an image got the same answer in all runs. Uses only the saved answers and metrics (no model call)."""
     runs = []
     for number in range(1, total + 1):
@@ -397,7 +364,6 @@ def summarize_test_runs(model_dir: Path, group: str, total: int) -> Path:
     if any(sorted(r["answers"]) != images for r in runs):
         raise ValueError(f"the test runs of {group} did not answer the same images")
     same = sum(len({r["answers"][path] for r in runs}) == 1 for path in images)
-    names = ["accuracy", "balanced_accuracy", "macro_f1", "cohen_kappa"]
 
     def spread(values: list[float]) -> dict:
         mean = sum(values) / len(values)
@@ -418,24 +384,16 @@ def summarize_test_runs(model_dir: Path, group: str, total: int) -> Path:
              f"- Images that got the same answer in all {total} runs: {same} of {len(images)} ({_pct(same / len(images)) if images else 'n/a'})",
              "- Mean and SD are over the runs (sample SD); each run's 95% intervals over images are in its own report.", ""]
     for key, title in sets:
-        figures = {name: [r["metrics"][key][name] for r in runs] for name in names}
-        defined = {name: [v for v in values if v is not None] for name, values in figures.items()}
-        data[key] = {name: {"per_run": figures[name], **(spread(defined[name]) if defined[name] else {})} for name in names}
-        lines += [f"## {title}", "", "| Run | Seed | Accuracy | Balanced accuracy | Macro-F1 | Cohen's kappa | Unreadable |",
-                  "|---|---|---|---|---|---|---|"]
+        per_run = [r["metrics"][key]["accuracy"] for r in runs]
+        data[key] = {"accuracy": {"per_run": per_run, **spread(per_run)}}
+        s = data[key]["accuracy"]
+        lines += [f"## {title}", "", "| Run | Seed | Accuracy | 95% interval | Unreadable |", "|---|---|---|---|---|"]
         for r in runs:
             m = r["metrics"][key]
             lines.append(f"| {r['folder']} | {r['seed']} | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | "
-                         f"{_pct(m['balanced_accuracy'])} | {_pct(m['macro_f1'])} | {_kappa(m.get('cohen_kappa'))} | {m['unreadable']} |")
-
-        def cell(name: str, fmt) -> str:
-            s = data[key][name]
-            if "mean" not in s:
-                return "n/a"
-            return fmt(s["mean"]) + (f" ± {fmt(s['sd'])}" if s["sd"] is not None else "")
-
-        lines += [f"| **Mean ± SD** | | {cell('accuracy', _pct)} | {cell('balanced_accuracy', _pct)} | {cell('macro_f1', _pct)} | "
-                  f"{cell('cohen_kappa', _kappa)} | |", ""]
+                         f"{_ci(m['accuracy_ci95'])} | {m['unreadable']} |")
+        lines += [f"| **Mean ± SD** | | {_pct(s['mean'])}" + (f" ± {_pct(s['sd'])}" if s["sd"] is not None else "")
+                  + f" (lowest {_pct(s['min'])}, highest {_pct(s['max'])}) | | |", ""]
     _write_json(model_dir / f"{group}_summary.json", data)
     path = model_dir / f"{group}_summary.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")

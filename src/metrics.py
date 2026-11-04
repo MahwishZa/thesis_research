@@ -1,10 +1,12 @@
-"""Classification metrics with confidence intervals. An unreadable answer (None) always counts as wrong."""
+"""Accuracy with its 95% interval. An unreadable answer (None) always counts as wrong.
+
+Accuracy is the only metric reported: further metrics are added only once the supervisor approves them. They can be
+computed later from the saved answers (predictions.jsonl) without asking the model again.
+"""
 
 from __future__ import annotations
 
 import math
-import random
-from collections import Counter
 
 UNREADABLE = "(unreadable)"
 
@@ -19,91 +21,9 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
-def per_class(y_true: list[str], y_pred: list[str | None], labels: list[str]) -> dict[str, dict]:
-    """Precision, recall, F1 and support for each class."""
-    out = {}
-    for label in labels:
-        tp = sum(t == label and p == label for t, p in zip(y_true, y_pred))
-        predicted = sum(p == label for p in y_pred)
-        support = sum(t == label for t in y_true)
-        precision = tp / predicted if predicted else 0.0
-        recall = tp / support if support else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-        out[label] = {"precision": precision, "recall": recall, "f1": f1, "support": support, "predicted": predicted}
-    return out
-
-
-def _balanced_and_macro(y_true: list[str], y_pred: list[str | None], labels: list[str]) -> tuple[float, float]:
-    """Mean recall and mean F1 over the classes present in y_true."""
-    present = [label for label in labels if label in set(y_true)]
-    stats = per_class(y_true, y_pred, present)
-    if not present:
-        return (0.0, 0.0)
-    return (sum(stats[c]["recall"] for c in present) / len(present), sum(stats[c]["f1"] for c in present) / len(present))
-
-
-def cohen_kappa(y_true: list[str], y_pred: list[str | None]) -> float | None:
-    """Agreement between answers and labels corrected for chance (Cohen, 1960); an unreadable answer is its own category.
-
-    None when chance agreement is already complete (one label and one answer throughout), where kappa is not defined.
-    """
-    n = len(y_true)
-    if not n:
-        return None
-    answers = [p if p is not None else UNREADABLE for p in y_pred]
-    observed = sum(t == p for t, p in zip(y_true, answers)) / n
-    truth, given = Counter(y_true), Counter(answers)
-    expected = sum(truth[c] * given[c] for c in truth) / (n * n)
-    return None if expected >= 1 else (observed - expected) / (1 - expected)
-
-
-def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], n_boot: int = 2000, seed: int = 0) -> dict:
-    """All metrics for one run. Balanced accuracy, macro-F1 and Cohen's kappa get percentile bootstrap intervals over images."""
+def summarize(y_true: list[str], y_pred: list[str | None]) -> dict:
+    """Accuracy of one run: correct answers out of all images, with its 95% Wilson interval."""
     n = len(y_true)
     correct = sum(t == p for t, p in zip(y_true, y_pred))
-    balanced, macro = _balanced_and_macro(y_true, y_pred, labels)
-    rng = random.Random(seed)
-    boot_b, boot_m, boot_k = [], [], []
-    for _ in range(n_boot if n else 0):
-        idx = [rng.randrange(n) for _ in range(n)]
-        sample_true, sample_pred = [y_true[i] for i in idx], [y_pred[i] for i in idx]
-        b, m = _balanced_and_macro(sample_true, sample_pred, labels)
-        boot_b.append(b)
-        boot_m.append(m)
-        k = cohen_kappa(sample_true, sample_pred)
-        if k is not None:  # a resample with a single label and a single answer has no kappa
-            boot_k.append(k)
-
-    def interval(values: list[float]) -> tuple[float, float]:
-        if not values:
-            return (0.0, 0.0)
-        values = sorted(values)
-        return (values[int(0.025 * (len(values) - 1))], values[int(0.975 * (len(values) - 1))])
-
-    columns = labels + [UNREADABLE]
-    confusion = {t: {c: 0 for c in columns} for t in labels}
-    for t, p in zip(y_true, y_pred):
-        confusion[t][p if p is not None else UNREADABLE] += 1
-    counts = Counter(y_true)
-    majority_n = max(counts.values(), default=0)
-    return {
-        "n": n,
-        "correct": correct,
-        "unreadable": sum(p is None for p in y_pred),
-        "accuracy": correct / n if n else 0.0,
-        "accuracy_ci95": wilson(correct, n),
-        "balanced_accuracy": balanced,
-        "balanced_accuracy_ci95": interval(boot_b),
-        "macro_f1": macro,
-        "macro_f1_ci95": interval(boot_m),
-        "cohen_kappa": cohen_kappa(y_true, y_pred),
-        "cohen_kappa_ci95": interval(boot_k),
-        "per_class": per_class(y_true, y_pred, labels),
-        "confusion": confusion,
-        "baselines": {
-            "chance_accuracy": 1 / len(labels) if labels else 0.0,
-            "majority_classes": sorted(label for label, k in counts.items() if k == majority_n),  # all of them when tied
-            "majority_class_accuracy": majority_n / n if n else 0.0,
-        },
-        "bootstrap": {"resamples": n_boot, "seed": seed},
-    }
+    return {"n": n, "correct": correct, "unreadable": sum(p is None for p in y_pred),
+            "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n)}

@@ -82,15 +82,12 @@ class EvaluateTests(unittest.TestCase):
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual(metrics["folder_labels"]["correct"], 2)
         self.assertEqual(metrics["corrected_labels"]["correct"], 4)
-        self.assertEqual(metrics["corrected_labels"]["balanced_accuracy"], 1.0)  # averaged over melanoma only
         self.assertEqual(len(metrics["label_corrections"]["applied"]), 2)
         text = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("| Accuracy | 50.0% (2/4) |", text)
         self.assertIn("| Accuracy | 100.0% (4/4) |", text)
-        self.assertIn("| nevus | 0 | n/a | n/a | n/a | 0 |", text)  # an answer option with no image under corrected labels
-        self.assertIn("answer options with no image: nevus", text)
-        self.assertIn("any one of the 2 largest classes (melanoma, nevus) 50.0%", text)  # folder labels: a tie
-        self.assertIn("the largest class (melanoma) 100.0%", text)  # corrected labels
+        for other in ("Balanced", "Macro-F1", "kappa", "Recall", "Confusion"):  # accuracy is the only metric reported
+            self.assertNotIn(other, text)
         self.assertIn("| Test/nevus/ISIC_0000009.jpg | nevus | melanoma | melanoma |", text)
         main, comparison = text.index("## Main result: scored against the ISIC-corrected labels"), text.index("## For comparison")
         self.assertLess(main, comparison)  # the corrected labels give the headline figure
@@ -234,12 +231,13 @@ class EvaluateTests(unittest.TestCase):
         text = summary.read_text(encoding="utf-8")
         self.assertIn("Images that got the same answer in all 3 runs: 3 of 4 (75.0%)", text)
         self.assertIn(f"| {group}_r1 | 7 | 50.0% (2/4) |", text)
+        self.assertIn("| **Mean ± SD** | | 58.3% ± 14.4% (lowest 50.0%, highest 75.0%) |", text)
         self.assertIn("| **Mean ± SD** | |", text)
         data = json.loads((self.model_dir / f"{group}_summary.json").read_text(encoding="utf-8"))
         self.assertEqual(data["folder_labels"]["accuracy"]["per_run"], [0.5, 0.5, 0.75])  # run 3's nevus answer was a nevus image
         self.assertAlmostEqual(data["folder_labels"]["accuracy"]["mean"], 0.5833333, places=6)
         self.assertAlmostEqual(data["folder_labels"]["accuracy"]["sd"], 0.1443376, places=6)  # sample SD (n - 1)
-        self.assertEqual(data["folder_labels"]["cohen_kappa"]["per_run"][:2], [0.0, 0.0])  # always "melanoma": chance level
+        self.assertEqual(set(data["folder_labels"]), {"accuracy"})
         self.assertIn("Test run 2 of 3 (seed 8)", (self.model_dir / f"{group}_r2" / "report.md").read_text(encoding="utf-8"))
         again = FakeModel()  # the same command once all runs are finished: no model call, the summary is written again
         with mock.patch("src.evaluate.models.load", return_value=again):

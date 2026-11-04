@@ -19,7 +19,7 @@ src/
   dataset.py      reads the dataset folders, writes the dataset profile, prepares images for sending
   isic.py         checks the dataset's labels against the ISIC Archive; lists the corrected testing labels
   prompt.py       builds the prompt and reads the model's answer (the same rule for every model)
-  metrics.py      accuracy, balanced accuracy, macro-F1, per-class figures, confusion matrix, intervals
+  metrics.py      accuracy and its 95% interval (the only metric until the supervisor approves others)
   preflight.py    the setup check that runs before every model run (no dataset image is sent)
   evaluate.py     the command line: profile, isic, check, run, report
   models/         one adapter per model provider (Gemini)
