@@ -102,6 +102,12 @@ class PreflightTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("[FAIL] Images vs committed profile", text)
 
+    def test_the_listed_corrections_are_counted(self):
+        write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"),
+                          ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"))
+        ok, text = self._check(ProbeModel())
+        self.assertIn("(2 testing images listed with a corrected label)", text)
+
     def test_bad_corrections_and_missing_folders_fail(self):
         write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "vascular lesion"))
         ok, text = self._check(ProbeModel())

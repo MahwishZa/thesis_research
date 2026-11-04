@@ -99,8 +99,10 @@ def check(config: dict, config_path: str, say=print, *, list_models: bool = Fals
             line("FAIL", "Committed profile", str(exc))
     if "train" in classes:
         try:
-            fixes = isic.read_corrections(config["data"]["corrections"], classes["train"], {})
-            line("OK", "Label corrections", f"{config['data']['corrections']} ({len(fixes)} testing images corrected)")
+            isic.read_corrections(config["data"]["corrections"], classes["train"], {})  # refuses labels that are not classes
+            with open(config["data"]["corrections"], encoding="utf-8") as f:
+                listed = sum(1 for _ in csv.DictReader(f))
+            line("OK", "Label corrections", f"{config['data']['corrections']} ({listed} testing images listed with a corrected label)")
         except (OSError, ValueError) as exc:
             line("FAIL", "Label corrections", str(exc))
 
