@@ -42,18 +42,37 @@ def _balanced_and_macro(y_true: list[str], y_pred: list[str | None], labels: lis
     return (sum(stats[c]["recall"] for c in present) / len(present), sum(stats[c]["f1"] for c in present) / len(present))
 
 
+def cohen_kappa(y_true: list[str], y_pred: list[str | None]) -> float | None:
+    """Agreement between answers and labels corrected for chance (Cohen, 1960); an unreadable answer is its own category.
+
+    None when chance agreement is already complete (one label and one answer throughout), where kappa is not defined.
+    """
+    n = len(y_true)
+    if not n:
+        return None
+    answers = [p if p is not None else UNREADABLE for p in y_pred]
+    observed = sum(t == p for t, p in zip(y_true, answers)) / n
+    truth, given = Counter(y_true), Counter(answers)
+    expected = sum(truth[c] * given[c] for c in truth) / (n * n)
+    return None if expected >= 1 else (observed - expected) / (1 - expected)
+
+
 def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], n_boot: int = 2000, seed: int = 0) -> dict:
-    """All metrics for one run. Balanced accuracy and macro-F1 get percentile bootstrap intervals over images."""
+    """All metrics for one run. Balanced accuracy, macro-F1 and Cohen's kappa get percentile bootstrap intervals over images."""
     n = len(y_true)
     correct = sum(t == p for t, p in zip(y_true, y_pred))
     balanced, macro = _balanced_and_macro(y_true, y_pred, labels)
     rng = random.Random(seed)
-    boot_b, boot_m = [], []
+    boot_b, boot_m, boot_k = [], [], []
     for _ in range(n_boot if n else 0):
         idx = [rng.randrange(n) for _ in range(n)]
-        b, m = _balanced_and_macro([y_true[i] for i in idx], [y_pred[i] for i in idx], labels)
+        sample_true, sample_pred = [y_true[i] for i in idx], [y_pred[i] for i in idx]
+        b, m = _balanced_and_macro(sample_true, sample_pred, labels)
         boot_b.append(b)
         boot_m.append(m)
+        k = cohen_kappa(sample_true, sample_pred)
+        if k is not None:  # a resample with a single label and a single answer has no kappa
+            boot_k.append(k)
 
     def interval(values: list[float]) -> tuple[float, float]:
         if not values:
@@ -77,6 +96,8 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], n_
         "balanced_accuracy_ci95": interval(boot_b),
         "macro_f1": macro,
         "macro_f1_ci95": interval(boot_m),
+        "cohen_kappa": cohen_kappa(y_true, y_pred),
+        "cohen_kappa_ci95": interval(boot_k),
         "per_class": per_class(y_true, y_pred, labels),
         "confusion": confusion,
         "baselines": {

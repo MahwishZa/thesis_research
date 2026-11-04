@@ -55,8 +55,9 @@ class EvaluateTests(unittest.TestCase):
         return [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
 
     def test_test_run_writes_predictions_metrics_and_report(self):
-        out = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
-        self.assertEqual(out, self.model_dir / "t1")
+        summary = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
+        self.assertEqual(summary, self.model_dir / "t1_summary.md")
+        out = self.model_dir / "t1_r1"
         preds = self._preds(out)
         self.assertEqual(len(preds), 4)
         self.assertTrue(all(p["prediction"] == "melanoma" for p in preds))
@@ -66,17 +67,18 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual((metrics["folder_labels"]["n"], metrics["folder_labels"]["correct"]), (4, 2))
         self.assertIsNone(metrics["corrected_labels"])  # no corrections listed: scored once
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
-        self.assertEqual((card["status"], card["model_versions_returned"], card["run_id"]), ("complete", ["fake-1-001"], "t1"))
+        self.assertEqual((card["status"], card["model_versions_returned"], card["run_id"]), ("complete", ["fake-1-001"], "t1_r1"))
         text = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("| Accuracy | 50.0% (2/4) |", text)
         self.assertNotIn("ISIC-corrected labels", text)
-        self.assertEqual([p.name for p in self.model_dir.iterdir()], ["t1"])  # no .partial folder is left behind
+        self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1_r1", "t1_summary.json", "t1_summary.md"])  # no .partial
 
     def test_the_same_answers_are_scored_against_folder_and_corrected_labels(self):
         write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"),
                           ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"),
                           ("Train/nevus/ISIC_0000004.jpg", "nevus", "melanoma"))  # not in the test run: ignored
-        out = self._run(FakeModel(), "test", run_id="t1")
+        self._run(FakeModel(), "test", run_id="t1")
+        out = self.model_dir / "t1_r1"
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual(metrics["folder_labels"]["correct"], 2)
         self.assertEqual(metrics["corrected_labels"]["correct"], 4)
@@ -197,20 +199,93 @@ class EvaluateTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as raised:
             self._run(FakeModel(), "test", run_id="t2")
         self.assertIn("--run-id t1", str(raised.exception))
-        self.assertEqual(self._run(FakeModel(), "test", run_id="t1"), self.model_dir / "t1")
+        self.assertEqual(self._run(FakeModel(), "test", run_id="t1"), self.model_dir / "t1_summary.md")
+
+    def _three_runs(self):
+        """Config with 3 test runs and a seed; returns a model loader that records the seed of every model it loads."""
+        text = self.config.read_text(encoding="utf-8")
+        self.config.write_text(text.replace("test_runs = 1", "test_runs = 3").replace('id = "fake-1"', 'id = "fake-1"\nseed = 7'),
+                               encoding="utf-8")
+        seeds = []
+
+        def load(models_list):
+            def loader(provider, settings):
+                seeds.append(settings["seed"])
+                return models_list.pop(0)
+            return loader
+        return seeds, load
+
+    def test_the_test_split_is_run_three_times_with_three_seeds_and_summarized(self):
+        seeds, load = self._three_runs()
+
+        class NevusOnce(FakeModel):  # the third run answers nevus for its first image: the runs disagree on one image
+            def predict(self, *args):
+                answer = super().predict(*args)
+                return answer | {"text": "nevus"} if self.calls == 1 else answer
+
+        with mock.patch("src.evaluate.models.load", side_effect=load([FakeModel(), FakeModel(), NevusOnce()])):
+            summary = evaluate.run(str(self.config), "test", results=self.results)
+        self.assertEqual(seeds, [7, 8, 9])
+        group = summary.name.removesuffix("_summary.md")
+        self.assertRegex(group, r"^test_[0-9a-f]{8}$")
+        cards = [json.loads((self.model_dir / f"{group}_r{n}" / "run_card.json").read_text(encoding="utf-8")) for n in (1, 2, 3)]
+        self.assertEqual([(c["repeat"], c["repeats"], c["seed"], c["repeat_group"]) for c in cards],
+                         [(1, 3, 7, group), (2, 3, 8, group), (3, 3, 9, group)])
+        text = summary.read_text(encoding="utf-8")
+        self.assertIn("Images that got the same answer in all 3 runs: 3 of 4 (75.0%)", text)
+        self.assertIn(f"| {group}_r1 | 7 | 50.0% (2/4) |", text)
+        self.assertIn("| **Mean ± SD** | |", text)
+        data = json.loads((self.model_dir / f"{group}_summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["folder_labels"]["accuracy"]["per_run"], [0.5, 0.5, 0.75])  # run 3's nevus answer was a nevus image
+        self.assertAlmostEqual(data["folder_labels"]["accuracy"]["mean"], 0.5833333, places=6)
+        self.assertAlmostEqual(data["folder_labels"]["accuracy"]["sd"], 0.1443376, places=6)  # sample SD (n - 1)
+        self.assertEqual(data["folder_labels"]["cohen_kappa"]["per_run"][:2], [0.0, 0.0])  # always "melanoma": chance level
+        self.assertIn("Test run 2 of 3 (seed 8)", (self.model_dir / f"{group}_r2" / "report.md").read_text(encoding="utf-8"))
+        again = FakeModel()  # the same command once all runs are finished: no model call, the summary is written again
+        with mock.patch("src.evaluate.models.load", return_value=again):
+            self.assertEqual(evaluate.run(str(self.config), "test", results=self.results), summary)
+        self.assertEqual(again.calls, 0)
+        self.config.write_text(self.config.read_text(encoding="utf-8").replace("seed = 7", "seed = 1"), encoding="utf-8")
+        with self.assertRaises(SystemExit) as raised:  # a changed setting cannot add runs to the finished ones
+            self._run(FakeModel(), "test")
+        self.assertIn("a finished test run already exists", str(raised.exception))
+
+    def test_a_stop_in_the_second_test_run_continues_there(self):
+        seeds, load = self._three_runs()
+        second = FakeModel(quota_from=3)
+        with mock.patch("src.evaluate.models.load", side_effect=load([FakeModel(), second])):
+            partial = evaluate.run(str(self.config), "test", results=self.results)
+        self.assertRegex(partial.name, r"^test_[0-9a-f]{8}_r2\.partial$")
+        self.assertEqual(len(self._preds(partial)), 2)
+        rest = [FakeModel(), FakeModel()]
+        with mock.patch("src.evaluate.models.load", side_effect=load(rest)):
+            summary = evaluate.run(str(self.config), "test", results=self.results)
+        self.assertEqual(seeds, [7, 8, 8, 9])  # run 1 is not repeated; run 2 continues with its own seed
+        self.assertTrue(summary.exists())
+        self.assertFalse(list(self.model_dir.glob("*.partial")))
+
+    def test_the_number_of_test_runs_is_checked(self):
+        text = self.config.read_text(encoding="utf-8")
+        for bad in ("0", "11", '"3"', "true", "2.5"):
+            self.config.write_text(text.replace("test_runs = 1", f"test_runs = {bad}"), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                evaluate.load_config(self.config)
+        self.config.write_text(text.replace("test_runs = 1\n", ""), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            evaluate.load_config(self.config)
 
     def test_a_folder_that_cannot_be_renamed_is_finished_by_running_the_command_again(self):
         real_rename = Path.rename
         with mock.patch.object(Path, "rename", side_effect=PermissionError("in use")), self.assertRaises(SystemExit) as raised:
             self._run(FakeModel(), "test", run_id="t1")
         self.assertIn("could not be renamed", str(raised.exception))
-        self.assertTrue((self.model_dir / "t1.partial" / "report.md").exists())
-        self.assertFalse((self.model_dir / "t1").exists())
+        self.assertTrue((self.model_dir / "t1_r1.partial" / "report.md").exists())
+        self.assertFalse((self.model_dir / "t1_r1").exists())
         again = FakeModel()
         with mock.patch.object(Path, "rename", real_rename):
             out = self._run(again, "test", run_id="t1")  # the test-run guard must not mistake the finished answers for a finished run
-        self.assertEqual((out, again.calls), (self.model_dir / "t1", 0))
-        self.assertEqual(len(self._preds(out)), 4)
+        self.assertEqual((out, again.calls), (self.model_dir / "t1_summary.md", 0))
+        self.assertEqual(len(self._preds(self.model_dir / "t1_r1")), 4)
 
     def test_failed_attempts_wait_longer_each_time(self):
         self._run(FakeModel(fail_on=[1, 2, 3]), "dev", run_id="d1")
@@ -236,8 +311,8 @@ class EvaluateTests(unittest.TestCase):
             def predict(self, *args):
                 return super().predict(*args) | {"text": "mela", "finish_reason": "MAX_TOKENS"}
 
-        out = self._run(Truncated(), "test", run_id="t1")
-        text = (out / "report.md").read_text(encoding="utf-8")
+        self._run(Truncated(), "test", run_id="t1")
+        text = (self.model_dir / "t1_r1" / "report.md").read_text(encoding="utf-8")
         self.assertIn("4 answers were cut off at the output limit", text)
         self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
         self.assertNotIn("cut off", (self._run(FakeModel(), "dev", run_id="d1") / "report.md").read_text(encoding="utf-8"))

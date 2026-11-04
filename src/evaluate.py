@@ -9,7 +9,10 @@
 
 ``check`` tests everything a run needs, without sending any dataset image. Run it before every run.
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
-``test`` is the dataset's own test split. It is run once per config, and a finished test run is never overwritten.
+``test`` is the dataset's own test split, run once per config as ``[run] test_runs`` repeats (folders ``..._r1``, ``..._r2``,
+...), each with its own seed (the config's seed plus 0, 1, 2, ...). One command makes all of them; when the last one is
+finished it writes a summary across the runs (mean and spread of every figure, and how often the answers agree).
+A finished test run is never overwritten.
 A run saves every answer as it arrives, in a folder ending in ``.partial`` (ignored by Git). An interrupted run continues
 where it stopped when the same command is run again; a finished run's folder loses the ``.partial`` ending.
 The report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels
@@ -65,10 +68,14 @@ def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
     for section, keys in {"data": ("root", "train", "test", "corrections", "manifest"), "model": ("provider", "id"), "prompt": ("file",),
-                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side")}.items():
+                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side",
+                                  "test_runs")}.items():
         for key in keys:
             if key not in config.get(section, {}):
                 raise ValueError(f"{path}: missing [{section}] {key}")
+    runs = config["run"]["test_runs"]
+    if not isinstance(runs, int) or isinstance(runs, bool) or not 1 <= runs <= 10:
+        raise ValueError(f"{path}: [run] test_runs must be a whole number from 1 to 10 (got {runs!r})")
     if not config["data"]["train"] or not config["data"]["test"]:
         raise ValueError(f"{path}: set [data] train and test to the dataset's split folder names first")
     return config
@@ -100,6 +107,9 @@ def _ask(model, image: bytes, mime: str, text: str, throttle) -> tuple[dict, int
 
 
 def run(config_path: str, split: str, run_id: str | None = None, limit: int | None = None, results: Path = RESULTS) -> Path:
+    """A development run (one folder), or the test runs: ``[run] test_runs`` repeats of the whole test split, each with its
+    own seed. Returns the folder of a stopped run (the same command continues it) or, once all test runs are finished, the
+    summary across them (written again each time the command is run, so it always matches the saved answers)."""
     config = load_config(config_path)
     if split == "test" and limit:
         raise ValueError("--limit is for development runs only; a test run always uses the whole test split")
@@ -127,34 +137,70 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     prompt_text = prompt.build(template, labels)
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + dataset.items_hash(items).encode()).hexdigest()
-    run_id = run_id or f"{split}_{fingerprint[:8]}"  # the same settings always give the same folder, so a stopped run resumes
     models.load_env()
-    model = models.load(config["model"]["provider"], config["model"])  # a missing key stops the run before any file is written
-
     model_dir = results / config["name"]
+    job = {"config": config, "config_path": config_path, "split": split, "items": items, "labels": labels,
+           "prompt_text": prompt_text, "fingerprint": fingerprint, "problems": problems, "model_dir": model_dir}
+    if split == "dev":
+        return _run_once(job, run_id or f"dev_{fingerprint[:8]}")  # the same settings give the same folder: a stop resumes
+
+    group, total = run_id or f"test_{fingerprint[:8]}", config["run"]["test_runs"]
+    _refuse_other_test_runs(model_dir, group, fingerprint)
+    for number in range(1, total + 1):
+        if (model_dir / f"{group}_r{number}").exists():
+            continue  # finished earlier
+        out = _run_once(job, f"{group}_r{number}", repeat=(number, total, group))
+        if out.name.endswith(".partial"):
+            return out  # stopped: the same command continues with this run
+    summary = summarize_test_runs(model_dir, group, total)
+    print(f"FINISHED: all {total} test runs. Summary across them: {summary}\nThe run folders and the summary can be committed.")
+    return summary
+
+
+def _refuse_other_test_runs(model_dir: Path, group: str, fingerprint: str) -> None:
+    """The test split is run once per config (as its set of repeats): other test runs for this config stop the command."""
+    for card_path in sorted(model_dir.glob("*/run_card.json")):
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        if card["split"] != "test":
+            continue
+        folder, finished = card_path.parent, not card_path.parent.name.endswith(".partial")
+        other_group = card.get("repeat_group") or folder.name.removesuffix(".partial")
+        if other_group == group and card["fingerprint"] == fingerprint:
+            continue  # one of this command's own runs
+        if card["fingerprint"] == fingerprint:
+            raise SystemExit(f"the test runs of this config already exist under the name {other_group} ({folder}). Continue "
+                             f"them with --run-id {other_group}, or leave out --run-id if that is the default name")
+        if finished:
+            raise SystemExit(f"a finished test run already exists for this config, made with other settings, prompt or images: "
+                             f"{folder} (results are not overwritten). A changed setting needs a new config file")
+        raise SystemExit(f"an unfinished test run made with other settings, prompt or images exists: {folder}. Delete that "
+                         "folder to start over, or undo the change")
+
+
+def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None) -> Path:
+    """One run over the job's images: answers are saved as they arrive in ``<run_id>.partial``, renamed when complete."""
+    config, items, labels, prompt_text, fingerprint = (job["config"], job["items"], job["labels"], job["prompt_text"],
+                                                       job["fingerprint"])
+    settings = dict(config["model"])
+    if repeat and "seed" in settings:
+        settings["seed"] = settings["seed"] + repeat[0] - 1  # each test run its own seed: the runs show the model's variation
+    model = models.load(settings["provider"], settings)  # a missing key stops the run before any file is written
+
+    model_dir = job["model_dir"]
     final, out = model_dir / run_id, model_dir / f"{run_id}.partial"  # unfinished work lives in the .partial folder (git-ignored)
     card_path, pred_path = out / "run_card.json", out / "predictions.jsonl"
-    if split == "test":
-        for other in model_dir.glob("*/run_card.json"):
-            card = json.loads(other.read_text(encoding="utf-8"))
-            if card["split"] != "test":
-                continue
-            if not other.parent.name.endswith(".partial"):  # a folder without the .partial ending is a finished run
-                raise SystemExit(f"a finished test run already exists for this config: {other.parent} (results are not overwritten)")
-            if other.parent != out:
-                raise SystemExit(f"an unfinished test run exists: {other.parent}. Continue it with --run-id "
-                                 f"{other.parent.name.removesuffix('.partial')}; if the config, prompt or images changed since, "
-                                 "delete that folder to start over")
     if final.exists():
         raise SystemExit(f"{final} is finished; choose another --run-id to run it again")
     created = not card_path.exists()
     if created:
         out.mkdir(parents=True, exist_ok=True)
-        card = {"name": config["name"], "split": split, "run_id": run_id, "status": "running", "fingerprint": fingerprint,
-                "config_file": Path(config_path).as_posix(), "config": config,
+        card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
+                "repeat": repeat[0] if repeat else None, "repeats": repeat[1] if repeat else None,
+                "repeat_group": repeat[2] if repeat else None, "seed": settings.get("seed"),
+                "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": dataset.items_hash(items),
-                "dataset_files_not_images": len(problems), "git": _git(), "versions": _versions(),
+                "dataset_files_not_images": len(job["problems"]), "git": _git(), "versions": _versions(),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
     else:
         card = json.loads(card_path.read_text(encoding="utf-8"))
@@ -174,7 +220,8 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
 
     root = Path(config["data"]["root"])
     answered = len(done)
-    print(f"{out}: {answered} of {len(items)} answered, {len(todo)} to go")
+    print(f"{out}: {answered} of {len(items)} answered, {len(todo)} to go"
+          + (f" (test run {repeat[0]} of {repeat[1]}, seed {settings.get('seed')})" if repeat else ""))
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, record in enumerate(todo, start=len(done) + 1):
@@ -224,6 +271,10 @@ def _pct(x: float) -> str:
     return f"{100 * x:.1f}%"
 
 
+def _kappa(x: float | None) -> str:
+    return "n/a" if x is None else f"{x:.3f}"
+
+
 def _ci(pair) -> str:
     return f"{_pct(pair[0])} to {_pct(pair[1])}"
 
@@ -235,6 +286,9 @@ def _scoring(title: str, m: dict, labels: list[str]) -> list[str]:
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} (Wilson) |",
              f"| Balanced accuracy | {_pct(m['balanced_accuracy'])} | {_ci(m['balanced_accuracy_ci95'])} (bootstrap) |",
              f"| Macro-F1 | {_pct(m['macro_f1'])} | {_ci(m['macro_f1_ci95'])} (bootstrap) |",
+             f"| Cohen's kappa | {_kappa(m.get('cohen_kappa'))} | "
+             + (f"{_kappa(m['cohen_kappa_ci95'][0])} to {_kappa(m['cohen_kappa_ci95'][1])} (bootstrap) |"
+                if m.get("cohen_kappa") is not None else "|"),
              f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |", "",
              f"Reference points: guessing at random {_pct(m['baselines']['chance_accuracy'])}; always answering "
              + (f"the largest class ({largest[0]})" if len(largest) == 1 else f"any one of the {len(largest)} largest classes "
@@ -280,6 +334,9 @@ def report(run_dir: str | Path) -> Path:
 
     complete = card["status"] == "complete" and len(preds) == card["n_images"]
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
+    if card.get("repeat"):
+        lines += [f"Test run {card['repeat']} of {card['repeats']} (seed {card['seed']}); the summary across the runs is "
+                  f"`{card['repeat_group']}_summary.md` next to this folder.", ""]
     if card["split"] == "dev":
         lines += ["**Development run on training images: for checking the prompt and answer reader, not a reported result.**", ""]
     if not complete:
@@ -313,11 +370,74 @@ def report(run_dir: str | Path) -> Path:
               *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
                 if finish.get("MAX_TOKENS") else []),
+              "- Cohen's kappa: agreement between answers and labels beyond what chance would give (1 = perfect, 0 = chance "
+              "level); an unreadable answer is its own category",
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", [])),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
     path = run_dir / "report.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    return path
+
+
+def summarize_test_runs(model_dir: Path, group: str, total: int) -> Path:
+    """Writes ``<group>_summary.md`` and ``.json``: every figure of each finished test run, their mean and spread, and how
+    often an image got the same answer in all runs. Uses only the saved answers and metrics (no model call)."""
+    runs = []
+    for number in range(1, total + 1):
+        folder = model_dir / f"{group}_r{number}"
+        card = json.loads((folder / "run_card.json").read_text(encoding="utf-8"))
+        if card["status"] != "complete":
+            raise ValueError(f"{folder} is not complete")
+        runs.append({"folder": folder.name, "seed": card["seed"], "card": card,
+                     "metrics": json.loads((folder / "metrics.json").read_text(encoding="utf-8")),
+                     "answers": {p["path"]: p["prediction"] for p in _read_jsonl(folder / "predictions.jsonl")}})
+    images = sorted(runs[0]["answers"])
+    if any(sorted(r["answers"]) != images for r in runs):
+        raise ValueError(f"the test runs of {group} did not answer the same images")
+    same = sum(len({r["answers"][path] for r in runs}) == 1 for path in images)
+    names = ["accuracy", "balanced_accuracy", "macro_f1", "cohen_kappa"]
+
+    def spread(values: list[float]) -> dict:
+        mean = sum(values) / len(values)
+        sd = (sum((v - mean) ** 2 for v in values) / (len(values) - 1)) ** 0.5 if len(values) > 1 else None
+        return {"mean": mean, "sd": sd, "min": min(values), "max": max(values)}
+
+    sets = [("corrected_labels", "Main result: scored against the ISIC-corrected labels"),
+            ("folder_labels", "For comparison: scored against the dataset's folder labels")]
+    sets = [(key, title) for key, title in sets if all(r["metrics"][key] for r in runs)]
+    if len(sets) == 1:
+        sets = [("folder_labels", "Scored against the dataset's folder labels (no label among these images is corrected)")]
+    data = {"group": group, "runs": [{"folder": r["folder"], "seed": r["seed"],
+                                      "model_versions_returned": r["card"]["model_versions_returned"]} for r in runs],
+            "images": len(images), "same_answer_in_all_runs": same}
+    lines = [f"# {runs[0]['card']['name']}: test split, {total} runs ({group})", "",
+             f"- Images: {len(images)}; every run answered the same images with the same prompt and settings, except the seed.",
+             f"- Model versions returned: {', '.join(sorted({v for r in runs for v in r['card']['model_versions_returned']})) or 'none recorded'}",
+             f"- Images that got the same answer in all {total} runs: {same} of {len(images)} ({_pct(same / len(images)) if images else 'n/a'})",
+             "- Mean and SD are over the runs (sample SD); each run's 95% intervals over images are in its own report.", ""]
+    for key, title in sets:
+        figures = {name: [r["metrics"][key][name] for r in runs] for name in names}
+        defined = {name: [v for v in values if v is not None] for name, values in figures.items()}
+        data[key] = {name: {"per_run": figures[name], **(spread(defined[name]) if defined[name] else {})} for name in names}
+        lines += [f"## {title}", "", "| Run | Seed | Accuracy | Balanced accuracy | Macro-F1 | Cohen's kappa | Unreadable |",
+                  "|---|---|---|---|---|---|---|"]
+        for r in runs:
+            m = r["metrics"][key]
+            lines.append(f"| {r['folder']} | {r['seed']} | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | "
+                         f"{_pct(m['balanced_accuracy'])} | {_pct(m['macro_f1'])} | {_kappa(m.get('cohen_kappa'))} | {m['unreadable']} |")
+
+        def cell(name: str, fmt) -> str:
+            s = data[key][name]
+            if "mean" not in s:
+                return "n/a"
+            return fmt(s["mean"]) + (f" ± {fmt(s['sd'])}" if s["sd"] is not None else "")
+
+        lines += [f"| **Mean ± SD** | | {cell('accuracy', _pct)} | {cell('balanced_accuracy', _pct)} | {cell('macro_f1', _pct)} | "
+                  f"{cell('cohen_kappa', _kappa)} | |", ""]
+    _write_json(model_dir / f"{group}_summary.json", data)
+    path = model_dir / f"{group}_summary.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
@@ -343,7 +463,8 @@ def build_parser() -> argparse.ArgumentParser:
     r = sub.add_parser("run", help="run one model on the dev sample or the test split")
     r.add_argument("--config", required=True)
     r.add_argument("--split", choices=("dev", "test"), required=True)
-    r.add_argument("--run-id", help="folder name; by default one that follows from the settings, so a stopped run resumes")
+    r.add_argument("--run-id", help="folder name (for test: the name the run folders start with); by default one that "
+                   "follows from the settings, so a stopped run resumes")
     r.add_argument("--limit", type=int, help="first N images of the dev sample (dev only)")
     rep = sub.add_parser("report", help="rewrite metrics.json and report.md from saved predictions")
     rep.add_argument("run_dir")
