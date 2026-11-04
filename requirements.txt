@@ -1,2 +1,4 @@
 # Python 3.11 or newer (configs are read with the built-in tomllib).
+google-genai==2.34.0
 pillow==13.0.0
+httpx==0.28.1  # imported directly by the Gemini adapter; google-genai needs it too

@@ -13,7 +13,7 @@ No model has been evaluated yet. Each finished run is listed here with a link to
 ## Repository Structure
 
 ```
-configs/          one settings file per model run (model, generation settings, prompt, dataset split folders); none until a provider is chosen
+configs/          one settings file per model run (model, generation settings, prompt, dataset split folders)
 prompts/          the frozen prompt; a changed prompt is a new file (diagnosis_v2.txt), never an edit
 src/
   dataset.py      reads the dataset folders, writes the dataset profile, prepares images for sending
@@ -22,7 +22,7 @@ src/
   metrics.py      accuracy, balanced accuracy, macro-F1, per-class figures, confusion matrix, intervals
   preflight.py    the setup check that runs before every model run (no dataset image is sent)
   evaluate.py     the command line: profile, isic, check, run, report
-  models/         one adapter per model provider (none yet: the Gemini adapter was removed, see the log)
+  models/         one adapter per model provider (Gemini)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, one folder per finished model run, and
                   EXPERIMENT_LOG.md (dated decisions, findings, settings and supervisor approvals)

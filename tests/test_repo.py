@@ -44,7 +44,9 @@ class RepoTests(unittest.TestCase):
                 self.assertIn(module.name if module.is_file() else "models/", self.readme, f"the README tree omits {module.name}")
 
     def test_configs_are_valid_and_point_to_files_that_exist(self):
-        for path in sorted((ROOT / "configs").glob("*.toml")):  # there are none until a provider adapter is added
+        configs = sorted((ROOT / "configs").glob("*.toml"))
+        self.assertTrue(configs)
+        for path in configs:
             with self.subTest(path.name):
                 config = evaluate.load_config(path)
                 self.assertEqual(config["name"], path.stem, "the config name is the run folder name and must match the file")
@@ -98,7 +100,7 @@ class RepoTests(unittest.TestCase):
     def test_every_imported_package_is_pinned_in_requirements(self):
         pins = {line.split("==")[0].strip().lower() for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
                 if "==" in line}
-        distribution = {"PIL": "pillow"}  # import name -> package name
+        distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx"}  # import name -> package name
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):

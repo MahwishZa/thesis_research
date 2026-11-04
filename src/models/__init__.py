@@ -7,8 +7,7 @@ passes through), ``model_version`` (as the API returns it), ``response_id`` and 
 TransientError for a failure worth retrying, QuotaExhausted when a per-day quota is used up, and FatalError (with a message that
 says what to do) for anything retrying cannot fix. An adapter may also offer ``list_models()`` for ``check --list-models``.
 
-No adapter exists yet. The only one so far (Gemini) was removed on 2026-11-04 at the researcher's request; it is in Git history
-at commit 8d1196e.
+Adapters: ``gemini`` (src/models/gemini.py).
 """
 
 from __future__ import annotations
@@ -58,5 +57,9 @@ def load_env(path: str | Path = ".env") -> None:
 
 
 def load(provider: str, settings: dict):
-    """The adapter for ``provider`` (a branch per provider goes here, importing its module only when used)."""
-    raise ValueError(f"unknown model provider: {provider!r}; no provider adapter is installed yet (see src/models/__init__.py)")
+    """The adapter for ``provider`` (a branch per provider, importing its module only when used)."""
+    if provider == "gemini":
+        from .gemini import GeminiModel  # imported here so tests and other providers do not need the Gemini SDK
+
+        return GeminiModel(settings)
+    raise ValueError(f"unknown model provider: {provider!r} (adapters: gemini)")

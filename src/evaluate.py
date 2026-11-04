@@ -53,7 +53,7 @@ def _git() -> dict:
 
 def _versions() -> dict:
     out = {"python": platform.python_version()}
-    for package in ("pillow",):
+    for package in ("google-genai", "pillow", "httpx"):
         try:
             out[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
