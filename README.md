@@ -37,6 +37,49 @@ data/             the extracted dataset (Train/ and Test/, one subfolder per cla
 
 ## How to Run
 
+Commands are for PowerShell, run in the repository folder. Python 3.11 or newer.
+
+**1. Set up (once).**
+
+```
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Activate `.venv` in every new terminal before the commands below.
+
+**2. Add the dataset and the API key (once).**
+- Extract the dataset so that the images are in `data/Train/<class>/` and `data/Test/<class>/`. Git ignores `data/`.
+- Create a file named `.env` in the repository folder with the line `GEMINI_API_KEY=<your key>`. Git ignores `.env`; never commit it.
+
+**3. Check the setup (before every run).** It tests the config, prompt, dataset and key, and sends one blank image
+(1 request); no dataset image is sent.
+
+```
+python -m src.evaluate check --config configs/gemini-3.5-flash-lite.toml
+```
+
+**4. Run.** Each answer is saved as it arrives. If a run stops (quota, network), run the same command again: it continues.
+
+```
+python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split dev --limit 5
+python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split test
+```
+
+- `dev` sends a few real training images to check the pipeline; it is never a reported result.
+- `test` sends the 118 test images (118 requests). The test split is run once per config and a finished run is never
+  overwritten; a changed setting needs a new config file.
+
+**5. Read the result.** A finished run is a folder `results/<model>/<run>/` with `report.md` (accuracy), `metrics.json`,
+`predictions.jsonl` (every answer) and `run_card.json` (settings, versions, commit). To rewrite the report from the saved
+answers: `python -m src.evaluate report results/<model>/<run>`.
+
+**Another model.** Add one config file in `configs/` (and an adapter in `src/models/` if the provider is new); the commands
+are the same.
+
+**Tests** (no API calls): `python -m unittest discover -s tests`
+
 ## If Something Goes Wrong
 
 | Message | What it means | What to do |
