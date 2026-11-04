@@ -75,28 +75,4 @@ python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split t
 `predictions.jsonl` (every answer) and `run_card.json` (settings, versions, commit). To rewrite the report from the saved
 answers: `python -m src.evaluate report results/<model>/<run>`.
 
-**Another model.** Add one config file in `configs/` (and an adapter in `src/models/` if the provider is new); the commands
-are the same.
-
 **Tests** (no API calls): `python -m unittest discover -s tests`
-
-## If Something Goes Wrong
-
-| Message | What it means | What to do |
-|---|---|---|
-| `unknown model provider ... no provider adapter is installed yet` | the config names a provider that has no adapter in `src/models/` | add the adapter, or use a provider that has one |
-| `no ... API key found` | no key in `.env` or the terminal | put the key line in the git-ignored file `.env` in the repository folder |
-| `HTTP 404` | the model is not available to your key | the check lists the models your key can use (if the adapter can); set `id` in a new config file |
-| `HTTP 400` or `401`/`403` about the key | wrong or refused key | correct the key line in `.env` |
-| `HTTP 503` ("high demand") | the provider is overloaded; temporary | the run retries for about 8 minutes, then stops with `NOT FINISHED`; run the same command again later |
-| `Daily quota used up ...` (HTTP 429, "per day") | the per-day request limit of your tier for that model is reached; a test run needs one request per test image (118) | the run stops at once and keeps its answers; run the same command after the reset the provider names, or use a paid key, or another model |
-| `HTTP 429` (per minute) | too many requests in a minute | retried automatically; lower `requests_per_minute` in a new config file if it keeps happening |
-| `HTTP 504`, `network problem (... timeout)` | the provider answered too slowly, or the connection was lost | retried automatically |
-| `answers were cut off at the output limit (MAX_TOKENS)` | the answer hit `max_output_tokens` (hidden reasoning can count toward it) | raise `max_output_tokens` in a new config file; results are not valid until then |
-| `images on disk differ from the committed profile` | dataset files changed or are missing | extract the ZIP again, or run the `profile` and `isic` commands again and review the differences |
-| `was started with a different config, prompt or image set` | an explicit `--run-id` was reused after a change | delete that `.partial` folder, or choose another `--run-id` |
-| `a finished test run already exists for this config, made with other settings` | the config, prompt or images changed after the test runs finished | nothing is overwritten; a changed setting needs a new config file |
-| `an unfinished test run made with other settings ... exists` | the config, prompt or images changed during the test runs | undo the change, or delete the `.partial` folder it names to start over |
-| `the test runs of this config already exist under the name ...` | `--run-id` names a different set of test runs | continue them with the `--run-id` the message names |
-| `FINISHED: all N test runs` | only when `test_runs` is above 1: every test run is done; `<name>_summary.md` gives the mean and spread across them | commit the run folders and the summary |
-| `ERROR: ...` | a problem with the config, the data or a path, explained in the message | fix what it names |
