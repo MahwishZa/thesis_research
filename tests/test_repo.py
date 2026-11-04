@@ -84,7 +84,7 @@ class RepoTests(unittest.TestCase):
         for path in (".env", ".env.txt", ".env.local", "data/Train/x.jpg", "results/m/dev_1.partial/predictions.jsonl",
                      "src/__pycache__/x.pyc", ".venv/x"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "results/m/dev_1/report.md", "results/EXPERIMENT_LOG.md", "configs/example.toml"):
+        for path in ("README.md", "results/m/dev_1/report.md", "docs/EXPERIMENT_LOG.md", "configs/example.toml"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

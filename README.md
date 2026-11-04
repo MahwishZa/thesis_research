@@ -32,9 +32,9 @@ src/
   evaluate.py     the command line: profile, isic, check, run, report
   models/         one adapter per model provider (Gemini)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
-results/          the dataset profile, the ISIC label check and corrections, one folder per finished model run, and
-                  EXPERIMENT_LOG.md (dated decisions, findings, settings and supervisor approvals)
-docs/             temporary supervisor-meeting pack (open decisions, RAG data audit); delete later; not used by runs
+results/          the dataset profile, the ISIC label check and corrections, and one folder per finished model run
+docs/             EXPERIMENT_LOG.md (dated decisions, findings, settings and approvals), the supervisor-meeting
+                  brief and the RAG data audit
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
