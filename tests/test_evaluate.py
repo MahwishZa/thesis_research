@@ -274,6 +274,82 @@ class EvaluateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evaluate.load_config(self.config)
 
+    def test_a_stop_in_the_middle_of_a_write_does_not_stop_the_run_from_continuing(self):
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=3), "dev", run_id="d1")
+        partial = self.model_dir / "d1.partial" / "predictions.jsonl"
+        complete = partial.read_text(encoding="utf-8")
+        partial.write_text(complete + '{"path": "Train/mel', encoding="utf-8")  # cut off in the middle of a line
+        later = FakeModel()
+        out = self._run(later, "dev", run_id="d1")
+        self.assertEqual((out, later.calls), (self.model_dir / "d1", 2))  # the cut-off image is answered again
+        self.assertEqual(len(self._preds(out)), 4)
+        # a complete last line that lacks only its end of line is kept, and the next answer starts on a new line
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=2), "dev", run_id="d2")
+        partial = self.model_dir / "d2.partial" / "predictions.jsonl"
+        partial.write_text(partial.read_text(encoding="utf-8").rstrip("\n"), encoding="utf-8")
+        out = self._run(FakeModel(), "dev", run_id="d2")
+        self.assertEqual(len(self._preds(out)), 4)
+        # a damaged line in the middle is an error, never skipped
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=3), "dev", run_id="d3")
+        partial = self.model_dir / "d3.partial" / "predictions.jsonl"
+        first, second = partial.read_text(encoding="utf-8").splitlines()
+        partial.write_text(first + "\n{broken\n" + second + "\n", encoding="utf-8")
+        with self.assertRaises(ValueError) as raised:
+            self._run(FakeModel(), "dev", run_id="d3")
+        self.assertIn("line 2 is not valid JSON", str(raised.exception))
+
+    def test_files_are_written_through_a_temporary_file(self):
+        target = self.results / "x.json"
+        self.results.mkdir(parents=True, exist_ok=True)
+        evaluate._write_json(target, {"a": 1})
+        with mock.patch("src.evaluate.os.replace", side_effect=OSError("stopped")), self.assertRaises(OSError):
+            evaluate._write_json(target, {"a": 2})
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), {"a": 1})  # the old file is whole
+
+    def test_unsafe_names_and_impossible_settings_are_refused_with_a_message(self):
+        for bad in ("../escape", "a/b", "a\\b", "", ".hidden", "x" * 81, "a b"):
+            with self.assertRaises(ValueError, msg=bad):
+                self._run(FakeModel(), "dev", run_id=bad)
+        self.assertFalse(self.results.exists())  # nothing was written
+        project_text = self.config.read_text(encoding="utf-8")
+        for old, new in (("requests_per_minute = 600000", "requests_per_minute = 0"), ("requests_per_minute = 600000", 'requests_per_minute = "5"'),
+                         ("dev_per_class = 2", "dev_per_class = 0"), ("max_image_side = 50", "max_image_side = -1"),
+                         ("dev_seed = 0", "dev_seed = 1.5"), ('name = "fake"', 'name = "../fake"'), ('name = "fake"', "")):
+            self.config.write_text(project_text.replace(old, new), encoding="utf-8")
+            with self.assertRaises(ValueError, msg=new):
+                evaluate.load_config(self.config)
+        self.config.write_text(project_text, encoding="utf-8")
+        for limit in (0, -3):
+            with self.assertRaises(ValueError):
+                self._run(FakeModel(), "dev", limit=limit)
+
+    def test_development_images_that_copy_a_test_image_are_left_out(self):
+        copy = self.project.data / "Train" / "nevus" / "ISIC_9999999.jpg"
+        copy.write_bytes(next((self.project.data / "Test" / "nevus").glob("*.jpg")).read_bytes())  # a training copy of a test image
+        from src import dataset
+        records, _ = dataset.scan(self.project.data, {"train": "Train", "test": "Test"})
+        dataset.write_manifest(records, self.project.manifest)
+        self.config.write_text(self.config.read_text(encoding="utf-8").replace("dev_per_class = 2", "dev_per_class = 99"),
+                               encoding="utf-8")  # every training image is in the sample
+        out = self._run(FakeModel(), "dev", run_id="d1")
+        paths = [p["path"] for p in self._preds(out)]
+        self.assertEqual(len(paths), 6)  # 7 training images, one of them a copy of a test image
+        self.assertNotIn("Train/nevus/ISIC_9999999.jpg", paths)
+
+    def test_answers_that_did_not_end_normally_are_flagged_in_the_report(self):
+        class Blocked(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": None, "finish_reason": "SAFETY"}
+
+        out = self._run(Blocked(), "dev", run_id="d1")
+        text = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("4 answers did not end normally (SAFETY: 4)", text)
+        clean = (self._run(FakeModel(), "dev", run_id="d2") / "report.md").read_text(encoding="utf-8")
+        self.assertNotIn("did not end normally", clean)
+
     def test_a_folder_that_cannot_be_renamed_is_finished_by_running_the_command_again(self):
         real_rename = Path.rename
         with mock.patch.object(Path, "rename", side_effect=PermissionError("in use")), self.assertRaises(SystemExit) as raised:

@@ -26,8 +26,10 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
 import platform
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -65,6 +67,16 @@ def _versions() -> dict:
     return out
 
 
+NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
+
+
+def _check_name(value, what: str) -> None:
+    """A name that becomes a folder: letters, digits, dot, underscore and hyphen only, so it cannot point elsewhere."""
+    if not isinstance(value, str) or not NAME.fullmatch(value):
+        raise ValueError(f"{what} must be 1 to 80 characters: letters, digits, '.', '_' or '-', starting with a letter or "
+                         f"digit (got {value!r})")
+
+
 def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
@@ -77,19 +89,66 @@ def load_config(path: str | Path) -> dict:
     runs = config["run"]["test_runs"]
     if not isinstance(runs, int) or isinstance(runs, bool) or not 1 <= runs <= 10:
         raise ValueError(f"{path}: [run] test_runs must be a whole number from 1 to 10 (got {runs!r})")
+    _check_name(config.get("name"), f"{path}: name")  # it becomes the results folder
+    run = config["run"]
+    rate = run["requests_per_minute"]
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
+        raise ValueError(f"{path}: [run] requests_per_minute must be a number above 0 (got {rate!r})")
+    for key in ("dev_per_class", "max_image_side"):
+        if isinstance(run[key], bool) or not isinstance(run[key], int) or run[key] < 1:
+            raise ValueError(f"{path}: [run] {key} must be a whole number of at least 1 (got {run[key]!r})")
+    for key in ("dev_seed", "order_seed"):
+        if isinstance(run[key], bool) or not isinstance(run[key], int):
+            raise ValueError(f"{path}: [run] {key} must be a whole number (got {run[key]!r})")
     if not config["data"]["train"] or not config["data"]["test"]:
         raise ValueError(f"{path}: set [data] train and test to the dataset's split folder names first")
     return config
 
 
 def _read_jsonl(path: Path) -> list[dict]:
+    """The rows of a JSON-lines file. An incomplete last line (the program was stopped while writing it) is ignored; a damaged
+    line anywhere else is an error, never silently skipped."""
     if not path.exists():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    text = path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+    rows = []
+    for number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            if not text.endswith("\n") and number == len(lines):
+                break  # the last line never got its end of line: it was cut off
+            raise ValueError(f"{path}: line {number} is not valid JSON ({exc.msg}); the file is damaged") from exc
+    return rows
+
+
+def _repair_jsonl(path: Path) -> None:
+    """Before answers are appended: remove an incomplete last line, or add the missing end of line after a complete one."""
+    if not path.exists():
+        return
+    text = path.read_bytes().decode("utf-8")
+    if not text or text.endswith("\n"):
+        return
+    start = text.rfind("\n") + 1
+    try:
+        json.loads(text[start:])
+        fixed = text + "\n"
+    except json.JSONDecodeError:
+        fixed = text[:start]
+        print(f"{path}: removed an incomplete last line (the program was stopped while writing it); that image is answered again")
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(fixed.encode("utf-8"))
+    os.replace(tmp, path)
 
 
 def _write_json(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    """Written to a temporary file first, so a stop in the middle never leaves a half-written file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
 
 
 def _ask(model, image: bytes, mime: str, text: str, throttle) -> tuple[dict, int]:
@@ -112,8 +171,12 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     own seed. Returns the folder of a stopped run (the same command continues it) or, once all test runs are finished, the
     summary across them (written again each time the command is run, so it always matches the saved answers)."""
     config = load_config(config_path)
+    if run_id is not None:
+        _check_name(run_id, "--run-id")
     if split == "test" and limit:
         raise ValueError("--limit is for development runs only; a test run always uses the whole test split")
+    if limit is not None and limit < 1:
+        raise ValueError(f"--limit must be at least 1 (got {limit})")
     records, problems = dataset.scan(config["data"]["root"], {"train": config["data"]["train"], "test": config["data"]["test"]})
     broken = [path for path, why in problems if why.startswith("unreadable image")]
     if broken:
@@ -131,6 +194,11 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
         raise ValueError("split must be 'dev' or 'test'")
     # A seeded random order, so that any drift of a hosted model during a run is not lined up with the classes.
     random.Random(config["run"]["order_seed"]).shuffle(items)
+    if split == "dev":
+        items, copies = dataset.without_test_copies(items, records)
+        if copies:
+            print(f"{len(copies)} development images are byte-identical to test images and were left out: "
+                  f"{[r.path for r in copies][:5]}")
     items = items[: limit or None]
     isic.read_corrections(config["data"]["corrections"], labels, {r.path: r.label for r in items})  # refuse a bad file now
 
@@ -213,6 +281,7 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
                              "over, or choose another --run-id")
     card["model"] = model.describe()
     _write_json(card_path, card)
+    _repair_jsonl(pred_path)
     done = {p["path"] for p in _read_jsonl(pred_path)}
     todo = [r for r in items if r.path not in done]
     interval = 60.0 / config["run"]["requests_per_minute"]
@@ -338,11 +407,15 @@ def report(run_dir: str | Path) -> Path:
     finish = {}
     for p in preds:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
+    other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
               *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
                 if finish.get("MAX_TOKENS") else []),
+              *([f"- **{sum(other.values())} answers did not end normally ("
+                 + ", ".join(f"{k}: {v}" for k, v in sorted(other.items(), key=str))
+                 + "); an answer without readable text counts as wrong. Check them in predictions.jsonl.**"] if other else []),
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", [])),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "

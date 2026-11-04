@@ -44,6 +44,8 @@ def make_dataset(root: Path, per_class: dict[str, dict[str, int]]) -> None:
                 image = Image.new("RGB", (60, 45), COLOURS[label])
                 image.putpixel((i % 60, (i * 7) % 45), (0, 0, 0))
                 image.paste((255, 255, 255), (0, 0, 5 + i, 5 + i))
+                if split == "Test":
+                    image.paste((10, 200, 10), (50, 35, 59, 44))  # a test image is never a copy of a training image
                 number += 1
                 image.save(folder / f"ISIC_{number:07d}.jpg", quality=95)
 

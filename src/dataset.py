@@ -105,6 +105,15 @@ def dev_subset(records: list[Record], per_class: int, seed: int) -> list[Record]
     return chosen
 
 
+def without_test_copies(items: list[Record], records: list[Record]) -> tuple[list[Record], list[Record]]:
+    """``items`` without the images whose bytes also occur in the test split (order kept), and the images left out.
+
+    Used for the development sample: a prompt must never be developed on a copy of a test image.
+    """
+    test_hashes = {r.sha256 for r in records if r.split == "test"}
+    return [r for r in items if r.sha256 not in test_hashes], [r for r in items if r.sha256 in test_hashes]
+
+
 def verify_against_manifest(records: list[Record], manifest: str | Path) -> None:
     """Stops if the images on disk are not exactly those in the committed profile (and so in the ISIC label check)."""
     with open(manifest, encoding="utf-8") as f:

@@ -50,7 +50,7 @@ Requires Python 3.11 or newer. Commands are for PowerShell, run in the repositor
    pip install -r requirements.txt
    ```
 
-2. **Add the data and the key (once):** put the dataset images in `data/Train/<class>/` and `data/Test/<class>/`, and create a
+2. **Add the data and the key (once):** put the dataset supplied by your supervisor in `data/Train/<class>/` and `data/Test/<class>/` (one folder per class), and create a
    file `.env` containing `GEMINI_API_KEY=<your key>`. Git ignores both.
 
 3. **Check the setup** (sends one blank image, no dataset image):
