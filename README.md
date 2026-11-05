@@ -33,37 +33,12 @@ src/
   models/         one adapter per model provider (Gemini)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, and one folder per finished model run
-docs/             EXPERIMENT_LOG.md (dated decisions, findings, settings and approvals), the supervisor-meeting
-                  brief and the RAG data audit
+docs/             EXPERIMENT_LOG.md (dated decisions and findings) and meeting_brief.md (result and open decisions)
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
 ## How to Run
 
-Requires Python 3.11 or newer. Commands are for PowerShell, run in the repository folder.
+With Python 3.11+, run `python -m venv .venv`, `.venv\Scripts\Activate.ps1` and `pip install -r requirements.txt`, put the dataset in `data/Train` and `data/Test`, and add `GEMINI_API_KEY=<your key>` to a `.env` file.
 
-1. **Set up (once):**
-
-   ```
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
-   ```
-
-2. **Add the data and the key (once):** put the dataset supplied by your supervisor in `data/Train/<class>/` and `data/Test/<class>/` (one folder per class), and create a
-   file `.env` containing `GEMINI_API_KEY=<your key>`. Git ignores both.
-
-3. **Check the setup** (sends one blank image, no dataset image):
-
-   ```
-   python -m src.evaluate check --config configs/gemini-3.5-flash-lite.toml
-   ```
-
-4. **Run the test split** (118 requests). It runs once per config and is never overwritten; if it stops, run the same command
-   again to continue.
-
-   ```
-   python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split test
-   ```
-
-5. **Read the result** in `results/<model>/<run>/report.md`.
+Then run `python -m src.evaluate check --config configs/gemini-3.5-flash-lite.toml` followed by `python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split test` (a stopped run continues when repeated).
