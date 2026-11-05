@@ -105,23 +105,37 @@ def load_config(path: str | Path) -> dict:
     return config
 
 
+def _split_last_line(data: bytes) -> tuple[str, bytes]:
+    """The complete lines of a JSON-lines file (decoded strictly) and the bytes after its last end of line."""
+    cut = data.rfind(b"\n") + 1
+    return data[:cut].decode("utf-8"), data[cut:]
+
+
+def _complete_row(tail: bytes) -> dict | None:
+    """The row in bytes that lack their end of line, or None when they are a cut-off line (even one cut inside a character)."""
+    try:
+        row = json.loads(tail.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return row if isinstance(row, dict) else None
+
+
 def _read_jsonl(path: Path) -> list[dict]:
     """The rows of a JSON-lines file. An incomplete last line (the program was stopped while writing it) is ignored; a damaged
     line anywhere else is an error, never silently skipped."""
     if not path.exists():
         return []
-    text = path.read_text(encoding="utf-8")
-    lines = text.split("\n")
+    head, tail = _split_last_line(path.read_bytes())
     rows = []
-    for number, line in enumerate(lines, start=1):
+    for number, line in enumerate(head.split("\n"), start=1):
         if not line.strip():
             continue
         try:
             rows.append(json.loads(line))
         except json.JSONDecodeError as exc:
-            if not text.endswith("\n") and number == len(lines):
-                break  # the last line never got its end of line: it was cut off
             raise ValueError(f"{path}: line {number} is not valid JSON ({exc.msg}); the file is damaged") from exc
+    if tail.strip() and (last := _complete_row(tail)) is not None:
+        rows.append(last)
     return rows
 
 
@@ -129,18 +143,17 @@ def _repair_jsonl(path: Path) -> None:
     """Before answers are appended: remove an incomplete last line, or add the missing end of line after a complete one."""
     if not path.exists():
         return
-    text = path.read_bytes().decode("utf-8")
-    if not text or text.endswith("\n"):
+    data = path.read_bytes()
+    if not data or data.endswith(b"\n"):
         return
-    start = text.rfind("\n") + 1
-    try:
-        json.loads(text[start:])
-        fixed = text + "\n"
-    except json.JSONDecodeError:
-        fixed = text[:start]
+    head, tail = _split_last_line(data)
+    if _complete_row(tail) is not None:
+        fixed = data + b"\n"
+    else:
+        fixed = head.encode("utf-8")
         print(f"{path}: removed an incomplete last line (the program was stopped while writing it); that image is answered again")
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(fixed.encode("utf-8"))
+    tmp.write_bytes(fixed)
     os.replace(tmp, path)
 
 

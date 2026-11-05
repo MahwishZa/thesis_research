@@ -3,6 +3,7 @@
 import argparse
 import ast
 import csv
+import json
 import os
 import re
 import shlex
@@ -33,6 +34,39 @@ class RepoTests(unittest.TestCase):
             for form in (re.sub(r"\[[^\]]*\]", "", line), re.sub(r"\[([^\]]*)\]", r"\1", line)):  # without / with the optional [parts]
                 with self.subTest(form):
                     evaluate.build_parser().parse_args(shlex.split(form))
+
+    def test_the_commands_written_in_the_readme_are_accepted_by_the_command_line(self):
+        commands = re.findall(r"`python -m src\.evaluate ([^`]+)`", self.readme)
+        self.assertGreaterEqual(len(commands), 2)
+        for command in commands:
+            with self.subTest(command):
+                args = evaluate.build_parser().parse_args(shlex.split(command))
+                if hasattr(args, "config"):
+                    self.assertTrue((ROOT / args.config).is_file(), f"the README names a config that does not exist: {args.config}")
+
+    def test_the_results_written_in_the_documents_match_the_saved_results(self):
+        def pct(x):
+            return f"{100 * x:.1f}"
+
+        rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
+        self.assertTrue(rows, "the README results table links to no run")
+        for row in rows:
+            link = re.search(r"\]\((results/[^)]+/report\.md)\)", row).group(1)
+            self.assertTrue((ROOT / link).is_file(), f"the README links to a report that does not exist: {link}")
+            m = json.loads((ROOT / link).with_name("metrics.json").read_text(encoding="utf-8"))
+            main = m["corrected_labels"] or m["folder_labels"]
+            low, high = main["accuracy_ci95"]
+            cells = [c.strip() for c in row.strip().strip("|").split("|")]
+            self.assertEqual(cells[1:4], [pct(main["accuracy"]), f"{pct(low)} to {pct(high)}", pct(m["folder_labels"]["accuracy"])])
+        brief = (ROOT / "docs" / "meeting_brief.md").read_text(encoding="utf-8").replace("**", "")
+        link = re.search(r"results/[^`\s]+/report\.md", brief).group(0)
+        m = json.loads((ROOT / link).with_name("metrics.json").read_text(encoding="utf-8"))
+        main = m["corrected_labels"] or m["folder_labels"]
+        low, high = main["accuracy_ci95"]
+        for scoring in (m["corrected_labels"], m["folder_labels"]):
+            if scoring:
+                self.assertIn(f"{pct(scoring['accuracy'])}% ({scoring['correct']}/{scoring['n']})", brief)
+        self.assertIn(f"{pct(low)}% to {pct(high)}%", brief)
 
     def test_commands_and_modules_are_documented(self):
         parser = evaluate.build_parser()

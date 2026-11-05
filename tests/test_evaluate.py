@@ -291,6 +291,15 @@ class EvaluateTests(unittest.TestCase):
         partial.write_text(partial.read_text(encoding="utf-8").rstrip("\n"), encoding="utf-8")
         out = self._run(FakeModel(), "dev", run_id="d2")
         self.assertEqual(len(self._preds(out)), 4)
+        # a line cut off inside a multi-byte character ("é" is two bytes) is also removed, and the report reads the partial run
+        with self.assertRaises(SystemExit):
+            self._run(FakeModel(fatal_from=3), "dev", run_id="d4")
+        partial = self.model_dir / "d4.partial" / "predictions.jsonl"
+        partial.write_bytes(partial.read_bytes() + '{"path": "x", "raw_text": "caf\u00e9"}'.encode("utf-8")[:-3])
+        self.assertEqual(len(evaluate._read_jsonl(partial)), 2)  # the cut-off line is ignored, nothing crashes
+        evaluate.report(partial.parent)
+        out = self._run(FakeModel(), "dev", run_id="d4")
+        self.assertEqual(len(self._preds(out)), 4)
         # a damaged line in the middle is an error, never skipped
         with self.assertRaises(SystemExit):
             self._run(FakeModel(fatal_from=3), "dev", run_id="d3")
