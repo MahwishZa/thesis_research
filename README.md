@@ -11,11 +11,11 @@ Existing methods do X. This is insufficient under condition Y because of limitat
 
 ## Results
 
-Accuracy (%) on the 118 test images, zero-shot, temperature 0, one run, scored against the ISIC-corrected labels (folder labels in the last column). The first Gemini run is a trial made before the audit fixes; the final run (same settings) is pending and will replace this row.
+Accuracy (%) on the 118 test images, zero-shot, temperature 0, one run, scored against the ISIC-corrected labels (folder labels in the last column). The final Gemini run is pending; each finished run is listed with a link to its report.
 
 | Model | ISIC-corrected labels (main) | 95% interval | Folder labels | Report |
 |---|---|---|---|---|
-| Gemini 3.5 Flash-Lite (0-shot), trial run | 37.3 | 29.1 to 46.3 | 36.4 | [report](results/trial/gemini-3.5-flash-lite/test_88d88f32_r1/report.md) |
+| Gemini 3.5 Flash-Lite (0-shot) | pending | pending | pending | pending |
 
 ## Repository Structure
 
