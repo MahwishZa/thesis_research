@@ -8,7 +8,8 @@
     python -m src.evaluate report results/<model>/<run-folder>
 
 ``check`` tests everything a run needs, without sending any dataset image. Run it before every run.
-``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
+``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result, stays on this
+computer (Git ignores its folder) and is not documented.
 ``test`` is the dataset's own test split, run once per config (the base paper's practice: one run at temperature 0); its
 report is the result. A test run needs a clean Git state (everything committed), so that its run card names the exact code it
 came from, and a downloaded model must be pinned to one commit. A finished test run is never overwritten.
@@ -358,7 +359,8 @@ def _run_once(job: dict, run_id: str) -> Path:
     _write_json(card_path, card)
     report(out)
     say(f"FINISHED: {len(items)} of {len(items)} answered. Report: {final / 'report.md'}\n"
-        "This folder is complete and can be committed.")
+        + ("This folder is complete and can be committed." if job["split"] == "test"
+           else "A development run stays on this computer: Git ignores it and it is not documented."))
     try:
         out.rename(final)
     except OSError as exc:  # Windows refuses while a program (Explorer, an editor) has the folder open

@@ -10,6 +10,9 @@ venv/
 # Unfinished runs (a run's folder loses the .partial ending when it finishes)
 *.partial/
 
+# Development runs only check the prompt and the answer reader: they stay on this computer and are not documented.
+results/*/dev_*/
+
 # API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env
 .env.*

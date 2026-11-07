@@ -290,6 +290,14 @@ class EvaluateTests(unittest.TestCase):
         self.assertTrue(all(line[:4].isdigit() for line in log.splitlines()))  # every line starts with a UTC time
         self.assertIn("Sessions (starts and restarts of this run): 2", (out / "report.md").read_text(encoding="utf-8"))
 
+    def test_a_finished_run_says_whether_its_folder_belongs_in_git(self):
+        dev = (self._run(FakeModel(), "dev", run_id="d1") / "run.log").read_text(encoding="utf-8")
+        self.assertIn("A development run stays on this computer", dev)
+        self.assertNotIn("can be committed", dev)
+        test = (self._run(FakeModel(), "test", run_id="t1") / "run.log").read_text(encoding="utf-8")
+        self.assertIn("This folder is complete and can be committed.", test)
+        self.assertNotIn("stays on this computer", test)
+
     def test_a_run_that_spans_two_commits_says_so_in_its_report(self):
         with mock.patch("src.evaluate._git", return_value={"commit": "a" * 40, "uncommitted_changes": False}), \
                 self.assertRaises(SystemExit):

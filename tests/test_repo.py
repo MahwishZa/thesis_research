@@ -103,14 +103,16 @@ class RepoTests(unittest.TestCase):
                 self.assertIn(r["corrected_label"], train)
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")
-    def test_git_ignores_keys_unfinished_runs_and_the_dataset_but_not_results(self):
+    def test_git_ignores_keys_unfinished_and_development_runs_and_the_dataset_but_not_test_results(self):
         def ignored(path):
             return subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT).returncode == 0
 
         for path in (".env", ".env.txt", ".env.local", "data/Train/x.jpg", "results/m/dev_1.partial/predictions.jsonl",
+                     "results/m/test_1.partial/predictions.jsonl", "results/m/dev_1/report.md", "results/m/dev_1/predictions.jsonl",
                      "src/__pycache__/x.pyc", ".venv/x"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "results/m/dev_1/report.md", "configs/example.toml"):
+        for path in ("README.md", "results/m/test_1/report.md", "results/m/test_1/predictions.jsonl", "results/dataset_profile/profile.md",
+                     "configs/example.toml"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

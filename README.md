@@ -30,7 +30,7 @@ src/
   evaluate.py     the command line: profile, isic, check, run, report
   models/         one adapter per model provider (currently: Hugging Face models run on this computer)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
-results/          the dataset profile, the ISIC label check and corrections, and one folder per finished model run
+results/          the dataset profile, the ISIC label check and corrections, and one folder per finished test run (development runs stay on your computer)
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 

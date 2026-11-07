@@ -24,8 +24,8 @@ gpu_memory_gib = 3.0   # of the 4 GB graphics card, leaving room for the picture
 cpu_memory_gib = 10.0  # RAM the model may use for the part that does not fit on the card
 
 [prompt]
-# v1 left 66 of 88 development answers unreadable (a sentence instead of a class name; run dev_4d365984). v2 is the one revision
-# allowed: it is judged only by the share of readable answers on the same 88 images (target 90%), never by accuracy, then frozen.
+# v2 is the one revision allowed after the first development run: it is judged only by the share of readable answers on the
+# same development images (target 90%), never by accuracy, and is then frozen for the test run and every later model.
 file = "prompts/diagnosis_v2.txt"
 
 [run]
