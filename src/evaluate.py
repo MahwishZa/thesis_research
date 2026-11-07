@@ -2,20 +2,19 @@
 
     python -m src.evaluate profile --root data --train <train-folder> --test <test-folder>
     python -m src.evaluate isic          (checks the dataset's labels against the ISIC Archive; needs internet)
-    python -m src.evaluate check --config configs/<model>.toml [--list-models] [--model <id>]
+    python -m src.evaluate check --config configs/<model>.toml [--model <id>]
     python -m src.evaluate run --config configs/<model>.toml --split dev --limit 5
     python -m src.evaluate run --config configs/<model>.toml --split test
     python -m src.evaluate report results/<model>/<run-folder>
 
 ``check`` tests everything a run needs, without sending any dataset image. Run it before every run.
 ``dev`` is a small, seeded sample of training images for developing the prompt; it is never a reported result.
-``test`` is the dataset's own test split, run once per config as ``[run] test_runs`` repeats (folders ``..._r1``, ``..._r2``,
-...), each with its own seed (the config's seed plus 0, 1, 2, ...). One command makes all of them; when the last one is
-finished it writes a summary across the runs (mean and spread of the accuracy, and how often the answers agree); with
-``test_runs = 1`` (the base paper's practice: one run at temperature 0) the single run's report is the result.
-A finished test run is never overwritten.
-A run saves every answer as it arrives, in a folder ending in ``.partial`` (ignored by Git). An interrupted run continues
-where it stopped when the same command is run again; a finished run's folder loses the ``.partial`` ending.
+``test`` is the dataset's own test split, run once per config (the base paper's practice: one run at temperature 0); its
+report is the result. A test run needs a clean Git state (everything committed), so that its run card names the exact code it
+came from, and a downloaded model must be pinned to one commit. A finished test run is never overwritten.
+A run saves every answer as it arrives, and a log of its progress (run.log), in a folder ending in ``.partial`` (ignored by
+Git). An interrupted run continues where it stopped when the same command is run again; a finished run's folder loses the
+``.partial`` ending.
 The report scores the same answers twice: against the dataset's folder labels and against the ISIC-corrected labels
 listed in the file named by ``[data] corrections`` (written by the isic command). The model never sees a label.
 """
@@ -82,14 +81,10 @@ def load_config(path: str | Path) -> dict:
     with open(path, "rb") as f:
         config = tomllib.load(f)
     for section, keys in {"data": ("root", "train", "test", "corrections", "manifest"), "model": ("provider", "id"), "prompt": ("file",),
-                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side",
-                                  "test_runs")}.items():
+                          "run": ("requests_per_minute", "dev_per_class", "dev_seed", "order_seed", "max_image_side")}.items():
         for key in keys:
             if key not in config.get(section, {}):
                 raise ValueError(f"{path}: missing [{section}] {key}")
-    runs = config["run"]["test_runs"]
-    if not isinstance(runs, int) or isinstance(runs, bool) or not 1 <= runs <= 10:
-        raise ValueError(f"{path}: [run] test_runs must be a whole number from 1 to 10 (got {runs!r})")
     _check_name(config.get("name"), f"{path}: name")  # it becomes the results folder
     run = config["run"]
     rate = run["requests_per_minute"]
@@ -165,7 +160,7 @@ def _write_json(path: Path, data: dict) -> None:
     os.replace(tmp, path)
 
 
-def _ask(model, image: bytes, mime: str, text: str, throttle) -> tuple[dict, int]:
+def _ask(model, image: bytes, mime: str, text: str, throttle, say=print) -> tuple[dict, int]:
     """One answer and the number of attempts it took. Waits longer after each transient failure; raises when all fail."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         throttle()
@@ -175,15 +170,14 @@ def _ask(model, image: bytes, mime: str, text: str, throttle) -> tuple[dict, int
             if attempt == MAX_ATTEMPTS:
                 raise
             wait = min(120, 10 * 2 ** (attempt - 1))
-            print(f"  attempt {attempt}/{MAX_ATTEMPTS} failed ({exc}); waiting {wait} s")
+            say(f"  attempt {attempt}/{MAX_ATTEMPTS} failed ({exc}); waiting {wait} s")
             time.sleep(wait)
     raise AssertionError("unreachable")
 
 
 def run(config_path: str, split: str, run_id: str | None = None, limit: int | None = None, results: Path = RESULTS) -> Path:
-    """A development run (one folder), or the test runs: ``[run] test_runs`` repeats of the whole test split, each with its
-    own seed. Returns the folder of a stopped run (the same command continues it) or, once all test runs are finished, the
-    summary across them (written again each time the command is run, so it always matches the saved answers)."""
+    """A development run or the test run (one folder each). Returns the finished run's folder, or the ``.partial`` folder of a
+    stopped run (the same command continues it)."""
     config = load_config(config_path)
     if run_id is not None:
         _check_name(run_id, "--run-id")
@@ -191,6 +185,12 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
         raise ValueError("--limit is for development runs only; a test run always uses the whole test split")
     if limit is not None and limit < 1:
         raise ValueError(f"--limit must be at least 1 (got {limit})")
+    git = _git()
+    if split == "test" and git["uncommitted_changes"]:
+        raise ValueError("a test run needs a clean Git state, so that its run card names the exact code it came from: commit your "
+                         "changes (git status shows them), then run the same command again")
+    if split == "test" and git["uncommitted_changes"] is None:
+        print("WARNING: Git is not available here, so the run card cannot name the code this run came from.")
     records, problems = dataset.scan(config["data"]["root"], {"train": config["data"]["train"], "test": config["data"]["test"]})
     broken = [path for path, why in problems if why.startswith("unreadable image")]
     if broken:
@@ -223,39 +223,31 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     models.load_env()
     model_dir = results / config["name"]
     job = {"config": config, "config_path": config_path, "split": split, "items": items, "labels": labels,
-           "prompt_text": prompt_text, "fingerprint": fingerprint, "problems": problems, "model_dir": model_dir}
+           "prompt_text": prompt_text, "fingerprint": fingerprint, "problems": problems, "model_dir": model_dir, "git": git}
     if split == "dev":
         return _run_once(job, run_id or f"dev_{fingerprint[:8]}")  # the same settings give the same folder: a stop resumes
 
-    group, total = run_id or f"test_{fingerprint[:8]}", config["run"]["test_runs"]
-    _refuse_other_test_runs(model_dir, group, fingerprint)
-    for number in range(1, total + 1):
-        if (model_dir / f"{group}_r{number}").exists():
-            print(f"{model_dir / f'{group}_r{number}'} is finished (results are not overwritten)")
-            continue  # finished earlier
-        out = _run_once(job, f"{group}_r{number}", repeat=(number, total, group))
-        if out.name.endswith(".partial"):
-            return out  # stopped: the same command continues with this run
-    if total == 1:
-        return model_dir / f"{group}_r1"  # a single run needs no summary: its report is the result
-    summary = summarize_test_runs(model_dir, group, total)
-    print(f"FINISHED: all {total} test runs. Summary across them: {summary}\nThe run folders and the summary can be committed.")
-    return summary
+    name = run_id or f"test_{fingerprint[:8]}"
+    _refuse_other_test_runs(model_dir, name, fingerprint)
+    if (model_dir / name).exists():
+        print(f"{model_dir / name} is finished (results are not overwritten)")
+        return model_dir / name
+    return _run_once(job, name)
 
 
-def _refuse_other_test_runs(model_dir: Path, group: str, fingerprint: str) -> None:
-    """The test split is run once per config (as its set of repeats): other test runs for this config stop the command."""
+def _refuse_other_test_runs(model_dir: Path, name: str, fingerprint: str) -> None:
+    """The test split is run once per config: any other test run of this config stops the command."""
     for card_path in sorted(model_dir.glob("*/run_card.json")):
         card = json.loads(card_path.read_text(encoding="utf-8"))
         if card["split"] != "test":
             continue
         folder, finished = card_path.parent, not card_path.parent.name.endswith(".partial")
-        other_group = card.get("repeat_group") or folder.name.removesuffix(".partial")
-        if other_group == group and card["fingerprint"] == fingerprint:
-            continue  # one of this command's own runs
+        other = folder.name.removesuffix(".partial")
+        if other == name and card["fingerprint"] == fingerprint:
+            continue  # this command's own run
         if card["fingerprint"] == fingerprint:
-            raise SystemExit(f"the test runs of this config already exist under the name {other_group} ({folder}). Continue "
-                             f"them with --run-id {other_group}, or leave out --run-id if that is the default name")
+            raise SystemExit(f"the test run of this config already exists under the name {other} ({folder}). Continue it "
+                             f"with --run-id {other}, or leave out --run-id if that is the default name")
         if finished:
             raise SystemExit(f"a finished test run already exists for this config, made with other settings, prompt or images: "
                              f"{folder} (results are not overwritten). A changed setting needs a new config file")
@@ -263,30 +255,30 @@ def _refuse_other_test_runs(model_dir: Path, group: str, fingerprint: str) -> No
                          "folder to start over, or undo the change")
 
 
-def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None) -> Path:
+def _run_once(job: dict, run_id: str) -> Path:
     """One run over the job's images: answers are saved as they arrive in ``<run_id>.partial``, renamed when complete."""
     config, items, labels, prompt_text, fingerprint = (job["config"], job["items"], job["labels"], job["prompt_text"],
                                                        job["fingerprint"])
     settings = dict(config["model"])
-    if repeat and "seed" in settings:
-        settings["seed"] = settings["seed"] + repeat[0] - 1  # each test run its own seed: the runs show the model's variation
-    model = models.load(settings["provider"], settings)  # a missing key stops the run before any file is written
+    model = models.load(settings["provider"], settings)  # a missing key or model stops the run before any file is written
+    if job["split"] == "test" and getattr(model, "pinned", True) is False:
+        raise SystemExit("a test run needs the model pinned to one version: set revision in the config to the commit hash that "
+                         "the check prints, and commit the config, so that every answer comes from the same model files")
+    described = model.describe()
 
     model_dir = job["model_dir"]
     final, out = model_dir / run_id, model_dir / f"{run_id}.partial"  # unfinished work lives in the .partial folder (git-ignored)
-    card_path, pred_path = out / "run_card.json", out / "predictions.jsonl"
+    card_path, pred_path, log_path = out / "run_card.json", out / "predictions.jsonl", out / "run.log"
     if final.exists():
         raise SystemExit(f"{final} is finished; choose another --run-id to run it again")
     created = not card_path.exists()
     if created:
         out.mkdir(parents=True, exist_ok=True)
         card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
-                "repeat": repeat[0] if repeat else None, "repeats": repeat[1] if repeat else None,
-                "repeat_group": repeat[2] if repeat else None, "seed": settings.get("seed"),
-                "config_file": Path(job["config_path"]).as_posix(), "config": config,
+                "seed": settings.get("seed"), "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": dataset.items_hash(items),
-                "dataset_files_not_images": len(job["problems"]), "git": _git(),
+                "dataset_files_not_images": len(job["problems"]), "git": job["git"],
                 "versions": _versions(getattr(model, "packages", ("pillow",))),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
     else:
@@ -294,8 +286,24 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
         if card["fingerprint"] != fingerprint:
             raise SystemExit(f"{out} was started with a different config, prompt or image set; delete that folder to start "
                              "over, or choose another --run-id")
-    card["model"] = model.describe()
+        before = (card.get("model") or {}).get("revision_loaded")
+        if before is not None and before != described.get("revision_loaded"):
+            raise SystemExit(f"{out} was started with model files at commit {before}, but commit {described.get('revision_loaded')} "
+                             "is loaded now; answers from two versions of a model must not be mixed. Delete that folder to start "
+                             "over (a revision pinned to a commit hash in the config prevents this)")
+    card.setdefault("sessions", []).append({"utc": _now(), "commit": job["git"]["commit"],
+                                            "uncommitted_changes": job["git"]["uncommitted_changes"]})
+    card["model"] = described
     _write_json(card_path, card)
+
+    def say(message: str, show: bool = True) -> None:
+        """Prints a progress message and appends it, with the time, to the run's log (when the run's folder exists)."""
+        if show:
+            print(message)
+        if out.exists():
+            with log_path.open("a", encoding="utf-8", newline="\n") as log:
+                log.write(f"{_now()} {message.replace(chr(10), ' ')}\n")
+
     _repair_jsonl(pred_path)
     done = {p["path"] for p in _read_jsonl(pred_path)}
     todo = [r for r in items if r.path not in done]
@@ -308,13 +316,15 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
 
     root = Path(config["data"]["root"])
     answered = len(done)
-    print(f"{out}: {answered} of {len(items)} answered, {len(todo)} to go"
-          + (f" (test run {repeat[0]} of {repeat[1]}, seed {settings.get('seed')})" if repeat else ""))
+    git = job["git"]
+    say(f"session start: Git commit {str(git['commit'])[:10]}{', UNCOMMITTED CHANGES' if git['uncommitted_changes'] else ''}; "
+        f"model {described.get('model_id')}, revision loaded {described.get('revision_loaded')}")
+    say(f"{out}: {answered} of {len(items)} answered, {len(todo)} to go")
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, record in enumerate(todo, start=len(done) + 1):
                 image, mime, sent = dataset.prepare_image(root / record.path, config["run"]["max_image_side"])
-                answer, attempt = _ask(model, image, mime, prompt_text, throttle)
+                answer, attempt = _ask(model, image, mime, prompt_text, throttle, say)
                 parsed = prompt.parse(answer["text"], labels)
                 line = {"path": record.path, "label": record.label, "prediction": parsed, "raw_text": answer["text"],
                         "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
@@ -323,7 +333,7 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()
                 answered += 1
-                print(f"[{i}/{len(items)}] {record.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
+                say(f"[{i}/{len(items)}] {record.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
     except (models.TransientError, models.QuotaExhausted, models.FatalError) as exc:
         nothing_to_continue = answered == 0 and created
         if nothing_to_continue:
@@ -333,25 +343,27 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
                                                          "message": str(exc)})
             _write_json(card_path, card)
         if isinstance(exc, models.FatalError):
-            raise SystemExit(f"STOPPED, {answered} of {len(items)} answered. {exc}") from exc
+            message = f"STOPPED, {answered} of {len(items)} answered. {exc}"
+            say(message, show=False)
+            raise SystemExit(message) from exc
         quota = isinstance(exc, models.QuotaExhausted)
-        print(f"NOT FINISHED: {answered} of {len(items)} answered. {'' if quota else 'Last problem: '}{exc}\n"
-              + ("Nothing was saved. " if nothing_to_continue else f"Your answers are saved in {out} (Git ignores it). ")
-              + ("Run the same command again once the quota allows it" if quota else "Run the same command again to continue")
-              + "; nothing needs to be committed until it finishes.")
+        say(f"NOT FINISHED: {answered} of {len(items)} answered. {'' if quota else 'Last problem: '}{exc}\n"
+            + ("Nothing was saved. " if nothing_to_continue else f"Your answers are saved in {out} (Git ignores it). ")
+            + ("Run the same command again once the quota allows it" if quota else "Run the same command again to continue")
+            + "; nothing needs to be committed until it finishes.")
         return out
 
     card["status"], card["finished_utc"] = "complete", _now()
     card["model_versions_returned"] = sorted({p["model_version"] for p in _read_jsonl(pred_path) if p["model_version"]})
     _write_json(card_path, card)
     report(out)
+    say(f"FINISHED: {len(items)} of {len(items)} answered. Report: {final / 'report.md'}\n"
+        "This folder is complete and can be committed.")
     try:
         out.rename(final)
     except OSError as exc:  # Windows refuses while a program (Explorer, an editor) has the folder open
         raise SystemExit(f"The run is complete and saved in {out}, but the folder could not be renamed ({exc}). Close any "
                          "program showing it and run the same command again; no image is sent again.") from exc
-    print(f"FINISHED: {len(items)} of {len(items)} answered. Report: {final / 'report.md'}\n"
-          "This folder is complete and can be committed.")
     return final
 
 
@@ -391,9 +403,6 @@ def report(run_dir: str | Path) -> Path:
 
     complete = card["status"] == "complete" and len(preds) == card["n_images"]
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
-    if card.get("repeat") and card["repeats"] > 1:
-        lines += [f"Test run {card['repeat']} of {card['repeats']} (seed {card['seed']}); the summary across the runs is "
-                  f"`{card['repeat_group']}_summary.md` next to this folder.", ""]
     if card["split"] == "dev":
         lines += ["**Development run on training images: for checking the prompt and answer reader, not a reported result.**", ""]
     if not complete:
@@ -419,6 +428,8 @@ def report(run_dir: str | Path) -> Path:
         lines += [f"| {p['path']} | {p['label']} | {fixed[p['path']]} | {p['prediction'] or metrics.UNREADABLE} |"
                   for p in sorted(preds, key=lambda p: p["path"]) if p["path"] in fixed]
         lines.append("")
+    sessions = card.get("sessions", [])
+    commits = sorted({s["commit"] or "unknown" for s in sessions})
     finish = {}
     for p in preds:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
@@ -431,63 +442,14 @@ def report(run_dir: str | Path) -> Path:
               *([f"- **{sum(other.values())} answers did not end normally ("
                  + ", ".join(f"{k}: {v}" for k, v in sorted(other.items(), key=str))
                  + "); an answer without readable text counts as wrong. Check them in predictions.jsonl.**"] if other else []),
+              f"- Sessions (starts and restarts of this run): {len(sessions)}; Git commits: "
+              f"{', '.join(c[:10] for c in commits) or 'not recorded'}"
+              + ("; **the run spanned more than one commit, so its answers do not all come from the same code**" if len(commits) > 1 else ""),
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", [])),
               f"- Images scaled down before sending (longer side above {card['config']['run']['max_image_side']} px): "
               f"{sum(bool(p.get('image_sent', {}).get('resized')) for p in preds)}"]
     path = run_dir / "report.md"
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    return path
-
-
-def summarize_test_runs(model_dir: Path, group: str, total: int) -> Path:
-    """Writes ``<group>_summary.md`` and ``.json``: the accuracy of each finished test run, their mean and spread, and how
-    often an image got the same answer in all runs. Uses only the saved answers and metrics (no model call)."""
-    runs = []
-    for number in range(1, total + 1):
-        folder = model_dir / f"{group}_r{number}"
-        card = json.loads((folder / "run_card.json").read_text(encoding="utf-8"))
-        if card["status"] != "complete":
-            raise ValueError(f"{folder} is not complete")
-        runs.append({"folder": folder.name, "seed": card["seed"], "card": card,
-                     "metrics": json.loads((folder / "metrics.json").read_text(encoding="utf-8")),
-                     "answers": {p["path"]: p["prediction"] for p in _read_jsonl(folder / "predictions.jsonl")}})
-    images = sorted(runs[0]["answers"])
-    if any(sorted(r["answers"]) != images for r in runs):
-        raise ValueError(f"the test runs of {group} did not answer the same images")
-    same = sum(len({r["answers"][path] for r in runs}) == 1 for path in images)
-
-    def spread(values: list[float]) -> dict:
-        mean = sum(values) / len(values)
-        sd = (sum((v - mean) ** 2 for v in values) / (len(values) - 1)) ** 0.5 if len(values) > 1 else None
-        return {"mean": mean, "sd": sd, "min": min(values), "max": max(values)}
-
-    sets = [("corrected_labels", "Main result: scored against the ISIC-corrected labels"),
-            ("folder_labels", "For comparison: scored against the dataset's folder labels")]
-    sets = [(key, title) for key, title in sets if all(r["metrics"][key] for r in runs)]
-    if len(sets) == 1:
-        sets = [("folder_labels", "Scored against the dataset's folder labels (no label among these images is corrected)")]
-    data = {"group": group, "runs": [{"folder": r["folder"], "seed": r["seed"],
-                                      "model_versions_returned": r["card"]["model_versions_returned"]} for r in runs],
-            "images": len(images), "same_answer_in_all_runs": same}
-    lines = [f"# {runs[0]['card']['name']}: test split, {total} runs ({group})", "",
-             f"- Images: {len(images)}; every run answered the same images with the same prompt and settings, except the seed.",
-             f"- Model versions returned: {', '.join(sorted({v for r in runs for v in r['card']['model_versions_returned']})) or 'none recorded'}",
-             f"- Images that got the same answer in all {total} runs: {same} of {len(images)} ({_pct(same / len(images)) if images else 'n/a'})",
-             "- Mean and SD are over the runs (sample SD); each run's 95% intervals over images are in its own report.", ""]
-    for key, title in sets:
-        per_run = [r["metrics"][key]["accuracy"] for r in runs]
-        data[key] = {"accuracy": {"per_run": per_run, **spread(per_run)}}
-        s = data[key]["accuracy"]
-        lines += [f"## {title}", "", "| Run | Seed | Accuracy | 95% interval | Unreadable |", "|---|---|---|---|---|"]
-        for r in runs:
-            m = r["metrics"][key]
-            lines.append(f"| {r['folder']} | {r['seed']} | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | "
-                         f"{_ci(m['accuracy_ci95'])} | {m['unreadable']} |")
-        lines += [f"| **Mean ± SD** | | {_pct(s['mean'])}" + (f" ± {_pct(s['sd'])}" if s["sd"] is not None else "")
-                  + f" (lowest {_pct(s['min'])}, highest {_pct(s['max'])}) | | |", ""]
-    _write_json(model_dir / f"{group}_summary.json", data)
-    path = model_dir / f"{group}_summary.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
@@ -508,7 +470,6 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--all", action="store_true", help="check every image, not only conflicting and testing images")
     c = sub.add_parser("check", help="test everything a run needs, without sending any dataset image")
     c.add_argument("--config", required=True)
-    c.add_argument("--list-models", action="store_true", help="also list the models the key can use")
     c.add_argument("--model", help="test this model id instead of the config's (the config file is not changed)")
     r = sub.add_parser("run", help="run one model on the dev sample or the test split")
     r.add_argument("--config", required=True)
@@ -532,7 +493,7 @@ def main(argv: list[str] | None = None) -> None:
             config = load_config(args.config)
             if args.model:
                 config["model"] = {**config["model"], "id": args.model}
-            sys.exit(0 if preflight.check(config, args.config, list_models=args.list_models) else 1)
+            sys.exit(0 if preflight.check(config, args.config) else 1)
         elif args.command == "run":
             run(args.config, args.split, args.run_id, args.limit)
         else:

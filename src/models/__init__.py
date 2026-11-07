@@ -5,12 +5,12 @@ An adapter is one file in this folder with a class that has ``describe()`` (what
 ``finish_reason`` ("STOP" for a normal end, "MAX_TOKENS" when the answer was cut off at the output limit, any other value
 passes through), ``model_version`` (as the API returns it), ``response_id`` and ``usage`` (token counts). It raises
 TransientError for a failure worth retrying, QuotaExhausted when a per-day quota is used up, and FatalError (with a message that
-says what to do) for anything retrying cannot fix. An adapter may also offer ``list_models()`` for ``check --list-models``.
+says what to do) for anything retrying cannot fix.
 
 An adapter may also set ``packages`` (the packages whose versions the run card records), ``loaded_note`` and ``probe_note``
 (how the check describes a loaded adapter and its one probe request).
 
-Adapters: ``gemini`` (src/models/gemini.py), ``hf_local`` (src/models/hf_local.py: a Hugging Face model run on this computer).
+Adapters: ``hf_local`` (src/models/hf_local.py: a Hugging Face model run on this computer).
 """
 
 from __future__ import annotations
@@ -61,12 +61,8 @@ def load_env(path: str | Path = ".env") -> None:
 
 def load(provider: str, settings: dict):
     """The adapter for ``provider`` (a branch per provider, importing its module only when used)."""
-    if provider == "gemini":
-        from .gemini import GeminiModel  # imported here so tests and other providers do not need the Gemini SDK
-
-        return GeminiModel(settings)
     if provider == "hf_local":
         from .hf_local import HFLocalModel  # imported here so the other providers do not need PyTorch
 
         return HFLocalModel(settings)
-    raise ValueError(f"unknown model provider: {provider!r} (adapters: gemini, hf_local)")
+    raise ValueError(f"unknown model provider: {provider!r} (adapters: hf_local)")

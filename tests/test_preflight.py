@@ -13,12 +13,10 @@ from tests.support import make_project, write_corrections
 class ProbeModel:
     """Answers the blank-image question as told: ``answer`` (a dict), or raises ``error``."""
 
-    def __init__(self, answer=None, error=None, names=None):
+    def __init__(self, answer=None, error=None):
         self.answer = answer or {"text": "ok", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": "r",
                                  "usage": {"output_tokens": 1}}
         self.error, self.calls, self.images = error, 0, []
-        if names is not None:
-            self.list_models = lambda: names
 
     def predict(self, image, mime_type, prompt):
         self.calls += 1
@@ -37,11 +35,10 @@ class PreflightTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _check(self, model=None, load_error=None, list_models=False):
+    def _check(self, model=None, load_error=None):
         lines = []
         with mock.patch("src.preflight.models.load", return_value=model, side_effect=load_error):
-            ok = preflight.check(evaluate.load_config(self.project.config), str(self.project.config), say=lines.append,
-                                 list_models=list_models)
+            ok = preflight.check(evaluate.load_config(self.project.config), str(self.project.config), say=lines.append)
         return ok, "\n".join(lines)
 
     def test_everything_in_order(self):
@@ -66,21 +63,12 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("fake, key found (not shown)", text)
         self.assertIn("it counts as one request against the daily quota) ...", text)
 
-    def test_an_unavailable_model_is_reported_with_the_models_that_are(self):
+    def test_an_unavailable_model_is_reported(self):
         error = models.FatalError("Provider refused the request (HTTP 404 NOT_FOUND): gone", 404)
-        ok, text = self._check(ProbeModel(error=error, names=["model-a", "model-b"]))
+        ok, text = self._check(ProbeModel(error=error))
         self.assertFalse(ok)
         self.assertIn("[FAIL] Model fake-1: Provider refused the request (HTTP 404", text)
-        self.assertIn("models your key can use", text)
-        self.assertIn("model-a, model-b", text)
         self.assertIn("Fix the lines marked FAIL", text)
-
-    def test_the_models_can_be_listed_while_the_model_works(self):
-        ok, text = self._check(ProbeModel(names=["model-a", "model-b"]), list_models=True)
-        self.assertTrue(ok)
-        self.assertEqual(text.count("model-a, model-b"), 1)
-        ok, text = self._check(ProbeModel(), list_models=True)  # a provider that cannot list them says so
-        self.assertIn("cannot list its models", text)
 
     def test_a_temporary_overload_is_not_blamed_on_the_setup(self):
         model = ProbeModel(error=models.TransientError("HTTP 503 UNAVAILABLE: high demand"))

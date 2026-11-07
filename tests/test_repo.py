@@ -57,7 +57,7 @@ class RepoTests(unittest.TestCase):
             low, high = main["accuracy_ci95"]
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             self.assertEqual(cells[1:4], [pct(main["accuracy"]), f"{pct(low)} to {pct(high)}", pct(m["folder_labels"]["accuracy"])])
-        finished = [p for p in (ROOT / "results").glob("*/*") if p.is_dir() and not p.name.endswith(".partial") and "_r" in p.name]
+        finished = [p for p in (ROOT / "results").glob("*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
         self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 
     def test_commands_and_modules_are_documented(self):
@@ -130,8 +130,8 @@ class RepoTests(unittest.TestCase):
                 name, operator, _ = re.fullmatch(r"([A-Za-z0-9._-]+)(==|>=)(\S+)", line).groups()
                 listed[name.lower()] = operator
         self.assertFalse(list((ROOT).glob("requirements*.txt"))[1:], "there must be one requirements file")
-        distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx", "torch": "torch",
-                        "transformers": "transformers", "huggingface_hub": "huggingface-hub"}  # import name -> package name
+        distribution = {"PIL": "pillow", "torch": "torch", "transformers": "transformers",
+                        "huggingface_hub": "huggingface-hub"}  # import name -> package name
         installed_first = {"torch"}  # from pytorch.org (the plain pip download for Windows has no GPU support); the run card records its version
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):

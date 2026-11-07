@@ -28,7 +28,7 @@ src/
   metrics.py      accuracy and its 95% interval (the only metric until the supervisor approves others)
   preflight.py    the setup check that runs before every model run (no dataset image is sent)
   evaluate.py     the command line: profile, isic, check, run, report
-  models/         one adapter per model provider (Gemini; Hugging Face models run on this computer)
+  models/         one adapter per model provider (currently: Hugging Face models run on this computer)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, and one folder per finished model run
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed

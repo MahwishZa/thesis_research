@@ -60,6 +60,14 @@ class DatasetTests(unittest.TestCase):
         with Image.open(io.BytesIO(data)) as im:
             self.assertEqual(im.size, (2048, 683))
 
+    def test_an_image_exactly_at_the_size_limit_is_sent_unchanged_and_one_pixel_more_is_scaled(self):
+        for size, resized in (((2048, 100), False), ((100, 2048), False), ((2049, 100), True), ((100, 2049), True)):
+            path = Path(self.tmp.name) / f"edge{size[0]}x{size[1]}.jpg"
+            Image.new("RGB", size, (10, 20, 30)).save(path)
+            data, mime, info = dataset.prepare_image(path, 2048)
+            self.assertEqual(info["resized"], resized, size)
+            self.assertEqual(data == path.read_bytes(), not resized, size)
+
     def test_profile_reports_cross_split_duplicate(self):
         out = Path(self.tmp.name) / "profile"
         report = dataset.profile(self.root, SPLITS, out, Path(self.tmp.name) / "sheets")

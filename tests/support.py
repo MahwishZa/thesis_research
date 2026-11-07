@@ -29,7 +29,6 @@ dev_per_class = 2
 dev_seed = 0
 order_seed = 0
 max_image_side = 50
-test_runs = 1
 """
 
 

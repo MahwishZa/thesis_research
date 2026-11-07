@@ -26,16 +26,17 @@ def build(template: str, labels: list[str]) -> str:
 
 
 def _normalise(text: str) -> str:
-    text = text.strip().lower()
-    text = re.sub(r"^(final\s+)?(diagnosis|answer)\s*:\s*", "", text)
-    text = text.strip(" \t\r\n\"'`*-.")
+    text = re.sub(r"[*_`]+", "", text.strip().lower())  # bold, italic and code marks, wherever they stand
+    text = re.sub(r"^(final\s+)?(diagnosis|answer)\s*:\s*", "", text.strip())
+    text = text.strip(" \t\r\n\"'-.")
     return re.sub(r"\s+", " ", text)
 
 
 def parse(text: str | None, labels: list[str]) -> str | None:
     """The class the answer names, or None when it is not exactly one class name.
 
-    Only formatting is forgiven (case, spaces, quotes, bold marks, a trailing full stop, a leading "Diagnosis:").
+    Only formatting is forgiven (case, spaces, quotes, bold, italic and code marks, a trailing full stop, a leading
+    "Diagnosis:", "Answer:" or "Final answer:").
     An answer that adds words or names two classes counts as unreadable, which the metrics score as wrong.
     """
     if not text:

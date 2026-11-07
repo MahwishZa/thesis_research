@@ -24,8 +24,15 @@ class PromptTests(unittest.TestCase):
             self.assertEqual(prompt.parse(answer, LABELS), "melanoma", answer)
         self.assertEqual(prompt.parse("Vascular  lesion", LABELS), "vascular lesion")
 
+    def test_parse_forgives_markup_around_a_leading_label(self):
+        for answer in ["**Diagnosis:** Melanoma", "**Diagnosis**: Melanoma", "***Diagnosis:*** melanoma", "Answer: **melanoma**",
+                       "Final answer: melanoma", "_melanoma_", "`melanoma`", "- melanoma", "**Final Answer:** `Melanoma`."]:
+            self.assertEqual(prompt.parse(answer, LABELS), "melanoma", answer)
+
     def test_parse_rejects_everything_else(self):
-        for answer in [None, "", "melanoma or nevus", "probably melanoma", "basal cell carcinoma", "The answer is nevus."]:
+        for answer in [None, "", "melanoma or nevus", "probably melanoma", "basal cell carcinoma", "The answer is nevus.",
+                       "The diagnosis is melanoma", "1. melanoma", "MELANOMA!", "melanoma (in situ)", "<end_of_turn>melanoma",
+                       "**Diagnosis:** melanoma, nevus", "Melanoma\n\nThis lesion shows irregular pigment."]:
             self.assertIsNone(prompt.parse(answer, LABELS), answer)
 
 

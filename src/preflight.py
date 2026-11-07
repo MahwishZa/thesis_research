@@ -1,6 +1,6 @@
 """The preflight check: everything a run needs, tested without sending a single dataset image.
 
-    python -m src.evaluate check --config configs/<model>.toml [--list-models] [--model <id>]
+    python -m src.evaluate check --config configs/<model>.toml [--model <id>]
 
 Run it before every development or test run. Each line says OK or FAIL; a FAIL says what to do. The model is called once with
 a blank synthetic image, so it finds an unavailable model, a wrong key, a used-up daily quota or an overloaded service before
@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import csv
 import io
-import textwrap
 import time
 from collections import Counter
 from pathlib import Path
@@ -46,20 +45,7 @@ def _probe(model, say) -> tuple[dict | None, str | None]:
     raise AssertionError("unreachable")
 
 
-def _show_models(model, say) -> None:
-    """The models the key can use, when the provider can list them (a help only: a failure of it is reported, not raised)."""
-    names = getattr(model, "list_models", None)
-    if names is None:
-        say("       (this provider cannot list its models)")
-        return
-    try:
-        say("       models your key can use (a listed model can still be refused; the check tells):")
-        say(textwrap.fill(", ".join(names()), width=110, initial_indent="         ", subsequent_indent="         "))
-    except Exception as exc:
-        say(f"       (the model list could not be read: {exc})")
-
-
-def check(config: dict, config_path: str, say=print, *, list_models: bool = False) -> bool:
+def check(config: dict, config_path: str, say=print) -> bool:
     """Prints one line per check and returns True when none failed."""
     failed = False
 
@@ -115,15 +101,11 @@ def check(config: dict, config_path: str, say=print, *, list_models: bool = Fals
         line("FAIL", "Model adapter and access", str(exc))
         return False
 
-    if list_models:
-        _show_models(model, say)
     say(f"       asking {settings['id']} one question with a blank image (nothing from the dataset is sent; "
         f"{getattr(model, 'probe_note', 'it counts as one request against the daily quota')}) ...")
     answer, problem = _probe(model, say)
     if answer is None:
         line("FAIL", f"Model {settings['id']}", problem)
-        if "HTTP 404" in problem and not list_models:
-            _show_models(model, say)
     else:
         detail = (f"answered {answer['text']!r}, finish reason {answer['finish_reason']}, version {answer['model_version']}"
                   + (f", usage {answer['usage']}" if answer["usage"] else ""))

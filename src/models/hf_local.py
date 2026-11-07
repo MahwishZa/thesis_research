@@ -70,6 +70,7 @@ class HFLocalModel:
             raise ValueError(f"[model] is missing {', '.join(missing)} (the hf_local adapter needs id, dtype, seed and max_new_tokens)")
         self.model_id, self.dtype_name, self.seed = settings["id"], settings["dtype"], settings["seed"]
         self.max_new_tokens, self.revision = settings["max_new_tokens"], settings.get("revision", "main")
+        self.pinned = isinstance(self.revision, str) and bool(COMMIT.fullmatch(self.revision))  # a test run needs this
         if not isinstance(self.model_id, str) or not self.model_id or not isinstance(self.revision, str) or not self.revision:
             raise ValueError("[model] id and revision must be non-empty text")
         if self.dtype_name not in DTYPES:

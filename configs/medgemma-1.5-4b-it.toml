@@ -32,4 +32,3 @@ dev_per_class = 10         # training images per class used only to develop the 
 dev_seed = 0
 order_seed = 0             # seeded random order in which the images are sent
 max_image_side = 2048      # as for every model; MedGemma itself resizes every image to 896 x 896 pixels
-test_runs = 1              # one test run, as in the base paper

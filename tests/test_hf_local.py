@@ -197,6 +197,11 @@ class HFLocalTests(unittest.TestCase):
         self.assertIn("UNKNOWN", adapter.loaded_note)
         self.assertEqual(adapter.predict(png(), "image/png", "?")["model_version"], "org/model@main")
 
+    def test_only_a_revision_that_is_a_commit_hash_counts_as_pinned(self):
+        self.assertFalse(self._load().pinned)  # "main" moves
+        self.assertTrue(self._load({"revision": COMMIT}).pinned)
+        self.assertFalse(self._load({"revision": COMMIT[:7]}).pinned)  # a short hash is not enough
+
     def test_the_packages_whose_versions_are_recorded_include_pytorch(self):
         from src.models import hf_local
 
