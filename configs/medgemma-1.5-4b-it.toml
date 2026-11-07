@@ -19,7 +19,7 @@ id = "google/medgemma-1.5-4b-it"
 revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"  # the commit of the model files that `check` loaded on 2026-11-07; a test run needs one fixed commit, not "main"
 dtype = "bfloat16"  # the model's own precision; float16 or float32 are also possible
 seed = 0
-max_new_tokens = 128  # a class name needs a few tokens; an answer that reaches this limit counts as wrong and is reported
+max_new_tokens = 32  # every accepted answer fits: the longest, "Final answer: **Seborrheic Keratosis**.", is 11 word-pieces + 1 end token (counted 2026-11-07); a longer answer is not a class name
 gpu_memory_gib = 3.0   # of the 4 GB graphics card, leaving room for the picture and the screen; the rest of the model waits in RAM
 cpu_memory_gib = 10.0  # RAM the model may use for the part that does not fit on the card
 

@@ -434,11 +434,16 @@ def report(run_dir: str | Path) -> Path:
     for p in preds:
         finish[p["finish_reason"]] = finish.get(p["finish_reason"], 0) + 1
     other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
+    cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
+    harmful = sum(prompt.can_still_become_readable(p["raw_text"], labels) for p in cut)  # the limit may have decided these
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
-              *([f"- **{finish['MAX_TOKENS']} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
-                 "max_output_tokens is too low for this model (hidden reasoning can count toward it). Results are not valid until it is raised in a new config.**"]
-                if finish.get("MAX_TOKENS") else []),
+              *([f"- **{harmful} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
+                 "the output limit in the config (max_output_tokens or max_new_tokens) is too low for this model (hidden reasoning "
+                 "can count toward it). Results are not valid until it is raised in a new config.**"] if harmful else []),
+              *([f"- {len(cut) - harmful} answers reached the output limit but already differed from every class name before it "
+                 "(an essay, or a second class name), so the limit did not change their score; they count as wrong."]
+                if len(cut) > harmful else []),
               *([f"- **{sum(other.values())} answers did not end normally ("
                  + ", ".join(f"{k}: {v}" for k, v in sorted(other.items(), key=str))
                  + "); an answer without readable text counts as wrong. Check them in predictions.jsonl.**"] if other else []),

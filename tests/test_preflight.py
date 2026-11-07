@@ -89,7 +89,7 @@ class PreflightTests(unittest.TestCase):
         answer = {"text": "o", "finish_reason": "MAX_TOKENS", "model_version": "v", "response_id": "r", "usage": {"output_tokens": 60}}
         ok, text = self._check(ProbeModel(answer))
         self.assertFalse(ok)
-        self.assertIn("raise max_output_tokens", text)
+        self.assertIn("raise the output limit, max_output_tokens or max_new_tokens", text)
 
     def test_a_missing_key_or_adapter_stops_early(self):
         ok, text = self._check(load_error=ValueError("no API key found"))

@@ -46,3 +46,17 @@ def parse(text: str | None, labels: list[str]) -> str | None:
         if answer == _normalise(label):
             return label
     return None
+
+
+LEAD_INS = ("diagnosis", "answer", "final answer")  # the words parse() forgives in front of a colon and the class name
+
+
+def can_still_become_readable(text: str | None, labels: list[str]) -> bool:
+    """For an answer that was cut off at the output limit: could the rest of it have made it a readable answer?
+
+    True when what is there, after the formatting that parse() forgives, is empty or only the beginning of a class name or
+    of a "Diagnosis:"-style lead-in. False when it already differs from every class name (an essay, a second class name):
+    no continuation can then make it exactly one class name, so the cut-off did not change how the answer is scored.
+    """
+    answer = _normalise(text or "")
+    return any(start.startswith(answer) for start in [_normalise(label) for label in labels] + list(LEAD_INS))

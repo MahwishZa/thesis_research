@@ -433,6 +433,33 @@ class EvaluateTests(unittest.TestCase):
         self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
         self.assertNotIn("cut off", (self._run(FakeModel(), "dev", run_id="d1") / "report.md").read_text(encoding="utf-8"))
 
+    def test_essays_cut_off_at_the_limit_do_not_make_the_results_invalid(self):
+        class Essay(FakeModel):
+            def predict(self, *args):
+                text = "Based on the image, the most likely diagnosis is **melanoma**. Here is why:"
+                return super().predict(*args) | {"text": text, "finish_reason": "MAX_TOKENS"}
+
+        self._run(Essay(), "test", run_id="t1")
+        text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
+        self.assertNotIn("Results are not valid", text)
+        self.assertIn("4 answers reached the output limit but already differed from every class name", text)
+        self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
+
+    def test_only_the_cut_off_answers_that_could_have_become_readable_make_the_results_invalid(self):
+        asked = []
+
+        class Mixed(FakeModel):
+            def predict(self, *args):
+                asked.append(1)
+                text = "mela" if len(asked) == 1 else "Based on the image, the most likely diagnosis is melanoma."
+                return super().predict(*args) | {"text": text, "finish_reason": "MAX_TOKENS"}
+
+        self._run(Mixed(), "test", run_id="t1")
+        text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
+        self.assertIn("1 answers were cut off at the output limit", text)
+        self.assertIn("Results are not valid until it is raised", text)
+        self.assertIn("3 answers reached the output limit but already differed from every class name", text)
+
     def test_a_missing_key_stops_the_run_before_anything_is_written(self):
         with mock.patch("src.evaluate.models.load", side_effect=ValueError("no key")), self.assertRaises(ValueError):
             evaluate.run(str(self.config), "test", results=self.results)

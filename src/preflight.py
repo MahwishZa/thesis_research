@@ -110,7 +110,7 @@ def check(config: dict, config_path: str, say=print) -> bool:
         detail = (f"answered {answer['text']!r}, finish reason {answer['finish_reason']}, version {answer['model_version']}"
                   + (f", usage {answer['usage']}" if answer["usage"] else ""))
         if answer["finish_reason"] != "STOP" or not answer["text"]:
-            line("FAIL", f"Model {settings['id']}", detail + " (the answer was cut off or empty: raise max_output_tokens)")
+            line("FAIL", f"Model {settings['id']}", detail + " (the answer was cut off or empty: raise the output limit, max_output_tokens or max_new_tokens)")
         else:
             line("OK", f"Model {settings['id']}", detail)
 
