@@ -16,7 +16,7 @@ manifest = "results/dataset_profile/manifest.csv"  # the profiled images (SHA-25
 [model]
 provider = "hf_local"
 id = "google/medgemma-1.5-4b-it"
-revision = "main"  # `check` prints the commit it loaded; pin that commit here before the test run (it is recorded in every run)
+revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"  # the commit of the model files that `check` loaded on 2026-11-07; a test run needs one fixed commit, not "main"
 dtype = "bfloat16"  # the model's own precision; float16 or float32 are also possible
 seed = 0
 max_new_tokens = 128  # a class name needs a few tokens; an answer that reaches this limit counts as wrong and is reported
