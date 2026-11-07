@@ -75,6 +75,15 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual((self._run(again, "test", run_id="t1"), again.calls), (out, 0))
         self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1_r1"])  # no .partial, no summary
 
+    def test_the_run_card_records_the_versions_of_the_packages_the_adapter_names(self):
+        model = FakeModel()
+        model.packages = ("pillow", "no-such-package")
+        self._run(model, "dev", run_id="d1", limit=1)
+        card = json.loads((self.model_dir / "d1" / "run_card.json").read_text(encoding="utf-8"))
+        self.assertEqual(sorted(card["versions"]), ["no-such-package", "pillow", "python"])
+        self.assertIsNone(card["versions"]["no-such-package"])
+        self.assertRegex(card["versions"]["pillow"], r"^\d+\.\d+")
+
     def test_the_same_answers_are_scored_against_folder_and_corrected_labels(self):
         write_corrections(self.project.corrections, ("Test/nevus/ISIC_0000009.jpg", "nevus", "melanoma"),
                           ("Test/nevus/ISIC_0000010.jpg", "nevus", "melanoma"),

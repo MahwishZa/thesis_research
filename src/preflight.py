@@ -110,7 +110,7 @@ def check(config: dict, config_path: str, say=print, *, list_models: bool = Fals
     provider, settings = config["model"]["provider"], config["model"]
     try:
         model = models.load(provider, settings)
-        line("OK", "Model adapter and API key", f"{provider}, key found (not shown)")
+        line("OK", "Model adapter and API key", f"{provider}, {getattr(model, 'loaded_note', 'key found (not shown)')}")
     except ValueError as exc:
         line("FAIL", "Model adapter and API key", str(exc))
         return False
@@ -118,7 +118,7 @@ def check(config: dict, config_path: str, say=print, *, list_models: bool = Fals
     if list_models:
         _show_models(model, say)
     say(f"       asking {settings['id']} one question with a blank image (nothing from the dataset is sent; "
-        "it counts as one request against the daily quota) ...")
+        f"{getattr(model, 'probe_note', 'it counts as one request against the daily quota')}) ...")
     answer, problem = _probe(model, say)
     if answer is None:
         line("FAIL", f"Model {settings['id']}", problem)

@@ -39,7 +39,7 @@ class LoadEnvTests(unittest.TestCase):
 
 class LoadTests(unittest.TestCase):
     def test_a_provider_without_an_adapter_is_refused_with_an_explanation(self):
-        with self.assertRaisesRegex(ValueError, r"unknown model provider: 'nothing' \(adapters: gemini\)"):
+        with self.assertRaisesRegex(ValueError, r"unknown model provider: 'nothing' \(adapters: gemini, hf_local\)"):
             models.load("nothing", {})
 
 

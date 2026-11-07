@@ -54,6 +54,18 @@ class PreflightTests(unittest.TestCase):
         image, mime, _ = model.images[0]  # only a blank synthetic image is ever sent
         self.assertEqual((mime, Image.open(io.BytesIO(image)).size), ("image/png", (64, 64)))
 
+    def test_an_adapter_can_say_how_it_is_loaded_and_what_the_probe_costs(self):
+        model = ProbeModel()
+        model.loaded_note, model.probe_note = "model files found and loaded", "it runs on this computer, so it uses no quota"
+        ok, text = self._check(model)
+        self.assertTrue(ok, text)
+        self.assertIn("[  OK] Model adapter and API key: fake, model files found and loaded", text)
+        self.assertIn("it runs on this computer, so it uses no quota) ...", text)
+        self.assertNotIn("daily quota)", text)
+        ok, text = self._check(ProbeModel())  # an adapter without notes keeps the wording for hosted models
+        self.assertIn("fake, key found (not shown)", text)
+        self.assertIn("it counts as one request against the daily quota) ...", text)
+
     def test_an_unavailable_model_is_reported_with_the_models_that_are(self):
         error = models.FatalError("Provider refused the request (HTTP 404 NOT_FOUND): gone", 404)
         ok, text = self._check(ProbeModel(error=error, names=["model-a", "model-b"]))

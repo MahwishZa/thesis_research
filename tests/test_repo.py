@@ -132,9 +132,11 @@ class RepoTests(unittest.TestCase):
                 self.assertIsNone(key_formats.search((ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
 
     def test_every_imported_package_is_pinned_in_requirements(self):
-        pins = {line.split("==")[0].strip().lower() for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
-                if "==" in line}
-        distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx"}  # import name -> package name
+        pins = {line.split("==")[0].strip().lower() for name in ("requirements.txt", "requirements-local.txt")
+                for line in (ROOT / name).read_text(encoding="utf-8").splitlines() if "==" in line and not line.startswith("#")}
+        distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx", "torch": "torch",
+                        "transformers": "transformers", "huggingface_hub": "huggingface-hub"}  # import name -> package name
+        installed_separately = {"torch"}  # from pytorch.org (the plain pip download for Windows has no GPU support); the run card records its version
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -145,7 +147,8 @@ class RepoTests(unittest.TestCase):
         outside = sorted(imported - set(sys.stdlib_module_names) - {"src"})
         self.assertEqual([name for name in outside if name not in distribution], [], "add this package to the map in this test and to requirements.txt")
         for name in outside:
-            self.assertIn(distribution[name], pins, f"{name} is imported but {distribution[name]} is not pinned in requirements.txt")
+            if distribution[name] not in installed_separately:
+                self.assertIn(distribution[name], pins, f"{name} is imported but {distribution[name]} is not pinned in a requirements file")
 
     def test_text_files_use_unix_line_endings(self):
         for path in [ROOT / "README.md", ROOT / "prompts" / "diagnosis_v1.txt"]:

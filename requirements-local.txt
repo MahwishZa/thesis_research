@@ -1,0 +1,6 @@
+# Extra packages for models run on this computer (provider hf_local, e.g. MedGemma). Install them after requirements.txt.
+# PyTorch is installed first and on its own, with the command that https://pytorch.org/get-started/locally/ shows for
+# Windows, Pip and the CUDA build: the plain pip download for Windows has no GPU support. Its version is recorded in every run.
+transformers==5.22.2
+accelerate==1.15.0  # needed for the GPU/RAM split (device_map="auto")
+huggingface-hub==2.4.0  # installed with transformers (which accepts 1.31 up to 3.0); read to record the commit of the model files

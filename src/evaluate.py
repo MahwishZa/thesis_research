@@ -57,9 +57,10 @@ def _git() -> dict:
         return {"commit": None, "uncommitted_changes": None}
 
 
-def _versions() -> dict:
+def _versions(packages: tuple[str, ...] = ("pillow",)) -> dict:
+    """The Python version and the versions of the packages the model adapter says it uses (``packages``)."""
     out = {"python": platform.python_version()}
-    for package in ("google-genai", "pillow", "httpx"):
+    for package in packages:
         try:
             out[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
@@ -285,7 +286,8 @@ def _run_once(job: dict, run_id: str, repeat: tuple[int, int, str] | None = None
                 "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": dataset.items_hash(items),
-                "dataset_files_not_images": len(job["problems"]), "git": _git(), "versions": _versions(),
+                "dataset_files_not_images": len(job["problems"]), "git": _git(),
+                "versions": _versions(getattr(model, "packages", ("pillow",))),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
     else:
         card = json.loads(card_path.read_text(encoding="utf-8"))
