@@ -1,4 +1,11 @@
 # Python 3.11 or newer (configs are read with the built-in tomllib).
+# To run MedGemma on a GPU, install PyTorch FIRST and on its own with the command that https://pytorch.org/get-started/locally/
+# shows for Windows, Pip and the CUDA build (the plain pip download for Windows has no GPU support); then install this file.
+# For that reason torch has no exact pin here; every run card records the version that was used.
 google-genai==2.34.0
 pillow==13.0.0
 httpx==0.28.1  # imported directly by the Gemini adapter; google-genai needs it too
+torch>=2.6  # MedGemma adapter; 2.6 is the lowest version transformers 5 accepts
+transformers==5.22.2  # MedGemma adapter
+accelerate==1.15.0  # splits a model that does not fit on the graphics card between the card and RAM (device_map="auto")
+huggingface-hub==2.4.0  # installed with transformers (which accepts 1.31 up to 3.0); read to record the commit of the model files

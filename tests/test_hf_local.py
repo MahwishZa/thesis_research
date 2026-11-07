@@ -149,6 +149,8 @@ class HFLocalTests(unittest.TestCase):
     def test_a_refused_download_says_how_to_get_access(self):
         with self.assertRaisesRegex(ValueError, "HF_TOKEN"):
             self._load(load_error=OSError("You are trying to access a gated repo. 401 Client Error"))
+        with self.assertRaisesRegex(ValueError, "HF_TOKEN"):  # not every version raises an OSError for a refused download
+            self._load(load_error=LookupError("401 Client Error: Unauthorized for url https://huggingface.co/org/model"))
         with self.assertRaisesRegex(ValueError, r"could not be loaded \(OSError: no space left"):
             self._load(load_error=OSError("no space left on device"))
 
@@ -162,8 +164,12 @@ class HFLocalTests(unittest.TestCase):
                 self._load(bad)
 
     def test_without_pytorch_the_setup_is_explained(self):
-        with mock.patch.dict(sys.modules, {"torch": None}), self.assertRaisesRegex(ValueError, "requirements-local.txt"):
+        with mock.patch.dict(sys.modules, {"torch": None}), self.assertRaisesRegex(ValueError, "install PyTorch from pytorch.org"):
             models.load("hf_local", SETTINGS)
+
+    def test_a_missing_helper_package_is_explained_instead_of_a_traceback(self):
+        with self.assertRaisesRegex(ValueError, r"accelerate.*pip install -r requirements.txt"):
+            self._load(load_error=ImportError("Using a `device_map` requires accelerate"))
 
     def test_the_run_card_records_what_was_asked_and_what_was_loaded(self):
         description = self._load().describe()

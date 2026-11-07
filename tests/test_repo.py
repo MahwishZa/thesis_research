@@ -131,12 +131,16 @@ class RepoTests(unittest.TestCase):
             if path and (ROOT / path).suffix in {".py", ".md", ".toml", ".txt", ".csv", ".json", ".jsonl"}:
                 self.assertIsNone(key_formats.search((ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
 
-    def test_every_imported_package_is_pinned_in_requirements(self):
-        pins = {line.split("==")[0].strip().lower() for name in ("requirements.txt", "requirements-local.txt")
-                for line in (ROOT / name).read_text(encoding="utf-8").splitlines() if "==" in line and not line.startswith("#")}
+    def test_every_imported_package_is_in_the_one_requirements_file_and_pinned(self):
+        listed = {}  # package -> how it is constrained ("==" exact pin, ">=" lowest version)
+        for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines():
+            if line := line.split("#")[0].strip():
+                name, operator, _ = re.fullmatch(r"([A-Za-z0-9._-]+)(==|>=)(\S+)", line).groups()
+                listed[name.lower()] = operator
+        self.assertFalse(list((ROOT).glob("requirements*.txt"))[1:], "there must be one requirements file")
         distribution = {"PIL": "pillow", "google": "google-genai", "httpx": "httpx", "torch": "torch",
                         "transformers": "transformers", "huggingface_hub": "huggingface-hub"}  # import name -> package name
-        installed_separately = {"torch"}  # from pytorch.org (the plain pip download for Windows has no GPU support); the run card records its version
+        installed_first = {"torch"}  # from pytorch.org (the plain pip download for Windows has no GPU support); the run card records its version
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -147,8 +151,11 @@ class RepoTests(unittest.TestCase):
         outside = sorted(imported - set(sys.stdlib_module_names) - {"src"})
         self.assertEqual([name for name in outside if name not in distribution], [], "add this package to the map in this test and to requirements.txt")
         for name in outside:
-            if distribution[name] not in installed_separately:
-                self.assertIn(distribution[name], pins, f"{name} is imported but {distribution[name]} is not pinned in a requirements file")
+            package = distribution[name]
+            self.assertIn(package, listed, f"{name} is imported but {package} is not in requirements.txt")
+            self.assertEqual(listed[package], ">=" if package in installed_first else "==", f"{package} is not constrained as expected")
+        for package, operator in listed.items():
+            self.assertTrue(operator == "==" or package in installed_first, f"{package} must be pinned with ==")
 
     def test_text_files_use_unix_line_endings(self):
         for path in [ROOT / "README.md", ROOT / "prompts" / "diagnosis_v1.txt"]:

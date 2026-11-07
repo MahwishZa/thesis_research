@@ -2,7 +2,7 @@
 and then read from the local cache. The model is gated, so the download needs a Hugging Face access token (``HF_TOKEN`` in
 ``.env``) of an account that has accepted the model's terms.
 
-Needs the packages of ``requirements-local.txt`` and PyTorch (the CUDA build from pytorch.org for a GPU). Decoding is greedy
+Needs the packages of ``requirements.txt`` and, for a GPU, PyTorch's CUDA build installed first from pytorch.org. Decoding is greedy
 (``do_sample=False``), the temperature-0 setting of the base paper. A model that does not fit in the GPU memory is split
 between the GPU and the RAM (``device_map="auto"`` within ``gpu_memory_gib`` and ``cpu_memory_gib``): slower, but every number is
 still computed in the model's own precision ``dtype``.
@@ -85,8 +85,8 @@ class HFLocalModel:
             import torch
             import transformers
         except ImportError as exc:
-            raise ValueError("PyTorch and transformers are not installed: install PyTorch from pytorch.org (the CUDA build for a "
-                             "GPU), then run pip install -r requirements-local.txt") from exc
+            raise ValueError("PyTorch and transformers are not installed: first install PyTorch from pytorch.org (the CUDA build "
+                             "for a GPU), then run pip install -r requirements.txt") from exc
         self.torch = torch
         self.cuda = bool(torch.cuda.is_available())
         kwargs = {"dtype": getattr(torch, self.dtype_name), "device_map": "auto" if self.cuda else "cpu"}
@@ -100,7 +100,9 @@ class HFLocalModel:
         try:
             self.model = transformers.AutoModelForImageTextToText.from_pretrained(self.model_id, revision=self.revision, **kwargs)
             self.processor = transformers.AutoProcessor.from_pretrained(self.model_id, revision=self.revision)
-        except (OSError, ValueError, RuntimeError) as exc:
+        except ImportError as exc:  # for example accelerate, which device_map="auto" needs
+            raise ValueError(f"A package that {self.model_id} needs is missing ({exc}). Run pip install -r requirements.txt") from exc
+        except Exception as exc:  # a refused or failed download arrives as different error types in different versions
             raise ValueError(_explain_load(exc, self.model_id)) from exc
         self.model.eval()
         self.transformers_version = getattr(transformers, "__version__", None)

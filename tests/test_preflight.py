@@ -49,7 +49,7 @@ class PreflightTests(unittest.TestCase):
         ok, text = self._check(model)
         self.assertTrue(ok, text)
         for expected in ("[  OK] Config", "[  OK] Prompt file", "[  OK] Classes", "[  OK] Images vs committed profile: 6 training and 4 testing",
-                         "[  OK] Label corrections", "[  OK] Model adapter and API key", "[  OK] Model fake-1", "All checks passed"):
+                         "[  OK] Label corrections", "[  OK] Model adapter and access", "[  OK] Model fake-1", "All checks passed"):
             self.assertIn(expected, text)
         image, mime, _ = model.images[0]  # only a blank synthetic image is ever sent
         self.assertEqual((mime, Image.open(io.BytesIO(image)).size), ("image/png", (64, 64)))
@@ -59,7 +59,7 @@ class PreflightTests(unittest.TestCase):
         model.loaded_note, model.probe_note = "model files found and loaded", "it runs on this computer, so it uses no quota"
         ok, text = self._check(model)
         self.assertTrue(ok, text)
-        self.assertIn("[  OK] Model adapter and API key: fake, model files found and loaded", text)
+        self.assertIn("[  OK] Model adapter and access: fake, model files found and loaded", text)
         self.assertIn("it runs on this computer, so it uses no quota) ...", text)
         self.assertNotIn("daily quota)", text)
         ok, text = self._check(ProbeModel())  # an adapter without notes keeps the wording for hosted models
@@ -106,7 +106,7 @@ class PreflightTests(unittest.TestCase):
     def test_a_missing_key_or_adapter_stops_early(self):
         ok, text = self._check(load_error=ValueError("no API key found"))
         self.assertFalse(ok)
-        self.assertIn("[FAIL] Model adapter and API key: no API key found", text)
+        self.assertIn("[FAIL] Model adapter and access: no API key found", text)
 
     def test_a_dataset_that_differs_from_the_profile_fails(self):
         next((self.project.data / "Test" / "nevus").iterdir()).unlink()
