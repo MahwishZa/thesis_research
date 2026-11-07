@@ -1,0 +1,121 @@
+2026-11-07T06:00:12+00:00 session start: Git commit f303e47ae1; model google/medgemma-1.5-4b-it, revision loaded 91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b
+2026-11-07T06:00:12+00:00 results\medgemma-1.5-4b-it\test_fda7277a.partial: 0 of 118 answered, 118 to go
+2026-11-07T06:00:19+00:00 [1/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:00:26+00:00 [2/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:00:32+00:00 [3/118] vascular lesion -> basal cell carcinoma
+2026-11-07T06:00:39+00:00 [4/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:00:45+00:00 [5/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:00:50+00:00 [6/118] melanoma -> melanoma
+2026-11-07T06:00:57+00:00 [7/118] nevus -> pigmented benign keratosis
+2026-11-07T06:01:03+00:00 [8/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:01:09+00:00 [9/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:01:15+00:00 [10/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:01:21+00:00 [11/118] squamous cell carcinoma -> actinic keratosis
+2026-11-07T06:01:27+00:00 [12/118] pigmented benign keratosis -> basal cell carcinoma
+2026-11-07T06:01:33+00:00 [13/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:01:38+00:00 [14/118] nevus -> melanoma
+2026-11-07T06:01:43+00:00 [15/118] melanoma -> nevus
+2026-11-07T06:01:48+00:00 [16/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:01:55+00:00 [17/118] melanoma -> pigmented benign keratosis
+2026-11-07T06:02:01+00:00 [18/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:02:07+00:00 [19/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:02:12+00:00 [20/118] melanoma -> melanoma
+2026-11-07T06:02:18+00:00 [21/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:02:24+00:00 [22/118] dermatofibroma -> melanoma
+2026-11-07T06:02:31+00:00 [23/118] squamous cell carcinoma -> actinic keratosis
+2026-11-07T06:02:36+00:00 [24/118] nevus -> melanoma
+2026-11-07T06:02:43+00:00 [25/118] pigmented benign keratosis -> pigmented benign keratosis
+2026-11-07T06:02:49+00:00 [26/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:02:55+00:00 [27/118] pigmented benign keratosis -> pigmented benign keratosis
+2026-11-07T06:03:02+00:00 [28/118] melanoma -> pigmented benign keratosis
+2026-11-07T06:03:09+00:00 [29/118] pigmented benign keratosis -> pigmented benign keratosis
+2026-11-07T06:03:15+00:00 [30/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:03:22+00:00 [31/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:03:28+00:00 [32/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:03:34+00:00 [33/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:03:40+00:00 [34/118] vascular lesion -> basal cell carcinoma
+2026-11-07T06:03:46+00:00 [35/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:03:52+00:00 [36/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:03:57+00:00 [37/118] melanoma -> melanoma
+2026-11-07T06:04:02+00:00 [38/118] basal cell carcinoma -> melanoma
+2026-11-07T06:04:08+00:00 [39/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:04:14+00:00 [40/118] pigmented benign keratosis -> actinic keratosis
+2026-11-07T06:04:20+00:00 [41/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:04:27+00:00 [42/118] dermatofibroma -> melanoma
+2026-11-07T06:04:33+00:00 [43/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:04:41+00:00 [44/118] actinic keratosis -> seborrheic keratosis
+2026-11-07T06:04:47+00:00 [45/118] squamous cell carcinoma -> basal cell carcinoma
+2026-11-07T06:04:53+00:00 [46/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:04:58+00:00 [47/118] nevus -> nevus
+2026-11-07T06:05:03+00:00 [48/118] melanoma -> melanoma
+2026-11-07T06:05:10+00:00 [49/118] squamous cell carcinoma -> actinic keratosis
+2026-11-07T06:05:16+00:00 [50/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:05:22+00:00 [51/118] dermatofibroma -> melanoma
+2026-11-07T06:05:28+00:00 [52/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:05:35+00:00 [53/118] pigmented benign keratosis -> actinic keratosis
+2026-11-07T06:05:41+00:00 [54/118] nevus -> melanoma
+2026-11-07T06:05:47+00:00 [55/118] actinic keratosis -> melanoma
+2026-11-07T06:05:53+00:00 [56/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:05:59+00:00 [57/118] seborrheic keratosis -> basal cell carcinoma
+2026-11-07T06:06:05+00:00 [58/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:06:11+00:00 [59/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:06:17+00:00 [60/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:06:24+00:00 [61/118] pigmented benign keratosis -> pigmented benign keratosis
+2026-11-07T06:06:30+00:00 [62/118] basal cell carcinoma -> melanoma
+2026-11-07T06:06:36+00:00 [63/118] dermatofibroma -> actinic keratosis
+2026-11-07T06:06:43+00:00 [64/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:06:48+00:00 [65/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:06:55+00:00 [66/118] melanoma -> pigmented benign keratosis
+2026-11-07T06:07:02+00:00 [67/118] actinic keratosis -> pigmented benign keratosis
+2026-11-07T06:07:06+00:00 [68/118] vascular lesion -> vascular lesion
+2026-11-07T06:07:12+00:00 [69/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:07:18+00:00 [70/118] actinic keratosis -> melanoma
+2026-11-07T06:07:22+00:00 [71/118] nevus -> nevus
+2026-11-07T06:07:28+00:00 [72/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:07:34+00:00 [73/118] squamous cell carcinoma -> basal cell carcinoma
+2026-11-07T06:07:39+00:00 [74/118] nevus -> melanoma
+2026-11-07T06:07:45+00:00 [75/118] melanoma -> melanoma
+2026-11-07T06:07:52+00:00 [76/118] squamous cell carcinoma -> actinic keratosis
+2026-11-07T06:07:57+00:00 [77/118] nevus -> melanoma
+2026-11-07T06:08:03+00:00 [78/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:08:09+00:00 [79/118] nevus -> melanoma
+2026-11-07T06:08:15+00:00 [80/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:08:20+00:00 [81/118] melanoma -> melanoma
+2026-11-07T06:08:26+00:00 [82/118] squamous cell carcinoma -> basal cell carcinoma
+2026-11-07T06:08:32+00:00 [83/118] pigmented benign keratosis -> melanoma
+2026-11-07T06:08:38+00:00 [84/118] nevus -> pigmented benign keratosis
+2026-11-07T06:08:44+00:00 [85/118] melanoma -> melanoma
+2026-11-07T06:08:51+00:00 [86/118] dermatofibroma -> dermatofibroma
+2026-11-07T06:08:57+00:00 [87/118] actinic keratosis -> basal cell carcinoma
+2026-11-07T06:09:04+00:00 [88/118] pigmented benign keratosis -> basal cell carcinoma
+2026-11-07T06:09:10+00:00 [89/118] dermatofibroma -> melanoma
+2026-11-07T06:09:17+00:00 [90/118] basal cell carcinoma -> actinic keratosis
+2026-11-07T06:09:22+00:00 [91/118] nevus -> melanoma
+2026-11-07T06:09:29+00:00 [92/118] pigmented benign keratosis -> pigmented benign keratosis
+2026-11-07T06:09:33+00:00 [93/118] nevus -> nevus
+2026-11-07T06:09:40+00:00 [94/118] dermatofibroma -> pigmented benign keratosis
+2026-11-07T06:09:45+00:00 [95/118] nevus -> nevus
+2026-11-07T06:09:52+00:00 [96/118] actinic keratosis -> pigmented benign keratosis
+2026-11-07T06:09:57+00:00 [97/118] seborrheic keratosis -> nevus
+2026-11-07T06:10:02+00:00 [98/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:10:09+00:00 [99/118] dermatofibroma -> melanoma
+2026-11-07T06:10:16+00:00 [100/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:10:21+00:00 [101/118] nevus -> melanoma
+2026-11-07T06:10:27+00:00 [102/118] basal cell carcinoma -> basal cell carcinoma
+2026-11-07T06:10:32+00:00 [103/118] nevus -> melanoma
+2026-11-07T06:10:39+00:00 [104/118] dermatofibroma -> basal cell carcinoma
+2026-11-07T06:10:44+00:00 [105/118] melanoma -> melanoma
+2026-11-07T06:10:49+00:00 [106/118] dermatofibroma -> nevus
+2026-11-07T06:10:54+00:00 [107/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:11:00+00:00 [108/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:11:07+00:00 [109/118] melanoma -> pigmented benign keratosis
+2026-11-07T06:11:12+00:00 [110/118] melanoma -> melanoma
+2026-11-07T06:11:17+00:00 [111/118] nevus -> melanoma
+2026-11-07T06:11:23+00:00 [112/118] dermatofibroma -> actinic keratosis
+2026-11-07T06:11:30+00:00 [113/118] actinic keratosis -> actinic keratosis
+2026-11-07T06:11:35+00:00 [114/118] melanoma -> melanoma
+2026-11-07T06:11:41+00:00 [115/118] squamous cell carcinoma -> melanoma
+2026-11-07T06:11:47+00:00 [116/118] seborrheic keratosis -> melanoma
+2026-11-07T06:11:53+00:00 [117/118] melanoma -> basal cell carcinoma
+2026-11-07T06:11:59+00:00 [118/118] squamous cell carcinoma -> basal cell carcinoma
+2026-11-07T06:11:59+00:00 FINISHED: 118 of 118 answered. Report: results\medgemma-1.5-4b-it\test_fda7277a\report.md This folder is complete and can be committed.

@@ -1,0 +1,43 @@
+{
+  "folder_labels": {
+    "n": 118,
+    "correct": 35,
+    "unreadable": 0,
+    "accuracy": 0.2966101694915254,
+    "accuracy_ci95": [
+      0.22166449745305883,
+      0.3843813850698232
+    ]
+  },
+  "corrected_labels": {
+    "n": 118,
+    "correct": 36,
+    "unreadable": 0,
+    "accuracy": 0.3050847457627119,
+    "accuracy_ci95": [
+      0.22924088369362033,
+      0.3932197537241417
+    ]
+  },
+  "label_corrections": {
+    "file": "results/dataset_profile/label_corrections.csv",
+    "sha256": "63b0abe29f5f177520176c72002601af12a98e14a9a84cf025e70a069df4debf",
+    "applied": [
+      {
+        "path": "Test/seborrheic keratosis/ISIC_0010809.jpg",
+        "folder_label": "seborrheic keratosis",
+        "corrected_label": "melanoma"
+      },
+      {
+        "path": "Test/seborrheic keratosis/ISIC_0010803.jpg",
+        "folder_label": "seborrheic keratosis",
+        "corrected_label": "melanoma"
+      },
+      {
+        "path": "Test/seborrheic keratosis/ISIC_0010808.jpg",
+        "folder_label": "seborrheic keratosis",
+        "corrected_label": "melanoma"
+      }
+    ]
+  }
+}

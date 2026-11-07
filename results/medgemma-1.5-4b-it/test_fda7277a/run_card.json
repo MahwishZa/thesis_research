@@ -1,0 +1,104 @@
+{
+  "name": "medgemma-1.5-4b-it",
+  "split": "test",
+  "run_id": "test_fda7277a",
+  "status": "complete",
+  "fingerprint": "fda7277a42e227a4af91d59054eda27310ca904933a1c4d6f29c160db8dcca95",
+  "seed": 0,
+  "config_file": "configs/medgemma-1.5-4b-it.toml",
+  "config": {
+    "name": "medgemma-1.5-4b-it",
+    "data": {
+      "root": "data",
+      "train": "Train",
+      "test": "Test",
+      "corrections": "results/dataset_profile/label_corrections.csv",
+      "manifest": "results/dataset_profile/manifest.csv"
+    },
+    "model": {
+      "provider": "hf_local",
+      "id": "google/medgemma-1.5-4b-it",
+      "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
+      "dtype": "bfloat16",
+      "seed": 0,
+      "max_new_tokens": 32,
+      "gpu_memory_gib": 3.0,
+      "cpu_memory_gib": 10.0
+    },
+    "prompt": {
+      "file": "prompts/diagnosis_v2.txt"
+    },
+    "run": {
+      "requests_per_minute": 600,
+      "dev_per_class": 10,
+      "dev_seed": 0,
+      "order_seed": 0,
+      "max_image_side": 2048
+    }
+  },
+  "prompt_file": "prompts/diagnosis_v2.txt",
+  "prompt_sha256": "e6f3a1222aa2a62f32c0582fa27daafd8e5ee37d77319276b84d6cf11b8d2232",
+  "prompt": "This is a dermoscopic image of a skin lesion.\nClassify the lesion as exactly one of the following diagnoses:\n- actinic keratosis\n- basal cell carcinoma\n- dermatofibroma\n- melanoma\n- nevus\n- pigmented benign keratosis\n- seborrheic keratosis\n- squamous cell carcinoma\n- vascular lesion\nAnswer with the diagnosis name only, exactly as written in the list above. Do not write a sentence. Do not explain.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "dermatofibroma",
+    "melanoma",
+    "nevus",
+    "pigmented benign keratosis",
+    "seborrheic keratosis",
+    "squamous cell carcinoma",
+    "vascular lesion"
+  ],
+  "n_images": 118,
+  "images_sha256": "37a96f915d3f3dd873f9aa3aef295165fd958070976f9ebf6aa07456c8db2dcc",
+  "dataset_files_not_images": 0,
+  "git": {
+    "commit": "f303e47ae1e6fd2263162a3dd76ef65b90608787",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "torch": "2.14.1+cu130",
+    "transformers": "5.22.2",
+    "accelerate": "1.15.0",
+    "huggingface-hub": "2.4.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-07T06:00:12+00:00",
+  "finished_utc": "2026-11-07T06:11:59+00:00",
+  "model": {
+    "provider": "hf_local",
+    "model_id": "google/medgemma-1.5-4b-it",
+    "revision_requested": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
+    "revision_loaded": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
+    "sdk": "transformers",
+    "sdk_version": "5.22.2",
+    "torch_version": "2.14.1+cu130",
+    "cuda": true,
+    "layers_per_device": {
+      "0": 8,
+      "cpu": 32
+    },
+    "generation_config": {
+      "do_sample": false,
+      "max_new_tokens": 32,
+      "seed": 0,
+      "dtype": "bfloat16",
+      "max_memory": {
+        "0": 3221225472,
+        "cpu": 10737418240
+      }
+    }
+  },
+  "model_versions_returned": [
+    "google/medgemma-1.5-4b-it@91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-07T06:00:12+00:00",
+      "commit": "f303e47ae1e6fd2263162a3dd76ef65b90608787",
+      "uncommitted_changes": false
+    }
+  ]
+}
