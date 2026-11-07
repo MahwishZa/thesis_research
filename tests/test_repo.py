@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src import dataset, evaluate, isic
+from src import dataset, evaluate, isic, prompt
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "results" / "dataset_profile"
@@ -150,8 +150,17 @@ class RepoTests(unittest.TestCase):
             self.assertTrue(operator == "==" or package in installed_first, f"{package} must be pinned with ==")
 
     def test_text_files_use_unix_line_endings(self):
-        for path in [ROOT / "README.md", ROOT / "prompts" / "diagnosis_v1.txt"]:
+        for path in [ROOT / "README.md", *sorted((ROOT / "prompts").glob("*.txt"))]:
             self.assertNotIn(b"\r", path.read_bytes(), f"{path.name} has Windows line endings (.gitattributes should prevent this)")
+
+    def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
+        files = sorted((ROOT / "prompts").glob("*.txt"))
+        self.assertTrue(files)
+        for path in files:
+            with self.subTest(path.name):
+                prompt.load_template(path)  # refuses a file without exactly one {labels}
+                self.assertTrue(path.read_bytes().endswith(b"\n"))
+                self.assertNotIn("\n\n", path.read_text(encoding="utf-8"), "a blank line would change what the model is shown")
 
 
 if __name__ == "__main__":

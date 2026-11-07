@@ -20,7 +20,7 @@ No model has been run yet. Each finished test run will be listed here (accuracy 
 
 ```
 configs/          one settings file per model run (model, generation settings, prompt, dataset split folders)
-prompts/          the frozen prompt; a changed prompt is a new file (diagnosis_v2.txt), never an edit
+prompts/          the prompts; a changed prompt is a new file (diagnosis_v1.txt, diagnosis_v2.txt), never an edit
 src/
   dataset.py      reads the dataset folders, writes the dataset profile, prepares images for sending
   isic.py         checks the dataset's labels against the ISIC Archive; lists the corrected testing labels
