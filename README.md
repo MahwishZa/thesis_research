@@ -11,10 +11,11 @@ Existing methods do X. This is insufficient under condition Y because of limitat
 
 ## Results
 
-No model has been run yet. Each finished test run will be listed here (accuracy % on the 118 test images, zero-shot, temperature 0, one run, scored against the ISIC-corrected labels, folder labels in the last column) with a link to its report.
+Each finished test run is listed here (accuracy % on the 118 test images, zero-shot, greedy decoding (temperature 0), one run, scored against the ISIC-corrected labels, folder labels in the last column) with a link to its report.
 
 | Model | ISIC-corrected labels (main) | 95% interval | Folder labels | Report |
 |---|---|---|---|---|
+| MedGemma 1.5 4B-it | 30.5 | 22.9 to 39.3 | 29.7 | [report](results/medgemma-1.5-4b-it/test_fda7277a/report.md) |
 
 ## Repository Structure
 
