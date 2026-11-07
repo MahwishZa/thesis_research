@@ -11,11 +11,10 @@ Existing methods do X. This is insufficient under condition Y because of limitat
 
 ## Results
 
-Accuracy (%) on the 118 test images, zero-shot, temperature 0, one run, scored against the ISIC-corrected labels (folder labels in the last column). Each finished run is listed with a link to its report.
+No model has been run yet. Each finished test run will be listed here (accuracy % on the 118 test images, zero-shot, temperature 0, one run, scored against the ISIC-corrected labels, folder labels in the last column) with a link to its report.
 
 | Model | ISIC-corrected labels (main) | 95% interval | Folder labels | Report |
 |---|---|---|---|---|
-| Gemini 3.5 Flash-Lite (0-shot) | 37.3 | 29.1 to 46.3 | 36.4 | [report](results/gemini-3.5-flash-lite/test_88d88f32_r1/report.md) |
 
 ## Repository Structure
 
@@ -32,12 +31,11 @@ src/
   models/         one adapter per model provider (Gemini; Hugging Face models run on this computer)
 tests/            unit tests (no API calls, no real data); they also check that README, configs and results agree
 results/          the dataset profile, the ISIC label check and corrections, and one folder per finished model run
-docs/             EXPERIMENT_LOG.md (dated decisions and findings) and meeting_brief.md (result and open decisions)
 data/             the extracted dataset (Train/ and Test/, one subfolder per class); git-ignored, never committed
 ```
 
 ## How to Run
 
-With Python 3.11+, run `python -m venv .venv`, `.venv\Scripts\Activate.ps1` and `pip install -r requirements.txt`, put the dataset in `data/Train` and `data/Test`, and add `GEMINI_API_KEY=<your key>` to a `.env` file.
+With Python 3.11+, run `python -m venv .venv` and `.venv\Scripts\Activate.ps1`, install PyTorch from pytorch.org, run `pip install -r requirements.txt`, put the dataset in `data/Train` and `data/Test`, and add `HF_TOKEN=<your token>` to a `.env` file.
 
-Then run `python -m src.evaluate check --config configs/gemini-3.5-flash-lite.toml` followed by `python -m src.evaluate run --config configs/gemini-3.5-flash-lite.toml --split test` (a stopped run continues when repeated).
+Then run `python -m src.evaluate check --config configs/medgemma-1.5-4b-it.toml` followed by `python -m src.evaluate run --config configs/medgemma-1.5-4b-it.toml --split test` (a stopped run continues when repeated).

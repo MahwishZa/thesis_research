@@ -44,13 +44,12 @@ class RepoTests(unittest.TestCase):
                 if hasattr(args, "config"):
                     self.assertTrue((ROOT / args.config).is_file(), f"the README names a config that does not exist: {args.config}")
 
-    def test_the_results_written_in_the_documents_match_the_saved_results(self):
+    def test_the_results_written_in_the_readme_match_the_saved_results(self):
         def pct(x):
             return f"{100 * x:.1f}"
 
         rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
-        self.assertTrue(rows, "the README results table links to no run")
-        for row in rows:
+        for row in rows:  # no row until a model has a finished test run
             link = re.search(r"\]\((results/[^)]+/report\.md)\)", row).group(1)
             self.assertTrue((ROOT / link).is_file(), f"the README links to a report that does not exist: {link}")
             m = json.loads((ROOT / link).with_name("metrics.json").read_text(encoding="utf-8"))
@@ -58,15 +57,8 @@ class RepoTests(unittest.TestCase):
             low, high = main["accuracy_ci95"]
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             self.assertEqual(cells[1:4], [pct(main["accuracy"]), f"{pct(low)} to {pct(high)}", pct(m["folder_labels"]["accuracy"])])
-        brief = (ROOT / "docs" / "meeting_brief.md").read_text(encoding="utf-8").replace("**", "")
-        link = re.search(r"results/[^`\s]+/report\.md", brief).group(0)
-        m = json.loads((ROOT / link).with_name("metrics.json").read_text(encoding="utf-8"))
-        main = m["corrected_labels"] or m["folder_labels"]
-        low, high = main["accuracy_ci95"]
-        for scoring in (m["corrected_labels"], m["folder_labels"]):
-            if scoring:
-                self.assertIn(f"{pct(scoring['accuracy'])}% ({scoring['correct']}/{scoring['n']})", brief)
-        self.assertIn(f"{pct(low)}% to {pct(high)}%", brief)
+        finished = [p for p in (ROOT / "results").glob("*/*") if p.is_dir() and not p.name.endswith(".partial") and "_r" in p.name]
+        self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 
     def test_commands_and_modules_are_documented(self):
         parser = evaluate.build_parser()
@@ -118,7 +110,7 @@ class RepoTests(unittest.TestCase):
         for path in (".env", ".env.txt", ".env.local", "data/Train/x.jpg", "results/m/dev_1.partial/predictions.jsonl",
                      "src/__pycache__/x.pyc", ".venv/x"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "results/m/dev_1/report.md", "docs/EXPERIMENT_LOG.md", "configs/example.toml"):
+        for path in ("README.md", "results/m/dev_1/report.md", "configs/example.toml"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")
@@ -128,7 +120,7 @@ class RepoTests(unittest.TestCase):
         key_formats = re.compile(r"AIza[0-9A-Za-z_-]{35}|\bsk-[A-Za-z0-9_-]{20,}|\bgsk_[A-Za-z0-9]{20,}|\bhf_[A-Za-z0-9]{30,}"
                                  r"|\bgh[pousr]_[A-Za-z0-9]{30,}|\bgithub_pat_[A-Za-z0-9_]{30,}")  # Google, OpenAI-style, Groq, Hugging Face, GitHub
         for path in tracked:
-            if path and (ROOT / path).suffix in {".py", ".md", ".toml", ".txt", ".csv", ".json", ".jsonl"}:
+            if path and (ROOT / path).suffix in {".py", ".md", ".toml", ".txt", ".csv", ".json", ".jsonl"} and (ROOT / path).is_file():  # a file deleted but not yet committed is no reason to fail
                 self.assertIsNone(key_formats.search((ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
 
     def test_every_imported_package_is_in_the_one_requirements_file_and_pinned(self):
