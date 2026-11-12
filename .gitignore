@@ -1,0 +1,23 @@
+# Python leftovers, virtual environments and test-coverage data
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# Images and downloads stay on this computer, never in Git: data/raw (the original dataset), data/downloads (ISIC and HAM10000
+# downloads), data/dataset (the prepared images). Only the tables and the report directly in data/ are committed.
+/data/*
+!/data/*.csv
+!/data/*.md
+
+# Unfinished runs (a run's folder loses the .partial ending when it finishes)
+*.partial/
+
+# Validation runs tune the method; they stay on this computer and are not reported results.
+results/*/val_*/
+
+# API keys (also .env.txt and the like, which Windows editors create by mistake)
+.env
+.env.*

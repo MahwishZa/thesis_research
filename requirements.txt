@@ -1,0 +1,8 @@
+# Python 3.11 or newer (configs are read with the built-in tomllib).
+pillow==13.0.0
+opencv-python-headless==4.14.0.94  # skin-pattern matching (python -m src.prepare lesions)
+numpy==2.4.6  # needed by OpenCV
+anthropic==2.6.0  # Claude adapter (Anthropic API); needs Python 3.10 or newer
+openai==3.49.0  # GPT-4o and Llama adapter (OpenAI-style chat API)
+google-genai==2.34.0  # Gemini adapter; 3.x raises other network errors than the adapter expects, so 2.34.0 (tested) stays
+httpx==0.28.1  # imported directly by the Gemini adapter; google-genai 2.x needs it too

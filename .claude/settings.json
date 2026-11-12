@@ -1,0 +1,13 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "env": {
+    "GIT_AUTHOR_NAME": "Mahwish Zafar",
+    "GIT_AUTHOR_EMAIL": "mahwishza@gmail.com",
+    "GIT_COMMITTER_NAME": "Mahwish Zafar",
+    "GIT_COMMITTER_EMAIL": "mahwishza@gmail.com"
+  }
+}
