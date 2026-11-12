@@ -6,17 +6,19 @@ venv/
 .coverage
 htmlcov/
 
-# Images and downloads stay on this computer, never in Git: data/raw (the original dataset), data/downloads (ISIC and HAM10000
-# downloads), data/dataset (the prepared images). Only the tables and the report directly in data/ are committed.
-/data/*
-!/data/*.csv
-!/data/*.md
+# One folder per dataset in data/ (data/image/ now; data/text/ and data/multimodal/ later). Only the tables and reports directly in
+# a dataset's folder are committed; its originals, downloads and prepared files stay on this computer (for the image dataset:
+# data/image/raw, data/image/downloads and data/image/dataset).
+/data/**
+!/data/*/
+!/data/*/*.csv
+!/data/*/*.md
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes)
 *.partial/
 
 # Validation runs tune the method; they stay on this computer and are not reported results.
-results/*/val_*/
+results/*/*/val_*/
 
 # API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env

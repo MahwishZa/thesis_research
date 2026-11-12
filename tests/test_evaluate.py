@@ -846,6 +846,7 @@ class OpenAICompatibleOverHttpTests(unittest.TestCase):
 COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120)}
 SIZES = {"train": 3, "val": 2, "test": 2}  # images per class and split in the synthetic project
 CONFIG = """name = "fake"
+dataset = "image"
 [model]
 provider = "fake"
 id = "fake-1"
@@ -859,8 +860,8 @@ LABELS = ["nevus", "melanoma", "vascular lesion"]
 
 
 def write_table(base: Path) -> Path:
-    """data/dataset.csv for the images now in data/dataset (as the dataset preparation writes it)."""
-    image_dir, table = base / "data" / "dataset", base / "data" / "dataset.csv"
+    """data/image/dataset.csv for the images now in data/image/dataset (as the dataset preparation writes it)."""
+    image_dir, table = base / "data" / "image" / "dataset", base / "data" / "image" / "dataset.csv"
     table.parent.mkdir(parents=True, exist_ok=True)
     with table.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f, lineterminator="\n")
@@ -881,7 +882,7 @@ class Project(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.image_dir = self.base / "data" / "dataset"
+        self.image_dir = self.base / "data" / "image" / "dataset"
         number = 0
         for split, n in SIZES.items():
             for label, colour in COLOURS.items():
@@ -899,7 +900,7 @@ class Project(unittest.TestCase):
         self.config.write_text(CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
         self.results = self.base / "results"
         previous = os.getcwd()
-        os.chdir(self.base)  # the default paths data/dataset and data/dataset.csv point into the project
+        os.chdir(self.base)  # the paths data/image/dataset and data/image/dataset.csv point into the project
         self.addCleanup(os.chdir, previous)
 
 
@@ -1093,7 +1094,7 @@ class UnpinnedModel(FakeModel):
 class RunTests(Project):
     def setUp(self):
         super().setUp()
-        self.model_dir = self.results / "fake"
+        self.model_dir = self.results / "image" / "fake"
         patcher = mock.patch("src.evaluate.time.sleep")
         self.sleep = patcher.start()
         self.addCleanup(patcher.stop)
@@ -1557,11 +1558,11 @@ class CheckTests(Project):
         model = ProbeModel()
         ok, text = self._check(model)
         self.assertFalse(ok)
-        self.assertIn("[FAIL] Prepared dataset: the images in data/dataset differ from data/dataset.csv", text)
+        self.assertIn("[FAIL] Prepared dataset: the images in data/image/dataset differ from data/image/dataset.csv", text)
         self.assertEqual(model.calls, 1)  # the model access is still tested, so both problems show at once
         self.table.unlink()
         ok, text = self._check(ProbeModel())
-        self.assertIn("[FAIL] Prepared dataset: data/dataset.csv not found", text)
+        self.assertIn("[FAIL] Prepared dataset: data/image/dataset.csv not found", text)
         self.assertIn("[  OK] Model fake-1", text)
 
     def test_a_broken_prompt_file_fails(self):
@@ -1617,7 +1618,7 @@ class RepositoryTests(unittest.TestCase):
                     self.assertTrue((ROOT / args.config).is_file(), f"the README names a config that does not exist: {args.config}")
 
     def test_the_readme_names_every_code_and_test_file(self):
-        for path in sorted((ROOT / "src").glob("*.py")) + sorted((ROOT / "tests").glob("*.py")):
+        for path in sorted((ROOT / "src").rglob("*.py")) + sorted((ROOT / "tests").rglob("*.py")):
             if path.name != "__init__.py":
                 self.assertIn(path.name, self.readme, f"the README tree omits {path.name}")
 
@@ -1633,16 +1634,17 @@ class RepositoryTests(unittest.TestCase):
             low, high = main["balanced_accuracy_ci95"]  # the main score
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             self.assertEqual(cells[1:3], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}"])
-        finished = [p for p in (ROOT / "results").glob("*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
+        finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
         self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 
     def test_configs_are_valid_and_point_to_files_that_exist(self):
-        configs = sorted((ROOT / "configs").glob("*.toml"))
+        configs = sorted((ROOT / "configs").glob("*/*.toml"))
         self.assertTrue(configs)
         for path in configs:
             with self.subTest(path.name):
                 config = evaluate.load_config(path)
                 self.assertEqual(config["name"], path.stem, "the config name is the results folder name and must match the file")
+                self.assertEqual(config["dataset"], path.parent.name, "a config sits in the folder of the dataset it names")
                 self.assertTrue((ROOT / config["prompt"]["file"]).is_file(), f"{path.name} names a prompt file that does not exist")
 
     def test_the_committed_dataset_table_is_consistent(self):
@@ -1650,7 +1652,7 @@ class RepositoryTests(unittest.TestCase):
             evaluate.classes(evaluate.read_table())
 
     def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
-        files = sorted((ROOT / "prompts").glob("*.txt"))
+        files = sorted((ROOT / "prompts").glob("*/*.txt"))
         self.assertTrue(files)
         for path in files:
             with self.subTest(path.name):
@@ -1687,13 +1689,15 @@ class RepositoryTests(unittest.TestCase):
         def ignored(path):
             return subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT).returncode == 0
 
-        for path in (".env", ".env.txt", ".env.local", "data/raw/Train/melanoma/x.jpg", "data/downloads/isic/ISIC_0000001.json",
-                     "data/downloads/isic_pictures/ISIC_0000001.jpg", "data/dataset/test/nevus/x.jpg", "data/dataset/x.csv",
-                     "data/anything_else.txt", "results/m/val_1/report.md",
-                     "results/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc", ".venv/x", ".coverage"):
+        for path in (".env", ".env.txt", ".env.local", "data/image/raw/Train/melanoma/x.jpg", "data/image/downloads/isic/ISIC_0000001.json",
+                     "data/image/downloads/isic_pictures/ISIC_0000001.jpg", "data/image/dataset/test/nevus/x.jpg",
+                     "data/image/dataset/x.csv", "data/text/raw/x.txt", "data/anything_else.txt", "data/x.csv",
+                     "results/image/m/val_1/report.md", "results/image/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc",
+                     "src/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "data/dataset.csv", "data/raw_photos.csv", "data/dataset_report.md", "results/m/test_1/report.md", "results/m/test_1/predictions.jsonl",
-                     "configs/example.toml"):
+        for path in ("README.md", "data/image/dataset.csv", "data/image/raw_photos.csv", "data/image/dataset_report.md",
+                     "data/image/datasheet.md", "data/text/dataset.csv", "results/image/m/test_1/report.md",
+                     "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

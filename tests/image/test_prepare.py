@@ -1,4 +1,4 @@
-"""The dataset preparation (src/prepare.py) on a tiny synthetic data/raw holding every kind of problem it must find, with local
+"""The image dataset's preparation (src/image/prepare.py) on a tiny synthetic data/image/raw holding every kind of problem it must find, with local
 stand-ins for the ISIC Archive and Harvard Dataverse (no real data, no network beyond this computer), and the files the steps
 share: raw_photos.csv, similar_photo_pairs.csv and dataset_report.md, of which each step rewrites only its own part."""
 
@@ -22,7 +22,8 @@ from unittest import mock
 import PIL
 from PIL import Image, ImageChops, ImageCms, ImageStat, JpegImagePlugin
 
-from src import evaluate, prepare
+from src import evaluate
+from src.image import prepare
 
 
 def _jpeg(colour, mark: int, mode: str = "RGB", orientation: int | None = None) -> bytes:
@@ -43,16 +44,16 @@ def _png() -> bytes:
 
 
 class RawProject(unittest.TestCase):
-    """A folder laid out like the repository, with a data/raw holding every kind of problem; each test runs inside it."""
+    """A folder laid out like the repository, with a data/image/raw holding every kind of problem; each test runs inside it."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
         previous = os.getcwd()
-        os.chdir(self.base)  # the default paths data/ and data/raw point into this folder
+        os.chdir(self.base)  # the default paths data/image/ and data/image/raw point into this folder
         self.addCleanup(os.chdir, previous)
-        self.raw, self.data = self.base / "data" / "raw", self.base / "data"
+        self.raw, self.data = self.base / "data" / "image" / "raw", self.base / "data" / "image"
         one, two, four = _jpeg((120, 40, 30), 1), _jpeg((120, 40, 30), 2), _jpeg((120, 40, 30), 4)
         files = {
             "Train/melanoma/ISIC_0000001.jpg": one,
@@ -119,7 +120,7 @@ class InventoryTests(RawProject):
         text = (self.data / prepare.REPORT).read_text(encoding="utf-8")
         for expected in ("| Image files in `<split>/<class>/` folders | 10 |", "| Opened completely without error | 9 |",
                          "| Unreadable (damaged or not an image) | 1 |", "| Readable, but the file type does not match its name | 1 |",
-                         "| Other files in `data/raw` (not used) | 2 |", "| Files whose name has no ISIC number | 1 |",
+                         "| Other files in `data/image/raw` (not used) | 2 |", "| Files whose name has no ISIC number | 1 |",
                          "| melanoma | 1 | 4 | 5 | 3 |", "| nevus | 0 | 5 | 5 | 5 |", "| **Total** | 1 | 9 | 10 | 7 |",
                          "Unique photos: 7 (from 10 files)", "Groups of identical files: 3, holding 3 extra copies",
                          "Groups filed under two or more class folders: 1", "Groups with copies in two or more split folders: 1",
@@ -131,7 +132,7 @@ class InventoryTests(RawProject):
                          "Test/melanoma/ISIC_0000004.jpg<br>Train/melanoma/ISIC_0000004.jpg | melanoma | Test, Train |",
                          "`dataset.zip`: not an image", "`Train/nevus/broken_ISIC_0000006.jpg`: unreadable", "Not checked in this step"):
             self.assertIn(expected, text)
-        self.assertRegex(text, r"Fingerprint of `data/raw` .*: `[0-9a-f]{64}`")
+        self.assertRegex(text, r"Fingerprint of `data/image/raw` .*: `[0-9a-f]{64}`")
 
     def test_nothing_in_data_raw_changes_and_a_second_run_writes_identical_files(self):
         before = self._raw_state()
@@ -171,7 +172,7 @@ class InventoryTests(RawProject):
             rel.unlink()
         with self.assertRaisesRegex(ValueError, "no image found"):
             prepare.inventory()
-        os.chdir(self.base / "data")  # here there is no data/raw at all
+        os.chdir(self.base / "data")  # here there is no data/image/raw at all
         with self.assertRaisesRegex(FileNotFoundError, "put the original dataset there"):
             prepare.inventory()
 
@@ -179,15 +180,15 @@ class InventoryTests(RawProject):
         with contextlib.redirect_stdout(io.StringIO()) as shown:
             prepare.main(["inventory"])
         for expected in ("10 image files, 1 unreadable, 1 with another problem, 2 other files", "7 unique photos; 3 groups",
-                         "Nothing in data/raw was changed"):
+                         "Nothing in data/image/raw was changed"):
             self.assertIn(expected, shown.getvalue())
         (self.raw / "Train/nevus/ISIC_0000003.jpg").unlink()
         with self.assertRaises(SystemExit) as raised:
             prepare.main(["inventory"])
-        self.assertTrue(str(raised.exception).startswith("ERROR: data/raw differs"))
+        self.assertTrue(str(raised.exception).startswith("ERROR: data/image/raw differs"))
 
     def test_every_command_in_the_usage_documentation_is_accepted(self):
-        usage = re.findall(r"^\s+python -m src\.prepare (.+?)$", prepare.__doc__, re.M)
+        usage = re.findall(r"^\s+python -m src\.image\.prepare (.+?)$", prepare.__doc__, re.M)
         self.assertGreaterEqual(len(usage), 2)
         for line in usage:
             for form in (re.sub(r"\[[^\]]*\]", "", line), re.sub(r"\[([^\]]*)\]", r"\1", line)):  # without / with the optional [parts]
@@ -291,10 +292,10 @@ class IsicServer(RawProject):
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
-        for patcher in (mock.patch.object(prepare, "ISIC_API", f"{base}/api/v2/images/{{}}/"), mock.patch("src.prepare.time.sleep")):
+        for patcher in (mock.patch.object(prepare, "ISIC_API", f"{base}/api/v2/images/{{}}/"), mock.patch("src.image.prepare.time.sleep")):
             self.sleep = patcher.start()
             self.addCleanup(patcher.stop)
-        self.cache = self.base / "data" / "downloads" / "isic"
+        self.cache = self.data / "downloads" / "isic"
 
 
 class IsicTests(IsicServer):
@@ -384,7 +385,7 @@ class IsicTests(IsicServer):
 
     def test_the_inventory_comes_first(self):
         (self.data / prepare.PHOTOS).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare inventory first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare inventory first"):
             prepare.isic()
 
     def test_the_command_line_shows_a_sample_and_then_writes_the_table(self):
@@ -410,8 +411,8 @@ class IdentityTests(IsicServer):
     def setUp(self):
         super().setUp()
         prepare.isic()
-        self.pictures = self.base / "data" / "downloads" / "isic_pictures"
-        self.review = self.base / "data" / "downloads" / "eye_check" / "identity"
+        self.pictures = self.data / "downloads" / "isic_pictures"
+        self.review = self.data / "downloads" / "eye_check" / "identity"
 
     def _photos(self):
         return prepare._read_photos(self.data)
@@ -478,7 +479,7 @@ class IdentityTests(IsicServer):
         with self.assertRaisesRegex(ValueError, "Train/melanoma/ISIC_0000002.jpg differs from .*must stay as downloaded"):
             prepare.identity()
         (self.cache / "ISIC_0000005.json").unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare isic first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare isic first"):
             prepare.identity()
 
     def test_the_command_line_shows_a_sample_and_then_writes_the_table(self):
@@ -489,7 +490,7 @@ class IdentityTests(IsicServer):
             self.assertIn(expected, shown.getvalue())
         with contextlib.redirect_stdout(io.StringIO()) as shown:
             prepare.main(["identity"])
-        for expected in ("check by eye: 1; no ISIC picture: 1; same picture: 5", "Commit both files", "Photos to check by eye are listed in data/dataset_report.md"):
+        for expected in ("check by eye: 1; no ISIC picture: 1; same picture: 5", "Commit both files", "Photos to check by eye are listed in data/image/dataset_report.md"):
             self.assertIn(expected, shown.getvalue())
         with self.assertRaisesRegex(SystemExit, "--limit must be at least 1"):
             prepare.main(["identity", "--limit", "0"])
@@ -550,7 +551,7 @@ class HamServer(IsicServer):
         patcher = mock.patch.object(prepare, "DATAVERSE", f"http://127.0.0.1:{self.dataverse.server_port}")
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.folder = self.base / "data" / "downloads" / "ham10000"
+        self.folder = self.data / "downloads" / "ham10000"
 
 
 class Ham10000Tests(HamServer):
@@ -622,7 +623,7 @@ class Ham10000Tests(HamServer):
         kept = photos["ISIC_0000002"]["isic_record_sha256"]
         photos["ISIC_0000002"]["isic_record_sha256"] = kept.split()[0]  # two ISIC numbers, but one fingerprint
         prepare._write_photos(self.data, photos)
-        with self.assertRaisesRegex(FileNotFoundError, "lacks the record fingerprints of ISIC_0000002: run python -m src.prepare isic"):
+        with self.assertRaisesRegex(FileNotFoundError, "lacks the record fingerprints of ISIC_0000002: run python -m src.image.prepare isic"):
             prepare.ham10000()
         photos["ISIC_0000002"]["isic_record_sha256"] = kept
         prepare._write_photos(self.data, photos)
@@ -633,10 +634,10 @@ class Ham10000Tests(HamServer):
         with self.assertRaisesRegex(ValueError, "ISIC_0000005.json is not the record .*raw_photos.csv was made from"):
             prepare.ham10000()
         record.unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "ISIC_0000005.json not found: run python -m src.prepare isic first"):
+        with self.assertRaisesRegex(FileNotFoundError, "ISIC_0000005.json not found: run python -m src.image.prepare isic first"):
             prepare.ham10000()
         prepare._update_photos(self.data, "isic", {})  # as if the isic step had never run
-        with self.assertRaisesRegex(FileNotFoundError, "lacks what the isic step adds: run python -m src.prepare isic first"):
+        with self.assertRaisesRegex(FileNotFoundError, "lacks what the isic step adds: run python -m src.image.prepare isic first"):
             prepare.ham10000()
 
     def test_the_command_line_prints_the_agreement(self):
@@ -745,7 +746,7 @@ class LabelsTests(HamServer):
         prepare.labels()
         self.assertEqual({name: (self.data / name).read_bytes() for name in first}, first)
         prepare._update_photos(self.data, "ham10000", {})  # as if the ham10000 step had never run
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare ham10000 first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare ham10000 first"):
             prepare.labels()
         self.rule.unlink()
         prepare.ham10000()
@@ -756,7 +757,7 @@ class LabelsTests(HamServer):
         with contextlib.redirect_stdout(io.StringIO()):
             prepare.main(["labels"])
         prepare._update_photos(self.data, "labels", {})  # as if the labels step had never run
-        with self.assertRaisesRegex(SystemExit, "run python -m src.prepare labels first"):
+        with self.assertRaisesRegex(SystemExit, "run python -m src.image.prepare labels first"):
             prepare.main(["duplicates"])
 
     def test_the_command_line_prints_the_classes(self):
@@ -801,7 +802,7 @@ class DuplicatesTests(unittest.TestCase):
         previous = os.getcwd()
         os.chdir(self.base)
         self.addCleanup(os.chdir, previous)
-        self.raw, self.data = self.base / "data" / "raw", self.base / "data"
+        self.raw, self.data = self.base / "data" / "image" / "raw", self.base / "data" / "image"
         one, two, other = _lesion(1), _lesion(2), _lesion(3, background=(150, 170, 210))
         cropped = two.crop((6, 4, 194, 146)).resize((200, 150), Image.Resampling.LANCZOS)
         files = {"ISIC_1000001": ("Train/melanoma/ISIC_1000001.jpg", _saved(one), "melanoma", ""),
@@ -841,7 +842,7 @@ class DuplicatesTests(unittest.TestCase):
         self.assertEqual(pairs[("ISIC_1000003", "ISIC_1000004")]["isic_lesion"], "same lesion")
         self.assertEqual(pairs[("ISIC_1000001", "ISIC_1000006")][("label_a")], "melanoma")
         self.assertFalse([pair for pair in pairs if "ISIC_1000005" in pair])  # the different lesion is paired with nothing
-        self.assertFalse((self.base / "data" / "downloads" / "eye_check").exists())  # no side-by-side pictures are made any more
+        self.assertFalse((self.data / "downloads" / "eye_check").exists())  # no side-by-side pictures are made any more
 
     def test_the_summary_measures_the_method_and_lists_pairs_with_two_labels(self):
         prepare.duplicates()
@@ -909,8 +910,8 @@ class LesionsTests(unittest.TestCase):
         previous = os.getcwd()
         os.chdir(self.base)
         self.addCleanup(os.chdir, previous)
-        self.raw, self.data = self.base / "data" / "raw", self.base / "data"
-        self.review = self.base / "data" / "downloads" / "eye_check" / "lesions"
+        self.raw, self.data = self.base / "data" / "image" / "raw", self.base / "data" / "image"
+        self.review = self.data / "downloads" / "eye_check" / "lesions"
         one, four = _skin(1), _skin(4, (1600, 1200))
         files = {"ISIC_2000001": (one.resize((600, 450), Image.Resampling.LANCZOS), "basal cell carcinoma", "IL_1"),
                  "ISIC_2000002": (one.rotate(20, Image.Resampling.BICUBIC).crop((100, 75, 700, 525)), "basal cell carcinoma", "IL_1"),
@@ -1008,7 +1009,7 @@ class LesionsTests(unittest.TestCase):
         self.assertIn("| 10 | 1 of 1 (100.0%) | 2 of 5 | 1 |", text)  # (1, 9) and (2, 9) match although ISIC names two lesions
         self.assertEqual(self._pairs()[("ISIC_2000001", "ISIC_2000009")]["isic_lesion"], "different lesions")
         (self.data / prepare.PHOTOS).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare inventory first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare inventory first"):
             prepare.lesions()
 
     def test_many_points_paired_with_one_and_an_impossible_zoom_are_no_match(self):
@@ -1089,7 +1090,7 @@ class SplitsTests(unittest.TestCase):
         return prepare._read_photos(self.data)
 
     def test_every_photo_gets_one_split_the_counts_are_exact_and_every_lesion_stays_together(self):
-        prepare.splits(self.data, pin=True, **self.SMALL)  # with the original test photos fixed in test (an option, not the default)
+        prepare.splits(self.data, **self.SMALL)
         photos = self._photos()
         self.assertEqual(Counter((p["label"], p["split"]) for p in photos.values()),
                          Counter({("melanoma", "test"): 4, ("melanoma", "val"): 2, ("melanoma", "train"): 9, ("nevus", "test"): 4,
@@ -1097,8 +1098,7 @@ class SplitsTests(unittest.TestCase):
         for group in (("M01", "M02"), ("M03", "M04", "M05"), ("M06", "M07"), ("M10", "M11")):
             self.assertEqual(len({photos[i]["split"] for i in group}), 1, group)
             self.assertEqual(len({photos[i]["lesion_group"] for i in group}), 1, group)
-        self.assertEqual([(photos[i]["split"], photos[i]["split_note"]) for i in ("M01", "M02", "N01")],
-                         [("test", "original test photo"), ("test", "same lesion as original test photo M01"), ("test", "original test photo")])
+        self.assertEqual({photos[i]["split_note"] for i in photos if photos[i]["split"] != "none"}, {""})  # nothing is fixed in a split
         self.assertEqual((photos["M09"]["split"], photos["M09"]["split_note"], photos["M09"]["lesion_group"]),
                          ("none", "same photo as M08 (eye check): left out", photos["M08"]["lesion_group"]))
         self.assertEqual((photos["X01"]["split"], photos["X01"]["split_note"]), ("none", "no class: collision: two lesions in one photo"))
@@ -1118,19 +1118,14 @@ class SplitsTests(unittest.TestCase):
                          "| nevus | subtype | common | 79% |", "No image is changed"):
             self.assertIn(expected, text)
 
-    def test_reproducible_and_the_original_test_photos_are_fixed_only_when_asked(self):
-        done = prepare.splits(self.data, **self.SMALL)  # the default: made anew, the original test photos like any other
+    def test_reproducible_and_the_original_test_photos_are_split_like_every_other_photo(self):
+        done = prepare.splits(self.data, **self.SMALL)
         first = {name: (self.data / name).read_bytes() for name in (prepare.PHOTOS, prepare.REPORT)}
         photos = self._photos()
-        self.assertEqual((photos["M01"]["split_note"], photos["M02"]["split_note"]), ("", ""))
-        self.assertEqual(photos["M01"]["split"], photos["M02"]["split"])  # still one lesion
+        self.assertEqual(photos["M01"]["split"], photos["M02"]["split"])  # the original test photo's lesion stays together
         self.assertEqual(sum(done["counts"][(label, "test")] for label in ("melanoma", "nevus")), 8)
-        self.assertNotIn("Fixed in test", (self.data / prepare.REPORT).read_text(encoding="utf-8"))
         prepare.splits(self.data, **self.SMALL)
         self.assertEqual({name: (self.data / name).read_bytes() for name in first}, first)
-        prepare.splits(self.data, pin=True, **self.SMALL)
-        self.assertIn("- Fixed in test: 2 original test photos and 1 photos of the same lesions",
-                      (self.data / prepare.REPORT).read_text(encoding="utf-8"))
 
     def test_what_cannot_be_split_as_asked_stops_with_a_message(self):
         with self.assertRaisesRegex(ValueError, "melanoma: 15 photos leave 9 for training .* fewer than 12"):
@@ -1146,7 +1141,7 @@ class SplitsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "show one lesion but have different labels"):
             prepare.splits(self.data, **self.SMALL)
         prepare._update_photos(self.data, "labels", {})
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare labels first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare labels first"):
             prepare.splits(self.data, **self.SMALL)
 
     def test_the_command_line_prints_the_counts_and_the_balance(self):
@@ -1224,13 +1219,13 @@ class ImagesTests(unittest.TestCase):
         prepare._write_photos(self.data, photos)
 
     def _table(self) -> dict[str, dict]:
-        with (self.data / prepare.IMAGE_TABLE).open(encoding="utf-8", newline="") as f:
+        with (self.data / prepare.TABLE_NAME).open(encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             self.assertEqual(reader.fieldnames, prepare.IMAGE_COLUMNS)
             return {row["photo_id"]: row for row in reader}
 
     def _files(self) -> dict[str, bytes]:
-        root = self.data / prepare.IMAGE_FOLDER
+        root = self.data / prepare.FILES
         return {p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
 
     def test_every_photo_is_fitted_whole_within_600_x_450_and_saved_the_same_way(self):
@@ -1263,7 +1258,7 @@ class ImagesTests(unittest.TestCase):
                 self.assertEqual(corners, list(CORNERS), path)
         self.assertEqual(len(tables), 1)  # one JPEG setting for every image
         with Image.open(self.data / "raw" / "Train/melanoma/ISIC_0000001.jpg") as original, \
-                Image.open(self.data / prepare.IMAGE_FOLDER / "test/melanoma/ISIC_0000001.jpg") as prepared:
+                Image.open(self.data / prepare.FILES / "test/melanoma/ISIC_0000001.jpg") as prepared:
             expected = original.resize((600, 450), Image.Resampling.LANCZOS)
             self.assertLess(max(ImageStat.Stat(ImageChops.difference(expected, prepared.convert("RGB"))).mean), 2)
         grey = io.BytesIO()
@@ -1274,9 +1269,9 @@ class ImagesTests(unittest.TestCase):
             self.assertEqual(image.mode, "RGB")
 
     def test_images_csv_is_what_the_evaluation_reads_and_photos_in_no_split_get_no_image(self):
-        self.assertEqual((prepare.DATA / prepare.IMAGE_FOLDER, prepare.DATA / prepare.IMAGE_TABLE), (evaluate.IMAGES, evaluate.TABLE))
+        self.assertEqual((prepare.DATA / prepare.FILES, prepare.DATA / prepare.TABLE_NAME), (evaluate.IMAGES, evaluate.TABLE))
         prepare.images(self.data)
-        items = evaluate.load_dataset(self.data / prepare.IMAGE_TABLE, self.data / prepare.IMAGE_FOLDER)
+        items = evaluate.load_dataset(self.data / prepare.TABLE_NAME, self.data / prepare.FILES)
         self.assertEqual(sorted((item.split, item.label, item.path, item.lesion_group) for item in items), [
             ("test", "melanoma", "test/melanoma/ISIC_0000001.jpg", "ISIC_0000001"),
             ("test", "nevus", "test/nevus/ISIC_0000003.jpg", "ISIC_0000003"),
@@ -1291,10 +1286,10 @@ class ImagesTests(unittest.TestCase):
 
     def test_running_again_changes_nothing_and_a_photo_that_leaves_its_split_leaves_no_image_behind(self):
         prepare.images(self.data)
-        first = self._files(), *((self.data / name).read_bytes() for name in (prepare.IMAGE_TABLE, prepare.REPORT))
+        first = self._files(), *((self.data / name).read_bytes() for name in (prepare.TABLE_NAME, prepare.REPORT))
         done = prepare.images(self.data)
         self.assertEqual((done["written"], done["removed"]), (0, 0))
-        self.assertEqual((self._files(), *((self.data / name).read_bytes() for name in (prepare.IMAGE_TABLE, prepare.REPORT))), first)
+        self.assertEqual((self._files(), *((self.data / name).read_bytes() for name in (prepare.TABLE_NAME, prepare.REPORT))), first)
         photos = prepare._read_photos(self.data)
         photos["ISIC_0000005"]["split"] = "train"  # the splits made again: it moves ...
         photos["ISIC_0000010"]["split"] = "none"  # ... and this one leaves every split
@@ -1304,10 +1299,10 @@ class ImagesTests(unittest.TestCase):
         self.assertNotIn("val/nevus/ISIC_0000005.jpg", self._files())
         self.assertNotIn("train/melanoma/ISIC_0000010.jpg", self._files())
         self.assertEqual(self._files()["train/nevus/ISIC_0000005.jpg"], first[0]["val/nevus/ISIC_0000005.jpg"])
-        self.assertFalse((self.data / prepare.IMAGE_FOLDER / "val" / "nevus").exists())  # an emptied folder goes too
-        (self.data / prepare.IMAGE_FOLDER / "test" / "notes.txt").write_text("not an image")
+        self.assertFalse((self.data / prepare.FILES / "val" / "nevus").exists())  # an emptied folder goes too
+        (self.data / prepare.FILES / "test" / "notes.txt").write_text("not an image")
         with self.assertRaisesRegex(ValueError, "1 not in the table .not in the table: test/notes.txt"):
-            prepare.images(self.data)  # anything else in data/dataset stops the step, as it would stop a run
+            prepare.images(self.data)  # anything else in data/image/dataset stops the step, as it would stop a run
 
     def test_a_changed_or_missing_original_stops_the_step(self):
         source = self.data / "raw" / "Train/melanoma/ISIC_0000002.jpg"
@@ -1316,17 +1311,17 @@ class ImagesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Train/melanoma/ISIC_0000002.jpg differs from raw_photos.csv: the original dataset must stay"):
             prepare.images(self.data)
         source.unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "ISIC_0000002.jpg not found: put the original dataset in data/raw"):
+        with self.assertRaisesRegex(FileNotFoundError, "ISIC_0000002.jpg not found: put the original dataset in data/image/raw"):
             prepare.images(self.data)
         source.write_bytes(original)
         prepare._update_photos(self.data, "splits", {})
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare splits first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare splits first"):
             prepare.images(self.data)
 
     def test_the_report_says_how_every_image_was_made_and_gives_the_fingerprints(self):
         prepare.images(self.data)
         text = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        items = evaluate.read_table(self.data / prepare.IMAGE_TABLE)
+        items = evaluate.read_table(self.data / prepare.TABLE_NAME)
         for expected in ("## Images: the prepared dataset", "Fitted whole within 600 x 450 pixels", "Nothing is cut and nothing is added",
                          "quality 95 with full colour resolution (4:4:4 chroma), without metadata", f"Made with Pillow {PIL.__version__}",
                          "| melanoma | 1 | 1 | 2 | 4 |", "| nevus | 1 | 1 | 1 | 3 |", "| **Total** | 2 | 2 | 3 | 7 |",
@@ -1348,7 +1343,7 @@ class ImagesTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()) as shown:
             prepare.main(["images"])
         for expected in ("7 of 7 images made", "Images: 7 (test 2, val 2, train 3); exactly 600x450: 4; another size: 3",
-                         "(7 images new or changed, 0 removed)", "Nothing in data/raw was changed", "the images stay on this computer"):
+                         "(7 images new or changed, 0 removed)", "Nothing in data/image/raw was changed", "the images stay on this computer"):
             self.assertIn(expected, shown.getvalue())
 
 
@@ -1435,7 +1430,7 @@ class ShortcutsTests(unittest.TestCase):
         self.assertEqual(prepare._vote([(0.0, 0), (0.0, 1)], ["b", "a"], weight, 1), "a")  # still tied: the first class name
 
     def test_without_the_prepared_images_or_with_a_changed_one_the_step_stops(self):
-        image = next((self.data / prepare.IMAGE_FOLDER / "test").rglob("*.jpg"))
+        image = next((self.data / prepare.FILES / "test").rglob("*.jpg"))
         image.write_bytes(image.read_bytes() + b"\0")
         with self.assertRaisesRegex(ValueError, "1 changed"):
             prepare.shortcuts(self.data)
@@ -1447,8 +1442,8 @@ class ShortcutsTests(unittest.TestCase):
         prepare.images(self.data)
         with self.assertRaisesRegex(ValueError, "needs images in train, val and test"):
             prepare.shortcuts(self.data)
-        (self.data / prepare.IMAGE_TABLE).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.prepare images first"):
+        (self.data / prepare.TABLE_NAME).unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.image.prepare images first"):
             prepare.shortcuts(self.data)
 
     def test_the_command_line_prints_what_each_property_reveals(self):
@@ -1481,7 +1476,7 @@ class SharedFilesTests(unittest.TestCase):
         photos = prepare._update_photos(self.data, "isic", {"A": {"lesion_id": "IL_1", "label": "not the isic step's column"}})
         self.assertEqual([(i, p["lesion_id"], p["label"]) for i, p in photos.items()], [("A", "IL_1", "melanoma"), ("B", "", "nevus")])
         self.assertEqual(list(prepare._read_photos(self.data)), ["A", "B"])  # sorted by photo_id
-        with self.assertRaisesRegex(FileNotFoundError, "lacks what the labels step adds: run python -m src.prepare labels first"):
+        with self.assertRaisesRegex(FileNotFoundError, "lacks what the labels step adds: run python -m src.image.prepare labels first"):
             prepare._read_photos(self.data, "labels")  # a label without the labels step's status
 
     def test_a_step_rewrites_only_its_own_section_and_the_sections_keep_the_step_order(self):
@@ -1548,9 +1543,9 @@ class EyeCheckTests(unittest.TestCase):
         with self.assertRaisesRegex(FileNotFoundError, "the eye check is part of the repository"):
             prepare._read_eye_check(self.path, self.PHOTOS)
 
-    @unittest.skipUnless((Path(__file__).resolve().parents[1] / "data" / prepare.PHOTOS).is_file(), "raw_photos.csv is not written yet")
+    @unittest.skipUnless((Path(__file__).resolve().parents[2] / "data" / "image" / prepare.PHOTOS).is_file(), "raw_photos.csv is not written yet")
     def test_the_committed_eye_check_fits_the_committed_photos(self):
-        root = Path(__file__).resolve().parents[1] / "data"
+        root = Path(__file__).resolve().parents[2] / "data" / "image"
         with (root / prepare.PHOTOS).open(encoding="utf-8", newline="") as f:
             photos = {p["photo_id"]: p for p in csv.DictReader(f)}
         done = prepare._read_eye_check(root / prepare.EYE_CHECK, photos)

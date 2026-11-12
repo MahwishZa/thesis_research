@@ -23,3 +23,6 @@ ISIC_0001151,ISIC_0010977,same photo,ISIC_0001151,"skin pattern: 11 points, zoom
 ISIC_0000413,ISIC_0010750,same photo,ISIC_0000413,"skin pattern: 10 points, zoom 0.97, turn -15 degrees; the lower ISIC number is kept"
 ISIC_0000487,ISIC_0000554,same photo,ISIC_0000487,"skin pattern: 10 points, zoom 1.06, turn 3 degrees; the lower ISIC number is kept"
 ISIC_0010241,ISIC_0010355,different lesions,,"skin pattern: 10 points, zoom 1.0, turn 0 degrees"
+ISIC_0000470,ISIC_0000480,different lesions,,"look-alike by whole picture (mean difference 8.3, hash distance 14), in train and validation; checked by eye in the independent audit of 2026-11-12"
+ISIC_0000480,ISIC_0000514,different lesions,,"look-alike by whole picture (mean difference 8.3, hash distance 16), in validation and train; checked by eye in the independent audit of 2026-11-12"
+ISIC_0010791,ISIC_0011193,different lesions,,"look-alike by whole picture (mean difference 9.0, hash distance 17), in test and train; checked by eye in the independent audit of 2026-11-12"

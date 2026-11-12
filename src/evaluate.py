@@ -1,9 +1,9 @@
 """Evaluation of LLMs on the prepared dataset: every model gets the same images, prompt, answer reader and metrics.
 
-    python -m src.evaluate check --config configs/<model>.toml [--model <id>]
-    python -m src.evaluate run --config configs/<model>.toml --split val [--limit 5]
-    python -m src.evaluate run --config configs/<model>.toml --split test
-    python -m src.evaluate report results/<model>/<run-folder>
+    python -m src.evaluate check --config configs/<dataset>/<model>.toml [--model <id>]
+    python -m src.evaluate run --config configs/<dataset>/<model>.toml --split val [--limit 5]
+    python -m src.evaluate run --config configs/<dataset>/<model>.toml --split test
+    python -m src.evaluate report results/<dataset>/<model>/<run-folder>
 
 ``check`` tests everything a run needs without sending any dataset image; run it before every run. The model is asked once,
 with a blank synthetic image, so an unavailable model, a wrong key or a used-up quota shows before a run starts.
@@ -14,11 +14,14 @@ result, and ``--limit N`` sends only its first N images. A test run (``--split t
 version. Answers are kept in a folder ending in ``.partial`` until the run is complete; the same command continues a stopped run.
 ``report`` rewrites metrics.json and report.md from a run's saved answers (no model is asked).
 
-The prepared dataset is read from data/dataset/<split>/<class>/<file> (the images, exactly as every model receives them;
-split: train, val or test) and data/dataset.csv (one row per image: split, label, path inside data/dataset, sha256, and the
-lesion group it belongs to, plus any further columns the preparation records). The table is committed to Git and is the single
-source of truth; the images stay on this computer. Every image on disk is checked against the table before a run, so a changed, missing or extra file stops
-the run and every model is evaluated on byte-identical images.
+Each config names its dataset (``dataset = "image"``); the code here is shared by every dataset, so all are scored alike. A
+prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file> (the files, exactly as every model receives them;
+split: train, val or test) and data/<dataset>/dataset.csv (one row per file: split, label, path inside the dataset folder,
+sha256, and the lesion group it belongs to, plus any further columns the preparation records). The table is committed to Git and
+is the single source of truth; the files stay on this computer. Every file on disk is checked against the table before a run, so
+a changed, missing or extra file stops the run and every model is evaluated on byte-identical files. Results go to
+results/<dataset>/<model>/<run>/. Only the image dataset exists so far; the text and multimodal datasets are added in their
+phases.
 
 The file has three parts, in this order: the metrics, the model adapters (one class per API) and the pipeline with its
 command line.
@@ -628,9 +631,10 @@ class OpenAICompatibleModel:
 # ==============================================================================================================================
 
 
-IMAGES = Path("data/dataset")
-TABLE = Path("data/dataset.csv")
-RESULTS = Path("results")
+DATA = Path("data")  # one folder per dataset: data/image/ (data/text/ and data/multimodal/ in later phases)
+DATASETS = ("image",)  # the datasets a config can name
+TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
+RESULTS = Path("results")  # results/<dataset>/<model>/<run>/
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
 RUN_SPLITS = ("val", "test")  # the splits a model answers; the training split is only ever looked up, never answered
 COLUMNS = ("split", "label", "path", "sha256")  # required in the table; other columns are kept there but not needed here
@@ -654,9 +658,17 @@ PROBE_PROMPT = "Reply with the single word: ok."
 class Item:
     split: str
     label: str
-    path: str  # inside data/dataset, with forward slashes: <split>/<label>/<file>
+    path: str  # inside the dataset's folder of files, with forward slashes: <split>/<label>/<file>
     sha256: str
     lesion_group: str = ""  # the lesion the image shows; empty when the table does not say
+
+
+def dataset_paths(dataset: str) -> tuple[Path, Path]:
+    """The table and the folder of files of one prepared dataset: data/<dataset>/dataset.csv and data/<dataset>/dataset/."""
+    return DATA / dataset / TABLE_NAME, DATA / dataset / FILES
+
+
+TABLE, IMAGES = dataset_paths("image")  # the defaults below
 
 
 def read_table(table: str | Path = TABLE) -> list[Item]:
@@ -861,7 +873,7 @@ def write_json(path: Path, content: dict) -> None:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# Settings: one config file per model (configs/<model>.toml)
+# Settings: one config file per dataset and model (configs/<dataset>/<model>.toml)
 
 
 def _check_name(value, what: str) -> None:
@@ -880,6 +892,8 @@ def load_config(path: str | Path) -> dict:
             if key not in config.get(section, {}):
                 raise ValueError(f"{path}: missing [{section}] {key}")
     _check_name(config.get("name"), f"{path}: name")  # it becomes the results folder
+    if config.get("dataset") not in DATASETS:
+        raise ValueError(f"{path}: dataset must be one of {list(DATASETS)} (got {config.get('dataset')!r})")
     rate, seed = config["run"]["requests_per_minute"], config["run"]["order_seed"]
     if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
         raise ValueError(f"{path}: [run] requests_per_minute must be a number above 0 (got {rate!r})")
@@ -930,7 +944,7 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
     except (OSError, ValueError) as exc:
         line("FAIL", "Prompt file", str(exc))
     try:  # every image is hashed and compared with the committed table, as a run does
-        items = load_dataset()
+        items = load_dataset(*dataset_paths(config["dataset"]))
         labels = classes(items)
         counts = Counter(item.split for item in items)
         line("OK", "Prepared dataset", f"{len(items)} images ({', '.join(f'{s} {counts[s]}' for s in SPLITS)}), {len(labels)} classes")
@@ -1026,7 +1040,8 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
                          "changes (git status shows them), then run the same command again")
     if split == "test" and git["uncommitted_changes"] is None:
         print("WARNING: Git is not available here, so the run card cannot name the code this run came from.")
-    everything = load_dataset()  # stops if any image differs from the committed table
+    table, root = dataset_paths(config["dataset"])
+    everything = load_dataset(table, root)  # stops if any image differs from the committed table
     labels = classes(everything)
     items = sorted((item for item in everything if item.split == split), key=lambda item: item.path)
     if not items:
@@ -1039,10 +1054,10 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + items_hash(items).encode()).hexdigest()
     load_env()
-    model_dir = results / config["name"]
+    model_dir = results / config["dataset"] / config["name"]
     job = {"config": config, "config_path": config_path, "split": split, "items": items, "labels": labels,
            "prompt_text": prompt_text, "fingerprint": fingerprint, "model_dir": model_dir, "git": git,
-           "table_sha256": hashlib.sha256(TABLE.read_bytes()).hexdigest()}
+           "table": table, "root": root, "table_sha256": hashlib.sha256(table.read_bytes()).hexdigest()}
     if split == "val":
         return _run_once(job, run_id or f"val_{fingerprint[:8]}")  # the same settings give the same folder: a stop resumes
 
@@ -1098,7 +1113,7 @@ def _run_once(job: dict, run_id: str) -> Path:
                 "seed": settings.get("seed"), "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": items_hash(items),
-                "dataset_table": {"file": TABLE.as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
+                "dataset_table": {"file": job["table"].as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
                 "versions": _versions(getattr(model, "packages", ("pillow",))),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
     else:
@@ -1137,7 +1152,7 @@ def _run_once(job: dict, run_id: str) -> Path:
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, item in enumerate(todo, start=len(done) + 1):
-                image, mime, sent = read_image(item)
+                image, mime, sent = read_image(item, job["root"])
                 answer, attempt = _ask(model, image, mime, prompt_text, throttle, say)
                 parsed = parse_answer(answer["text"], labels)
                 line = {"path": item.path, "label": item.label, "lesion_group": item.lesion_group, "prediction": parsed, "raw_text": answer["text"],

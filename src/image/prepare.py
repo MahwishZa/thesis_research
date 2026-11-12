@@ -1,86 +1,84 @@
-"""Preparation of the original dataset for evaluation, one step per command, run in this order. Nothing in data/raw is ever changed.
+"""Preparation of the image dataset, one step per command, run in this order. Nothing in data/image/raw is ever changed.
 
-    python -m src.prepare inventory
-    python -m src.prepare isic [--limit 5]
-    python -m src.prepare identity [--limit 5]
-    python -m src.prepare ham10000
-    python -m src.prepare labels
-    python -m src.prepare duplicates
-    python -m src.prepare lesions [--limit 20]
-    python -m src.prepare splits
-    python -m src.prepare images
-    python -m src.prepare shortcuts
+    python -m src.image.prepare inventory
+    python -m src.image.prepare isic [--limit 5]
+    python -m src.image.prepare identity [--limit 5]
+    python -m src.image.prepare ham10000
+    python -m src.image.prepare labels
+    python -m src.image.prepare duplicates
+    python -m src.image.prepare lesions [--limit 20]
+    python -m src.image.prepare splits
+    python -m src.image.prepare images
+    python -m src.image.prepare shortcuts
 
-Every step writes into the same few committed files in data/ and rewrites only its own part of them, so running a step again gives
-byte-identical files:
+Every step writes into the same few committed files in data/image/ and rewrites only its own part of them, so running a step again
+gives byte-identical files:
     raw_photos.csv           one row per original photo (identical files count once): everything the steps find out about it
     similar_photo_pairs.csv  pairs of photos found alike: by comparing whole pictures (duplicates) or by skin pattern (lesions)
     dataset_report.md        one section per step, in the order above: its counts, its tables and what it does not do
     dataset.csv              the prepared images, written by the images step: the table the experiments read
 Two committed files are written by people, not by code: isic_to_class.csv (which ISIC wording belongs to which class) and
-eye_check_verdicts.csv (the verdicts of the eye check on flagged pairs). Downloads stay in data/downloads/ (not committed).
+eye_check_verdicts.csv (the verdicts of the eye check on flagged pairs). Downloads stay in data/image/downloads/ (not committed).
 
-``inventory`` lists every file in data/raw (the Kaggle dataset as extracted: Train/<class>/ and Test/<class>/), opens every
+``inventory`` lists every file in data/image/raw (the Kaggle dataset as extracted: Train/<class>/ and Test/<class>/), opens every
 image completely to find damaged files, records its format, colour mode, size, orientation and colour profile, fingerprints it
-(SHA-256) and groups identical files into one photo. Once raw_photos.csv exists, the files in data/raw must keep matching it: a
-changed, missing or new file stops the step instead of being written over, so the original dataset provably stays as downloaded.
+(SHA-256) and groups identical files into one photo. Once raw_photos.csv exists, the files in data/image/raw must keep matching it:
+a changed, missing or new file stops the step instead of being written over, so the original dataset provably stays as downloaded.
 
-``isic`` downloads the public ISIC Archive record of every ISIC number (no key, no cost) into data/downloads/isic/ (a record
-already there is never downloaded again, so a stopped download continues where it stopped). ``--limit N`` downloads only the
-next N records and shows what they hold, to check the format first. Once every record is there, it adds to each photo the
-diagnosis, how it was confirmed, image type, lesion and patient numbers, licence, credit line, download date and a fingerprint of
-each record; later steps read the downloaded records and check them against these fingerprints. No label is changed.
+``isic`` downloads the public ISIC Archive record of every ISIC number (no key, no cost) into data/image/downloads/isic/ (a record
+already there is never downloaded again, so a stopped download continues where it stopped). ``--limit N`` downloads only the next N
+records and shows what they hold, to check the format first. Once every record is there, it adds to each photo the diagnosis, how it
+was confirmed, image type, lesion and patient numbers, licence, credit line, download date and a fingerprint of each record; later
+steps read the downloaded records and check them against these fingerprints. No label is changed.
 
-``identity`` checks that each photo really is the picture its ISIC number names: it downloads the ISIC Archive's preview picture
-of every number (into data/downloads/isic_pictures/; a link that has expired is renewed by asking for the record again) and
-compares it with the photo in data/raw (shape, a difference hash and the mean colour difference of small versions). Any pair not
-judged the same picture is listed in the report for an eye check. ``--limit N`` downloads only the next N pictures first. Nothing is
-changed.
+``identity`` checks that each photo really is the picture its ISIC number names: it downloads the ISIC Archive's preview picture of
+every number (into data/image/downloads/isic_pictures/; a link that has expired is renewed by asking for the record again) and
+compares it with the photo in data/image/raw (shape, a difference hash and the mean colour difference of small versions). Any pair
+not judged the same picture is listed in the report for an eye check. ``--limit N`` downloads only the next N pictures first.
+Nothing is changed.
 
 ``ham10000`` cross-checks the photos that come from the HAM10000 collection against HAM10000's own metadata (Harvard Dataverse
-doi:10.7910/DVN/DBW86T; the file is downloaded once into data/downloads/ham10000/ and checked against the checksum Dataverse
+doi:10.7910/DVN/DBW86T; the file is downloaded once into data/image/downloads/ham10000/ and checked against the checksum Dataverse
 publishes): the diagnosis group, how the diagnosis was confirmed, and which photos show the same lesion. No label is changed.
 
 ``labels`` gives every photo its label from its ISIC record, by the naming rule in isic_to_class.csv (or says why it gets none). If
-any ISIC wording has no rule, or a photo's ISIC numbers would get two classes, it stops instead of guessing. No image is changed
-and no split is made.
+any ISIC wording has no rule, or a photo's ISIC numbers would get two classes, it stops instead of guessing. No image is changed and
+no split is made.
 
 ``duplicates`` compares every photo with every other one (shape, outline hash and mean colour difference of small versions) and
 flags pairs that are one picture saved differently ("near-identical") or look alike enough to be a second photo of one lesion
 ("similar"). It measures how many of the same-lesion pairs that ISIC's lesion numbers name it finds, and how often it flags
-different lesions. A flagged pair decides
-nothing by itself: only the verdicts in eye_check_verdicts.csv (per pair: same photo, and which copy is kept; same lesion, new photo; or
-different lesions) and ISIC's lesion numbers decide what is left out or kept together in the splits. No image is changed.
+different lesions. A flagged pair decides nothing by itself: only the verdicts in eye_check_verdicts.csv (per pair: same photo, and
+which copy is kept; same lesion, new photo; or different lesions) and ISIC's lesion numbers decide what is left out or kept together
+in the splits. No image is changed.
 
 ``lesions`` looks for second photos of one lesion (another angle, zoom or day), which a comparison of whole pictures misses. Within
-each class (one lesion has one diagnosis), it compares every photo with every other one by their skin pattern: OpenCV's SIFT
-finds distinctive points in each photo, the points are paired by Lowe's ratio test (each point with one other at most), and RANSAC
-keeps only the pairs that fit one shift, turn and zoom; a zoom beyond 4 times closer or farther is no match. The number of points
-that fit ("inliers") is the evidence. It measures the method on the same-lesion pairs that ISIC's lesion numbers name and on the
-pairs they name as different lesions, at several thresholds, so the threshold is chosen from data. Pairs without lesion numbers
-above the lowest threshold are listed for an eye check. ``--limit N`` compares only the first N
-photos of each class and shows how long the whole search will take. Copies left out by the eye check are not compared. Nothing is
-changed.
+each class (one lesion has one diagnosis), it compares every photo with every other one by their skin pattern: OpenCV's SIFT finds
+distinctive points in each photo, the points are paired by Lowe's ratio test (each point with one other at most), and RANSAC keeps
+only the pairs that fit one shift, turn and zoom; a zoom beyond 4 times closer or farther is no match. The number of points that fit
+("inliers") is the evidence. It measures the method on the same-lesion pairs that ISIC's lesion numbers name and on the pairs they
+name as different lesions, at several thresholds, so the threshold is chosen from data. Pairs without lesion numbers above the
+lowest threshold are listed for an eye check. ``--limit N`` compares only the first N photos of each class and shows how long the
+whole search will take. Copies left out by the eye check are not compared. Nothing is changed.
 
 ``splits`` puts every labelled photo into train, validation (val) or test, with every lesion in one split: photos that ISIC's or
-HAM10000's lesion numbers, or the eye check, name as one lesion form a group that moves as a whole. The Kaggle dataset's own
-Train and Test folders play no part: the splits are made anew (PIN_ORIGINAL_TEST = True would instead keep the original test photos
-in test). Each class gets exactly 40 test and 15 validation photos (stratified); the rest is train, the database that open-book runs retrieve from. The split starts from a random fill with a seed fixed in advance
+HAM10000's lesion numbers, or the eye check, name as one lesion form a group that moves as a whole. The Kaggle dataset's own Train
+and Test folders play no part: the splits are made anew. Each class gets exactly 40 test and 15 validation photos (stratified); the
+rest is train, the database that open-book runs retrieve from. The split starts from a random fill with a seed fixed in advance
 (SEED) and then swaps lesion groups of equal size between the parts whenever that brings the test and validation parts closer to
 their class's own mix of subtype, confirmation, source and original image size; nothing else is used, and never a model's result.
-The report compares the balance reached with simple random splits under the same rules. Copies left out by the eye check and
-photos without a class go into no split, with the reason.
+The report compares the balance reached with simple random splits under the same rules. Copies left out by the eye check and photos
+without a class go into no split, with the reason.
 
 ``images`` makes the image of every photo in a split from its original file, all in the same way: upright, in sRGB colours, turned
 from portrait to landscape, fitted whole within 600 x 450 pixels keeping its shape (shrunk, never enlarged; nothing cut, nothing
-added) and saved as JPEG with one setting and no metadata, as data/dataset/<split>/<class>/<photo_id>.jpg (not committed). It writes
-dataset.csv (split, class, file, SHA-256, lesion group, original-test mark, size and what was done) and checks the result the way
-the evaluation does before every run. Nothing in data/raw is changed.
+added) and saved as JPEG with one setting and no metadata, as data/image/dataset/<split>/<class>/<photo_id>.jpg (not committed). It
+writes dataset.csv (split, class, file, SHA-256, lesion group, original-test mark, size and what was done) and checks the result the
+way the evaluation does before every run. Nothing in data/image/raw is changed.
 
 ``shortcuts`` measures how much simple properties of the prepared images, which say nothing about the lesion (size, file size, dark
-corners, the colour of the outer frame, sharpness), reveal each image's class and source: a nearest-neighbour vote from the
-training images, scored on the test split like a model. It also tabulates where each class's photos come from. Nothing is changed.
-"""
+corners, the colour of the outer frame, sharpness), reveal each image's class and source: a nearest-neighbour vote from the training
+images, scored on the test split like a model. It also tabulates where each class's photos come from. Nothing is changed."""
 
 from __future__ import annotations
 
@@ -105,10 +103,10 @@ from pathlib import Path
 import PIL
 from PIL import Image, ImageChops, ImageCms, ImageOps, ImageStat, features
 
-from .evaluate import MEDIA_TYPES, SPLITS, SYSTEM_FILES, items_hash, load_dataset, summarize
-from .evaluate import classes as training_classes
+from ..evaluate import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, items_hash, load_dataset, summarize
+from ..evaluate import classes as training_classes
 
-DATA = Path("data")  # the committed tables and report sit directly in it; raw/, downloads/ and dataset/ stay on this computer
+DATA = Path("data/image")  # the image dataset's folder: its committed tables and reports, and raw/, downloads/ and dataset/ (on this computer)
 PHOTOS = "raw_photos.csv"  # one row per original photo: everything the steps find out about it
 PAIRS = "similar_photo_pairs.csv"  # pairs of photos found alike: by comparing whole pictures, or by skin pattern
 REPORT = "dataset_report.md"  # one section per step, in the order the steps run
@@ -139,9 +137,9 @@ PAIR_COLUMNS = ["photo_a", "photo_b", "label_a", "label_b", "found_by", "isic_le
                 "hash_distance", "mean_difference", "good_matches", "inliers", "zoom", "turn_degrees"]
 FOUND_BY = {"duplicates": "picture comparison", "lesions": "skin pattern"}  # each step rewrites only the pairs it found
 REPORT_HEAD = ["# Preparation of the dataset", "",
-               "Written by `python -m src.prepare`, one section per step in the order the steps run; each step rewrites only its own "
+               "Written by `python -m src.image.prepare`, one section per step in the order the steps run; each step rewrites only its own "
                "section. What the steps find out about each photo is in `raw_photos.csv` (one row per original photo), the pairs of photos "
-               "found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/raw` "
+               "found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/image/raw` "
                "is ever changed.", ""]
 ISIC_API = "https://api.isic-archive.com/api/v2/images/{}/"
 USER_AGENT = "thesis-research-dataset-preparation/1.0 (academic research)"
@@ -180,7 +178,6 @@ THRESHOLDS = (10, 15, 20, 30, 50, 100)  # inliers at which the calibration is sh
 # then, a different lesion that looks alike). Both are measured against the pairs ISIC's lesion numbers already name.
 NEAR_IDENTICAL = SAME
 SIMILAR = {"shape_difference_pct": 10.0, "hash_distance": 20, "mean_difference": 10.0}
-PIN_ORIGINAL_TEST = False  # the researcher's decision: the splits are made anew, and the Kaggle Train/Test folders play no part
 # (True would keep the original test photos, and the other photos of their lesions, in test)
 SEED = 2026  # chosen before the first split was drawn and never changed: the split depends on nothing else
 TEST_PER_CLASS = 40
@@ -189,8 +186,6 @@ MIN_TRAIN = 50  # the fewest training photos a class may keep (the database that
 BALANCED = ("isic_diagnosis", "diagnosis_confirm_type", "attribution", "size")  # each part should mirror its class in these
 RANDOM_DRAWS = 1000  # simple random splits under the same rules: the yardstick for the balance reached
 PATIENCE = 3000  # swaps tried in a row without improvement before the search for a better balance stops (per class)
-IMAGE_FOLDER = "dataset"  # data/dataset/<split>/<class>/<photo_id>.jpg: the prepared images (they stay on this computer)
-IMAGE_TABLE = "dataset.csv"  # the table the experiments read: src/evaluate.py checks every image against it before a run
 IMAGE_COLUMNS = ["split", "label", "path", "sha256", "lesion_group", "photo_id", "kaggle_test", "width", "height", "bytes", "changes"]
 SIZE = (600, 450)  # width x height every photo is fitted within: HAM10000's own size, which most photos already have
 SNAP_PIXELS = 1  # a fitted size this close to SIZE becomes SIZE exactly (a photo whose shape is 4:3 up to rounding)
@@ -214,12 +209,12 @@ def _read_photos(data: Path, *after: str) -> dict[str, dict]:
     """raw_photos.csv by photo_id, after checking that the steps named in ``after`` have run."""
     table = data / PHOTOS
     if not table.is_file():
-        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.prepare inventory first")
+        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.image.prepare inventory first")
     with table.open(encoding="utf-8", newline="") as f:
         photos = {row["photo_id"]: {c: row.get(c) or "" for c in PHOTO_COLUMNS} for row in csv.DictReader(f)}
     for step in after:
         if not photos or any(not row[DONE[step]] for row in photos.values()):
-            raise FileNotFoundError(f"{table.as_posix()} lacks what the {step} step adds: run python -m src.prepare {step} first")
+            raise FileNotFoundError(f"{table.as_posix()} lacks what the {step} step adds: run python -m src.image.prepare {step} first")
     return photos
 
 
@@ -323,7 +318,7 @@ def _describe(file: Path, rel: str) -> dict:
 
 
 def scan_raw(raw: str | Path = DATA / "raw") -> tuple[list[dict], list[str]]:
-    """The rows for every image file in data/raw/<split>/<class>/, sorted by path, and every other file (not used)."""
+    """The rows for every image file in data/image/raw/<split>/<class>/, sorted by path, and every other file (not used)."""
     raw = Path(raw)
     if not raw.is_dir():
         raise FileNotFoundError(f"{raw.as_posix()} not found: put the original dataset there (the Train and Test folders from the "
@@ -352,14 +347,14 @@ def _fingerprint(rows: list[dict]) -> str:
 
 
 def _refuse_changed_raw(rows: list[dict], files: list[dict], table: Path) -> None:
-    """Stops when data/raw no longer matches the committed raw_photos.csv (the original dataset must stay as downloaded)."""
+    """Stops when data/image/raw no longer matches the committed raw_photos.csv (the original dataset must stay as downloaded)."""
     before = {r["path"]: r["sha256"] for r in files}
     now = {r["path"]: r["sha256"] for r in rows}
     changed = sorted(p for p in now.keys() & before.keys() if now[p] != before[p])
     missing, new = sorted(before.keys() - now.keys()), sorted(now.keys() - before.keys())
     if changed or missing or new:
         examples = "; ".join(f"{why}: {paths[0]}" for why, paths in (("changed", changed), ("missing", missing), ("new", new)) if paths)
-        raise ValueError(f"data/raw differs from the committed {table.as_posix()}: {len(changed)} changed, {len(missing)} missing, "
+        raise ValueError(f"data/image/raw differs from the committed {table.as_posix()}: {len(changed)} changed, {len(missing)} missing, "
                          f"{len(new)} new ({examples}). The original dataset must stay as downloaded: extract the Kaggle ZIP again. "
                          f"Only if the change is intended, delete {table.as_posix()} and run every step again")
 
@@ -395,15 +390,15 @@ def _summary(rows: list[dict], others: list[str]) -> list[str]:
         return ", ".join(f"{k if k != '' else 'none'}: {v}" for k, v in sorted(Counter(values).items(), key=lambda kv: (-kv[1], str(kv[0]))))
 
     lines = ["# Inventory of the original dataset", "",
-             "Written by `python -m src.prepare inventory` from the files in `data/raw`, which it does not change. One row per photo "
+             "Written by `python -m src.image.prepare inventory` from the files in `data/image/raw`, which it does not change. One row per photo "
              "(identical files count once, with every file named) is in `raw_photos.csv`.", "",
-             f"Fingerprint of `data/raw` (the path and SHA-256 of every image file): `{_fingerprint(rows)}`", "",
+             f"Fingerprint of `data/image/raw` (the path and SHA-256 of every image file): `{_fingerprint(rows)}`", "",
              "## Files", "", "| | Files |", "|---|---|",
              f"| Image files in `<split>/<class>/` folders | {len(rows)} |",
              f"| Opened completely without error | {len(readable)} |",
              f"| Unreadable (damaged or not an image) | {len(rows) - len(readable)} |",
              f"| Readable, but the file type does not match its name | {sum(1 for r in readable if r['problem'])} |",
-             f"| Other files in `data/raw` (not used) | {len(others)} |",
+             f"| Other files in `data/image/raw` (not used) | {len(others)} |",
              f"| Files whose name has no ISIC number | {sum(1 for r in rows if not r['isic_id'])} |", "",
              "## Files per folder and class (the dataset's own labels, not yet verified)", "",
              "| Class folder | " + " | ".join(splits) + " | All files | Unique photos |", "|---|" + "---|" * (len(splits) + 2)]
@@ -457,8 +452,8 @@ def _summary(rows: list[dict], others: list[str]) -> list[str]:
 
 
 def inventory(data: str | Path = DATA) -> dict:
-    """Groups the files in data/raw into photos (identical files are one photo), writes their file columns of raw_photos.csv and the
-    inventory section of dataset_report.md, and returns the main counts. Nothing in data/raw is changed."""
+    """Groups the files in data/image/raw into photos (identical files are one photo), writes their file columns of raw_photos.csv and the
+    inventory section of dataset_report.md, and returns the main counts. Nothing in data/image/raw is changed."""
     data = Path(data)
     rows, others = scan_raw(data / "raw")
     table = data / PHOTOS
@@ -577,8 +572,8 @@ def _isic_summary(raw_rows: list[dict], records: dict[str, dict]) -> list[str]:
         return lines + [""]
 
     lines = ["# ISIC Archive records of the original dataset", "",
-             "Written by `python -m src.prepare isic` from the public ISIC Archive record of every ISIC number of the photos (the "
-             "records themselves are kept unchanged in `data/downloads/isic/`; what they say about each photo is in `raw_photos.csv`, with "
+             "Written by `python -m src.image.prepare isic` from the public ISIC Archive record of every ISIC number of the photos (the "
+             "records themselves are kept unchanged in `data/image/downloads/isic/`; what they say about each photo is in `raw_photos.csv`, with "
              "a fingerprint of each record). "
              "No label has been changed: this is the evidence for the naming rule that maps ISIC's wording to the class names.", "",
              f"- ISIC numbers: {len(records)}; found in the ISIC Archive: {len(found)}; not found: {len(missing)}"
@@ -670,21 +665,21 @@ def isic(limit: int | None = None, data: str | Path = DATA) -> dict:
 
 
 def _records(data: Path, photos: dict[str, dict]) -> dict[str, dict]:
-    """The ISIC record of every ISIC number, read from data/downloads/isic/ and checked against the fingerprints in raw_photos.csv."""
+    """The ISIC record of every ISIC number, read from data/image/downloads/isic/ and checked against the fingerprints in raw_photos.csv."""
     cache, records = data / "downloads" / "isic", {}
     for p in photos.values():
         numbers, fingerprints = p["isic_ids"].split(), p["isic_record_sha256"].split()
         if len(numbers) != len(fingerprints):
             raise FileNotFoundError(f"{(data / PHOTOS).as_posix()} lacks the record fingerprints of {p['photo_id']}: run python -m "
-                                    "src.prepare isic first")
+                                    "src.image.prepare isic first")
         for number, fingerprint in zip(numbers, fingerprints):
             path = cache / f"{number}.json"
             if not path.is_file():
-                raise FileNotFoundError(f"{path.as_posix()} not found: run python -m src.prepare isic first")
+                raise FileNotFoundError(f"{path.as_posix()} not found: run python -m src.image.prepare isic first")
             row = _isic_row(json.loads(path.read_text(encoding="utf-8")))
             if (row["record_sha256"] or "-") != fingerprint:
                 raise ValueError(f"{path.as_posix()} is not the record {(data / PHOTOS).as_posix()} was made from: run python -m "
-                                 "src.prepare isic again")
+                                 "src.image.prepare isic again")
             records[number] = row
     return records
 
@@ -757,7 +752,7 @@ def _identity_summary(rows: list[dict]) -> list[str]:
     compared = [row for row in rows if row["hash_distance"] != ""]
     bins = [("0 to 1", 0, 1), ("over 1 to 2", 1, 2), ("over 2 to 5", 2, 5), ("over 5 to 10", 5, 10), ("over 10", 10, 255)]
     lines = ["# Identity check: each photo against the ISIC Archive's own picture", "",
-             "Written by `python -m src.prepare identity`. For every ISIC number, the photo in `data/raw` is compared with the preview "
+             "Written by `python -m src.image.prepare identity`. For every ISIC number, the photo in `data/image/raw` is compared with the preview "
              "picture the ISIC Archive serves for that number: the shape (width / height), the mean colour difference of 32 x 32 "
              "versions (0 to 255; 0 = the same) and a 64-bit difference hash of an 8 x 9 grey version (0 = the same outline). Nothing "
              "is changed; the result for each photo is in `raw_photos.csv`.", "",
@@ -775,7 +770,7 @@ def _identity_summary(rows: list[dict]) -> list[str]:
               f"mean difference: {max((row['mean_difference'] for row in compared if row['verdict'] == 'same picture'), default='–')}", ""]
     review = [row for row in rows if row["verdict"] != "same picture"]
     if review:
-        lines += ["## For an eye check", "", "| ISIC number | Photo in data/raw | Verdict | Shape difference | Hash distance | "
+        lines += ["## For an eye check", "", "| ISIC number | Photo in data/image/raw | Verdict | Shape difference | Hash distance | "
                   "Mean difference |", "|---|---|---|---|---|---|"]
         lines += [f"| {row['isic_id']} | {row['path']} | {row['verdict']} | {row['shape_difference_pct']} | {row['hash_distance']} | "
                   f"{row['mean_difference']} |" for row in review]
@@ -794,7 +789,7 @@ def identity(limit: int | None = None, data: str | Path = DATA) -> dict:
     records, thumbnails = downloads / "isic", downloads / "isic_pictures"
     ids = sorted({r["isic_id"] for r in raw_rows if r["isic_id"]})
     if not all((records / f"{i}.json").exists() for i in ids):
-        raise FileNotFoundError("not every ISIC record is downloaded: run python -m src.prepare isic first")
+        raise FileNotFoundError("not every ISIC record is downloaded: run python -m src.image.prepare isic first")
     first_file = {}
     for r in raw_rows:
         first_file.setdefault(r["isic_id"], r)
@@ -914,7 +909,7 @@ def _ham_summary(rows: list[dict], info: dict, path: Path, raw_rows: list[dict],
         return lines + [""]
 
     lines = ["# HAM10000 cross-check", "",
-             "Written by `python -m src.prepare ham10000`. Every photo of this dataset that is also in HAM10000 is compared with "
+             "Written by `python -m src.image.prepare ham10000`. Every photo of this dataset that is also in HAM10000 is compared with "
              "HAM10000's own metadata: its diagnosis group, how the diagnosis was confirmed, and which photos show the same lesion. "
              "No label is changed; the result for each photo is in `raw_photos.csv`.", "",
              f"Source: HAM10000 (Tschandl, Rosendahl and Kittler, *Scientific Data* 5:180161, 2018), Harvard Dataverse {HAM_DOI}, "
@@ -1088,7 +1083,7 @@ def _labels_summary(photos: list[dict], rules: list[dict], records: dict[str, di
             if rule:
                 per_rule[(rule["level"], rule["isic_wording"])] += 1
     lines = ["# Labels of the original dataset", "",
-             "Written by `python -m src.prepare labels`. Each unique photo (identical files count once) is labelled from its ISIC "
+             "Written by `python -m src.image.prepare labels`. Each unique photo (identical files count once) is labelled from its ISIC "
              "Archive record by the naming rule in `isic_to_class.csv`, never from its Kaggle folder. One row per photo is in "
              "`raw_photos.csv`. No image is changed and no split is made in this step.", "",
              f"- Photos: {len(photos)}; labelled: {len(labelled)}; without a class: {len(photos) - len(labelled)}",
@@ -1229,7 +1224,7 @@ def _duplicates_summary(ids, flagged, known_same, measured, lesion) -> list[str]
         return ", ".join(f"{values[int(q * (len(values) - 1))]}" for q in (0, 0.25, 0.5, 0.75, 1)) if values else "–"
 
     lines = ["# Near-duplicates: different files of one picture, and second photos of one lesion", "",
-             "Written by `python -m src.prepare duplicates`. Every photo in `raw_photos.csv` is compared with every other one (identical "
+             "Written by `python -m src.image.prepare duplicates`. Every photo in `raw_photos.csv` is compared with every other one (identical "
              "files were already merged by the inventory). Flagged pairs are in `similar_photo_pairs.csv` (found by \"picture comparison\"). No image is "
              "changed.", "",
              f"- Photos compared: {len(ids)}; pairs: {len(ids) * (len(ids) - 1) // 2}",
@@ -1433,7 +1428,7 @@ def _lesions_summary(counts, rows, same_scores, different_scores, known_differen
 
     labels = sorted(counts)
     lines = ["# Second photos of one lesion (skin-pattern matching)", "",
-             "Written by `python -m src.prepare lesions`. Within each class, every photo is compared with every other one by its skin "
+             "Written by `python -m src.image.prepare lesions`. Within each class, every photo is compared with every other one by its skin "
              f"pattern (OpenCV {opencv_version}: the {FEATURES} strongest SIFT points of a grey version {WORK_SIDE} pixels long, paired "
              f"by Lowe's ratio test at {RATIO}, each point with one other at most, and RANSAC keeping the pairs that fit one shift, turn "
              f"and zoom within {RANSAC_PIXELS} pixels; a zoom outside {ZOOM_RANGE[0]}–{ZOOM_RANGE[1]} is no match). \"Inliers\" are the points that fit: two photos of one lesion share many, two different lesions few. Pairs with "
@@ -1498,10 +1493,10 @@ class _Balance:
         return sum(distances) / len(distances) if distances else 0.0
 
 
-def _fill(sizes: dict[str, int], fixed: list[str], order: list[str], targets: dict[str, int]) -> dict[str, str] | None:
-    """The fixed groups in test, then the others in the given order: into test while it has room, then into validation, the rest
+def _fill(sizes: dict[str, int], order: list[str], targets: dict[str, int]) -> dict[str, str] | None:
+    """The lesion groups in the given order: into test while it has room, then into validation, the rest
     into train (a group too large for the room left goes on). None when a target cannot be met exactly."""
-    assign, room = {g: "test" for g in fixed}, {"test": targets["test"] - sum(sizes[g] for g in fixed), "val": targets["val"]}
+    assign, room = {}, {"test": targets["test"], "val": targets["val"]}
     for g in order:
         part = next((p for p in ("test", "val") if sizes[g] <= room[p]), "train")
         assign[g] = part
@@ -1530,7 +1525,7 @@ def _optimise(balance: _Balance, assign: dict[str, str], movable: list[str], rng
 
 
 def splits(data: str | Path = DATA, test: int = TEST_PER_CLASS, val: int = VAL_PER_CLASS, min_train: int = MIN_TRAIN,
-           seed: int = SEED, draws: int = RANDOM_DRAWS, patience: int = PATIENCE, pin: bool = PIN_ORIGINAL_TEST) -> dict:
+           seed: int = SEED, draws: int = RANDOM_DRAWS, patience: int = PATIENCE) -> dict:
     """Puts every labelled photo into train, val or test (every lesion in one), and writes the split columns of raw_photos.csv and
     the splits section of dataset_report.md."""
     data = Path(data)
@@ -1564,32 +1559,30 @@ def splits(data: str | Path = DATA, test: int = TEST_PER_CLASS, val: int = VAL_P
     for label in sorted(classes):
         names = classes[label]
         sizes = {g: len(groups[g]) for g in names}
-        fixed = [g for g in names if pin and any(photos[i]["kaggle_test"] == "yes" for i in groups[g])]
-        movable = [g for g in names if g not in fixed]
         total = sum(sizes.values())
-        targets = {"test": max(test, sum(sizes[g] for g in fixed)), "val": val}
+        targets = {"test": test, "val": val}
         if total - targets["test"] - targets["val"] < min_train:
             raise ValueError(f"{label}: {total} photos leave {total - targets['test'] - targets['val']} for training after "
                              f"{targets['test']} test and {targets['val']} validation photos, fewer than {min_train}")
         rng = random.Random(f"{seed}:{label}")
-        order = list(movable)
+        order = list(names)
         rng.shuffle(order)
-        start = _fill(sizes, fixed, order, targets)
+        start = _fill(sizes, order, targets)
         if start is None:
             raise ValueError(f"{label}: the lesion groups cannot fill exactly {targets['test']} test and {targets['val']} "
                              "validation photos")
         balances[label] = _Balance({g: groups[g] for g in names}, photos)
         start_scores[label] = balances[label].score(start)
-        assign.update(_optimise(balances[label], start, movable, rng, patience))
-        per_class[label] = {"fixed": fixed, "movable": movable, "sizes": sizes, "targets": targets}
+        assign.update(_optimise(balances[label], start, names, rng, patience))
+        per_class[label] = {"names": names, "sizes": sizes, "targets": targets}
     random_scores = []  # the yardstick: simple random splits under the same rules
     for draw in range(draws):
         scores = []
         for label in sorted(classes):
             c, rng = per_class[label], random.Random(f"{seed}:random:{draw}:{label}")
-            order = list(c["movable"])
+            order = list(c["names"])
             rng.shuffle(order)
-            filled = _fill(c["sizes"], c["fixed"], order, c["targets"])
+            filled = _fill(c["sizes"], order, c["targets"])
             if filled is not None:
                 scores.append(balances[label].score(filled))
         random_scores.append(sum(scores) / len(scores))
@@ -1604,20 +1597,17 @@ def splits(data: str | Path = DATA, test: int = TEST_PER_CLASS, val: int = VAL_P
                          "lesion_group": group_of[left_out[i]]}
         else:
             g = group_of[i]
-            pinned = [j for j in groups[g] if pin and photos[j]["kaggle_test"] == "yes"]
-            note = ("original test photo" if pin and p["kaggle_test"] == "yes" else
-                    f"same lesion as original test photo {pinned[0]}" if pinned else "")
-            values[i] = {"split": assign[g], "split_note": note, "lesion_group": g}
+            values[i] = {"split": assign[g], "split_note": "", "lesion_group": g}
     updated = _update_photos(data, "splits", values)
     rows = [updated[i] for i in sorted(updated)]
     random_scores.sort()
-    _write_section(data, "splits", _splits_summary(rows, groups, scores, start_scores, random_scores, seed, test, val, pin))
+    _write_section(data, "splits", _splits_summary(rows, groups, scores, start_scores, random_scores, seed, test, val))
     counts = Counter((p["label"], p["split"]) for p in rows if p["split"] != "none")
     return {"counts": counts, "imbalance": sum(scores.values()) / len(scores), "start": sum(start_scores.values()) / len(start_scores),
             "random": random_scores, "rows": rows, "table": (data / PHOTOS).as_posix(), "summary": (data / REPORT).as_posix()}
 
 
-def _splits_summary(rows, groups, scores, start_scores, random_scores, seed, test, val, pin) -> list[str]:
+def _splits_summary(rows, groups, scores, start_scores, random_scores, seed, test, val) -> list[str]:
     used = [p for p in rows if p["split"] != "none"]
     classes = sorted({p["label"] for p in used})
     parts = ("test", "val", "train")
@@ -1632,14 +1622,12 @@ def _splits_summary(rows, groups, scores, start_scores, random_scores, seed, tes
         return random_scores[int(q * (len(random_scores) - 1))] if random_scores else float("nan")
 
     lines = ["# Splits: train, validation and test", "",
-             "Written by `python -m src.prepare splits`. Every labelled photo goes into train, validation (val) or test, with every "
+             "Written by `python -m src.image.prepare splits`. Every labelled photo goes into train, validation (val) or test, with every "
              "lesion in one split: photos that ISIC's or HAM10000's lesion numbers, or the eye check, name as one lesion form a "
              "group that moves as a whole (group-based). "
-             + ("The original test photos and the other photos of their lesions are fixed in test. " if pin else
-                "The Kaggle dataset's own Train and Test folders play no part: the splits are made anew, and the original test photos "
-                "are split like every other photo (where they went is shown below). ")
-             + f"Each class gets exactly {test} test and {val} validation photos (stratified)"
-             + (", unless its fixed photos alone are more" if pin else "") + "; the rest is train, the database that open-book runs retrieve from. The split starts from a random fill "
+             "The Kaggle dataset's own Train and Test folders play no part: the splits are made anew, and the original test photos "
+             "are split like every other photo (where they went is shown below). "
+             f"Each class gets exactly {test} test and {val} validation photos (stratified); the rest is train, the database that open-book runs retrieve from. The split starts from a random fill "
              f"(seed {seed}, fixed in advance; Python {sys.version_info.major}.{sys.version_info.minor}'s random module) and then swaps lesion groups of equal size between the parts whenever that brings the "
              "test and validation parts closer to their class's own mix of subtype (ISIC diagnosis), how the diagnosis was "
              "confirmed, source (credit line) and original image size. Only these facts, known before any experiment, are used; "
@@ -1659,17 +1647,13 @@ def _splits_summary(rows, groups, scores, start_scores, random_scores, seed, tes
     left = [p for p in rows if p["split"] == "none"]
     lines += ["", f"- Lesion groups: {len(groups)}, of which {sum(len(ids) > 1 for ids in groups.values())} hold two or more photos; "
               f"groups found in two splits: {in_two}",
-              *([f"- Fixed in test: {sum(p['split_note'] == 'original test photo' for p in used)} original test photos and "
-                 f"{sum(p['split_note'].startswith('same lesion as original') for p in used)} photos of the same lesions"] if pin else []),
               f"- In no split: {len(left)} (" + "; ".join(f"{k}: {n}" for k, n in sorted(Counter(
                   'same photo as another (eye check)' if 'eye check' in p['split_note'] else p['split_note'] for p in left).items()))
               + ")", "",
               "## Balance (0 = the test and validation parts have their class's own mix)", "",
               f"- This split: {mean:.3f} (the random fill it started from: {sum(start_scores.values()) / len(start_scores):.3f})",
               f"- {len(random_scores)} simple random splits under the same rules: median {quantile(0.5):.3f}, 95th percentile "
-              f"{quantile(0.95):.3f}, worst {quantile(1):.3f}",
-              *(["- Where the fixed original test photos already hold a mix unlike their class's, the free places can only partly "
-                 "even it out."] if pin else []), "",
+              f"{quantile(0.95):.3f}, worst {quantile(1):.3f}", "",
               "| Class | Property | Value | Class | Test | Validation | Train |", "|---|---|---|---|---|---|---|"]
     names = {"isic_diagnosis": "subtype", "diagnosis_confirm_type": "confirmed by", "attribution": "source", "size": "original size"}
     for label in classes:
@@ -1738,18 +1722,18 @@ def _prepare_image(content: bytes) -> tuple[bytes, list[str]]:
 
 
 def images(data: str | Path = DATA, show=None) -> dict:
-    """Makes the image of every photo in a split from its original file, as data/dataset/<split>/<class>/<photo_id>.jpg (an image
+    """Makes the image of every photo in a split from its original file, as data/image/dataset/<split>/<class>/<photo_id>.jpg (an image
     already there with the same bytes is left as it is; one no longer in a split is removed), and writes dataset.csv and the images
-    section of dataset_report.md. Nothing in data/raw is changed."""
+    section of dataset_report.md. Nothing in data/image/raw is changed."""
     data = Path(data)
     photos = _read_photos(data, "splits")
-    root, table = data / IMAGE_FOLDER, data / IMAGE_TABLE
+    root, table = data / FILES, data / TABLE_NAME
     used = [photos[i] for i in sorted(photos) if photos[i]["split"] != "none"]
     rows, written = [], 0
     for n, p in enumerate(used, start=1):
         source = data / "raw" / p["files"].split(" | ")[0]
         if not source.is_file():
-            raise FileNotFoundError(f"{source.as_posix()} not found: put the original dataset in data/raw (the Train and Test folders "
+            raise FileNotFoundError(f"{source.as_posix()} not found: put the original dataset in data/image/raw (the Train and Test folders "
                                     "from the Kaggle ZIP)")
         content = source.read_bytes()
         if hashlib.sha256(content).hexdigest() != p["sha256"]:
@@ -1801,9 +1785,9 @@ def _images_summary(rows: list[dict], items: list, photos: dict[str, dict]) -> l
         return [row for row in rows if text in row["changes"]]
 
     lines = ["# Images: the prepared dataset", "",
-             "Written by `python -m src.prepare images`. Every photo in a split is made from its original file in `data/raw` (checked "
-             "against its fingerprint in `raw_photos.csv`; nothing in `data/raw` is changed) and saved as "
-             f"`data/{IMAGE_FOLDER}/<split>/<class>/<photo_id>.jpg`. `{IMAGE_TABLE}` lists every image: its split, class, file, SHA-256, "
+             "Written by `python -m src.image.prepare images`. Every photo in a split is made from its original file in `data/image/raw` (checked "
+             "against its fingerprint in `raw_photos.csv`; nothing in `data/image/raw` is changed) and saved as "
+             f"`{(DATA / FILES).as_posix()}/<split>/<class>/<photo_id>.jpg`. `{TABLE_NAME}` lists every image: its split, class, file, SHA-256, "
              "lesion group, whether it is an original test photo, its size and what was done to it. The evaluation checks every "
              "image against that table before a run, so every model gets byte-identical images.", "",
              "Every photo is prepared the same way, in this order:", "",
@@ -1920,9 +1904,9 @@ def shortcuts(data: str | Path = DATA) -> dict:
     """Measures how much simple properties of the prepared images (size, file size, dark corners, edge colour, sharpness) reveal
     each image's class and source, and writes the shortcut section of dataset_report.md. Nothing is changed."""
     data = Path(data)
-    table, root = data / IMAGE_TABLE, data / IMAGE_FOLDER
+    table, root = data / TABLE_NAME, data / FILES
     if not table.is_file():
-        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.prepare images first")
+        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.image.prepare images first")
     items = load_dataset(table, root)  # the images on disk are exactly the prepared ones
     photos = _read_photos(data)
     with table.open(encoding="utf-8", newline="") as f:
@@ -1977,7 +1961,7 @@ def _shortcuts_summary(images: list[dict], labels: list[str], results: dict) -> 
         return f"{100 * score:.1f}% ({100 * interval[0]:.1f}–{100 * interval[1]:.1f}%)"
 
     lines = ["# Shortcut check: what the images reveal besides the lesion", "",
-             "Written by `python -m src.prepare shortcuts` from the prepared images; it changes nothing. A model should recognise the "
+             "Written by `python -m src.image.prepare shortcuts` from the prepared images; it changes nothing. A model should recognise the "
              "lesion, not where or how the photo was taken. This step measures how much simple properties of the images, which are "
              "mostly about how the photo was taken rather than about the lesion (file size and sharpness also depend a little on "
              "the lesion's own texture), reveal each image's class: where they do, a model, or the image search of an open-book "
@@ -2026,9 +2010,9 @@ def _shortcuts_summary(images: list[dict], labels: list[str], results: dict) -> 
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m src.prepare", description=__doc__.split("\n\n")[0])
+    parser = argparse.ArgumentParser(prog="python -m src.image.prepare", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("inventory", help="list, open and fingerprint every file in data/raw, and group identical copies")
+    sub.add_parser("inventory", help="list, open and fingerprint every file in data/image/raw, and group identical copies")
     i = sub.add_parser("isic", help="download the ISIC Archive record of every ISIC number (no label is changed)")
     i.add_argument("--limit", type=int, help="download only the next N records and show what they hold")
     d = sub.add_parser("identity", help="compare every photo with the ISIC Archive's own picture of its ISIC number")
@@ -2049,10 +2033,10 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "inventory":
             done = inventory()
-            print(f"data/raw: {done['files']} image files, {done['unreadable']} unreadable, {done['other_problems']} with another "
+            print(f"data/image/raw: {done['files']} image files, {done['unreadable']} unreadable, {done['other_problems']} with another "
                   f"problem, {done['other_files']} other files")
             print(f"{done['unique']} unique photos; {done['duplicate_groups']} groups of identical files")
-            print(f"Written: {done['table']} and {done['summary']}. Nothing in data/raw was changed. Commit both files.")
+            print(f"Written: {done['table']} and {done['summary']}. Nothing in data/image/raw was changed. Commit both files.")
         elif args.command == "isic":
             if args.limit is not None and args.limit < 1:
                 raise ValueError(f"--limit must be at least 1 (got {args.limit})")
@@ -2139,7 +2123,7 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Images: {len(rows)} (test {parts['test']}, val {parts['val']}, train {parts['train']}); exactly {SIZE[0]}x{SIZE[1]}: "
                   f"{standard}; another size: {len(rows) - standard}")
             print(f"Written: {done['folder']}/ ({done['written']} images new or changed, {done['removed']} removed), {done['table']} "
-                  f"and {done['summary']}. Nothing in data/raw was changed. Commit {done['table']} and {done['summary']}; the "
+                  f"and {done['summary']}. Nothing in data/image/raw was changed. Commit {done['table']} and {done['summary']}; the "
                   "images stay on this computer.")
         elif args.command == "shortcuts":
             done = shortcuts()

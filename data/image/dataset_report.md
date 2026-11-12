@@ -1,13 +1,13 @@
 # Preparation of the dataset
 
-Written by `python -m src.prepare`, one section per step in the order the steps run; each step rewrites only its own section. What the steps find out about each photo is in `raw_photos.csv` (one row per original photo), the pairs of photos found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/raw` is ever changed.
+Written by `python -m src.image.prepare`, one section per step in the order the steps run; each step rewrites only its own section. What the steps find out about each photo is in `raw_photos.csv` (one row per original photo), the pairs of photos found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/image/raw` is ever changed.
 
 <!-- step: inventory -->
 ## Inventory of the original dataset
 
-Written by `python -m src.prepare inventory` from the files in `data/raw`, which it does not change. One row per photo (identical files count once, with every file named) is in `raw_photos.csv`.
+Written by `python -m src.image.prepare inventory` from the files in `data/image/raw`, which it does not change. One row per photo (identical files count once, with every file named) is in `raw_photos.csv`.
 
-Fingerprint of `data/raw` (the path and SHA-256 of every image file): `0915dd82f562136d1151b61be6181e8fd1ab6072dadd4d0f47f69dc4ddd0bfaa`
+Fingerprint of `data/image/raw` (the path and SHA-256 of every image file): `0915dd82f562136d1151b61be6181e8fd1ab6072dadd4d0f47f69dc4ddd0bfaa`
 
 ### Files
 
@@ -17,7 +17,7 @@ Fingerprint of `data/raw` (the path and SHA-256 of every image file): `0915dd82f
 | Opened completely without error | 2357 |
 | Unreadable (damaged or not an image) | 0 |
 | Readable, but the file type does not match its name | 0 |
-| Other files in `data/raw` (not used) | 0 |
+| Other files in `data/image/raw` (not used) | 0 |
 | Files whose name has no ISIC number | 0 |
 
 ### Files per folder and class (the dataset's own labels, not yet verified)
@@ -238,7 +238,7 @@ The size of a photo should say nothing about its diagnosis. Where one class has 
 <!-- step: isic -->
 ## ISIC Archive records of the original dataset
 
-Written by `python -m src.prepare isic` from the public ISIC Archive record of every ISIC number of the photos (the records themselves are kept unchanged in `data/downloads/isic/`; what they say about each photo is in `raw_photos.csv`, with a fingerprint of each record). No label has been changed: this is the evidence for the naming rule that maps ISIC's wording to the class names.
+Written by `python -m src.image.prepare isic` from the public ISIC Archive record of every ISIC number of the photos (the records themselves are kept unchanged in `data/image/downloads/isic/`; what they say about each photo is in `raw_photos.csv`, with a fingerprint of each record). No label has been changed: this is the evidence for the naming rule that maps ISIC's wording to the class names.
 
 - ISIC numbers: 2202; found in the ISIC Archive: 2202; not found: 0
 - With a diagnosis recorded: 2202
@@ -373,7 +373,7 @@ A photo filed under two Kaggle folders is counted in both, and a photo with two 
 <!-- step: identity -->
 ## Identity check: each photo against the ISIC Archive's own picture
 
-Written by `python -m src.prepare identity`. For every ISIC number, the photo in `data/raw` is compared with the preview picture the ISIC Archive serves for that number: the shape (width / height), the mean colour difference of 32 x 32 versions (0 to 255; 0 = the same) and a 64-bit difference hash of an 8 x 9 grey version (0 = the same outline). Nothing is changed; the result for each photo is in `raw_photos.csv`.
+Written by `python -m src.image.prepare identity`. For every ISIC number, the photo in `data/image/raw` is compared with the preview picture the ISIC Archive serves for that number: the shape (width / height), the mean colour difference of 32 x 32 versions (0 to 255; 0 = the same) and a 64-bit difference hash of an 8 x 9 grey version (0 = the same outline). Nothing is changed; the result for each photo is in `raw_photos.csv`.
 
 - ISIC numbers: 2202; same picture: 2202
 - "same picture" means: shapes differ by at most 2.0%, mean difference at most 5.0 and hash distance at most 16 of 64. Anything else is listed below for an eye check.
@@ -399,7 +399,7 @@ Written by `python -m src.prepare identity`. For every ISIC number, the photo in
 <!-- step: ham10000 -->
 ## HAM10000 cross-check
 
-Written by `python -m src.prepare ham10000`. Every photo of this dataset that is also in HAM10000 is compared with HAM10000's own metadata: its diagnosis group, how the diagnosis was confirmed, and which photos show the same lesion. No label is changed; the result for each photo is in `raw_photos.csv`.
+Written by `python -m src.image.prepare ham10000`. Every photo of this dataset that is also in HAM10000 is compared with HAM10000's own metadata: its diagnosis group, how the diagnosis was confirmed, and which photos show the same lesion. No label is changed; the result for each photo is in `raw_photos.csv`.
 
 Source: HAM10000 (Tschandl, Rosendahl and Kittler, *Scientific Data* 5:180161, 2018), Harvard Dataverse doi:10.7910/DVN/DBW86T, version 4.0, file `HAM10000_metadata`, downloaded 2026-11-11T08:53:45+00:00 (UTC). MD5 published by Dataverse: `8f85fb1aa29d80a2797247e434deb79d`; of the downloaded file: `8f85fb1aa29d80a2797247e434deb79d` (they match).
 
@@ -463,7 +463,7 @@ Source: HAM10000 (Tschandl, Rosendahl and Kittler, *Scientific Data* 5:180161, 2
 <!-- step: labels -->
 ## Labels of the original dataset
 
-Written by `python -m src.prepare labels`. Each unique photo (identical files count once) is labelled from its ISIC Archive record by the naming rule in `isic_to_class.csv`, never from its Kaggle folder. One row per photo is in `raw_photos.csv`. No image is changed and no split is made in this step.
+Written by `python -m src.image.prepare labels`. Each unique photo (identical files count once) is labelled from its ISIC Archive record by the naming rule in `isic_to_class.csv`, never from its Kaggle folder. One row per photo is in `raw_photos.csv`. No image is changed and no split is made in this step.
 
 - Photos: 2200; labelled: 2196; without a class: 4
 - Classes: 8 (actinic keratosis, basal cell carcinoma, dermatofibroma, melanoma, nevus, pigmented benign keratosis, squamous cell carcinoma, vascular lesion)
@@ -536,7 +536,7 @@ Written by `python -m src.prepare labels`. Each unique photo (identical files co
 <!-- step: duplicates -->
 ## Near-duplicates: different files of one picture, and second photos of one lesion
 
-Written by `python -m src.prepare duplicates`. Every photo in `raw_photos.csv` is compared with every other one (identical files were already merged by the inventory). Flagged pairs are in `similar_photo_pairs.csv` (found by "picture comparison"). No image is changed.
+Written by `python -m src.image.prepare duplicates`. Every photo in `raw_photos.csv` is compared with every other one (identical files were already merged by the inventory). Flagged pairs are in `similar_photo_pairs.csv` (found by "picture comparison"). No image is changed.
 
 - Photos compared: 2200; pairs: 2418900
 - Flagged pairs: 210 (near-identical: 3; similar: 207)
@@ -659,7 +659,7 @@ Pairs link into groups (a with b and b with c make one group). If the "similar" 
 <!-- step: lesions -->
 ## Second photos of one lesion (skin-pattern matching)
 
-Written by `python -m src.prepare lesions`. Within each class, every photo is compared with every other one by its skin pattern (OpenCV 4.14.0: the 1000 strongest SIFT points of a grey version 600 pixels long, paired by Lowe's ratio test at 0.75, each point with one other at most, and RANSAC keeping the pairs that fit one shift, turn and zoom within 5.0 pixels; a zoom outside 0.25–4.0 is no match). "Inliers" are the points that fit: two photos of one lesion share many, two different lesions few. Pairs with at least 10 inliers are in `similar_photo_pairs.csv` (found by "skin pattern"). Copies left out by the eye check are not compared. No image or label is changed.
+Written by `python -m src.image.prepare lesions`. Within each class, every photo is compared with every other one by its skin pattern (OpenCV 4.14.0: the 1000 strongest SIFT points of a grey version 600 pixels long, paired by Lowe's ratio test at 0.75, each point with one other at most, and RANSAC keeping the pairs that fit one shift, turn and zoom within 5.0 pixels; a zoom outside 0.25–4.0 is no match). "Inliers" are the points that fit: two photos of one lesion share many, two different lesions few. Pairs with at least 10 inliers are in `similar_photo_pairs.csv` (found by "skin pattern"). Copies left out by the eye check are not compared. No image or label is changed.
 
 - Photos compared: 2179; pairs (within each class): 371988
 - Per class: actinic keratosis: 131 photos, 8515 pairs; basal cell carcinoma: 392 photos, 76636 pairs; dermatofibroma: 111 photos, 6105 pairs; melanoma: 436 photos, 94830 pairs; nevus: 293 photos, 42778 pairs; pigmented benign keratosis: 478 photos, 114003 pairs; squamous cell carcinoma: 196 photos, 19110 pairs; vascular lesion: 142 photos, 10011 pairs
@@ -699,7 +699,7 @@ Pairs that ISIC names as one lesion: 446; as different lesions (same class): 233
 <!-- step: splits -->
 ## Splits: train, validation and test
 
-Written by `python -m src.prepare splits`. Every labelled photo goes into train, validation (val) or test, with every lesion in one split: photos that ISIC's or HAM10000's lesion numbers, or the eye check, name as one lesion form a group that moves as a whole (group-based). The Kaggle dataset's own Train and Test folders play no part: the splits are made anew, and the original test photos are split like every other photo (where they went is shown below). Each class gets exactly 40 test and 15 validation photos (stratified); the rest is train, the database that open-book runs retrieve from. The split starts from a random fill (seed 2026, fixed in advance; Python 3.12's random module) and then swaps lesion groups of equal size between the parts whenever that brings the test and validation parts closer to their class's own mix of subtype (ISIC diagnosis), how the diagnosis was confirmed, source (credit line) and original image size. Only these facts, known before any experiment, are used; never a model's result. The split column of `raw_photos.csv` holds the result; no image is changed.
+Written by `python -m src.image.prepare splits`. Every labelled photo goes into train, validation (val) or test, with every lesion in one split: photos that ISIC's or HAM10000's lesion numbers, or the eye check, name as one lesion form a group that moves as a whole (group-based). The Kaggle dataset's own Train and Test folders play no part: the splits are made anew, and the original test photos are split like every other photo (where they went is shown below). Each class gets exactly 40 test and 15 validation photos (stratified); the rest is train, the database that open-book runs retrieve from. The split starts from a random fill (seed 2026, fixed in advance; Python 3.12's random module) and then swaps lesion groups of equal size between the parts whenever that brings the test and validation parts closer to their class's own mix of subtype (ISIC diagnosis), how the diagnosis was confirmed, source (credit line) and original image size. Only these facts, known before any experiment, are used; never a model's result. The split column of `raw_photos.csv` holds the result; no image is changed.
 
 ### Photos per class and split
 
@@ -768,7 +768,7 @@ Values below 5% of a class are not listed (they are balanced too).
 <!-- step: images -->
 ## Images: the prepared dataset
 
-Written by `python -m src.prepare images`. Every photo in a split is made from its original file in `data/raw` (checked against its fingerprint in `raw_photos.csv`; nothing in `data/raw` is changed) and saved as `data/dataset/<split>/<class>/<photo_id>.jpg`. `dataset.csv` lists every image: its split, class, file, SHA-256, lesion group, whether it is an original test photo, its size and what was done to it. The evaluation checks every image against that table before a run, so every model gets byte-identical images.
+Written by `python -m src.image.prepare images`. Every photo in a split is made from its original file in `data/image/raw` (checked against its fingerprint in `raw_photos.csv`; nothing in `data/image/raw` is changed) and saved as `data/image/dataset/<split>/<class>/<photo_id>.jpg`. `dataset.csv` lists every image: its split, class, file, SHA-256, lesion group, whether it is an original test photo, its size and what was done to it. The evaluation checks every image against that table before a run, so every model gets byte-identical images.
 
 Every photo is prepared the same way, in this order:
 
@@ -839,7 +839,7 @@ One hash per split over every image's split, class, file, SHA-256 and lesion gro
 <!-- step: shortcuts -->
 ## Shortcut check: what the images reveal besides the lesion
 
-Written by `python -m src.prepare shortcuts` from the prepared images; it changes nothing. A model should recognise the lesion, not where or how the photo was taken. This step measures how much simple properties of the images, which are mostly about how the photo was taken rather than about the lesion (file size and sharpness also depend a little on the lesion's own texture), reveal each image's class: where they do, a model, or the image search of an open-book run, could get the class partly right without looking at the lesion. It shows how much these clues could tell, not whether a model uses them.
+Written by `python -m src.image.prepare shortcuts` from the prepared images; it changes nothing. A model should recognise the lesion, not where or how the photo was taken. This step measures how much simple properties of the images, which are mostly about how the photo was taken rather than about the lesion (file size and sharpness also depend a little on the lesion's own texture), reveal each image's class: where they do, a model, or the image search of an open-book run, could get the class partly right without looking at the lesion. It shows how much these clues could tell, not whether a model uses them.
 
 ### Where the photos come from (ISIC credit line)
 
