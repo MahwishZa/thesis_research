@@ -85,7 +85,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import http.client
 import io
 import json
 import os
@@ -103,6 +102,7 @@ from pathlib import Path
 import PIL
 from PIL import Image, ImageChops, ImageCms, ImageOps, ImageStat, features
 
+from ..common import fetch, write_section
 from ..evaluate import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, items_hash, load_dataset, summarize
 from ..evaluate import classes as training_classes
 
@@ -142,7 +142,6 @@ REPORT_HEAD = ["# Preparation of the dataset", "",
                "found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/image/raw` "
                "is ever changed.", ""]
 ISIC_API = "https://api.isic-archive.com/api/v2/images/{}/"
-USER_AGENT = "thesis-research-dataset-preparation/1.0 (academic research)"
 ISIC_DELAY = 0.3  # seconds between requests: a polite pace for a free public service (about 15 minutes for 2,200 records)
 ISIC_ATTEMPTS = 4  # tries per record when the service is busy or the network fails: waits of 4, 8 and 16 seconds
 LEVELS = [f"diagnosis_{n}" for n in range(1, 6)]  # ISIC's diagnosis from the broadest (1) to the most specific (5)
@@ -266,27 +265,8 @@ def _update_pairs(data: Path, step: str, rows: list[dict]) -> None:
 
 
 def _write_section(data: Path, step: str, lines: list[str]) -> None:
-    """Rewrites the step's section of dataset_report.md (its headings one level down) and keeps the other steps' sections, in the
-    order the steps run."""
-    path = data / REPORT
-    sections, current = {}, None
-    if path.is_file():
-        for line in path.read_text(encoding="utf-8").split("\n"):
-            marker = re.fullmatch(r"<!-- step: (\w+) -->", line)
-            if marker:
-                current = marker.group(1)
-                sections[current] = []
-            elif current:
-                sections[current].append(line)
-    sections[step] = [f"#{line}" if line.startswith("#") else line for line in lines]
-    text = list(REPORT_HEAD)
-    for name in (name for name in STEPS if name in sections):
-        body = sections[name]
-        while body and not body[-1]:
-            body = body[:-1]
-        text += [f"<!-- step: {name} -->", *body, ""]
-    data.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(text).rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+    """Rewrites the step's section of dataset_report.md and keeps the other steps' sections, in the order the steps run."""
+    write_section(data / REPORT, REPORT_HEAD, STEPS, step, lines)
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -487,24 +467,8 @@ def inventory(data: str | Path = DATA) -> dict:
 
 
 def _fetch(url: str, accept: str, check=None):
-    """The answer at ``url`` (bytes, or what ``check`` makes of them). A busy service, a network failure or a garbled answer is
-    tried again with growing waits; any other refusal raises urllib's HTTPError at once (retrying cannot help)."""
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
-    problem = ""
-    for attempt in range(1, ISIC_ATTEMPTS + 1):
-        time.sleep(ISIC_DELAY if attempt == 1 else 2 ** attempt)
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                content = response.read()
-            return check(content) if check else content
-        except urllib.error.HTTPError as exc:  # the service answered, but not with what was asked for
-            if exc.code != 429 and exc.code < 500:
-                raise
-            problem = f"HTTP {exc.code}"
-        except (OSError, http.client.HTTPException, ValueError) as exc:  # network, cut-off or garbled answer (JSON, picture)
-            problem = f"{type(exc).__name__}: {getattr(exc, 'reason', exc)}"
-    raise ValueError(f"cannot get {url} after {ISIC_ATTEMPTS} attempts ({problem}). What was downloaded so far is kept: run the "
-                     "same command again later to continue")
+    """A download from the ISIC Archive or Harvard Dataverse at a polite pace, tried again when busy (see src/common.py)."""
+    return fetch(url, accept, check, delay=ISIC_DELAY, attempts=ISIC_ATTEMPTS)
 
 
 def _download(isic_id: str) -> dict:

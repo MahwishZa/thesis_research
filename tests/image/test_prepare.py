@@ -292,7 +292,7 @@ class IsicServer(RawProject):
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
-        for patcher in (mock.patch.object(prepare, "ISIC_API", f"{base}/api/v2/images/{{}}/"), mock.patch("src.image.prepare.time.sleep")):
+        for patcher in (mock.patch.object(prepare, "ISIC_API", f"{base}/api/v2/images/{{}}/"), mock.patch("src.common.time.sleep")):
             self.sleep = patcher.start()
             self.addCleanup(patcher.stop)
         self.cache = self.data / "downloads" / "isic"

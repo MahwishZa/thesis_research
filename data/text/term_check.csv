@@ -1,0 +1,121 @@
+class,term,counts,in_mesh,mesh_ids,mesh_headings,pubmed_articles
+actinic keratosis,actinic keratosis,yes,heading,D055623,"Keratosis, Actinic",3518
+actinic keratosis,solar keratosis,yes,no,,,244
+actinic keratosis,senile keratosis,yes,no,,,54
+actinic keratosis,actinic cheilitis,no,heading,C535669,Actinic cheilitis,450
+actinic keratosis,Bowen's disease,no,heading,D001913,Bowen's Disease,2132
+basal cell carcinoma,basal cell carcinoma,yes,heading,D002280,Basal Cell Carcinoma,16690
+basal cell carcinoma,basal cell epithelioma,yes,entry term,D002280,Basal Cell Carcinoma,451
+basal cell carcinoma,rodent ulcer,yes,entry term,D002280,Basal Cell Carcinoma,158
+basal cell carcinoma,basalioma,yes,no,,,298
+dermatofibroma,dermatofibroma,yes,entry term,D018219,"Histiocytoma, Benign Fibrous",969
+dermatofibroma,benign fibrous histiocytoma,yes,heading,D018219,"Histiocytoma, Benign Fibrous",372
+dermatofibroma,cutaneous fibrous histiocytoma,yes,no,,,58
+dermatofibroma,dermatofibrosarcoma protuberans,no,entry term,D018223,Dermatofibrosarcoma,2487
+dermatofibroma,malignant fibrous histiocytoma,no,heading,D051677,"Histiocytoma, Malignant Fibrous",3872
+melanoma,melanoma,yes,heading,D008545,Melanoma,158356
+melanoma,melanoma in situ,yes,no,,,1336
+melanoma,invasive melanoma,yes,no,,,1098
+melanoma,lentigo maligna,yes,entry term,D018327,Hutchinson's Melanotic Freckle,1543
+melanoma,lentigo maligna melanoma,yes,no,,,668
+melanoma,superficial spreading melanoma,yes,no,,,686
+melanoma,nevoid melanoma,yes,no,,,73
+melanoma,malignant melanoma,yes,entry term,D008545,Melanoma,30097
+melanoma,nodular melanoma,yes,no,,,775
+melanoma,acral lentiginous melanoma,yes,no,,,711
+melanoma,amelanotic melanoma,yes,heading,D018328,"Melanoma, Amelanotic",1104
+melanoma,uveal melanoma,no,heading,D000098943,Uveal Melanoma,6328
+melanoma,conjunctival melanoma,no,no,,,761
+melanoma,mucosal melanoma,no,no,,,1577
+melanoma,melanoma of unknown primary,no,no,,,211
+melanoma,non-melanoma,no,no,,,5108
+nevus,nevus,yes,heading,D009506,Nevus,13551
+nevus,melanocytic nevus,yes,entry term,D009508,"Nevus, Pigmented",1418
+nevus,compound nevus,yes,no,,,163
+nevus,junctional nevus,yes,no,,,101
+nevus,dermal nevus,yes,no,,,97
+nevus,dysplastic nevus,yes,entry term,D004416,Dysplastic Nevus Syndrome,618
+nevus,atypical nevus,yes,no,,,124
+nevus,Clark nevus,yes,no,,,30
+nevus,congenital nevus,yes,no,,,357
+nevus,lentiginous nevus,yes,no,,,98
+nevus,Spitz nevus,yes,entry term,D018332,"Nevus, Epithelioid and Spindle Cell",566
+nevus,blue nevus,yes,heading,D018329,"Nevus, Blue",829
+nevus,halo nevus,yes,heading,D055882,"Nevus, Halo",147
+nevus,mole,no,heading,D008971,Moles,22173
+nevus,Reed nevus,yes,no,,,28
+nevus,intradermal nevus,yes,heading,D018330,"Nevus, Intradermal",186
+nevus,pigmented nevus,yes,heading,D009508,"Nevus, Pigmented",329
+nevus,nevocellular nevus,yes,no,,,65
+nevus,acral nevus,yes,no,,,31
+nevus,recurrent nevus,yes,no,,,27
+nevus,combined nevus,yes,no,,,55
+nevus,Sutton nevus,yes,no,,,27
+nevus,Miescher nevus,yes,no,,,1
+nevus,nevus spilus,yes,no,,,189
+nevus,speckled lentiginous nevus,yes,no,,,81
+nevus,kissing nevus,yes,no,,,31
+nevus,divided nevus,yes,no,,,63
+nevus,deep penetrating nevus,yes,no,,,73
+nevus,Meyerson nevus,yes,no,,,18
+nevus,nevus sebaceus,no,no,,,330
+nevus,epidermal nevus,no,heading,C580062,Epidermal Nevus,845
+nevus,nevus flammeus,no,entry term,D019339,Port-Wine Stain,293
+nevus,spider nevus,no,no,,,21
+nevus,Becker nevus,no,no,,,277
+nevus,nevus of Ota,no,heading,D009507,Nevus of Ota,484
+nevus,basal cell nevus syndrome,no,heading,D001478,Basal Cell Nevus Syndrome,546
+nevus,hydatidiform mole,no,heading,D006828,Hydatidiform Mole,3532
+nevus,blue rubber bleb nevus,no,entry term,C536240,Blue rubber bleb nevus syndrome,483
+nevus,nevus lipomatosus,no,no,,,165
+nevus,nevus lipomatosis,no,no,,,9
+nevus,nevus sebaceous,no,no,,,388
+nevus,nevus comedonicus,no,no,,,185
+nevus,white sponge nevus,no,no,,,142
+nevus,woolly hair nevus,no,no,,,44
+nevus,faun tail nevus,no,no,,,15
+nevus,Ota nevus,no,entry term,D009507,Nevus of Ota,78
+nevus,nevus sudoriferous,no,no,,,0
+nevus,nevus unius lateris,no,no,,,33
+nevus,nevus depigmentosus,no,no,,,97
+nevus,nevus achromicus,no,no,,,5
+nevus,achromic nevus,no,no,,,11
+nevus,nevus anemicus,no,no,,,70
+nevus,verrucous nevus,no,entry term,D054000,"Nevus, Sebaceous of Jadassohn",47
+nevus,lipomatous nevus,no,no,,,18
+nevus,eccrine nevus,no,no,,,48
+nevus,connective tissue nevus,no,heading,C562737,Connective Tissue Nevus,134
+nevus,organoid nevus,no,no,,,96
+nevus,nevus of Ito,no,no,,,36
+nevus,magnocellular nevus,no,no,,,11
+pigmented benign keratosis,pigmented benign keratosis,yes,no,,,0
+pigmented benign keratosis,seborrheic keratosis,yes,heading,D017492,"Keratosis, Seborrheic",1271
+pigmented benign keratosis,solar lentigo,yes,no,,,275
+pigmented benign keratosis,lichen planus-like keratosis,yes,no,,,79
+pigmented benign keratosis,senile lentigo,yes,no,,,46
+pigmented benign keratosis,benign lichenoid keratosis,yes,no,,,37
+pigmented benign keratosis,melanoacanthoma,yes,no,,,115
+pigmented benign keratosis,lentigo maligna,no,entry term,D018327,Hutchinson's Melanotic Freckle,1543
+pigmented benign keratosis,lentigo simplex,no,no,,,48
+pigmented benign keratosis,dermatosis papulosa nigra,no,heading,C562379,Dermatosis Papulosa Nigra,72
+squamous cell carcinoma,squamous cell carcinoma,yes,heading,D002294,"Carcinoma, Squamous Cell",139872
+squamous cell carcinoma,squamous cell carcinoma in situ,yes,entry term,D001913,Bowen's Disease,874
+squamous cell carcinoma,cutaneous squamous cell carcinoma,yes,heading,D000099314,Cutaneous Squamous Cell Carcinoma,4974
+squamous cell carcinoma,Bowen's disease,yes,heading,D001913,Bowen's Disease,2132
+squamous cell carcinoma,intraepidermal carcinoma,yes,no,,,68
+squamous cell carcinoma,keratoacanthoma,no,heading,D007636,Keratoacanthoma,1890
+squamous cell carcinoma,squamous cell carcinoma of a non-skin site,no,no,,,0
+squamous cell carcinoma,verrucous carcinoma,no,heading,D018289,"Carcinoma, Verrucous",1460
+squamous cell carcinoma,Bowenoid papulosis,no,no,,,355
+vascular lesion,vascular lesion,yes,no,,,3247
+vascular lesion,cherry angioma,yes,no,,,63
+vascular lesion,angiokeratoma,yes,heading,D000794,Angiokeratoma,949
+vascular lesion,pyogenic granuloma,yes,heading,D017789,"Granuloma, Pyogenic",2109
+vascular lesion,skin hemorrhage,yes,no,,,53
+vascular lesion,senile angioma,yes,no,,,14
+vascular lesion,Campbell de Morgan spot,yes,no,,,3
+vascular lesion,lobular capillary hemangioma,yes,entry term,D017789,"Granuloma, Pyogenic",336
+vascular lesion,hemangioma,no,heading,D006391,Hemangioma,19750
+vascular lesion,angiosarcoma,no,entry term,D006394,Hemangiosarcoma,8035
+vascular lesion,Kaposi sarcoma,no,heading,D012514,"Sarcoma, Kaposi",15657
+vascular lesion,port-wine stain,no,heading,D019339,Port-Wine Stain,1085

@@ -1691,12 +1691,17 @@ class RepositoryTests(unittest.TestCase):
 
         for path in (".env", ".env.txt", ".env.local", "data/image/raw/Train/melanoma/x.jpg", "data/image/downloads/isic/ISIC_0000001.json",
                      "data/image/downloads/isic_pictures/ISIC_0000001.jpg", "data/image/dataset/test/nevus/x.jpg",
-                     "data/image/dataset/x.csv", "data/text/raw/x.txt", "data/anything_else.txt", "data/x.csv",
+                     "data/image/dataset/x.csv", "data/text/sources/pmc_patients/PMC-Patients-V2.json",
+                     "data/text/sources/pmc_patients/download.json", "data/text/sources/x.csv", "data/text/dataset/test/melanoma/1-1.txt",
+                     "data/text/sources/pubmed/abstracts.jsonl", "data/text/sources/audit_sample.txt",
+                     "data/text/sources/library/statpearls/NBK1.html", "data/text/library/passages.jsonl", "data/anything_else.txt",
+                     "data/x.csv",
                      "results/image/m/val_1/report.md", "results/image/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc",
                      "src/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
         for path in ("README.md", "data/image/dataset.csv", "data/image/raw_photos.csv", "data/image/dataset_report.md",
-                     "data/image/datasheet.md", "data/text/dataset.csv", "results/image/m/test_1/report.md",
+                     "data/image/datasheet.md", "data/text/dataset.csv", "data/text/case_candidates.csv", "data/text/article_mesh.csv", "data/text/abstract_candidates.csv",
+                     "data/text/library.csv", "results/image/m/test_1/report.md",
                      "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 

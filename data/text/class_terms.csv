@@ -1,0 +1,121 @@
+class,term,counts,source,note
+actinic keratosis,actinic keratosis,yes,ISIC records of the image dataset,class name
+actinic keratosis,solar keratosis,yes,ISIC records of the image dataset,ISIC wording: Solar or actinic keratosis
+actinic keratosis,senile keratosis,yes,proposed; checked by the survey (term_check.csv),older name
+actinic keratosis,actinic cheilitis,no,decision 2026-11-12,"actinic keratosis of the lip, not of the skin: left out like other non-skin sites"
+actinic keratosis,Bowen's disease,no,ISIC records of the image dataset,"squamous cell carcinoma in situ: counts as squamous cell carcinoma, as in the image labels (HAM10000 groups it with actinic keratosis, ISIC does not)"
+basal cell carcinoma,basal cell carcinoma,yes,ISIC records of the image dataset,"class name; every subtype (nodular, superficial, infiltrative, pigmented and so on) counts"
+basal cell carcinoma,basal cell epithelioma,yes,proposed; checked by the survey (term_check.csv),older name
+basal cell carcinoma,rodent ulcer,yes,proposed; checked by the survey (term_check.csv),older name
+basal cell carcinoma,basalioma,yes,proposed; checked by the survey (term_check.csv),older name
+dermatofibroma,dermatofibroma,yes,ISIC records of the image dataset,class name
+dermatofibroma,benign fibrous histiocytoma,yes,proposed; checked by the survey (term_check.csv),other name
+dermatofibroma,cutaneous fibrous histiocytoma,yes,proposed; checked by the survey (term_check.csv),other name
+dermatofibroma,dermatofibrosarcoma protuberans,no,proposed; checked by the survey (term_check.csv),"a different, malignant tumour despite the similar name"
+dermatofibroma,malignant fibrous histiocytoma,no,proposed; checked by the survey (term_check.csv),"a sarcoma, not a dermatofibroma"
+melanoma,melanoma,yes,ISIC records of the image dataset,"class name; skin (cutaneous) melanoma only, in situ and invasive alike"
+melanoma,melanoma in situ,yes,ISIC records of the image dataset,ISIC wording: Melanoma in situ
+melanoma,invasive melanoma,yes,ISIC records of the image dataset,ISIC wording: Melanoma Invasive
+melanoma,lentigo maligna,yes,ISIC records of the image dataset,"ISIC wording: Melanoma in situ, Lentigo maligna type"
+melanoma,lentigo maligna melanoma,yes,ISIC records of the image dataset,"ISIC wording: Melanoma Invasive, On chronically sun-exposed skin or lentigo maligna melanoma"
+melanoma,superficial spreading melanoma,yes,ISIC records of the image dataset,ISIC wording: Superficial spreading
+melanoma,nevoid melanoma,yes,ISIC records of the image dataset,"ISIC wording: Melanoma Invasive, Nevoid"
+melanoma,malignant melanoma,yes,proposed; checked by the survey (term_check.csv),other name
+melanoma,nodular melanoma,yes,proposed; checked by the survey (term_check.csv),"subtype not in the image records, but a skin melanoma"
+melanoma,acral lentiginous melanoma,yes,proposed; checked by the survey (term_check.csv),"subtype not in the image records, but a skin melanoma"
+melanoma,amelanotic melanoma,yes,proposed; checked by the survey (term_check.csv),a skin melanoma without pigment
+melanoma,uveal melanoma,no,decision 2026-11-12,"eye, not skin (question 7)"
+melanoma,conjunctival melanoma,no,decision 2026-11-12,"eye, not skin (question 7)"
+melanoma,mucosal melanoma,no,decision 2026-11-12,"mouth, nose, genital or anal lining, not skin (question 7)"
+melanoma,melanoma of unknown primary,no,decision 2026-11-12,no skin lesion is described
+melanoma,non-melanoma,no,found by the audit of the dataset; checked by the survey (term_check.csv),"as in non-melanoma skin cancer: the skin cancers other than melanoma, so not melanoma"
+nevus,nevus,yes,ISIC records of the image dataset,"class name; melanocytic nevi only (the word nevus is also used for unrelated lesions, see the rows marked no)"
+nevus,melanocytic nevus,yes,ISIC records of the image dataset,ISIC wording: Benign melanocytic proliferations > Nevus
+nevus,compound nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, NOS, Compound"
+nevus,junctional nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, NOS, Junctional"
+nevus,dermal nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, NOS, Dermal; also called intradermal nevus"
+nevus,dysplastic nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Dysplastic"
+nevus,atypical nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Atypical"
+nevus,Clark nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Clark"
+nevus,congenital nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Congenital"
+nevus,lentiginous nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Lentiginous"
+nevus,Spitz nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Spitz"
+nevus,blue nevus,yes,ISIC records of the image dataset,ISIC wording: Blue nevus
+nevus,halo nevus,yes,ISIC records of the image dataset,"ISIC wording: Nevus, Halo"
+nevus,mole,no,proposed; checked by the survey (term_check.csv),an everyday word for any dark spot: too vague to give a diagnosis (MeSH's 'Moles' is the animal)
+nevus,Reed nevus,yes,proposed; checked by the survey (term_check.csv),"pigmented spindle cell nevus, a form of Spitz nevus"
+nevus,intradermal nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"another name of dermal nevus"
+nevus,pigmented nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"MeSH's heading for melanocytic nevi (Nevus, Pigmented)"
+nevus,nevocellular nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"another name of melanocytic nevus"
+nevus,acral nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a melanocytic nevus on the palm or sole"
+nevus,recurrent nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a melanocytic nevus growing back after removal"
+nevus,combined nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a melanocytic nevus with two kinds of nevus cells"
+nevus,Sutton nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"another name of halo nevus"
+nevus,Miescher nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a dome-shaped dermal melanocytic nevus of the face"
+nevus,nevus spilus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a speckled lentiginous melanocytic nevus"
+nevus,speckled lentiginous nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"another name of nevus spilus"
+nevus,kissing nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a melanocytic nevus divided between the upper and lower eyelid"
+nevus,divided nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"another name of kissing nevus"
+nevus,deep penetrating nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a pigmented melanocytic nevus reaching deep into the skin"
+nevus,Meyerson nevus,yes,a mole type named in the candidate titles; checked by the survey (term_check.csv),"a melanocytic nevus with an eczematous halo"
+nevus,nevus sebaceus,no,proposed; checked by the survey (term_check.csv),not melanocytic
+nevus,epidermal nevus,no,proposed; checked by the survey (term_check.csv),not melanocytic
+nevus,nevus flammeus,no,proposed; checked by the survey (term_check.csv),"a vascular birthmark (port-wine stain), not a mole"
+nevus,spider nevus,no,proposed; checked by the survey (term_check.csv),"a small vascular lesion (spider angioma), not a mole"
+nevus,Becker nevus,no,proposed; checked by the survey (term_check.csv),not a melanocytic nevus in the sense of the image class
+nevus,nevus of Ota,no,proposed; checked by the survey (term_check.csv),"a dermal melanocytosis, not one of the image class's nevi: unclear, so left out"
+nevus,basal cell nevus syndrome,no,proposed; checked by the survey (term_check.csv),"a syndrome of basal cell carcinomas, not a nevus"
+nevus,hydatidiform mole,no,proposed; checked by the survey (term_check.csv),"a pregnancy disorder, not a skin mole"
+nevus,blue rubber bleb nevus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a syndrome of venous malformations of the skin and gut, not a mole (blue nevus still counts: the longer name is matched first)"
+nevus,nevus lipomatosus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a growth of fat tissue in the skin (nevus lipomatosus cutaneous superficialis), not a mole"
+nevus,nevus lipomatosis,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a spelling of nevus lipomatosus found in article titles"
+nevus,nevus sebaceous,no,proposed from the candidate titles; checked by the survey (term_check.csv),"nevus sebaceus in English spelling (a growth of sebaceous glands), not a mole"
+nevus,nevus comedonicus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a growth of hair follicle openings plugged with keratin, not a mole"
+nevus,white sponge nevus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a condition of the lining of the mouth, not of the skin"
+nevus,woolly hair nevus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a patch of tightly curled hair, not a mole"
+nevus,faun tail nevus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a tuft of long hair over the lower back, not a mole"
+nevus,Ota nevus,no,proposed from the candidate titles; checked by the survey (term_check.csv),"nevus of Ota, written without 'of'"
+nevus,nevus sudoriferous,no,proposed from the candidate titles; checked by the survey (term_check.csv),"a growth of sweat glands (eccrine nevus), not a mole"
+nevus,nevus unius lateris,no,proposed from the candidate titles; checked by the survey (term_check.csv),"an epidermal nevus along one side of the body, not a mole"
+nevus,nevus depigmentosus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a pale birthmark with fewer melanosomes, not a mole"
+nevus,nevus achromicus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"another name of nevus depigmentosus, not a mole"
+nevus,achromic nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"another name of nevus depigmentosus, not a mole"
+nevus,nevus anemicus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a pale patch from narrowed blood vessels, not a mole"
+nevus,verrucous nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a warty epidermal nevus, not a mole"
+nevus,lipomatous nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"fat tissue in the skin (nevus lipomatosus), not a mole"
+nevus,eccrine nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a sweat-gland birthmark, not a mole"
+nevus,connective tissue nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a collagen or elastic-tissue birthmark, not a mole"
+nevus,organoid nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"another name of nevus sebaceus, not a mole"
+nevus,nevus of Ito,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a dermal melanocytosis of the shoulder, like nevus of Ota, not a mole"
+nevus,magnocellular nevus,no,found by the audit's reading of questions; checked by the survey (term_check.csv),"a melanocytoma of the eye (optic disc, choroid), not a mole of the skin"
+pigmented benign keratosis,pigmented benign keratosis,yes,ISIC records of the image dataset,class name
+pigmented benign keratosis,seborrheic keratosis,yes,"HAM10000 group definition (Tschandl et al., 2018)","counts whether or not it is described as pigmented, as in HAM10000 (decision 2026-11-12, question 7)"
+pigmented benign keratosis,solar lentigo,yes,"HAM10000 group definition (Tschandl et al., 2018)",HAM10000: solar lentigines
+pigmented benign keratosis,lichen planus-like keratosis,yes,"HAM10000 group definition (Tschandl et al., 2018)",HAM10000: lichen-planus like keratoses
+pigmented benign keratosis,senile lentigo,yes,proposed; checked by the survey (term_check.csv),other name for solar lentigo
+pigmented benign keratosis,benign lichenoid keratosis,yes,proposed; checked by the survey (term_check.csv),other name for lichen planus-like keratosis
+pigmented benign keratosis,melanoacanthoma,yes,proposed; checked by the survey (term_check.csv),a pigmented form of seborrheic keratosis (on the skin)
+pigmented benign keratosis,lentigo maligna,no,ISIC records of the image dataset,"a melanoma (in situ), despite the word lentigo"
+pigmented benign keratosis,lentigo simplex,no,proposed; checked by the survey (term_check.csv),"a melanocytic lesion, not a keratosis: unclear, so left out"
+pigmented benign keratosis,dermatosis papulosa nigra,no,proposed; checked by the survey (term_check.csv),"related to seborrheic keratosis but not named in HAM10000: unclear, so left out"
+squamous cell carcinoma,squamous cell carcinoma,yes,ISIC records of the image dataset,class name; skin (cutaneous) only
+squamous cell carcinoma,squamous cell carcinoma in situ,yes,ISIC records of the image dataset,ISIC wording: Squamous cell carcinoma in situ
+squamous cell carcinoma,cutaneous squamous cell carcinoma,yes,proposed; checked by the survey (term_check.csv),other name
+squamous cell carcinoma,Bowen's disease,yes,proposed; checked by the survey (term_check.csv),squamous cell carcinoma in situ of the skin
+squamous cell carcinoma,intraepidermal carcinoma,yes,proposed; checked by the survey (term_check.csv),other name for squamous cell carcinoma in situ
+squamous cell carcinoma,keratoacanthoma,no,decision 2026-11-12,"doctors disagree whether it is a squamous cell carcinoma: unclear, so left out (question 7)"
+squamous cell carcinoma,squamous cell carcinoma of a non-skin site,no,decision 2026-11-12,"mouth, throat, lung, oesophagus, cervix, anus, genitals, eye and so on: not skin (question 7)"
+squamous cell carcinoma,verrucous carcinoma,no,proposed; checked by the survey (term_check.csv),"mostly of the mouth or genitals: unclear, so left out"
+squamous cell carcinoma,Bowenoid papulosis,no,proposed; checked by the survey (term_check.csv),"a genital condition: unclear, so left out"
+vascular lesion,vascular lesion,yes,ISIC records of the image dataset,class name; benign vascular lesions of the kinds HAM10000 names (rows below)
+vascular lesion,cherry angioma,yes,"HAM10000 group definition (Tschandl et al., 2018)",HAM10000: cherry angiomas
+vascular lesion,angiokeratoma,yes,"HAM10000 group definition (Tschandl et al., 2018)",HAM10000: angiokeratomas
+vascular lesion,pyogenic granuloma,yes,"HAM10000 group definition (Tschandl et al., 2018)",HAM10000: pyogenic granulomas
+vascular lesion,skin hemorrhage,yes,"HAM10000 group definition (Tschandl et al., 2018)","HAM10000: haemorrhage; only when a bleed in the skin is the final diagnosis (for example under the nail or in the heel), not a bleed inside another lesion"
+vascular lesion,senile angioma,yes,proposed; checked by the survey (term_check.csv),other name for cherry angioma
+vascular lesion,Campbell de Morgan spot,yes,proposed; checked by the survey (term_check.csv),other name for cherry angioma
+vascular lesion,lobular capillary hemangioma,yes,proposed; checked by the survey (term_check.csv),other name for pyogenic granuloma
+vascular lesion,hemangioma,no,proposed; checked by the survey (term_check.csv),"not among HAM10000's vascular lesions: unclear, so left out"
+vascular lesion,angiosarcoma,no,proposed; checked by the survey (term_check.csv),"malignant, not a benign vascular lesion"
+vascular lesion,Kaposi sarcoma,no,proposed; checked by the survey (term_check.csv),"malignant, not a benign vascular lesion"
+vascular lesion,port-wine stain,no,proposed; checked by the survey (term_check.csv),"a vascular birthmark, not among HAM10000's vascular lesions"

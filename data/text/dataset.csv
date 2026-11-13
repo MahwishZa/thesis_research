@@ -1,0 +1,1050 @@
+split,label,path,sha256,patient_uid,pmid,source,pubmed,year,age,sex,words
+test,actinic keratosis,test/actinic keratosis/3591197-3.txt,efb0a12c0a3e2b15bf4e33385777a8918c1b55ff50c305a9c3271bebc2eed18d,3591197-3,23484071,PMC-Patients,agrees,2013,42 year,F,164
+test,actinic keratosis,test/actinic keratosis/4870479-1.txt,8cfc8fd14f210035d47f566334e67249ce7c6909758661f33d29b1be63835488,4870479-1,27330893,PMC-Patients,not indexed,2016,78 year,M,150
+test,actinic keratosis,test/actinic keratosis/4870479-2.txt,e092ae9598b5597272035d54b6fe2aedfce8c52bf35cf8ef10fe088d1d6dc1cc,4870479-2,27330893,PMC-Patients,not indexed,2016,62 year,M,166
+test,actinic keratosis,test/actinic keratosis/6000848-1.txt,e6d2f89735b6908cdab198ad3fb41c7071593c8c5446ebbfe212925e84a53dca,6000848-1,29955399,PMC-Patients,not indexed,2018,66 year,M,46
+test,actinic keratosis,test/actinic keratosis/pubmed-41181771.txt,315a24c1de16422a351eb7d2a0bb26d956491925dbd3790c7d2884245022deed,pubmed-41181771,41181771,PMC full text,not indexed,2025,,,102
+test,actinic keratosis,test/actinic keratosis/pubmed-42333313.txt,30a17f01e016e0b97c078b10daea98d437c1075a281c033d82bc53a44d1b6ccd,pubmed-42333313,42333313,PMC full text,not indexed,2026,,,235
+test,basal cell carcinoma,test/basal cell carcinoma/2000862-1.txt,fa83f42ed7eff3b5b47f625313599273a65f2cdb9e0b3eaab3951ebfe3de3b57,2000862-1,17718899,PMC-Patients,not indexed,2007,76 year,M,64
+test,basal cell carcinoma,test/basal cell carcinoma/2840884-1.txt,cfdffc228043c16d7db89511af62a0b865019b10625bff3b646ad43f1d890261,2840884-1,20300339,PMC-Patients,not indexed,2008,48 year,F,50
+test,basal cell carcinoma,test/basal cell carcinoma/3229065-1.txt,8ce62ed759fe51bab67477cfc4987ba00f6ad37c4ef2f4615fa493882173aaa4,3229065-1,22148050,PMC-Patients,not indexed,2011,67 year,F,89
+test,basal cell carcinoma,test/basal cell carcinoma/3936559-1.txt,ceaf7b24c60947167e50f5db7c76937fca10252489b8b377238478a250dceb1b,3936559-1,24653879,PMC-Patients,not indexed,2012,55 year,F,66
+test,basal cell carcinoma,test/basal cell carcinoma/4533542-1.txt,39a99a8e30175ebabec601185326dae986b5165ac4647785b9505524d8e63870,4533542-1,26288412,PMC-Patients,not indexed,2015,55 year,F,85
+test,basal cell carcinoma,test/basal cell carcinoma/4830157-1.txt,357b299a3664c72c48faf6db01740353e085ae091e9a0c8f3d73c15ef7bd59d5,4830157-1,27127748,PMC-Patients,not indexed,2016,34 year,F,165
+test,basal cell carcinoma,test/basal cell carcinoma/5856425-1.txt,558cebd31a517edddf90cadae13d7b816f7442cb538abf94a812e72ffac10fa6,5856425-1,29560294,PMC-Patients,not indexed,2018,71 year,M,90
+test,basal cell carcinoma,test/basal cell carcinoma/6186888-1.txt,febc2563d8e594f7aa874ff1dfd872de03917fdfc43532bfdc545b16cfa61e1f,6186888-1,30349720,PMC-Patients,not indexed,2018,85 year,F,205
+test,basal cell carcinoma,test/basal cell carcinoma/7370554-1.txt,73db48308a45a86a1c51f7b838e3f23911d9a2c5e72e28fcfaf8dc0e60e44586,7370554-1,32733678,PMC-Patients,not indexed,2020,53 year,M,150
+test,basal cell carcinoma,test/basal cell carcinoma/7716756-1.txt,71e436e2152ff9669b0a6e802c2e2a9bad7bf7d2ccac7e0fac009797460a896f,7716756-1,33304635,PMC-Patients,not indexed,2020,78 year,M,164
+test,basal cell carcinoma,test/basal cell carcinoma/8404427-1.txt,4c2a162bedad8d237b32a0d4d5f15f5dade023b9c1c18d3ef54e2c9773598bdc,8404427-1,34497703,PMC-Patients,not indexed,2021,58 year,M,112
+test,basal cell carcinoma,test/basal cell carcinoma/9128874-1.txt,c22e128e620fb27620a257f71ccfac734ae06ef940ebb0aeb9fff06fbe6859e1,9128874-1,32189006,PMC-Patients,agrees,2020,55 year,F,159
+test,basal cell carcinoma,test/basal cell carcinoma/10937045-1.txt,1ec9f20cb82e29a53ed401da6dcf42ffca6341bdbbb020ed4b71746b9e5af849,10937045-1,38481562,PMC-Patients,not indexed,2024,68 year,M,34
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-9557792.txt,70e05d1be69042b0dcca8285e325ded7cb8819ca47aabebb76f9209eec3ddca8,pubmed-9557792,9557792,PubMed abstract,agrees,1998,,,118
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-12921259.txt,8cbcde2e306ef765a7c35e6897d668755fa6f48ccc8214fb8b45dabd7f38d6e2,pubmed-12921259,12921259,PubMed abstract,agrees,2003,,,76
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-12941101.txt,c22414a2ad7fdf29caae6f154ad8dafd8a0d89744718581930dd29d1d6cc84ba,pubmed-12941101,12941101,PubMed abstract,agrees,2003,,,27
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-18577044.txt,8c06a1fea8dd384281a73a5f00c25b8fec53445f691245f1e393a7b07d578f50,pubmed-18577044,18577044,PubMed abstract,agrees,2008,,,95
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-19178496.txt,66ba67833fa40a641dee3fe58c4175eec8f8b0ee8e2eb913d81ae1c691be18c6,pubmed-19178496,19178496,PubMed abstract,agrees,2009,,,37
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-20736874.txt,ffe77eb74ff93f4bd844b7cbc4e6fd425df352ae1975e82290fa34861bfb4854,pubmed-20736874,20736874,PubMed abstract,agrees,2010,,,27
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-21886698.txt,f46ca0ac993e3f47dd75c2c77ece89b4e790dfe3fe1b5c3ab99cb492ce675732,pubmed-21886698,21886698,PubMed abstract,not indexed,2007,,,38
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-22740815.txt,994b4b80196353075741b85fb6c7680a17c1bb6f66bb9bd8440b04c8b783a41e,pubmed-22740815,22740815,PMC full text,not indexed,2012,,,95
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-23626541.txt,08a427de9ca5aa9bb97b55b8d79d5a260b1345a4bd5ccbdfec3dcf3f0185c2d0,pubmed-23626541,23626541,PMC full text,not indexed,2013,,,78
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-27222877.txt,e804583cd258302eeda08768825c8f11f476dc448d71953ce1f1f9a1ffd74635,pubmed-27222877,27222877,PMC full text,not indexed,2016,,,78
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-28029677.txt,5806d204b1a80d8d09b3f90562f967db197ecb70a495df450bfde40905c1e6ba,pubmed-28029677,28029677,PubMed abstract,agrees,2016,,,40
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-29199268.txt,ea59273980cee399907abf03b408b2742cf8bd2a0b865d8e33ea090422342f20,pubmed-29199268,29199268,PMC full text,agrees,2017,,,173
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-30003127.txt,27ced5771dd6142dc287d99bbdc6c150166eccb421e5357ea93e25958604ef30,pubmed-30003127,30003127,PMC full text,not indexed,2018,,,67
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-33102034.txt,2bdb7d34ec4f81ae209e31a4be86551ea848b79b8a21a3ab8cba460058cc80f4,pubmed-33102034,33102034,PMC full text,not indexed,2020,,,108
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-33858891.txt,c9c78bc58efe306813b0ebf0771b0d6199f52176f2833145a72afc720480eaaf,pubmed-33858891,33858891,PubMed abstract,agrees,2021,,,95
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-36212898.txt,f1a4ffd969dfacae430f2309497163dc194bbb54ddcab48d2972bd8399b4f328,pubmed-36212898,36212898,PMC full text,not indexed,2022,,,196
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-38921053.txt,9d6c78d75e4b41035dd96c0beedac9f277815b4a33576a9ecdae0d0b047a8cb2,pubmed-38921053,38921053,PMC full text,not indexed,2024,,,153
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-39040767.txt,70e0cbd88c3464cc724859e65c1d9be596219721c3a469bd5196cd0301ef5892,pubmed-39040767,39040767,PMC full text,not indexed,2024,,,128
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-39584850.txt,c34b30ebe917fcfe40a02544c33b2967489b24ca296c711aadbf3b67c7214fc2,pubmed-39584850,39584850,PMC full text,not indexed,2024,,,60
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-39923440.txt,79b5ed651cb27a7ee6ed14d5edaa98a71b70ca228226edf8ccd20b6745f93e7a,pubmed-39923440,39923440,PMC full text,not indexed,2025,,,251
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-40109824.txt,7b1464ea3a75e1d86c9bc155bfc5feb387eb19d5b5529d24392d99f4279a5882,pubmed-40109824,40109824,PMC full text,not indexed,2025,,,84
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-40851718.txt,c6f7b96b46fc57202c76799b722171a969947238eec4040d7dc5cf7741e285d2,pubmed-40851718,40851718,PMC full text,not indexed,2025,,,101
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-40988834.txt,b117e1a43e9aee4809eafc0a825a56d297e9cc310aef59db1b81acc63314f3a1,pubmed-40988834,40988834,PMC full text,not indexed,2025,,,97
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-41262265.txt,4762d11be603d2d684dce5201847f2f8905aa749837d5f0110568a555c5ba742,pubmed-41262265,41262265,PMC full text,not indexed,2025,,,43
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-41347193.txt,65eb1b82bbec0c7621b6d9b6ee3166cbac31fa2530bf2b70a42b393a1a20ebfe,pubmed-41347193,41347193,PMC full text,not indexed,2025,,,116
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-41859605.txt,17c1a3b07bef7b461c6348ddbaecce58fc4a4386a67fa5a427bbb60bd3514cf2,pubmed-41859605,41859605,PMC full text,not indexed,2026,,,163
+test,basal cell carcinoma,test/basal cell carcinoma/pubmed-43016841.txt,93aee1f6d87101336a50cc0d3b32f019ee0ef67f4a1b53d468d7cc1a957da0b1,pubmed-43016841,43016841,PMC full text,not indexed,2026,,,158
+test,dermatofibroma,test/dermatofibroma/2836174-1.txt,4e2375e741313173dfffbc405de8a0934b00c30c945b66332fd280fe62e2b761,2836174-1,20224764,PMC-Patients,not indexed,2010,61 year,M,112
+test,dermatofibroma,test/dermatofibroma/3229075-1.txt,d99fcfaa548f8c06d5fc015f4afbe91d19c913b88fbf338448980948a7178c1d,3229075-1,22148060,PMC-Patients,not indexed,2011,25 year,F,72
+test,dermatofibroma,test/dermatofibroma/3667312-1.txt,40965429d95cdbbcb369f19fc989b4f14b1edeff375a47d5c8932d2980e1ed1d,3667312-1,23723500,PMC-Patients,not indexed,2013,41 year,F,99
+test,dermatofibroma,test/dermatofibroma/3859268-1.txt,8202f2dc6bce29210cd3a9943fa2e94c5cd0fc68965b3b0a777de7617b5253cb,3859268-1,24371537,PMC-Patients,not indexed,2013,36 year,M,81
+test,dermatofibroma,test/dermatofibroma/3875973-1.txt,2f9ebbdce62f20b6d676378cda1f9864ce5436d5f2aea696e8b916a0db493ebb,3875973-1,24346882,PMC-Patients,agrees,2013,12 year,F,90
+test,dermatofibroma,test/dermatofibroma/5418985-1.txt,999d4ea85a0ad4c67d04d8f657011ec076f0a000d499dcbf12fc7d8e4db93c2a,5418985-1,28529424,PMC-Patients,not indexed,2017,63 year,F,90
+test,dermatofibroma,test/dermatofibroma/5894553-1.txt,5aa7a52989cc19bf51a4ab9a8ff07d1645946df6f4d9bfd31d2e272fd129d09d,5894553-1,29609438,PMC-Patients,not indexed,2018,51 year,F,52
+test,dermatofibroma,test/dermatofibroma/6452477-1.txt,d0072f2bcd9d40767f5b4be7668cbb13ff08550a34b72e493569506f70de15b2,6452477-1,30997061,PMC-Patients,not indexed,2019,62 year,F,73
+test,dermatofibroma,test/dermatofibroma/6792423-1.txt,40089be92d0e35ecf92dcfe701b6049cbff909b2bd3ab33126cb9c4223bf4c6f,6792423-1,31616280,PMC-Patients,not indexed,2019,45 year,M,43
+test,dermatofibroma,test/dermatofibroma/8395948-1.txt,7ba6d1f167057c101c77a97f2c46e338cdefb88a6f54dad5da9982667d56efa9,8395948-1,34449581,PMC-Patients,not indexed,2021,43 year,F,30
+test,dermatofibroma,test/dermatofibroma/8906261-1.txt,3409ade83e093417c7955878d6a3ebba4db8c70a21c78229924940caea2049f3,8906261-1,35283608,PMC-Patients,not indexed,2021,29 year,F,82
+test,dermatofibroma,test/dermatofibroma/9616610-1.txt,822679b305bb4e6c572025cf18b19f60d58d14c675e55aa13484d34478e94c9c,9616610-1,36321023,PMC-Patients,not indexed,2022,42 year,F,77
+test,dermatofibroma,test/dermatofibroma/9616610-2.txt,9cf85bf141180f136aa3ca3de69a175bb5ba4a249439cb248892048d22642e93,9616610-2,36321023,PMC-Patients,not indexed,2022,37 year,F,151
+test,dermatofibroma,test/dermatofibroma/9616610-3.txt,8f5a634d954f550f3957c45c768391559b9a7e1a4abd6dbd0d8b7ed2d1d49205,9616610-3,36321023,PMC-Patients,not indexed,2022,35 year,F,71
+test,dermatofibroma,test/dermatofibroma/pubmed-10885409.txt,80ababd104d3065ff0e816b94359a62bd91925d2004ffee542028fe1f29bfb6f,pubmed-10885409,10885409,PubMed abstract,agrees,2000,,,33
+test,dermatofibroma,test/dermatofibroma/pubmed-16503899.txt,75564659d04b84dbe0a2d575d0033fb83b63a9d2ed830a261e66a333d0ffe9c9,pubmed-16503899,16503899,PubMed abstract,agrees,2006,,,36
+test,dermatofibroma,test/dermatofibroma/pubmed-18412813.txt,e0a64591cecf64aa790f467bf1616096d7539e5311d43577c10aa65bccf3bf8f,pubmed-18412813,18412813,PubMed abstract,agrees,2008,,,56
+test,dermatofibroma,test/dermatofibroma/pubmed-19263377.txt,2110a90bf1d9bb0c0d1584029ef53033adcd53309eb616630254f0f10414a0c0,pubmed-19263377,19263377,PubMed abstract,agrees,2009,,,47
+test,dermatofibroma,test/dermatofibroma/pubmed-22059953.txt,f9f3d6c707dff67b3b7fdbfdbfc7fb25ef40e2932b91ecb9eb4bf267312e71f0,pubmed-22059953,22059953,PubMed abstract,agrees,2012,,,29
+test,dermatofibroma,test/dermatofibroma/pubmed-27661268.txt,eb12c655171431efa6e632d9398aa580ced01fdc3ff3a6616df7ca77cf3fc105,pubmed-27661268,27661268,PubMed abstract,agrees,2016,,,32
+test,dermatofibroma,test/dermatofibroma/pubmed-29956351.txt,f18c094b9ac2137e6accd9109b13ae864587cd321897c95957321a39e560ffee,pubmed-29956351,29956351,PubMed abstract,agrees,2018,,,60
+test,dermatofibroma,test/dermatofibroma/pubmed-35385853.txt,94496b66485810f89caf36346a4ceb154064d2975719a73f3934465e2f094090,pubmed-35385853,35385853,PubMed abstract,agrees,2022,,,42
+test,dermatofibroma,test/dermatofibroma/pubmed-39036613.txt,c554dfc14a662787eb0e8b47773a0afe88bd4d290fe4165256a63f1c8371d72f,pubmed-39036613,39036613,PMC full text,not indexed,2024,,,141
+test,dermatofibroma,test/dermatofibroma/pubmed-39215353.txt,ab720c2e25d1be2bf7da42c32c0cad0550dfc3be1803dd4e8ef49dd8a89dec4f,pubmed-39215353,39215353,PMC full text,agrees,2024,,,294
+test,dermatofibroma,test/dermatofibroma/pubmed-39431259.txt,3fbead11e3c6a5d45185e5d694a05f12f2a75b6700d9cb9b6e036f662b3f5de9,pubmed-39431259,39431259,PMC full text,not indexed,2024,,,138
+test,dermatofibroma,test/dermatofibroma/pubmed-41280943.txt,cb2d70fbbe1e142cb7f4305a4b9478986b68c1b7f5f80960cb4f681ecaf9fdf3,pubmed-41280943,41280943,PMC full text,agrees,2025,,,265
+test,dermatofibroma,test/dermatofibroma/pubmed-42621542.txt,40f072e90dda9af2ee3ef448c99b6ebe6e3fd1deddc7c4a909e703ebfd53b2e0,pubmed-42621542,42621542,PMC full text,not indexed,2026,,,56
+test,melanoma,test/melanoma/2837230-1.txt,e65f01d622e31ab3015685fe860e112297c9f535d9b5dacf3b7f62220e8d5044,2837230-1,20234825,PMC-Patients,not indexed,2009,13 year,M,73
+test,melanoma,test/melanoma/3229085-1.txt,1ceec1e0429f3f89690ca4ac82fde5503daa009a3883598aadaf3e9c2e469033,3229085-1,22148070,PMC-Patients,not indexed,2011,62 year,F,29
+test,melanoma,test/melanoma/3750895-1.txt,4a8e7b06e7a8a902d024ec0174b85d25337dab6c8892ac68516eabfbf1e05391,3750895-1,23739714,PMC-Patients,agrees,2013,17 year,F,73
+test,melanoma,test/melanoma/3765467-1.txt,6136f6ae189c7b04f8b48a3171ca6e5fb422c28f94d836678261636587948af7,3765467-1,23938065,PMC-Patients,agrees,2013,62 year,M,79
+test,melanoma,test/melanoma/4650989-1.txt,f5fd02d180f323fc5349be24a13357887a40293e9b72e5e1f9f40cf4f3aaaddd,4650989-1,26594172,PMC-Patients,not indexed,2015,61 year,F,56
+test,melanoma,test/melanoma/6467182-1.txt,2c8f88742ef94349e9806eced5ab90a9b3b067f0bc9d9847f3b9fd776e65058b,6467182-1,31019646,PMC-Patients,not indexed,2019,63 year,F,154
+test,melanoma,test/melanoma/6684299-1.txt,43f35a4294912ab775e376c4473d35aaba88b475ae6461fcb9be4b3250c52422,6684299-1,31410340,PMC-Patients,not indexed,2019,43 year,F,226
+test,melanoma,test/melanoma/8648433-1.txt,fb99297fb5c71e6632b85662ae6c1361796fa3c41ddb21e7b95324dab64a514a,8648433-1,35024235,PMC-Patients,not indexed,2021,73 year,F,36
+test,melanoma,test/melanoma/8672424-1.txt,303218159ae9d2335282507b6753135f9fd79643ffa433ed3e22edd802f47c6b,8672424-1,34926098,PMC-Patients,not indexed,2021,72 year,F,74
+test,melanoma,test/melanoma/8720861-1.txt,f3fa765d319c19c624c8f06c66e34e75f08c360f88cabf96c2b9c213f9748eeb,8720861-1,35002272,PMC-Patients,not indexed,2021,75 year,M,85
+test,melanoma,test/melanoma/9073300-1.txt,cf207e03be4a999d858e78a116b15a1e7e071bec0efc37ba3f9dd2310a737472,9073300-1,35090790,PMC-Patients,agrees,2022,44 year,M,47
+test,melanoma,test/melanoma/9355838-1.txt,1244496ac0d470af1a3314c686bdaeb10bbe87470ec03b62da364d3051a1d638,9355838-1,35936139,PMC-Patients,not indexed,2022,67 year,M,135
+test,melanoma,test/melanoma/9681240-1.txt,6540fe8aec0b3319e5eb45297061420448f4af30043476f46d9a302ca9331474,9681240-1,36534581,PMC-Patients,not indexed,2022,47 year,M,72
+test,melanoma,test/melanoma/10220981-1.txt,84c61bbed50df7cd3fa56cc4b7f713832ffff4ecbbc4a3cc4ba73ae8b0c9ba03,10220981-1,37241207,PMC-Patients,agrees,2023,41 year,M,74
+test,melanoma,test/melanoma/10589494-3.txt,b6933fe9e2dbe73af4528473c8991ca7a4045d3603ebf73bd40ac20d923fd8a7,10589494-3,37393137,PMC-Patients,agrees,2023,7 year,M,44
+test,melanoma,test/melanoma/10716727-1.txt,ecb27cd973369d4512de452c5fdb8a6d01549bbd889888c53a5078f3744ae2a5,10716727-1,38094552,PMC-Patients,not indexed,2023,67 year,M,443
+test,melanoma,test/melanoma/10789164-1.txt,91e3900f2174700b4f4344771409ad11730b76037417c7fc413dad17494cb066,10789164-1,38189222,PMC-Patients,agrees,2024,53 year,F,48
+test,melanoma,test/melanoma/11035014-1.txt,6551a42335b4132b8ff6ee837b35e31ff06ffbe86fb68c9f66dd9425191d6eb5,11035014-1,38650592,PMC-Patients,not indexed,2024,64 year,F,115
+test,melanoma,test/melanoma/11143801-1.txt,29008880d40fd1c8517435b4490ead7d359a0b1c68ff182b2a1a87f9abe82db6,11143801-1,38828380,PMC-Patients,not indexed,2024,46 year,M,97
+test,melanoma,test/melanoma/pubmed-8619775.txt,aa29f5d80b66c7f2130653cb961a11176e91392084bb7b7862aff81f2f15da18,pubmed-8619775,8619775,PubMed abstract,agrees,1996,,,98
+test,melanoma,test/melanoma/pubmed-18709293.txt,2df4ddfd2997f24471e73e33ebdb61d8296b6e62ff1ec5463ef2cc483ca74da8,pubmed-18709293,18709293,PubMed abstract,agrees,2008,,,49
+test,melanoma,test/melanoma/pubmed-21251441.txt,1aed646095f385297bb42f83e91ab3d9213d7f7cbd85955e3163c06817733d5a,pubmed-21251441,21251441,PubMed abstract,agrees,2010,,,31
+test,melanoma,test/melanoma/pubmed-22008718.txt,8d31a3f64ee0b2d406f20b64c9ceb9f5762dd4f4daecfa187911e67b757e9f75,pubmed-22008718,22008718,PubMed abstract,agrees,2011,,,57
+test,melanoma,test/melanoma/pubmed-25343213.txt,baef3a9a9fc3240858f3ff7b4a86d38b59032644484659957560433d5f5f144f,pubmed-25343213,25343213,PubMed abstract,agrees,2014,,,26
+test,melanoma,test/melanoma/pubmed-25397381.txt,d936d1fa228e0927f75a52b5f0fe76be90234206d255ff75b97e6a7aaf6a2983,pubmed-25397381,25397381,PubMed abstract,agrees,2014,,,60
+test,melanoma,test/melanoma/pubmed-27149137.txt,08cc977d8ab6bf38898a500c1d454e4024e9eec4456d4ab90dcc8101294c2520,pubmed-27149137,27149137,PubMed abstract,agrees,2016,,,85
+test,melanoma,test/melanoma/pubmed-27169340.txt,555563b4f8fd512329c9e8093de8378282fcb152146dcfcefc8320e7ca149e3d,pubmed-27169340,27169340,PubMed abstract,agrees,2016,,,36
+test,melanoma,test/melanoma/pubmed-28507284.txt,40f63228a432545083f99b2cd85bba3ca8630d5fc62fd664f84f0445a5f87cc7,pubmed-28507284,28507284,PMC full text,agrees,2017,,,135
+test,melanoma,test/melanoma/pubmed-29483985.txt,f1947eaa7c4994928f0ee5c647b9332a647f8853918833de474674e8d1b6e927,pubmed-29483985,29483985,PMC full text,not indexed,2018,,,183
+test,melanoma,test/melanoma/pubmed-30559881.txt,f000267de77a92dfde8afa2491b4ba01309d546a8da09eace6d0f9592a2c4025,pubmed-30559881,30559881,PMC full text,not indexed,2018,,,191
+test,melanoma,test/melanoma/pubmed-30740172.txt,d9607c8fe625bd98ec06ff70790d0556a4e8f44782e4f0b41d00a431918b553c,pubmed-30740172,30740172,PMC full text,not indexed,2019,,,141
+test,melanoma,test/melanoma/pubmed-30801340.txt,bae41c127965899aaf5d0961d24ace19969ec1cd5028a3f8118e010b2f80d69b,pubmed-30801340,30801340,PMC full text,agrees,2019,,,39
+test,melanoma,test/melanoma/pubmed-31930427.txt,153e74dd64f3b4cc322f332c13654446ede40d5ecd7429eb7511d1d34faf6bfc,pubmed-31930427,31930427,PMC full text,agrees,2020,,,117
+test,melanoma,test/melanoma/pubmed-32160649.txt,8b1a1e87402a5bbc1f6f0b1827d27baa029071193cd7488b48c10c1eb671557d,pubmed-32160649,32160649,PubMed abstract,agrees,2020,,,37
+test,melanoma,test/melanoma/pubmed-39723589.txt,18cf66647714fdc13bd4d638d7b3dbdb881eb5ceb297aa0a16d33cab788bd436,pubmed-39723589,39723589,PubMed abstract,agrees,2025,,,37
+test,melanoma,test/melanoma/pubmed-40861587.txt,2462744a1675f8ce2081c7f6daf97a85ba75dba3f2fba317b8b99b33c4ba2c0d,pubmed-40861587,40861587,PMC full text,not indexed,2025,,,117
+test,melanoma,test/melanoma/pubmed-41220461.txt,9e0602b160ad645ae16c7c3501dcc5eeb4cee2343b564b763a84ce391971a95b,pubmed-41220461,41220461,PMC full text,not indexed,2025,,,45
+test,melanoma,test/melanoma/pubmed-41307004.txt,07e36a0b413702502447eb2a16f250bb60dfe1d02f49b0b56bb52fd23ceeb14c,pubmed-41307004,41307004,PMC full text,not indexed,2025,,,34
+test,melanoma,test/melanoma/pubmed-41578510.txt,bccae0f06778af1d6249db393d3699f5bfd4cc2590d70fa2d3d744ba7f0d4eba,pubmed-41578510,41578510,PMC full text,agrees,2026,,,65
+test,melanoma,test/melanoma/pubmed-42571504.txt,ae3dbfda3f654956e247b05b3ebff2e6cc24c991539b4b451976a66cfd44330d,pubmed-42571504,42571504,PMC full text,not indexed,2026,,,155
+test,nevus,test/nevus/3081491-1.txt,8b699e8538c7eab304bb2450643494ba7f1a9fb06c4ad7ab1718d99656fe7941,3081491-1,21572688,PMC-Patients,not indexed,2011,6 year,F,97
+test,nevus,test/nevus/3752487-1.txt,9bfa258e7295953e4a8bba019eed915c7e2cebd1458138a768a72f37b4e73279,3752487-1,23984245,PMC-Patients,not indexed,2013,23 year,F,213
+test,nevus,test/nevus/3843908-1.txt,a6d79da7ea5d037be619e9032302eba6b8103611edf2f12733ea7e3b0905a117,3843908-1,24348378,PMC-Patients,not indexed,2013,23 year,F,77
+test,nevus,test/nevus/3936521-1.txt,23134e28812a3cbba9303e0a059f747fa0b4cebec7aa56cca046541a6d2da3e3,3936521-1,24653901,PMC-Patients,not indexed,2013,47 year,M,64
+test,nevus,test/nevus/4318062-1.txt,d82be42e7f68e6c9244912290f3a490f971bc4994ca8caced98755ae082fcf21,4318062-1,25657396,PMC-Patients,not indexed,2015,55 year,M,100
+test,nevus,test/nevus/5087230-1.txt,e1e696d4bf5a700fd75d8e4d72bb50e17b2ebdef60d5652c93de5adc72c775b5,5087230-1,27828645,PMC-Patients,agrees,2016,64 year,M,59
+test,nevus,test/nevus/5655628-1.txt,80131cd3218a4a0885f7f2e8d6e1024237939ca693697b8242cde9b4681d58b9,5655628-1,29118524,PMC-Patients,not indexed,2017,47 year,M,43
+test,nevus,test/nevus/6219340-1.txt,c9904599665f2eba4a980ffb9100a8ec19d15cb3f7014ebb0c6090d4255fb4f2,6219340-1,30505119,PMC-Patients,not indexed,2018,12 year,M,124
+test,nevus,test/nevus/6259301-1.txt,4c9959ad1101463fc6e4b99cda20c192b7735f780ae69cdfb00bb6f1632584cf,6259301-1,30598914,PMC-Patients,not indexed,2018,13 year,M,29
+test,nevus,test/nevus/7058877-1.txt,f3ac246b116389a483d85bc24b232962aedbd3bd48fd954053d498e0bbb9954a,7058877-1,31899063,PMC-Patients,agrees,2019,24 year,M,123
+test,nevus,test/nevus/7253887-1.txt,04079e08faef4742d920562df45a6fd9412553cbc3c83a8f4dc536e22f911b8c,7253887-1,32265056,PMC-Patients,agrees,2020,38 year,F,70
+test,nevus,test/nevus/9679269-1.txt,d1ceb324b1a4fa354f72276ec252a212081adcf25c12dde602f43fd688b2d07f,9679269-1,36425659,PMC-Patients,not indexed,2022,54 year,M,58
+test,nevus,test/nevus/9681224-1.txt,6c68ce04ff14d64ded255e6acbd9eac08bec9c279e579e49391794415d71ba2a,9681224-1,36534514,PMC-Patients,not indexed,2022,12 year,F,80
+test,nevus,test/nevus/9681422-1.txt,7c872ad6e4036af00f19fe5015b5d229839b6767c2957164e6a64d19c65089ce,9681422-1,36534564,PMC-Patients,not indexed,2022,12 year,F,27
+test,nevus,test/nevus/9950964-1.txt,b5ca6f25c796cf272696729e359e27d21582e927ec5c1db7d86958fd78a08ac4,9950964-1,36843646,PMC-Patients,not indexed,2023,84 year,F,215
+test,nevus,test/nevus/10837041-1.txt,3335d6c3b2c9e13c1c3bd6acca5851c7565edf187de2a3f3a1c47960617e6110,10837041-1,38314193,PMC-Patients,not indexed,2024,30 year,F,106
+test,nevus,test/nevus/pubmed-7608388.txt,a1a7bb61a3b980d2662d5bc0ba1afb94540c7af067f1bd8bc7967bbb66484ca0,pubmed-7608388,7608388,PubMed abstract,agrees,1995,,,33
+test,nevus,test/nevus/pubmed-9542669.txt,7cc9207b0472ff487519b4c790a50b5dfa556b1fc02f9d1f1a8e060a54c4cfdb,pubmed-9542669,9542669,PubMed abstract,agrees,1998,,,114
+test,nevus,test/nevus/pubmed-10773703.txt,40ecf8057d9e4eb35216ba4c5c2e07c3347ac5aeaa73c72ba8722ef233d0d82b,pubmed-10773703,10773703,PubMed abstract,agrees,2000,,,27
+test,nevus,test/nevus/pubmed-10824486.txt,b3c06b04a6755e1fe387dbe438275aef09f61f57b0f6e3aa8edf536222740f0e,pubmed-10824486,10824486,PubMed abstract,agrees,2000,,,31
+test,nevus,test/nevus/pubmed-12544098.txt,ca2864240bf51d61ef084b7b7b4e894b8a2e6bc7bb086b9d248817e25fb8a483,pubmed-12544098,12544098,PubMed abstract,agrees,2003,,,56
+test,nevus,test/nevus/pubmed-18401177.txt,e5b7ecb3fef42fe8353c4383e82d07172c99ddf5f37fd9ef1a7f8d1ec3cb3330,pubmed-18401177,18401177,PubMed abstract,agrees,2008,,,45
+test,nevus,test/nevus/pubmed-19362750.txt,6bf517fe4feeb54a6103b56e61000dc8caca32ba0880a6f343bf22b7cfea201d,pubmed-19362750,19362750,PubMed abstract,agrees,2009,,,50
+test,nevus,test/nevus/pubmed-19817763.txt,7b8d8da36ed6c1c2c135fbb9309cbd5f3b41c76b8eae09c27a22c12b0c3ab099,pubmed-19817763,19817763,PubMed abstract,agrees,2009,,,27
+test,nevus,test/nevus/pubmed-20424415.txt,525a9a8f9c580114d9ffbd5a68d4b82f7b4579d00e92338e27e2f95fc508f3bd,pubmed-20424415,20424415,PubMed abstract,agrees,2010,,,35
+test,nevus,test/nevus/pubmed-22515581.txt,68008d6fbf922b48acfd6872c891ea0c886c1d0e951d0398353af9905449ab99,pubmed-22515581,22515581,PubMed abstract,agrees,2012,,,26
+test,nevus,test/nevus/pubmed-28317165.txt,f50290f64460a2d62906780dde79da1727deef6d3f5f3f0898d5f06c800a1896,pubmed-28317165,28317165,PubMed abstract,agrees,2017,,,41
+test,nevus,test/nevus/pubmed-28954104.txt,0a39005bb0cc66a75fdbd22fd3a7347f15f997918058068901edf07e8b9af431,pubmed-28954104,28954104,PMC full text,agrees,2017,,,58
+test,nevus,test/nevus/pubmed-29210482.txt,dc4b0dff25cb410306d4e2116c8df48ecbc8dc6b58f9495c42eba6ae047781ed,pubmed-29210482,29210482,PMC full text,agrees,2018,,,97
+test,nevus,test/nevus/pubmed-30484543.txt,ad35c4f9c91843f4d3cf891c973db4ae8c633a3a65e2cf7d97c5bacf10b3d452,pubmed-30484543,30484543,PMC full text,agrees,2018,,,80
+test,nevus,test/nevus/pubmed-31272992.txt,7b768f4b6dd521d00c6062b09152d23837485cf47a6c4440526f3a377f9f2ed2,pubmed-31272992,31272992,PubMed abstract,agrees,2019,,,38
+test,nevus,test/nevus/pubmed-33813872.txt,bf9f900ea22671a6f07be41d9d8095674995a4cf68f28de4e196f265e305b276,pubmed-33813872,33813872,PubMed abstract,agrees,2021,,,49
+test,nevus,test/nevus/pubmed-34231495.txt,627c30db1711e92c4da12c9ab9ed1f46879575b9b04068610ca6b442933d1c3f,pubmed-34231495,34231495,PubMed abstract,agrees,2021,,,33
+test,nevus,test/nevus/pubmed-35028147.txt,74a0f45ebb966ae89be818ae4372d74d831324f8bcd324e55ab949947b2832ed,pubmed-35028147,35028147,PMC full text,not indexed,2022,,,28
+test,nevus,test/nevus/pubmed-36787930.txt,a7ffbe15291edee59d5a31e3c2e77c62f3214c7e12e51b1ae44d9b5f97c3e9e0,pubmed-36787930,36787930,PMC full text,agrees,2023,,,70
+test,nevus,test/nevus/pubmed-39511823.txt,2edc71c95513dc6299193339a5c0c562eb39a9a4e4f01edfa737cecab8a89902,pubmed-39511823,39511823,PubMed abstract,agrees,2025,,,30
+test,nevus,test/nevus/pubmed-40253790.txt,02d7d4217f2217a97ed0794c5d29c667bd824e78be0ab9df9ee698a89cf6d39a,pubmed-40253790,40253790,PMC full text,not indexed,2025,,,106
+test,nevus,test/nevus/pubmed-41249608.txt,cfb83ce5b5f1e2953b4ff9376fac5300fbac8810ee098cb05f77f06d099e0914,pubmed-41249608,41249608,PMC full text,agrees,2025,,,80
+test,nevus,test/nevus/pubmed-41822668.txt,c4f3af751be390746fe15ec7636275f356ed58e57b41a978fae8874f8355abc7,pubmed-41822668,41822668,PMC full text,not indexed,2026,,,65
+test,nevus,test/nevus/pubmed-42465576.txt,9c171d8e9583765e982c6e3e62a4a93ae2490f477438dd8f25457677560af0ed,pubmed-42465576,42465576,PMC full text,not indexed,2026,,,79
+test,pigmented benign keratosis,test/pigmented benign keratosis/3673377-1.txt,8f35686ed3ae031c78f7eb2f1311d50ebd371e4e02ce6f6c3ab564bf8fd849bf,3673377-1,23741670,PMC-Patients,not indexed,2013,62 year,M,151
+test,pigmented benign keratosis,test/pigmented benign keratosis/3758711-1.txt,42e3afae792a85ffeb64219d13549127f2eef2d67979b1f089a55f7ead9ae0c0,3758711-1,24014974,PMC-Patients,not indexed,2013,50 year,F,46
+test,pigmented benign keratosis,test/pigmented benign keratosis/4196312-1.txt,21a2722a4916d4174b2768ac9b4091bb8abda859e4fe5f0038bdcc4b0dcba86a,4196312-1,25328324,PMC-Patients,not indexed,2014,67 year,F,107
+test,pigmented benign keratosis,test/pigmented benign keratosis/4219898-1.txt,e36c1c532ee34e6c902bdf4f5b95fdfb5a30819d5d2d526bb41935ae8ddd3e82,4219898-1,25405133,PMC-Patients,not indexed,2014,75 year,M,195
+test,pigmented benign keratosis,test/pigmented benign keratosis/4314887-1.txt,98c3c78158097b0e57ed1d18dd6b69cf91e4f2548824fc7449f410c7316c9b5d,4314887-1,25657917,PMC-Patients,not indexed,2015,59 year,M,203
+test,pigmented benign keratosis,test/pigmented benign keratosis/4555906-1.txt,1d2beeb78df39fcbd1a05ecf9714a52abb8930644d4cd8df49e821f302efcd65,4555906-1,26392661,PMC-Patients,not indexed,2015,55 year,M,280
+test,pigmented benign keratosis,test/pigmented benign keratosis/6085941-1.txt,ca7aa0fdb0423008d71229084067c42454441fb92f37952d2f225e755e175788,6085941-1,30148273,PMC-Patients,not indexed,2017,62 year,M,103
+test,pigmented benign keratosis,test/pigmented benign keratosis/7588146-1.txt,586d5c4562f57cbb97e3b97f7f9c322ee9a1db79cb9e72ef3135c23da3362ece,7588146-1,33150031,PMC-Patients,not indexed,2020,57 year,M,94
+test,pigmented benign keratosis,test/pigmented benign keratosis/8808045-1.txt,dfcf060e5474c9d3aad79ca9022dbba765256dc5b9c16f4ea3af400af3b24fbd,8808045-1,35125879,PMC-Patients,not indexed,2022,47 year,F,41
+test,pigmented benign keratosis,test/pigmented benign keratosis/10037649-1.txt,4a79b71b0bfae6352b0d0db50d5f71923137ad807a577968823c8c34f56ea38f,10037649-1,36961058,PMC-Patients,not indexed,2023,91 year,F,111
+test,pigmented benign keratosis,test/pigmented benign keratosis/10113801-1.txt,149c55e08513ae1c027d523e789e6edc2c1c5c49dc2e9290946d0e3ba32555c8,10113801-1,37090399,PMC-Patients,not indexed,2023,65 year,F,164
+test,pigmented benign keratosis,test/pigmented benign keratosis/10202162-1.txt,a2fb6b66269f31f2720ade8e5d6324d0ab70417385fb4aaecf9011113f9282f0,10202162-1,37223401,PMC-Patients,not indexed,2023,64 year,F,83
+test,pigmented benign keratosis,test/pigmented benign keratosis/10350662-1.txt,d77c79f6efbc15a388168242fad1008b6b20bf1350d1b58f30148402e2bf2529,10350662-1,37465245,PMC-Patients,not indexed,2023,16 year,M,49
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-12081162.txt,f107cf3b5e028dbf54f9928aa8e6403181357236fbed313a8e49e8a2e2418992,pubmed-12081162,12081162,PubMed abstract,agrees,2002,,,28
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-16640546.txt,f496bc0fea7485dc4195f6270ad579599db8a21669fce4e25b13722e9e6f8f3b,pubmed-16640546,16640546,PubMed abstract,agrees,2006,,,41
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-18187992.txt,6643488adb466b9f9e55fd4c5764bb062664f7c1f0a80e3e0103691b29276f05,pubmed-18187992,18187992,PubMed abstract,agrees,2007,,,27
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-23785597.txt,b6e9c8c7cd1a89357998d13bf52762c7f38f6d4d26c5d0e017573e5003dfee66,pubmed-23785597,23785597,PMC full text,not indexed,2012,,,58
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-31762920.txt,c2b83c04d151f5648a2aef7735540a668b1fe53761aab67ca6c3d72e13393217,pubmed-31762920,31762920,PMC full text,agrees,2019,,,82
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-33425131.txt,f58ef54535f1a1d088ad162e456763fd0f1f1d319413df160d581d6ded9bc376,pubmed-33425131,33425131,PMC full text,agrees,2020,,,102
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-38244653.txt,666b96a322373d66a711edd43ef04dd599575df09ca2e97b0f295b985fd48036,pubmed-38244653,38244653,PubMed abstract,agrees,2024,,,32
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-38901381.txt,f6138725a68233e319a2374008ecb6fda5de46a0e77e8025eb6c0228bb1843ea,pubmed-38901381,38901381,PMC full text,not indexed,2024,,,152
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-40250188.txt,9f8d2c8085c41e0421e6bdff44d6fe14e380359821d30e39e9c54e42c818c713,pubmed-40250188,40250188,PMC full text,not indexed,2025,,,87
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-40255848.txt,b05e4e27cff4273588e052b2c3133665b0bf9ccce6936f7709fcf5d48ee95a14,pubmed-40255848,40255848,PMC full text,not indexed,2025,,,68
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-40486406.txt,80bbfd861333787047e85e0b47a3cd2864035ade667b8727e88103bf25e3eebc,pubmed-40486406,40486406,PMC full text,not indexed,2025,,,88
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-41328095.txt,ec6713853f25bdb8b16f8c0b6c59034feabbe3f77ca8264d526d3aec499a538c,pubmed-41328095,41328095,PMC full text,not indexed,2025,,,88
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-41365489.txt,12f86419cc2e37dddf03bf62781f03532f5ea9413e6d5a586930de63e04c155a,pubmed-41365489,41365489,PMC full text,not indexed,2025,,,96
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-41399596.txt,27f9ce4a5ae43c5844cb49aef77a1ba01b97a50ad463da6863bd66a739bc018d,pubmed-41399596,41399596,PMC full text,not indexed,2025,,,120
+test,pigmented benign keratosis,test/pigmented benign keratosis/pubmed-41552040.txt,a3622392c0f34fcb196dabbe8e5c4b67c3440a4ba3a020290d4531278dce4d66,pubmed-41552040,41552040,PMC full text,not indexed,2025,,,181
+test,squamous cell carcinoma,test/squamous cell carcinoma/1253716-1.txt,f7c88d025537bd8610530dfe0047126777653380c470fc323d8d405ed1ae9c21,1253716-1,15626654,PMC-Patients,agrees,2005,50 year,M,43
+test,squamous cell carcinoma,test/squamous cell carcinoma/3764943-1.txt,f3c14c48c6fddd9024d7ebee60829a7c784e574861040af4cd5288781e24b21f,3764943-1,24019773,PMC-Patients,not indexed,2013,83 year,M,68
+test,squamous cell carcinoma,test/squamous cell carcinoma/3968566-1.txt,5168a60db6a5cd444baf4398d02a60a9d2bb9f08099c0bc6811cecddc8ff6c54,3968566-1,24695441,PMC-Patients,not indexed,2014,3 year,M,120
+test,squamous cell carcinoma,test/squamous cell carcinoma/4155968-1.txt,6d1b3ab68c510681730204e88f139f5c3809bd68688485013380226295736755,4155968-1,25184929,PMC-Patients,agrees,2014,72 year,M,115
+test,squamous cell carcinoma,test/squamous cell carcinoma/4560320-1.txt,7013af7e0854fc9709cc2c21eb1d5a32852e0e85d5589165941fe6c1affdb7ec,4560320-1,26351427,PMC-Patients,not indexed,2015,43 year,F,58
+test,squamous cell carcinoma,test/squamous cell carcinoma/4560320-2.txt,d75098f1d7242742b63c88506719a9a8677c4fa6010496fba22097ec030ee978,4560320-2,26351427,PMC-Patients,not indexed,2015,82 year,F,63
+test,squamous cell carcinoma,test/squamous cell carcinoma/4857268-1.txt,29ae124fef4a85fa96e1d664af6a3b2f038e5b64d3965fdfbae7cf550dc259da,4857268-1,27489627,PMC-Patients,not indexed,2013,32 year,M,181
+test,squamous cell carcinoma,test/squamous cell carcinoma/5193197-1.txt,23d7bbafc7aca9e9bdadb8b9c3c617484a7cb175ac1025032db3c2b1ab0dd68e,5193197-1,28099608,PMC-Patients,agrees,2016,75 year,M,106
+test,squamous cell carcinoma,test/squamous cell carcinoma/5518577-1.txt,5977ab57c9581ed2110803b57b17f95bd7beaf57f99bed929d5d1a7a11f0dfb3,5518577-1,28761842,PMC-Patients,not indexed,2017,16 year,M,46
+test,squamous cell carcinoma,test/squamous cell carcinoma/7416828-1.txt,aa7f9046ae7a66f5035a9df5c9310cf1fded7e27c2c7b0bf0de15dde333bd696,7416828-1,32793363,PMC-Patients,not indexed,2020,25 year,F,186
+test,squamous cell carcinoma,test/squamous cell carcinoma/7875211-1.txt,e98c42fbf2ec971c749f2f5d4d83cba6947ab0a38a992167dc3945ec3aaa6651,7875211-1,33911814,PMC-Patients,not indexed,2021,40 year,M,99
+test,squamous cell carcinoma,test/squamous cell carcinoma/7916637-1.txt,188e3df7d1d4ad73927a7e3bcd2e60126ac0cb2d8bf582b73c0b88922a51a917,7916637-1,33654645,PMC-Patients,not indexed,2021,75 year,M,95
+test,squamous cell carcinoma,test/squamous cell carcinoma/7933721-1.txt,7a0c979b239b263546ccf18a8e0d612c6dbc892c8971c55bc40b33f76167195b,7933721-1,33663145,PMC-Patients,not indexed,2020,60 year,M,78
+test,squamous cell carcinoma,test/squamous cell carcinoma/8404429-1.txt,fe7258e8f30ecda68284b61536106a841b5c02dadbc9060fe5b7a904f5934af2,8404429-1,34497696,PMC-Patients,not indexed,2021,55 year,M,172
+test,squamous cell carcinoma,test/squamous cell carcinoma/9848785-1.txt,64750ec99989d4f421e867d11d368c975dc0f386acbdc816b634f44a338e684b,9848785-1,36684806,PMC-Patients,not indexed,2023,65 year,F,255
+test,squamous cell carcinoma,test/squamous cell carcinoma/9946102-1.txt,58f4dd342dcf8bfeb97c30d3d7f2192dcbd613927561728cb857a78f2328324a,9946102-1,36892386,PMC-Patients,not indexed,2023,39 year,M,56
+test,squamous cell carcinoma,test/squamous cell carcinoma/10411990-1.txt,c483ac45ae905873a3a62e1beb8e07018f3f5b8e85550995e86a2502e5b1b7e8,10411990-1,37564053,PMC-Patients,not indexed,2023,50 year,M,154
+test,squamous cell carcinoma,test/squamous cell carcinoma/10934125-1.txt,6522c097f073c1238df46ec342dba9875007cb830bfa0013ae8e3a750a245000,10934125-1,38481923,PMC-Patients,not indexed,2024,68 year,F,129
+test,squamous cell carcinoma,test/squamous cell carcinoma/10936134-1.txt,8b7ffe829334a12c506d0e65992e23de2baafb232abf26c90636d7cbe6089750,10936134-1,20512280,PMC-Patients,agrees,2010,90 year,F,73
+test,squamous cell carcinoma,test/squamous cell carcinoma/11017714-1.txt,94ecfd706e95bab542257143b396cefa73deca92bafd1777e7a8346412303951,11017714-1,38623368,PMC-Patients,not indexed,2024,92 year,F,55
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-507871.txt,f55b4c9ec4653a28b42ada6ef4895e1575803441069827bbe85bd645c9a6a00b,pubmed-507871,507871,PubMed abstract,agrees,1979,,,29
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-1955228.txt,e5439a6d5c06efd6c24778a5c9df74aeb7e10cf99416a14cfa8af1b74e3e12ec,pubmed-1955228,1955228,PubMed abstract,agrees,1991,,,29
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-16919034.txt,f911db539eb87a06e4992442038d3e95201e47a6c151017a22f014f63db884bd,pubmed-16919034,16919034,PubMed abstract,agrees,2006,,,45
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-18713604.txt,5551bb333d7d9db790b5062cb67be370ae939e845306ce4a20a24d82b93eda3d,pubmed-18713604,18713604,PubMed abstract,agrees,2008,,,31
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-20523786.txt,8e59840a97e2621df365d6469f6777b76c3a35de490c66d03aa598a1dff4ea19,pubmed-20523786,20523786,PubMed abstract,not indexed,2009,,,33
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-21960950.txt,e376ddbb4db96e5dfe560167229e7c3be3d0a0a184bb81cdb53d43caded8e555,pubmed-21960950,21960950,PMC full text,not indexed,2011,,,312
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-24396723.txt,c0921d3dbebc92f894b2cc4dc28b61c1b6d3a68b7ed32f54e9c1df9c912782e2,pubmed-24396723,24396723,PMC full text,not indexed,2011,,,71
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-32754459.txt,9596604470288a200aca142ee3cc6f9abcdb4e00602dce0e0987f042333dd4c8,pubmed-32754459,32754459,PubMed abstract,not indexed,2018,,,74
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-33461827.txt,c23de3df56b005102536da5acc0082e3740168dcfa9a501200eb168953425221,pubmed-33461827,33461827,PubMed abstract,agrees,2021,,,70
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-34815944.txt,0f8f9d40859398f4b4c91bda0c833add13560c618c4cae2530cc5da6192d4e4a,pubmed-34815944,34815944,PMC full text,not indexed,2022,,,191
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-39184684.txt,9e32c3bf11bd732b64f4b41d2b0497517b0f62833acb8a7f62968474850b877d,pubmed-39184684,39184684,PMC full text,not indexed,2024,,,113
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-40458238.txt,8d2cde4fb4a6373fe469827543468b27c5174896944c78f19017bbe3db65e0c1,pubmed-40458238,40458238,PMC full text,not indexed,2025,,,89
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-40551927.txt,d188fae51567c78a093d28a49b3d9db9d6ed0a3fc3a4a5c7114878dcdbe5773e,pubmed-40551927,40551927,PMC full text,not indexed,2025,,,217
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-41049935.txt,79b12cafdc92f559585d946fd2eb913d95c310c5648539d7d843ad10a5187882,pubmed-41049935,41049935,PMC full text,not indexed,2025,,,178
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-41185838.txt,38b5402de3b662ccb8dc36769c031b724fdfbdf472f12032ff86ca220f0101a3,pubmed-41185838,41185838,PMC full text,not indexed,2025,,,223
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-41722006.txt,bd473c89169ab657ac906b267048fd9e670f36d356f8b8dc14fb5ebf1f8e8a5b,pubmed-41722006,41722006,PMC full text,agrees,2026,,,381
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-41773144.txt,6dafc1e956ccf259238ec19d9def14cbcd1bd1bb103aedc93f56490f425ee4a4,pubmed-41773144,41773144,PMC full text,not indexed,2026,,,236
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-42137705.txt,18001bb7420f0d53020b105a36afe778f94cfe7d665a63f267fa616ce01bc1f0,pubmed-42137705,42137705,PMC full text,not indexed,2026,,,138
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-42266608.txt,0677c556e79839233753b501793b1ea3fa2cf7f7d716b9f541b5c499d7e68176,pubmed-42266608,42266608,PMC full text,not indexed,2026,,,62
+test,squamous cell carcinoma,test/squamous cell carcinoma/pubmed-42369117.txt,77b85ae46ef9803075ece81c0688ac39c391f4348fbbec0637ce4477dd16d668,pubmed-42369117,42369117,PMC full text,not indexed,2026,,,127
+test,vascular lesion,test/vascular lesion/2329656-1.txt,2010e5e880e4e1fe9706e8ae4c9ab44623de03e88e351396ab201b3fbb00e333,2329656-1,18377654,PMC-Patients,not indexed,2008,28 year,F,214
+test,vascular lesion,test/vascular lesion/3199403-1.txt,443d2f9583c83a9fb658d35ed4fe7a86834039c3ef0103993af0c8655c9feb43,3199403-1,22028553,PMC-Patients,not indexed,2011,16 year,F,69
+test,vascular lesion,test/vascular lesion/3420220-1.txt,bf2d0b7766b6e39ce810f285788b0862ecce1e4cbede29b7c80783a88a6f04b7,3420220-1,22919398,PMC-Patients,not indexed,2012,16 year,F,80
+test,vascular lesion,test/vascular lesion/3793560-1.txt,28b10c529a8ee2bd04a491b52d66ae178292838f225cc41e8419a00eb68923db,3793560-1,24124305,PMC-Patients,not indexed,2013,12 year,F,271
+test,vascular lesion,test/vascular lesion/4290170-1.txt,7d5311bdc0559f235e6bf785f76d016f63a2aa1e0680c677158843d4a2a7ace1,4290170-1,25593797,PMC-Patients,not indexed,2014,4 year,M,229
+test,vascular lesion,test/vascular lesion/5405876-1.txt,f5951ed48bceaca1bb6251fafa14a6abc4a769e3ddf09febdd84740c7086743f,5405876-1,28491928,PMC-Patients,not indexed,2017,10 year,M,86
+test,vascular lesion,test/vascular lesion/6380972-1.txt,e9f1df527331302f743b26ba52eda44a6531f8a1c4fd307309360f58eb9efed6,6380972-1,30478818,PMC-Patients,not indexed,2018,70 year,M,96
+test,vascular lesion,test/vascular lesion/6913950-1.txt,c7c02f5774ef3cb2314bb49ab566a7f5cf31008c860180a11029f1392e56f4f3,6913950-1,31890366,PMC-Patients,not indexed,2019,4 year,M,50
+test,vascular lesion,test/vascular lesion/7861056-1.txt,1121032c8cd44fe88d13ff27851511001682ef6acbc015b338bb329848cf19f9,7861056-1,33564515,PMC-Patients,not indexed,2021,21 year,M,174
+test,vascular lesion,test/vascular lesion/8025953-1.txt,355cf46033df586def4aa289e99785076164972045951790df8154da258e2d67,8025953-1,33842296,PMC-Patients,not indexed,2021,12 year,M,115
+test,vascular lesion,test/vascular lesion/8208728-1.txt,1f57a7f83f449ba0b92c86eae467bab500f207fd5508c64cdf52e41e056d2cb8,8208728-1,34150410,PMC-Patients,not indexed,2021,68 year,F,151
+test,vascular lesion,test/vascular lesion/8339893-1.txt,559ac612e9ecb39eef5a0c09b07ef5d7797cb64873257d41c1336440fe52625e,8339893-1,34395327,PMC-Patients,not indexed,2021,69 year,F,145
+test,vascular lesion,test/vascular lesion/8896988-1.txt,3bde1568ae5d806e7e7f22b054fc2c994fbc0ca5667a35e3dfb0563434fc5f64,8896988-1,35291545,PMC-Patients,not indexed,2022,45 year,F,158
+test,vascular lesion,test/vascular lesion/8941334-1.txt,2386b9933d451a3541e794d0c8f531fa7acca86fec316f21a8e86dbe11840a00,8941334-1,35356375,PMC-Patients,not indexed,2022,50 year,M,184
+test,vascular lesion,test/vascular lesion/9542042-1.txt,b178274b2bc77c22a6712192c60ca0d65934daefe3420fe4fcab14247d6a8216,9542042-1,36225490,PMC-Patients,not indexed,2022,30 year,M,89
+test,vascular lesion,test/vascular lesion/10625792-1.txt,d33c39f507e684a2b4981217690e2eef9ef44631c2231df45a4d493ae26726b7,10625792-1,37933368,PMC-Patients,not indexed,2023,40 year,F,101
+test,vascular lesion,test/vascular lesion/10984198-1.txt,3c7afba0e85326e2283d62d3ece30ebccb7160b4ae2c3d2a0942d7a668e7fdec,10984198-1,38562554,PMC-Patients,not indexed,2024,39 year,M,155
+test,vascular lesion,test/vascular lesion/11168036-1.txt,4e4224f194af7d831cb38efe6daac8bd517486810081aebec25eafa405090598,11168036-1,38868664,PMC-Patients,not indexed,2024,46 year,M,45
+test,vascular lesion,test/vascular lesion/pubmed-8030763.txt,3a6fdef7d0e1c215677f03a4deb6d2eec23c6eda461a8e6d4ab308e341094d7b,pubmed-8030763,8030763,PubMed abstract,agrees,1994,,,30
+test,vascular lesion,test/vascular lesion/pubmed-22567459.txt,184e3c4181f30d9422503dd45a04736f8c4d9ba4c981e40302f515d03b43c8bf,pubmed-22567459,22567459,PMC full text,not indexed,2012,,,154
+test,vascular lesion,test/vascular lesion/pubmed-27891487.txt,1865ebcffba43e995adf5df0b06a004a089c1092e9b22e20b01dd60a4ed4d1dc,pubmed-27891487,27891487,PubMed abstract,not indexed,2016,,,27
+test,vascular lesion,test/vascular lesion/pubmed-28329529.txt,9728bcbfb91a07264f9463f62769f318e4473734df07a306ab53aeb11b6f83b9,pubmed-28329529,28329529,PubMed abstract,agrees,2017,,,42
+test,vascular lesion,test/vascular lesion/pubmed-39345277.txt,6a25f9aaa1597bc0b525d62d722637537248474a115fd0bf68507c29088fa176,pubmed-39345277,39345277,PMC full text,not indexed,2024,,,92
+test,vascular lesion,test/vascular lesion/pubmed-39539924.txt,5291810a45b1de3f2dedc94c8dc1a593087238724c3f7997538d03b6deaf782f,pubmed-39539924,39539924,PMC full text,not indexed,2024,,,167
+test,vascular lesion,test/vascular lesion/pubmed-40606809.txt,908990b5f994bb86861c6afeb98dc98a5d7605aa4873689098a3d52c5a314b44,pubmed-40606809,40606809,PMC full text,not indexed,2025,,,261
+test,vascular lesion,test/vascular lesion/pubmed-40787061.txt,a92eeb558aeb1711c48479aadc205ba9d6ed3c731b1c4c7b12cbe5525e10e97a,pubmed-40787061,40787061,PMC full text,not indexed,2025,,,206
+test,vascular lesion,test/vascular lesion/pubmed-40926947.txt,4a6bd04933eed768eb1860900796c26a6fa21eb8f59b16afaba61fa479bdb738,pubmed-40926947,40926947,PMC full text,not indexed,2025,,,124
+test,vascular lesion,test/vascular lesion/pubmed-42245883.txt,6288dfed5a9ebed2ca2b410ede2490e47a85a243e25b826c555f838e4c6fc2d0,pubmed-42245883,42245883,PMC full text,not indexed,2026,,,36
+val,actinic keratosis,val/actinic keratosis/3842183-1.txt,2d60729f7ad170c0f8217005bfda7f88ccde4fd7777928125a43715c2e604abc,3842183-1,24294287,PMC-Patients,not indexed,2013,45 year,M,112
+val,actinic keratosis,val/actinic keratosis/pubmed-28031141.txt,b2fa93dc175546b53c0180a0e9ea764c076f89a9d938c18f452a33048b35009b,pubmed-28031141,28031141,PubMed abstract,agrees,2016,,,102
+val,basal cell carcinoma,val/basal cell carcinoma/3162279-1.txt,43268f12d3b72946b0db0c9c69bd632ffde8ebf3fe0eab3b2fc5763e08f1d17e,3162279-1,21909220,PMC-Patients,not indexed,2011,70 year,M,117
+val,basal cell carcinoma,val/basal cell carcinoma/3199405-1.txt,3ed4b8e7a2d44fcb63af6eb556deeac2be63a59c5f7bbbc79ab81a179a4d84cf,3199405-1,22028555,PMC-Patients,not indexed,2011,54 year,M,122
+val,basal cell carcinoma,val/basal cell carcinoma/4458941-1.txt,4c88b5dcecc8434c65b675670f2840849e105ce75fd7868ee757d69706169317,4458941-1,26120156,PMC-Patients,not indexed,2015,57 year,F,189
+val,basal cell carcinoma,val/basal cell carcinoma/7234329-1.txt,4b960e1abb47b258cb469eb4ab261615177fcf545f6e3d6f1e38541919fd507f,7234329-1,32477557,PMC-Patients,not indexed,2020,83 year,M,27
+val,basal cell carcinoma,val/basal cell carcinoma/7992662-1.txt,7634ca7e977d91f2dce772da5bfac9a5b87e33ea4243be5f5667e8698bdbdefa,7992662-1,33911569,PMC-Patients,not indexed,2019,57 year,M,101
+val,basal cell carcinoma,val/basal cell carcinoma/9609975-1.txt,5875ee2d0d04bb46a213f92cbad669758f06940e3dba8862ec412ebd171ac701,9609975-1,35146530,PMC-Patients,agrees,2022,58 year,F,123
+val,basal cell carcinoma,val/basal cell carcinoma/11110509-1.txt,e0fbd1397fa1bbb778637b361dd9b50cae47e0bbb8f14b6f963903c9cb696152,11110509-1,38778911,PMC-Patients,not indexed,2024,47 year,F,156
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-10940116.txt,5d2a27a59b6cdf664ff57040edb34989e7d7f1ce175d581dfcb37971fc568a05,pubmed-10940116,10940116,PubMed abstract,agrees,2000,,,226
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-15246946.txt,f44aff50dae02f2370ac35f22684f4b964727a59f14b0b8558a9d364da10fae5,pubmed-15246946,15246946,PubMed abstract,agrees,2004,,,50
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-16043918.txt,255da463c1e0cf0737c64bdecc0094a2b954659bfd764ea74cbd1228e7fed656,pubmed-16043918,16043918,PubMed abstract,agrees,2005,,,34
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-18544067.txt,beed601290fab74629f6b684517727de5f0c9e71f84788575f1f8c4095c7079c,pubmed-18544067,18544067,PubMed abstract,agrees,2008,,,63
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-27847737.txt,a6e231b3ae24da1b9540c2adc28fe3443d68eaf7ff673a2dc1d4433943bcf282,pubmed-27847737,27847737,PMC full text,not indexed,2016,,,81
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-31360466.txt,90bbbc395d4ae9d51802714bc3cc37e1a1645b6ad1d251dfb7dd8b18ca35ef6f,pubmed-31360466,31360466,PMC full text,not indexed,2019,,,85
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-38989074.txt,5f573f1c38b0eda16a0e8793eea029e1dce9d5edefee88459d42eb51332ea346,pubmed-38989074,38989074,PMC full text,not indexed,2024,,,122
+val,basal cell carcinoma,val/basal cell carcinoma/pubmed-40123789.txt,6d66804b3874ff0eee0d46784b4dcfede5b97a81d5c90bc42ee408af5634d6f1,pubmed-40123789,40123789,PMC full text,not indexed,2025,,,28
+val,dermatofibroma,val/dermatofibroma/4763649-1.txt,91dda327e0729fa2cdb77e8ebaa389baacd7bc617473cbd8c83c4304654dbd7d,4763649-1,26955137,PMC-Patients,not indexed,2016,30 year,F,75
+val,dermatofibroma,val/dermatofibroma/4763649-2.txt,9ca6ab8b0d3a5f04be57ed60cc2e313dd4035eec8e2f81774af186d6ca438dd2,4763649-2,26955137,PMC-Patients,not indexed,2016,30 year,F,195
+val,dermatofibroma,val/dermatofibroma/5029260-1.txt,13b296535f030e6358030834c4aba8048801d872300197631c17e134f6bdf735,5029260-1,27688463,PMC-Patients,not indexed,2016,34 year,M,153
+val,dermatofibroma,val/dermatofibroma/8136451-1.txt,524bdc1f71306902277aba4705f11d118d5b8a421ab48f40d66ef17d42446dd6,8136451-1,34035995,PMC-Patients,not indexed,2021,47 year,M,59
+val,dermatofibroma,val/dermatofibroma/8136451-2.txt,6aad5a6b64d774907fe5e37dd66f6586a96ec00e7b36b9625cff64377c9ef3fb,8136451-2,34035995,PMC-Patients,not indexed,2021,68 year,M,39
+val,dermatofibroma,val/dermatofibroma/10412005-1.txt,1499814887a10d18b00fdfb95e0d6a448b6aa1ca057deea0547cb4283f61ff22,10412005-1,37557144,PMC-Patients,not indexed,2023,50 year,F,66
+val,dermatofibroma,val/dermatofibroma/pubmed-7894102.txt,16f260b8b3d4212aef3f791a28d6699236d81332ef6a32fa791b5495c8e3cf9b,pubmed-7894102,7894102,PubMed abstract,agrees,1995,,,29
+val,dermatofibroma,val/dermatofibroma/pubmed-12045945.txt,fa249e8a99574a03f534a3a2d43b5067840ff09f4b69536bb165ea867652afde,pubmed-12045945,12045945,PubMed abstract,not indexed,2000,,,26
+val,dermatofibroma,val/dermatofibroma/pubmed-17596172.txt,e3ecbd0b58fc217c48a9e1f9760583ca28f92316c2ac462c8f1100f67be692a2,pubmed-17596172,17596172,PubMed abstract,agrees,2007,,,39
+val,melanoma,val/melanoma/5367002-1.txt,35fb5a6f8185a0387f48ef17c670faa049c988f3387c69a5367123b84a61041e,5367002-1,28343447,PMC-Patients,agrees,2017,62 year,F,35
+val,melanoma,val/melanoma/7875657-1.txt,f4d00a290d77490f9094b93076eb7efdae90ebf4295f798d0790b250bb6067e1,7875657-1,33614203,PMC-Patients,not indexed,2021,74 year,M,29
+val,melanoma,val/melanoma/8437670-1.txt,223d13f4cb2e7e572975d33289e0071e5220eeb23d5f93e93f41fe956d89ab86,8437670-1,34527055,PMC-Patients,not indexed,2021,65 year,F,253
+val,melanoma,val/melanoma/8801450-1.txt,c4245458534c007c46cdd13bd9a14c0c4652e9dbc23b6c3f355833175206ddf1,8801450-1,35111668,PMC-Patients,not indexed,2022,45 year,M,89
+val,melanoma,val/melanoma/10289641-1.txt,a08d0f4c995efc0deb2a5c01dd03d2ce787e329f56cd1fa97bb7fdaa1b2eae58,10289641-1,37352079,PMC-Patients,agrees,2023,68 year,M,87
+val,melanoma,val/melanoma/11118888-1.txt,f79ad9d02b7af10bbabf521132452ce6b98038f10f2e5f73e6b6895c3cb34ce9,11118888-1,38800207,PMC-Patients,not indexed,2024,35 year,M,165
+val,melanoma,val/melanoma/pubmed-17966182.txt,555a8cc3031bb385cfd50f9630d9ffb603390d0b7fc1497878e3b456b8419978,pubmed-17966182,17966182,PubMed abstract,agrees,2007,,,33
+val,melanoma,val/melanoma/pubmed-22605002.txt,658982881970fbe373d667a4ef2fca7453b323020990d218ae1d9fe709829404,pubmed-22605002,22605002,PubMed abstract,agrees,2012,,,31
+val,melanoma,val/melanoma/pubmed-25546496.txt,1a501a515d9780f8e877d32c9cdfa296b91ce2dbb4c91196d403de2249f1a3f3,pubmed-25546496,25546496,PubMed abstract,agrees,2015,,,43
+val,melanoma,val/melanoma/pubmed-27051719.txt,40ce3c73e421af00078722e71202ecaeb859f8e643d6f9529ff1c70b4577d7fc,pubmed-27051719,27051719,PMC full text,not indexed,2015,,,225
+val,melanoma,val/melanoma/pubmed-28515583.txt,9e66d1c29c16358990b2c2687e339485314ac43d06e9f426b307f6cadd4e627a,pubmed-28515583,28515583,PMC full text,not indexed,2017,,,171
+val,melanoma,val/melanoma/pubmed-38666479.txt,15c0bdb18f3b93d16ff524ed030b0500f1d9b266deb224860d1d627e8b1c1ce0,pubmed-38666479,38666479,PMC full text,agrees,2024,,,83
+val,melanoma,val/melanoma/pubmed-39862670.txt,0a8d08564b87723d66814fb6fb766cbbbc582c394c54555fbf6703f82f6dc96f,pubmed-39862670,39862670,PMC full text,not indexed,2025,,,97
+val,melanoma,val/melanoma/pubmed-39872575.txt,cd27d1497f16b6aefb2f08abb4de5591ed2bb5648438a69b5b69820038f5a7a2,pubmed-39872575,39872575,PMC full text,not indexed,2024,,,157
+val,melanoma,val/melanoma/pubmed-40556990.txt,a0dde43767fd0057a55405fbfdbd13403a4a7de572028726d645472e1c93d60b,pubmed-40556990,40556990,PMC full text,not indexed,2025,,,46
+val,nevus,val/nevus/3875981-1.txt,e28c05b6aec42539838c19cfeecb6d0c3c53926cf12160cde5dc8ae322b52b8d,3875981-1,24346910,PMC-Patients,agrees,2013,9 year,M,73
+val,nevus,val/nevus/3881944-1.txt,17f921f319fab64670bce1f649848aa4d0eed450f14985e04def37c9d103a605,3881944-1,24396441,PMC-Patients,not indexed,2014,26 year,M,50
+val,nevus,val/nevus/3975198-1.txt,9dc564fbbc7dbfadfdebb39ceca375a16c67956217a3d9094b12fea95f086d29,3975198-1,24707253,PMC-Patients,not indexed,2014,46 year,F,63
+val,nevus,val/nevus/5836163-1.txt,b2caa34697370e2e3da18e6ad0dcc96fd8aab36bea65bbed5f2caac1def4ccc8,5836163-1,29515391,PMC-Patients,not indexed,2018,1 day,M,65
+val,nevus,val/nevus/6015456-1.txt,26c351a2a7e664161ddbf3448d1bd252b52125660eac02a84f459d1d301a3c94,6015456-1,29933750,PMC-Patients,agrees,2018,12 year,F,80
+val,nevus,val/nevus/7190562-1.txt,7f6b2daff2f634cb068cbb416508ff14d0c943a7aa3a517f3b4c6f7d3208bbc9,7190562-1,32363103,PMC-Patients,not indexed,2020,24 year,F,135
+val,nevus,val/nevus/pubmed-11991276.txt,211d117ac8f7c3417dda9444b4238426b576c1de98c20485fac55b429ef67147,pubmed-11991276,11991276,PubMed abstract,agrees,2002,,,37
+val,nevus,val/nevus/pubmed-17034379.txt,ec0169048e0c65f02636c31e5d384a6cdc40c782b4fb18d54687899b44b3c3ae,pubmed-17034379,17034379,PubMed abstract,agrees,2006,,,89
+val,nevus,val/nevus/pubmed-19397572.txt,22763c0b04b76d5ab38e09b220ebbdb219c5fa3b1aa9050513aadee382fcb8cf,pubmed-19397572,19397572,PubMed abstract,agrees,2009,,,26
+val,nevus,val/nevus/pubmed-19434323.txt,83fc5b754ea735b547e9784a36a5407f201aa2f5037b7de405427c493846c6e6,pubmed-19434323,19434323,PubMed abstract,agrees,2009,,,88
+val,nevus,val/nevus/pubmed-27051741.txt,f475ca43d099240bc067c47382848dd7ca5229378110857e22266b513277cfd5,pubmed-27051741,27051741,PMC full text,not indexed,2015,,,215
+val,nevus,val/nevus/pubmed-27180150.txt,0d473228646f3f8e9d4d7298134983bad32502e8d9b6dcbddc729c7c20155620,pubmed-27180150,27180150,PMC full text,agrees,2016,,,127
+val,nevus,val/nevus/pubmed-35079400.txt,63e37c1ba121a17346067e9a894ebe7d67a9f9c01cf36f3f39d3889518eaff5b,pubmed-35079400,35079400,PMC full text,not indexed,2022,,,81
+val,nevus,val/nevus/pubmed-35795089.txt,d6337d89a8c556ac379e1fb1d1578a457e62a040f96ea3c0e4f36244d2ae2f91,pubmed-35795089,35795089,PubMed abstract,not indexed,2022,,,44
+val,nevus,val/nevus/pubmed-40755471.txt,65f2234afa3f6b1b0b51155cf8e8dad1d5c6679f3b614d31bbb6febee383373b,pubmed-40755471,40755471,PMC full text,not indexed,2025,,,25
+val,pigmented benign keratosis,val/pigmented benign keratosis/2882082-1.txt,1f1cb963d6f712eb1b7b5b64413f4d92ec509bfb6ffc9f0fd3251e6b35b8a0a3,2882082-1,20532145,PMC-Patients,agrees,2010,83 year,F,105
+val,pigmented benign keratosis,val/pigmented benign keratosis/7190459-1.txt,2b31a80be3c08a999b5e245cb9303650fed4f47c777da4b6dd7a87ef34d59554,7190459-1,32363100,PMC-Patients,not indexed,2020,72 year,M,67
+val,pigmented benign keratosis,val/pigmented benign keratosis/7937374-1.txt,b08a615df2c1e47a611eb8e97fcea90ee94edf1a176045254bbb85b379c15cca,7937374-1,33688271,PMC-Patients,not indexed,2021,69 year,F,183
+val,pigmented benign keratosis,val/pigmented benign keratosis/8488890-1.txt,a68a9d22652949bd22e456ec18ebabbcb66aad629e79c0acbfbb02c54fe2d267,8488890-1,34703401,PMC-Patients,not indexed,2021,55 year,M,90
+val,pigmented benign keratosis,val/pigmented benign keratosis/pubmed-10343473.txt,c419e5c0cc58571ddaea839ae9019e6ad580783eb7cc47d932242fcf33e16c3e,pubmed-10343473,10343473,PubMed abstract,agrees,1999,,,26
+val,pigmented benign keratosis,val/pigmented benign keratosis/pubmed-18477232.txt,f1e80e2e8ccf5f9fe6246b4627473f10f81b34c1dd4aab43315d86615a202505,pubmed-18477232,18477232,PubMed abstract,agrees,2008,,,97
+val,pigmented benign keratosis,val/pigmented benign keratosis/pubmed-32950725.txt,6d9d6c9e6ffce8b328ca298c78d931daa7fc2d44b4b9b1e19a598836637de333,pubmed-32950725,32950725,PubMed abstract,agrees,2020,,,33
+val,pigmented benign keratosis,val/pigmented benign keratosis/pubmed-41658789.txt,4eacdebdc97e9618768b369fdb8cff694e9f193aaf27629b5eb780a960b9ab3e,pubmed-41658789,41658789,PMC full text,not indexed,2026,,,92
+val,pigmented benign keratosis,val/pigmented benign keratosis/pubmed-41694995.txt,d390450b05c7b15eb66f281c2edd54e43c03787d5306e308c916f5385ba27364,pubmed-41694995,41694995,PMC full text,not indexed,2026,,,153
+val,squamous cell carcinoma,val/squamous cell carcinoma/3283857-1.txt,32b896974023bddd3f066683f6dd0441f30e88e2d83968c7bc45fd4f45a62543,3283857-1,22363161,PMC-Patients,not indexed,2012,75 year,F,70
+val,squamous cell carcinoma,val/squamous cell carcinoma/4082944-1.txt,1b888bdf7e05adb3538e026f0ce971a01dc661fac4fd5669eff1f5e33bb9ed6c,4082944-1,25024859,PMC-Patients,not indexed,2014,68 year,F,117
+val,squamous cell carcinoma,val/squamous cell carcinoma/4292202-1.txt,59222b546ae6cf6352b7af20a6a7092ad93b84cb3f5fb6b23b8b14ee8a98fc00,4292202-1,25598622,PMC-Patients,not indexed,2014,45 year,M,183
+val,squamous cell carcinoma,val/squamous cell carcinoma/4698785-1.txt,5cd7e78d5fe6a99aa1ca23954d444e2afbe2890e7a04c27ec492d776249782ad,4698785-1,26798535,PMC-Patients,not indexed,2015,29 year,F,49
+val,squamous cell carcinoma,val/squamous cell carcinoma/6537059-1.txt,2fd242c2300c92c2d5fd1889acd4a9e583cb28aa3663b9546df270b79b3cbf37,6537059-1,31205707,PMC-Patients,not indexed,2019,64 year,M,101
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-16519572.txt,610aa7bed556353d12213a801edc965ba30da0436fe7f9bf870f0f8beb9eb11d,pubmed-16519572,16519572,PubMed abstract,agrees,2006,,,51
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-19104745.txt,84a71ed323f892dbd475b5ebcd85f3298a0497f7fe272ad555e432dbf7de0431,pubmed-19104745,19104745,PubMed abstract,agrees,2008,,,44
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-26990329.txt,8134a89fb331b1ff497daf612e83aed2db889268da3feed81c58acbe33866976,pubmed-26990329,26990329,PubMed abstract,agrees,2015,,,46
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-27752471.txt,c5cb9b27b73ccae5b7041b2a9f43c5fa6b3684e71e93cd728f86808d83ba52c3,pubmed-27752471,27752471,PMC full text,not indexed,2016,,,94
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-28619973.txt,d24efff4615586a2affad5dbebef8a1f87c3bb7d9156c89fde52280534d0b961,pubmed-28619973,28619973,PubMed abstract,agrees,2017,,,29
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-38688838.txt,244b4349b8df5926c4844406523eeb3dc02ffbbe6c90accf2dbb380e082d82b0,pubmed-38688838,38688838,PubMed abstract,agrees,2024,,,45
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-40717701.txt,07a8b62c0730c1aaef6b8779184340996739ef053f7544ec4bc90e503b68f572,pubmed-40717701,40717701,PMC full text,not indexed,2025,,,228
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-41137313.txt,d926947add0c7263ee7b6c4062581f4cd7078b7a88c0e44548866ee0f4ef203e,pubmed-41137313,41137313,PMC full text,agrees,2025,,,283
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-41404076.txt,26ff401dbcc96fc2db7f9dcccccdadb7b9f2e22c3b1abbbc93585b8a354bfcfa,pubmed-41404076,41404076,PMC full text,not indexed,2025,,,210
+val,squamous cell carcinoma,val/squamous cell carcinoma/pubmed-42271509.txt,f00d0692b786abf006ef037344555b93a860c505b3b67c539f8b1b04e4cc4811,pubmed-42271509,42271509,PMC full text,agrees,2026,,,54
+val,vascular lesion,val/vascular lesion/4123288-1.txt,8ba23e5d19cce596b8dd86f72518e3e89423904d96b43f30c4beb9c87879eb44,4123288-1,25100920,PMC-Patients,agrees,2014,28 year,M,101
+val,vascular lesion,val/vascular lesion/4228644-1.txt,fc17cadb7b0da4a64b2a40ddd11178be0c35c1c482d46fc4a0b2b47639439754,4228644-1,25396132,PMC-Patients,not indexed,2014,16 year,F,194
+val,vascular lesion,val/vascular lesion/4678085-1.txt,d284c1a9f87ff337a5c26460afe5c4fe23cbdb5fcb3476c19d33b6744d9bbb0b,4678085-1,26697068,PMC-Patients,not indexed,2015,52 year,M,224
+val,vascular lesion,val/vascular lesion/4817473-1.txt,a10dc6d6b2f79bfbf14b9ba6dbab6ba9e628f1c59c921a511d4426bb2a3339f5,4817473-1,27057048,PMC-Patients,not indexed,2016,47 year,M,44
+val,vascular lesion,val/vascular lesion/6939071-1.txt,e65793e8cec879d4119b743c002093f9606d51e4e91edf8863f9b5a2aa15057c,6939071-1,31789263,PMC-Patients,agrees,2019,45 year,M,49
+val,vascular lesion,val/vascular lesion/10491431-1.txt,f8996b591e1bb7ca62acdd0229bc0080f1df5ea0965453d57613015efb8e42e3,10491431-1,37692697,PMC-Patients,not indexed,2023,50 year,F,73
+val,vascular lesion,val/vascular lesion/pubmed-32477981.txt,dc4f4a6d0c3c2583318b176ad0f7f43ee39691c634cdd9f32fd5571b1530fe33,pubmed-32477981,32477981,PMC full text,not indexed,2020,,,293
+val,vascular lesion,val/vascular lesion/pubmed-40406276.txt,660d61df33c3d0a1f4c8d17c5c9bc8c63402cd394617df5624714a45c8149ab8,pubmed-40406276,40406276,PMC full text,not indexed,2024,,,595
+val,vascular lesion,val/vascular lesion/pubmed-42719922.txt,92c3deaacdcdca59a6228316705d3fdd7b9b2a297acbc518da7aa865f9d514a8,pubmed-42719922,42719922,PMC full text,not indexed,2026,,,141
+train,actinic keratosis,train/actinic keratosis/9661553-1.txt,bdfa2763586430c633cc8204f80341ca8631c9d22e7495ff8dc3e828883d8b3b,9661553-1,36388634,PMC-Patients,not indexed,2022,51 year,F,128
+train,actinic keratosis,train/actinic keratosis/pubmed-26930256.txt,be541e52526b257edbded3f2ad9d8617f6b9c9aa995c5cf0cb15d28e22ee25b9,pubmed-26930256,26930256,PMC full text,not indexed,2016,,,90
+train,basal cell carcinoma,train/basal cell carcinoma/2605696-1.txt,afb2ba98b04ec2772511c9828e2b2dc1ae37a9b4fb6bd16584f3afb2a83c173d,2605696-1,19478861,PMC-Patients,not indexed,2007,87 year,F,69
+train,basal cell carcinoma,train/basal cell carcinoma/2687829-1.txt,3f2f84d7db6e04c6cf6c3833bd70a39afba0aa79c8d9c2493501f866721a7c16,2687829-1,17191318,PMC-Patients,agrees,2006,83 year,F,43
+train,basal cell carcinoma,train/basal cell carcinoma/2956953-1.txt,e1709cf83788b997ffa06d80d350946d02ec4d2a7b8fb794590e7f181e1b4247,2956953-1,21031073,PMC-Patients,not indexed,2010,65 year,M,41
+train,basal cell carcinoma,train/basal cell carcinoma/2989656-1.txt,6e4224dca85d5f0f2aae9fa72d963977af8d85a45ba2e82c40f0887e880ef0a4,2989656-1,21151522,PMC-Patients,not indexed,2011,80 year,F,47
+train,basal cell carcinoma,train/basal cell carcinoma/2992163-1.txt,1f3e0e07f915245ee39032af7b1e241c7f1dc5e4a1bcd07c4070a89ecf560e48,2992163-1,21120052,PMC-Patients,not indexed,2010,51 year,F,95
+train,basal cell carcinoma,train/basal cell carcinoma/3003961-1.txt,f97d6c04feca4155029c0f6e1b6ff143e5d1f16b0c942f4be81f3119cee83562,3003961-1,21188232,PMC-Patients,not indexed,2011,11 year,M,42
+train,basal cell carcinoma,train/basal cell carcinoma/3157603-1.txt,c7cfba8bcaea105bf63b713803f422f86fb7bab71bd0f054d44c2fc98cea0b7c,3157603-1,20623309,PMC-Patients,agrees,2010,33 year,F,93
+train,basal cell carcinoma,train/basal cell carcinoma/3296393-1.txt,3ccf75ec9cb3762272a06ae57d3f0fe78d1f7c1e10d3fb71fc01318153f1c95c,3296393-1,22408339,PMC-Patients,not indexed,2011,48 year,F,113
+train,basal cell carcinoma,train/basal cell carcinoma/3502463-1.txt,77ebe6c6cc85e981058ce7222b9d17fb8464c3fc2674f4a60921561e75ab1137,3502463-1,23107377,PMC-Patients,not indexed,2012,23 year,F,56
+train,basal cell carcinoma,train/basal cell carcinoma/3505920-1.txt,88519218802c712cfb7f3e15f77d94c94ad4cf129db2f1202dce9d80672d3ed3,3505920-1,23259074,PMC-Patients,not indexed,2011,60 year,M,125
+train,basal cell carcinoma,train/basal cell carcinoma/3523429-1.txt,38eb256008c89f272e9440ba7cb155f0afa21a7bea258e8158b2f12d19eeb426,3523429-1,23248666,PMC-Patients,not indexed,2012,52 year,F,199
+train,basal cell carcinoma,train/basal cell carcinoma/3667320-1.txt,df4eec78ec54833b6c65cf99cd57cacbd8dd18551fa3289d6bdbccaa8466988d,3667320-1,23723508,PMC-Patients,not indexed,2013,55 year,M,84
+train,basal cell carcinoma,train/basal cell carcinoma/3691894-1.txt,ec165f26aae449c79a3c7f6b5d5ccd1a5923bb8b973613fb05fcc4d6abd008f3,3691894-1,23841002,PMC-Patients,not indexed,2013,84 year,M,92
+train,basal cell carcinoma,train/basal cell carcinoma/3827524-1.txt,fd8c0e96d1678486c86f061d8712cf7c13a954fdbc0033abea2a5fca30d10a61,3827524-1,24249904,PMC-Patients,not indexed,2013,70 year,M,194
+train,basal cell carcinoma,train/basal cell carcinoma/4248494-1.txt,3b3b770e29251d8cfa45acce769293c6540b37f63fdcee5a7779a0b27173a019,4248494-1,25484387,PMC-Patients,not indexed,2014,51 year,M,80
+train,basal cell carcinoma,train/basal cell carcinoma/4248494-2.txt,56f5ec63b140ece06dc2ae5a2a8aeccecc8cd42cfb4d938787df8a76dfb8b7ce,4248494-2,25484387,PMC-Patients,not indexed,2014,43 year,F,25
+train,basal cell carcinoma,train/basal cell carcinoma/4372948-1.txt,cb771d43c321d2efeeab51f9b713d99f2d06775ec0cba9bbb65e8d7a409e186e,4372948-1,25814744,PMC-Patients,not indexed,2015,29 year,F,144
+train,basal cell carcinoma,train/basal cell carcinoma/4448066-1.txt,1b8416271315ee36add6ac505ab90762d709a69ab2a6c6df51608eb698f9fce6,4448066-1,26034477,PMC-Patients,not indexed,2015,55 year,M,105
+train,basal cell carcinoma,train/basal cell carcinoma/4601466-1.txt,22537a06216fa6228fec31c720900f757aa775e647c38ea7bab47f96c6b675a7,4601466-1,26538745,PMC-Patients,not indexed,2015,78 year,M,168
+train,basal cell carcinoma,train/basal cell carcinoma/4763702-1.txt,debdd5978ca3cae2301589915f884ae462b86b43243357aeaaa99cb5c9837ccb,4763702-1,26955102,PMC-Patients,not indexed,2016,45 year,M,137
+train,basal cell carcinoma,train/basal cell carcinoma/4777905-1.txt,3248f8a2dceb75dddcdb2c50bc1b4f9e0c21a1aef2aff79c158e93c26f455269,4777905-1,26955331,PMC-Patients,not indexed,2015,70 year,M,76
+train,basal cell carcinoma,train/basal cell carcinoma/4924409-1.txt,9d8e104a9274a144597ff1d8eff4bec689642455488dfc27e580dc79f3c2a9fd,4924409-1,27398014,PMC-Patients,not indexed,2016,78 year,F,40
+train,basal cell carcinoma,train/basal cell carcinoma/4924409-2.txt,4028ba703b074eb5863fd5dcdabfa2ddec281ae102edb5e8ea5c60d25c7b243e,4924409-2,27398014,PMC-Patients,not indexed,2016,60 year,F,31
+train,basal cell carcinoma,train/basal cell carcinoma/4976408-1.txt,615d973ebc683ef0488eb2d77699606a51676356af3793788bdad3b151fd0aaa,4976408-1,27559504,PMC-Patients,not indexed,2016,56 year,F,82
+train,basal cell carcinoma,train/basal cell carcinoma/4976908-1.txt,0bbd82a85af1d4bab16f09dbf3926452aaa5ac4b22916758b96a91bb63fb0109,4976908-1,27536142,PMC-Patients,not indexed,2016,23 year,F,446
+train,basal cell carcinoma,train/basal cell carcinoma/5121552-1.txt,4f109e226bd097bad9de46e1d6798608de249f436f1f4590ef34615c581a97f8,5121552-1,27920679,PMC-Patients,not indexed,2016,69 year,F,77
+train,basal cell carcinoma,train/basal cell carcinoma/5216247-1.txt,7868b379877ab19deba69ca9cea9d77a256e9c5d3c28f4c9d68b352e7572a7da,5216247-1,28101025,PMC-Patients,not indexed,2016,71 year,M,160
+train,basal cell carcinoma,train/basal cell carcinoma/5398019-2.txt,a67c2d40a46722fab1f8e94d4ab68717e5643fffa7258b8599de4024cb362982,5398019-2,28469323,PMC-Patients,not indexed,2017,70 year,M,66
+train,basal cell carcinoma,train/basal cell carcinoma/5647844-1.txt,7a014ccf2a6581b52eff6330d7f829ba7198f79020f7182bf744799bc0d039e5,5647844-1,29090201,PMC-Patients,not indexed,2017,79 year,F,75
+train,basal cell carcinoma,train/basal cell carcinoma/6587202-1.txt,0baa3aa70955606221d70d1849152ff793237b3a3d7ba14d9e0764fa0142e7d1,6587202-1,31244639,PMC-Patients,not indexed,2019,56 year,M,70
+train,basal cell carcinoma,train/basal cell carcinoma/6587205-1.txt,ca006a3c41b8e61fcab3c45732153ee6cc7b2976df7a4c1f2fa9c50cb1dc7475,6587205-1,31244643,PMC-Patients,not indexed,2019,55 year,M,181
+train,basal cell carcinoma,train/basal cell carcinoma/6745442-1.txt,e10f1b7cf4e2914239861b06b451ff66c2000e02af2d93f6057ae8bd90c8c059,6745442-1,31534749,PMC-Patients,not indexed,2019,65 year,F,162
+train,basal cell carcinoma,train/basal cell carcinoma/6793645-1.txt,33d0dc6912d2423eeebf77d40b91efa7e8d8487fd3180f78bb4fbd26d53bbaf6,6793645-1,31620324,PMC-Patients,not indexed,2019,61 year,M,57
+train,basal cell carcinoma,train/basal cell carcinoma/6796745-1.txt,7a3ef21c5f377b4b5b972889bbc285010dc5a0680dd9b1675bee3920477e3c60,6796745-1,31557720,PMC-Patients,not indexed,2019,88 year,F,99
+train,basal cell carcinoma,train/basal cell carcinoma/6976741-1.txt,2cd8d974f7a2a188529381748685ff83a48de219c9edfd5ca8832b05d3e6373e,6976741-1,31964127,PMC-Patients,not indexed,2020,67 year,F,183
+train,basal cell carcinoma,train/basal cell carcinoma/7349141-1.txt,12f3e1785d7589eb27ca4afae789d054ade267663f5d22358982a53844179d33,7349141-1,32630996,PMC-Patients,not indexed,2020,46 year,F,47
+train,basal cell carcinoma,train/basal cell carcinoma/7593205-1.txt,d0abc6ddaf75084c569ae055e94a3dd047ca0845a16f811795741df9287e4f59,7593205-1,33133860,PMC-Patients,not indexed,2020,70 year,M,223
+train,basal cell carcinoma,train/basal cell carcinoma/7644349-1.txt,c569a3cb3b4371537cd604197bff53e3800fb59f18e0fd0048fc82987317db4f,7644349-1,33143401,PMC-Patients,not indexed,2020,48 year,F,87
+train,basal cell carcinoma,train/basal cell carcinoma/7875650-1.txt,8511bbce98a17b72dafbf5d6e7c613c2bcb71e66f36406a3d25c92a2f433655e,7875650-1,33614212,PMC-Patients,not indexed,2021,32 year,F,64
+train,basal cell carcinoma,train/basal cell carcinoma/7883528-1.txt,e0d99e14541ad3fc93d7e4e86ca7eb3936dad306f79e754c8141841c16a6c8d3,7883528-1,33614324,PMC-Patients,not indexed,2021,80 year,M,29
+train,basal cell carcinoma,train/basal cell carcinoma/8056320-1.txt,2d7bc2c2960d6d50a29712b076ee20136b5078737243c57fc7f9ec4b70cf6bd7,8056320-1,33936576,PMC-Patients,not indexed,2021,60 year,M,209
+train,basal cell carcinoma,train/basal cell carcinoma/8257451-1.txt,59bb598bf4305e51bf264d4ce92eb365be21bde970a79ae24e12b8050bf50682,8257451-1,34225412,PMC-Patients,not indexed,2021,74 year,M,200
+train,basal cell carcinoma,train/basal cell carcinoma/8520612-1.txt,fcc685f9593ff30ca5c3757ac15bb8437cfcb85610ece2a0a14a77e558295b42,8520612-1,34656174,PMC-Patients,agrees,2021,55 year,M,160
+train,basal cell carcinoma,train/basal cell carcinoma/8738910-1.txt,13a4e07bc1d8d4371157a991a4b7f59aa55d21b3dca15a8de2417dc34f524c4e,8738910-1,35082610,PMC-Patients,not indexed,2021,80 year,M,70
+train,basal cell carcinoma,train/basal cell carcinoma/9175047-1.txt,37f52cb759ffcb5c729b8a1de3b6e2eae3a334752b6958940f3ec6427de1aacc,9175047-1,32516426,PMC-Patients,agrees,2020,39 year,M,77
+train,basal cell carcinoma,train/basal cell carcinoma/9175047-2.txt,47edc96373eb6793fdad302453ae7353410a0e57fe96f0facb35107e11731376,9175047-2,32516426,PMC-Patients,agrees,2020,80 year,M,98
+train,basal cell carcinoma,train/basal cell carcinoma/9234275-1.txt,13b8fcf65de60fe8c647deb16ea5f35b0bf3b90e5a8f04f7cb1e43e4f97bdd77,9234275-1,35769131,PMC-Patients,not indexed,2022,58 year,M,106
+train,basal cell carcinoma,train/basal cell carcinoma/9249521-1.txt,0dae4a28c4128cbcb374366a59e1862b7bb9a1dc49c561bc6399cf9e12e61eaa,9249521-1,35784675,PMC-Patients,not indexed,2022,104 year,M,54
+train,basal cell carcinoma,train/basal cell carcinoma/9569191-1.txt,781aa1c41887c7c44a0b8a9b084f68a8e30d650c1520e0fc7c5e48347c818c00,9569191-1,36254173,PMC-Patients,not indexed,2022,67 year,F,335
+train,basal cell carcinoma,train/basal cell carcinoma/9588167-1.txt,078cafe61ed5524d32b4ad025784815d5bb95e74c9662b640c8dc2f908a153ec,9588167-1,36299923,PMC-Patients,not indexed,2022,43 year,M,35
+train,basal cell carcinoma,train/basal cell carcinoma/9588167-2.txt,f6aa797ec263ad074e07c8839d13424276b38432d4a72f58c213b7b6f9eb8d91,9588167-2,36299923,PMC-Patients,not indexed,2022,63 year,M,35
+train,basal cell carcinoma,train/basal cell carcinoma/9588167-3.txt,64a8b712a79e0d808ff505ea1b2480c9a5d24d757509157a6930dceccc247eaa,9588167-3,36299923,PMC-Patients,not indexed,2022,69 year,M,78
+train,basal cell carcinoma,train/basal cell carcinoma/9593473-1.txt,57f498bdc5d5c3b3e94ba9e216be2783257ae80961634c0e4d6c54464ec14855,9593473-1,36000995,PMC-Patients,agrees,2022,72 year,M,62
+train,basal cell carcinoma,train/basal cell carcinoma/9593473-2.txt,9d9eafe2630e15cbea3cef132b9807b8d0363105b2bf472053a501db7b9bb3ec,9593473-2,36000995,PMC-Patients,agrees,2022,76 year,M,52
+train,basal cell carcinoma,train/basal cell carcinoma/9593473-3.txt,185cb706bb746e154ee700a368945c164afae7877a61b2d89dccba871152a4d2,9593473-3,36000995,PMC-Patients,agrees,2022,80 year,F,96
+train,basal cell carcinoma,train/basal cell carcinoma/9793728-1.txt,82f5375fa7ba9ea6bedc983b9dae484b67d741ff82d2b028c67c7c2f5544a28b,9793728-1,36582849,PMC-Patients,not indexed,2022,78 year,F,211
+train,basal cell carcinoma,train/basal cell carcinoma/9831639-1.txt,d027c61b14500c89d9730eda18832f82409965f37eb88483ad59db4c88ebba9e,9831639-1,36636656,PMC-Patients,not indexed,2023,52 year,M,35
+train,basal cell carcinoma,train/basal cell carcinoma/9997686-1.txt,9b884833d71e09faa5021e338ad02587a084f78cae378382eac8f3e3ff09b3d2,9997686-1,36911588,PMC-Patients,not indexed,2023,61 year,F,90
+train,basal cell carcinoma,train/basal cell carcinoma/10041369-1.txt,da6e2780be40269782367146b44fdaffe022ba3d64858de280a5d1a762699ebb,10041369-1,36992670,PMC-Patients,not indexed,2023,76 year,F,164
+train,basal cell carcinoma,train/basal cell carcinoma/10123599-1.txt,532d47b89dc7d7444c99a6102e05b0a04809ade9bf50b83c7f22a5326924dfa0,10123599-1,37092530,PMC-Patients,not indexed,2023,81 year,M,57
+train,basal cell carcinoma,train/basal cell carcinoma/10176810-1.txt,29b760fb18b0577b472fafecefcfa049d1ca8f4b3afe03e5e824da26bbb4df38,10176810-1,37170311,PMC-Patients,agrees,2023,78 year,M,503
+train,basal cell carcinoma,train/basal cell carcinoma/10312345-1.txt,37bc6b804f7ac10c4ea923ab9c7aa342b1786f557dc8e97fa02ef1724bb8ca60,10312345-1,37398930,PMC-Patients,not indexed,2023,60 year,F,202
+train,basal cell carcinoma,train/basal cell carcinoma/10563025-1.txt,09b5d9c104b0ba09b997a94c517626eeef8e0e555241145aae25a5100aa6b40d,10563025-1,37822986,PMC-Patients,not indexed,2023,69 year,F,182
+train,basal cell carcinoma,train/basal cell carcinoma/10563029-1.txt,dffadd7e7d8ec676ba855de3ae2a297ea66fa1ab00f3b96c51a4aa32e9a6ef54,10563029-1,37822985,PMC-Patients,not indexed,2023,75 year,F,50
+train,basal cell carcinoma,train/basal cell carcinoma/10595198-1.txt,709ac84642ab1e327c4889b0b6341d91b19bb8bd0c504a7491f6e5ff71c0e7e3,10595198-1,37881203,PMC-Patients,not indexed,2023,58 year,F,71
+train,basal cell carcinoma,train/basal cell carcinoma/10599457-1.txt,b9db3bfe34f9cec70d390505362e8b9cfd2b33d913e60d13960df7f411a7c739,10599457-1,37885494,PMC-Patients,not indexed,2023,54 year,M,72
+train,basal cell carcinoma,train/basal cell carcinoma/10680464-1.txt,8701333e1d04084d5a7d22fda19352cd2d75bbb1c9cfab801d97a6130cfd6055,10680464-1,37982728,PMC-Patients,agrees,2023,64 year,M,159
+train,basal cell carcinoma,train/basal cell carcinoma/10727880-1.txt,90b7c771cdb1c0b94f92ebd0430cc7b14cb8dcf50eb89c3babaff1c73c82a51c,10727880-1,38061706,PMC-Patients,not indexed,2023,59 year,F,186
+train,basal cell carcinoma,train/basal cell carcinoma/10757858-1.txt,57b0cb0b458b89de8ab104e10001d775dbce9b1db521a3686f57e99cc862ce6c,10757858-1,38161568,PMC-Patients,not indexed,2023,63 year,F,102
+train,basal cell carcinoma,train/basal cell carcinoma/10956713-1.txt,8431325ed233753fe3040937e675c8c5dde34e3141f8dbac77d2eafc2a670746,10956713-1,38516482,PMC-Patients,not indexed,2024,66 year,M,53
+train,basal cell carcinoma,train/basal cell carcinoma/11135141-1.txt,236bafdfce424dab58270aecc964103709c30c7b5ae1753c54abb352a6617ba3,11135141-1,38813281,PMC-Patients,not indexed,2024,65 year,F,82
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-2262624.txt,f380a4adc7c321d5efb786f7224d693e5901a7d67aefadd4fdd6d700527d626f,pubmed-2262624,2262624,PubMed abstract,agrees,1990,,,29
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-8245311.txt,5fb0847c77dc298fe28406bd2bd78747ba51e00c4b18a855e98b5f72324cb198,pubmed-8245311,8245311,PubMed abstract,agrees,1993,,,32
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-8517497.txt,8d9920d8dbcde26c91ad8c2c2bc780cd391290d335877a77c6ad84214bc5d526,pubmed-8517497,8517497,PubMed abstract,agrees,1993,,,25
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-8675823.txt,ab85ea20d7ab1a7da25e26d7ab2b58c06d33ae7992018a8768118855587079c9,pubmed-8675823,8675823,PubMed abstract,agrees,1996,,,25
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-10439525.txt,6c9ce52b6cf1d762507268993178a5a4b821b72549ba2fa3a3bbb7348086d1e7,pubmed-10439525,10439525,PubMed abstract,agrees,1999,,,36
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-11149661.txt,b9136dc806230cafb754cd29876e72d078c54da07f99f4ecb03baae71bc333b4,pubmed-11149661,11149661,PubMed abstract,agrees,2000,,,48
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-14684941.txt,8be17841d78fd2f0689cba76525f796bb2c0ae88073f5dd39b2f37bffcd17f63,pubmed-14684941,14684941,PubMed abstract,agrees,2003,,,38
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-15696993.txt,f6f37c41c823e4e292eda29e21cb0da58a23899027969b36fba78518ffe36bf0,pubmed-15696993,15696993,PubMed abstract,agrees,2005,,,33
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-15953381.txt,b856a5d2fe3f30ee04ecf70cc557f58ee31b257061a8d9946629c6bff177b529,pubmed-15953381,15953381,PubMed abstract,agrees,2005,,,30
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-17618177.txt,d78d2cbd42482e2f7b7f17a38a211551808594bb881a0e51e360671eff7e63c5,pubmed-17618177,17618177,PubMed abstract,agrees,2007,,,118
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-18757394.txt,19e786cd93bb785a047c3fcbf7da66503dce5e68581140633301025bcad931d3,pubmed-18757394,18757394,PubMed abstract,agrees,2008,,,40
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-21792351.txt,42c15d2cf44fcee203103cbda9f5298a34bc2ee90b7ffdff0a2e95c3a90fd753,pubmed-21792351,21792351,PMC full text,not indexed,2011,,,140
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-21826272.txt,29348c9013b5a8cf71e7b007dc2fcb6ccef9654d7046d6837dd0606b9349013e,pubmed-21826272,21826272,PMC full text,not indexed,2012,,,231
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-21957657.txt,633f97e80c7b142af8b5d4bd5518320e4496c1bbddb0f7e12bd517185c410e41,pubmed-21957657,21957657,PubMed abstract,agrees,2011,,,98
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-21957959.txt,94c65d0af5615901d4b6b016d7e3140bc8b0072cc96c38cd135c847ee2ba8700,pubmed-21957959,21957959,PubMed abstract,agrees,2011,,,44
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-23552002.txt,6d970b6b57868885de69190a33591e2abbba8b75047e7fbb33f0c40560a43eab,pubmed-23552002,23552002,PubMed abstract,agrees,2013,,,75
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-23569366.txt,d3b7af6e1148fdabecb23e84f3dfd918f2ca655eba161f633643f947a1b09d3c,pubmed-23569366,23569366,PMC full text,agrees,2013,,,84
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-23864993.txt,119175aab0a9ae369ba5db17fd378b476af078524b182eb619f39653c1542579,pubmed-23864993,23864993,PMC full text,not indexed,2012,,,241
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-24396719.txt,b962d6d08daec2a5c02466c47e8a5580355296c602b28f1fdab0dfa1e0b9830f,pubmed-24396719,24396719,PMC full text,not indexed,2011,,,82
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-24786580.txt,50bf94b4c5d1230ee1ce67d5b8a6b702f8e92a8fd57149e4bad4d732472aa9c8,pubmed-24786580,24786580,PubMed abstract,agrees,2015,,,78
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-26295857.txt,4a5c1bb1eb5913b403d363b17ca436e52a851d7f07b93aaf3550aebd54bb9b31,pubmed-26295857,26295857,PubMed abstract,agrees,2015,,,29
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-26876464.txt,ead59edf476eb21e72f7794a7d1afe8e5177521980c435710886f25d038a1a8e,pubmed-26876464,26876464,PubMed abstract,agrees,2016,,,39
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-27051742.txt,d64289c27117ce85db04cbff4ecfdba790404a4bee0b5c1a46cbe6c5b7fd836d,pubmed-27051742,27051742,PMC full text,not indexed,2015,,,144
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-27051753.txt,23c12a821340fad2935782b7462a54c61c61752bfa5014ae68f5b43215cab916,pubmed-27051753,27051753,PMC full text,not indexed,2015,,,79
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-27075125.txt,256ddabac522d257ac92ca78d57a89dfec2ba84990a632ac26778a2964a7b2e9,pubmed-27075125,27075125,PMC full text,not indexed,2015,,,25
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-27697696.txt,753e635ca2111733f08b210671b5b6cd29d336181cf3d2f3121614add1b8bd1f,pubmed-27697696,27697696,PubMed abstract,not indexed,2016,,,32
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-28785343.txt,2da31563f641633712b7b833df98bbe31f1d3fa254a08cca676e2f2cf844c3ba,pubmed-28785343,28785343,PMC full text,not indexed,2017,,,105
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-29563940.txt,b7a01062379b4a942acee07b3ae18a14e6a3029cfe1bce26d6c7e9090c881c99,pubmed-29563940,29563940,PMC full text,not indexed,2017,,,78
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-29641710.txt,d7073905422d7503f0b9e008344d1254d03d1ab1b88b08a09eab5683626d3e5a,pubmed-29641710,29641710,PMC full text,agrees,2018,,,100
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-29924227.txt,6ea40ff8527787b0d282b729db27a61622418409511d2aabe41105db400d8021,pubmed-29924227,29924227,PMC full text,agrees,2018,,,28
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-31762877.txt,bd206e32e1ce0769798a62f6b5d0f6c17a99824bf568d8a742ff8e7cfa62ccec,pubmed-31762877,31762877,PMC full text,agrees,2019,,,302
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-32685644.txt,d3f3b4d19b791482a7aa93b4b4ab780b121633c9ff3cc657c9101322ad8210d0,pubmed-32685644,32685644,PMC full text,not indexed,2020,,,159
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-33329859.txt,a3506ce7d59900d5315f4a9a1264670caf1e680789bed24d5bddaf1797c8fcd7,pubmed-33329859,33329859,PubMed abstract,not indexed,2020,,,88
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-33425577.txt,864369545fbc90258af1e62c773614e297f0bbdc412d07336a705400098badcd,pubmed-33425577,33425577,PMC full text,not indexed,2020,,,109
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-33584954.txt,0638966563905097aefb7fca02535f8e0d217e7e4cc7f3019d16d6b60fe9216f,pubmed-33584954,33584954,PubMed abstract,not indexed,2020,,,29
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-34252646.txt,bffeb4f6a178956c9ce426f16a59a0f7ded97deb84e65c70c8293bab89c9d66e,pubmed-34252646,34252646,PMC full text,not indexed,2021,,,131
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-34504603.txt,e160f391d07cfd393ede70eadb9a03fb5e54f0a0bb11f39ae6f6c150ea999fce,pubmed-34504603,34504603,PubMed abstract,not indexed,2021,,,92
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-35972041.txt,e8f50402d9d1b6e798f313190ccfcf775cd2a88f6af009118ec5fd53e872b1b4,pubmed-35972041,35972041,PMC full text,agrees,2022,,,93
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-36605976.txt,8b2562eb93c3cb524cab82967c1af642e58ea8fcbbb27384fdfaff844f3b85ff,pubmed-36605976,36605976,PMC full text,agrees,2022,,,103
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-36751507.txt,1c4e8a7c2505e892958299e403272b5225e2ac7d160a9a516ec933c901c3a0ef,pubmed-36751507,36751507,PubMed abstract,not indexed,2023,,,43
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-36827001.txt,943ebe27f36a54abcfda12cb36d925b2f7702f5dc96a36b15815afface3683bf,pubmed-36827001,36827001,PMC full text,agrees,2023,,,55
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-37068207.txt,db0cd00f36eaa5a9049139a3ebbb6506fa6ce63106fc2c129a07afb62741536f,pubmed-37068207,37068207,PubMed abstract,agrees,2023,,,62
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-37487354.txt,593d282c8474e305aea0710287190e02c5bd07e78984cec33d9f767e6159734f,pubmed-37487354,37487354,PMC full text,not indexed,2023,,,83
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-38371171.txt,36ca91210e008fc4bf7517f4726c8209b9a59615dea44801fe7ac57a4073ec73,pubmed-38371171,38371171,PMC full text,not indexed,2024,,,335
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-38384734.txt,bea1da3dc24d3d6b49d741601b19b71a1d86adfd4a65ff734067bd27e0121693,pubmed-38384734,38384734,PMC full text,not indexed,2024,,,100
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-38802808.txt,76796cce8381002498aa830ba7262db931e4aacf04bb19a36c6dc55abd8800cc,pubmed-38802808,38802808,PubMed abstract,agrees,2024,,,67
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-38975532.txt,f81c24e7a87222561dccbd38df6fa3a456bf928059d36e9895f7c738401c103b,pubmed-38975532,38975532,PMC full text,not indexed,2024,,,31
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39268443.txt,c16e09dbfb7c74eb4aeb16abc766a8354bac5fe1f29d494cdca49cc625e28761,pubmed-39268443,39268443,PMC full text,not indexed,2024,,,153
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39310074.txt,3d67fabc0a75b5c99a4b2e0fb43bc0ae47bbb1c1aed78970884c06916b13fcf6,pubmed-39310074,39310074,PMC full text,not indexed,2024,,,107
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39314575.txt,ce4cf0485ed4b150b078abcb2897cf2fda245a77b6b93ccb64b42e5e75a77574,pubmed-39314575,39314575,PMC full text,not indexed,2024,,,250
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39355711.txt,862a545752b1e7f85d906b854c08ebb94e352d723b5ed2ed9c814a4d1fb7df75,pubmed-39355711,39355711,PMC full text,agrees,2024,,,254
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39522409.txt,d66d31d67163445e3ea1adfe9794682d94f1a18820eaa99551671a8df104f1b0,pubmed-39522409,39522409,PMC full text,not indexed,2024,,,56
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39597787.txt,f20536b92ca7526d789b12a428b7607326a7621a9c30fa705c95df7c84f2a1dc,pubmed-39597787,39597787,PMC full text,not indexed,2024,,,166
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39649980.txt,f7330ac1cb9cfc2d3edc65702498c33013bb91e0a5dd136796cd331a074ada4d,pubmed-39649980,39649980,PMC full text,not indexed,2024,,,32
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39650166.txt,fd50bdaf04e0fcf6f1d641f5dc5ba1d6dd212ac135505fd41d8c10b44f031e2b,pubmed-39650166,39650166,PMC full text,not indexed,2024,,,40
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39664916.txt,d8b0317d9f0efcae1d7279ec761574e784933f7dc6cfb7f5c6cd59bf2c84875a,pubmed-39664916,39664916,PMC full text,not indexed,2024,,,239
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39675064.txt,da44c34f3c224536360e4b008194757b711fff7ddcd90ba189306ef870495be5,pubmed-39675064,39675064,PMC full text,not indexed,2025,,,173
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39816390.txt,a3b607e72809ab9cd7d7f132379a6bc06725418d853d74e8da5c84c34b7363bf,pubmed-39816390,39816390,PMC full text,not indexed,2024,,,170
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39822933.txt,bc33c573703da3aeb01d80ec826dc53477bdbb627ef87c7d9f27dbe79ebbad9f,pubmed-39822933,39822933,PMC full text,not indexed,2025,,,167
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39863915.txt,e9d7a4b05fe7d05a71b8489caccb7b8ca6a742bed0d1e62448df9673fad2f89b,pubmed-39863915,39863915,PMC full text,agrees,2025,,,93
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-39968018.txt,5e7b70e58bd81d47aab490d94c2ef9ef0a1bd92de0f0c0644947bfcaee3d3d65,pubmed-39968018,39968018,PMC full text,not indexed,2025,,,138
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40026985.txt,1b39e401107126199503683f46003ed3800f485248fc0e4d663cdd0b242cd6db,pubmed-40026985,40026985,PMC full text,not indexed,2025,,,106
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40027537.txt,c27e79d75b291b6d3ab20350a78a04f58ffafaac2c5bd58ef89621c6d90c4216,pubmed-40027537,40027537,PMC full text,not indexed,2025,,,54
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40084188.txt,df5d2548b625a8b3cd92c6dee6612dc12459a17eabbf060c4efd85262a1dae15,pubmed-40084188,40084188,PMC full text,not indexed,2025,,,159
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40276389.txt,60c494680c8cb9dbdfe3424ebad76eaf1eed69e06b37a12635145a5b5085ef76,pubmed-40276389,40276389,PMC full text,not indexed,2025,,,233
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40286695.txt,50b72eb8df55b5b58e8aa01250b0642331484ee044ac10b693269ae2e5208696,pubmed-40286695,40286695,PMC full text,not indexed,2025,,,121
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40661770.txt,b75f122dfdc666202f82a33c3e96554a896659f64270752d544407f478ffb5bf,pubmed-40661770,40661770,PMC full text,not indexed,2025,,,180
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40706330.txt,50d999ca0458907a2c8895bf00b0fbb24bc03f740870b8dc5006e291cd22505f,pubmed-40706330,40706330,PMC full text,not indexed,2025,,,106
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40842486.txt,2173ef59586f40449ce4127a0c887863878e129c1cf30ea4c7c445f120794d96,pubmed-40842486,40842486,PMC full text,not indexed,2025,,,52
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40895852.txt,1b8a395a29e8560908c732cab9e4cedabfb88dc5acd30dcfe948f8a09d5d85f7,pubmed-40895852,40895852,PMC full text,not indexed,2025,,,61
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-40978852.txt,1eeafa4af261b9c77f024da67ac9c9482eb5e00338365eba21d37149b66d0430,pubmed-40978852,40978852,PMC full text,not indexed,2025,,,56
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41050009.txt,837b79778bfa06e81365c514ee47ba09c0ec05d1f79ee09e53426534451ae308,pubmed-41050009,41050009,PMC full text,not indexed,2025,,,27
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41070215.txt,7f51be5f98ec042e75c0a66ee022c861336e9b992c7fba4747411482a7e6a9bc,pubmed-41070215,41070215,PubMed abstract,not indexed,2025,,,42
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41472125.txt,07b86e61c611972c2bfa54b56f4d7aba08d584a327ac3d9dfff779ba51da6957,pubmed-41472125,41472125,PMC full text,not indexed,2025,,,62
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41626533.txt,88c23ef61f8d329ddb8c162a34d74062e97cf2cbca3dc3f733144843439af7fa,pubmed-41626533,41626533,PMC full text,not indexed,2026,,,186
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41669576.txt,accebfa4be5c4e8268a120b2d8c0305dab31e753a79129ba670df585db4abb17,pubmed-41669576,41669576,PMC full text,not indexed,2026,,,43
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41744497.txt,7821856744031086608b76b3eb622f1d758ecf1b5a55fc7204c913ec336454f9,pubmed-41744497,41744497,PubMed abstract,agrees,2026,,,27
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41798156.txt,6e014c8e41d51423827b3b8d2327cd014eca6cb68f558a4ee0a2b41e7d62ac94,pubmed-41798156,41798156,PMC full text,not indexed,2026,,,46
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-41835632.txt,c3b85d1b67ca122d8af22e0f190223d74fb510b7018120308dcc682f8648c9d3,pubmed-41835632,41835632,PMC full text,not indexed,2026,,,166
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42170233.txt,e66d91c4f21f5219f41eed261d02d040ec6c419cd13979f92aed5fbb264cb58d,pubmed-42170233,42170233,PMC full text,not indexed,2026,,,108
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42255753.txt,3444e4ca4565c89ec6ee041548ae9871cb215e9eeb8d0fee35364792c1674cf4,pubmed-42255753,42255753,PMC full text,not indexed,2026,,,97
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42299174.txt,c9986061140a5ec3b369f2be5871f60440097e5f1d1478c5036e0eb3e2af3e3e,pubmed-42299174,42299174,PMC full text,not indexed,2026,,,80
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42359956.txt,b5a56fe8bffb743d4fbe152a4b1e2cba7a438e624b810ab155be96dae57dab52,pubmed-42359956,42359956,PubMed abstract,agrees,2025,,,60
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42388425.txt,16ca2867ee9fbec4dcfde243bc19713b898a378a28e82d2ad9b2723dddeabd29,pubmed-42388425,42388425,PMC full text,not indexed,2026,,,41
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42488272.txt,f50e2c7a31b94836c744162d74e23fe6d6b67d8a9a50c722bf28668863b9f118,pubmed-42488272,42488272,PMC full text,not indexed,2026,,,116
+train,basal cell carcinoma,train/basal cell carcinoma/pubmed-42894695.txt,361470e8d66aec01eaff1f567ab1256c4d6f907434d6677f95f387050a188740,pubmed-42894695,42894695,PMC full text,not indexed,2026,,,261
+train,dermatofibroma,train/dermatofibroma/3798357-1.txt,8420779a8b539c14b07f13d276e81de840687df10fb6a138a0bd612b1a3d2950,3798357-1,24173186,PMC-Patients,agrees,2013,57 year,F,57
+train,dermatofibroma,train/dermatofibroma/6458953-1.txt,b634819e588fb2fde97218ffb47b69086c253c0de6a957d52cf55fb46fedcdd1,6458953-1,31049230,PMC-Patients,not indexed,2019,51 year,F,120
+train,dermatofibroma,train/dermatofibroma/7588162-1.txt,3a7dbd9660bf0d515724f748130f9c87a274474e9c6101cdd23b2cf020826d3d,7588162-1,33150034,PMC-Patients,not indexed,2020,57 year,F,91
+train,dermatofibroma,train/dermatofibroma/pubmed-12100703.txt,261b35e7e20eb65e957ae5f6bd7affcc8f152bc98d82e2c002a227d6bb31a235,pubmed-12100703,12100703,PubMed abstract,agrees,2002,,,171
+train,dermatofibroma,train/dermatofibroma/pubmed-15347330.txt,e2ae911cbfe05b44134c01788829c7cd8f43a16cad635e14ce4a615a6b01cde6,pubmed-15347330,15347330,PubMed abstract,agrees,2004,,,28
+train,dermatofibroma,train/dermatofibroma/pubmed-27408454.txt,ba0f39152fc73650a8b26b26e69db97aa1cf8a76b0d8769fbc044becc88c3232,pubmed-27408454,27408454,PubMed abstract,not indexed,2016,,,52
+train,dermatofibroma,train/dermatofibroma/pubmed-38440582.txt,a5e27af5288098976ad0bfee40a9ea6fd937fb8f9c84364a50672911ea64417e,pubmed-38440582,38440582,PubMed abstract,not indexed,2024,,,90
+train,dermatofibroma,train/dermatofibroma/pubmed-39502277.txt,6648aa6c6a4870ffbaa34a2c257ab0baa857ff23f1de0728a5f3908e23653301,pubmed-39502277,39502277,PMC full text,not indexed,2025,,,209
+train,dermatofibroma,train/dermatofibroma/pubmed-40981342.txt,5e592f5cb52f9bbd58f2f2015dc2c9d8cb919aff6ffd2c9fa0da2a9fc9784b88,pubmed-40981342,40981342,PMC full text,not indexed,2025,,,99
+train,melanoma,train/melanoma/2267474-1.txt,bbad15e894f66481c3292a94afce336537e371b0e165c89435b8116d76e304c7,2267474-1,18237392,PMC-Patients,not indexed,2008,55 year,M,77
+train,melanoma,train/melanoma/2636101-1.txt,0d7749d646d2acfdbda1cd858f16d5e6b2b386a307c0e8dc5bcae5be156686d4,2636101-1,18417829,PMC-Patients,agrees,2008,53 year,M,90
+train,melanoma,train/melanoma/3085478-1.txt,5a352098dab82f2129fdcc63e7d2a178b8d8df0d98a27ab812754a85a6856bbb,3085478-1,21541184,PMC-Patients,not indexed,2011,58 year,M,31
+train,melanoma,train/melanoma/3108530-1.txt,a8a6140ec847adb89d2ad1b4cb35a92a2f02a9aaee66eb693e7919ee3705c5e0,3108530-1,21716556,PMC-Patients,not indexed,2011,65 year,M,76
+train,melanoma,train/melanoma/3162278-1.txt,37010b40569b8ec5edc2cb7664e5e380df6d06a69b99e0e23e1e9b2d9635fd65,3162278-1,21909219,PMC-Patients,not indexed,2011,66 year,F,77
+train,melanoma,train/melanoma/3229054-1.txt,7a18f9674a64ef6f6381c2fa416fca77540cc71205406dd858b573555f3bca75,3229054-1,22148039,PMC-Patients,not indexed,2011,54 year,M,73
+train,melanoma,train/melanoma/3420798-1.txt,fe6ee8c3d66037017ab2474271d585e7fa7cd933ad8af6897fcb83b4acfd320d,3420798-1,22937296,PMC-Patients,not indexed,2012,81 year,M,230
+train,melanoma,train/melanoma/3699915-1.txt,6041cb9861cdf5436dd650b509daa4dc440f1b9da0680152d16cc8db913a21f6,3699915-1,23197217,PMC-Patients,agrees,2012,55 year,F,54
+train,melanoma,train/melanoma/3728608-1.txt,d2969fb9efe6572d7c62cd594b4097a054cfb7fd530db9dd775f9fa6b2e46faf,3728608-1,23904845,PMC-Patients,not indexed,2013,72 year,F,44
+train,melanoma,train/melanoma/3754372-1.txt,fc91e7f30dcc8b69170c07adc433fc154e17e3b68481f33fac1d2fbfb15adaa6,3754372-1,23793189,PMC-Patients,agrees,2013,47 year,F,45
+train,melanoma,train/melanoma/3784113-1.txt,12efedc669a1c3eef96e4c83d2fdfafe0696f2fae9d8abcd804ec425b1be9f35,3784113-1,24328003,PMC-Patients,not indexed,2013,75 year,F,185
+train,melanoma,train/melanoma/3827531-1.txt,2ca7b0d2fb90bc7206160f83aa7fcac50c6cddb3441d8ca5a9173886faa3905e,3827531-1,24249911,PMC-Patients,not indexed,2013,50 year,M,201
+train,melanoma,train/melanoma/4008073-1.txt,addd9feaad603d5af5bb8c5c686a340e99155f2532662853be619059ebeba453,4008073-1,24770519,PMC-Patients,agrees,2014,72 year,F,51
+train,melanoma,train/melanoma/4049021-1.txt,12ef0675b84bff0fed034a707ec045eb1fc1eb9154ca1fda2dc3216182291b25,4049021-1,24932168,PMC-Patients,not indexed,2014,42 year,F,69
+train,melanoma,train/melanoma/4068050-1.txt,566039458a9d54ea7f4e02464dc64e87421373276cdb200dfab68f530529c399,4068050-1,24995141,PMC-Patients,not indexed,2014,78 year,F,130
+train,melanoma,train/melanoma/4248522-1.txt,25e96bc693c379a1ddb6c6049200e4511bdd38c9330963d3d7aae030e8fcdee0,4248522-1,25484414,PMC-Patients,not indexed,2014,73 year,F,43
+train,melanoma,train/melanoma/4303728-1.txt,979289b2f4b8e79948d61e90f4e9503ffc0c76f29a74f80d34f29a754ad50fed,4303728-1,25628812,PMC-Patients,not indexed,2014,59 year,M,273
+train,melanoma,train/melanoma/4349013-1.txt,be0bce5220a583680329b9ae09368172baefb9dcc2da5644022b5c09a55ff2d5,4349013-1,25745288,PMC-Patients,not indexed,2014,35 year,F,52
+train,melanoma,train/melanoma/4377412-1.txt,ad27346cda42648a1c7e76967b7504aba3ca0d617630b6ece998a55cc615da25,4377412-1,25834362,PMC-Patients,not indexed,2015,85 year,M,143
+train,melanoma,train/melanoma/4411598-1.txt,0c9090fbf4a9d1718d1dc37dfa727ddbb5b65c4155a832bd7c32650563bca197,4411598-1,25949027,PMC-Patients,not indexed,2015,75 year,M,143
+train,melanoma,train/melanoma/4474441-1.txt,90fd3287cc68f16b3fe6ee87b08df0cfb616c8b945f24d0e8c862d5260e5a0c2,4474441-1,26088594,PMC-Patients,agrees,2015,77 year,F,115
+train,melanoma,train/melanoma/4508639-1.txt,69f716e87bcf3be6ef0748b7edbf9f50db097233ab32cadd5ef981d9c89114ef,4508639-1,26266008,PMC-Patients,not indexed,2015,78 year,M,27
+train,melanoma,train/melanoma/4513057-1.txt,15588dbd4d70acc552374aee9a98223110dee29b71bd350456175d79f1c8703e,4513057-1,26217569,PMC-Patients,not indexed,2015,33 year,M,120
+train,melanoma,train/melanoma/4516104-1.txt,d34f94df86448f76ea171e6b1c6d6cf8a55a84baee8a1373673ee143d62b84da,4516104-1,26131877,PMC-Patients,agrees,2015,69 year,F,75
+train,melanoma,train/melanoma/4650992-1.txt,564d79648a3c2ffad7d780ee1e948b89dd43c04b92bdf8cf703b32132433c889,4650992-1,26594166,PMC-Patients,not indexed,2015,63 year,M,38
+train,melanoma,train/melanoma/4681203-1.txt,877bd76bb12d479517754f33fe65fd8ade0cad2e5b302da99ecfee14e49ccdbc,4681203-1,26677278,PMC-Patients,not indexed,2015,40 year,M,295
+train,melanoma,train/melanoma/5064298-1.txt,42d9c15cbce25a05868b25b949bc0659246e5028bc4721473764353108c09ff6,5064298-1,27746882,PMC-Patients,not indexed,2016,53 year,F,100
+train,melanoma,train/melanoma/5439066-1.txt,08e6117dad799bdfc92851484ee224af1634452fa74cef6dbff380053939c44f,5439066-1,28567312,PMC-Patients,not indexed,2017,67 year,F,106
+train,melanoma,train/melanoma/5624695-1.txt,ba6fb7c619121eb95572e9e705bc61172f86ef7692949917c6d1f84a4746fc25,5624695-1,28983362,PMC-Patients,not indexed,2016,62 year,M,304
+train,melanoma,train/melanoma/5690489-2.txt,5f4b18781d24a9468516320cab8d7accae3838db4ba73db9337e89a4f816244c,5690489-2,29159004,PMC-Patients,not indexed,2017,31 year,M,64
+train,melanoma,train/melanoma/5726692-1.txt,9a2815eabe1e49d6b84986d7cc2b65e36ae36fa676ae8f90a8aab1db01a87dfb,5726692-1,29267461,PMC-Patients,agrees,2017,82 year,M,58
+train,melanoma,train/melanoma/5880972-1.txt,cb13194843a8b2b4b8ef72d4ec1c3eb7b18e96dc79baa48d2700cf27445228f1,5880972-1,29628990,PMC-Patients,not indexed,2018,59 year,F,122
+train,melanoma,train/melanoma/5947931-1.txt,fbe4d51f971c8ce1c624cd4cf7d04fb5d9930c3e282117ba315ee8aab8c7b5d7,5947931-1,29755903,PMC-Patients,not indexed,2018,67 year,F,164
+train,melanoma,train/melanoma/6029957-1.txt,10f0e53682329cc97a21daf114a55a77d6716a93ee5f17f7416ef00baec84d8b,6029957-1,30065586,PMC-Patients,not indexed,2018,69 year,M,62
+train,melanoma,train/melanoma/6381421-1.txt,e62cf2fbee4c759b948b90d8c4e7b689fcce1f03cb68a9713c6b9ca54c8398a8,6381421-1,30815261,PMC-Patients,not indexed,2019,5 year,M,58
+train,melanoma,train/melanoma/6411517-1.txt,5980b0d65f85c76d81de40884580093ff375569c9e27548fba933f49a4d5479a,6411517-1,30703864,PMC-Patients,not indexed,2019,67 year,M,85
+train,melanoma,train/melanoma/6614109-1.txt,747cbda7c653c307c050890ade9e102145c65cb5179b566ae58f16aecb964405,6614109-1,31280068,PMC-Patients,not indexed,2019,74 year,F,111
+train,melanoma,train/melanoma/6698173-1.txt,b2d92b1901fef2fbcf93625c8fc15e0e354af63b7719f90865906435865e599f,6698173-1,31496836,PMC-Patients,not indexed,2019,63 year,F,269
+train,melanoma,train/melanoma/6939181-1.txt,fbcc726b849530d74f1a38a55bddbbf346aa08f3db90d84d04ab59f4a5d87e01,6939181-1,31789252,PMC-Patients,agrees,2019,30 year,M,95
+train,melanoma,train/melanoma/7319790-1.txt,6fae79f4ac1d1dccf59711aca2e65f6893f4e209254690584165b8fdb46ebc4f,7319790-1,32642306,PMC-Patients,not indexed,2020,32 year,F,101
+train,melanoma,train/melanoma/7336622-1.txt,3db06305d0421319b83abcdd3d86516ab1a3fc87e5d8aef50900459924f27f17,7336622-1,32642340,PMC-Patients,not indexed,2020,72 year,F,68
+train,melanoma,train/melanoma/7366130-1.txt,61b768bf010c786204d9228c48aa9f3d3e4a176991eba98538fc541730b8dfe0,7366130-1,32685126,PMC-Patients,not indexed,2020,80 year,F,122
+train,melanoma,train/melanoma/7576341-1.txt,426c7f062b62cba490ecf6a8be2819ec599a6617e1d4f5b1557ff8b250df762e,7576341-1,33101748,PMC-Patients,not indexed,2020,57 year,F,83
+train,melanoma,train/melanoma/7838110-2.txt,9d90f90ac13b22f8b7c528b2495daf5719e6f8b89340e2304749626c6b57d85b,7838110-2,33281007,PMC-Patients,agrees,2020,66 year,M,38
+train,melanoma,train/melanoma/7838110-3.txt,91d364e6be96693846239925235df1435bba1c3c87c88c4e0f9d534a93f053b4,7838110-3,33281007,PMC-Patients,agrees,2020,81 year,M,33
+train,melanoma,train/melanoma/7838949-1.txt,fc755c454bb777621c1106520a94b5426b168c757383629cb0f097e9343ba696,7838949-1,33445655,PMC-Patients,not indexed,2021,93 year,M,52
+train,melanoma,train/melanoma/7943205-1.txt,e0898e12d572a2c55d4858c248738c3669cf74c8042065bc98bbdbaa1062638f,7943205-1,33747615,PMC-Patients,not indexed,2021,60 year,F,58
+train,melanoma,train/melanoma/7943205-2.txt,4d5947f5846e760a52fae98f71a7e06c280b1c6007d6da3788e15b68f2bae46f,7943205-2,33747615,PMC-Patients,not indexed,2021,48 year,M,44
+train,melanoma,train/melanoma/8212892-1.txt,09bd5254c4ae321820c465fa3d6f806d4f3ddca8fcb2dd84e3417a075363d6f6,8212892-1,34159038,PMC-Patients,not indexed,2021,61 year,M,133
+train,melanoma,train/melanoma/8328845-1.txt,768ce877058d5b9b14c501994001dd30b4066e5e21f53c2877ce38635827b865,8328845-1,34354897,PMC-Patients,not indexed,2021,69 year,M,304
+train,melanoma,train/melanoma/8362584-1.txt,ce3b3183c461c5fab56ea25040f77b8863bee71518f4429eada1b3b3526dfd2e,8362584-1,34435012,PMC-Patients,not indexed,2021,78 year,M,99
+train,melanoma,train/melanoma/8423318-1.txt,27be74f866e5340338293ddfdb0d0e16b46a002df3568203d3087e5d022fbda6,8423318-1,34540398,PMC-Patients,not indexed,2021,62 year,M,329
+train,melanoma,train/melanoma/8648425-1.txt,46a8c5833e0dab9ec1bde00fff596b9a1159c8ade2160547740605acd94df20a,8648425-1,35024226,PMC-Patients,not indexed,2021,75 year,M,75
+train,melanoma,train/melanoma/8824489-1.txt,9541e22e6ebb9e005a296ea67542e274622118eef33c7cdfbdc5c381d6442a89,8824489-1,35223182,PMC-Patients,not indexed,2022,60 year,F,98
+train,melanoma,train/melanoma/8859830-1.txt,677d0e74c736396fe4135288a8745598dc185ddeed9a1b126c9d19aa370203f6,8859830-1,35198980,PMC-Patients,not indexed,2022,26 year,M,53
+train,melanoma,train/melanoma/8882303-1.txt,ae575e94175e87965365b33b9cf870ea25c08ed7074581ab0ca3cf0b62f896a9,8882303-1,35220953,PMC-Patients,agrees,2022,58 year,M,107
+train,melanoma,train/melanoma/9289571-1.txt,efbff86e620e77516bd3ab85227e5dc4865fb507f131491370049e3ac53cf852,9289571-1,35860608,PMC-Patients,not indexed,2022,75 year,M,131
+train,melanoma,train/melanoma/9321777-1.txt,37e00f22e5364ccef9cf353d3e22bd645b70bfbf43e049f9780d0e9a7799a91d,9321777-1,35434834,PMC-Patients,agrees,2022,76 year,F,83
+train,melanoma,train/melanoma/9422357-1.txt,62dbbfe2fdaad48924b96f65dd3b46fc70e060cc55e134b8df6bbd6a4fbe9b03,9422357-1,36045766,PMC-Patients,not indexed,2022,53 year,F,89
+train,melanoma,train/melanoma/9464542-1.txt,2a236ec08bcc08691c17e6bfbde7914a34f7e89b7a6c1a28a1d6fb0b1019740b,9464542-1,36159140,PMC-Patients,not indexed,2022,13 year,F,59
+train,melanoma,train/melanoma/9464570-1.txt,cd654da8b05c9a11b676b6a20d456505c7d210e074ff0038b3182cea4cc4352c,9464570-1,36159120,PMC-Patients,not indexed,2022,63 year,M,121
+train,melanoma,train/melanoma/9487200-1.txt,725a156c66e9ca57cf191441753270f2ac969b81d02404cc80cd35512029fc3a,9487200-1,36148142,PMC-Patients,not indexed,2022,84 year,F,253
+train,melanoma,train/melanoma/9542206-1.txt,f60866443a78097d1cd168a5d8f773ca6b95d06065a6eb012777173b9a455154,9542206-1,35514028,PMC-Patients,agrees,2022,65 year,F,55
+train,melanoma,train/melanoma/9638227-1.txt,69627c72a74be912f74054f089d193a7724972b412ef032e6709891e10b24473,9638227-1,36333615,PMC-Patients,not indexed,2022,77 year,M,34
+train,melanoma,train/melanoma/9638227-3.txt,72a1539fcd23d0aa39ffd0d3cc948b556fe869c3484f7b728182a5ff2e42d557,9638227-3,36333615,PMC-Patients,not indexed,2022,50 year,M,109
+train,melanoma,train/melanoma/9638227-5.txt,0f8b165262c3bc7d2b374149c790e7132a9ffcc7a1d276067bab550406912eaa,9638227-5,36333615,PMC-Patients,not indexed,2022,79 year,M,85
+train,melanoma,train/melanoma/9663247-1.txt,e37d4fa949f96d57930b02a4e2782fa118d9622f20e54555f974d56854152c4e,9663247-1,36386569,PMC-Patients,not indexed,2022,69 year,F,98
+train,melanoma,train/melanoma/9883383-1.txt,8bce3606d6ce53d8833daff8cd14bcef4bfc8cc79eb1e83e7f97c781e581b18a,9883383-1,36721707,PMC-Patients,not indexed,2023,59 year,F,145
+train,melanoma,train/melanoma/9904512-1.txt,083682e003623f75a5af0315bdf7a411d932bd561c7a6a651f309e81eaa76f7e,9904512-1,36779129,PMC-Patients,not indexed,2023,77 year,M,71
+train,melanoma,train/melanoma/9946071-1.txt,e120ad024298198266ce3c3b578925c1ad803242f623fbf4f269ff271c575b27,9946071-1,36701586,PMC-Patients,not indexed,2023,61 year,F,45
+train,melanoma,train/melanoma/10022727-1.txt,9e493cd4447590d57c52a4e99557a56b0d8d437d30aa36e3aa6cf0b1aef7e845,10022727-1,36937447,PMC-Patients,not indexed,2023,70 year,F,125
+train,melanoma,train/melanoma/10047677-1.txt,fe4ea573b06f758d2299d7ecca1d323ade1a7e48477cf6adabb29e3d02e38508,10047677-1,36980355,PMC-Patients,not indexed,2023,63 year,M,113
+train,melanoma,train/melanoma/10257812-1.txt,b2b30fbc47c8984eb68c1ff31bb3f7a103b794c42b3c7ed50794dace32239f0a,10257812-1,37309332,PMC-Patients,not indexed,2023,65 year,M,78
+train,melanoma,train/melanoma/10334933-1.txt,3fb49d9d3e272a0908bb7d9012aaa16bcd46ff17a17b74326220885468cd34b9,10334933-1,37632907,PMC-Patients,not indexed,2022,59 year,M,141
+train,melanoma,train/melanoma/10412465-1.txt,4893e257f4eaeeb9865df24bb0c6313d02e0f9a1b19ac32247f0bed5cd9d079b,10412465-1,37575793,PMC-Patients,not indexed,2023,62 year,M,91
+train,melanoma,train/melanoma/10493823-1.txt,5909dedcdf760cc5db042fb1132092ad3bd5f847dee338c94dff90aa91dc14d0,10493823-1,37700960,PMC-Patients,not indexed,2023,39 year,F,136
+train,melanoma,train/melanoma/10581861-1.txt,e6d65b61ef35d46eccd2e6187fc0e91c1f3255769107c216457fb826d66b47f5,10581861-1,37859876,PMC-Patients,not indexed,2023,64 year,F,149
+train,melanoma,train/melanoma/10629865-1.txt,0ae2204372c9cb13eadf423d736fad8c1ff1da7e8ed6346ae7ff92b934381a4c,10629865-1,37942344,PMC-Patients,not indexed,2023,49 year,F,233
+train,melanoma,train/melanoma/10640706-1.txt,6b291332ba9f2699f997821a0143420243bc04f6adf513515497bd1164f10ee3,10640706-1,38022238,PMC-Patients,not indexed,2023,88 year,F,36
+train,melanoma,train/melanoma/10640706-2.txt,f10b3cc7faf539fed4089d55d8ca32579ee1e2417d13c2c25feec66a5ed08673,10640706-2,38022238,PMC-Patients,not indexed,2023,47 year,F,39
+train,melanoma,train/melanoma/10656161-1.txt,363db3f4e348553a39ce79e3782d7b9487e3923404807c4e641263f6f820fbfc,10656161-1,37992363,PMC-Patients,not indexed,2023,74 year,M,27
+train,melanoma,train/melanoma/10666062-2.txt,5b622f14e72f1797419e7d7a4b68892193d519edfdd3819d8f28dd876bbbbca3,10666062-2,37974485,PMC-Patients,agrees,2023,52 year,M,37
+train,melanoma,train/melanoma/10985282-1.txt,787b984a9bcb37da1be6dea31ab9bb655abb2372a3bd6451312a1c4d28006936,10985282-1,38567210,PMC-Patients,not indexed,2024,63 year,M,241
+train,melanoma,train/melanoma/11006043-5.txt,8bb7f1457a47a791a7284f420922500564b1ad75bb7d6db77a88b293c9b8a48f,11006043-5,38605775,PMC-Patients,not indexed,2024,47 year,F,87
+train,melanoma,train/melanoma/11036084-1.txt,5ac8f9d0547a221d22c9ebb4e57d8fc426d18651b109d27721e25f6f8fb8d18b,11036084-1,38654893,PMC-Patients,not indexed,2024,83 year,F,48
+train,melanoma,train/melanoma/11122514-1.txt,a1fd5a038ecbc43a8390386313e3d67f9ab7907fa4eac2f63ade460146a05839,11122514-1,38792595,PMC-Patients,not indexed,2024,52 year,F,107
+train,melanoma,train/melanoma/11129619-1.txt,2d00a34ff31e2a3af86bbd168bb413a19ab2f2944639deaf208c83536ba3c70d,11129619-1,38801212,PMC-Patients,agrees,2024,10 year,M,55
+train,melanoma,train/melanoma/11170057-1.txt,042d2b8c2bf6b617aa6be4f22b98676ceaa86b07aea6543604edef3b6a91aee9,11170057-1,38872690,PMC-Patients,not indexed,2024,72 year,M,180
+train,melanoma,train/melanoma/pubmed-2326012.txt,4a7a802335945e06f20411e0df7824e126f896e8732fec12be126bba01a140d7,pubmed-2326012,2326012,PubMed abstract,agrees,1990,,,28
+train,melanoma,train/melanoma/pubmed-2621435.txt,6731134f3bcaa06666b368145fa3c09e3adf62056bc2274dd7728f6e786e6e74,pubmed-2621435,2621435,PubMed abstract,agrees,1989,,,53
+train,melanoma,train/melanoma/pubmed-3617232.txt,73c6aa19356cca216f428e660d5816083533573300059fb8c5af518b1c9d5e76,pubmed-3617232,3617232,PubMed abstract,agrees,1987,,,25
+train,melanoma,train/melanoma/pubmed-8251363.txt,be90af7d7df2cdf82325bb647f1889234222eae677e0c1fad911c8abe2d427fd,pubmed-8251363,8251363,PubMed abstract,agrees,1993,,,28
+train,melanoma,train/melanoma/pubmed-10892271.txt,7e05b2c45748070e6e50364194e0b88f762872a695bcaead9b91eaf92d71a763,pubmed-10892271,10892271,PubMed abstract,agrees,2000,,,42
+train,melanoma,train/melanoma/pubmed-15541091.txt,c54a5a6cc3d466451c8c51c39b5851320b69b5e9e386f3841f30ed5656b11f75,pubmed-15541091,15541091,PubMed abstract,agrees,2004,,,35
+train,melanoma,train/melanoma/pubmed-17372102.txt,3f419a911aaeab89fabf2bd13f51a3a54413babb620d60cf6b396b2de77e15bb,pubmed-17372102,17372102,PubMed abstract,agrees,2007,,,27
+train,melanoma,train/melanoma/pubmed-17825759.txt,590f96817b2233b17db08124e740dc2f49e995e2a8099bfd29111cf5adb50919,pubmed-17825759,17825759,PubMed abstract,agrees,2007,,,53
+train,melanoma,train/melanoma/pubmed-19590417.txt,c43bbb6fac9f257260080bad77b60192b0547a175264424d631f165f1ca6fe9c,pubmed-19590417,19590417,PubMed abstract,agrees,2009,,,27
+train,melanoma,train/melanoma/pubmed-19805962.txt,12b52d1f9f456e0e42079519e6a9fee502d64f13a8dc0cad6cafe11e548d4f19,pubmed-19805962,19805962,PubMed abstract,agrees,2009,,,108
+train,melanoma,train/melanoma/pubmed-20445300.txt,37b9357249f6bbf681da7533a0ea499208f1cce427d5827bea505b1478cf8d1a,pubmed-20445300,20445300,PubMed abstract,agrees,2010,,,44
+train,melanoma,train/melanoma/pubmed-21318971.txt,2e00d6db45510bf4ed83e9f528538642cdcc8beec8748a558df907023ef77c98,pubmed-21318971,21318971,PubMed abstract,agrees,2008,,,48
+train,melanoma,train/melanoma/pubmed-21332699.txt,23901bc920ea31c4c5aa838c630a18550815fc29017dc367ab980dadfbbdf049,pubmed-21332699,21332699,PubMed abstract,agrees,2011,,,56
+train,melanoma,train/melanoma/pubmed-22066035.txt,fbe430f30338811a5ab621e3a46766c06b3005993ea481d8cce47cb985c75c56,pubmed-22066035,22066035,PMC full text,not indexed,2011,,,92
+train,melanoma,train/melanoma/pubmed-22693201.txt,5808dac31d9e0ffd73348634726bf2b56c0b238184c74675057eb3c6444c4f72,pubmed-22693201,22693201,PubMed abstract,agrees,2011,,,40
+train,melanoma,train/melanoma/pubmed-22978401.txt,e2a770ba9ac261aa959f4e9df67ed286360c398ef93a0fee279e8aac629ac3ff,pubmed-22978401,22978401,PMC full text,agrees,2012,,,136
+train,melanoma,train/melanoma/pubmed-23565846.txt,3de9451cb37115ac9df8e79a218b2943a57c999151820e4c62c3ecabdeacf6a3,pubmed-23565846,23565846,PubMed abstract,agrees,2012,,,63
+train,melanoma,train/melanoma/pubmed-23569358.txt,13fe7dbe2d6318df5b096d89c664ac9d726a18d650865f8fdadd12bfecb8d70b,pubmed-23569358,23569358,PMC full text,agrees,2013,,,93
+train,melanoma,train/melanoma/pubmed-23626553.txt,dbaa8c58e57707b54015cfc1a49e3849cf8829e42f224eba987a81e62d2346ce,pubmed-23626553,23626553,PMC full text,not indexed,2013,,,102
+train,melanoma,train/melanoma/pubmed-23782676.txt,0b8e5042b20ce407129c336d509c67c1b5fac46984040eb5eda8ef166102cb75,pubmed-23782676,23782676,PMC full text,agrees,2014,,,95
+train,melanoma,train/melanoma/pubmed-23785636.txt,05a0a4e6bf8fcfc3d6ba6e3c998fe9a784e1444b1ed1b5c338ee147ce33df155,pubmed-23785636,23785636,PMC full text,not indexed,2013,,,71
+train,melanoma,train/melanoma/pubmed-23785644.txt,c6a546e68858d37133bea6c805d69bbf4c440de77333494201a0140777c359cb,pubmed-23785644,23785644,PMC full text,not indexed,2013,,,69
+train,melanoma,train/melanoma/pubmed-24335517.txt,7e99e07a040a56ea677e56ba9724417651300e06709d05b6c60bba60e3790fc5,pubmed-24335517,24335517,PubMed abstract,agrees,2014,,,36
+train,melanoma,train/melanoma/pubmed-24520521.txt,f7d98d64978493677e3ac3da494be57c4df69ee00b3f383aa6c278d3bee76fae,pubmed-24520521,24520521,PMC full text,not indexed,2014,,,51
+train,melanoma,train/melanoma/pubmed-24765293.txt,edb3e98c8ecfdd9dc5f00280ab9411fc1447a6b1044c768f238a9cf52c8fd188,pubmed-24765293,24765293,PMC full text,not indexed,2011,,,169
+train,melanoma,train/melanoma/pubmed-24856047.txt,89b240d22da071589dbc113be4f300dcf10951e3d56dc7b189cb0954b290ed77,pubmed-24856047,24856047,PubMed abstract,agrees,2014,,,66
+train,melanoma,train/melanoma/pubmed-24879513.txt,aed4d7358cb76198cf39a3da127672b3e07e0f53e7c05f2834e78ff9d3bdcdc8,pubmed-24879513,24879513,PubMed abstract,agrees,2014,,,48
+train,melanoma,train/melanoma/pubmed-25289347.txt,8cb02962fa09fe5e6698283a1873b0dd6a79b7499d90dbcddc7c99fb3cc1ddbd,pubmed-25289347,25289347,PMC full text,not indexed,2014,,,69
+train,melanoma,train/melanoma/pubmed-25386272.txt,9e7ee21275ceb4bcb3d07aef6e0d366f2d24c6dc9dac6001e70dd641bb08a17f,pubmed-25386272,25386272,PMC full text,not indexed,2011,,,212
+train,melanoma,train/melanoma/pubmed-25636629.txt,2d52b77916ee88ed2ff87dc43832abcac674869189c0147a47af35e1887ff50e,pubmed-25636629,25636629,PubMed abstract,agrees,2015,,,50
+train,melanoma,train/melanoma/pubmed-25870600.txt,15bb211461536b79fc0e4c831358d915e2eaf51892eda5c80ba5ccba78424890,pubmed-25870600,25870600,PubMed abstract,not indexed,2015,,,63
+train,melanoma,train/melanoma/pubmed-26137133.txt,b7dcce07a031a4098fa0eadda8fdd5a81a8dc5c2fd1771ed15b68668a8af79dd,pubmed-26137133,26137133,PubMed abstract,not indexed,2015,,,55
+train,melanoma,train/melanoma/pubmed-26191321.txt,00559bab04b93678d2bc994a235a2ce9c80d7d840f62eec5e0263c7f1a36f6b2,pubmed-26191321,26191321,PubMed abstract,agrees,2015,,,49
+train,melanoma,train/melanoma/pubmed-26448581.txt,150e30eff1d818e7007db81c94dcf591815c4a4a8e7ab41f4e61149f6e120e4e,pubmed-26448581,26448581,PMC full text,agrees,2015,,,54
+train,melanoma,train/melanoma/pubmed-26929670.txt,22f09c2ee98ad0ec0be3cd7541e04f3d9ff443304e9b2f83a81b566996b3592c,pubmed-26929670,26929670,PMC full text,not indexed,2016,,,279
+train,melanoma,train/melanoma/pubmed-27331138.txt,3c74c805aa638f6f5b9e2b45ebd57694813c3e7165851b6a14e78462f45e8a5f,pubmed-27331138,27331138,PMC full text,not indexed,2016,,,181
+train,melanoma,train/melanoma/pubmed-27924801.txt,1c90fecd6991afe89a7c2adfa745a75f93c81a49657fffb3212045a8d42378c6,pubmed-27924801,27924801,PubMed abstract,agrees,2018,,,25
+train,melanoma,train/melanoma/pubmed-28723771.txt,e8b601bf998fddfccbe5de9259e20280918659dbd0a6f4640a77e4118689854a,pubmed-28723771,28723771,PMC full text,agrees,2017,,,161
+train,melanoma,train/melanoma/pubmed-28785332.txt,3eadfd7b9a699cca8c19da3033c5ca7514f9e6357e3b5729bb31f5a169716d02,pubmed-28785332,28785332,PMC full text,not indexed,2017,,,78
+train,melanoma,train/melanoma/pubmed-29196822.txt,d538c70787dd975edbc5c31d74ad6eb329196b87cc82bcdc7a57b8ae88219a72,pubmed-29196822,29196822,PubMed abstract,agrees,2018,,,65
+train,melanoma,train/melanoma/pubmed-29356740.txt,0a767d4c80e02f8d4eb0ca6b7d1ee57b86758a2dcf8d6cbedcd2ecb12d1c41a5,pubmed-29356740,29356740,PubMed abstract,agrees,2018,,,51
+train,melanoma,train/melanoma/pubmed-29531606.txt,9982905047fc85702573d83739f114783eeb4f3ee3da8f831f16599e6bdf4b0e,pubmed-29531606,29531606,PMC full text,not indexed,2018,,,236
+train,melanoma,train/melanoma/pubmed-29594078.txt,73b11322da67792113443a016564c44c668ed97385c138cfcdaf90f7fb78e31a,pubmed-29594078,29594078,PMC full text,not indexed,2018,,,87
+train,melanoma,train/melanoma/pubmed-29644838.txt,c93658fa3a3688fad2d5bc8f948a1004ff436b932880103ada4baed92dfc95f5,pubmed-29644838,29644838,PubMed abstract,agrees,2017,,,37
+train,melanoma,train/melanoma/pubmed-30159073.txt,b1b26814078692bf6f58ce68cfa68f859cb997a1d441e04c9f1b4b1d2e5e14b2,pubmed-30159073,30159073,PMC full text,not indexed,2018,,,266
+train,melanoma,train/melanoma/pubmed-30541312.txt,a7ef90994654ff83e3b6c427c9cceb3d42e61dbf02b483043ea4b5ba61529109,pubmed-30541312,30541312,PubMed abstract,agrees,2018,,,51
+train,melanoma,train/melanoma/pubmed-30607193.txt,63a28423aeac3ec601f22b96faa5e126751c6c262b754913521dde66dc87c545,pubmed-30607193,30607193,PMC full text,not indexed,2018,,,84
+train,melanoma,train/melanoma/pubmed-30726470.txt,c9982ec86b6c1204d4d4777e1ed152cfec895ca682d2e130adab2747b7dad90c,pubmed-30726470,30726470,PMC full text,agrees,2019,,,85
+train,melanoma,train/melanoma/pubmed-30792637.txt,ba0a3972636200668a03d499c619b7f2edf0b9c524737eed7474169b540f9767,pubmed-30792637,30792637,PMC full text,not indexed,2019,,,37
+train,melanoma,train/melanoma/pubmed-31371335.txt,9be09f6df8c159cf1b0fef2114a8dddc7d34573492ae7c6a05819f45000a3c92,pubmed-31371335,31371335,PubMed abstract,agrees,2019,,,53
+train,melanoma,train/melanoma/pubmed-31592860.txt,aeefb3cbf6dae7c9d9ce0591e1877d751e395d30f0d5974cfcc028f4712bbe2d,pubmed-31592860,31592860,PubMed abstract,agrees,2020,,,33
+train,melanoma,train/melanoma/pubmed-31763424.txt,b3160982a7ba7686bd41aa31209ac4c0e59856121dfed4aa2d6d082b1cd7cb6f,pubmed-31763424,31763424,PMC full text,not indexed,2019,,,37
+train,melanoma,train/melanoma/pubmed-32158881.txt,051cda6d4bcdc4e25a7513613955ab4197e96f2dcd78e29ec84ba93c8b810f11,pubmed-32158881,32158881,PMC full text,not indexed,2019,,,30
+train,melanoma,train/melanoma/pubmed-32650855.txt,873f532fea519bb8c99ad025b526198dd1661376ad85f1edb8bfcc12926520ef,pubmed-32650855,32650855,PubMed abstract,agrees,2020,,,67
+train,melanoma,train/melanoma/pubmed-32876038.txt,b84810cbd5a41809de0001200f17364b8b4dd5b3ff83eba369befa160ba4a655,pubmed-32876038,32876038,PubMed abstract,agrees,2020,,,78
+train,melanoma,train/melanoma/pubmed-32953113.txt,bf63c53b3dfd8d7ef6589b18cd97b60ecb465e3cb6b762888e6a2fb5bb8a788b,pubmed-32953113,32953113,PMC full text,not indexed,2020,,,171
+train,melanoma,train/melanoma/pubmed-33041156.txt,09f0e3c7b17aa8f2811f07e69503a8650258059452ef1db2384cd57f9d8955d5,pubmed-33041156,33041156,PMC full text,agrees,2020,,,94
+train,melanoma,train/melanoma/pubmed-33768036.txt,cf22decf89406c4e18cd21a86ea49cbb67e8f8394f20bbc32bc76bd7df40ea60,pubmed-33768036,33768036,PMC full text,not indexed,2021,,,89
+train,melanoma,train/melanoma/pubmed-33997213.txt,3926eddc3af94a116618a1cb4d16e4e3338cce2951f99e744d59a6d4f201b96d,pubmed-33997213,33997213,PMC full text,not indexed,2021,,,92
+train,melanoma,train/melanoma/pubmed-34266825.txt,3b85b0bb44f42beb952e1272d269a5ac46b521331f6afad5afd3fee178e97974,pubmed-34266825,34266825,PubMed abstract,agrees,2021,,,36
+train,melanoma,train/melanoma/pubmed-34320913.txt,e81c56396f70f3ebd8e8c8b5139f7d2f6cb9f16ca5b3e265bb3be6a58534bf0a,pubmed-34320913,34320913,PubMed abstract,agrees,2023,,,48
+train,melanoma,train/melanoma/pubmed-34492616.txt,c420237de95ae4b5bdf762e011a1561b1a9396fb66015c8a704c0b0f68dc893e,pubmed-34492616,34492616,PMC full text,not indexed,2021,,,165
+train,melanoma,train/melanoma/pubmed-34726186.txt,9ce67e39bd9f0a434d2dbd8a4293499067ff9934927d9455c99190636cb5c45f,pubmed-34726186,34726186,PubMed abstract,agrees,2022,,,27
+train,melanoma,train/melanoma/pubmed-35990226.txt,c77a0f7c27b7d47f233a710c6a236e9870fa8e8179e948693ce1a45d9358d2de,pubmed-35990226,35990226,PMC full text,not indexed,2022,,,110
+train,melanoma,train/melanoma/pubmed-36380543.txt,a84d1d38ebdba4ab380dbf461bfc6b2e0c5b9ed456e947ed283fe1260403da42,pubmed-36380543,36380543,PMC full text,not indexed,2022,,,246
+train,melanoma,train/melanoma/pubmed-36905617.txt,0145bce4afcd4e34b72d2a7df12fe88eb648e6b72bffb0e8d1dcdcb2a6122c0d,pubmed-36905617,36905617,PubMed abstract,agrees,2023,,,44
+train,melanoma,train/melanoma/pubmed-36937623.txt,5af289f5278449a919696974336bbb866c6612cce6ecacacb577cf29ae47e412,pubmed-36937623,36937623,PMC full text,not indexed,2023,,,127
+train,melanoma,train/melanoma/pubmed-37094414.txt,7189e47576b6d845bd54261f276e369bee0a7a5095d86cde5c54894faaa85092,pubmed-37094414,37094414,PMC full text,not indexed,2023,,,226
+train,melanoma,train/melanoma/pubmed-37153063.txt,d9362d1bf5e41a92740fa3002be24e28464622f5badd43b49f67c6891cbcfbe7,pubmed-37153063,37153063,PMC full text,not indexed,2023,,,63
+train,melanoma,train/melanoma/pubmed-37323976.txt,358bf96bd51cc11c746cae1e8c8986eff6f2b02969b36a324a7d33a8f199c86a,pubmed-37323976,37323976,PMC full text,not indexed,2023,,,167
+train,melanoma,train/melanoma/pubmed-37506525.txt,7fbcbb65b0698f2705134b526a187825865c5cd6ba2028547bffed1b1b9030fa,pubmed-37506525,37506525,PMC full text,not indexed,2023,,,345
+train,melanoma,train/melanoma/pubmed-37539371.txt,018f24cfb8c5d51341661ed43c474a6bc85fdda41f6ef7344786c7562ee97d95,pubmed-37539371,37539371,PMC full text,not indexed,2023,,,107
+train,melanoma,train/melanoma/pubmed-37573316.txt,d4bc1a4f94f6ea5e4224ae6cb7cfb33ff711ecb4e4cef29a57a12c5e90122a81,pubmed-37573316,37573316,PMC full text,agrees,2023,,,91
+train,melanoma,train/melanoma/pubmed-37715977.txt,e98e4becc877d4c609f36e221fae0b4e1e341c60ef8ade06a459c191787727a3,pubmed-37715977,37715977,PubMed abstract,agrees,2023,,,78
+train,melanoma,train/melanoma/pubmed-38028384.txt,46c8636d721fa16e61b0de537269e94029bfbbe2909eb6dfdd41860836c355df,pubmed-38028384,38028384,PMC full text,not indexed,2023,,,194
+train,melanoma,train/melanoma/pubmed-38576910.txt,0a2d133b9d5a764b5eb21ebf36b3b7121b53be64c8a3d7b9470c5d9b052f99f0,pubmed-38576910,38576910,PMC full text,not indexed,2024,,,39
+train,melanoma,train/melanoma/pubmed-38966838.txt,5db216c580feeaa4fc934813d0d319d3a458041a1508e574e11ab4b2717d83f4,pubmed-38966838,38966838,PMC full text,not indexed,2024,,,79
+train,melanoma,train/melanoma/pubmed-39205907.txt,e5651150af9527838944b9a692113532195d5936d03f8b78b98eac8fd4641f6b,pubmed-39205907,39205907,PMC full text,not indexed,2024,,,223
+train,melanoma,train/melanoma/pubmed-39237979.txt,f96f6b3ac34db7908a831fd08da3dacf634ec4f1fc2d21e9c6cd15f6109a00df,pubmed-39237979,39237979,PMC full text,agrees,2024,,,87
+train,melanoma,train/melanoma/pubmed-39363234.txt,eee142ae4ad659658d39858587747bfe68a734bcad913983e298e44c5df506ca,pubmed-39363234,39363234,PMC full text,agrees,2024,,,161
+train,melanoma,train/melanoma/pubmed-39385807.txt,5ab8d3e3cd1aa7ff9292b4454c9b958c516d7b20588682f824d6701faa032d08,pubmed-39385807,39385807,PMC full text,not indexed,2024,,,169
+train,melanoma,train/melanoma/pubmed-39862659.txt,e1a16f5cdb5176e5a679fbe47441c34abce61fda54b7eafee6f93145ab5ec80f,pubmed-39862659,39862659,PMC full text,not indexed,2025,,,44
+train,melanoma,train/melanoma/pubmed-39869445.txt,8c1f2b427c08a7c9fa3a05b39552420cdd070f0b9134186799f9b5adefd039c0,pubmed-39869445,39869445,PMC full text,not indexed,2024,,,92
+train,melanoma,train/melanoma/pubmed-40125165.txt,082ccc07cc6ec83d26fd174a07d82d7f3cefacf2ee34cd7040abe38f0e87497c,pubmed-40125165,40125165,PMC full text,not indexed,2025,,,49
+train,melanoma,train/melanoma/pubmed-40244039.txt,72f745bfaaea84d5a436aa3f09062ddcfe4ea15f5765b9c7f40af975f970c682,pubmed-40244039,40244039,PMC full text,not indexed,2025,,,64
+train,melanoma,train/melanoma/pubmed-40357084.txt,ccf2bf5b4f3d3c6867d8a22bd871db5855c8ee0268e136e13cf580d904a880b0,pubmed-40357084,40357084,PMC full text,not indexed,2025,,,53
+train,melanoma,train/melanoma/pubmed-40487251.txt,d794eaf82f3cd647ac67ad41209ccb9932a3700da09c9cd9a48ba09cd422be95,pubmed-40487251,40487251,PMC full text,not indexed,2025,,,39
+train,melanoma,train/melanoma/pubmed-40520839.txt,898c08bf7e003b7378722cf09f276c14dc3f1e1ece2398d47f64fc9ce9e13731,pubmed-40520839,40520839,PMC full text,not indexed,2025,,,135
+train,melanoma,train/melanoma/pubmed-40636637.txt,0eecde2c79ac9aa85ecccbe3c84544ac5aba88798ef7982f38c489f2cbaed35e,pubmed-40636637,40636637,PMC full text,not indexed,2025,,,176
+train,melanoma,train/melanoma/pubmed-40729160.txt,75c22b5f5d0112f7f988cb927c1691292e51288893af4f56390c60466aac61a4,pubmed-40729160,40729160,PMC full text,not indexed,2024,,,132
+train,melanoma,train/melanoma/pubmed-40851874.txt,c5837714b5d5aa597308dad8367953ac0c7ec67689d0329e73659b8d78859018,pubmed-40851874,40851874,PMC full text,not indexed,2025,,,277
+train,melanoma,train/melanoma/pubmed-40869985.txt,1145d3e96d2609e84bc9cb93abfae78d52bc58d52eac4cabc6d88d72a9630629,pubmed-40869985,40869985,PMC full text,agrees,2025,,,59
+train,melanoma,train/melanoma/pubmed-40933992.txt,5f2746b52af32cdc022fbb5507e3b05f638b655defae9efadefdfb6c91a0530d,pubmed-40933992,40933992,PMC full text,agrees,2025,,,127
+train,melanoma,train/melanoma/pubmed-40978828.txt,67099648c568480e9bd11bf2c7bae3fb6d0a65566854cc9dda5d16494037cd38,pubmed-40978828,40978828,PMC full text,not indexed,2025,,,41
+train,melanoma,train/melanoma/pubmed-41030925.txt,5bbea1c74be078a3737071fb80ccae7e071a8fbc5a2aebeb9831edf0e145426e,pubmed-41030925,41030925,PMC full text,not indexed,2025,,,34
+train,melanoma,train/melanoma/pubmed-41111856.txt,bec5e98584cac986ac6b26c6de16031e08d5911728e9f2d047dfd589a302da20,pubmed-41111856,41111856,PMC full text,not indexed,2025,,,92
+train,melanoma,train/melanoma/pubmed-41321603.txt,74feba0e2f3221687ebc238fb53d3f0617ecda91d29d638f45e7086d89fe89dd,pubmed-41321603,41321603,PMC full text,not indexed,2025,,,57
+train,melanoma,train/melanoma/pubmed-41341824.txt,f9433d7d20b740ce1ad4f2b00ab8f5d3b64fad868c7edf64b8d78092a4c1a28b,pubmed-41341824,41341824,PMC full text,not indexed,2025,,,50
+train,melanoma,train/melanoma/pubmed-41487751.txt,39ca1e78ae8a1183fbdc799ec49fd78fc46d18cb4d8b376c86fa8cb51904563d,pubmed-41487751,41487751,PMC full text,not indexed,2025,,,56
+train,melanoma,train/melanoma/pubmed-41646537.txt,82014d34221cca49164820d00fc20432200979aad2f0ee0d94f305b8a02a5648,pubmed-41646537,41646537,PMC full text,not indexed,2026,,,41
+train,melanoma,train/melanoma/pubmed-41744881.txt,19694b24050c5463e91a72ca9eee880e7bcae23362e6d8dd86d3256d8ae5326e,pubmed-41744881,41744881,PMC full text,not indexed,2026,,,246
+train,melanoma,train/melanoma/pubmed-41869222.txt,f140f66adaa44aa28abbd190bf488a347ffa442ef48187be29fbff53d16c5c6d,pubmed-41869222,41869222,PMC full text,not indexed,2026,,,134
+train,melanoma,train/melanoma/pubmed-41949015.txt,c7618fc710aff30dc71b993f2861ed400c67aa24cdbadc2657b49d83ad62de9d,pubmed-41949015,41949015,PMC full text,agrees,2026,,,103
+train,melanoma,train/melanoma/pubmed-42031380.txt,cf48d4e13e4a025193448f443ce5ae239cb065e3c451d5e12e2f0c4e7738131c,pubmed-42031380,42031380,PubMed abstract,agrees,2026,,,49
+train,melanoma,train/melanoma/pubmed-42056756.txt,0669519e5db0816ddb5ab7a6b6721d9cc4d8376e71fd3dfc9dcb259922b6e398,pubmed-42056756,42056756,PMC full text,agrees,2026,,,63
+train,melanoma,train/melanoma/pubmed-42110052.txt,a0211f5bfaccdde0a71b1d2209572825115509f78275dea4f26c9aeddcbbd833,pubmed-42110052,42110052,PMC full text,not indexed,2026,,,81
+train,melanoma,train/melanoma/pubmed-42181459.txt,d63cdfaec3d4668dc373610a0331c83138e5a7d48d6e883c2f8870fd8dd16808,pubmed-42181459,42181459,PMC full text,not indexed,2026,,,75
+train,melanoma,train/melanoma/pubmed-42195418.txt,174a5c9c8d6f0732a70cc0d320b52b1b9b2919e3facccd182ec3a744ad617cb4,pubmed-42195418,42195418,PMC full text,not indexed,2026,,,87
+train,melanoma,train/melanoma/pubmed-42199973.txt,80b1abe51adfba4f874c6ddae2c0201fa113a131782e0c24725ee2e5e13f528c,pubmed-42199973,42199973,PMC full text,not indexed,2026,,,26
+train,melanoma,train/melanoma/pubmed-42245639.txt,c61259d6eb6143b36179d7ceb7db1e5796df44c89f7060d23bf457ec3433b9a9,pubmed-42245639,42245639,PMC full text,agrees,2026,,,30
+train,melanoma,train/melanoma/pubmed-42262336.txt,5a23f3ade00ad0aa5cc20707662c34742b8699515af066175a09535ec59c40f1,pubmed-42262336,42262336,PubMed abstract,agrees,2026,,,50
+train,melanoma,train/melanoma/pubmed-42587721.txt,4bcb5a83b425e1b23da767fb26fc893349b6ae56cec660b445b975eeabd00d7b,pubmed-42587721,42587721,PMC full text,not indexed,2026,,,60
+train,melanoma,train/melanoma/pubmed-42603991.txt,ffe41e8d9b4f0efbf8fa2d1ef6797644186546c58fd25609c122fcfdd479f624,pubmed-42603991,42603991,PMC full text,not indexed,2026,,,49
+train,melanoma,train/melanoma/pubmed-42609852.txt,3dd7f10d5660b90840f34c47331a25c504af4629a9c67b24cf48aaf40e4f2ced,pubmed-42609852,42609852,PMC full text,not indexed,2026,,,57
+train,melanoma,train/melanoma/pubmed-42856974.txt,669426a46e51d7aa2f9cce8bad7111edbe9165db00a0e28b13d70f225f0c2398,pubmed-42856974,42856974,PMC full text,not indexed,2026,,,94
+train,melanoma,train/melanoma/pubmed-42909358.txt,10372983d91005b14a3a416ca1261ede59add8a17b9e47878f1001e5d6e49ce8,pubmed-42909358,42909358,PMC full text,not indexed,2026,,,138
+train,melanoma,train/melanoma/pubmed-42920588.txt,48a2ac4552416ccf6056d88d7abebec6391023baa0c8add584eccc74b5fa6660,pubmed-42920588,42920588,PMC full text,not indexed,2026,,,112
+train,melanoma,train/melanoma/pubmed-42948860.txt,82a5da8f93f4bfc09095e1497c31097e524dd15bf077ad8120b0cfa2abba61c0,pubmed-42948860,42948860,PMC full text,agrees,2026,,,96
+train,nevus,train/nevus/3827522-1.txt,237aba32bf4e9f4e446085fbde25228969d543395a654a00815c84b736f8b239,3827522-1,24249902,PMC-Patients,not indexed,2013,7 month,M,109
+train,nevus,train/nevus/3937483-1.txt,a5bd6781b173f1948b3f097433c156c10ec118f804b2d09738c6ee373d92f052,3937483-1,24616852,PMC-Patients,not indexed,2014,28 year,M,293
+train,nevus,train/nevus/4284490-1.txt,e93cbd5514988d48b6c3def3fa2c807fd0fa991bfbcd830e64258bf994f5fb1f,4284490-1,25588635,PMC-Patients,not indexed,2014,21 year,F,43
+train,nevus,train/nevus/4481803-1.txt,e707d7a6e6978ae8542b9074193bf3158f433c750707a5fe336b1d46e19e8255,4481803-1,26167032,PMC-Patients,not indexed,2015,40 year,F,234
+train,nevus,train/nevus/4943305-1.txt,ad178272ca0e8a645ccd3a7315d3901649d9d8a07e055948e04f8d497791b63e,4943305-1,27462219,PMC-Patients,not indexed,2016,52 year,M,114
+train,nevus,train/nevus/5700600-1.txt,8e7fd95e8dab5bc0bb18be16c9bc6a8e095a2d235227ba07c17f4441537b50ed,5700600-1,29133658,PMC-Patients,agrees,2017,20 year,F,121
+train,nevus,train/nevus/5726670-1.txt,4958c56029ff415dac9ba4302e8edc57a99e07b9aaedb382939241a5cc8f3cc2,5726670-1,29267439,PMC-Patients,agrees,2017,15 year,F,78
+train,nevus,train/nevus/6182949-1.txt,fe3b0c9d10010cd1c8d6ec7a081f1cdd6fe30bd63d4f00f67f8b8e8cf7ba15c5,6182949-1,30443119,PMC-Patients,not indexed,2018,6 month,M,71
+train,nevus,train/nevus/6287087-1.txt,15c9ef61e137cc39e44862a95eac9906ca8de258043c85948d538214c24ede15,6287087-1,30581937,PMC-Patients,not indexed,2018,15 year,M,27
+train,nevus,train/nevus/6489059-1.txt,b03000ebc8e0ae6a7af4331b04dff2e79739bf2c187e3422907c4a9671622bc9,6489059-1,31049319,PMC-Patients,not indexed,2019,28 year,F,85
+train,nevus,train/nevus/6707821-1.txt,c57776df002eefa93e7fa4d05354d6a83b048a153593c23bcc3dee331ceab279,6707821-1,31497428,PMC-Patients,not indexed,2019,54 year,F,89
+train,nevus,train/nevus/7001409-1.txt,3a1662f7bda9154c4c85ba1461eedc151b953cf172afb5d2f812025eca8d3778,7001409-1,32055515,PMC-Patients,not indexed,2020,2 year,F,237
+train,nevus,train/nevus/7413440-1.txt,2a528c55c8e0d2a20bd5e45c2c3fa5b0048bf76ddefbd97715ba39613fba671f,7413440-1,32832458,PMC-Patients,not indexed,2020,66 year,F,62
+train,nevus,train/nevus/7563016-1.txt,1d977831b85ae588fdac45284f3a893f6e3bb4dbfd2403542faf891871a71539,7563016-1,32711929,PMC-Patients,agrees,2020,28 year,F,94
+train,nevus,train/nevus/8012142-1.txt,ed323179ab88224a0fc6715197375e27a786123dae42b83eb34d06459512fb23,8012142-1,33833888,PMC-Patients,not indexed,2021,57 year,F,102
+train,nevus,train/nevus/8094459-1.txt,eb5405e6f5044d626b08ab534404888ae0cab88c637a519e8c5e1b45d171446d,8094459-1,33947392,PMC-Patients,agrees,2021,25 year,M,192
+train,nevus,train/nevus/8405355-1.txt,0fabcb862b886190846db8b06e069d0de81ae4386c35ca2d43534aacb27257fd,8405355-1,34513374,PMC-Patients,not indexed,2021,15 year,F,75
+train,nevus,train/nevus/8530055-2.txt,d954598f9daa8910c71a0f8b2fe26233d72650572c4555f22b4b93568327b6cb,8530055-2,34759412,PMC-Patients,not indexed,2021,4 month,F,54
+train,nevus,train/nevus/8790198-1.txt,92984657c4c6325368ed08865d1ae9c56ae3b784e1123c99198afcf412fd3db6,8790198-1,34579962,PMC-Patients,agrees,2021,30 year,M,58
+train,nevus,train/nevus/9069907-1.txt,492533d509fd002709cfbfedefae080d1a388465dd731e603339ca6496a8962c,9069907-1,35531486,PMC-Patients,not indexed,2022,26 year,F,87
+train,nevus,train/nevus/9837582-1.txt,9ceb4ebd7ccba496b13ab5cbf83f31c4dce0fd2f03cc0e39a72b276a93791cee,9837582-1,36685999,PMC-Patients,not indexed,2022,52 year,M,137
+train,nevus,train/nevus/9885278-1.txt,43d8b0ca54f1a43dd6836124e43c85fa2ab64fa8ae628e38a9d32530fe729e18,9885278-1,36172696,PMC-Patients,agrees,2023,6 year,M,43
+train,nevus,train/nevus/9946098-1.txt,b4411ac0e079581620134b6e7204e3905650a770fef42ce5aafdbde9d34b18e1,9946098-1,36892352,PMC-Patients,not indexed,2023,7 year,F,74
+train,nevus,train/nevus/10366870-1.txt,0d48e953f8a13a7f5fa07b5fbc4be424f76863025b9ed81112ff843f66dfaa75,10366870-1,37489452,PMC-Patients,not indexed,2023,42 year,F,117
+train,nevus,train/nevus/10646499-1.txt,cdd8ae6c31550ea0fd2a592377f7c86db53702512b54a4679e76b456ea5354e3,10646499-1,38021933,PMC-Patients,not indexed,2023,14 year,F,155
+train,nevus,train/nevus/10751467-1.txt,e435fb5346eb539b9610a7a790e010c4d63e75458da3db38519a84099613f369,10751467-1,38152824,PMC-Patients,not indexed,2023,40 year,F,159
+train,nevus,train/nevus/11167765-1.txt,6cb8c5132f0616c5e4e3a0a4936673d6278f34d7abba4207df2363929f1ec266,11167765-1,38867278,PMC-Patients,agrees,2024,46 year,F,90
+train,nevus,train/nevus/pubmed-931398.txt,baf08f82a98286249598a78c914c43a14b05a623573b7676a75c883477ae9899,pubmed-931398,931398,PubMed abstract,agrees,1977,,,34
+train,nevus,train/nevus/pubmed-3169686.txt,61a4f157fa2dccb845e8f9ee639868e3c2cad2e5e7567358b2dbddba3e1e0c7c,pubmed-3169686,3169686,PubMed abstract,agrees,1988,,,35
+train,nevus,train/nevus/pubmed-3314974.txt,963c314370e3fc68a8e20d1bc85fbb9180a97ff86b4d645ae4aba45e875f8ee7,pubmed-3314974,3314974,PubMed abstract,agrees,1987,,,25
+train,nevus,train/nevus/pubmed-10632492.txt,7f262427a9605ebc66c04c4053c8395e685902a4c2f576ae57b5d72b41353343,pubmed-10632492,10632492,PubMed abstract,agrees,2000,,,59
+train,nevus,train/nevus/pubmed-15005688.txt,842119e9fe8cb6b94bac7076304fcfb63a74b7fa2a48061f8b1d1220d1b894c7,pubmed-15005688,15005688,PubMed abstract,agrees,2004,,,78
+train,nevus,train/nevus/pubmed-15009390.txt,0d50e11beaa855a7c0f2d670d4b371e399c5464526f3189164fd7d93ff8b9e24,pubmed-15009390,15009390,PubMed abstract,agrees,2004,,,62
+train,nevus,train/nevus/pubmed-15134325.txt,1b19ae7c6b61d19972c7e2698d9af2a4962bde9340f1c67d888dc72be72a66ec,pubmed-15134325,15134325,PubMed abstract,agrees,2004,,,58
+train,nevus,train/nevus/pubmed-16012861.txt,7980a13446687716259021dbda0366b00fed5b7cd8b937b86504e3e20c799a16,pubmed-16012861,16012861,PubMed abstract,agrees,2006,,,38
+train,nevus,train/nevus/pubmed-16393608.txt,7242618135cae0df0844f82f969682729e7dada09d059a1a8f5b19f4ad4776d7,pubmed-16393608,16393608,PubMed abstract,agrees,2006,,,65
+train,nevus,train/nevus/pubmed-16618868.txt,7206f8835d07baf3d668a51f6b9d98f9165652be704a39bb4e8db57b8c7d53fc,pubmed-16618868,16618868,PubMed abstract,agrees,2006,,,46
+train,nevus,train/nevus/pubmed-20507404.txt,45318f7abe4b430a1751816e8e5d97217b0918f2d6cfd8d8de3e6a41e2f35aa2,pubmed-20507404,20507404,PubMed abstract,agrees,2010,,,28
+train,nevus,train/nevus/pubmed-20805689.txt,4c6a63c6dbdcb1cfb895bff8c438194e2f5aa0cd6f7bfd3803066440906adc36,pubmed-20805689,20805689,PubMed abstract,agrees,2010,,,56
+train,nevus,train/nevus/pubmed-29703880.txt,471e6c2a9170289a4cb785285449a72ef14b1aadff7fe74bbedeac948fd587a3,pubmed-29703880,29703880,PubMed abstract,agrees,2018,,,46
+train,nevus,train/nevus/pubmed-29943855.txt,2a6f55e3417830e4b172757049cca382edcb6d6d5a4c4724a6176630d9f49b74,pubmed-29943855,29943855,PubMed abstract,agrees,2018,,,57
+train,nevus,train/nevus/pubmed-30719746.txt,e9252cf7d0e095474b80f3c34d3fcf305f56851edf62a48cd3398d78ffd58f8b,pubmed-30719746,30719746,PubMed abstract,agrees,2019,,,55
+train,nevus,train/nevus/pubmed-34026121.txt,9d697289513290e77d94021544241a47997fe578ed89f754ef122da01ec921bb,pubmed-34026121,34026121,PMC full text,not indexed,2021,,,152
+train,nevus,train/nevus/pubmed-34804761.txt,46b509ebb49f1cae782ef383b62686990b8928c6d4b1e196a62a4dd821169c20,pubmed-34804761,34804761,PMC full text,not indexed,2021,,,69
+train,nevus,train/nevus/pubmed-39165299.txt,479cf28393f1cb953de5c8e5974d683d7f82a93594b65870a4c595bb1b6bf727,pubmed-39165299,39165299,PMC full text,not indexed,2024,,,53
+train,nevus,train/nevus/pubmed-40843881.txt,4d792b4480462aa73d0c2cc65782304e538a8cc9b9e6b1d2236a41f25a9c5e2a,pubmed-40843881,40843881,PMC full text,not indexed,2025,,,90
+train,nevus,train/nevus/pubmed-41574354.txt,5d497ffe17b3b7e38318ec7fc5c5439b1d9e40e5a959e8a1920bbb1fa1583f69,pubmed-41574354,41574354,PMC full text,not indexed,2025,,,104
+train,pigmented benign keratosis,train/pigmented benign keratosis/4622895-1.txt,610db7cae87575456a673049ad54c780754df04aae104505806b41ff1cd78734,4622895-1,26512175,PMC-Patients,not indexed,2015,28 year,F,67
+train,pigmented benign keratosis,train/pigmented benign keratosis/6939077-1.txt,4e64b2223a632ff830427d9286e01fbee7a87d141db6c483c8f55214ef594080,6939077-1,31789261,PMC-Patients,agrees,2019,76 year,M,27
+train,pigmented benign keratosis,train/pigmented benign keratosis/8648421-1.txt,db05c3068eb20986a4aca55dfcff0f7b6bda152eb920aa08b0e91ecf275e5f5e,8648421-1,35024223,PMC-Patients,not indexed,2021,65 year,F,91
+train,pigmented benign keratosis,train/pigmented benign keratosis/11128169-1.txt,a36252a8b2869e95c6ce47e724d01d91c1c91ab8674cf45230faad09337c6d54,11128169-1,38799019,PMC-Patients,not indexed,2024,75 year,M,144
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-19508488.txt,a0246016ac6f9dc32b2ac896ac748a75515f1bffb62590795e24775b83eddba3,pubmed-19508488,19508488,PubMed abstract,agrees,2009,,,38
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-25386277.txt,6184d18785ae2b4a68499ad65d13843db0c8d11a0be77bedf33156a7b8657def,pubmed-25386277,25386277,PMC full text,not indexed,2011,,,97
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-25526344.txt,ef4ca1137e89eae511ae88cc7adccfff618dece6b10f37b879df49f733b97806,pubmed-25526344,25526344,PubMed abstract,agrees,2014,,,46
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-41357318.txt,a965e561d2b1526f0dbe4334c3208d7f3e7db07380211064fcbe0552271c078c,pubmed-41357318,41357318,PMC full text,not indexed,2025,,,80
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-41493242.txt,83c0bb5f4208347f94288f65309d99e0866b1e47ce82aaad427717d3ff8aadaf,pubmed-41493242,41493242,PubMed abstract,agrees,2026,,,41
+train,pigmented benign keratosis,train/pigmented benign keratosis/pubmed-41904532.txt,0aa554a0bbb943a18ccea7c3f56112dc199b878c646d58d7dec6ec99fc4f96cb,pubmed-41904532,41904532,PMC full text,agrees,2026,,,258
+train,squamous cell carcinoma,train/squamous cell carcinoma/1314891-1.txt,1015f120505e8f5fc191febb8e9f22e86d40c117afb0a5aa7ebd668e82f9fcdc,1314891-1,16309562,PMC-Patients,agrees,2005,63 year,M,139
+train,squamous cell carcinoma,train/squamous cell carcinoma/2769336-1.txt,25ed153ae1ff32c40890d25baf21a19b97ad79dc0a3d8ad4ea5e93092a8b1d51,2769336-1,19918506,PMC-Patients,not indexed,2009,67 year,M,112
+train,squamous cell carcinoma,train/squamous cell carcinoma/2907399-1.txt,8fe51c5e44ce3f20e95a75ab3330e863cff07b1f5c2953da5fbd1740d7b433a3,2907399-1,20565942,PMC-Patients,not indexed,2010,66 year,F,97
+train,squamous cell carcinoma,train/squamous cell carcinoma/3027001-1.txt,1910b686077743d68701b971095b547e85439363b85bae10b7fec2f5129388e6,3027001-1,21274289,PMC-Patients,not indexed,2010,79 year,M,88
+train,squamous cell carcinoma,train/squamous cell carcinoma/3198751-1.txt,dd93f90d052c46df002041156406ceb82c44ae67f34088456ebe1e1a2dccb6c4,3198751-1,21967681,PMC-Patients,agrees,2011,58 year,M,183
+train,squamous cell carcinoma,train/squamous cell carcinoma/3221232-1.txt,5b7493dec497c9b99c0768b9f730532a71560a9da31c6e296040a4d2ff8b2b41,3221232-1,22121287,PMC-Patients,not indexed,2011,29 year,F,135
+train,squamous cell carcinoma,train/squamous cell carcinoma/3229955-1.txt,ab7044170eef309827350602b4b2c5ed3eb615219d0f9a32d9ee34db78825197,3229955-1,22148029,PMC-Patients,not indexed,2011,62 year,M,124
+train,squamous cell carcinoma,train/squamous cell carcinoma/3339127-1.txt,09eca95defc875ec1970babd3476dca465f8b403c9946f49a4b5675cab05a17c,3339127-1,22557854,PMC-Patients,not indexed,2012,65 year,M,172
+train,squamous cell carcinoma,train/squamous cell carcinoma/3354388-1.txt,e0e71c40e5156644721e910bda809ca0fe885b694a0c8e2ad8b61eb89c5d3448,3354388-1,22624113,PMC-Patients,not indexed,2010,50 year,M,85
+train,squamous cell carcinoma,train/squamous cell carcinoma/3540696-1.txt,24ff087a9b5c9ff7d0e8f8e7192f41975ec9c5be119fcedc24b0df49c950d840,3540696-1,23320213,PMC-Patients,not indexed,2012,52 year,F,180
+train,squamous cell carcinoma,train/squamous cell carcinoma/3786534-1.txt,57e48390bf6ae0a3f4095ee66351ca06b187ad2c60780d6f982aea243896c838,3786534-1,24102031,PMC-Patients,not indexed,2013,67 year,M,195
+train,squamous cell carcinoma,train/squamous cell carcinoma/3796415-1.txt,99caf96e3946bc1044b48df9e586d0b738ccc4540513294b048f9b53108cb3b0,3796415-1,24137429,PMC-Patients,not indexed,2013,80 year,F,56
+train,squamous cell carcinoma,train/squamous cell carcinoma/3848791-2.txt,7cf3f772c6b929b58a05cab58d8445c36dfcc747108cc4844349da9087f51dc1,3848791-2,24040860,PMC-Patients,agrees,2013,56 year,M,30
+train,squamous cell carcinoma,train/squamous cell carcinoma/3969683-1.txt,1ea3d036a09740abb6fae1adeb79dbaf2baab4a8aa171d97775a900059bd835d,3969683-1,24700942,PMC-Patients,not indexed,2014,65 year,F,148
+train,squamous cell carcinoma,train/squamous cell carcinoma/4065436-1.txt,64d2a4033110762b880780a02c402bdacd1fa33fb4f80dd6205cfc19a0f5b2a9,4065436-1,24959058,PMC-Patients,not indexed,2014,65 year,F,115
+train,squamous cell carcinoma,train/squamous cell carcinoma/4131493-1.txt,8a525c9d5867d60c6f523c97799115ce14834882ad3d51ee72ac7033d40fb0c0,4131493-1,25152821,PMC-Patients,not indexed,2014,42 year,M,275
+train,squamous cell carcinoma,train/squamous cell carcinoma/4209265-1.txt,8e6e0ace462d6d0d4f6e3b3bed6e41a23dcef01dc53271f60ba77c7176489274,4209265-1,25408647,PMC-Patients,not indexed,2014,86 year,M,50
+train,squamous cell carcinoma,train/squamous cell carcinoma/4209265-2.txt,5e4d2d5c381ffbe7be48134fb6e4d635e3d6b85ad755e0e04dd17d49b0cbc7cd,4209265-2,25408647,PMC-Patients,not indexed,2014,70 year,M,48
+train,squamous cell carcinoma,train/squamous cell carcinoma/4248544-1.txt,ed50c9ab462c3f1482cd7fbe09d44d0754d4c3041bc59702d47e3535326d4d60,4248544-1,25484436,PMC-Patients,not indexed,2014,44 year,M,67
+train,squamous cell carcinoma,train/squamous cell carcinoma/4359804-1.txt,09e9aac5ef83d5ce9ddf795bc7d977764a99b29652a486d8836449f0a99817a7,4359804-1,25815013,PMC-Patients,not indexed,2015,75 year,F,127
+train,squamous cell carcinoma,train/squamous cell carcinoma/4466287-1.txt,d0230bab1102df015bd8015744cdf8b7435faecc50543905e04ff26d80702bb8,4466287-1,26082591,PMC-Patients,not indexed,2015,72 year,M,47
+train,squamous cell carcinoma,train/squamous cell carcinoma/4560310-1.txt,adbc81a0f2746d9133c120c05b473daf4de2cfa41b41b4c889d3f5c86e75e3d6,4560310-1,26351422,PMC-Patients,not indexed,2015,64 year,M,112
+train,squamous cell carcinoma,train/squamous cell carcinoma/4607581-1.txt,7c85c20808d675f175b050d9989eb1cade0b154c1449c66305bb353001e3e40b,4607581-1,26484311,PMC-Patients,not indexed,2015,82 year,F,34
+train,squamous cell carcinoma,train/squamous cell carcinoma/4706539-1.txt,9f894d42fc5d252927d0fdcb5e73687aabec70cd5c34dd172231b199a80052fb,4706539-1,26943678,PMC-Patients,not indexed,2016,54 year,F,89
+train,squamous cell carcinoma,train/squamous cell carcinoma/4827219-1.txt,35620a7c72130db2726963dfa5ea5a06134d8e51595e5f3bd959676423469862,4827219-1,27066782,PMC-Patients,agrees,2016,78 year,F,124
+train,squamous cell carcinoma,train/squamous cell carcinoma/4881932-1.txt,ee755714b4e1e5f1a9e8fdd107d01963d43a5c5c2f1388a5516b59dfe0a19f25,4881932-1,27161144,PMC-Patients,not indexed,2016,62 year,F,89
+train,squamous cell carcinoma,train/squamous cell carcinoma/5121571-1.txt,d2c03ad0e8917e90b5f4ae620779afa0820bf2471d2084dcd5bacb715d72f372,5121571-1,27920677,PMC-Patients,not indexed,2016,58 year,M,160
+train,squamous cell carcinoma,train/squamous cell carcinoma/5126593-1.txt,23b04dde1885f4ae4e0821fde92fbc56028c327e755aa7478c108972a18ee88f,5126593-1,27920683,PMC-Patients,not indexed,2016,7 year,M,100
+train,squamous cell carcinoma,train/squamous cell carcinoma/5126593-2.txt,6776227f6ef23018e6b2bf09223a5bb461b809d460e0a81187b812dbd320c758,5126593-2,27920683,PMC-Patients,not indexed,2016,8 year,M,107
+train,squamous cell carcinoma,train/squamous cell carcinoma/5126593-3.txt,cc88b76ee77d8489ba0e6ed41040eec47030ea284ec42eb882199ac7be33ffa5,5126593-3,27920683,PMC-Patients,not indexed,2016,8 year,F,112
+train,squamous cell carcinoma,train/squamous cell carcinoma/5279087-1.txt,2d873ac22e254065d2ec2ec2425dc15b9b7f0e9d8fce02b69603fccf1341e453,5279087-1,28099342,PMC-Patients,agrees,2017,60 year,M,129
+train,squamous cell carcinoma,train/squamous cell carcinoma/5301118-1.txt,29ceb6a7eef975849d50d7d334f6ed54d845db86644b035311f72f4459f1d40b,5301118-1,28203172,PMC-Patients,not indexed,2017,33 year,F,79
+train,squamous cell carcinoma,train/squamous cell carcinoma/5387884-1.txt,b9f17e5df1c0c94d817960304c366b454bb586873e546f75c30932858bdf4190,5387884-1,28442880,PMC-Patients,not indexed,2016,56 year,F,119
+train,squamous cell carcinoma,train/squamous cell carcinoma/5500717-1.txt,bb1e291f630777a3ae5627d474759ef3cfc348732c8e1e07e763ef3aafe6ea6c,5500717-1,28761300,PMC-Patients,not indexed,2017,76 year,F,48
+train,squamous cell carcinoma,train/squamous cell carcinoma/5518578-1.txt,77ead17879b23c533db6ff91d2b9445235fd95a81723bc4df01c53c65d70f497,5518578-1,28761843,PMC-Patients,not indexed,2017,45 year,M,82
+train,squamous cell carcinoma,train/squamous cell carcinoma/5624694-1.txt,f455dc787086f5981c24596098258a299498f56a52c08fb3196973cf69543d20,5624694-1,28983361,PMC-Patients,not indexed,2016,95 year,F,157
+train,squamous cell carcinoma,train/squamous cell carcinoma/5828143-1.txt,ef2a9f503b09c50acbd65dee1dd61ad00cc79292017f669e457b4d807ba7046f,5828143-1,29610695,PMC-Patients,not indexed,2018,81 year,M,179
+train,squamous cell carcinoma,train/squamous cell carcinoma/5839895-1.txt,f988ae3fa369517d0ed3e014aeaf0818aca56e0f20cc47de6bf9bdc280e45763,5839895-1,29606821,PMC-Patients,not indexed,2018,76 year,M,96
+train,squamous cell carcinoma,train/squamous cell carcinoma/5878901-1.txt,338d8c75451529908ee95fa46bc9b2c6a5b848a3449452eebcc242f120ba4afc,5878901-1,29744229,PMC-Patients,not indexed,2018,73 year,F,56
+train,squamous cell carcinoma,train/squamous cell carcinoma/5884260-1.txt,b21ab37763af7af7c488e896b2b1d49c39663ea9b870dab0277a7c9320f62e67,5884260-1,29602886,PMC-Patients,agrees,2018,46 year,M,46
+train,squamous cell carcinoma,train/squamous cell carcinoma/5903124-1.txt,1f6b1cc1eca0e7aabbd008f24bd8be7d3c3913b2ddbf4585f7a940ed225bfc10,5903124-1,29681810,PMC-Patients,not indexed,2018,64 year,F,80
+train,squamous cell carcinoma,train/squamous cell carcinoma/5954775-1.txt,0a84b60ea712091102cced3d85c5680a03fc596718612871237a185d413c0264,5954775-1,29782594,PMC-Patients,not indexed,2017,55 year,M,329
+train,squamous cell carcinoma,train/squamous cell carcinoma/6031089-1.txt,951de213bd1cf47a8a44372a01d04a297681f3364ea0407005b83740363e7d6b,6031089-1,30026989,PMC-Patients,not indexed,2018,49 year,F,67
+train,squamous cell carcinoma,train/squamous cell carcinoma/6031951-1.txt,cfaf00484c63d427029600eb9136db46d7d365a082c2a9756880a842ca4aed1b,6031951-1,29998100,PMC-Patients,not indexed,2018,71 year,M,147
+train,squamous cell carcinoma,train/squamous cell carcinoma/6064627-1.txt,36673a29d5b774208ac9cdc1c87d0bc177f6bd2a1e676c34a17a9ef318f16292,6064627-1,30055637,PMC-Patients,agrees,2018,51 year,M,184
+train,squamous cell carcinoma,train/squamous cell carcinoma/6109022-1.txt,5a515c3d2bcf8ca99776d0e846bd59f3c3682c0e48f5f37c47c0a8b775b3435c,6109022-1,29855895,PMC-Patients,not indexed,2018,60 year,F,40
+train,squamous cell carcinoma,train/squamous cell carcinoma/6137021-1.txt,a861e30663ce75cdcf335504371b32cf2f6e62a5b6e2d1a085fc29bb2e7f5ad0,6137021-1,30255001,PMC-Patients,not indexed,2018,44 year,F,177
+train,squamous cell carcinoma,train/squamous cell carcinoma/6180276-1.txt,71a84dd32e4c6ca1d9049272dddc1e6c7e23a32c3210477c3ada22916e9f23cf,6180276-1,30323750,PMC-Patients,not indexed,2018,76 year,F,100
+train,squamous cell carcinoma,train/squamous cell carcinoma/6211896-1.txt,10edc0ea6180c6257863372e94bc23776cc26458a6739ce096cbde059447d96e,6211896-1,30334944,PMC-Patients,agrees,2018,89 year,M,133
+train,squamous cell carcinoma,train/squamous cell carcinoma/6260552-1.txt,b283f6397a72f6c6c91c424ca8cf65923cd6569172f25fbf425075cfdeb6ba45,6260552-1,30538874,PMC-Patients,not indexed,2018,53 year,M,41
+train,squamous cell carcinoma,train/squamous cell carcinoma/6421930-1.txt,9a0fe2174f5180a9166626953a68908d87003644bfbd697fb292aa149b60604e,6421930-1,30967733,PMC-Patients,not indexed,2019,38 year,F,51
+train,squamous cell carcinoma,train/squamous cell carcinoma/6434754-1.txt,96b48927b192ebf5ea67cb9bba5277b7842cf3b3d93f3319086ef9dfd523e9d5,6434754-1,30984594,PMC-Patients,not indexed,2019,61 year,M,134
+train,squamous cell carcinoma,train/squamous cell carcinoma/6806623-1.txt,e4a73716636a3265d5e7b740513b3f492ec127ed9a3b6e4db103660d550acca0,6806623-1,31666912,PMC-Patients,not indexed,2019,70 year,M,62
+train,squamous cell carcinoma,train/squamous cell carcinoma/7061685-1.txt,50e9f6c8219bd5ae67feb605cd4b7311a59d4a63cbfad662147d7e6e17fce006,7061685-1,32158871,PMC-Patients,not indexed,2019,84 year,F,38
+train,squamous cell carcinoma,train/squamous cell carcinoma/7061685-5.txt,65792475e71411212aa57746cf9caa7a7a4b7c9735d670026e0a19421459e0ec,7061685-5,32158871,PMC-Patients,not indexed,2019,78 year,F,40
+train,squamous cell carcinoma,train/squamous cell carcinoma/7061685-6.txt,a72f02ad7238092a8f4313c496474e78ede10691c97499a1c02d6821b20a0889,7061685-6,32158871,PMC-Patients,not indexed,2019,84 year,F,41
+train,squamous cell carcinoma,train/squamous cell carcinoma/7146309-1.txt,bd7087bf05f3e83207cb256d68e1f61a3b7e386cfb1b42082b4f2a4e3ee35462,7146309-1,32318346,PMC-Patients,not indexed,2020,61 year,M,369
+train,squamous cell carcinoma,train/squamous cell carcinoma/7175428-1.txt,c0793c4e9303bfa71dfe733643fcb0b33c45f90399db875ab1312de525f2437e,7175428-1,32341711,PMC-Patients,agrees,2020,46 year,M,66
+train,squamous cell carcinoma,train/squamous cell carcinoma/7184790-1.txt,e3996f115b6fb6e3c23f77331aba878e35e11177e8b6d36574acc34c884392dd,7184790-1,32355488,PMC-Patients,not indexed,2020,65 year,M,45
+train,squamous cell carcinoma,train/squamous cell carcinoma/7455450-1.txt,3f4375edb4c299f559a9d84893c9f895f1adb914cc8b5164e8a7347ec703d8a9,7455450-1,32884770,PMC-Patients,not indexed,2020,78 year,F,37
+train,squamous cell carcinoma,train/squamous cell carcinoma/7455450-2.txt,b5575fb5a3e1891d64772a37518fc7a67f6f62643ed0564704ddffe784624651,7455450-2,32884770,PMC-Patients,not indexed,2020,76 year,M,48
+train,squamous cell carcinoma,train/squamous cell carcinoma/7670704-1.txt,230034f9f9fc0c3f3a2d0f03a85a59c46885683221991a0448d3f78e649baf6f,7670704-1,33292409,PMC-Patients,not indexed,2020,49 year,M,80
+train,squamous cell carcinoma,train/squamous cell carcinoma/7719265-1.txt,7e888b45f2b33ab150403303a349aaf0a7495774d6d71ba72853b1e630f6a4a2,7719265-1,33050167,PMC-Patients,not indexed,2020,56 year,M,202
+train,squamous cell carcinoma,train/squamous cell carcinoma/7752640-1.txt,076ee81940d83b919ead3908b158657f11dc9610c5ed4b801c1e59fc6d996e11,7752640-1,33363907,PMC-Patients,not indexed,2020,69 year,M,104
+train,squamous cell carcinoma,train/squamous cell carcinoma/7924088-1.txt,5fc1f9c3cf5858c5adab2f8db28f8f923fc2a813edee3f574220a3ea9327f414,7924088-1,33718823,PMC-Patients,not indexed,2021,75 year,M,35
+train,squamous cell carcinoma,train/squamous cell carcinoma/7952297-1.txt,11c0c1cc796810fba5655adfe04d054f72ecd8c1346ee672ab06f651c7609937,7952297-1,33718249,PMC-Patients,not indexed,2021,83 year,F,41
+train,squamous cell carcinoma,train/squamous cell carcinoma/7952297-2.txt,ccd674f6ee741a4ce9d0aae7a310dd3bc92be4461f4b8c250e3c0a021b086dee,7952297-2,33718249,PMC-Patients,not indexed,2021,97 year,F,47
+train,squamous cell carcinoma,train/squamous cell carcinoma/7952297-3.txt,800312be7bc26a44c6e384cda4315a0f811bcfed6bc90f74a9d09b0c01e4bc1b,7952297-3,33718249,PMC-Patients,not indexed,2021,76 year,F,44
+train,squamous cell carcinoma,train/squamous cell carcinoma/8009643-1.txt,2dc271326b291015b38239e7a34b999750d546fcbaf7a1ce88fd944d7cbb7785,8009643-1,33815911,PMC-Patients,not indexed,2021,55 year,M,229
+train,squamous cell carcinoma,train/squamous cell carcinoma/8186998-1.txt,50f2bd89f28834d7a1e4f2416bae8a700fe9b64abceb8a16dfedf1c8fd1765f4,8186998-1,34113181,PMC-Patients,not indexed,2021,46 year,M,366
+train,squamous cell carcinoma,train/squamous cell carcinoma/8252176-1.txt,4446c9b080b5289d1fb85840d7cd93026b704c5af901e79fded81a2884fe1cdc,8252176-1,34212735,PMC-Patients,agrees,2021,16 year,M,232
+train,squamous cell carcinoma,train/squamous cell carcinoma/8278417-1.txt,5a6eca5f71c50a4edd76e3002a14d7683cd459549dee69fc4250200695cc4cdd,8278417-1,34252640,PMC-Patients,not indexed,2021,59 year,F,168
+train,squamous cell carcinoma,train/squamous cell carcinoma/8409213-1.txt,6a49d960337220de56346e4ad786dc4a5309e52632be3f1f204de4c6838031ee,8409213-1,34540966,PMC-Patients,not indexed,2021,77 year,F,94
+train,squamous cell carcinoma,train/squamous cell carcinoma/8740151-1.txt,23be59abeb84b5e316566caab6694adca51df7cb8a3523213169aee86b73d011,8740151-1,35082616,PMC-Patients,not indexed,2021,56 year,M,175
+train,squamous cell carcinoma,train/squamous cell carcinoma/8825690-1.txt,26be51254ee4a25d525e7ba9a4662a142e232b947194fbb4cb6165aa0e9c0e98,8825690-1,35155032,PMC-Patients,not indexed,2022,57 year,M,58
+train,squamous cell carcinoma,train/squamous cell carcinoma/9121989-1.txt,065953b5829ca6aebef05467c502b1cd22988da80c1c41436ebb36aeb7f426c4,9121989-1,35601538,PMC-Patients,not indexed,2022,50 year,F,181
+train,squamous cell carcinoma,train/squamous cell carcinoma/9192687-1.txt,cfc3979ce66fbf0eef73a126d70b13c16fa7d30dbb77f324a586475dddd19309,9192687-1,35712462,PMC-Patients,not indexed,2022,65 year,M,66
+train,squamous cell carcinoma,train/squamous cell carcinoma/9192687-2.txt,4b1d22f0626ee7c898233b57001011ab593034f4876bb2891e24dd1e9ef46e60,9192687-2,35712462,PMC-Patients,not indexed,2022,75 year,M,100
+train,squamous cell carcinoma,train/squamous cell carcinoma/9205272-1.txt,3a105b89ba228da45e536a48903845234ff35ce07f2e013a03fc024b636d6847,9205272-1,35733461,PMC-Patients,not indexed,2022,84 year,M,121
+train,squamous cell carcinoma,train/squamous cell carcinoma/9280752-1.txt,447e9370d065cf10147a5649c91cd9a1eef18517e9f9e2b3447d2733cda0e50e,9280752-1,35846910,PMC-Patients,not indexed,2022,72 year,M,150
+train,squamous cell carcinoma,train/squamous cell carcinoma/9392849-1.txt,04b449de5c35458e76dc5319ad516b94f4311fdeba66bff51606417e8d657228,9392849-1,36004016,PMC-Patients,not indexed,2022,72 year,M,159
+train,squamous cell carcinoma,train/squamous cell carcinoma/9420417-1.txt,e0f0e4269b34cff3b3f4aef50cdc8009c2fd9ed3acc425513ddbca3bbc53c2fe,9420417-1,36043220,PMC-Patients,not indexed,2022,68 year,F,142
+train,squamous cell carcinoma,train/squamous cell carcinoma/9462656-1.txt,a96d5db0d05f49621f3499753b4504f7a1bdf6ec3d865b0ea9da299e8734eed4,9462656-1,36110441,PMC-Patients,not indexed,2022,58 year,M,107
+train,squamous cell carcinoma,train/squamous cell carcinoma/9580330-1.txt,4456e5eeb42a5f260e07d0ef7ba8e77388f87d195404907b232795ec2e5ae185,9580330-1,36277592,PMC-Patients,not indexed,2022,77 year,F,74
+train,squamous cell carcinoma,train/squamous cell carcinoma/9831616-1.txt,7ff57f1c4df42f0a8b9db9183c4448ae6625313e46aa28d36e20c7cc5ed2f7f1,9831616-1,36636549,PMC-Patients,not indexed,2022,63 year,M,141
+train,squamous cell carcinoma,train/squamous cell carcinoma/9891020-1.txt,c52d20b7a67069d0527fde8b411cd83cb2536fd02f4ceae1b797a77cf05a3573,9891020-1,36743112,PMC-Patients,not indexed,2022,42 year,M,119
+train,squamous cell carcinoma,train/squamous cell carcinoma/9900233-1.txt,55965705b134f8ec1ebf663ca927c9367455dd521bf4c021644184398f370ec1,9900233-1,36777790,PMC-Patients,not indexed,2023,51 year,F,100
+train,squamous cell carcinoma,train/squamous cell carcinoma/9910816-1.txt,b8241be89dcd14105e4493ce6ede6023f0f0e0b1d623a6988307f078ad2e3971,9910816-1,36788857,PMC-Patients,not indexed,2023,91 year,M,79
+train,squamous cell carcinoma,train/squamous cell carcinoma/10039754-1.txt,f2fe808e40ae9fba44460469433d18db19d6eb8940eaf566c44f21e1151c5a31,10039754-1,36974168,PMC-Patients,not indexed,2023,62 year,M,132
+train,squamous cell carcinoma,train/squamous cell carcinoma/10056737-4.txt,c218e5d3b92e624919189c04f777cef89f02567ee22e682f62bb56c57962b0c2,10056737-4,36983424,PMC-Patients,not indexed,2023,52 year,M,57
+train,squamous cell carcinoma,train/squamous cell carcinoma/10263070-1.txt,84aa35be0f95399eec3357007544b10e2cb07037dc464aefc635853e18d9b108,10263070-1,37323298,PMC-Patients,not indexed,2023,88 year,M,238
+train,squamous cell carcinoma,train/squamous cell carcinoma/10391777-1.txt,430bb24fcb5b18998e1be0e6f0600605daf9eeda56314485360edb942da1b0ff,10391777-1,36705400,PMC-Patients,agrees,2023,50 year,M,62
+train,squamous cell carcinoma,train/squamous cell carcinoma/10395632-1.txt,8406aa2315e0b2b87c156e3fa21a4c528e21650f7d0d36879ced8038d85664f7,10395632-1,37538336,PMC-Patients,not indexed,2023,40 year,M,50
+train,squamous cell carcinoma,train/squamous cell carcinoma/10421574-1.txt,3591cfb687379343bb504ca623126a184fd9de378cf57a611686cc02cb941cd4,10421574-1,37576725,PMC-Patients,not indexed,2023,69 year,F,191
+train,squamous cell carcinoma,train/squamous cell carcinoma/10508921-1.txt,47bb1526dc9b919b141bc798fe3bdaefff1e907323d4146ecf78de40ff129032,10508921-1,32701165,PMC-Patients,agrees,2021,78 year,M,34
+train,squamous cell carcinoma,train/squamous cell carcinoma/10539787-1.txt,62c01d48f8a5cdc64f39640d0ee325192c1ce0b2e3a55354f39a57ff6ce331eb,10539787-1,37780529,PMC-Patients,not indexed,2023,73 year,M,134
+train,squamous cell carcinoma,train/squamous cell carcinoma/10568952-1.txt,718c2dfd5722d7e8ed22aa4ec6feee35f9bfcb94488ddcb623b7c2667b43a633,10568952-1,37842450,PMC-Patients,not indexed,2023,50 year,M,786
+train,squamous cell carcinoma,train/squamous cell carcinoma/10835559-1.txt,87c799db2b2128e46ab5ac135fbda9c18363ad24f0afbeaafcc45cb56144160a,10835559-1,38313173,PMC-Patients,agrees,2023,72 year,F,300
+train,squamous cell carcinoma,train/squamous cell carcinoma/10873700-1.txt,8005c549f9c5f0f4d1f05653e1642ed264c90e27b9ebe1b311ad34b22a864d8f,10873700-1,38370500,PMC-Patients,not indexed,2024,60 year,F,94
+train,squamous cell carcinoma,train/squamous cell carcinoma/10881292-1.txt,6a0264dbec975ca106ce59ccacbf30ae166b87bd84a56cc8a386d8ced616022e,10881292-1,38389511,PMC-Patients,not indexed,2024,80 year,F,281
+train,squamous cell carcinoma,train/squamous cell carcinoma/10969264-1.txt,472021b04cd07394e44f63f0bc616b23f2333e5dfbd079ad7b468cdc609f733e,10969264-1,38550807,PMC-Patients,not indexed,2024,60 year,M,52
+train,squamous cell carcinoma,train/squamous cell carcinoma/10987401-1.txt,2a4351d66be6a7f073046949a36f6c8adae45217b577a8227750d13bd80e3407,10987401-1,38571860,PMC-Patients,not indexed,2024,83 year,M,151
+train,squamous cell carcinoma,train/squamous cell carcinoma/11001315-1.txt,36c7aaffff253a4214e7ffdabfc1fe8a362fccd9c00f486d5ae73d299f6d0098,11001315-1,38590475,PMC-Patients,not indexed,2024,98 year,F,67
+train,squamous cell carcinoma,train/squamous cell carcinoma/11128329-1.txt,391283fc3490615f3177f715dd24df06c93a79dde46ee153df3d0bdf06350785,11128329-1,38803760,PMC-Patients,not indexed,2024,44 year,F,43
+train,squamous cell carcinoma,train/squamous cell carcinoma/11144422-1.txt,63ed128b9a4366dd5efbd327836efbd09b3e261e970fec9b6982fa88b5f5e1ed,11144422-1,38827628,PMC-Patients,not indexed,2024,61 year,M,296
+train,squamous cell carcinoma,train/squamous cell carcinoma/11146447-1.txt,1b881201792933f94da130c53e8babda89e1b26f51abbf25a1fec362df78770d,11146447-1,38832174,PMC-Patients,not indexed,2024,75 year,M,302
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-211056.txt,f3e7983c8dc5167998bf36df562cd63d2fda6031dbdcbdefc247d5f0162ae9ee,pubmed-211056,211056,PubMed abstract,agrees,1978,,,31
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-2794165.txt,e48cf69c60ec868c874b15a3c9fd7976485e3a3d0de17e87dc59eabfa8c24bd6,pubmed-2794165,2794165,PubMed abstract,agrees,1989,,,33
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-3529812.txt,f4e1df3b0590696adc4a42aec0d698d9d2e5807b3b0754f5d70c3f3d2bd58a7e,pubmed-3529812,3529812,PubMed abstract,agrees,1986,,,36
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-8105625.txt,d35164d961a14bad1cfd8fb73785187030a1ca1ab9256065a61700b8e69e47e1,pubmed-8105625,8105625,PubMed abstract,agrees,1993,,,34
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-9056656.txt,ac999de3903b9daba9f035ec99642d56cf87658fa849b568d8b5eff085d05447,pubmed-9056656,9056656,PubMed abstract,agrees,1997,,,46
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-9085157.txt,862b89a2ae89d51938f7d3492b5f6fc59d78e0e0b7b968073077572c072553e7,pubmed-9085157,9085157,PubMed abstract,agrees,1997,,,43
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-9580811.txt,c646565db54fbe23380992c9eed8bd27bf896f42dfb5012a096f456f0153e98a,pubmed-9580811,9580811,PubMed abstract,agrees,1998,,,35
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-9861735.txt,9015069df123f463cc8629f966dbbdc869b5c3abbef6e37807dc651994ccc620,pubmed-9861735,9861735,PubMed abstract,agrees,1998,,,31
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-12135525.txt,d85fad8e5bfa51ab4cb615dce41729745efa03bad1a1f76adecb604296459ff4,pubmed-12135525,12135525,PubMed abstract,agrees,2002,,,43
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-12207766.txt,f65d41e4b92a399d680dfcdfc1e2d956971a02eb04d2242b91c8cefac23f163a,pubmed-12207766,12207766,PubMed abstract,agrees,2002,,,127
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-14871229.txt,0c9f5abd712104f6d8d17377be56e7041383a76cbd3374d477b08fd339795e9a,pubmed-14871229,14871229,PubMed abstract,agrees,2004,,,29
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-15492424.txt,69fee73658f093adeadd6ca593ab8be3cdfc28962246109aa10de779a70bbdfc,pubmed-15492424,15492424,PubMed abstract,agrees,2004,,,45
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-16197430.txt,04a4479e86f4a874d23b531aa2ace9560df743ae493ecfb8854abaeadb7b69ff,pubmed-16197430,16197430,PubMed abstract,agrees,2005,,,61
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-16466514.txt,a7ee91f6d77e0d1dc59079f4dd026e4b9a9df019d57b9839bbcd049a02d6b1bf,pubmed-16466514,16466514,PubMed abstract,agrees,2006,,,36
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-16483058.txt,ae10e9f986a986f8c74935640460bc0a8ee3da07830880aa030dab2706f25d2b,pubmed-16483058,16483058,PubMed abstract,agrees,2005,,,48
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-18048875.txt,a50108e1e30c37a62faacd49956d5297ddf91fa35898d1b29a922853ad471835,pubmed-18048875,18048875,PubMed abstract,agrees,2007,,,141
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-18273510.txt,9e4b9c67593f131338e7bcd66dc3fcd7b89999140671189665770a63c79110af,pubmed-18273510,18273510,PubMed abstract,agrees,2008,,,83
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-18559769.txt,de5dfc7c5e5f5dd02313028b94c72e6a75437eb82b06c75190814dfbad1b9b7e,pubmed-18559769,18559769,PubMed abstract,agrees,2008,,,47
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-19061623.txt,1fbdddc6c6d82966af99606264c966d82407b900883bbe19501898a96507746c,pubmed-19061623,19061623,PubMed abstract,agrees,2008,,,35
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-21139891.txt,ab32d4c59794fa8867aeca6da037a21e8f598cdd4945ffcad1ae368fca1bb6b2,pubmed-21139891,21139891,PMC full text,not indexed,2009,,,176
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-21769774.txt,91c3ff20d06b946bc997b76f85a87050af36802e9d2db7e74004bf9eaf904b71,pubmed-21769774,21769774,PubMed abstract,agrees,2011,,,35
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-21897818.txt,80b4f6f9deca2438ac33d394049cd504a711ba5936a6a53ac5c5a4c7be7d9669,pubmed-21897818,21897818,PMC full text,not indexed,2011,,,131
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-21922390.txt,bc112db67c04cc9c5e0e386cf9c14c0e291bae21f3242b1644ac018a6ebfb883,pubmed-21922390,21922390,PubMed abstract,agrees,2011,,,25
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-23271994.txt,dc3889c41beeb4f3a2758c9cc32ec55f3dac19b8df363692447deaa449ede743,pubmed-23271994,23271994,PMC full text,not indexed,2012,,,50
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-23457882.txt,b6e40486a4b5fced39b949bef09c4d20b1cc14592576998d164694cf0dd41abd,pubmed-23457882,23457882,PubMed abstract,agrees,2012,,,52
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-23714052.txt,c52e4d3481dbb91ab104c7ad4ddc067b9ac2e45f5d92d31df485a05a11d1bb43,pubmed-23714052,23714052,PubMed abstract,agrees,2013,,,29
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-23926398.txt,98534c655abaa9bb46f8031075c30b76fbd1098cad592005780ce0d206c6124a,pubmed-23926398,23926398,PMC full text,not indexed,2011,,,65
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-24214953.txt,0fedecff5e795508a7d02d62d802c58b10dd2d9c60042296d5b07b7f52134394,pubmed-24214953,24214953,PubMed abstract,agrees,2013,,,49
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-24765553.txt,b019fb4919020f6a6bc06de1bbe9d36fd061bfd58856eb86af19be7c952de5c5,pubmed-24765553,24765553,PMC full text,not indexed,2012,,,42
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-25191429.txt,7ddece61b9db33363f622350821f37afd04fe79bb7ab377a80835fc85956f76f,pubmed-25191429,25191429,PMC full text,not indexed,2012,,,289
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-25750849.txt,0352a7a492ba3b25593f14a9b036e2d1ff9ea1cff15de2d2ec4e88de5035997a,pubmed-25750849,25750849,PMC full text,not indexed,2015,,,70
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-25826522.txt,4b59ab923f9bdbba65d4baabfe303a98c71ce5ed8e01e34424b1e1cf47a01cd4,pubmed-25826522,25826522,PubMed abstract,agrees,2015,,,61
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-25878926.txt,f470a50ef4d40c69228e6a3fdbfd5c8871de48724a2cffdd92f76510afa97b62,pubmed-25878926,25878926,PMC full text,not indexed,2015,,,148
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-26091513.txt,1d1207479c817cd022152a2fb5472e34c54e1f723c5a0b9bc608a24b51b68bee,pubmed-26091513,26091513,PubMed abstract,agrees,2015,,,108
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-26472290.txt,dbe49f378166c456346ba3bcc6f842054141e39cd75516d1766ffef10725e2f2,pubmed-26472290,26472290,PubMed abstract,agrees,2015,,,50
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-26495235.txt,0afcc2356bc79c831ef8237a349e5a9f385861c1556dfcb3c1eb24761562e08a,pubmed-26495235,26495235,PMC full text,not indexed,2015,,,27
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-26904452.txt,ac2cd3b6ccf340eafcbd32f7be2aff7d90a5e3d8afc6240ff58a9f99e77dae97,pubmed-26904452,26904452,PMC full text,not indexed,2015,,,238
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-26998295.txt,4362a2c97517244bbf6beee3f10fe3b549a8402a95f314bbaaeb10286fb95d2e,pubmed-26998295,26998295,PubMed abstract,not indexed,2016,,,36
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27051710.txt,2ed9fa9831f42fcdc007928d764ae88e5d31b4ccf0b6ed1c51209b703685b2e8,pubmed-27051710,27051710,PMC full text,not indexed,2015,,,104
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27051826.txt,800392147027ab116d44f20271564a0c3446c5e6a7428bcb442511edf51a67aa,pubmed-27051826,27051826,PMC full text,not indexed,2016,,,150
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27207346.txt,25f15a4628d36be74edba90c6cbbf69c7c54e921501112563cdf642ec3cb94ba,pubmed-27207346,27207346,PubMed abstract,agrees,2016,,,42
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27222765.txt,276183db98ea1aec5594985e0ceb4be859b9483adb5b4d875db5d0968e49b17d,pubmed-27222765,27222765,PMC full text,not indexed,2016,,,142
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27535727.txt,a566fa3f068e8278eafa929695da124101ad08de6c0b834f84b8b61e19adaf64,pubmed-27535727,27535727,PubMed abstract,agrees,2017,,,69
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-27790451.txt,5b3177a28521372fa36989be9d8df3e2ae17eff55b53461a772d6351e1abc7b9,pubmed-27790451,27790451,PubMed abstract,not indexed,2016,,,48
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-28134189.txt,97b6f441b8e33a6dc89ea84b327f43eafd47eee2ffc583afd500dec2642afbc3,pubmed-28134189,28134189,PubMed abstract,not indexed,1988,,,29
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-28329540.txt,b84d4fb091e0a3e71e8b0e70882365fb3a92ffdb65860a0077cffd7faaad0480,pubmed-28329540,28329540,PubMed abstract,agrees,2016,,,94
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-28370387.txt,642cb82be7741026514594c3a92fc4cb81142f8ae544fed74f64fa15d2521b49,pubmed-28370387,28370387,PubMed abstract,agrees,2017,,,28
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-29139140.txt,b3f4e6c1f278815c83a3da26ee6f9efb39d5dcb34f8e18835288df5f57145aaa,pubmed-29139140,29139140,PubMed abstract,agrees,2018,,,35
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-29266386.txt,2e096adf8ab2836c868aa1e5f590c2b9546cc14deb657bb850a62e2a2de8863f,pubmed-29266386,29266386,PubMed abstract,agrees,2018,,,25
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-29484002.txt,07a1795b4dea1af145c07479df8883a00d43db177b6a148c79abf7e960208d37,pubmed-29484002,29484002,PMC full text,not indexed,2018,,,173
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-29742561.txt,8ef5339bc68ef758fc806023b19c191846f6fd4b10efc9a2e6dc03afa43155e6,pubmed-29742561,29742561,PubMed abstract,agrees,2018,,,43
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-29984271.txt,4186b19cd1aa40ebd93d17f34dcf26f7ec06487676d1ff0f8091a9e5300fcc40,pubmed-29984271,29984271,PMC full text,not indexed,2018,,,99
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30204258.txt,5d67bd1642c9b69223d321a849c0a9a3a437e8e8748cbecaf3ac489c5b5b6822,pubmed-30204258,30204258,PubMed abstract,agrees,2018,,,28
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30310837.txt,cd51ce3ed5913e81eab90e47c9508b9b194d8d6103bfa379d4832ec614cb7007,pubmed-30310837,30310837,PMC full text,not indexed,2018,,,84
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30591900.txt,5bfebcde2960ea227799d43e8e5ace8f29ece1289bcccbec8b5ea6abdbd00c6d,pubmed-30591900,30591900,PubMed abstract,not indexed,2017,,,50
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30596017.txt,016bfb16bdbdc432d9f316c8ecb4b0c2706c602659c4b2515808a66afee9e84f,pubmed-30596017,30596017,PMC full text,not indexed,2019,,,51
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30685629.txt,2efedb7028c968973a493e03995c0ca725ee62cd774b06d24b7756cfeb746b61,pubmed-30685629,30685629,PMC full text,not indexed,2019,,,392
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30843746.txt,4fb9257c19cd1b9e6f97641c3504cfd879a9b293ba66cd3ab6951e8d5896124b,pubmed-30843746,30843746,PubMed abstract,agrees,2020,,,41
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30881827.txt,c1fbc3743461fa87b20d1794b62257384beec74d52813b1dcfea40d54b9f2cc3,pubmed-30881827,30881827,PMC full text,not indexed,2019,,,116
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-30894921.txt,16a8faea2d2aaab66cd8f2f9f50a63aefa5361e07d023dcc8b3d471fef73297b,pubmed-30894921,30894921,PMC full text,not indexed,2019,,,117
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-31485536.txt,4762ed7e8fe754f09d2b7ed50d133df8ed968950aebb504fe3060e53c4ce2679,pubmed-31485536,31485536,PMC full text,not indexed,2019,,,36
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-31692840.txt,4e8d7ec6441afb4b4db708c19eb43d0d86434ffd0416a3f18a26202afc0f51f9,pubmed-31692840,31692840,PMC full text,agrees,2019,,,109
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-31850123.txt,d84291df5c48173259ed6d5f16bef0adaeb74a09b1c4c0dbc913b69166b91d76,pubmed-31850123,31850123,PMC full text,not indexed,2019,,,66
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-31884265.txt,ba52b9583588fd129184b9c676cf78400951b87fa3248d38bbe4bbaf211f9282,pubmed-31884265,31884265,PMC full text,not indexed,2020,,,60
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-32211494.txt,9329626defd213fd89cf8249e3bb75606164be6dcb17ba580f0dc91aa501f4ac,pubmed-32211494,32211494,PMC full text,not indexed,2020,,,134
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-32417733.txt,4cff6c6c1510e64725e2597b5e31bd98b768d52f824aa2aae8187aa2043d3204,pubmed-32417733,32417733,PMC full text,not indexed,2020,,,45
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-32518541.txt,7f4b2719b0dcfdba386278caa54b5b9f3b31e799f365c795939b7a6a2bbfddca,pubmed-32518541,32518541,PMC full text,not indexed,2020,,,29
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-32760776.txt,6189ae413edfd83a719ea2556aa41c15d6248a28791174330bf61880aa2f6fd5,pubmed-32760776,32760776,PMC full text,not indexed,2020,,,40
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-32874574.txt,f161b963e086f62e073c154fdcdf16cb85c92fee42994a4ca0a1aef0c2e0401e,pubmed-32874574,32874574,PMC full text,not indexed,2020,,,94
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33145143.txt,eb231f7eb6bcc442c5639dff9093e4d2a3a8575f21793409a800769243b7e029,pubmed-33145143,33145143,PMC full text,not indexed,2020,,,117
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33294566.txt,2ab59a29a97b3783518f36b123a13aa25094edc0d13036b2d252e8881ecf93ba,pubmed-33294566,33294566,PMC full text,not indexed,2020,,,128
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33564593.txt,c8a2c752ae1a7ae31b11f5779127f9745a4266ee5cd583e2dfe728ff28c9d099,pubmed-33564593,33564593,PMC full text,not indexed,2021,,,103
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33655188.txt,8ca7a45beedc0bcfc29304b63dd85fdc38d6430361cff9f134aed18c5db7ff9d,pubmed-33655188,33655188,PMC full text,not indexed,2020,,,112
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33732837.txt,5a8d8acece52950f699b348ce87cd7d202e883506528f875d3c5ca1d6e20e5b4,pubmed-33732837,33732837,PMC full text,not indexed,2021,,,42
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-33842344.txt,3ea035cac30e21f033d3de34b248831dcd271b4f748d61c1b3bee1478b15ffbd,pubmed-33842344,33842344,PMC full text,not indexed,2021,,,180
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-34011202.txt,7461200493a705378f03ba59b73c84071d2aee13bb54e999e0919994dd1e5e39,pubmed-34011202,34011202,PubMed abstract,agrees,2022,,,31
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-34401428.txt,64bd83b31eea9981eb1865d5cde3fc7ecc9b001347e3769c7002c58f941fe359,pubmed-34401428,34401428,PMC full text,not indexed,2021,,,140
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-34836741.txt,601d37b01f07b7780ef457f85fb4a63668f18359ad46fc141f8d948a438de1af,pubmed-34836741,34836741,PubMed abstract,agrees,2022,,,67
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35339130.txt,97604e197949bab46cf412a7f2b3bfc9f250a39517f7d4f18a42ccc851ad558b,pubmed-35339130,35339130,PubMed abstract,agrees,2022,,,72
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35466139.txt,7b325cfcb32f9f0373390569451a9127c9de22ad33cf1c3b2b8a84bbbbedaed5,pubmed-35466139,35466139,PubMed abstract,agrees,2022,,,33
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35720470.txt,bfcdcaac0292158a49a1fe10dd81350bbbfb188a874737f4bf20b12856b74159,pubmed-35720470,35720470,PMC full text,not indexed,2022,,,166
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35872878.txt,4b170771f42e7230a2e9330e4fa5eca3405bc3d95e9d6f3790f84a5c978c0336,pubmed-35872878,35872878,PMC full text,not indexed,2022,,,81
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35922899.txt,273b885ee43fd27f86a1823b6f82d4e3135ede0897b88dfdc64c12fe15766ecf,pubmed-35922899,35922899,PubMed abstract,agrees,2022,,,30
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-35923983.txt,f2744653b4f22de4af55103af6a88f530df78208fa4f3d972985a4e1c78aae4e,pubmed-35923983,35923983,PMC full text,not indexed,2022,,,156
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-36268452.txt,e2691fda36c0d5092866c9dd4ac2935a65b936421b91e7d91e2fe225d9d158e1,pubmed-36268452,36268452,PMC full text,not indexed,2022,,,238
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-36566739.txt,bcc9d52f6a0eac122037f34c851241aaa5906d7540d0ab387b87230530d46eb9,pubmed-36566739,36566739,PMC full text,not indexed,2023,,,235
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-37597429.txt,0570c1ddfe8312ab8ff22b0394cb0051a021056368391405c6de53d614a6f7c4,pubmed-37597429,37597429,PMC full text,not indexed,2023,,,230
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-37691759.txt,787cffb325c3f7b94c368ded61a8a5677993b790ddf96aecfe80d6125085a039,pubmed-37691759,37691759,PMC full text,not indexed,2023,,,201
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-37719184.txt,cd89a6b1f6147586749059aec6fb920637137a4e53b8a7544e32c20112d696cb,pubmed-37719184,37719184,PMC full text,not indexed,2023,,,96
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38279518.txt,df204e25dface7526bbc96c5723f35c966373febda4ca869dc3c9a3910ed2247,pubmed-38279518,38279518,PubMed abstract,agrees,2024,,,40
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38544962.txt,3246dfe44b5ded29b96557eb792d53ee521c4878e4412ad9b3f290a9d0cbf67f,pubmed-38544962,38544962,PMC full text,not indexed,2024,,,190
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38590933.txt,95e275b686da696fe1d5945ef239e0802a9ec3a81e584414325b5045a18bfa38,pubmed-38590933,38590933,PMC full text,not indexed,2024,,,127
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38827804.txt,67e287ab7c3e0fdf226cbf7fe62a2b4087de009ae0e03986b936ca8294651d7e,pubmed-38827804,38827804,PMC full text,not indexed,2024,,,318
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38989265.txt,c2198cb75b09baaa3aa46f45dff9d85d41fdfeacd73f4206fc1729a48e8c7e2d,pubmed-38989265,38989265,PMC full text,not indexed,2024,,,30
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-38989504.txt,0e8d1b5da2457992b27e7f80284427fc399db93b400bee8065d16cf9fac3f5eb,pubmed-38989504,38989504,PMC full text,not indexed,2024,,,181
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39100612.txt,64e673be801eaaa6eb375aa83c7fe64accf800636747919aa3e331f96e6d374e,pubmed-39100612,39100612,PMC full text,not indexed,2024,,,125
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39118905.txt,8446868a846f5d75991b53e785c50e28ef158444202a003a6d29404d0317d124,pubmed-39118905,39118905,PubMed abstract,not indexed,2024,,,29
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39184757.txt,e5f35e1db103eabd96c7962993d5272364bce6f7b2a60edcd066706a92c42af4,pubmed-39184757,39184757,PMC full text,not indexed,2024,,,111
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39215660.txt,98f81ad6408595c06225a3783b97ffc932b5d0f90386a93c0e43517cbac6cf70,pubmed-39215660,39215660,PMC full text,agrees,2024,,,162
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39233960.txt,6a1a86174d47af6dd9246e194ae5e1d2ee95250aa191823ae4e5802badcad071,pubmed-39233960,39233960,PMC full text,not indexed,2024,,,154
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39260341.txt,ffc5f265b4e4c6cc89c2bfb546f8e6ca2d7e85d252481b19df098309c04ee908,pubmed-39260341,39260341,PMC full text,not indexed,2024,,,153
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39286828.txt,a87c3ee15e7b30a3ccc187411b532d9490259a7d834bb682b1734d4a0e8d1a4f,pubmed-39286828,39286828,PMC full text,not indexed,2024,,,106
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39398756.txt,3154854282b7847f48ae5ead43d9dfa1364be7b25b05ddcd9022fb1618e5d2fd,pubmed-39398756,39398756,PMC full text,not indexed,2024,,,79
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39411140.txt,174622893d6dbd4ce894f611a875ae312fbad4a81bc972c5cdf01bf7c63fa023,pubmed-39411140,39411140,PMC full text,not indexed,2024,,,205
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39483577.txt,3a3f9d56684eb2483a3c0c07ee7a13b9d2423bbaeebd9eb23d41db1837940b40,pubmed-39483577,39483577,PMC full text,not indexed,2024,,,46
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39512980.txt,886943fa66ed8fb548ac865bc35587f514f21a7aae7d776789a2ec2d19479b9c,pubmed-39512980,39512980,PMC full text,not indexed,2024,,,153
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39625710.txt,15864eb9bbfe4786c1801370de7bf3b3b2e45f00ebacaac4dd2886ee7f7fb019,pubmed-39625710,39625710,PMC full text,agrees,2025,,,145
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39631867.txt,9649872731037e976d0b73f9cc5103284050b9a77e1a7e6efab88f226f6e3cc2,pubmed-39631867,39631867,PMC full text,agrees,2025,,,74
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39640108.txt,541d92cd041d12e61129a17931a98d2d26804a7b8d855168b921b8b047b02a48,pubmed-39640108,39640108,PMC full text,not indexed,2024,,,95
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39720643.txt,8ceafef84b4568b08ff706bee6e6c7ecf1fcf7d65e6322ed7446377884b9767c,pubmed-39720643,39720643,PMC full text,not indexed,2024,,,201
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-39995476.txt,5861c1e8fdd1e0b842a467e2f99482088424dd38c45a7dd37a5ef97804a7f3ca,pubmed-39995476,39995476,PMC full text,not indexed,2025,,,167
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40047818.txt,5a04ae4b2b1258b9b3b8aa6f541fca98575840f47da7676b46d35b4b37348df8,pubmed-40047818,40047818,PubMed abstract,agrees,2025,,,33
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40062089.txt,187077dc56714d0fe1981fd3cc24e53481b16a2aef21c790cc086886e07af58a,pubmed-40062089,40062089,PMC full text,not indexed,2025,,,135
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40099174.txt,76969112711afa4cb53b22837190166cee7595fea8c66305e31038075e2d51d5,pubmed-40099174,40099174,PMC full text,not indexed,2025,,,79
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40162153.txt,7dc5e6c8e3077102dd3710011b1ffb662bddbe1b21a8cb39963123b5431a8f80,pubmed-40162153,40162153,PMC full text,not indexed,2025,,,70
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40185053.txt,10bf0131779cea272548604bfd3c484b920a3681d83897924b870d12229daccd,pubmed-40185053,40185053,PMC full text,not indexed,2025,,,126
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40190970.txt,e78d76ef8bf18bb334f9e591be4c4fbe3b9517aec32f7edeed17e6716b068795,pubmed-40190970,40190970,PMC full text,not indexed,2025,,,429
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40218313.txt,af93d6e484dae5b6cd51ce2f6fad9825445ce24b05948bfdbdbd2d693f22a165,pubmed-40218313,40218313,PMC full text,not indexed,2025,,,274
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40330832.txt,1d435da29a78cf67022a9658442da3c15be49a724e3838e451b52f148a650a38,pubmed-40330832,40330832,PMC full text,not indexed,2025,,,225
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40353102.txt,84e13cf88dca9a6a9ac3bb9c02ee27d90cf32f3bc578ba87a064c1c5e48b3b81,pubmed-40353102,40353102,PMC full text,not indexed,2025,,,118
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40587967.txt,f8d7f39bc421bfe13b54d1140167ff36fbbef8409bad9c3d9bcc34a280085eae,pubmed-40587967,40587967,PMC full text,agrees,2025,,,127
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40694922.txt,a6acd84b2045f0b688f843e37a2071fce98d366f469a55e55545c0ad1e8c2908,pubmed-40694922,40694922,PMC full text,not indexed,2025,,,160
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40747183.txt,ab231b36c5a6a5b4ff7c8a6ee78f507ca453037d0fc07ddd2d8883ed3178f789,pubmed-40747183,40747183,PMC full text,not indexed,2025,,,68
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-40987224.txt,2396fbe473380b74bb4182f5b20c01c768490447dca171ada9b9ef5caa0f225b,pubmed-40987224,40987224,PMC full text,not indexed,2025,,,113
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41002780.txt,07a54c896593b832145daae4d2ced05b20e985204354ccf814b692498d9b8143,pubmed-41002780,41002780,PMC full text,not indexed,2025,,,148
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41024849.txt,71960f54c2ae7c438127699f87b44791e1ea14db4fabe41913e7ae032ab2038c,pubmed-41024849,41024849,PMC full text,not indexed,2025,,,91
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41050848.txt,6221245f3f8fed271490a7d3427a524924fbe17b95514655500769e7a72dadb0,pubmed-41050848,41050848,PMC full text,not indexed,2025,,,114
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41064298.txt,dd5e666d888abb58ee7e76521f90be565abdf3cb6c6db8f278fdfa8e54b394f3,pubmed-41064298,41064298,PMC full text,not indexed,2025,,,215
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41084663.txt,62341fff6af1896939554b9f8c718880d4df2e388b6efcef7567d1ba98c5ebca,pubmed-41084663,41084663,PMC full text,not indexed,2025,,,155
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41112830.txt,e1f20d752f9873196decb6da249389af55d7512a78915791ba2d0ccd72f195d5,pubmed-41112830,41112830,PMC full text,not indexed,2025,,,544
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41113234.txt,15f037602d5ac13d61177b2f161ccde53d93c91e943f6cb64c6906c2d14df0b7,pubmed-41113234,41113234,PMC full text,not indexed,2025,,,173
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41209091.txt,bc79f2009744a0a14a7d7b9134399477d0ae8620ceb77283a9c85f1b27aeb742,pubmed-41209091,41209091,PMC full text,not indexed,2026,,,261
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41311432.txt,9962b0caad1d1e243f081983bed215488d894327acf80ea0b27acec0d16ac0ba,pubmed-41311432,41311432,PMC full text,not indexed,2025,,,84
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41322864.txt,1610c84e89b7abf4065e57ce095dd661e0613411a8beb943565df5010868837c,pubmed-41322864,41322864,PMC full text,not indexed,2025,,,343
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41356897.txt,056474adab38c9dc0970b60b7c03e5fed0e3c90657e42ac1ad5c073176407e8c,pubmed-41356897,41356897,PMC full text,not indexed,2025,,,120
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41404217.txt,5f832501a712e06d6c7d612eb5579bbd83a4dc0760393bc3443ccbf7ec8b7a96,pubmed-41404217,41404217,PMC full text,not indexed,2025,,,151
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41583186.txt,14875e77177e8ef03feccaf05c47af5c0ba80ae2fc849b296c8f83b88e776b2b,pubmed-41583186,41583186,PMC full text,not indexed,2025,,,158
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41586411.txt,fcdb78b3a1eb5f8275d0bb65a0e3f1547364947b3ee7f9344cfeb46b6020dc0c,pubmed-41586411,41586411,PMC full text,not indexed,2026,,,177
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41659267.txt,d0efd5e22466ccc285a702bb7e02e90a3d3f6d7a3362c48fedec7172cb38b62d,pubmed-41659267,41659267,PMC full text,not indexed,2026,,,163
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41790609.txt,ce8c4347f4e802a45df86f1b2fde7da309ee30343f2adb8c9542080a073e958a,pubmed-41790609,41790609,PMC full text,agrees,2026,,,361
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41799427.txt,6864ba401ced8b24564dbe0d48bf187fe4dd666b4d132927b92f29d092ca5354,pubmed-41799427,41799427,PMC full text,not indexed,2026,,,280
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41822341.txt,be20b21fe918b79b70528faeaa02812d572929b175a715c61f50be7df5a54988,pubmed-41822341,41822341,PMC full text,not indexed,2026,,,106
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41912178.txt,e02c0f9c0731a71bfeab7a617db80d621306ff45ea8cab0bd8bacc311b8cffb5,pubmed-41912178,41912178,PMC full text,not indexed,2026,,,45
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-41938988.txt,6d86c8ace1bafdc9d5e3556004b4649cee80f8fd50631fe925e8fe4c256a3869,pubmed-41938988,41938988,PubMed abstract,not indexed,2026,,,52
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42017103.txt,14d89e7d5c84d2b107d0a80a1d3f6f9a7c599e6bd5377c1667cd6aa2efa5b939,pubmed-42017103,42017103,PMC full text,not indexed,2026,,,414
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42078246.txt,af9c0bb26ff084acb59567c33ecbbc6df988b153277256977fa6bdd843eafe9a,pubmed-42078246,42078246,PMC full text,not indexed,2026,,,109
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42117139.txt,782f8806aac6856aaa3eccac7299ce1084f9b5e7cec11db1a31e36648a6005f2,pubmed-42117139,42117139,PMC full text,not indexed,2026,,,43
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42117629.txt,b42fc48e087df14122b20cccb5280e8d8732334b49e1ca967c88a56903881516,pubmed-42117629,42117629,PubMed abstract,not indexed,2026,,,31
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42238159.txt,4188ce466550349e8546081a9e4d6acc177a4e546830c2399040c9e5a44dbd9c,pubmed-42238159,42238159,PMC full text,not indexed,2026,,,187
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42366959.txt,2d5871008f7b80ed65b87c614eebd388533ceec26950d134e549e2f331f6afca,pubmed-42366959,42366959,PMC full text,not indexed,2026,,,30
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42367710.txt,89e5dc88c0150252abb53431d01aaf5871cb4bffb5a2c44fd65bb6ebdc9d350b,pubmed-42367710,42367710,PMC full text,not indexed,2026,,,205
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42403802.txt,1f09f9972e091c9c5b0af00ec0bbe0970d5907d66ae0a91aa86b7b67deaad58a,pubmed-42403802,42403802,PMC full text,not indexed,2026,,,100
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42416971.txt,afaf841df3aa96125e4e6498be5f748d41ef0b9f442bc4837ab39345dd73da4f,pubmed-42416971,42416971,PMC full text,not indexed,2026,,,143
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42421760.txt,65a7a57631954e92a47cf40fc091d99fd4667d8dface4d178a5b50ea1ae014b7,pubmed-42421760,42421760,PMC full text,not indexed,2026,,,64
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42434637.txt,ca96ccccfaa35302df2edd03cb0993db77842b79e3f3d9655b305fd5d9ffcd20,pubmed-42434637,42434637,PMC full text,not indexed,2026,,,168
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42519529.txt,62e1fc7567803c3be0cc6713677d07ee6766bf7a3c7ad78036956bb4c223ea9f,pubmed-42519529,42519529,PMC full text,not indexed,2026,,,53
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42605493.txt,2fe6b394436382281f153356de0f245476398c5184b323cb79e1b0464822487b,pubmed-42605493,42605493,PMC full text,not indexed,2026,,,104
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42683452.txt,4b4a97f5999e719ebd99f97a42347ebd7327f80f31333bc4ac2fd5c63d419198,pubmed-42683452,42683452,PMC full text,not indexed,2026,,,162
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42780613.txt,5a0c4c174084d310de2fb18a3eb56b1ccf4d150dd33cff96cd333f98c278c7fc,pubmed-42780613,42780613,PMC full text,not indexed,2026,,,76
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42827682.txt,87a9c6444cde792f22ffcb223437b6fd9a1800615b1d129f3609930680f878e1,pubmed-42827682,42827682,PMC full text,not indexed,2026,,,287
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42829729.txt,0900a0ff4e6f764e18b4ce12807505aa6870737b2f7ebe41648518a4aa86239f,pubmed-42829729,42829729,PMC full text,not indexed,2026,,,51
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42865951.txt,a9c69b04d69932c53a41de750809ec8c1acca7056cd1adb707b33bb091517996,pubmed-42865951,42865951,PMC full text,not indexed,2026,,,90
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42877944.txt,c9a2f2a84168cc07620e54bdd46324400a3596fb94a6958f4f8f8fa29640f62a,pubmed-42877944,42877944,PMC full text,not indexed,2026,,,163
+train,squamous cell carcinoma,train/squamous cell carcinoma/pubmed-42997569.txt,c923533ca8a04026e35b6d4bd8244c4d3a56c0f823886336259182b68f72f5e0,pubmed-42997569,42997569,PMC full text,not indexed,2026,,,75
+train,vascular lesion,train/vascular lesion/4804580-1.txt,407319dfee3d8214e1e3c5e496dad2f4577d2cc1705a22a0a1c3389f5ab145a1,4804580-1,27057494,PMC-Patients,not indexed,2016,11 year,M,99
+train,vascular lesion,train/vascular lesion/5964439-1.txt,59fc99f3f098a9c01a9e30f1e4af0b54d8f1bfdb5f2cc947a8d8b927903d56d3,5964439-1,29854524,PMC-Patients,not indexed,2018,12 year,M,150
+train,vascular lesion,train/vascular lesion/10909320-1.txt,81e2e3c8b8cf93c9940bfb0236173e58e1ff812381d360fd80b735addcbcb772,10909320-1,38435842,PMC-Patients,not indexed,2024,43 year,M,203
+train,vascular lesion,train/vascular lesion/pubmed-16988295.txt,9aa6ed6b3d8c16136fd04c70babe0aae5f144ae9ceb714758ec0e993e491caeb,pubmed-16988295,16988295,PubMed abstract,agrees,2006,,,74
+train,vascular lesion,train/vascular lesion/pubmed-20465644.txt,f0c723210a395f64e744f9004c0d9afdc70deceebe78c06c424ebeb88d2d9cad,pubmed-20465644,20465644,PubMed abstract,agrees,2010,,,26
+train,vascular lesion,train/vascular lesion/pubmed-34990348.txt,db468e4c74fc3d73b42d94d0ca812b03b01d70e04fc18db257bc2d90b5ba120f,pubmed-34990348,34990348,PubMed abstract,agrees,2021,,,110
+train,vascular lesion,train/vascular lesion/pubmed-35395702.txt,95ca4de9eb564b5d934c0f992e537e223f0c9539116d1ca71c531bbf1c329e67,pubmed-35395702,35395702,PubMed abstract,agrees,2022,,,102
+train,vascular lesion,train/vascular lesion/pubmed-41280975.txt,904bf5f589e68108ce226b4166daa0a7ffec8acfa82d8787c6e86db7cbd1c9bd,pubmed-41280975,41280975,PMC full text,not indexed,2025,,,210
+train,vascular lesion,train/vascular lesion/pubmed-41574322.txt,5f0fd53b2406f34ebf30f6b835036ceff9eba55ef05535372a755915ae42b0b9,pubmed-41574322,41574322,PMC full text,not indexed,2026,,,237
+train,vascular lesion,train/vascular lesion/pubmed-42459423.txt,196a4e8418ed540730c59c18fd93e589aa9d2c9f2158e33bb987fb333f9121f1,pubmed-42459423,42459423,PMC full text,not indexed,2026,,,238
