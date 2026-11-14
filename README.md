@@ -31,5 +31,5 @@ With Python 3.11 or newer, `pip install -r requirements.txt`, and the model's AP
 
 ## Results
 
-| Dataset | Model | Setting | Balanced accuracy (test) | 95% interval | Missed malignancy (cancers called benign) | Report |
-|---|---|---|---|---|---|---|
+| Dataset | Model | Setting | Balanced accuracy (test) | 95% interval | Hallucination rate (wrong diagnoses) | Missed malignancy (cancers called benign) | Report |
+|---|---|---|---|---|---|---|---|

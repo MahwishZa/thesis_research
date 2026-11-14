@@ -192,6 +192,23 @@ class MetricTests(unittest.TestCase):
         none = evaluate.summarize(["a", "b"], ["a", "a"], ["a", "b"])["risk"]  # classes outside both groups: undefined, not 0
         self.assertEqual((none["missed_malignancy"], none["missed_malignancy_ci95"], none["overcall"]), (None, None, None))
 
+    def test_a_hallucination_is_a_wrong_diagnosis_and_a_refusal_is_not(self):
+        true = ["a"] * 4 + ["b"] * 2 + ["c"]
+        pred = ["a", "b", None, "c", "b", "a", None]
+        # class a: 1 right, 2 wrong diagnoses (b, c), 1 no valid answer; class b: 1 right, 1 wrong; class c: 1 no valid answer
+        h = evaluate.summarize(true, pred, ["a", "b", "c"])["hallucination"]
+        self.assertEqual((h["wrong"], h["n"], h["rate"], h["no_valid_answer"], h["no_valid_answer_rate"]), (3, 7, 3 / 7, 2, 2 / 7))
+        self.assertAlmostEqual(h["balanced_rate"], (2 / 4 + 1 / 2 + 0 / 1) / 3)
+        self.assertEqual(h["rate_ci95"], evaluate.wilson(3, 7))  # every answer its own lesion
+        self.assertEqual(2 + h["wrong"] + h["no_valid_answer"], 7)  # right + hallucination + no valid answer = every question
+        equal = evaluate.summarize(["a", "a", "b", "b"], ["a", "b", "b", None], ["a", "b"])["hallucination"]
+        self.assertEqual((equal["rate"], equal["balanced_rate"]), (0.25, 0.25))  # the same number of questions in every class
+        empty = evaluate.summarize([], [], ["a"])["hallucination"]
+        self.assertEqual((empty["rate"], empty["balanced_rate"]), (None, None))  # nothing answered: undefined, not 0
+        grouped = evaluate.summarize(true, pred, ["a", "b", "c"], groups=["L1", "L1", "L2", "L3", "L4", "L5", "L6"])["hallucination"]
+        low, high = grouped["balanced_rate_ci95"]
+        self.assertTrue(0 <= low <= grouped["balanced_rate"] <= high <= 1)
+
     def test_mcnemar_exact_values_by_hand(self):
         self.assertEqual(evaluate.mcnemar(0, 0), 1.0)  # no question decides between the runs
         self.assertEqual(evaluate.mcnemar(0, 5), 2 / 32)  # 2 x (1/2)^5
@@ -1208,6 +1225,10 @@ class RunTests(Project):
                          "Every class has the same number of test images (2), so plain accuracy equals balanced accuracy.",
                          "(2 lesions for 4 images)",
                          "it is not a clinical figure", "No ROC curve or AUC", "sent exactly as stored",
+                         "| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **50.0%** |",
+                         "| Hallucination rate, all questions | 50.0% (2/4) |",
+                         "a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 0 |",
+                         "Right answers, hallucinations and answers with no valid answer",
                          "| Missed malignancy: cancers answered as benign | 0.0% (0/2) |",
                          "| Over-calls: benign lesions answered as cancer | 100.0% (2/2) |"):
             self.assertIn(expected, text)
@@ -1226,10 +1247,15 @@ class RunTests(Project):
         c = evaluate.compare(a, b)
         self.assertEqual((c["n"], c["both_right"], c["only_a"], c["only_b"], c["both_wrong"]), (4, 0, 2, 2, 0))
         self.assertEqual((c["mcnemar_p"], c["balanced_accuracy_difference"], c["accuracy_difference"]), (1.0, 0.0, 0.0))
+        self.assertEqual((c["hallucination_difference"], c["hallucination_reduction"], c["hallucination_reduction_ci95"]),
+                         (0.0, 0.0, (0.0, 0.0)))
+        self.assertEqual((c["hallucinations_removed"], c["hallucinations_introduced"]), (2, 2))  # each fixes the other's wrong half
         low, high = c["balanced_accuracy_difference_ci95"]
         self.assertTrue(low <= 0 <= high)
         text = evaluate.comparison_text(c)
-        for expected in ("| **Run B right** | 0 | 2 |", "McNemar's exact test: p = 1.0000", "+0.0 points", "paired bootstrap over lesions"):
+        for expected in ("| **Run B right** | 0 | 2 |", "McNemar's exact test: p = 1.0000", "+0.0 points", "paired bootstrap over lesions",
+                         "Hallucination reduction, A minus B as a share of A: +0.0% (95% interval +0.0% to +0.0%)",
+                         "Hallucinations removed (A named a wrong diagnosis, B is right): 2; introduced (A was right, B named a wrong diagnosis): 2"):
             self.assertIn(expected, text)
         same = evaluate.compare(a, a)
         self.assertEqual((same["only_a"], same["only_b"], same["balanced_accuracy_difference_ci95"]), (0, 0, (0.0, 0.0)))
@@ -1269,6 +1295,45 @@ class RunTests(Project):
         self.assertEqual((c["only_a"], c["only_b"], c["balanced_accuracy_difference"]), (4, 0, -0.25))
         self.assertEqual(c["balanced_accuracy_difference_ci95"], (-0.5, 0.0))
         self.assertEqual(c["mcnemar_p"], 0.125)  # 2 x (1/2)^4
+        # B's balanced hallucination rate is 0.5, 0.25 or 0 (a1 twice, once, never in the resample) with chances 1/4, 1/2, 1/4; A's is 0
+        self.assertEqual((c["hallucination_difference"], c["hallucination_difference_ci95"]), (0.25, (0.0, 0.5)))
+        self.assertEqual((c["hallucination_reduction"], c["hallucination_reduction_ci95"]), (None, None))  # A has none to reduce
+        self.assertEqual((c["hallucinations_removed"], c["hallucinations_introduced"]), (0, 4))
+        self.assertIn("undefined (run A has no hallucination)", evaluate.comparison_text(c))
+        back = evaluate.compare(runs[1], runs[0])  # the other way round: B has removed all 4 of A's hallucinations
+        self.assertEqual((back["hallucination_reduction"], back["hallucinations_removed"], back["hallucinations_introduced"]), (1.0, 4, 0))
+        self.assertIsNone(back["hallucination_reduction_ci95"])  # in some resamples A has none: no interval
+        self.assertIn("+100.0% (no interval: run A has no hallucination in some resamples)", evaluate.comparison_text(back))
+
+    def test_removed_and_introduced_hallucinations_are_counted_by_hand(self):
+        """Six questions of two classes. Run A: right, no valid answer, wrong, right, wrong, wrong. Run B: right, right, wrong,
+        wrong, right, wrong. Hallucinated (a wrong diagnosis named): A on questions 2, 4, 5; B on 2, 3, 5. Removed (A hallucinated,
+        B right): question 4 only; question 1 is no hallucination of A's (it named nothing). Introduced (A right, B hallucinated):
+        question 3 only; questions 2 and 5 are hallucinations of both."""
+        truth = ["a", "a", "a", "b", "b", "b"]
+        answers = {"A": ["a", None, "b", "b", "a", "a"], "B": ["a", "a", "b", "a", "b", "a"]}
+        runs = []
+        for name, predicted in answers.items():
+            folder = self.base / f"hand_{name}"
+            folder.mkdir()
+            card = {"status": "complete", "config": {"dataset": "image"}, "n_images": 6, "images_sha256": "same", "split": "test",
+                    "labels": ["a", "b"]}
+            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+            rows = [{"path": f"test/{t}/{i}.jpg", "label": t, "lesion_group": f"L{i}", "prediction": p}
+                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+            runs.append(folder)
+        c = evaluate.compare(*runs)
+        self.assertEqual((c["hallucinations_removed"], c["hallucinations_introduced"]), (1, 1))
+        # class a: A wrong 1 of 3 (question 2), B 1 of 3; class b: A wrong 2 of 3 (4, 5), B 2 of 3 (3, 5): the same rate, 0 difference
+        self.assertAlmostEqual(c["hallucination_difference"], 0.0)
+        self.assertAlmostEqual(c["hallucination_reduction"], 0.0)
+
+    def test_the_hallucination_interval_is_its_own_not_the_accuracy_s(self):
+        """Class b is never answered with a valid answer: a balanced accuracy of exactly 50%, but no hallucination at all."""
+        m = evaluate.summarize(["a", "a", "b", "b"], ["a", "a", None, None], ["a", "b"], groups=["L1", "L2", "L3", "L4"])
+        self.assertEqual((m["balanced_accuracy_ci95"], m["hallucination"]["balanced_rate"], m["hallucination"]["balanced_rate_ci95"]),
+                         ((0.5, 0.5), 0.0, (0.0, 0.0)))
 
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):
@@ -1551,7 +1616,7 @@ class RunTests(Project):
         self._run(Truncated(), "test", run_id="t1")
         text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
         self.assertIn("4 answers were cut off at the output limit", text)
-        self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
+        self.assertIn("No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 4 |", text)
         self.assertNotIn("cut off", (self._run(FakeModel(), "val", run_id="v1") / "report.md").read_text(encoding="utf-8"))
 
     def test_essays_cut_off_at_the_limit_do_not_make_the_results_invalid(self):
@@ -1564,7 +1629,7 @@ class RunTests(Project):
         text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
         self.assertNotIn("Results are not valid", text)
         self.assertIn("4 answers reached the output limit but already differed from every class name", text)
-        self.assertIn("| Unreadable answers (counted as wrong) | 4 |", text)
+        self.assertIn("No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 4 |", text)
 
     def test_only_the_cut_off_answers_that_could_have_become_readable_make_the_results_invalid(self):
         asked = []
@@ -2007,7 +2072,7 @@ class RepositoryTests(unittest.TestCase):
         header = next(line for line in self.readme.splitlines() if line.startswith("| Dataset |"))
         self.assertEqual([c.strip() for c in header.strip().strip("|").split("|")],
                          ["Dataset", "Model", "Setting", "Balanced accuracy (test)", "95% interval",
-                          "Missed malignancy (cancers called benign)", "Report"])
+                          "Hallucination rate (wrong diagnoses)", "Missed malignancy (cancers called benign)", "Report"])
         rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
         for row in rows:  # no row until a model has a finished test run
             link = re.search(r"\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", row)
@@ -2016,8 +2081,9 @@ class RepositoryTests(unittest.TestCase):
             low, high = main["balanced_accuracy_ci95"]  # the main score
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             self.assertEqual(cells[:2], [link.group(2), link.group(3)], "the dataset and model must be the run's own")
-            self.assertEqual(cells[3:6], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
-                                          pct(main["risk"]["missed_malignancy"]) if main["risk"]["missed_malignancy"] is not None else "–"])
+            missed = main["risk"]["missed_malignancy"]
+            self.assertEqual(cells[3:7], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
+                                          pct(main["hallucination"]["balanced_rate"]), pct(missed) if missed is not None else "–"])
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
         self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 

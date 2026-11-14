@@ -18,8 +18,9 @@ one version. Answers are kept in a folder ending in ``.partial`` until the run i
 run.
 ``report`` rewrites metrics.json and report.md from a run's saved answers (no model is asked).
 ``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
-McNemar's exact test on the questions one run gets right and the other wrong, and the difference in balanced accuracy and in
-accuracy, with paired 95% intervals (both runs resampled together, by the same groups as the reports). No model is asked.
+McNemar's exact test on the questions one run gets right and the other wrong, the difference in balanced accuracy and in
+accuracy, and the change in the hallucination rate (the difference, and the reduction relative to the first run), with paired
+95% intervals (both runs resampled together, by the same groups as the reports). No model is asked.
 
 Each config names its dataset (``dataset = "image"``, ``"text"`` or ``"multimodal"``); the code here is shared by every dataset, so all are scored
 alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
@@ -91,6 +92,13 @@ from PIL import Image
 # A class with very few files in a split (actinic keratosis in the text dataset: 2 test cases) weighs as much as any other class
 # in balanced accuracy, yet its recall can take only a few values. The report then also gives the scores without its files,
 # beside the main score (DATASETS names such classes).
+#
+# Hallucination: an answer is right (it names the true class), a hallucination (it names a class the ground truth does not
+# support: a wrong diagnosis, stated as the answer), or no valid answer (a refusal, a sentence, two classes, a cut-off: it names no
+# diagnosis, so it is no hallucination, and is counted apart). Right + hallucination + no valid answer = every question. The
+# hallucination rate is the share of the questions answered with a wrong diagnosis; the class-balanced rate is the mean of the
+# shares of the classes (the same weighting as balanced accuracy, and the same as the plain rate when every class has the same
+# number of questions). The models are forced to choose a class, so a model cannot avoid hallucinating by saying it is unsure.
 #
 # Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
 # diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
@@ -173,6 +181,19 @@ def _scores(matrix: list[list[int]]) -> dict:
     return out
 
 
+def _hallucination(matrix: list[list[int]]) -> dict:
+    """The share of the questions answered with a wrong diagnosis (plain, and the mean over the classes that occur), and the
+    questions with no valid answer. ``matrix`` has the true class in its rows and, in its last column, the unreadable answers."""
+    k = len(matrix)
+    support = [sum(row) for row in matrix]
+    wrong = [support[i] - matrix[i][i] - matrix[i][k] for i in range(k)]
+    present = [i for i in range(k) if support[i]]
+    n = sum(support)
+    return {"rate": _ratio(sum(wrong), n), "wrong": sum(wrong), "n": n,
+            "balanced_rate": _ratio(sum(wrong[i] / support[i] for i in present), len(present)),
+            "no_valid_answer": sum(row[k] for row in matrix), "no_valid_answer_rate": _ratio(sum(row[k] for row in matrix), n)}
+
+
 def _risk(y_true, y_pred) -> dict:
     """Missed malignancy (cancers answered as a benign class) and over-calls (benign lesions answered as a cancer), as counts and
     shares; a share is None when no answer has a true class in its group."""
@@ -229,14 +250,17 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
     group are drawn together. The generator is seeded: the same answers always give the same interval.
     """
     by_class = _units(y_true, labels, groups)
-    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall"]
+    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced"]
     if not by_class:
         return {name: None for name in names} | {"recall": {}}
     values = {name: [] for name in names}
     recall = {label: [] for label in by_class}
     for sample in _resamples(by_class, resamples, seed):
         true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
-        scores = _scores(confusion_matrix(true, pred, labels))
+        matrix = confusion_matrix(true, pred, labels)
+        scores, hallucination = _scores(matrix), _hallucination(matrix)
+        values["hallucination"].append(hallucination["rate"])
+        values["hallucination_balanced"].append(hallucination["balanced_rate"])
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
         values["balanced_accuracy"].append(scores["macro"]["recall"])
         values["macro_f1"].append(scores["macro"]["f1"])
@@ -273,6 +297,9 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     groups = list(groups) if groups is not None else list(range(len(y_true)))
     independent = len(set(groups)) == len(groups)  # every file its own group: Wilson intervals for accuracy and recall
     interval = _bootstrap(y_true, y_pred, labels, groups, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
+    hallucination = _hallucination(matrix)
+    hallucination["rate_ci95"] = wilson(hallucination["wrong"], n) if independent and n else interval["hallucination"]
+    hallucination["balanced_rate_ci95"] = interval["hallucination_balanced"]
     risk = _risk(y_true, y_pred)
     for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign")):
         risk[f"{share}_ci95"] = None if not risk[of] else wilson(risk[count], risk[of]) if independent else interval[share]
@@ -290,7 +317,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
             "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]],
             "macro": {**s["macro"], "f1_ci95": interval["macro_f1"]},
             "weighted": s["weighted"],
-            "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk,
+            "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk, "hallucination": hallucination,
             "per_class": per_class,
             "confusion_matrix": {"rows": list(labels), "columns": [*labels, UNREADABLE], "counts": matrix}}
 
@@ -1377,7 +1404,9 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
              f"| **Balanced accuracy (main score: the mean recall of the classes)** | **{_share(m['balanced_accuracy'])}** | "
              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} ({simple}) |",
-             f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |",
+             *_hallucination_rows(m, over if grouped else None),
+             f"| No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | "
+             f"{m['unreadable']} | |",
              *_risk_rows(m, over if grouped else None),
              f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
              f"(bootstrap{over}) |",
@@ -1415,12 +1444,26 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
               f"- A dash means undefined: precision when a class was never answered, recall when no {item} has that class. A class "
               "that was never answered counts as precision 0 in the macro-precision.",
               f"- With one answer per {item}, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.",
+              "- Hallucination: an answer that names a wrong diagnosis. Right answers, hallucinations and answers with no valid "
+              "answer (a refusal, a sentence, two classes, a cut-off) add up to every question; a model that refuses is not "
+              "hallucinating, but it is not right either. The models must choose a class, so none can avoid hallucinating by "
+              f"declaring itself unsure. With the same number of {items} in every class, the two rates are the same.",
               "- Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign "
               "keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign "
               "lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the "
               "total; actinic keratosis as a true class is in neither group.",
               "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.", ""]
     return lines
+
+
+def _hallucination_rows(m: dict, over: str | None) -> list[str]:
+    """The two hallucination rows of a summary table: the class-balanced rate (the main one) and the plain share of the questions."""
+    h, method = m["hallucination"], f"bootstrap{over}" if over is not None else "Wilson"
+    if h["rate"] is None:
+        return []
+    return [f"| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **{_share(h['balanced_rate'])}** | "
+            f"{_ci(h['balanced_rate_ci95'])} (bootstrap{over or ''}) |",
+            f"| Hallucination rate, all questions | {_pct(h['rate'])} ({h['wrong']}/{h['n']}) | {_ci(h['rate_ci95'])} ({method}) |"]
 
 
 def _risk_rows(m: dict, over: str | None) -> list[str]:
@@ -1446,7 +1489,7 @@ def _brief(m: dict, kind: Dataset) -> list[str]:
             f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} "
             f"({f'bootstrap{over}' if grouped else 'Wilson'}) |",
             f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
-            f"(bootstrap{over}) |", *_risk_rows(m, over if grouped else None)]
+            f"(bootstrap{over}) |", *_hallucination_rows(m, over if grouped else None), *_risk_rows(m, over if grouped else None)]
 
 
 def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
@@ -1563,8 +1606,9 @@ def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
 
 
 def compare(run_a: str | Path, run_b: str | Path) -> dict:
-    """How run B differs from run A on the same questions: McNemar's exact test, and the differences (B minus A) in balanced
-    accuracy and accuracy with paired 95% intervals."""
+    """How run B differs from run A on the same questions: McNemar's exact test; the differences (B minus A) in balanced accuracy,
+    accuracy and class-balanced hallucination rate, and the hallucination reduction (A minus B, as a share of A), with paired 95%
+    intervals; and the hallucinations B removed and introduced."""
     (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
     dataset = card_a["config"]["dataset"]
     kind = DATASETS[dataset]
@@ -1585,27 +1629,40 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     right_b = [t == p for t, p in zip(y_true, pred_b)]
     only_a = sum(a and not b for a, b in zip(right_a, right_b))
     only_b = sum(b and not a for a, b in zip(right_a, right_b))
+    hallucinated_a = [p is not None and p != t for t, p in zip(y_true, pred_a)]  # a wrong diagnosis named
+    hallucinated_b = [p is not None and p != t for t, p in zip(y_true, pred_b)]
 
     def scores(sample):
+        """B minus A in balanced accuracy, accuracy and balanced hallucination rate, and the reduction of the rate (None when A's
+        rate is 0)."""
         true = [y_true[i] for i in sample]
         out = []
         for pred in (pred_a, pred_b):
-            s = _scores(confusion_matrix(true, [pred[i] for i in sample], labels))
-            out.append((s["macro"]["recall"], sum(s["tp"]) / s["n"]))
-        return out[1][0] - out[0][0], out[1][1] - out[0][1]
+            matrix = confusion_matrix(true, [pred[i] for i in sample], labels)
+            s = _scores(matrix)
+            out.append((s["macro"]["recall"], sum(s["tp"]) / s["n"], _hallucination(matrix)["balanced_rate"]))
+        (bal_a, acc_a, hall_a), (bal_b, acc_b, hall_b) = out
+        return bal_b - bal_a, acc_b - acc_a, hall_b - hall_a, (hall_a - hall_b) / hall_a if hall_a else None
 
     differences = [scores(sample) for sample in _resamples(_units(y_true, labels, groups), BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)]
 
     def interval(k):
-        series = sorted(d[k] for d in differences)
+        series = [d[k] for d in differences]
+        if None in series:  # A had no hallucination in some resample: a relative reduction is undefined there
+            return None
+        series.sort()
         return (_percentile(series, 0.025), _percentile(series, 0.975))
 
-    balanced, accuracy = scores(range(len(pairs)))
+    balanced, accuracy, hallucination, reduction = scores(range(len(pairs)))
     return {"run_a": Path(run_a).as_posix(), "run_b": Path(run_b).as_posix(), "dataset": dataset, "split": card_a["split"],
             "n": len(pairs), "both_right": sum(a and b for a, b in zip(right_a, right_b)), "only_a": only_a, "only_b": only_b,
             "both_wrong": sum(not a and not b for a, b in zip(right_a, right_b)), "mcnemar_p": mcnemar(only_a, only_b),
             "balanced_accuracy_difference": balanced, "balanced_accuracy_difference_ci95": interval(0),
-            "accuracy_difference": accuracy, "accuracy_difference_ci95": interval(1), "groups": f"{kind.group}s"}
+            "accuracy_difference": accuracy, "accuracy_difference_ci95": interval(1),
+            "hallucination_difference": hallucination, "hallucination_difference_ci95": interval(2),
+            "hallucination_reduction": reduction, "hallucination_reduction_ci95": interval(3),
+            "hallucinations_removed": sum(a and not h and r for a, h, r in zip(hallucinated_a, hallucinated_b, right_b)),
+            "hallucinations_introduced": sum(h and r for h, r in zip(hallucinated_b, right_a)), "groups": f"{kind.group}s"}
 
 
 def comparison_text(c: dict) -> str:
@@ -1624,7 +1681,17 @@ def comparison_text(c: dict) -> str:
         f"{points(c['balanced_accuracy_difference_ci95'][0])} to {points(c['balanced_accuracy_difference_ci95'][1])}, paired "
         f"bootstrap over {c['groups']})",
         f"- Accuracy, B minus A: {points(c['accuracy_difference'])} (95% interval {points(c['accuracy_difference_ci95'][0])} to "
-        f"{points(c['accuracy_difference_ci95'][1])})", ""])
+        f"{points(c['accuracy_difference_ci95'][1])})",
+        f"- Hallucination rate (a wrong diagnosis named; mean over the classes), B minus A: {points(c['hallucination_difference'])} "
+        f"(95% interval {points(c['hallucination_difference_ci95'][0])} to {points(c['hallucination_difference_ci95'][1])})",
+        "- Hallucination reduction, A minus B as a share of A: " + (
+            "undefined (run A has no hallucination)" if c["hallucination_reduction"] is None else
+            f"{100 * c['hallucination_reduction']:+.1f}%" + (
+                f" (95% interval {100 * c['hallucination_reduction_ci95'][0]:+.1f}% to "
+                f"{100 * c['hallucination_reduction_ci95'][1]:+.1f}%)" if c["hallucination_reduction_ci95"] else
+                " (no interval: run A has no hallucination in some resamples)")),
+        f"- Hallucinations removed (A named a wrong diagnosis, B is right): {c['hallucinations_removed']}; introduced (A was right, "
+        f"B named a wrong diagnosis): {c['hallucinations_introduced']}", ""])
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
