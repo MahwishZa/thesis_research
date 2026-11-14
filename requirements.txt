@@ -1,6 +1,6 @@
 # Python 3.11 or newer (configs are read with the built-in tomllib).
 pillow==13.0.0
-opencv-python-headless==4.14.0.94  # skin-pattern matching (python -m src.prepare lesions)
+opencv-python-headless==4.14.0.94  # skin-pattern matching (python -m src.image.prepare lesions)
 numpy==2.4.6  # needed by OpenCV
 anthropic==2.6.0  # Claude adapter (Anthropic API); needs Python 3.10 or newer
 openai==3.49.0  # GPT-4o and Llama adapter (OpenAI-style chat API)

@@ -81,6 +81,8 @@ class EutilsServer(unittest.TestCase):
                     test.queries.append(term)
                     if test.mode == "not understood":
                         body = {"esearchresult": {"count": "0", "idlist": [], "errorlist": {"phrasesnotfound": ["free full text[sb]"]}}}
+                    elif test.mode.startswith("backend") and (test.mode == "backend down" or test.queries.count(term) == 1):
+                        body = {"esearchresult": {"ERROR": "Search Backend failed: read tcp: i/o timeout"}}  # NCBI's own failure
                     else:
                         extra = 1 if "2025:3000" in term else 4 if "review[" in term else 2 if "free full text" in term else 3
                         body = {"esearchresult": {"count": str(100 * term.count("[MeSH Major Topic]") + extra), "idlist": []}}
@@ -148,6 +150,14 @@ class SurveyTests(EutilsServer):
             prepare.survey(self.data, classes=CLASSES)
         self.assertFalse((self.data / prepare.CHECK).exists())
         self.assertFalse((self.data / prepare.REPORT).exists())
+
+    def test_a_search_answer_without_a_count_is_tried_again_and_its_error_is_shown_when_it_never_comes(self):
+        self.mode = "backend once"  # each search's first answer is NCBI's backend error
+        prepare.survey(self.data, classes=CLASSES)
+        self.assertTrue((self.data / prepare.CHECK).exists())
+        self.mode = "backend down"
+        with self.assertRaisesRegex(ValueError, "after 4 attempts .*no count: .*Search Backend failed"):
+            prepare.survey(self.data, classes=CLASSES)
 
     def test_an_unexpected_mesh_summary_stops_the_step_and_names_the_fields_it_had(self):
         self.mode = "odd summary"
@@ -340,7 +350,8 @@ class CasesTests(HuggingFaceServer):
     def test_titles_naming_the_class_only_as_a_look_alike_an_animal_or_another_site_are_marked(self):
         judge = prepare._judge(prepare.read_terms(self.data / prepare.TERMS, self.CLASSES), self.CLASSES)
         cases = {
-            "Sebaceoma on the nose mimicking basal cell carcinoma": ("basal cell carcinoma", prepare.LOOKS_MARK),
+            "Sebaceoma on the nose mimicking basal cell carcinoma": ("basal cell carcinoma",
+                                                                     f"{prepare.LOOKS_MARK}; {prepare.OTHER_MARK}: sebaceoma"),
             "Pigmented Mammary Paget Disease Misdiagnosed as Malignant Melanoma": ("melanoma", prepare.LOOKS_MARK),
             "Melanoma mimicking a cyst": ("melanoma", ""),  # the class comes first: it is the diagnosis
             "Melanoma misdiagnosed as a diabetic foot ulcer": ("melanoma", ""),
@@ -350,10 +361,12 @@ class CasesTests(HuggingFaceServer):
             "Primary malignant melanoma of the trachea": ("melanoma", "a site that may not be skin: trachea"),
             "Primary Central Nervous System Melanoma": ("melanoma", "a site that may not be skin: central nervous system"),
             "Perianal squamous cell carcinoma in a man": ("squamous cell carcinoma", "a site that may not be skin: perianal"),
-            "Pilar leiomyoma with dermatofibroma-like dermatoscopic features": ("dermatofibroma", prepare.LOOKS_MARK),
-            "Sebaceous carcinoma associated with seborrheic keratosis": ("pigmented benign keratosis", prepare.LOOKS_MARK),
+            "Pilar leiomyoma with dermatofibroma-like dermatoscopic features": (
+                "dermatofibroma", f"{prepare.LOOKS_MARK}; {prepare.OTHER_MARK}: leiomyoma"),
+            "Sebaceous carcinoma associated with seborrheic keratosis": (
+                "pigmented benign keratosis", f"{prepare.LOOKS_MARK}; {prepare.OTHER_MARK}: carcinoma"),
             "Dermoscopy aids in differentiating cafe-au-lait macules from congenital melanocytic nevi": ("nevus", prepare.LOOKS_MARK),
-            "Hidradenoma arising in a congenital nevus": ("nevus", prepare.LOOKS_MARK),
+            "Hidradenoma arising in a congenital nevus": ("nevus", f"{prepare.LOOKS_MARK}; {prepare.OTHER_MARK}: hidradenoma"),
             "Basal cell carcinoma arising in rhinophyma": ("basal cell carcinoma", ""),  # the class first: the diagnosis
             "Melanoma associated with pregnancy": ("melanoma", ""),
             "Mucinous nevus": ("nevus", prepare.BARE_MARK),  # the bare word: not always a mole
@@ -364,6 +377,31 @@ class CasesTests(HuggingFaceServer):
             "Superficial spreading cervical squamous cell carcinoma as intrauterine nodules": (
                 "squamous cell carcinoma", "a site that may not be skin: intrauterine"),
             "Basal cell carcinoma of the nipple-areola complex": ("basal cell carcinoma", ""),  # the nipple's skin
+            "Cutaneous plasmacytoma adjacent to Bowenoid actinic keratosis on the scalp: Is there a link?": (
+                "actinic keratosis", f"{prepare.OTHER_MARK}: plasmacytoma"),  # a second lesion
+            "Fibroepithelial Polyp With Actinic Keratosis at Its Base and a Cutaneous Horn": (
+                "actinic keratosis", f"{prepare.OTHER_MARK}: polyp"),
+            "Composite Tumor Associating Trichoblastoma and Seborrheic Keratosis": (
+                "pigmented benign keratosis", f"{prepare.OTHER_MARK}: trichoblastoma"),
+            "Squamous cell carcinoma arising in mature cystic teratomas": (
+                "squamous cell carcinoma", f"{prepare.OTHER_MARK}: teratoma"),  # arising in: a second finding
+            "Synchronous Merkel cell carcinoma and primary cutaneous melanoma": ("melanoma", f"{prepare.OTHER_MARK}: carcinoma"),
+            "Spectrum of disease from condylomata to squamous cell carcinoma": (
+                "squamous cell carcinoma", f"{prepare.OTHER_MARK}: condylomata"),
+            "A case of cellular neurothekeoma instead of basal cell carcinoma": (
+                "basal cell carcinoma", f"{prepare.OTHER_MARK}: neurothekeoma"),
+            "Large ulcerated melanoma mimicking extramedullary plasmacytoma": ("melanoma", ""),  # only what it looked like
+            "A mimicker of dermatofibroma: cutaneous leiomyoma": (  # no class before the look-alike word: the diagnosis
+                "dermatofibroma", f"{prepare.LOOKS_MARK}; {prepare.OTHER_MARK}: leiomyoma"),
+            "Basal cell carcinoma misdiagnosed as trichoepithelioma": ("basal cell carcinoma", ""),
+            "Atypical fibroxanthoma-like amelanotic melanoma": ("melanoma", ""),
+            "Bowen's disease and human papilloma virus": ("squamous cell carcinoma", ""),  # no lesion
+            "Squamous cell carcinoma with an anaplastic lymphoma kinase fusion": ("squamous cell carcinoma", ""),
+            "Pseudovascular squamous cell carcinoma with eosinophil-rich stroma": ("squamous cell carcinoma", ""),
+            "Lobular capillary hemangioma of the finger in a woman": ("vascular lesion", ""),  # a name of class_terms.csv
+            "Cutaneous basaloid squamous cell carcinoma in a captive blue-fronted amazon (Amazona aestiva)": (
+                "squamous cell carcinoma", "the title is about an animal: amazona"),
+            "Melanoma in a pet bird": ("melanoma", "the title is about an animal: bird"),
         }
         for title, (label, mark) in cases.items():
             row, _ = judge(title, label)
@@ -371,7 +409,8 @@ class CasesTests(HuggingFaceServer):
                 self.assertEqual((row["class"], row["marks"]), (label, mark))
         self.assertEqual(judge("Syphilis resembling non-melanoma skin cancer", "x"), (None, True))  # not melanoma
         for title in ("Vitiligo coexistent with nevus depigmentosus", "Two cases of giant melanocytoma (hyperpigmented magnocellular "
-                      "nevus)", "Multiple superficial lipomatous nevi with a verrucous nevus"):  # not moles
+                      "nevus)", "Multiple superficial lipomatous nevi with a verrucous nevus",  # not moles
+                      "Acral pseudolymphomatous angiokeratoma of children (APACHE)"):  # a pseudolymphoma, not an angiokeratoma
             self.assertEqual(judge(title, "x"), (None, True), title)
         self.assertIn(prepare.HUMANS, prepare.ABSTRACT_QUERY)
 
@@ -776,14 +815,14 @@ BUILD_PATIENTS = [  # made-up texts, one for each rule
              "pyogenic granuloma.", age=12.0),  # a test result ends the question even when it names no diagnosis
     _patient("2007-1", "Basal cell carcinoma on the face of a woman", BCC_TEXT),  # the same question as 2001-1
     _patient("2008-1", "Superficial spreading melanoma of the back", "A 52-year-old man noticed that a mole on his upper back had "
-             "grown and darkened over six months. He had a history of basal cell carcinoma on the nose. On examination there was an asymmetric 12 mm brown-black macule with irregular "
+             "grown and darkened over six months. He had a history of basal cell carcinoma on the nose. On examination there was an asymmetric 12 mm brown-black macule on the back with irregular "
              "borders and several colours, including blue-white areas. His wife had seen it bleed once after he scratched it. "
              "Histopathology showed a superficial spreading melanoma.", sex="M"),  # "mole" and another class's name stay
     _patient("2009-1", "Melanoma treated with nivolumab", "A 66-year-old man with a melanoma received nivolumab."),  # marked
     _patient("2010-1", "Actinic keratosis of the forehead", "A 75-year-old retired sailor presented with a rough, scaly pink patch "
              "on the forehead that had been present for a year. It was 8 mm across, slightly tender, and felt like sandpaper; there "
              "were several similar smaller spots nearby on sun-damaged skin. Clinically, an AK was diagnosed and treated with "
-             "cryotherapy."),
+             "cryotherapy. A biopsy taken before the treatment confirmed an actinic keratosis."),
     _patient("2011-1", "Angiokeratoma of the thigh", "A 35-year-old man had a dark purple papule on the thigh for five years that "
              "bled after shaving and never itched or hurt. The papule measured 4 mm and had a rough, warty surface with dark red "
              "dots seen through a lens and a pale rim that was described as pyogenic. Granuloma formation was not considered. "
@@ -793,7 +832,7 @@ BUILD_PATIENTS = [  # made-up texts, one for each rule
     _patient("2013-1", "Halo nevus on the back of a child", "A 10-year-old girl had a brown mole on her back that developed a white "
              "ring around it over the past year. The ring was 4 mm wide and symmetric, and the central papule was 5 mm, soft and "
              "evenly brown with a regular edge. She had vitiligo patches on both knees. Dermoscopy findings were consistent with "
-             "a halo nevus.", age=10.0),  # "mole" is too vague to end a nevus question
+             "a halo nevus. An excision biopsy confirmed a halo nevus.", age=10.0),  # "mole" is too vague to end a nevus question
 ]
 BUILD_MESH = {  # indexed, classes: 2004's headings do not name melanoma (left out); 2010 is not indexed (title and text decide)
     "2001": ("yes", "basal cell carcinoma"), "2002": ("yes", "dermatofibroma"), "2003": ("yes", "squamous cell carcinoma"),
@@ -823,6 +862,30 @@ BLUE_NEVUS = ("A 40-year-old man had a slowly enlarging blue papule on the left 
 SHIN_CASE = ("A 60-year-old woman noticed a changing dark macule on her left shin over a year; it had grown from 4 mm to 9 mm, had "
              "two colours and an irregular border, and bled once after shaving. Her sister had been treated for skin cancer. "
              "Histology showed a melanoma.")
+TWO_CASES = ("Case 1 is a 40-year-old woman with a red, scaly plaque on her left leg that had grown over two years and bled after "
+             "minor trauma. Case 2 is her 42-year-old brother, with a crusted nodule on the right ear. Histology showed squamous cell "
+             "carcinoma in both.")
+GULLET = ("A 45-year-old man had a red, polypoid mass in the upper esophagus that bled and grew over three months. He had "
+          "difficulty swallowing, lost weight during that time and had no history of skin disease. Histology showed a pyogenic "
+          "granuloma.")  # a lesion, and the skin, but never in one sentence
+LOOK_ALIKE = ("A 50-year-old woman had a firm brown papule on her right arm for six months that dimpled when pinched and had grown "
+              "slowly to 7 mm in diameter over that time. It looked like a dermatofibroma. Histology showed mycosis fungoides.")
+IHC_ONLY = ("A 30-year-old man had a red, bleeding papule on his left hand that grew quickly over three weeks after a cut while he "
+            "was gardening. Immunohistochemistry (IHC) was performed. IHC was positive for CD31. He healed well. A year later the "
+            "diagnosis was pyogenic granuloma.")
+BY_EYE = ("A 63-year-old man had a stuck-on, warty brown plaque on his back for ten years that had slowly grown to 2 cm and itched "
+          "at times, with no bleeding. The clinical and dermoscopic picture was typical of a seborrheic keratosis, which was frozen.")
+HEADED = ("Case 2. A 58-year-old man had a nodule on his left cheek that had grown slowly over two years without any pain or "
+          "itching. It was pink, pearly and 9 mm across. An excision was done. The margins were clear. It was a basal cell "
+          "carcinoma.")  # a heading; what it looks like in the next sentence; the name two sentences after the result
+WART_VIRUS = ("A 36-year-old woman had many brown, warty papules on her neck, back and chest that had appeared over four weeks "
+              "and itched mildly at night. Cytology of the skin lesions showed no malignancy. A DNA test for HPV was positive. "
+              "She was given a cream. Later, the papules were thought to be seborrheic keratoses by eye.")
+TWO_AGES = ("We report a 40-year-old man and a 48-year-old man who presented with firm, reddish-brown plaques on a lower limb "
+            "that had grown slowly over several years and dimpled when pinched. Histology showed a dermatofibroma in each.")
+BY_ITS_SHORT_FORM = ("Angiokeratoma circumscriptum (AC) is a rare vascular malformation. A 19-year-old woman had an extensive AC "
+                     "on her left leg, with dark red warty papules and plaques that had grown since birth and bled at times after "
+                     "minor trauma. Histology showed an angiokeratoma.")
 SHORTEST = ("A 52-year-old man had a firm red nodule on his left forearm that had grown slowly over three years without pain, "
             "itching or any bleeding.")  # MIN_WORDS words: the shortest question kept
 AK_ABSTRACT = ("A 68-year-old fisherman presented with a rough, red, scaly patch on the back of the left hand that had persisted "
@@ -1005,7 +1068,8 @@ class BuildTests(BuildData):
         self.assertEqual([self._question_of(f"pubmed-{n}") for n in ("2104", "2105", "2109")], [None, None, None])
         self.assertTrue(self._question_of("pubmed-2106").endswith("Intraoral examination was normal."))  # no lesion in it
         report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        for expected in ("| dermatofibroma | 1 | 0 | 0 | 0 |", "| vascular lesion | 0 | 1 | 1 | 0 |", "| nevus | 0 | 0 | 0 | 0 |"):
+        for expected in ("| dermatofibroma | 1 | 0 | 0 | 0 | 0 | 0 | 0 |", "| vascular lesion | 0 | 0 | 1 | 0 | 1 | 0 | 0 |",
+                         "| nevus | 0 | 0 | 0 | 0 | 0 | 0 | 0 |"):
             self.assertIn(expected, report)
 
     def test_a_question_of_min_words_is_kept_and_one_word_fewer_is_left_out(self):
@@ -1017,6 +1081,115 @@ class BuildTests(BuildData):
         self.assertEqual(self._question_of("pubmed-2111"), SHORTEST)
         self.assertIsNone(self._question_of("pubmed-2112"))
 
+    def test_a_case_heading_a_look_in_the_next_sentence_and_a_name_two_sentences_after_the_result_are_kept(self):
+        self._add_abstract("2118", "Basal cell carcinoma of the cheek", [["", HEADED]])
+        self._add_abstract("2119", "Seborrheic keratosis and human papillomavirus (HPV) infection after fingolimod",
+                           [["", WART_VIRUS]])  # the title's "(HPV)" is no short form of the class: no result names it
+        self._add_abstract("2120", "Angiokeratoma circumscriptum of the leg", [["", BY_ITS_SHORT_FORM]])  # its question would
+        # use "AC", the article's short form of a name of its class
+        prepare.build(self.data, classes=self.CLASSES)
+        self.assertEqual(self._question_of("pubmed-2118"), HEADED.split(" An excision")[0])
+        self.assertIsNone(self._question_of("pubmed-2119"))
+        self.assertIsNone(self._question_of("pubmed-2120"))
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("| pigmented benign keratosis | 0 | 0 | 0 | 0 | 0 | 1 | 0 |", report)
+
+    def test_the_title_rules_as_they_are_now_and_two_patients_ages_leave_a_case_out(self):
+        self._add_abstract("2121", "Basal cell carcinoma of the cheek", [["", HEADED]])
+        path = self.data / prepare.ABSTRACT_CANDIDATES  # listed before the rule on another lesion: no mark
+        rows = prepare._read_csv(path, prepare.CANDIDATE_COLUMNS, "abstracts")
+        for row in rows:
+            if row["pmid"] == "2121":
+                row["title"] = "Basal cell carcinoma occurring with a desmoplastic trichilemmoma"
+        prepare._write_csv(path, prepare.CANDIDATE_COLUMNS, rows)
+        self._add_abstract("2123", "Basal cell carcinoma of the face", [["", HEADED.replace("58-year-old", "61-year-old")]])
+        rows = prepare._read_csv(path, prepare.CANDIDATE_COLUMNS, "abstracts")
+        for row in rows:
+            if row["pmid"] == "2123":
+                row["title"] = "Basal cell nevus syndrome in a man"  # as if a name had been added since: it names no class now
+        prepare._write_csv(path, prepare.CANDIDATE_COLUMNS, rows)
+        self._add_abstract("2122", "Dermatofibroma of the leg", [["", TWO_AGES]])
+        prepare.build(self.data, classes=self.CLASSES)
+        self.assertEqual([self._question_of(f"pubmed-{n}") for n in ("2121", "2122", "2123")], [None] * 3)
+        self.assertIn("| dermatofibroma | 0 | 1 | 0 | 0 | 0 | 0 | 0 |", (self.data / prepare.REPORT).read_text(encoding="utf-8"))
+
+    def test_two_patients_a_lesion_not_on_the_skin_and_a_diagnosis_no_test_result_confirms_are_left_out_and_counted(self):
+        self._add_abstract("2113", "Squamous cell carcinoma of the leg and the ear in two siblings", [["", TWO_CASES]])
+        self._add_abstract("2114", "Pyogenic granuloma: an unusual case", [["", GULLET]])
+        self._add_abstract("2115", "A dermatofibroma that was not one", [["", LOOK_ALIKE]])  # the result names another diagnosis
+        self._add_abstract("2116", "Seborrheic keratosis of the back", [["", BY_EYE]])  # diagnosed by eye and by dermoscopy only
+        self._add_abstract("2117", "Pyogenic granuloma of the hand", [["", IHC_ONLY]])  # a test's short form is not the class's
+        prepare.build(self.data, classes=self.CLASSES)
+        self.assertEqual([self._question_of(f"pubmed-{n}") for n in ("2113", "2114", "2115", "2116", "2117")], [None] * 5)
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        for expected in ("| squamous cell carcinoma | 0 | 1 | 0 | 0 | 0 | 0 | 0 |", "| vascular lesion | 0 | 0 | 0 | 1 | 0 | 1 | 0 |",
+                         "| dermatofibroma | 0 | 0 | 0 | 0 | 0 | 1 | 0 |", "| pigmented benign keratosis | 0 | 0 | 0 | 0 | 0 | 1 | 0 |"):
+            self.assertIn(expected, report)
+
+    def test_a_result_confirms_in_its_own_sentence_or_the_next_and_only_by_a_name_that_counts(self):
+        terms = prepare.read_terms(ROOT / "data" / "text" / prepare.TERMS, CasesTests.CLASSES)
+        names = prepare._says(prepare._namer(terms, "squamous cell carcinoma"))
+        for rest, confirmed in {" A biopsy was taken. Histology showed a squamous cell carcinoma.": True,
+                                " Histology confirmed an SCC.": True,  # the class's short form
+                                " A punch biopsy was taken. It showed a squamous cell carcinoma.": True,  # the next sentence names it
+                                " Histology showed a keratoacanthoma.": False,  # a name that does not count: another diagnosis
+                                " A squamous cell carcinoma was suspected. It was frozen.": False,  # no test result
+                                " A biopsy was taken. It healed well. A squamous cell carcinoma was found.": True,  # two after
+                                " A biopsy was taken. It healed. It was not sent. A squamous cell carcinoma was found.": False,
+                                " A biopsy was taken. His father had a squamous cell carcinoma.": False,  # a relative's
+                                " He was at risk of keratinocyte carcinoma. It was an SCC.": False,  # a group of diseases
+                                " Histology showed atypical keratinocytes. It was an SCC.": True}.items():
+            self.assertEqual(prepare._confirmed(rest, names), confirmed, rest)
+        placed = {w for word in prepare.LESION_WORDS + prepare.PLACED for w in prepare._tokens(word)}
+        where = {tuple(prepare._tokens(word)): word for word in prepare.SKIN_WORDS + prepare.SURFACE}
+        looks = {tuple(prepare._tokens(word)): word for word in prepare.SKIN_WORDS + prepare.SEEN + prepare.FEATURES}
+        for text, on_skin in {"A man had brown moles on both feet.": True, "A red nodule on the nasal tip.": True,
+                              "A man had a brown mole. It was on both feet and grew.": False,  # what and where: not in one sentence
+                              "A chest CT showed a small nodule in the right lung.": False,  # nothing seen or felt
+                              "A pedunculated red tumor filled the nasal cavity.": False,  # "nasal" alone: not the skin
+                              "A nodule grew on the left cheek. It was red and firm.": True,  # what it looks like: next sentence
+                              "It was red and firm. A nodule grew on the left cheek.": True,  # or the sentence before
+                              "A nodule grew on the left cheek. It was 5 mm. It was red.": False,  # but not two sentences away
+                              "She had skin cancer. A nodule grew on her chest.": False,  # "skin" next to it: another matter
+                              "A port-wine stain on the left cheek was purple.": True, "A wound on the left shin was red.": True,
+                              "A red papule on the prepuce.": True,
+                              "Abdominal CT showed a mass in the bile duct. It was cystic.": False,  # a scan's: not the skin
+                              "A CT of the abdomen showed a polypoid lesion.": False}.items():
+            self.assertEqual(prepare._on_skin(text, placed, where, looks), on_skin, text)
+        text = "Immunohistochemistry (IHC) was done. Pyogenic granuloma (PG) is common."
+        self.assertEqual(prepare._defined_short_forms(text, prepare._namer(terms, "vascular lesion"), last=True), ["PG"])  # confirms
+        self.assertEqual(prepare._defined_short_forms(text, prepare._revealer(terms, "vascular lesion")), ["IHC", "PG"])  # ends a question
+        keratosis, carcinoma = prepare._namer(terms, "pigmented benign keratosis"), prepare._namer(terms, "basal cell carcinoma")
+        title = "Development of Seborrheic Keratosis and Human Papillomavirus (HPV) Infection"
+        self.assertEqual(prepare._defined_short_forms(title, keratosis, last=True), [])  # the name does not end right before
+        self.assertEqual(prepare._defined_short_forms(title, prepare._revealer(terms, "pigmented benign keratosis")), ["HPV"])  # a
+        # question stops at it all the same: to be safe
+        self.assertEqual(prepare._defined_short_forms("A nodular basal cell carcinoma (nBCC) and a nodular BCC (nBCCs).", carcinoma,
+                                                      last=True), ["nBCC"])  # a name or the class's short form, right before
+        self.assertEqual(prepare._defined_short_forms("A man had a nodular BCC (nBCC).", carcinoma, last=True), ["nBCC"])
+        self.assertEqual(prepare._defined_short_forms("A BCC or not (NOT).", carcinoma, last=True), [])
+        self.assertEqual(prepare._defined_short_forms("A BCC or not (NOT).", carcinoma), ["NOT"])
+        self.assertEqual(prepare._defined_short_forms("Nevoid basal cell carcinoma syndrome (NBCCS) is rare.", carcinoma, last=True),
+                         [])  # a syndrome, not the class
+        vascular = prepare._revealer(terms, "vascular lesion")
+        self.assertEqual(prepare._defined_short_forms("Angiokeratoma circumscriptum (AC) is rare.", vascular), ["AC"])  # the class
+        self.assertEqual(prepare._defined_short_forms("Angiokeratoma circumscriptum (AC) is rare.", prepare._namer(
+            terms, "vascular lesion"), last=True), [])
+        self.assertEqual(prepare._defined_short_forms("Histopathological examination (HPE) was done.",
+                                                      prepare._revealer(terms, "basal cell carcinoma")), ["HPE"])  # a test's
+        for text, many in {"Two patients were seen.": True, "The mean age was 54 years.": True, "Case 2 is a man.": True,
+                           "The patient's mother had a mole.": False, "A patient with a case of acne.": False}.items():
+            self.assertEqual(bool(prepare.MANY.search(text)), many, text)
+        for text, many in {"Case 2. A 40-year-old man.": False, "Patient 3: a woman.": False, "CASE II - A boy.": False,
+                           "Case 1 is a woman; case 2, her son.": True, "A man. Case 2 is a woman.": True}.items():
+            self.assertEqual(bool(prepare.MANY.search(prepare.HEADING.sub("", text, count=1))), many, text)  # a heading at the start
+        self.assertEqual(prepare.HEADING.sub("", "Patient is a man.", count=1), "Patient is a man.")  # not a heading
+        for text, ages in {"We report a 40-year-old man and a 48-year-old man.": {40, 48},
+                           "One lesion was of a 53-year-old woman. The other, of a 20-year-old man.": {20, 53},
+                           "A 45-year old African American woman; her 8-year-old daughter.": {45},  # a relative's: not a patient
+                           "A 61 years old female. The 61-year-old female had a mole.": {61}}.items():
+            self.assertEqual(prepare._ages(text), ages, text)
+
     def test_the_same_patient_in_two_articles_is_kept_once_from_the_article_pubmed_listed_first(self):
         self._add_abstract("2108", "A changing melanoma on the leg", [["", SHIN_CASE]])
         self._add_abstract("2107", "Melanoma of the shin in a woman", [["", "We describe a " + SHIN_CASE[2:].replace(
@@ -1025,7 +1198,7 @@ class BuildTests(BuildData):
         self.assertIsNotNone(self._question_of("pubmed-2107"))  # the lower PubMed number keeps the case
         self.assertIsNone(self._question_of("pubmed-2108"))
         self.assertIsNotNone(self._question_of("2008-1"))  # another melanoma, not the same patient
-        self.assertIn("| melanoma | 0 | 0 | 0 | 1 |", (self.data / prepare.REPORT).read_text(encoding="utf-8"))
+        self.assertIn("| melanoma | 0 | 0 | 0 | 0 | 0 | 0 | 1 |", (self.data / prepare.REPORT).read_text(encoding="utf-8"))
 
     def test_a_question_sharing_10_percent_of_its_runs_with_an_earlier_article_is_the_same_patient(self):
         case = SHIN_CASE.split(" Histology")[0]

@@ -35,7 +35,8 @@ every patient whose article title names one of the classes, by the names that co
 shorter one inside it, and word order inside a name does not matter), with marks where a person should look: a title naming two
 classes, a name that does not count, a word for a site other than the skin, a title about treatment or about an animal, a class
 named only as what the lesion looked like ("... mimicking basal cell carcinoma"), a nevus named only by the bare word (it also
-names birthmarks that are not moles), or a case text that names the class neither by a
+names birthmarks that are not moles), another lesion (a word ending in -oma, or a polyp, that is no name in class_terms.csv,
+unless named only as what the lesion looked like), or a case text that names the class neither by a
 full name nor by its short form (such as SCC). It also lists each case's publication year and how often its
 text names the class. No case text is written into the repository, and nothing is chosen or cut.
 
@@ -53,14 +54,24 @@ the US National Library of Medicine, independently of the authors' titles and of
 NCBI's E-utilities.
 
 ``build`` makes the dataset from both lists of candidates, with no person choosing, labelling or cutting a case. A case gets
-class X when its article title names X and no other class, with no mark (``cases``, ``abstracts``), and its case text names X, by a full name or its short form; and, where
-PubMed has indexed the article, its headings must name X on the skin (``mesh``), else the case is left out. Its question is the
+class X when its article title names X and no other class, with no mark (``cases``, ``abstracts``; their title rules are applied
+again, as they are now), and its case text names X, by a full name or its short form; and, where
+PubMed has indexed the article, its headings must name X on the skin (``mesh``), else the case is left out; and the case text
+after the question must report a test result that names X (a biopsy or histology confirming it, in the sentence of the result
+or one of the two after it, in a sentence that names no relative), not a diagnosis by eye alone, a result naming another
+diagnosis, or a group of diseases ("keratinocyte carcinoma"). A short form names X in such a result when a name of X ends right before its brackets ("nodular basal cell carcinoma
+(nBCC)"; not "seborrheic keratosis and human papillomavirus (HPV)"). Its question is the
 case text word for word, up to the first sentence that names its own class (any name of the class in class_terms.csv, counting
 or not), its short form or one the article defines for it (such as "pyogenic granuloma (PG)"), or reports a test result (a
 biopsy, histology, pathology, immunohistochemistry, an excision, or what a microscope showed); it starts at the start of the case
 text, or at its first sentence about the patient when an earlier sentence (a background) already names the class. Names of the
 other classes stay, as clinical information. A question is kept when it has at least 25 words, describes a lesion, what it
-looks like (a size, a lesion type such as a nodule, a colour, a surface or a shape) and a patient, and puts no lesion inside the body (such as the mouth); of two articles telling the same patient's case (their
+looks like (a size, a lesion type such as a nodule, a colour, a surface or a shape) and one patient (not "patients", a mean age
+or a second case, nor two patients' ages; a heading such as "Case 2." at its start does not count), describes the lesion as seen
+on the skin (one sentence
+naming a lesion and where on the skin or the body's surface it is, and reporting no scan, and what it looks or feels like, in
+that sentence or the one before or after it), and
+puts no lesion inside the body (such as the mouth); of two articles telling the same patient's case (their
 questions share at least 10% of their runs of 12 words), the one PubMed listed first keeps it.
 Cases are split whole by article in a fixed random order: for each class, 60% of its cases into test (at most 40), 20% into
 validation (at most 15) and the rest into train, so that every class with a few cases is in all three splits.
@@ -152,7 +163,8 @@ ANIMALS = (  # words in a title that show the case is an animal's (veterinary re
     "dog", "canine", "puppy", "cat", "feline", "kitten", "horse", "equine", "mare", "gelding", "stallion", "pony", "foal", "cattle",
     "cow", "bovine", "heifer", "pig", "porcine", "swine", "sheep", "ovine", "goat", "caprine", "rabbit", "ferret", "rat", "mouse",
     "mice", "murine", "hamster", "guinea pig", "rodent", "paca", "monkey", "macaque", "primate", "dolphin", "whale", "camel",
-    "alpaca", "llama", "deer", "parrot", "budgerigar", "avian", "chicken", "snake", "reptile", "lizard", "tortoise", "veterinary")
+    "alpaca", "llama", "deer", "parrot", "budgerigar", "avian", "chicken", "snake", "reptile", "lizard", "tortoise", "veterinary",
+    "bird", "psittacine", "amazona", "macaw", "cockatoo", "cockatiel", "pigeon")
 LOOKS_LIKE = (  # words in a title after which a class is not the diagnosis: what the lesion looked like ("sebaceoma mimicking
     # basal cell carcinoma") or a second finding beside it ("sebaceous carcinoma associated with seborrheic keratosis"); a class
     # named before them is the diagnosis ("melanoma mimicking a cyst", "basal cell carcinoma arising in rhinophyma")
@@ -160,6 +172,13 @@ LOOKS_LIKE = (  # words in a title after which a class is not the diagnosis: wha
     "imitate", "imitating", "disguised", "presenting as", "presented as", "misdiagnosed as", "mistaken for", "look-alike",
     "lookalike", "associated with", "association with", "coexistent with", "coexisting with", "arising in", "arising from",
     "arising within", "arising on", "differentiating", "distinguishing")
+SECOND_FINDING = ("associated with", "association with", "coexistent with", "coexisting with", "arising in", "arising from",
+                  "arising within", "arising on")  # the words of LOOKS_LIKE that name a second finding, not a look-alike
+NOT_LESIONS = ("stroma", "glaucoma", "coma", "diploma", "trachoma", "aroma")  # words ending in -oma that name no lesion
+OTHER_MARK = "the title names another lesion"  # a word ending in -oma (a tumour such as a plasmacytoma, or a granuloma or a
+# haematoma) or a polyp that is no name in class_terms.csv: a second tumour beside the class ("cutaneous plasmacytoma adjacent to
+# Bowenoid actinic keratosis"), or the lesion itself ("a case of cellular neurothekeoma instead of basal cell carcinoma"); not a
+# lesion named only as what the case looked like ("melanoma mimicking sarcoma", "fibroxanthoma-like melanoma")
 TREATMENT = (  # words in a title that show it is about (mostly systemic) treatment: such a case is marked, not dropped
     "inhibitor", "inhibition", "blockade", "immunotherapy", "chemotherapy", "radiotherapy", "chemoradiotherapy", "chemoradiation",
     "brachytherapy", "radiosurgery", "adjuvant", "neoadjuvant", "toxicity", "adverse", "nivolumab", "ipilimumab", "pembrolizumab",
@@ -213,6 +232,38 @@ FEATURES = (  # what a lesion looks like: a question tells at least one (a colou
     "papillomatous", "pedunculated", "exophytic", "nodular", "polypoid", "polypoidal", "fungating", "raised", "elevated", "flat",
     "depressed", "atrophic", "firm", "hard", "soft", "smooth", "rough", "friable", "bleeding", "hemorrhagic", "lobulated",
     "annular", "irregular", "circumscribed", "demarcated", "indurated", "cystic", "compressible")
+SKIN_WORDS = ("skin", "cutaneous", "subcutaneous", "dermal", "dermatology", "dermatological", "dermoscopy", "dermoscopic", "dermatoscopy",
+        "dermatoscopic")  # words that put a lesion on the skin by themselves
+SURFACE = (  # the places on the body's surface ("nasal" alone also names the inside of the nose: only its outer parts count)
+    "scalp", "vertex", "face", "facial", "forehead", "glabella", "temple", "temporal", "frontal", "parietal", "occipital", "cheek",
+    "nose", "nasal ala", "nasal tip", "nasal bridge", "nasal dorsum", "nasal sidewall", "nasal root", "ear", "pinna", "auricle",
+    "auricular", "earlobe", "helix", "preauricular", "postauricular", "retroauricular", "eyelid", "lid", "canthus", "eyebrow",
+    "periorbital", "lip", "perioral", "philtrum", "chin", "jaw", "neck", "nape", "nuchal", "shoulder", "axilla", "axillae",
+    "axillary", "arm", "forearm", "elbow", "wrist", "hand", "palm", "palmar", "finger", "thumb", "nail", "fingernail", "toenail",
+    "subungual", "periungual", "digit", "back", "chest", "breast", "nipple", "areola", "abdomen", "abdominal", "trunk", "flank",
+    "umbilicus", "umbilical", "groin", "inguinal", "pubic", "scrotum", "scrotal", "penis", "perineum", "perineal", "buttock",
+    "gluteal", "sacral", "hip", "thigh", "leg", "knee", "shin", "pretibial", "calf", "ankle", "malleolus", "foot", "feet", "sole",
+    "plantar", "heel", "toe", "limb", "extremity", "scapula", "scapular", "supraclavicular", "sternal", "presternal", "lumbar",
+    "dorsum", "prepuce")
+SEEN = ("pigment", "papule", "plaque", "macule", "patch", "patches")  # with FEATURES and SKIN_WORDS: what is seen or felt of a lesion on
+# the skin (a scan's "nodule in the right lower lobe" or "mass in the parotid gland" has none of them)
+PLACED = ("mole", "lump", "swelling", "rash", "rashes", "eruption", "wound", "stain")  # besides the lesion words: what a
+# sentence can put on the skin
+SCANS = ("ct", "computed tomography", "tomography", "mri", "magnetic resonance", "ultrasound", "ultrasonography", "sonography",
+         "radiograph", "radiography", "x ray", "pet", "scan", "scintigraphy", "imaging", "endoscopy", "cystoscopy", "colonoscopy",
+         "bronchoscopy", "laryngoscopy", "laparotomy", "laparoscopy")  # a sentence with one reports a scan or a look inside the
+# body: its "mass in the abdomen" is no lesion seen on the skin
+RELATIVES = ("father", "mother", "brother", "sister", "son", "daughter", "sibling", "parent", "grandfather", "grandmother",
+             "grandparent", "aunt", "uncle", "cousin", "niece", "nephew", "twin", "husband", "wife", "family", "relative")  # a
+# sentence with one may name a relative's diagnosis, not the patient's
+MANY = re.compile(r"\bpatients\b|\b(?:mean|median|average) age\b|\bage range\b|\b(?:case|patient) (?:[12]|one|two|i|ii)\b|"
+                  r"\b(?:first|second) (?:case|patient)\b|\bboth (?:cases|patients)\b", re.I)  # more than one patient, or a study
+AGED = re.compile(r"\b(\d{1,3})[- ]?(?:years?|yrs?)[- ]old(?:[- ][a-z]+){0,2}?[- ](?:man|woman|boy|girl|male|female|patient|"
+                  r"gentleman|lady)\b", re.I)  # "a 40-year-old Japanese man": a patient's age (not a relative's or a child's)
+NOT_RESULTS = ("keratinocyte carcinoma", "keratinocyte cancer", "keratinocytic carcinoma")  # a group of diseases, not a test
+# result, though their first word begins as one of RESULT_CUES
+HEADING = re.compile(r"^\W*(?:case|patient)\s+(?:\d+|[ivx]+|one|two|three|four|five)\b\W*", re.I)  # "Case 2." at a question's
+# start: the article's heading of one of its cases, which MANY does not read
 SIZE = re.compile(r"\d\s*(?:mm|cm)\b", re.I)
 LESION_TYPES = ("nodule", "papule", "plaque", "patch", "patches", "macule", "ulcer", "spot")  # lesion words that tell what a
 # lesion looks like by themselves ("a slowly growing nodule"), unlike lesion, mass, tumour and growth
@@ -286,16 +337,22 @@ def _singular(word: str) -> str:
 
 
 def _eutils(tool: str, **params) -> dict:
+    """An E-utilities answer. A search answer without a count (NCBI's search backend now and then answers with an error, such
+    as "Search Backend failed") is tried again like a busy service; the last error is in the message when it never comes."""
     url = f"{EUTILS}{tool}.fcgi?" + urllib.parse.urlencode({**params, "retmode": "json"})
-    return fetch(url, "application/json", lambda content: json.loads(content.decode("utf-8")), delay=NCBI_DELAY,
-                 attempts=NCBI_ATTEMPTS)
+
+    def parse(content: bytes) -> dict:
+        answer = json.loads(content.decode("utf-8"))
+        result = answer.get("esearchresult") if isinstance(answer, dict) else None
+        if tool == "esearch" and (not isinstance(result, dict) or "count" not in result):
+            raise ValueError(f"NCBI's search answer has no count: {json.dumps(result if result else answer)[:300]}")
+        return answer
+    return fetch(url, "application/json", parse, delay=NCBI_DELAY, attempts=NCBI_ATTEMPTS)
 
 
 def _search(db: str, term: str, retmax: int = 0, **extra) -> dict:
     """The answer of an E-utilities search; stops when NCBI says part of the query was not understood (a count would be wrong)."""
-    answer = _eutils("esearch", db=db, term=term, retmax=retmax, **extra).get("esearchresult")
-    if not isinstance(answer, dict) or "count" not in answer:
-        raise ValueError(f"NCBI's search answer has an unexpected form for {db}: {term}")
+    answer = _eutils("esearch", db=db, term=term, retmax=retmax, **extra)["esearchresult"]
     errors = {k: v for k, v in (answer.get("errorlist") or {}).items() if v}
     unknown = (answer.get("warninglist") or {}).get("quotedphrasesnotfound") or []
     if db != "mesh" and (errors or unknown):
@@ -321,9 +378,7 @@ def _mesh_records(term: str) -> list[dict]:
 
 def _articles(term: str) -> int:
     """How many PubMed articles use a name in their title or summary (abstract); 0 when PubMed has never seen the phrase."""
-    answer = _eutils("esearch", db="pubmed", term=f'"{term}"[Title/Abstract]', retmax=0).get("esearchresult")
-    if not isinstance(answer, dict) or "count" not in answer:
-        raise ValueError(f"NCBI's search answer has an unexpected form for the name {term!r}")
+    answer = _eutils("esearch", db="pubmed", term=f'"{term}"[Title/Abstract]', retmax=0)["esearchresult"]
     if (answer.get("errorlist") or {}).get("fieldsnotfound"):
         raise ValueError(f"PubMed did not understand the search for the name {term!r}: {answer['errorlist']}. Nothing was written")
     return int(answer["count"])
@@ -591,16 +646,19 @@ def _matcher(terms: list[dict]) -> list[tuple[int, dict]]:
     return sorted(((n, dict(rows)) for n, rows in names.items()), key=lambda item: -item[0])
 
 
-def _named(words: list[str], matcher) -> tuple[Counter, list[str]]:
+def _named(words: list[str], matcher, last: bool = False) -> tuple[Counter, list[str]]:
     """How often a text names each class, and the names it holds that count for no class. A longer name takes its words from a
     shorter one inside it: "basal cell nevus syndrome" is not also a "nevus", and "lentigo maligna melanoma" is one melanoma.
-    The words of a name may come in any order: "sebaceous nevus" is the name "nevus sebaceous"."""
+    The words of a name may come in any order: "sebaceous nevus" is the name "nevus sebaceous". With ``last``, only the names
+    that end at the last word count."""
     taken, classes, others = [False] * len(words), Counter(), set()
     for n, names in matcher:
         for i in range(len(words) - n + 1):
             rows = names.get(tuple(sorted(words[i:i + n])))
             if rows and not any(taken[i:i + n]):
                 taken[i:i + n] = [True] * n
+                if last and i + n < len(words):
+                    continue
                 counted = [r["class"] for r in rows if r["counts"] == "yes"]
                 classes.update(counted)
                 if not counted:
@@ -631,21 +689,44 @@ def _judge(terms: list[dict], classes: list[str]):
     """The candidate rules, for one article's title and case text: the candidate's fields (its class, the classes the title
     names, the marks, and how often the text names the class by a full name and by its short form), or None when the title
     names no class; and whether the title names only names that count for no class."""
+    matcher, rules = _matcher(terms), _title_rules(terms)
+    short = {label: {w + end for form in SHORT_FORMS.get(label, ()) for w in _tokens(form) for end in ("", "s")} for label in classes}
+
+    def judge(title: str, text: str) -> tuple[dict | None, bool]:
+        named, others, marks = rules(title)
+        if not named:
+            return None, bool(others)
+        full = short_forms = ""
+        if len(named) == 1:
+            text_words = _tokens(text)
+            full = _named(text_words, matcher)[0][named[0]]
+            short_forms = sum(w in short[named[0]] for w in text_words)
+            if not full and not short_forms:
+                marks.append(TEXT_MARK)
+        return {"class": named[0] if len(named) == 1 else "", "classes_named": "; ".join(named), "marks": "; ".join(marks),
+                "title": " ".join(title.split()), "text_full_names": full, "text_short_forms": short_forms}, False
+    return judge
+
+
+def _title_rules(terms: list[dict]):
+    """The candidate rules for a title alone: the classes it names (sorted), the names it holds that count for no class, and
+    its marks. ``build`` applies them again to every candidate's title, so that a rule added after ``cases`` and ``abstracts``
+    ran counts without running them again."""
     matcher = _matcher(terms)
     not_skin = {tuple(_tokens(site)): site for site in NOT_SKIN}  # each site in the form of the title's words, and as written
     treatment = {tuple(_tokens(word)): word for word in TREATMENT}
     animals = {tuple(_tokens(word)): word for word in ANIMALS}
     looks_like = [tuple(_tokens(word)) for word in LOOKS_LIKE]
+    look_alikes = [tuple(_tokens(word)) for word in LOOKS_LIKE if word not in SECOND_FINDING]
     specific = _matcher([t for t in terms if _words(t["term"]) not in {_words(name) for name in BARE}])
-    short = {label: {w + end for form in SHORT_FORMS.get(label, ()) for w in _tokens(form) for end in ("", "s")} for label in classes}
 
-    def judge(title: str, text: str) -> tuple[dict | None, bool]:
+    def rules(title: str) -> tuple[list[str], list[str], list[str]]:
         title_words = _tokens(title)
         named, others = _named(title_words, matcher)
         named = sorted(named)
-        if not named:
-            return None, bool(others)
         marks = []
+        if not named:
+            return named, others, marks
         if len(named) > 1:
             marks.append("names two or more classes")
         if others:
@@ -666,16 +747,39 @@ def _judge(terms: list[dict], classes: list[str]):
             marks.append(LOOKS_MARK)
         if len(named) == 1 and named[0] in BARE and named[0] not in _named(title_words, specific)[0]:
             marks.append(BARE_MARK)
-        full = short_forms = ""
-        if len(named) == 1:
-            text_words = _tokens(text)
-            full = _named(text_words, matcher)[0][named[0]]
-            short_forms = sum(w in short[named[0]] for w in text_words)
-            if not full and not short_forms:
-                marks.append(TEXT_MARK)
-        return {"class": named[0] if len(named) == 1 else "", "classes_named": "; ".join(named), "marks": "; ".join(marks),
-                "title": " ".join(title.split()), "text_full_names": full, "text_short_forms": short_forms}, False
-    return judge
+        lesions = _other_lesions(title_words, matcher, look_alikes)
+        if lesions:
+            marks.append(f"{OTHER_MARK}: {', '.join(lesions)}")
+        return named, others, marks
+    return rules
+
+
+def _other_lesions(words: list[str], matcher, look_alikes: list[tuple[str, ...]]) -> list[str]:
+    """The words of a title for a lesion that is no name in class_terms.csv (OTHER_MARK), in order: a word ending in -oma or
+    -omata (not one of NOT_LESIONS, nor "papilloma virus" or "lymphoma kinase") or "polyp", unless it is written as "...-like" or
+    comes after a look-alike word (LOOKS_LIKE but SECOND_FINDING) that a class is named before."""
+    taken = _name_words(words, matcher)
+    looks = [i for i in range(len(words)) for seq in look_alikes
+             if tuple(words[i:i + len(seq)]) == seq and _named(words[:i], matcher)[0]]
+    found = []
+    for i, word in enumerate(words):
+        if taken[i] or word in NOT_LESIONS or not (word.endswith(("oma", "omata")) or word == "polyp"):
+            continue
+        if words[i + 1:i + 2] in (["like"], ["virus"], ["kinase"]) or any(start < i for start in looks):
+            continue
+        if word not in found:
+            found.append(word)
+    return found
+
+
+def _name_words(words: list[str], matcher) -> list[bool]:
+    """Which of the words belong to a name in class_terms.csv, a longer name first (as _named reads them)."""
+    taken = [False] * len(words)
+    for n, names in matcher:
+        for i in range(len(words) - n + 1):
+            if names.get(tuple(sorted(words[i:i + n]))) and not any(taken[i:i + n]):
+                taken[i:i + n] = [True] * n
+    return taken
 
 
 def _without_look_alikes(words: list[str], matcher) -> list[str]:
@@ -783,9 +887,7 @@ def _span(rows) -> str:
 def _in_titles(names: list[str]) -> list[str]:
     """The names some PubMed title uses. A name used only in abstracts finds no title, and PubMed answers a search by title
     for it with a warning that the phrase is not found (which stops _search), so it is left out of a search by title."""
-    answer = _eutils("esearch", db="pubmed", term=" OR ".join(f'"{name}"[Title]' for name in names), retmax=0).get("esearchresult")
-    if not isinstance(answer, dict) or "count" not in answer:
-        raise ValueError(f"NCBI's search answer has an unexpected form for the names {names}")
+    answer = _eutils("esearch", db="pubmed", term=" OR ".join(f'"{name}"[Title]' for name in names), retmax=0)["esearchresult"]
     unknown = {phrase.lower() for found in (answer.get("warninglist") or {}).get("quotedphrasesnotfound") or []
                for phrase in re.findall(r'"([^"]+)"', found)}
     return [name for name in names if name.lower() not in unknown]
@@ -1145,13 +1247,18 @@ def _sentence_starts(text: str) -> list[int]:
     return starts
 
 
+def _class_words(terms: list[dict], label: str):
+    """The names of class ``label`` in class_terms.csv (except the descriptive ones) and the words of its short forms."""
+    vague = {_words(word) for word in DESCRIPTIVE}
+    matcher = _matcher([t for t in terms if t["class"] == label and _words(t["term"]) not in vague])
+    return matcher, {w + end for form in SHORT_FORMS.get(label, ()) for w in _tokens(form) for end in ("", "s")}
+
+
 def _revealer(terms: list[dict], label: str):
     """A test of a sentence's words for a case of class ``label``: does it name the class (any of its names in class_terms.csv,
     counting or not, except the descriptive ones), use its short form, or report a test result? Names of the other classes do
     not reveal the answer: they stay in a question as clinical information (a history, a suspicion)."""
-    vague = {_words(word) for word in DESCRIPTIVE}
-    matcher = _matcher([t for t in terms if t["class"] == label and _words(t["term"]) not in vague])
-    short = {w + end for form in SHORT_FORMS.get(label, ()) for w in _tokens(form) for end in ("", "s")}
+    matcher, short = _class_words(terms, label)
 
     def reveals(words: list[str]) -> bool:
         named, others = _named(words, matcher)
@@ -1159,12 +1266,23 @@ def _revealer(terms: list[dict], label: str):
     return reveals
 
 
-def _defined_short_forms(text: str, reveals) -> list[str]:
+def _namer(terms: list[dict], label: str):
+    """A test of a sentence's words: does it name class ``label`` by a name that counts for it, or by its short form? A name
+    that does not count (such as keratoacanthoma, or mucosal melanoma) is another diagnosis, not this class."""
+    matcher, short = _class_words(terms, label)
+    return lambda words, last=False: (bool(_named(words, matcher, last)[0])
+                                      or any(w in short for w in (words[-1:] if last else words)))
+
+
+def _defined_short_forms(text: str, reveals, last: bool = False) -> list[str]:
     """The short forms a text defines for a class, as "pyogenic granuloma (PG)" or "PG (pyogenic granuloma)": the authors' own
-    short forms, which name the class as its full name does (``reveals`` tests the words before or inside the brackets)."""
+    short forms, which name the class as its full name does (``reveals`` tests the words inside the brackets, or the 5 words
+    before them). With ``last``, a name before the brackets must end right before them: "nodular BCC (nBCC)", not "seborrheic
+    keratosis and human papillomavirus (HPV)" nor "nevoid basal cell carcinoma syndrome (NBCCS)" (for a result that confirms the
+    class); without it, any name in those words will do ("angiokeratoma circumscriptum (AC)": for what a question must not use)."""
     found = set()
     for m in re.finditer(rf"([^()]{{0,80}})\(\s*({SHORT_FORM})\s*[),;]", text):
-        if reveals(_tokens(m.group(1))[-5:]):
+        if reveals(_tokens(m.group(1))[-5:], last=True) if last else reveals(_tokens(m.group(1))[-5:]):
             found.add(m.group(2))
     for m in re.finditer(rf"\b({SHORT_FORM})\s*\(([^()]{{3,80}})\)", text):
         if reveals(_tokens(m.group(2))):
@@ -1203,6 +1321,50 @@ def _inside(question: str, lesion: set[str], inside: dict) -> bool:
         if lesion.intersection(words) and _found(words, inside):
             return True
     return False
+
+
+def _sentences(text: str) -> list[str]:
+    starts = _sentence_starts(text)
+    return [text[a:b] for a, b in zip(starts, starts[1:] + [len(text)])]
+
+
+def _on_skin(question: str, placed: set[str], where: dict, looks: dict) -> bool:
+    """Whether the question describes a lesion as seen on the skin: a sentence with a lesion word (or one of PLACED) and where it
+    is (SKIN_WORDS or a place of SURFACE), that reports no scan or look inside the body (SCANS), and what it looks or feels like:
+    in that sentence (SKIN_WORDS, SEEN or FEATURES), or in the sentence before or after it (SEEN or FEATURES; "skin" there may be
+    another matter): "a red nodule on the left cheek", or "a nodule on the left cheek. It was red."; not "chest CT showed a small
+    irregular nodule in the right lung", nor "she had no history of skin cancer"."""
+    near = {words: word for words, word in looks.items() if word not in SKIN_WORDS}
+    scans = {tuple(_tokens(word)): word for word in SCANS}
+    sentences = [_tokens(sentence) for sentence in _sentences(question)]
+    return any(placed.intersection(words) and _found(words, where) and not _found(words, scans) and (_found(words, looks) or any(
+        _found(other, near) for other in sentences[max(0, n - 1):n] + sentences[n + 1:n + 2])) for n, words in enumerate(sentences))
+
+
+def _ages(question: str) -> set[int]:
+    """The ages of the patients a question describes ("a 40-year-old man and a 48-year-old man": two patients)."""
+    return {int(m.group(1)) for m in AGED.finditer(question)}
+
+
+def _without(words: list[str], phrases: list[tuple[str, ...]]) -> list[str]:
+    """The words without the phrases' words where the phrases stand."""
+    drop = {k for i in range(len(words)) for phrase in phrases if tuple(words[i:i + len(phrase)]) == phrase
+            for k in range(i, i + len(phrase))}
+    return [word for k, word in enumerate(words) if k not in drop]
+
+
+def _confirmed(rest: str, names) -> bool:
+    """Whether the case text after its question reports a test result that names the case's class (``names``, on a sentence): a
+    sentence with a test-result word (RESULT_CUES) that names it, or one of whose two next sentences does ("A biopsy was taken.
+    Histology showed a melanoma."), a sentence that names no relative (RELATIVES: "a BCC was found on the father's arm"). A
+    diagnosis made by eye or by dermoscopy alone, or a result naming another diagnosis, is not one; nor is a group of diseases
+    (NOT_RESULTS: "a higher risk of keratinocyte carcinoma") a test result."""
+    relatives = {tuple(_tokens(word)): word for word in RELATIVES}
+    groups = [tuple(_tokens(phrase)) for phrase in NOT_RESULTS]
+    sentences = _sentences(rest)
+    return any(any(w.startswith(RESULT_CUES) for w in _without(_tokens(sentence), groups))
+               and any(names(other) and not _found(_tokens(other), relatives) for other in sentences[n:n + 3])
+               for n, sentence in enumerate(sentences))
 
 
 def _same_patients(rows: list[dict]) -> list[dict]:
@@ -1272,19 +1434,22 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
         raise FileNotFoundError(f"{(folder / PMC_PATIENTS['file']).as_posix()} not found: run python -m src.text.prepare cases first")
     funnel = {label: Counter() for label in classes}
     chosen = {}
+    title_rules = _title_rules(terms)
     for row in candidates:
         label = row["class"]
         if label not in funnel:  # a title naming two classes has no class
             continue
         funnel[label]["candidates"] += 1
-        if row["marks"]:  # includes "the case text does not name the class": rule 3
-            continue
+        named, _, marks = title_rules(row["title"])
+        if row["marks"] or marks or named != [label]:  # its marks ("the case text does not name the class": rule 3), and the
+            continue  # title rules as they are now (a rule or a name added after the candidates were listed)
         funnel[label]["no marks"] += 1
         if row["pmid"] in indexed and label not in confirmed[row["pmid"]]:  # PubMed's headings disagree
             funnel[label]["disagree"] += 1
             continue
         chosen[row["patient_uid"]] = row
-    revealers, texts, whole = {label: _revealer(terms, label) for label in classes}, {}, {}
+    revealers, namers = {label: _revealer(terms, label) for label in classes}, {label: _namer(terms, label) for label in classes}
+    texts, whole = {}, {}
     for record in _json_list(folder / PMC_PATIENTS["file"]):
         if isinstance(record, dict) and record.get("patient_uid") in chosen:
             texts[record["patient_uid"]] = whole[record["patient_uid"]] = str(record["patient"])
@@ -1300,19 +1465,30 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     lesion = {w for word in LESION_WORDS for w in _tokens(word)}
     inside = {tuple(_tokens(site)): site for site in INSIDE}
     features = {w for word in FEATURES + LESION_TYPES for w in _tokens(word)}
+    placed = lesion | {w for word in PLACED for w in _tokens(word)}
+    where = {tuple(_tokens(word)): word for word in SKIN_WORDS + SURFACE}
+    looks = {tuple(_tokens(word)): word for word in SKIN_WORDS + SEEN + FEATURES}
     rows, seen, leaks, duplicates = [], set(), 0, Counter()
     for uid in sorted(chosen, key=_uid_key):
         row, text = chosen[uid], texts[uid]
         reveals = revealers[row["class"]]
-        says = _says(reveals, _defined_short_forms(f"{row['title']}\n{whole[uid]}", reveals))
+        defined = _defined_short_forms(f"{row['title']}\n{whole[uid]}", reveals)
+        confirms = _says(namers[row["class"]], _defined_short_forms(f"{row['title']}\n{whole[uid]}", namers[row["class"]], last=True))
+        says = _says(reveals, defined)
         question = _question(text, says)
         if len(question.split()) < MIN_WORDS or not lesion.intersection(_tokens(question)):
             continue
         if not PATIENT.search(question):  # a background or a microscope's findings, not a patient
             funnel[row["class"]]["no patient"] += 1
             continue
+        if MANY.search(HEADING.sub("", question, count=1)) or len(_ages(question)) > 1:  # two patients, or a study's results
+            funnel[row["class"]]["many"] += 1
+            continue
         if _inside(question, lesion, inside):
             funnel[row["class"]]["inside"] += 1
+            continue
+        if not _on_skin(question, placed, where, looks):  # nowhere on the skin: inside the body, or not said
+            funnel[row["class"]]["not skin"] += 1
             continue
         if not (SIZE.search(question) or features.intersection(_tokens(question))):  # only a treatment or a history, say
             funnel[row["class"]]["no feature"] += 1
@@ -1321,6 +1497,9 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
             leaks += 1
             continue
         assert question in text
+        if not _confirmed(text[text.index(question) + len(question):], confirms):  # a short form only for a name that counts
+            funnel[row["class"]]["unconfirmed"] += 1  # a diagnosis by eye, or a result naming another diagnosis
+            continue
         funnel[row["class"]]["question"] += 1
         digest = hashlib.sha256(question.encode("utf-8")).hexdigest()
         if digest in seen:
@@ -1367,10 +1546,17 @@ def _build_summary(meta, funnel, rows, classes, leaks, duplicates) -> list[str]:
              "again, the same, from the downloaded files.", "",
              "## Rules", "",
              "- Label: a case gets class X when the article title names X and no other class, with no mark (`cases`, "
-             "`abstracts`), and the "
+             "`abstracts`; their title rules are applied again here, as they are now, so that a rule or a name added since "
+             "counts: among them a title that names another lesion, a word ending in -oma or a polyp that is no name in "
+             "`class_terms.csv`, unless named only as what the lesion looked like), and the "
              "case text names X, by a full name or its short form; where PubMed has indexed the article, its subject headings "
              "must also name X on the skin (`mesh`), else the case is left out. `dataset.csv` says for every case whether PubMed "
-             "agrees (three sources) or has not indexed the article (two sources).",
+             "agrees (three sources) or has not indexed the article (two sources). The case text after the question must also report a "
+             "test result that names X (a sentence with a word beginning " + ", ".join(RESULT_CUES[:6]) + " ... that names X by a "
+             "name that counts or its short form, or one of whose two next sentences does; a sentence naming a relative (" +
+             ", ".join(RELATIVES) + ") does not count): a diagnosis by eye or by dermoscopy alone, a result that names "
+             "another diagnosis, or a group of diseases (" + ", ".join(NOT_RESULTS) + ") is not enough. A short form the article defines names X in a result when a name of X ends "
+             "right before its brackets (\"nodular basal cell carcinoma (nBCC)\").",
              "- Question: the case text word for word, up to the first sentence that names the case's own class (any of its "
              "names in `class_terms.csv`, counting or not; except " + ", ".join(DESCRIPTIVE) + ", too vague to be one), its "
              "short form (" + ", ".join(f for forms in SHORT_FORMS.values() for f in forms) + ", or one the article defines, "
@@ -1378,8 +1564,15 @@ def _build_summary(meta, funnel, rows, classes, leaks, duplicates) -> list[str]:
              + "). It starts at the start of the case text, or, when a sentence before the first sentence about the patient "
              "already names the class (a background), at that first sentence about the patient. Names of the other classes "
              "stay, as clinical information (a history, a suspicion). Nothing is rewritten.",
-             f"- Kept when the question has at least {MIN_WORDS} words, describes a lesion (" + ", ".join(LESION_WORDS) + ") and a "
-             "patient (an age or a sex) and what the lesion looks like (a size in mm or cm, a lesion type: " + ", ".join(LESION_TYPES) +
+             f"- Kept when the question has at least {MIN_WORDS} words, describes a lesion (" + ", ".join(LESION_WORDS) + ") and one "
+             "patient (an age or a sex; not \"patients\", a mean or median age, a second case, or two different ages of a man, woman, "
+             "boy, girl, male, female, patient, gentleman or lady; a heading such as \"Case 2.\" "
+             "at its start does not count), describes a lesion as seen on "
+             "the skin (one sentence with a lesion word, or " + ", ".join(PLACED) + ", and the skin (" + ", ".join(SKIN_WORDS) + ") or a place "
+             "on the body's surface (" + ", ".join(SURFACE) + "), with no scan or look inside the body (" + ", ".join(SCANS) +
+             "); and what it looks or feels like: in that sentence the skin "
+             "words, " + ", ".join(SEEN) + ", or the colours, surfaces and shapes below; in the sentence before or after it, "
+             "the same but for the skin words), describes what the lesion looks like (a size in mm or cm, a lesion type: " + ", ".join(LESION_TYPES) +
              ", or a colour, surface or shape: " +
              ", ".join(FEATURES) + "), and has no sentence that puts a lesion inside the body (" +
              ", ".join(INSIDE) + "). When the questions of two articles share at least "
@@ -1410,10 +1603,13 @@ def _build_summary(meta, funnel, rows, classes, leaks, duplicates) -> list[str]:
               "## Checks", "",
               f"- Questions that would still name their class across two sentences (left out): {leaks}",
               f"- Questions identical to an earlier one (left out): {sum(duplicates.values())}", "",
-              "| Class | No patient described (left out) | A lesion inside the body (left out) | Nothing of what the lesion looks "
-              "like (left out) | The same patient as an earlier article (left out) |", "|---|---|---|---|---|",
-              *(f"| {label} | {funnel[label]['no patient']} | {funnel[label]['inside']} | {funnel[label]['no feature']} | "
-                f"{funnel[label]['same patient']} |" for label in classes), "",
+              "Left out, per class (each case counted for the first rule it fails, in this order):", "",
+              "| Class | No patient described | More than one patient | A lesion inside the body | No lesion seen on the skin | "
+              "Nothing of what the lesion looks like | No test result names the class | The same patient as an earlier article |",
+              "|---|---|---|---|---|---|---|---|",
+              *(f"| {label} | " + " | ".join(str(funnel[label][k]) for k in ("no patient", "many", "inside", "not skin", "no feature",
+                                                                              "unconfirmed", "same patient")) + " |"
+                for label in classes), "",
               f"- Articles in more than one split: {sum(len(s) > 1 for s in splits.values())}",
               "- Every question is part of its case text, word for word: yes", "",
               "## Not done in this step", "",

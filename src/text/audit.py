@@ -9,14 +9,22 @@ the build's), that every question:
     - names neither its class (any name of the class in class_terms.csv, counting or not, except "mole") nor the class's short
       form, nor a short form its source defines for the class (such as "pyogenic granuloma (PG)"), and reports no test result
       (a biopsy, histology, pathology, immunohistochemistry, an excision, or what a microscope showed);
-    - has at least 25 words, describes a lesion and a patient (an age or a sex), and has no sentence that puts
+    - has at least 25 words, describes a lesion and one patient (an age or a sex; not "patients", a mean age or a second
+      case, nor two patients of different ages; a heading such as "Case 2." at its start does not count), has a sentence that describes a lesion as seen on the
+      skin (what it is and where on the skin or the body's surface, in a sentence that reports no scan; what it looks or feels
+      like in it or, but for the skin words, in a sentence next to it) and none that puts
       a lesion inside the body (the mouth, the eye, the ear, the genital mucosa, the mediastinum ...), and tells what the
       lesion looks like (a size in mm or cm, a lesion type such as a nodule, or a colour, surface or shape);
+    - is followed in its source by a test result that names its class (a sentence with a test-result word that names the class
+      by a name that counts or its short form, or one of whose two next sentences does, in a sentence that names no
+      relative; "keratinocyte carcinoma", a group of diseases, is no test result): a confirmed diagnosis; a short form the
+      source defines names the class there when a name ends right before its brackets ("nodular basal cell carcinoma (nBCC)");
     - is not the same as another question, and is not the same patient's case as a question of another article (they share at
       least 10% of the shorter one's runs of 12 words; questions of one article are kept together in one split anyway). Smaller
       overlaps, such as a common phrase, are only listed on the screen.
-It writes the result into the audit section of dataset_report.md, and 5 questions per class (a fixed random choice) into
-data/text/sources/audit_sample.txt (not committed) for anyone who wants to read real questions. It exits with an error when a check
+It writes the result into the audit section of dataset_report.md, and 10 questions per class (a fixed random choice), each with
+the text that follows it in its source (where its label can be checked), into data/text/sources/audit_sample.txt (not committed)
+for anyone who wants to read real questions. It exits with an error when a check
 fails.
 """
 
@@ -32,7 +40,8 @@ from pathlib import Path
 
 from ..common import write_section
 from ..evaluate import FILES, SYSTEM_FILES, TABLE_NAME
-from .prepare import (ABSTRACTS, DATA, FEATURES, INSIDE, PMC_PATIENTS, REPORT, REPORT_HEAD, SHORT_FORMS, SOURCES, STEPS, TERMS, _json_list)
+from .prepare import (ABSTRACTS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
+                      SKIN_WORDS, SOURCES, STEPS, SURFACE, TERMS, _json_list)
 
 MIN_WORDS = 25
 VAGUE = {"mole"}  # too vague to be a diagnosis (class_terms.csv): it does not reveal the class
@@ -43,15 +52,47 @@ SIZE = re.compile(r"\d\s*(mm|cm)\b", re.I)
 TYPES = re.compile(r"\b(nodules?|papules?|plaques?|patch(es)?|macules?|ulcers?|spots?)\b")  # lesion words that tell what it looks like
 DEFINED = r"(?=[A-Za-z]*[A-Z][A-Za-z]*[A-Z])[A-Za-z]{2,6}"  # an author's short form: 2 to 6 letters, 2 or more capitals
 LESION = re.compile(r"\b(lesions?|nodules?|papules?|plaques?|patch(es)?|macules?|mass(es)?|tumou?rs?|ulcers?|growths?|spots?)\b")
+PLACED = re.compile(r"\b(lesions?|nodules?|papules?|plaques?|patch(es)?|macules?|mass(es)?|tumou?rs?|ulcers?|growths?|spots?|moles?|"
+                    r"lumps?|swellings?|rash(es)?|eruptions?|wounds?|stains?)\b")  # what a sentence can put on the skin
+ONE_PATIENT = re.compile(r"\bpatients\b|\b(mean|median|average) age\b|\bage range\b|\b(case|patient) ([12]|one|two|i|ii)\b|"
+                         r"\b(first|second) (case|patient)\b|\bboth (cases|patients)\b", re.I)  # a match: more than one patient
+AGE_OF = re.compile(r"\b(\d{1,3})[- ]?(?:year|yr)s?[- ]old(?:[- ][a-z]+){0,2}?[- ](?:man|woman|boy|girl|male|female|patient|"
+                    r"gentleman|lady)\b", re.I)  # a patient's age: two different ones, two patients
+GROUP = re.compile(r" keratinocyt(?:e|ic) (?:carcinoma|cancer)s? ")  # a group of diseases: no test result
+CASE_HEADING = re.compile(r"^[^a-z0-9]*(case|patient) +([0-9]+|[ivx]+|one|two|three|four|five)(?![a-z0-9])[^a-z0-9]*",
+                          re.I)  # "Case 2." at the start: a heading, not a second patient
 SPELLING = (("’", "'"), ("naev", "nev"), ("haem", "hem"), ("oedem", "edem"), ("seborrhoe", "seborrhe"), ("tumour", "tumor"),
             ("oesophag", "esophag"))
 PATIENT = re.compile(r"\b(\d+[- ]?(year|yr|month|week|day)s?[- ]?old|aged? \d+|\d+ years? of age|man|woman|boy|girl|male|female|"
                      r"infant|newborn|neonate|child|gentleman|lady)\b", re.I)  # a patient: an age or a sex
-SAMPLE, SAMPLE_PER_CLASS = "audit_sample.txt", 5
-SAMPLE_SEED = "text-audit-4"  # changed after rules were drawn from a reading of the sample: the next reading is of unseen questions
+SHORT_STOPS = {"e.g.", "i.e.", "dr.", "mr.", "mrs.", "ms.", "vs.", "approx.", "fig.", "figs.", "no.", "al.", "st.", "ca."}
+SAMPLE, SAMPLE_PER_CLASS, SAMPLE_AFTER = "audit_sample.txt", 10, 2000  # questions per class; characters of the text after each
+SAMPLE_SEED = "text-audit-8"  # changed after rules were drawn from a reading of the sample: the next reading is of unseen questions
 SHARED_RUN, SAME_PATIENT = 12, 0.10  # questions of two articles sharing this share of their runs of 12 words: one patient
 DUPLICATE = f"question tells the same patient's case as a question of another article (at least {SAME_PATIENT:.0%} of its " \
             f"runs of {SHARED_RUN} words)"
+
+
+def _sentences(text: str) -> list[str]:
+    """The sentences of a text: each ends at a full stop, question or exclamation mark followed by a space and a capital letter,
+    a digit, an opening bracket or a quote, unless the stop ends a short form such as "Fig." or "e.g."."""
+    sentences, start = [], 0
+    for m in re.finditer(r"(?<=[.!?])\s+(?=[A-Z0-9(\[\"'“])", text):
+        last = text[start:m.start()].split()
+        if last and last[-1].lstrip("([\"'“").lower() in SHORT_STOPS:
+            continue
+        sentences.append(text[start:m.start()])
+        start = m.end()
+    return sentences + [text[start:]]
+
+
+def _any_of(words) -> re.Pattern:
+    """Any of the words or phrases in a plain text (_plain), each also in the plural: with "s" or "es", or "ies" for a final
+    "y" ("extremities")."""
+    forms = []
+    for word in map(lambda w: _plain(w).strip(), words):
+        forms.append(re.escape(word[:-1]) + "(?:y|ies)" if word.endswith("y") else re.escape(word) + "(?:s|es)?")
+    return re.compile(r" (?:" + "|".join(forms) + r") ")
 
 
 def _plain(text: str) -> str:
@@ -60,6 +101,13 @@ def _plain(text: str) -> str:
     for british, american in SPELLING:
         text = text.replace(british, american)
     return " " + " ".join(re.findall(r"[a-z0-9]+", text.replace("'s", ""))) + " "
+
+
+WHERE = _any_of(SKIN_WORDS + SURFACE)  # a lesion on the skin, or on a place of the body's surface
+LOOKS = _any_of(SKIN_WORDS + SEEN + FEATURES)  # what is seen or felt of a lesion on the skin
+NEAR = _any_of(SEEN + FEATURES)  # the same, in a sentence next to the lesion's ("skin" there may be another matter)
+SCAN = _any_of(SCANS)  # a scan or a look inside the body: its lesion is not one seen on the skin
+RELATIVE = _any_of(RELATIVES)  # a sentence about a relative: its diagnosis may not be the patient's
 
 
 def _forms(word: str) -> set[str]:
@@ -90,11 +138,14 @@ def audit(data: str | Path = DATA, show=None) -> dict:
     with (data / TABLE_NAME).open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
     with (data / TERMS).open(encoding="utf-8", newline="") as f:
-        names = defaultdict(list)
+        names, counting = defaultdict(list), defaultdict(list)
         for t in csv.DictReader(f):
             if t["term"].lower() not in VAGUE:
                 names[t["class"]].append(t["term"])
+                if t["counts"] == "yes":
+                    counting[t["class"]].append(t["term"])
     patterns = {label: _name_pattern(names[label]) for label in names}
+    confirms = {label: _name_pattern(counting[label]) for label in counting}  # a result confirms the class by these names
     short = {label: re.compile(r"\b(?:" + "|".join(re.escape(f) for f in forms) + r")s?\b", re.I)
              for label, forms in SHORT_FORMS.items()}
     folder = data / FILES
@@ -123,7 +174,8 @@ def audit(data: str | Path = DATA, show=None) -> dict:
         plain = _plain(question)
         if patterns[row["label"]].search(plain) or (row["label"] in short and short[row["label"]].search(question)):
             failures["question names its class or its short form"].append(uid)
-        if any(re.search(rf"\b{re.escape(form)}s?\b", question) for form in _defined(sources.get(uid, ()), patterns[row["label"]])):
+        if any(re.search(rf"\b{re.escape(form)}s?\b", question)
+               for form in _defined(sources.get(uid, ()), patterns[row["label"]], short.get(row["label"]))):
             failures["question uses a short form its source defines for the class"].append(uid)
         if RESULT.search(plain):
             failures["question reports a test result"].append(uid)
@@ -133,8 +185,16 @@ def audit(data: str | Path = DATA, show=None) -> dict:
             failures["question describes no lesion"].append(uid)
         if not PATIENT.search(question):
             failures["question describes no patient"].append(uid)
+        if ONE_PATIENT.search(CASE_HEADING.sub("", question, count=1)) or len({int(m.group(1)) for m in AGE_OF.finditer(question)}) > 1:
+            failures["question describes more than one patient"].append(uid)
+        if not _on_skin(question):
+            failures["question describes no lesion as seen on the skin"].append(uid)
+        defined = _defined(sources.get(uid, ()), confirms[row["label"]], short.get(row["label"]), ending=True)  # names that count
+        if not any(_confirms(source[source.index(question) + len(question):], confirms[row["label"]], short.get(row["label"]),
+                             defined) for source in sources.get(uid, ()) if question in source):
+            failures["no test result after the question names its class"].append(uid)
         if any(LESION.search(_plain(sentence)) and any(f" {_plain(site).strip()} " in _plain(sentence) for site in INSIDE)
-               for sentence in re.split(r"(?<=[.!?])\s+", question)):
+               for sentence in _sentences(question)):
             failures["question puts a lesion inside the body"].append(uid)
         if not (SIZE.search(question) or TYPES.search(plain) or any(f" {_plain(word).strip()} " in plain for word in FEATURES)):
             failures["question tells nothing of what the lesion looks like"].append(uid)
@@ -145,10 +205,32 @@ def audit(data: str | Path = DATA, show=None) -> dict:
     pairs = _shared_runs(rows, texts)
     failures[DUPLICATE] += [f"{a['patient_uid']} ~ {b['patient_uid']} ({a['split']}/{b['split']}, {share:.0%})"
                             for a, b, share, _ in pairs if share >= SAME_PATIENT]
-    _write_sample(data, rows, texts)
+    _write_sample(data, rows, texts, sources)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "audit", _summary(rows, failures))
     return {"rows": rows, "failures": dict(failures), "pairs": pairs, "summary": (data / REPORT).as_posix(),
             "sample": (data / SOURCES / SAMPLE).as_posix()}
+
+
+def _on_skin(question: str) -> bool:
+    """Whether a sentence of the question names a lesion and where it is on the skin or the body's surface, reporting no scan,
+    and it or a sentence next to it what the lesion looks or feels like."""
+    plains = [_plain(sentence) for sentence in _sentences(question)]
+    return any(PLACED.search(plain) and WHERE.search(plain) and not SCAN.search(plain) and (LOOKS.search(plain) or any(
+        NEAR.search(near) for near in plains[max(0, n - 1):n] + plains[n + 1:n + 2])) for n, plain in enumerate(plains))
+
+
+def _confirms(rest: str, names: re.Pattern, short: re.Pattern | None, defined: set[str]) -> bool:
+    """Whether a sentence of the rest of the source reports a test result (RESULT) and names the class (``names``, its short
+    form, or a short form the source defines), itself or in one of the two sentences after it, in a sentence that names no
+    relative; "keratinocyte carcinoma" (GROUP) is no test result."""
+    sentences = _sentences(rest.strip())
+
+    def named(sentence: str) -> bool:
+        return not RELATIVE.search(_plain(sentence)) and bool(
+            names.search(_plain(sentence)) or (short and short.search(sentence))
+            or any(re.search(rf"\b{re.escape(form)}s?\b", sentence) for form in defined))
+    return any(RESULT.search(GROUP.sub(" ", _plain(sentence))) and any(map(named, sentences[n:n + 3]))
+               for n, sentence in enumerate(sentences))
 
 
 def _shared_runs(rows: list[dict], texts: dict[str, str]) -> list[tuple[dict, dict, float, str]]:
@@ -176,13 +258,19 @@ def _shared_runs(rows: list[dict], texts: dict[str, str]) -> list[tuple[dict, di
     return sorted(found, key=lambda pair: (order[pair[0]["patient_uid"]], order[pair[1]["patient_uid"]]))
 
 
-def _defined(sources: list[str], pattern: re.Pattern) -> set[str]:
-    """The short forms the source texts define for the class (``pattern``): "pyogenic granuloma (PG)" or "PG (pyogenic
-    granuloma)", a plural "s" dropped."""
+def _defined(sources: list[str], pattern: re.Pattern, short: re.Pattern | None = None, ending: bool = False) -> set[str]:
+    """The short forms the source texts define for the class (``pattern``, or its short form ``short``): "pyogenic granuloma
+    (PG)", a name in the 5 words before the brackets ("angiokeratoma circumscriptum (AC)"), or, with ``ending``, a name that
+    ends right before them ("nodular BCC (nBCC)"; not "seborrheic keratosis and human papillomavirus (HPV)"); or "PG (pyogenic
+    granuloma)". A plural "s" dropped."""
+    end = r"$" if ending else ""
+    tail = re.compile(r"(?:" + short.pattern + r")" + (r"[^A-Za-z0-9]*$" if ending else ""), re.I) if short else None
+    name = re.compile(pattern.pattern + end)
     found = set()
     for source in sources:
         for m in re.finditer(rf"\(\s*({DEFINED})\s*[),;]", source):
-            if pattern.search(_plain(" ".join(source[max(0, m.start() - 80):m.start()].split()[-5:]))):
+            before = " ".join(source[max(0, m.start() - 80):m.start()].split()[-5:])
+            if name.search(_plain(before)) or (tail and tail.search(before)):
                 found.add(m.group(1))
         for m in re.finditer(rf"\b({DEFINED})\s*\(([^()]{{3,80}})\)", source):
             if pattern.search(_plain(m.group(2))):
@@ -214,7 +302,8 @@ def _sources(data: Path, rows: list[dict], show=None) -> dict[str, list[str]]:
     return found
 
 
-def _write_sample(data: Path, rows: list[dict], texts: dict[str, str]) -> None:
+def _write_sample(data: Path, rows: list[dict], texts: dict[str, str], sources: dict[str, list[str]]) -> None:
+    """SAMPLE_PER_CLASS questions per class, each with the first SAMPLE_AFTER characters of what follows it in its source."""
     by_class = defaultdict(list)
     for row in rows:
         if row["patient_uid"] in texts:
@@ -223,7 +312,11 @@ def _write_sample(data: Path, rows: list[dict], texts: dict[str, str]) -> None:
     for label in sorted(by_class):
         chosen = sorted(by_class[label], key=lambda r: hashlib.sha256(f"{SAMPLE_SEED}:{r['patient_uid']}".encode()).hexdigest())
         for row in chosen[:SAMPLE_PER_CLASS]:
-            lines += [f"== {label} | {row['patient_uid']} | {row['source']} | {row['split']}", texts[row["patient_uid"]], ""]
+            question = texts[row["patient_uid"]]
+            source = next((s for s in sources.get(row["patient_uid"], ()) if question in s), "")
+            after = source[source.index(question) + len(question):].strip()[:SAMPLE_AFTER] if source else "(not in its source)"
+            lines += [f"== {label} | {row['patient_uid']} | {row['source']} | {row['split']}", question,
+                      "-- after it in its source:", after, ""]
     (data / SOURCES).mkdir(parents=True, exist_ok=True)
     (data / SOURCES / SAMPLE).write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
@@ -234,13 +327,16 @@ def _summary(rows, failures) -> list[str]:
               "question names its class or its short form", "question uses a short form its source defines for the class",
               "question reports a test result",
               f"question shorter than {MIN_WORDS} words", "question describes no lesion", "question describes no patient",
+              "question describes more than one patient", "question describes no lesion as seen on the skin",
               "question puts a lesion inside the body", "question tells nothing of what the lesion looks like",
+              "no test result after the question names its class",
               "question the same as another", DUPLICATE]
     lines = ["# Audit: an independent check of the questions", "",
              "Written by `python -m src.text.audit`, on the computer that holds the texts, with code of its own (not the "
              "build's): every question file is checked against its fingerprint and its source, and for the class's names, short "
-             "forms (also those its source defines) and test results it must not contain, and for a patient and a lesion on the "
-             f"skin it must describe. {SAMPLE_PER_CLASS} questions per class are written into "
+             "forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the "
+             "skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis)."
+             f" {SAMPLE_PER_CLASS} questions per class, each with the text after it in its source, are written into "
              "`data/text/sources/audit_sample.txt` for reading (not committed).", "",
              f"- Questions checked: {len(rows)}", "", "| Check | Failed | Examples |", "|---|---|---|"]
     for check in checks:
