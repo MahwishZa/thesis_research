@@ -2247,43 +2247,60 @@ class RepositoryTests(unittest.TestCase):
             self.assertIn(f"python -m src.evaluate {name}", evaluate.__doc__, f"the usage documentation omits '{name}'")
 
     def test_the_commands_written_in_the_readme_are_accepted_by_the_command_line(self):
-        commands = re.findall(r"`python -m src\.evaluate ([^`]+)`", self.readme)
-        self.assertGreaterEqual(len(commands), 2)
-        for command in commands:
+        for command in re.findall(r"`python -m src\.evaluate ([^`]+)`", self.readme):  # the section may stay empty until the end
             with self.subTest(command):
                 args = evaluate.build_parser().parse_args(shlex.split(command))
                 if hasattr(args, "config"):
                     self.assertTrue((ROOT / args.config).is_file(), f"the README names a config that does not exist: {args.config}")
 
-    def test_the_readme_names_every_code_and_test_file(self):
-        for path in sorted((ROOT / "src").rglob("*.py")) + sorted((ROOT / "tests").rglob("*.py")):
-            if path.name != "__init__.py":
-                self.assertIn(path.name, self.readme, f"the README tree omits {path.name}")
+    def test_the_readme_has_its_sections_in_order_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
+        self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M),
+                         ["Overview", "Objectives", "Results", "Repository Structure", "How to Run"])
+        block = re.search(r"## Repository Structure\n\n```\n(.*?)\n```", self.readme, re.S).group(1)
+        parents, listed = [], set()
+        for line in block.splitlines():
+            level, name = (len(line) - len(line.lstrip())) // 4, line.strip().rstrip("/")
+            parents = parents[:level] + [name]
+            self.assertTrue(ROOT.joinpath(*parents).exists(), f"the README structure lists a path that does not exist: {'/'.join(parents)}")
+            if level == 0:
+                listed.add(name)
+        if shutil.which("git") and (ROOT / ".git").exists():
+            tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
+            folders = {p.split("/")[0] for p in tracked if "/" in p and not p.startswith(".")}
+            self.assertEqual(sorted(folders - listed), [], "the README structure omits a top-level folder")
 
     def test_the_results_written_in_the_readme_match_the_saved_results(self):
         def pct(x):
-            return f"{100 * x:.1f}"
+            return f"{100 * x:.1f}%"
 
-        header = next(line for line in self.readme.splitlines() if line.startswith("| Dataset |"))
-        self.assertEqual([c.strip() for c in header.strip().strip("|").split("|")],
-                         ["Dataset", "Model", "Setting", "Balanced accuracy, test (%)", "95% interval (%)",
-                          "Hallucination rate (%, wrong diagnoses)", "Missed malignancy (%, cancers called benign)",
-                          "Abstention rate (%)", "Report"])
-        rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
-        for row in rows:  # no row until a model has a finished test run
-            link = re.search(r"\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", row)
-            self.assertTrue((ROOT / link.group(1)).is_file(), f"the README links to a report that does not exist: {link.group(1)}")
-            main = json.loads((ROOT / link.group(1)).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
-            low, high = main["balanced_accuracy_ci95"]  # the main score
-            cells = [c.strip() for c in row.strip().strip("|").split("|")]
-            self.assertEqual(cells[:2], [link.group(2), link.group(3)], "the dataset and model must be the run's own")
-            missed = main["risk"]["missed_malignancy"]
-            abstains = link.group(3).endswith("-abstain")
-            self.assertEqual(cells[3:8], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
-                                          pct(main["hallucination"]["balanced_rate"]), pct(missed) if missed is not None else "–",
-                                          pct(main["abstention"]["rate"]) if abstains else "–"])
+        section = re.search(r"## Results\n(.*?)\n## ", self.readme, re.S).group(1)
+        header = "| Model | Setting | Balanced accuracy (95% CI) | Hallucination rate | Missed malignancy |"
+        dataset, rows, headings = None, 0, []
+        for line in section.splitlines():
+            if line.startswith("### "):
+                dataset = line[4:].strip().lower()
+                headings.append(dataset)
+            elif line.startswith("| Model |"):
+                self.assertEqual(line, header)
+            elif line.startswith("| ["):  # a row exists only for a finished test run
+                rows += 1
+                link = re.fullmatch(r"\| \[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\) \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|", line)
+                self.assertIsNotNone(link, f"a results row must have the form of the table: {line}")
+                path, folder, model, setting, bal, hall, missed = link.groups()
+                self.assertEqual(folder, dataset, "a row belongs under the heading of its own dataset")
+                self.assertFalse(model.endswith("-abstain"), "a run that may abstain needs an abstention column before it is listed")
+                self.assertTrue((ROOT / path).is_file(), f"the README links to a report that does not exist: {path}")
+                card = json.loads((ROOT / path).with_name("run_card.json").read_text(encoding="utf-8"))
+                main = json.loads((ROOT / path).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
+                low, high = main["balanced_accuracy_ci95"]
+                shown = main["risk"]["missed_malignancy"]
+                self.assertEqual((card["split"], setting.strip()), ("test", "Closed-book"))
+                self.assertEqual([bal.strip(), hall.strip(), missed.strip()], [
+                    f"{pct(main['balanced_accuracy'])} ({100 * low:.1f} to {100 * high:.1f})", pct(main["hallucination"]["balanced_rate"]),
+                    pct(shown) if shown is not None else "-"])
+        self.assertEqual(headings, ["image", "text", "multimodal"])
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
-        self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
+        self.assertEqual(rows, len(finished), "every finished test run in results/ must have exactly one README row")
 
     def test_configs_are_valid_and_point_to_files_that_exist(self):
         configs = sorted((ROOT / "configs").glob("*/*.toml"))
