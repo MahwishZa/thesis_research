@@ -1664,13 +1664,22 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     accuracy and class-balanced hallucination rate, and the hallucination reduction (A minus B, as a share of A), with paired 95%
     intervals; and the hallucinations B removed and introduced."""
     (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
-    dataset = card_a["config"]["dataset"]
+    dataset, dataset_b = card_a["config"]["dataset"], card_b["config"]["dataset"]
     kind = DATASETS[dataset]
-    for what, a, b in (("dataset", dataset, card_b["config"]["dataset"]), ("split", card_a["split"], card_b["split"]),
-                       ("answer options", card_a["labels"], card_b["labels"]),
-                       ("questions", card_a[f"{kind.item}s_sha256"], card_b[f"{kind.item}s_sha256"])):
+    # The one pair of different datasets that can be compared: the same photos without and with their patients' facts (the
+    # multimodal questions are the image dataset's photos). Then the questions differ by the facts, so the photos and their
+    # classes are compared instead of the questions' fingerprint.
+    same_photos = {dataset, dataset_b} == {"image", "multimodal"}
+    if dataset != dataset_b and not same_photos:
+        raise ValueError("the two runs differ in their dataset, so they cannot be compared question by question")
+    checks = [("split", card_a["split"], card_b["split"]), ("answer options", card_a["labels"], card_b["labels"])]
+    if not same_photos:
+        checks.append(("questions", card_a[f"{kind.item}s_sha256"], card_b[f"{kind.item}s_sha256"]))
+    for what, a, b in checks:
         if a != b:
             raise ValueError(f"the two runs differ in their {what}, so they cannot be compared question by question")
+    if same_photos and {(p["path"], p["label"]) for p in preds_a} != {(p["path"], p["label"]) for p in preds_b}:
+        raise ValueError("the two runs did not answer the same photos with the same classes")
     by_path = {p["path"]: p for p in preds_b}
     if set(by_path) != {p["path"] for p in preds_a} or len(by_path) != len(preds_b):
         raise ValueError("the two runs did not answer the same questions")
@@ -1709,7 +1718,8 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
         return (_percentile(series, 0.025), _percentile(series, 0.975))
 
     balanced, accuracy, hallucination, reduction = scores(range(len(pairs)))
-    return {"run_a": Path(run_a).as_posix(), "run_b": Path(run_b).as_posix(), "dataset": dataset, "split": card_a["split"],
+    return {"run_a": Path(run_a).as_posix(), "run_b": Path(run_b).as_posix(),
+            "dataset": dataset if dataset == dataset_b else f"{dataset} and {dataset_b}", "split": card_a["split"],
             "n": len(pairs), "both_right": sum(a and b for a, b in zip(right_a, right_b)), "only_a": only_a, "only_b": only_b,
             "both_wrong": sum(not a and not b for a, b in zip(right_a, right_b)), "mcnemar_p": mcnemar(only_a, only_b),
             "balanced_accuracy_difference": balanced, "balanced_accuracy_difference_ci95": interval(0),
