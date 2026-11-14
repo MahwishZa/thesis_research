@@ -1,0 +1,81 @@
+{
+  "name": "claude-sonnet-5-5",
+  "split": "test",
+  "run_id": "test_5db7a077",
+  "status": "complete",
+  "fingerprint": "5db7a0771aace7f62de69620419c5890d92a5c4e6e3fb790f794293db331ef5d",
+  "seed": null,
+  "config_file": "configs/multimodal/claude-sonnet-5-5.toml",
+  "config": {
+    "name": "claude-sonnet-5-5",
+    "dataset": "multimodal",
+    "model": {
+      "provider": "anthropic",
+      "id": "claude-sonnet-5-5",
+      "max_tokens": 256,
+      "thinking": "between_tools",
+      "effort": "low"
+    },
+    "prompt": {
+      "file": "prompts/multimodal/diagnosis.txt"
+    },
+    "run": {
+      "requests_per_minute": 15,
+      "order_seed": 0
+    }
+  },
+  "prompt_file": "prompts/multimodal/diagnosis.txt",
+  "prompt_sha256": "d1a433195f62e84bc38ff2f52f342c5f34df229d8f513ad9071e02abab7e969d",
+  "prompt": "This is a dermoscopic image of a skin lesion.\nPatient: {facts}\nClassify the lesion as exactly one of the following diagnoses:\n- actinic keratosis\n- basal cell carcinoma\n- dermatofibroma\n- melanoma\n- nevus\n- pigmented benign keratosis\n- squamous cell carcinoma\n- vascular lesion\nAnswer with the diagnosis name only, exactly as written in the list above. Do not write a sentence. Do not explain.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "dermatofibroma",
+    "melanoma",
+    "nevus",
+    "pigmented benign keratosis",
+    "squamous cell carcinoma",
+    "vascular lesion"
+  ],
+  "abstain": false,
+  "n_images": 320,
+  "images_sha256": "c3de85ddfda03706361af1c65b930339ffd3371ca85b1452289920d26d8a7988",
+  "group_column": "lesion_group",
+  "dataset_table": {
+    "file": "data/multimodal/questions.csv",
+    "sha256": "150d699e3752e46b6d0a46ee3456bc4a479809fe6553eea8c96ec0b3b18a17c6"
+  },
+  "git": {
+    "commit": "b0f7fe7cd81fe9cf49fd2ff2d1cd49efd6eaff81",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "anthropic": "2.6.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-14T17:27:43+00:00",
+  "finished_utc": "2026-11-14T17:49:01+00:00",
+  "model": {
+    "provider": "anthropic",
+    "model_id": "claude-sonnet-5-5",
+    "sdk": "anthropic",
+    "sdk_version": "2.6.0",
+    "generation_config": {
+      "max_tokens": 256,
+      "thinking": "between_tools",
+      "effort": "low",
+      "sampling": "provider default (temperature, top_p and top_k are not sent)"
+    }
+  },
+  "model_versions_returned": [
+    "claude-sonnet-5-5"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-14T17:27:43+00:00",
+      "commit": "b0f7fe7cd81fe9cf49fd2ff2d1cd49efd6eaff81",
+      "uncommitted_changes": false
+    }
+  ]
+}
