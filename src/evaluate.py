@@ -1187,10 +1187,13 @@ def _now() -> str:
 
 
 def _git() -> dict:
+    """The commit the code is at, and whether anything but the results folder differs from it (a finished run's own folder, not yet
+    committed, must not stop the next test run)."""
     try:
         commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
-        dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True).stdout.strip())
-        return {"commit": commit, "uncommitted_changes": dirty}
+        changes = subprocess.run(["git", "status", "--porcelain", "--", ".", f":(exclude){RESULTS.as_posix()}"],
+                                 capture_output=True, text=True, check=True).stdout.strip()
+        return {"commit": commit, "uncommitted_changes": bool(changes)}
     except (OSError, subprocess.CalledProcessError):
         return {"commit": None, "uncommitted_changes": None}
 

@@ -1227,9 +1227,9 @@ class RunTests(Project):
         patcher = mock.patch("src.evaluate.time.sleep")
         self.sleep = patcher.start()
         self.addCleanup(patcher.stop)
-        clean = mock.patch("src.evaluate._git", return_value={"commit": "c" * 40, "uncommitted_changes": False})
-        clean.start()
-        self.addCleanup(clean.stop)
+        self.clean = mock.patch("src.evaluate._git", return_value={"commit": "c" * 40, "uncommitted_changes": False})
+        self.clean.start()
+        self.addCleanup(self.clean.stop)
 
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.evaluate.load", return_value=model):
@@ -1437,6 +1437,36 @@ class RunTests(Project):
         self.assertIn('Run B answered "uncertain" 3 times. Run A named a wrong diagnosis on 2 of those questions (hallucinations avoided) '
                       "and the right one on 1 (right answers lost)", text)
         self.assertNotIn("Run A answered", text)
+
+    @unittest.skipUnless(shutil.which("git"), "needs git")
+    def test_a_finished_test_run_does_not_stop_the_next_one_but_changed_code_does(self):
+        """With the real Git check (no stand-in): the results folder of the first test run is new and uncommitted, and the second
+        test run, of another model, must still start; a changed or new file outside results/ must still stop it."""
+        self.clean.stop()  # RunTests.setUp replaced _git with a clean stand-in: use the real one here
+        git = lambda *args: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=self.base,
+                                           capture_output=True, check=True)
+        git("init", "-q")
+        (self.base / ".gitignore").write_text("*.partial/\nresults/*/*/val_*/\n", encoding="utf-8")
+        git("add", "-A")
+        git("commit", "-qm", "code and data")
+        self.assertEqual(evaluate._git()["uncommitted_changes"], False)
+        first = self._run(FakeModel(), "test")
+        self.assertTrue(first.is_dir())
+        self.assertEqual(evaluate._git()["uncommitted_changes"], False)  # only a results folder is new
+        second_config = self.base / "other.toml"
+        second_config.write_text(self.config.read_text(encoding="utf-8").replace('name = "fake"', 'name = "other"'), encoding="utf-8")
+        git("add", "other.toml")
+        git("commit", "-qm", "another config")
+        with mock.patch("src.evaluate.load", return_value=FakeModel()), mock.patch("src.evaluate.time.sleep"):
+            second = evaluate.run(str(second_config), "test", results=self.results)
+        card = json.loads((second / "run_card.json").read_text(encoding="utf-8"))
+        self.assertEqual(card["git"]["uncommitted_changes"], False)
+        self.assertEqual(len(card["git"]["commit"]), 40)
+        (self.base / "prompt.txt").write_text("changed {labels}", encoding="utf-8")  # tracked code or settings changed
+        self.assertEqual(evaluate._git()["uncommitted_changes"], True)
+        git("checkout", "--", "prompt.txt")
+        (self.base / "new_code.py").write_text("x = 1\n", encoding="utf-8")  # a new file outside results/
+        self.assertEqual(evaluate._git()["uncommitted_changes"], True)
 
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):
@@ -1988,6 +2018,16 @@ class TextDatasetTests(TextProject):
         self.assertEqual((card["labels"], card["n_cases"], card["group_column"], card["prompt"]), (labels, 8, "pmid", prompt))
         self.assertEqual(card["cases_sha256"], evaluate.items_hash([i for i in evaluate.load_dataset(*evaluate.dataset_paths("text"), "text")
                                                                     if i.split == "test"]))
+
+    def test_nothing_of_a_case_is_written_into_the_run_folder_that_goes_into_git(self):
+        """The case texts have research-only licences and stay on this computer; a test run's folder is committed."""
+        out = self._run(FakeModel(), "test", run_id="t1")
+        written = {f.name: f.read_text(encoding="utf-8") for f in out.iterdir()}
+        self.assertEqual(sorted(written), ["metrics.json", "predictions.jsonl", "report.md", "run.log", "run_card.json"])
+        for text in self.texts.values():
+            for piece in (text, "café au lait", "It grew."):
+                for name, content in written.items():
+                    self.assertNotIn(piece, content, f"{name} holds a piece of a case text")
 
     def test_the_report_resamples_articles_and_gives_the_scores_without_actinic_keratosis_beside_the_main_score(self):
         out = self._run(FakeModel(), "test", run_id="t1")  # "melanoma" for every case: right for the 3 melanomas only
