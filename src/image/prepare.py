@@ -102,7 +102,7 @@ from pathlib import Path
 import PIL
 from PIL import Image, ImageChops, ImageCms, ImageOps, ImageStat, features
 
-from ..common import fetch, write_section
+from ..common import fetch, flatten, write_section
 from ..evaluate import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, items_hash, load_dataset, summarize
 from ..evaluate import classes as training_classes
 
@@ -485,19 +485,9 @@ def _download(isic_id: str) -> dict:
             "status": status, "record": record}
 
 
-def _flatten(value, prefix: str = "") -> dict:
-    """A nested record as dotted names: {"metadata": {"clinical": {"sex": "male"}}} -> {"metadata.clinical.sex": "male"}."""
-    if isinstance(value, dict):
-        out = {}
-        for key, item in value.items():
-            out.update(_flatten(item, f"{prefix}.{key}" if prefix else str(key)))
-        return out
-    return {prefix: value}
-
-
 def _isic_row(entry: dict) -> dict:
     """What one ISIC record says, as one row. Fields are found by their own name wherever ISIC nests them; nothing is guessed."""
-    flat = {k: v for k, v in _flatten(entry["record"] or {}).items() if v not in (None, "")}
+    flat = {k: v for k, v in flatten(entry["record"] or {}).items() if v not in (None, "")}
 
     def field(name: str) -> str:
         return " | ".join(dict.fromkeys(str(v) for k, v in sorted(flat.items()) if k.split(".")[-1] == name))
@@ -602,7 +592,7 @@ def isic(limit: int | None = None, data: str | Path = DATA) -> dict:
         tmp.write_text(json.dumps(entry, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         os.replace(tmp, cache / f"{isic_id}.json")
         new.append(_isic_row(entry))
-        fields = fields or sorted(_flatten(entry["record"] or {}))  # the field names of the first record found, to check the format
+        fields = fields or sorted(flatten(entry["record"] or {}))  # the field names of the first record found, to check the format
     have = sum(1 for i in ids if (cache / f"{i}.json").exists())
     done = {"total": len(ids), "have": have, "new": new, "fields": fields, "written": False}
     if have < len(ids):

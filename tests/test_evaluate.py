@@ -958,6 +958,7 @@ class Project(unittest.TestCase):
         previous = os.getcwd()
         os.chdir(self.base)  # the paths data/image/dataset and data/image/dataset.csv point into the project
         self.addCleanup(os.chdir, previous)
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))  # the progress lines of the runs inside the tests
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -1734,6 +1735,7 @@ class TextProject(unittest.TestCase):
         previous = os.getcwd()
         os.chdir(self.base)
         self.addCleanup(os.chdir, previous)
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))  # the progress lines of the runs inside the tests
         for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
             patcher = mock.patch(f"src.evaluate.{name}", return_value=value)
             patcher.start()

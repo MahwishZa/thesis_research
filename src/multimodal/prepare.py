@@ -44,7 +44,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from ..common import write_section
+from ..common import flatten, read_rows, write_section
 
 IMAGE = Path("data/image")  # the frozen image dataset: dataset.csv, raw_photos.csv and, on this computer, downloads/isic/
 DATA = Path("data/multimodal")  # this dataset's folder: its committed tables and reports
@@ -71,16 +71,6 @@ IDENTIFIER = re.compile(r"(?:^|_)id$", re.I)  # a lesion or patient number: link
 TOP_VALUES = 8  # values listed per fact and collection
 
 
-def _flatten(value, prefix: str = "") -> dict:
-    """A nested record as dotted names: {"metadata": {"clinical": {"sex": "male"}}} -> {"metadata.clinical.sex": "male"}."""
-    if isinstance(value, dict):
-        out = {}
-        for key, item in value.items():
-            out.update(_flatten(item, f"{prefix}.{key}" if prefix else str(key)))
-        return out
-    return {prefix: value}
-
-
 def _record_hash(record) -> str:
     """The fingerprint the image dataset gave the record (src/image/prepare.py): its JSON with sorted keys."""
     return hashlib.sha256(json.dumps(record, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
@@ -97,10 +87,7 @@ def kind_of(field: str) -> str:
 
 
 def _read_csv(path: Path) -> list[dict]:
-    if not path.is_file():
-        raise FileNotFoundError(f"{path.as_posix()} not found: the image dataset must be prepared first")
-    with path.open(encoding="utf-8", newline="") as f:
-        return list(csv.DictReader(f))
+    return read_rows(path, "the image and text datasets must be prepared first")
 
 
 def read_images(image: Path = IMAGE) -> list[dict]:
@@ -127,7 +114,7 @@ def read_images(image: Path = IMAGE) -> list[dict]:
             if entry.get("status") != "found" or _record_hash(entry.get("record")) != fingerprint:
                 changed.append(path.as_posix())
                 continue
-            for k, v in _flatten(entry["record"]).items():
+            for k, v in flatten(entry["record"]).items():
                 if k.startswith(PATIENT_GROUPS) and v not in (None, ""):
                     values.setdefault(k, []).append(v)
         fields = {k: v[0] for k, v in values.items() if all(x == v[0] for x in v)}
