@@ -11,7 +11,7 @@ once, with a blank synthetic image (for the text dataset, with a short question 
 key or a used-up quota shows before a run starts.
 ``run`` sends every file of one split, with the prompt, to the model named in the config and saves each answer as it arrives: an
 image goes next to the prompt, exactly as stored; a text case goes into the prompt word for word, where the prompt has
-``{case}``. A validation run (``--split val``) is for tuning the method; it stays on this computer (Git ignores it) and is not a
+``{case}``; a multimodal question is its image with its patient's facts in the prompt, where the prompt has ``{facts}``. A validation run (``--split val``) is for tuning the method; it stays on this computer (Git ignores it) and is not a
 reported result, and ``--limit N`` sends only its first N files. A test run (``--split test``) is the result: it runs once per
 config (the base paper's practice), needs a clean Git state so its run card names the exact code, and needs the model pinned to
 one version. Answers are kept in a folder ending in ``.partial`` until the run is complete; the same command continues a stopped
@@ -21,14 +21,16 @@ run.
 McNemar's exact test on the questions one run gets right and the other wrong, and the difference in balanced accuracy and in
 accuracy, with paired 95% intervals (both runs resampled together, by the same groups as the reports). No model is asked.
 
-Each config names its dataset (``dataset = "image"`` or ``"text"``); the code here is shared by every dataset, so all are scored
+Each config names its dataset (``dataset = "image"``, ``"text"`` or ``"multimodal"``); the code here is shared by every dataset, so all are scored
 alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
 (the files, exactly as every model receives them: JPEG or PNG images, or UTF-8 text cases; split: train, val or test) and
 data/<dataset>/dataset.csv (one row per file: split, label, path inside the dataset folder, sha256, and the group it belongs to:
-the lesion an image shows, or the article a case comes from; plus any further columns the preparation records). The table is
+the lesion an image shows, or the article a case comes from; plus any further columns the preparation records). The multimodal
+dataset is the exception: its table is data/multimodal/questions.csv, with each photo's facts, and its files are the image
+dataset's. The table is
 committed to Git and is the single source of truth; the files stay on this computer. Every file on disk is checked against the
 table before a run, so a changed, missing or extra file stops the run and every model is evaluated on byte-identical files.
-Results go to results/<dataset>/<model>/<run>/. The multimodal dataset is added in its phase.
+Results go to results/<dataset>/<model>/<run>/.
 
 The file has three parts, in this order: the metrics, the model adapters (one class per API) and the pipeline with its
 command line.
@@ -695,7 +697,7 @@ class OpenAICompatibleModel:
 # ==============================================================================================================================
 
 
-DATA = Path("data")  # one folder per dataset: data/image/ and data/text/ (data/multimodal/ in a later phase)
+DATA = Path("data")  # one folder per dataset: data/image/, data/text/ and data/multimodal/
 TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
 RESULTS = Path("results")  # results/<dataset>/<model>/<run>/
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
@@ -708,6 +710,8 @@ SHA256 = re.compile(r"[0-9a-f]{64}")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 PLACEHOLDER = "{labels}"
 CASE = "{case}"  # in a text prompt: where each case goes
+FACTS = "{facts}"  # in a multimodal prompt: where the patient's facts go
+MISSING_FACT = "not recorded"  # how a missing fact is written in a multimodal question
 LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reader forgives in front of a colon and the class name
 MAX_ATTEMPTS = 8  # waits of 10, 20, 40, 80, 120, 120, 120 seconds between them: about 8.5 minutes in all
 PROBE_ATTEMPTS = 3
@@ -730,6 +734,9 @@ class Dataset:
     group: str  # what one group is
     why_grouped: str  # why the files of one group are not independent
     set_apart: tuple[str, ...] = ()  # classes with so few files that the report also gives the scores without them
+    facts_column: str = ""  # the table's column with each file's patient facts, put into the prompt at {facts}
+    table: str = TABLE_NAME  # its table, in data/<dataset>/
+    files: str = ""  # its folder of files, inside data/ (default: <dataset>/dataset)
 
 
 DATASETS = {  # the datasets a config can name
@@ -738,6 +745,9 @@ DATASETS = {  # the datasets a config can name
     "text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
                     "Patients described in one article are not independent",
                     set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
+    "multimodal": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
+                          "Photos of one lesion are not independent", facts_column="facts", table="questions.csv",
+                          files="image/dataset"),  # the image dataset's photos, each with its patient's facts
 }
 
 
@@ -748,11 +758,14 @@ class Item:
     path: str  # inside the dataset's folder of files, with forward slashes: <split>/<label>/<file>
     sha256: str
     group: str = ""  # the lesion an image shows, or the article a case comes from; empty when the table does not say
+    facts: str = ""  # a multimodal question's patient facts, as the model is shown them
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
-    """The table and the folder of files of one prepared dataset: data/<dataset>/dataset.csv and data/<dataset>/dataset/."""
-    return DATA / dataset / TABLE_NAME, DATA / dataset / FILES
+    """The table and the folder of files of one prepared dataset: data/<dataset>/dataset.csv and data/<dataset>/dataset/ (the
+    multimodal dataset: data/multimodal/questions.csv and the image dataset's folder)."""
+    kind = DATASETS[dataset]
+    return DATA / dataset / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
 
 
 TABLE, IMAGES = dataset_paths("image")  # the defaults below
@@ -767,10 +780,11 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
                                 "preparation first)")
     with table.open(encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
-        missing = [c for c in COLUMNS if c not in (reader.fieldnames or [])]
+        missing = [c for c in (*COLUMNS, *([kind.facts_column] if kind.facts_column else [])) if c not in (reader.fieldnames or [])]
         if missing:
             raise ValueError(f"{table.as_posix()} lacks the column(s): {', '.join(missing)}")
-        items = [Item(*(row[c] for c in COLUMNS), group=(row.get(kind.group_column) or "").strip()) for row in reader]
+        items = [Item(*(row[c] for c in COLUMNS), group=(row.get(kind.group_column) or "").strip(),
+                      facts=(row[kind.facts_column] or "").strip() if kind.facts_column else "") for row in reader]
     if not items:
         raise ValueError(f"{table.as_posix()} lists no file")
     first_line = {}
@@ -785,6 +799,8 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
             raise ValueError(f"{where}: {item.path} is not {kind.file_kind}")
         if not SHA256.fullmatch(item.sha256):
             raise ValueError(f"{where}: sha256 must be 64 lowercase hexadecimal characters")
+        if kind.facts_column and not item.facts:
+            raise ValueError(f"{where}: the {kind.facts_column} column is empty (a missing fact is written \"{MISSING_FACT}\")")
         for key, what in ((item.path, "path"), (item.sha256, kind.item)):
             if key in first_line:  # a second copy of one file could sit in two splits: a leak between them
                 raise ValueError(f"{where}: the same {what} is also on line {first_line[key]}")
@@ -829,8 +845,9 @@ def classes(items: list[Item]) -> list[str]:
 
 
 def items_hash(items: list[Item]) -> str:
-    """One hash for a list of files: it changes if any file, label, path, split or group changes."""
-    lines = sorted(f"{i.split}\t{i.label}\t{i.path}\t{i.sha256}" + (f"\t{i.group}" if i.group else "") for i in items)
+    """One hash for a list of files: it changes if any file, label, path, split, group or fact changes."""
+    lines = sorted(f"{i.split}\t{i.label}\t{i.path}\t{i.sha256}" + (f"\t{i.group}" if i.group else "")
+                   + (f"\t{i.facts}" if i.facts else "") for i in items)
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
@@ -864,8 +881,9 @@ def read_case(item: Item, root: str | Path) -> tuple[str, dict]:
 
 
 def load_template(path: str | Path, dataset: str = "image") -> str:
-    """The prompt template: the label placeholder exactly once, and the case placeholder exactly once in a prompt for text cases
-    (never in one for images, which go next to the prompt)."""
+    """The prompt template: the label placeholder exactly once; the case placeholder exactly once in a prompt for text cases
+    (never in one for images, which go next to the prompt); the facts placeholder exactly once in a multimodal prompt (never in
+    another)."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:
         raise ValueError(f"{path} must contain {PLACEHOLDER} exactly once")
@@ -873,6 +891,10 @@ def load_template(path: str | Path, dataset: str = "image") -> str:
         raise ValueError(f"{path} must contain {CASE} exactly once: it is where each case goes")
     if not DATASETS[dataset].in_prompt and CASE in text:
         raise ValueError(f"{path} must not contain {CASE}: the {dataset} dataset sends no text case")
+    if DATASETS[dataset].facts_column and text.count(FACTS) != 1:
+        raise ValueError(f"{path} must contain {FACTS} exactly once: it is where each patient's facts go")
+    if not DATASETS[dataset].facts_column and FACTS in text:
+        raise ValueError(f"{path} must not contain {FACTS}: the {dataset} dataset has no patient facts")
     return text
 
 
@@ -881,10 +903,11 @@ def build_prompt(template: str, labels: list[str]) -> str:
     return template.replace(PLACEHOLDER, "\n".join(f"- {label}" for label in sorted(labels))).strip()
 
 
-def fill_case(prompt: str, case: str) -> str:
-    """The prompt for one text case: the case, word for word, where the prompt has {case}."""
-    before, after = prompt.split(CASE)
-    return before + case + after
+def fill(prompt: str, placeholder: str, value: str) -> str:
+    """The prompt for one question: the value (a text case, or a patient's facts) word for word where the prompt has the
+    placeholder. A placeholder-like text inside the value is left as it is."""
+    before, after = prompt.split(placeholder)
+    return before + value + after
 
 
 def _normalise(text: str) -> str:
@@ -1272,16 +1295,17 @@ def _run_once(job: dict, run_id: str) -> Path:
             for i, item in enumerate(todo, start=len(done) + 1):
                 if kind.in_prompt:  # a text case: inside the prompt, with no image
                     case, sent = read_case(item, job["root"])
-                    image, mime, text = None, None, fill_case(prompt_text, case)
+                    image, mime, text = None, None, fill(prompt_text, CASE, case)
                 else:
                     image, mime, sent = read_image(item, job["root"])
-                    text = prompt_text
+                    text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
                 answer, attempt = _ask(model, image, mime, text, throttle, say)
                 parsed = parse_answer(answer["text"], labels)
                 line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
                         "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
-                        f"{kind.item}_sent": sent, "answered_utc": _now()}
+                        f"{kind.item}_sent": sent, **({"facts": item.facts} if kind.facts_column else {}),
+                        "answered_utc": _now()}
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()
                 answered += 1
@@ -1408,12 +1432,25 @@ def _risk_rows(m: dict, over: str | None) -> list[str]:
     return rows
 
 
-def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
-    """The report lines of the scores without the classes too small to weigh like the others, and those classes' files."""
-    m, left_out, files = set_apart["metrics"], set_apart["left_out"], set_apart["files"]
+def _brief(m: dict, kind: Dataset) -> list[str]:
+    """The main scores of a second scoring, as a short table: balanced accuracy, accuracy, macro-F1 and the clinical risk."""
     items, groups = f"{kind.item}s", f"{kind.group}s"
     grouped = m["interval_method"] == f"bootstrap over {groups}"
     over = f" over {groups}" if grouped else ""
+    counted = [c for c, v in m["per_class"].items() if v["support"]]
+    return ["| Metric | Value | 95% interval |", "|---|---|---|",
+            f"| Balanced accuracy ({len(counted)} classes) | {_share(m['balanced_accuracy'])} | "
+            f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
+            f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} "
+            f"({f'bootstrap{over}' if grouped else 'Wilson'}) |",
+            f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
+            f"(bootstrap{over}) |", *_risk_rows(m, over if grouped else None)]
+
+
+def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
+    """The report lines of the scores without the classes too small to weigh like the others, and those classes' files."""
+    m, left_out, files = set_apart["metrics"], set_apart["left_out"], set_apart["files"]
+    items = f"{kind.item}s"
     lines = [f"## Without {' and '.join(left_out)}", ""]
     for label in left_out:
         n = sum(f["label"] == label for f in files)
@@ -1421,18 +1458,10 @@ def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
         lines.append(f"The class {label} has only {n} {kind.item if n == 1 else items} in this split, so its recall can only be "
                      f"{', '.join(f'{v}%' for v in values[:-1])} or {values[-1]}%, yet it weighs as much as any other class in the "
                      f"balanced accuracy above (one class in {n_labels}).")
-    counted = [c for c, v in m["per_class"].items() if v["support"]]
     lines += ["", f"The scores below leave out the {items} of {' and '.join(left_out)}, to show how much "
               f"{'they move' if len(left_out) > 1 else 'it moves'} the result. They are shown beside the main score, never "
               f"instead of it. The answer options stay the same {n_labels} classes, so answering {' or '.join(left_out)} for another "
-              f"{kind.item} still counts as wrong.", "",
-              "| Metric | Value | 95% interval |", "|---|---|---|",
-              f"| Balanced accuracy ({len(counted)} classes) | {_share(m['balanced_accuracy'])} | "
-              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
-              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} "
-              f"({f'bootstrap{over}' if grouped else 'Wilson'}) |",
-              f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
-              f"(bootstrap{over}) |", *_risk_rows(m, over if grouped else None), "",
+              f"{kind.item} still counts as wrong.", "", *_brief(m, kind), "",
               f"The {items} left out, and the answers:", "", f"| {kind.item.capitalize()} | True class | Answer |", "|---|---|---|"]
     lines += [f"| `{f['path']}` | {f['label']} | {f['prediction'] or UNREADABLE} |" for f in files]
     return lines + [""]
@@ -1457,6 +1486,9 @@ def write_report(run_dir: str | Path) -> Path:
             "left_out": left_out, "metrics": scores([p for p in preds if p["label"] not in left_out]),
             "files": [{"path": p["path"], "label": p["label"], "prediction": p["prediction"]}
                       for p in sorted(preds, key=lambda p: p["path"]) if p["label"] in left_out]}
+    if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
+        complete_facts = [p for p in preds if MISSING_FACT not in p["facts"]]
+        metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
     write_json(run_dir / "metrics.json", metrics)
 
     n_files = card[f"n_{kind.item}s"]
@@ -1474,12 +1506,19 @@ def write_report(run_dir: str | Path) -> Path:
               f"- Started {card['started_utc']}, finished {card['finished_utc']} (UTC)",
               f"- Prompt: `{card['prompt_file']}` (SHA-256 `{card['prompt_sha256'][:12]}`); {kind.item}s: {n_files} "
               f"(hash `{card[f'{kind.item}s_sha256'][:12]}`), "
-              + ("each put into the prompt word for word" if kind.in_prompt else "sent exactly as stored")
+              + ("each put into the prompt word for word" if kind.in_prompt else "sent exactly as stored"
+                 + (", each with its patient's facts in the prompt" if kind.facts_column else ""))
               + f"; dataset table `{table['file']}` (SHA-256 `{table['sha256'][:12]}`); Git commit "
               f"`{(card['git']['commit'] or 'unknown')[:10]}`", ""]
     lines += _scoring("Results", metrics["main"], kind)
     if left_out:
         lines += _without(metrics["without_small_classes"], kind, len(labels))
+    if kind.facts_column:
+        part = metrics["all_facts_recorded"]
+        lines += ["## Questions with all facts recorded", "",
+                  f"A missing fact (\"{MISSING_FACT}\") points to the photo's collection, and so mostly to melanoma or nevus "
+                  f"(data/multimodal/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
+                  "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"], kind), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})

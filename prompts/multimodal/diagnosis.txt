@@ -1,0 +1,5 @@
+This is a dermoscopic image of a skin lesion.
+Patient: {facts}
+Classify the lesion as exactly one of the following diagnoses:
+{labels}
+Answer with the diagnosis name only, exactly as written in the list above. Do not write a sentence. Do not explain.
