@@ -94,7 +94,8 @@ from PIL import Image
 #
 # Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
 # diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
-# precancerous and belongs to neither group, and an unreadable answer names no class: neither counts toward either rate.
+# precancerous and is in neither group as a true class. Both shares are of ALL the files of the group: a cancer answered as
+# actinic keratosis, or not readable, is no miss but stays in the total (so a model cannot lower its rate by not answering).
 #
 # ROC curves and AUC are deliberately absent: they need a score per class for every image, and a model that answers with one class
 # name gives none.
@@ -1415,8 +1416,9 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
               "that was never answered counts as precision 0 in the macro-precision.",
               f"- With one answer per {item}, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.",
               "- Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign "
-              "keratosis, dermatofibroma or vascular lesion. Over-call: the reverse. Actinic keratosis (precancerous) and unreadable "
-              "answers count toward neither.",
+              "keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign "
+              "lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the "
+              "total; actinic keratosis as a true class is in neither group.",
               "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.", ""]
     return lines
 
