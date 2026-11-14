@@ -1346,6 +1346,37 @@ class RunTests(Project):
         self.assertIsNone(back["hallucination_reduction_ci95"])  # in some resamples A has none: no interval
         self.assertIn("+100.0% (no interval: run A has no hallucination in some resamples)", evaluate.comparison_text(back))
 
+    def test_the_image_run_and_the_multimodal_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
+        """The multimodal questions are the image dataset's photos with their facts: the two runs differ in dataset and in the
+        questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair."""
+        truth = ["a", "a", "b", "b"]
+        runs = {}
+        for name, dataset, predicted in (("image", "image", ["a", "b", "b", "a"]), ("multi", "multimodal", ["a", "a", "b", "b"]),
+                                         ("text", "text", ["a", "a", "b", "b"])):
+            folder = self.base / f"pair_{name}"
+            folder.mkdir()
+            kind = evaluate.DATASETS[dataset]
+            card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
+            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+            rows = [{"path": f"test/{t}/{i}.jpg", "label": t, kind.group_column: f"L{i}", "prediction": p}
+                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+            runs[name] = folder
+        c = evaluate.compare(runs["image"], runs["multi"])
+        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("image and multimodal", 4, 0, 2))  # the facts fixed 2
+        self.assertEqual(c["balanced_accuracy_difference"], 0.5)
+        self.assertIn("image and multimodal dataset, test split, 4 questions", evaluate.comparison_text(c))
+        with self.assertRaisesRegex(ValueError, "differ in their dataset"):
+            evaluate.compare(runs["image"], runs["text"])
+        with self.assertRaisesRegex(ValueError, "differ in their dataset"):
+            evaluate.compare(runs["multi"], runs["text"])
+        rows = [json.loads(x) for x in (runs["multi"] / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        rows[0]["label"] = "b"  # another photo, or another class for the same photo
+        (runs["multi"] / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "same photos with the same classes"):
+            evaluate.compare(runs["image"], runs["multi"])
+
     def test_removed_and_introduced_hallucinations_are_counted_by_hand(self):
         """Six questions of two classes. Run A: right, no valid answer, wrong, right, wrong, wrong. Run B: right, right, wrong,
         wrong, right, wrong. Hallucinated (a wrong diagnosis named): A on questions 2, 4, 5; B on 2, 3, 5. Removed (A hallucinated,
@@ -2214,9 +2245,9 @@ class RepositoryTests(unittest.TestCase):
 
         header = next(line for line in self.readme.splitlines() if line.startswith("| Dataset |"))
         self.assertEqual([c.strip() for c in header.strip().strip("|").split("|")],
-                         ["Dataset", "Model", "Setting", "Balanced accuracy (test)", "95% interval",
-                          "Hallucination rate (wrong diagnoses)", "Missed malignancy (cancers called benign)",
-                          "Abstention rate", "Report"])
+                         ["Dataset", "Model", "Setting", "Balanced accuracy, test (%)", "95% interval (%)",
+                          "Hallucination rate (%, wrong diagnoses)", "Missed malignancy (%, cancers called benign)",
+                          "Abstention rate (%)", "Report"])
         rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
         for row in rows:  # no row until a model has a finished test run
             link = re.search(r"\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", row)

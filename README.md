@@ -31,5 +31,8 @@ With Python 3.11 or newer, `pip install -r requirements.txt`, and the model's AP
 
 ## Results
 
-| Dataset | Model | Setting | Balanced accuracy (test) | 95% interval | Hallucination rate (wrong diagnoses) | Missed malignancy (cancers called benign) | Abstention rate | Report |
+| Dataset | Model | Setting | Balanced accuracy, test (%) | 95% interval (%) | Hallucination rate (%, wrong diagnoses) | Missed malignancy (%, cancers called benign) | Abstention rate (%) | Report |
 |---|---|---|---|---|---|---|---|---|
+| image | claude-sonnet-5-5 | closed-book, forced choice | 51.2 | 45.7 to 56.7 | 48.8 | 25.0 | – | [report](results/image/claude-sonnet-5-5/test_cf5351f1/report.md) |
+| text | claude-sonnet-5-5 | closed-book, forced choice | 55.9 | 49.6 to 61.8 | 34.1 | 5.8 | – | [report](results/text/claude-sonnet-5-5/test_06ce1664/report.md) |
+| multimodal | claude-sonnet-5-5 | closed-book, forced choice | 56.2 | 50.6 to 61.7 | 43.8 | 20.8 | – | [report](results/multimodal/claude-sonnet-5-5/test_5db7a077/report.md) |
