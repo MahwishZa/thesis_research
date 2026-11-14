@@ -1248,6 +1248,28 @@ class RunTests(Project):
             evaluate.main(["compare", str(a), str(a)])
         self.assertIn("McNemar's exact test: p = 1.0000", shown.getvalue())
 
+    def test_the_paired_interval_resamples_whole_lesions_of_both_runs_together(self):
+        """Run B misses all 4 photos of lesion a1 and nothing else. Resampling the two lesions of class a (with replacement) gives
+        B's recall of a as 0, 1/2 or 1 with chances 1/4, 1/2, 1/4, so the difference in balanced accuracy is -50, -25 or 0 points
+        and the 95% interval is exactly -50 to 0. Resampling the 8 photos one by one would make losing all of them rare (under 1%)
+        and give an interval of about -44 to -6 instead."""
+        photos = [("a", "a1")] * 4 + [("a", "a2")] * 4 + [("b", "b1")] * 2 + [("b", "b2")] * 2
+        runs = []
+        for name, wrong in (("A", set()), ("B", {0, 1, 2, 3})):
+            folder = self.base / f"run_{name}"
+            folder.mkdir()
+            card = {"status": "complete", "config": {"dataset": "image"}, "n_images": 12, "images_sha256": "same", "split": "test",
+                    "labels": ["a", "b"]}
+            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+            rows = [{"path": f"test/{label}/{i}.jpg", "label": label, "lesion_group": group,
+                     "prediction": ("b" if label == "a" else "a") if i in wrong else label} for i, (label, group) in enumerate(photos)]
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+            runs.append(folder)
+        c = evaluate.compare(*runs)
+        self.assertEqual((c["only_a"], c["only_b"], c["balanced_accuracy_difference"]), (4, 0, -0.25))
+        self.assertEqual(c["balanced_accuracy_difference_ci95"], (-0.5, 0.0))
+        self.assertEqual(c["mcnemar_p"], 0.125)  # 2 x (1/2)^4
+
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):
             self._run(FakeModel(), "train")
