@@ -594,9 +594,17 @@ class GeminiModel:
         self.client = genai.Client(http_options=types.HttpOptions(timeout=int(TIMEOUT_SECONDS * 1000)))  # milliseconds
 
     def describe(self) -> dict:
-        return {"provider": "gemini", "model_id": self.model_id, "sdk": "google-genai",
+        return {"provider": "gemini", "model_id": self.model_id, "model_revision": self._revision(), "sdk": "google-genai",
                 "sdk_version": importlib.metadata.version("google-genai"),
                 "generation_config": self.config.model_dump(exclude_none=True, mode="json")}
+
+    def _revision(self) -> str | None:
+        """The exact revision Google serves under the model id (for example 3.5-flash-lite-07-2026): the answers name only the id,
+        so an update behind the same id would not show. None when it cannot be asked; the run then goes on."""
+        try:
+            return self.client.models.get(model=self.model_id).version
+        except (self.errors.APIError, self.httpx.TransportError):
+            return None
 
     def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
         contents = [prompt] if image is None else [self.types.Part.from_bytes(data=image, mime_type=mime_type), prompt]
@@ -1597,7 +1605,8 @@ def write_report(run_dir: str | Path) -> Path:
         lines += [f"**Incomplete: {len(preds)} of {n_files} {kind.item}s answered.**", ""]
     model = card.get("model") or {}
     table = card["dataset_table"]
-    lines += [f"- Model requested: `{model.get('model_id')}`; versions returned by the API: "
+    lines += [f"- Model requested: `{model.get('model_id')}`" + (f" (revision `{model['model_revision']}`)" if model.get("model_revision") else "")
+              + "; versions returned by the API: "
               f"{', '.join(f'`{v}`' for v in card['model_versions_returned']) or 'not recorded yet'}",
               f"- Generation settings: `{json.dumps(model.get('generation_config'))}`",
               f"- Started {card['started_utc']}, finished {card['finished_utc']} (UTC)",

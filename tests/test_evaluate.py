@@ -581,8 +581,19 @@ class GeminiTests(unittest.TestCase):
 
     def test_a_model_name_that_moves_is_not_a_pinned_version(self):
         with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}):
-            self.assertTrue(evaluate.load("gemini", GEMINI | {"id": "gemini-3.1-flash-lite"}).pinned)
+            self.assertTrue(evaluate.load("gemini", GEMINI | {"id": "gemini-3.5-flash-lite"}).pinned)
             self.assertFalse(evaluate.load("gemini", GEMINI | {"id": "gemini-flash-lite-latest"}).pinned)
+
+    def test_the_run_card_records_the_exact_revision_google_serves_under_the_model_id(self):
+        with mock.patch.object(self.model.client.models, "get", return_value=types.SimpleNamespace(version="3.5-flash-lite-07-2026")) as ask:
+            self.assertEqual(self.model.describe()["model_revision"], "3.5-flash-lite-07-2026")
+        ask.assert_called_once_with(model="gemini-test")
+        unavailable = self.errors.APIError(503, {"error": {"code": 503, "message": "busy", "status": "UNAVAILABLE"}})
+        for failure in (unavailable, self.model.httpx.ConnectError("no connection")):  # the run goes on without the revision
+            with self.subTest(type(failure).__name__), mock.patch.object(self.model.client.models, "get", side_effect=failure):
+                description = self.model.describe()
+                self.assertIsNone(description["model_revision"])
+                self.assertEqual(description["model_id"], "gemini-test")
 
     def test_blocked_prompt_gives_no_text(self):
         t = self.genai_types
@@ -1498,6 +1509,16 @@ class RunTests(Project):
         git("checkout", "--", "prompt.txt")
         (self.base / "new_code.py").write_text("x = 1\n", encoding="utf-8")  # a new file outside results/
         self.assertEqual(evaluate._git()["uncommitted_changes"], True)
+
+    def test_the_report_names_the_revision_a_model_says_it_served(self):
+        class Revised(FakeModel):
+            def describe(self):
+                return super().describe() | {"model_revision": "9.9-test-01-2026"}
+
+        revised = (self._run(Revised(), "val", run_id="v1") / "report.md").read_text(encoding="utf-8")
+        plain = (self._run(FakeModel(), "val", run_id="v2") / "report.md").read_text(encoding="utf-8")
+        self.assertIn("- Model requested: `fake-1` (revision `9.9-test-01-2026`); versions returned by the API: `fake-1-001`", revised)
+        self.assertIn("- Model requested: `fake-1`; versions returned by the API: `fake-1-001`", plain)
 
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):
