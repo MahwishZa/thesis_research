@@ -86,6 +86,10 @@ from PIL import Image
 # in balanced accuracy, yet its recall can take only a few values. The report then also gives the scores without its files,
 # beside the main score (DATASETS names such classes).
 #
+# Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
+# diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
+# precancerous and belongs to neither group, and an unreadable answer names no class: neither counts toward either rate.
+#
 # ROC curves and AUC are deliberately absent: they need a score per class for every image, and a model that answers with one class
 # name gives none.
 # ==============================================================================================================================
@@ -94,6 +98,8 @@ from PIL import Image
 UNREADABLE = "(unreadable)"
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 0
+MALIGNANT = ("melanoma", "basal cell carcinoma", "squamous cell carcinoma")  # cancers
+BENIGN = ("nevus", "pigmented benign keratosis", "dermatofibroma", "vascular lesion")  # actinic keratosis: precancerous, in neither
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -160,6 +166,16 @@ def _scores(matrix: list[list[int]]) -> dict:
     return out
 
 
+def _risk(y_true, y_pred) -> dict:
+    """Missed malignancy (cancers answered as a benign class) and over-calls (benign lesions answered as a cancer), as counts and
+    shares; a share is None when no answer has a true class in its group."""
+    cancers = [answer for true, answer in zip(y_true, y_pred) if true in MALIGNANT]
+    benign = [answer for true, answer in zip(y_true, y_pred) if true in BENIGN]
+    missed, overcalled = sum(a in BENIGN for a in cancers), sum(a in MALIGNANT for a in benign)
+    return {"missed_malignancy": _ratio(missed, len(cancers)), "missed": missed, "cancers": len(cancers),
+            "overcall": _ratio(overcalled, len(benign)), "overcalled": overcalled, "benign": len(benign)}
+
+
 def _percentile(sorted_values: list[float], q: float) -> float:
     """The q-quantile (0 to 1) of sorted values with linear interpolation between neighbours."""
     position = q * (len(sorted_values) - 1)
@@ -182,7 +198,7 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
                 units.setdefault(groups[i], []).append(i)
         if units:
             by_class[label] = list(units.values())
-    names = ["accuracy", "balanced_accuracy", "macro_f1"]
+    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall"]
     if not by_class:
         return {name: None for name in names} | {"recall": {}}
     rng = random.Random(seed)
@@ -195,10 +211,15 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
         values["balanced_accuracy"].append(scores["macro"]["recall"])
         values["macro_f1"].append(scores["macro"]["f1"])
+        risk = _risk(true, pred)
+        values["missed_malignancy"].append(risk["missed_malignancy"])
+        values["overcall"].append(risk["overcall"])
         for label in by_class:
             recall[label].append(scores["recall"][labels.index(label)])
 
-    def interval(series):  # every resample holds every class, so no value is ever undefined
+    def interval(series):  # every resample holds every class, so a score is defined in all resamples or in none
+        if None in series:
+            return None
         series = sorted(series)
         return (_percentile(series, 0.025), _percentile(series, 0.975))
 
@@ -223,6 +244,9 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     groups = list(groups) if groups is not None else list(range(len(y_true)))
     independent = len(set(groups)) == len(groups)  # every file its own group: Wilson intervals for accuracy and recall
     interval = _bootstrap(y_true, y_pred, labels, groups, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
+    risk = _risk(y_true, y_pred)
+    for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign")):
+        risk[f"{share}_ci95"] = None if not risk[of] else wilson(risk[count], risk[of]) if independent else interval[share]
     per_class = {}
     for i, label in enumerate(labels):
         per_class[label] = {"support": s["support"][i], "answered": s["answered"][i], "tp": s["tp"][i],
@@ -237,7 +261,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
             "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]],
             "macro": {**s["macro"], "f1_ci95": interval["macro_f1"]},
             "weighted": s["weighted"],
-            "mcc": s["mcc"], "kappa": s["kappa"],
+            "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk,
             "per_class": per_class,
             "confusion_matrix": {"rows": list(labels), "columns": [*labels, UNREADABLE], "counts": matrix}}
 
@@ -1303,6 +1327,7 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} ({simple}) |",
              f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |",
+             *_risk_rows(m, over if grouped else None),
              f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
              f"(bootstrap{over}) |",
              f"| Macro-precision | {_share(m['macro']['precision'])} | |",
@@ -1339,8 +1364,22 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
               f"- A dash means undefined: precision when a class was never answered, recall when no {item} has that class. A class "
               "that was never answered counts as precision 0 in the macro-precision.",
               f"- With one answer per {item}, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.",
+              "- Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign "
+              "keratosis, dermatofibroma or vascular lesion. Over-call: the reverse. Actinic keratosis (precancerous) and unreadable "
+              "answers count toward neither.",
               "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.", ""]
     return lines
+
+
+def _risk_rows(m: dict, over: str | None) -> list[str]:
+    """The two clinical-risk rows of a summary table (none when the run has neither cancers nor benign lesions)."""
+    r, method = m["risk"], f"bootstrap{over}" if over is not None else "Wilson"
+    rows = []
+    for title, share, count, of in (("Missed malignancy: cancers answered as benign", "missed_malignancy", "missed", "cancers"),
+                                    ("Over-calls: benign lesions answered as cancer", "overcall", "overcalled", "benign")):
+        if r[of]:
+            rows.append(f"| {title} | {_pct(r[share])} ({r[count]}/{r[of]}) | {_ci(r[f'{share}_ci95'])} ({method}) |")
+    return rows
 
 
 def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
@@ -1367,7 +1406,7 @@ def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
               f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} "
               f"({f'bootstrap{over}' if grouped else 'Wilson'}) |",
               f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
-              f"(bootstrap{over}) |", "",
+              f"(bootstrap{over}) |", *_risk_rows(m, over if grouped else None), "",
               f"The {items} left out, and the answers:", "", f"| {kind.item.capitalize()} | True class | Answer |", "|---|---|---|"]
     lines += [f"| `{f['path']}` | {f['label']} | {f['prediction'] or UNREADABLE} |" for f in files]
     return lines + [""]

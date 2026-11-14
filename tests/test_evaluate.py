@@ -177,6 +177,21 @@ class MetricTests(unittest.TestCase):
         m = evaluate.summarize(["a", "a", "a", "b"], ["a", "b", "a", "b"], ["a", "b"], groups=["p1", "p1", "p2", "p3"], group_name="article")
         self.assertEqual((m["groups"], m["group_name"], m["interval_method"]), (3, "article", "bootstrap over articles"))
 
+    def test_missed_malignancy_and_over_calls_are_counted_by_hand(self):
+        labels = ["actinic keratosis", "basal cell carcinoma", "melanoma", "nevus"]
+        true = ["melanoma", "melanoma", "melanoma", "basal cell carcinoma", "nevus", "nevus", "actinic keratosis"]
+        pred = ["melanoma", "nevus", None, "actinic keratosis", "nevus", "melanoma", "nevus"]
+        risk = evaluate.summarize(true, pred, labels)["risk"]
+        # cancers: 4, of which 1 answered benign (melanoma -> nevus); unreadable and actinic keratosis count as neither
+        self.assertEqual((risk["missed"], risk["cancers"], risk["missed_malignancy"]), (1, 4, 0.25))
+        self.assertEqual((risk["overcalled"], risk["benign"], risk["overcall"]), (1, 2, 0.5))  # nevus -> melanoma
+        self.assertEqual(risk["missed_malignancy_ci95"], evaluate.wilson(1, 4))  # every answer its own lesion: Wilson
+        grouped = evaluate.summarize(true, pred, labels, groups=["L1", "L1", "L2", "L3", "L4", "L5", "L6"])["risk"]
+        low, high = grouped["missed_malignancy_ci95"]
+        self.assertTrue(0 <= low <= 0.25 <= high <= 1)  # bootstrap over lesions
+        none = evaluate.summarize(["a", "b"], ["a", "a"], ["a", "b"])["risk"]  # classes outside both groups: undefined, not 0
+        self.assertEqual((none["missed_malignancy"], none["missed_malignancy_ci95"], none["overcall"]), (None, None, None))
+
     def test_the_summary_can_be_saved_as_json(self):
         saved = json.loads(json.dumps(evaluate.summarize(METRIC_TRUE, METRIC_PRED, METRIC_LABELS)))
         self.assertEqual(saved["confusion_matrix"]["columns"][-1], evaluate.UNREADABLE)
@@ -1185,7 +1200,9 @@ class RunTests(Project):
                          "### Per class", "Recall (95% interval: bootstrap over lesions)", "### Confusion matrix",
                          "Every class has the same number of test images (2), so plain accuracy equals balanced accuracy.",
                          "(2 lesions for 4 images)",
-                         "it is not a clinical figure", "No ROC curve or AUC", "sent exactly as stored"):
+                         "it is not a clinical figure", "No ROC curve or AUC", "sent exactly as stored",
+                         "| Missed malignancy: cancers answered as benign | 0.0% (0/2) |",
+                         "| Over-calls: benign lesions answered as cancer | 100.0% (2/2) |"):
             self.assertIn(expected, text)
         self.assertLess(text.index("Balanced accuracy (main score"), text.index("| Accuracy |"))  # the main score comes first
         self.assertNotIn("## Without", text)
