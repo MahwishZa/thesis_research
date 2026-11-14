@@ -1,0 +1,621 @@
+{
+  "main": {
+    "n": 320,
+    "correct": 133,
+    "unreadable": 0,
+    "groups": 248,
+    "group_name": "lesion",
+    "interval_method": "bootstrap over lesions",
+    "balanced_accuracy": 0.415625,
+    "balanced_accuracy_ci95": [
+      0.3638080712318587,
+      0.4670695629695697
+    ],
+    "accuracy": 0.415625,
+    "accuracy_ci95": [
+      0.3627982002063223,
+      0.4693344487823015
+    ],
+    "classes_absent": [],
+    "macro": {
+      "precision": 0.49697174259723764,
+      "recall": 0.415625,
+      "f1": 0.4062127940841263,
+      "f1_ci95": [
+        0.3505921354578875,
+        0.4558221404155037
+      ]
+    },
+    "weighted": {
+      "precision": 0.4969717425972376,
+      "recall": 0.415625,
+      "f1": 0.4062127940841263
+    },
+    "mcc": 0.3584846602109725,
+    "kappa": 0.3321428571428572,
+    "risk": {
+      "missed_malignancy": 0.19166666666666668,
+      "missed": 23,
+      "cancers": 120,
+      "overcall": 0.43125,
+      "overcalled": 69,
+      "benign": 160,
+      "missed_malignancy_ci95": [
+        0.1239651137277847,
+        0.2682926829268293
+      ],
+      "overcall_ci95": [
+        0.34284276126558005,
+        0.5155328333138013
+      ]
+    },
+    "hallucination": {
+      "rate": 0.584375,
+      "wrong": 187,
+      "n": 320,
+      "balanced_rate": 0.584375,
+      "no_valid_answer": 0,
+      "no_valid_answer_rate": 0.0,
+      "rate_ci95": [
+        0.5306655512176985,
+        0.6372017997936776
+      ],
+      "balanced_rate_ci95": [
+        0.5329304370304302,
+        0.6361919287681413
+      ]
+    },
+    "abstention": {
+      "count": 0,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "committed": 320,
+      "selective_accuracy": 0.415625,
+      "selective_accuracy_ci95": [
+        0.3627982002063223,
+        0.4693344487823015
+      ]
+    },
+    "per_class": {
+      "actinic keratosis": {
+        "support": 40,
+        "answered": 12,
+        "tp": 8,
+        "fp": 4,
+        "fn": 32,
+        "precision": 0.6666666666666666,
+        "recall": 0.2,
+        "f1": 0.3076923076923077,
+        "recall_ci95": [
+          0.06666666666666667,
+          0.3590277777777775
+        ]
+      },
+      "basal cell carcinoma": {
+        "support": 40,
+        "answered": 51,
+        "tp": 21,
+        "fp": 30,
+        "fn": 19,
+        "precision": 0.4117647058823529,
+        "recall": 0.525,
+        "f1": 0.46153846153846156,
+        "recall_ci95": [
+          0.375,
+          0.6756756756756757
+        ]
+      },
+      "dermatofibroma": {
+        "support": 40,
+        "answered": 41,
+        "tp": 29,
+        "fp": 12,
+        "fn": 11,
+        "precision": 0.7073170731707317,
+        "recall": 0.725,
+        "f1": 0.7160493827160493,
+        "recall_ci95": [
+          0.55,
+          0.880987394957983
+        ]
+      },
+      "melanoma": {
+        "support": 40,
+        "answered": 137,
+        "tp": 28,
+        "fp": 109,
+        "fn": 12,
+        "precision": 0.20437956204379562,
+        "recall": 0.7,
+        "f1": 0.3163841807909605,
+        "recall_ci95": [
+          0.55,
+          0.85
+        ]
+      },
+      "nevus": {
+        "support": 40,
+        "answered": 22,
+        "tp": 13,
+        "fp": 9,
+        "fn": 27,
+        "precision": 0.5909090909090909,
+        "recall": 0.325,
+        "f1": 0.41935483870967744,
+        "recall_ci95": [
+          0.175,
+          0.475
+        ]
+      },
+      "pigmented benign keratosis": {
+        "support": 40,
+        "answered": 38,
+        "tp": 15,
+        "fp": 23,
+        "fn": 25,
+        "precision": 0.39473684210526316,
+        "recall": 0.375,
+        "f1": 0.38461538461538464,
+        "recall_ci95": [
+          0.19044401544401543,
+          0.5510204081632653
+        ]
+      },
+      "squamous cell carcinoma": {
+        "support": 40,
+        "answered": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 40,
+        "precision": null,
+        "recall": 0.0,
+        "f1": 0.0,
+        "recall_ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "vascular lesion": {
+        "support": 40,
+        "answered": 19,
+        "tp": 19,
+        "fp": 0,
+        "fn": 21,
+        "precision": 1.0,
+        "recall": 0.475,
+        "f1": 0.6440677966101694,
+        "recall_ci95": [
+          0.2926829268292683,
+          0.6775891341256357
+        ]
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "dermatofibroma",
+        "melanoma",
+        "nevus",
+        "pigmented benign keratosis",
+        "squamous cell carcinoma",
+        "vascular lesion"
+      ],
+      "columns": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "dermatofibroma",
+        "melanoma",
+        "nevus",
+        "pigmented benign keratosis",
+        "squamous cell carcinoma",
+        "vascular lesion",
+        "(unreadable)"
+      ],
+      "counts": [
+        [
+          8,
+          15,
+          2,
+          9,
+          0,
+          6,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          21,
+          3,
+          14,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          29,
+          7,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          28,
+          2,
+          9,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          25,
+          13,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          2,
+          2,
+          16,
+          3,
+          15,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          8,
+          2,
+          23,
+          0,
+          6,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          2,
+          15,
+          2,
+          0,
+          0,
+          19,
+          0
+        ]
+      ]
+    }
+  },
+  "all_facts_recorded": {
+    "questions": 289,
+    "metrics": {
+      "n": 289,
+      "correct": 118,
+      "unreadable": 0,
+      "groups": 218,
+      "group_name": "lesion",
+      "interval_method": "bootstrap over lesions",
+      "balanced_accuracy": 0.4094572368421053,
+      "balanced_accuracy_ci95": [
+        0.35102117663684973,
+        0.4676172963585213
+      ],
+      "accuracy": 0.4083044982698962,
+      "accuracy_ci95": [
+        0.3511632341723875,
+        0.46528376436781604
+      ],
+      "classes_absent": [],
+      "macro": {
+        "precision": 0.47919292717086837,
+        "recall": 0.4094572368421053,
+        "f1": 0.3952720652038794,
+        "f1_ci95": [
+          0.33517440300333373,
+          0.44867914405824105
+        ]
+      },
+      "weighted": {
+        "precision": 0.4874143428997897,
+        "recall": 0.4083044982698962,
+        "f1": 0.3989038330958463
+      },
+      "mcc": 0.3513658780772032,
+      "kappa": 0.3252549801340779,
+      "risk": {
+        "missed_malignancy": 0.1875,
+        "missed": 21,
+        "cancers": 112,
+        "overcall": 0.41605839416058393,
+        "overcalled": 57,
+        "benign": 137,
+        "missed_malignancy_ci95": [
+          0.11320754716981132,
+          0.2719298245614035
+        ],
+        "overcall_ci95": [
+          0.31817300916138125,
+          0.5174950948332243
+        ]
+      },
+      "hallucination": {
+        "rate": 0.5916955017301038,
+        "wrong": 171,
+        "n": 289,
+        "balanced_rate": 0.5905427631578948,
+        "no_valid_answer": 0,
+        "no_valid_answer_rate": 0.0,
+        "rate_ci95": [
+          0.5347162356321838,
+          0.6488367658276125
+        ],
+        "balanced_rate_ci95": [
+          0.5323827036414787,
+          0.6489788233631502
+        ]
+      },
+      "abstention": {
+        "count": 0,
+        "rate": 0.0,
+        "rate_ci95": [
+          0.0,
+          0.0
+        ],
+        "committed": 289,
+        "selective_accuracy": 0.4083044982698962,
+        "selective_accuracy_ci95": [
+          0.3511632341723875,
+          0.46528376436781604
+        ]
+      },
+      "per_class": {
+        "actinic keratosis": {
+          "support": 40,
+          "answered": 12,
+          "tp": 8,
+          "fp": 4,
+          "fn": 32,
+          "precision": 0.6666666666666666,
+          "recall": 0.2,
+          "f1": 0.3076923076923077,
+          "recall_ci95": [
+            0.07312717770034843,
+            0.3548566308243727
+          ]
+        },
+        "basal cell carcinoma": {
+          "support": 40,
+          "answered": 51,
+          "tp": 21,
+          "fp": 30,
+          "fn": 19,
+          "precision": 0.4117647058823529,
+          "recall": 0.525,
+          "f1": 0.46153846153846156,
+          "recall_ci95": [
+            0.37135338345864666,
+            0.6756756756756757
+          ]
+        },
+        "dermatofibroma": {
+          "support": 40,
+          "answered": 40,
+          "tp": 29,
+          "fp": 11,
+          "fn": 11,
+          "precision": 0.725,
+          "recall": 0.725,
+          "f1": 0.725,
+          "recall_ci95": [
+            0.5525657894736843,
+            0.8888888888888888
+          ]
+        },
+        "melanoma": {
+          "support": 32,
+          "answered": 119,
+          "tp": 22,
+          "fp": 97,
+          "fn": 10,
+          "precision": 0.18487394957983194,
+          "recall": 0.6875,
+          "f1": 0.2913907284768212,
+          "recall_ci95": [
+            0.53125,
+            0.84375
+          ]
+        },
+        "nevus": {
+          "support": 19,
+          "answered": 14,
+          "tp": 6,
+          "fp": 8,
+          "fn": 13,
+          "precision": 0.42857142857142855,
+          "recall": 0.3157894736842105,
+          "f1": 0.36363636363636365,
+          "recall_ci95": [
+            0.10526315789473684,
+            0.5263157894736842
+          ]
+        },
+        "pigmented benign keratosis": {
+          "support": 40,
+          "answered": 36,
+          "tp": 15,
+          "fp": 21,
+          "fn": 25,
+          "precision": 0.4166666666666667,
+          "recall": 0.375,
+          "f1": 0.39473684210526316,
+          "recall_ci95": [
+            0.18600061199510404,
+            0.5609756097560976
+          ]
+        },
+        "squamous cell carcinoma": {
+          "support": 40,
+          "answered": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 40,
+          "precision": null,
+          "recall": 0.0,
+          "f1": 0.0,
+          "recall_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vascular lesion": {
+          "support": 38,
+          "answered": 17,
+          "tp": 17,
+          "fp": 0,
+          "fn": 21,
+          "precision": 1.0,
+          "recall": 0.4473684210526316,
+          "f1": 0.6181818181818182,
+          "recall_ci95": [
+            0.2682926829268293,
+            0.6486486486486487
+          ]
+        }
+      },
+      "confusion_matrix": {
+        "rows": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "dermatofibroma",
+          "melanoma",
+          "nevus",
+          "pigmented benign keratosis",
+          "squamous cell carcinoma",
+          "vascular lesion"
+        ],
+        "columns": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "dermatofibroma",
+          "melanoma",
+          "nevus",
+          "pigmented benign keratosis",
+          "squamous cell carcinoma",
+          "vascular lesion",
+          "(unreadable)"
+        ],
+        "counts": [
+          [
+            8,
+            15,
+            2,
+            9,
+            0,
+            6,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            21,
+            3,
+            14,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            29,
+            7,
+            2,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            22,
+            1,
+            8,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            13,
+            6,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            2,
+            2,
+            16,
+            3,
+            15,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            8,
+            2,
+            23,
+            0,
+            6,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            2,
+            2,
+            15,
+            2,
+            0,
+            0,
+            17,
+            0
+          ]
+        ]
+      }
+    }
+  }
+}
