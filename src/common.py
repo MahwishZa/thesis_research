@@ -1,8 +1,10 @@
-"""Helpers the dataset folders share (src/image/, src/text/, src/multimodal/): a polite download that tries again when a service is busy, and a
-report with one section per step that each step rewrites on its own."""
+"""Helpers the dataset folders share (src/image/, src/text/, src/multimodal/): a polite download that tries again when a service
+is busy, a report with one section per step that each step rewrites on its own, reading a table, and a nested record as flat
+names."""
 
 from __future__ import annotations
 
+import csv
 import http.client
 import re
 import time
@@ -59,3 +61,21 @@ def write_section(path: Path, head: list[str], steps: tuple[str, ...], step: str
         text += [f"<!-- step: {name} -->", *body, ""]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(text).rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+
+
+def read_rows(path: Path, missing: str) -> list[dict]:
+    """The rows of a CSV table; ``missing`` says what to do when the table does not exist."""
+    if not path.is_file():
+        raise FileNotFoundError(f"{path.as_posix()} not found: {missing}")
+    with path.open(encoding="utf-8", newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def flatten(value, prefix: str = "") -> dict:
+    """A nested record as dotted names: {"metadata": {"clinical": {"sex": "male"}}} -> {"metadata.clinical.sex": "male"}."""
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            out.update(flatten(item, f"{prefix}.{key}" if prefix else str(key)))
+        return out
+    return {prefix: value}

@@ -24,7 +24,6 @@ The result goes into the audit section of data/multimodal/dataset_report.md. A f
 
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import math
@@ -32,7 +31,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from ..common import write_section
+from ..common import read_rows, write_section
 from ..evaluate import summarize
 from .prepare import DATA, IMAGE, REPORT, REPORT_HEAD, STEPS, TEXT
 
@@ -43,10 +42,7 @@ FEATURES = ("age", "sex", "site")
 
 
 def _rows(path: Path) -> list[dict]:
-    if not path.is_file():
-        raise FileNotFoundError(f"{path.as_posix()} not found: run the multimodal build first (python -m src.multimodal.prepare build)")
-    with path.open(encoding="utf-8", newline="") as f:
-        return list(csv.DictReader(f))
+    return read_rows(path, "prepare the image and text datasets, then run python -m src.multimodal.prepare build")
 
 
 def _digest(content: bytes) -> str:
