@@ -1082,8 +1082,8 @@ class PromptTests(unittest.TestCase):
             path.write_text("Case: {case}\nPick one:\n{labels}\n", encoding="utf-8")
             prompt = evaluate.build_prompt(evaluate.load_template(path, "text"), LABELS)
         case = "A man of 70 had a {labels} lesion – “café”.\nIt grew."  # put in as it is, even text that looks like a placeholder
-        self.assertEqual(evaluate.fill_case(prompt, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
-        self.assertEqual(evaluate.fill_case("Case: {case}\nPick", " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed
+        self.assertEqual(evaluate.fill(prompt, evaluate.CASE, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
+        self.assertEqual(evaluate.fill("Case: {case}\nPick", evaluate.CASE, " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed
 
     def test_parse_forgives_only_formatting(self):
         for answer in ["melanoma", " Melanoma.", "**melanoma**", '"melanoma"', "Diagnosis: melanoma", "MELANOMA\n"]:
@@ -1851,6 +1851,96 @@ class TextDatasetTests(TextProject):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# The multimodal dataset: each photo with its patient's facts in the prompt
+
+class MultimodalProject(Project):
+    """The image project, with data/multimodal/questions.csv giving each photo its patient's facts (one test photo lacks a fact),
+    a prompt with the facts placeholder and a multimodal config."""
+
+    MISSING = "test/nevus/ISIC_0000013.jpg"
+
+    def setUp(self):
+        super().setUp()
+        with self.table.open(encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f))
+        self.questions = self.base / "data" / "multimodal" / "questions.csv"
+        self.questions.parent.mkdir(parents=True)
+        with self.questions.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["split", "label", "path", "sha256", "lesion_group", "facts"], lineterminator="\n")
+            writer.writeheader()
+            for i, row in enumerate(rows):
+                site = "not recorded" if row["path"] == self.MISSING else "trunk"
+                writer.writerow({k: row[k] for k in ("split", "label", "path", "sha256", "lesion_group")}
+                                | {"facts": f"Age: about {30 + 5 * i} years. Sex: female. Body site: {site}."})
+        self.prompt.write_text("A photo.\nPatient: {facts}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
+        self.config.write_text(CONFIG.replace('dataset = "image"', 'dataset = "multimodal"').format(prompt=self.prompt.as_posix()),
+                               encoding="utf-8")
+        for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
+            patcher = mock.patch(f"src.evaluate.{name}", return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+
+class MultimodalTests(MultimodalProject):
+    def _run(self, model, *args, **kwargs):
+        with mock.patch("src.evaluate.load", return_value=model):
+            return evaluate.run(str(self.config), *args, results=self.results, **kwargs)
+
+    def test_the_questions_are_the_image_dataset_s_photos_with_their_facts(self):
+        self.assertEqual(evaluate.dataset_paths("multimodal"), (Path("data/multimodal/questions.csv"), Path("data/image/dataset")))
+        items = evaluate.load_dataset(*evaluate.dataset_paths("multimodal"), "multimodal")
+        self.assertEqual(len(items), 14)
+        missing = next(i for i in items if i.path == self.MISSING)
+        self.assertTrue(missing.facts.endswith("Body site: not recorded."))
+        changed = [evaluate.Item(**{**items[0].__dict__, "facts": "Age: about 99 years. Sex: male. Body site: trunk."}), *items[1:]]
+        self.assertNotEqual(evaluate.items_hash(changed), evaluate.items_hash(items))  # a changed fact is a changed question
+        text = self.questions.read_text(encoding="utf-8")
+        self.questions.write_text(text.replace("Age: about 30 years. Sex: female. Body site: trunk.", ""), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "the facts column is empty"):
+            evaluate.read_table(self.questions, "multimodal")
+        self.questions.write_text(text.replace(",facts\n", "\n", 1), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "lacks the column"):
+            evaluate.read_table(self.questions, "multimodal")
+
+    def test_a_multimodal_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
+        for template, dataset in (("Pick:\n{labels}", "multimodal"), ("Patient: {facts}\n{labels}", "image"),
+                                  ("Case: {case}\nPatient: {facts}\n{labels}", "text")):
+            with self.subTest(dataset):
+                self.prompt.write_text(template, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "{facts}"):
+                    evaluate.load_template(self.prompt, dataset)
+
+    def test_each_photo_is_sent_as_stored_with_its_facts_in_the_prompt_and_scored_also_on_complete_facts(self):
+        model = RecordingModel()
+        out = self._run(model, "test", run_id="t1")
+        preds = {p["path"]: p for p in (json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines())}
+        self.assertEqual(len(model.requests), 4)
+        with self.questions.open(encoding="utf-8", newline="") as f:
+            facts = {row["path"]: row["facts"] for row in csv.DictReader(f)}
+        for image, mime, prompt in model.requests:
+            path = next(p for p in preds if (self.image_dir / p).read_bytes() == image)  # the photo, exactly as stored
+            self.assertEqual(mime, "image/jpeg")
+            self.assertEqual(prompt, "A photo.\nPatient: " + facts[path] + "\nPick one:\n- melanoma\n- nevus\nAnswer with the name only.")
+            self.assertEqual(preds[path]["facts"], facts[path])
+        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual((metrics["main"]["n"], metrics["all_facts_recorded"]["questions"], metrics["all_facts_recorded"]["metrics"]["n"]),
+                         (4, 3, 3))
+        report = (out / "report.md").read_text(encoding="utf-8")
+        for expected in ("sent exactly as stored, each with its patient's facts in the prompt", "## Questions with all facts recorded",
+                         "These scores count only the 3 of 4 questions with every fact recorded", "(bootstrap over lesions)"):
+            self.assertIn(expected, report)
+        self.assertLess(report.index("## Results"), report.index("## Questions with all facts recorded"))
+
+    def test_the_check_sends_a_blank_image_and_counts_the_questions(self):
+        model, lines = ProbeModel(), []
+        with mock.patch("src.evaluate.load", return_value=model):
+            ok = evaluate.check_setup(evaluate.load_config(self.config), str(self.config), say=lines.append)
+        self.assertTrue(ok, "\n".join(lines))
+        self.assertIn("[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes", "\n".join(lines))
+        self.assertEqual(model.images[0][1:], ("image/png", evaluate.PROBE_PROMPT))
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # The repository against itself
 
 
@@ -1912,17 +2002,19 @@ class RepositoryTests(unittest.TestCase):
                 self.assertTrue((ROOT / config["prompt"]["file"]).is_file(), f"{path.name} names a prompt file that does not exist")
 
     def test_each_model_is_asked_the_same_way_on_every_dataset(self):
-        """The same models, settings and pace on the image and the text dataset; only the image setting is left out for text."""
+        """The same models, settings and pace on every dataset; only the image setting is left out for text."""
         configs = {}
         for path in sorted((ROOT / "configs").glob("*/*.toml")):
             config = evaluate.load_config(path)
             configs.setdefault(config["dataset"], {})[config["name"]] = config
         self.assertEqual(sorted(configs["text"]), sorted(configs["image"]))
+        self.assertEqual(sorted(configs["multimodal"]), sorted(configs["image"]))
         for name, text in configs["text"].items():
             with self.subTest(name):
                 image = configs["image"][name]
                 self.assertEqual(text["model"], {k: v for k, v in image["model"].items() if k != "image_detail"})
                 self.assertEqual(text["run"], image["run"])
+                self.assertEqual((configs["multimodal"][name]["model"], configs["multimodal"][name]["run"]), (image["model"], image["run"]))
 
     def test_the_committed_dataset_tables_are_consistent(self):
         for dataset, kind in evaluate.DATASETS.items():
