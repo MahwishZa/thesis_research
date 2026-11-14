@@ -1579,6 +1579,31 @@ class RunTests(Project):
         self._run(FakeModel(quota_from=1), "val", run_id="v2")  # quota used up before the first answer: nothing is left behind
         self.assertEqual([p.name for p in self.model_dir.iterdir()], ["v1"])
 
+    def test_an_answer_with_reasoning_and_a_class_on_its_last_line_is_unreadable_but_counted_in_the_sensitivity_analysis(self):
+        class Wordy(FakeModel):
+            texts = ["Hard to say.\n\nnevus", "It is not listed.\nMelanoma.", "Reasoning that was cut off\nnevus", "I think\nnevus or melanoma"]
+
+            def predict(self, image, mime_type, prompt):
+                out = super().predict(image, mime_type, prompt)
+                text = self.texts[(self.calls - 1) % len(self.texts)]
+                return out | {"text": text, "finish_reason": "MAX_TOKENS" if text.endswith("off\nnevus") else "STOP"}
+
+        out = self._run(Wordy(), "test", run_id="w1")
+        preds = self._preds(out)
+        self.assertEqual([p["prediction"] for p in preds], [None, None, None, None])  # the main reading is strict
+        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual(metrics["main"]["correct"], 0)
+        part = metrics["last_line_reading"]
+        self.assertEqual(part["answers_reread"], 2)  # the two with a lone class name last; two-class and one-line answers stay unreadable
+        self.assertEqual(part["metrics"]["n"], 4)
+        self.assertEqual(part["right_among_them"], sum(1 for p, a in zip(preds, ["nevus", "melanoma"]) if p["label"] == a))
+        self.assertIn("## Sensitivity analysis: the last line of the answer", (out / "report.md").read_text(encoding="utf-8"))
+        again = self._run(FakeModel(), "val", run_id="w2")  # a clean run has no such section
+        self.assertNotIn("last_line_reading", json.loads((again / "metrics.json").read_text(encoding="utf-8")))
+        self.assertNotIn("Sensitivity analysis", (again / "report.md").read_text(encoding="utf-8"))
+        self.assertEqual([evaluate.parse_last_line(x, ["nevus", "melanoma"]) for x in ("a\nnevus", "nevus", "a\nb nevus", "", None, "a\n\n**Melanoma.**\n", "a\nnevus\n\n  \n")],
+                         ["nevus", None, None, None, None, "melanoma", "nevus"])
+
     def test_a_run_stopped_by_a_quota_and_resumed_says_whether_the_model_changed_meanwhile(self):
         def revised(revision, **kwargs):
             class Revised(FakeModel):
