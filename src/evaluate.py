@@ -1335,7 +1335,8 @@ def _run_once(job: dict, run_id: str) -> Path:
             raise SystemExit(f"{out} was started with a different config, prompt or set of files; delete that folder to start "
                              "over, or choose another --run-id")
     card.setdefault("sessions", []).append({"utc": _now(), "commit": job["git"]["commit"],
-                                            "uncommitted_changes": job["git"]["uncommitted_changes"]})
+                                            "uncommitted_changes": job["git"]["uncommitted_changes"],
+                                            "model_revision": described.get("model_revision")})  # each session's, as a run may last days
     card["model"] = described
     write_json(card_path, card)
 
@@ -1630,6 +1631,7 @@ def write_report(run_dir: str | Path) -> Path:
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
+    revisions = sorted({s["model_revision"] for s in sessions if s.get("model_revision")})
     finish = Counter(p["finish_reason"] for p in preds)
     other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
     cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
@@ -1648,6 +1650,9 @@ def write_report(run_dir: str | Path) -> Path:
               f"- Sessions (starts and restarts of this run): {len(sessions)}; Git commits: "
               f"{', '.join(c[:10] for c in commits) or 'not recorded'}"
               + ("; **the run spanned more than one commit, so its answers do not all come from the same code**" if len(commits) > 1 else ""),
+              *([f"- Model revision at the start of each session: {', '.join(f'`{r}`' for r in revisions)}"
+                 + ("; **the model changed while the run was stopped, so its answers do not all come from the same model**"
+                    if len(revisions) > 1 else "")] if revisions else []),
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", []))]
     path = run_dir / "report.md"
