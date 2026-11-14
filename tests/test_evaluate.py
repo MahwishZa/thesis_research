@@ -1579,6 +1579,26 @@ class RunTests(Project):
         self._run(FakeModel(quota_from=1), "val", run_id="v2")  # quota used up before the first answer: nothing is left behind
         self.assertEqual([p.name for p in self.model_dir.iterdir()], ["v1"])
 
+    def test_a_run_stopped_by_a_quota_and_resumed_says_whether_the_model_changed_meanwhile(self):
+        def revised(revision, **kwargs):
+            class Revised(FakeModel):
+                def describe(self):
+                    return super().describe() | {"model_revision": revision}
+
+            return Revised(**kwargs)
+
+        for second, changed in (("r1", False), ("r2", True)):
+            with self.subTest(second):
+                self._run(revised("r1", quota_from=3), "val", run_id=f"v_{second}")  # day one: the quota stops it
+                final = self._run(revised(second), "val", run_id=f"v_{second}")  # day two: it continues
+                card = json.loads((final / "run_card.json").read_text(encoding="utf-8"))
+                self.assertEqual([s["model_revision"] for s in card["sessions"]], ["r1", second])  # one per session
+                report = (final / "report.md").read_text(encoding="utf-8")
+                self.assertIn("- Model revision at the start of each session: " + ("`r1`, `r2`" if changed else "`r1`"), report)
+                self.assertEqual("the model changed while the run was stopped" in report, changed)
+        plain = self._run(FakeModel(), "val", run_id="v_plain")  # a model that names no revision: nothing to report
+        self.assertNotIn("Model revision at the start", (plain / "report.md").read_text(encoding="utf-8"))
+
     def test_a_refusal_after_some_answers_keeps_them(self):
         with self.assertRaises(SystemExit):
             self._run(FakeModel(fatal_from=3), "val", run_id="v1")
