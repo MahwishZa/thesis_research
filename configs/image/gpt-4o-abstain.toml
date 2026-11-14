@@ -5,7 +5,10 @@ dataset = "image"  # the prepared dataset: data/image/; results go to results/im
 
 [model]
 provider = "openai_compatible"
-id = "gpt-4o-2024-08-06"  # a dated snapshot, the "GPT-4" of the supervisor's list; the plain name "gpt-4o" moves. OpenAI has announced that GPT-4o leaves its API in January 2027; the version that answered is recorded with every answer
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+extra_body = { provider = { order = ["openai"], allow_fallbacks = false } }  # only OpenAI's own host may answer (OpenRouter's other host for this model is Azure)
+id = "openai/gpt-4o-2024-08-06"  # a dated snapshot, the "GPT-4" of the supervisor's list; the plain name "gpt-4o" moves. OpenAI has announced that GPT-4o leaves its API in January 2027; the version that answered is recorded with every answer
 temperature = 0.0  # as in the base paper (greedy decoding)
 seed = 0           # OpenAI treats the seed as best effort: a repeated run can still differ slightly
 max_tokens = 64    # a class name needs about 12; room is left in case the model explains (an answer cut off is reported)
