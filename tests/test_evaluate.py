@@ -192,6 +192,12 @@ class MetricTests(unittest.TestCase):
         none = evaluate.summarize(["a", "b"], ["a", "a"], ["a", "b"])["risk"]  # classes outside both groups: undefined, not 0
         self.assertEqual((none["missed_malignancy"], none["missed_malignancy_ci95"], none["overcall"]), (None, None, None))
 
+    def test_mcnemar_exact_values_by_hand(self):
+        self.assertEqual(evaluate.mcnemar(0, 0), 1.0)  # no question decides between the runs
+        self.assertEqual(evaluate.mcnemar(0, 5), 2 / 32)  # 2 x (1/2)^5
+        self.assertEqual(evaluate.mcnemar(9, 1), 2 * 11 / 1024)  # 2 x (C(10,0) + C(10,1)) / 2^10
+        self.assertEqual(evaluate.mcnemar(3, 3), 1.0)
+
     def test_the_summary_can_be_saved_as_json(self):
         saved = json.loads(json.dumps(evaluate.summarize(METRIC_TRUE, METRIC_PRED, METRIC_LABELS)))
         self.assertEqual(saved["confusion_matrix"]["columns"][-1], evaluate.UNREADABLE)
@@ -1209,6 +1215,37 @@ class RunTests(Project):
         again = FakeModel()  # the same command again: nothing is sent, nothing is overwritten
         self.assertEqual((self._run(again, "test", run_id="t1"), again.calls), (out, 0))
         self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1"])  # no .partial folder left
+
+    def test_two_runs_on_the_same_questions_are_compared_and_others_are_refused(self):
+        class Nevus(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": "nevus"}
+
+        a, b = self._run(FakeModel(), "val", run_id="v1"), self._run(Nevus(), "val", run_id="v2")
+        c = evaluate.compare(a, b)
+        self.assertEqual((c["n"], c["both_right"], c["only_a"], c["only_b"], c["both_wrong"]), (4, 0, 2, 2, 0))
+        self.assertEqual((c["mcnemar_p"], c["balanced_accuracy_difference"], c["accuracy_difference"]), (1.0, 0.0, 0.0))
+        low, high = c["balanced_accuracy_difference_ci95"]
+        self.assertTrue(low <= 0 <= high)
+        text = evaluate.comparison_text(c)
+        for expected in ("| **Run B right** | 0 | 2 |", "McNemar's exact test: p = 1.0000", "+0.0 points", "paired bootstrap over lesions"):
+            self.assertIn(expected, text)
+        same = evaluate.compare(a, a)
+        self.assertEqual((same["only_a"], same["only_b"], same["balanced_accuracy_difference_ci95"]), (0, 0, (0.0, 0.0)))
+        short = self._run(FakeModel(), "val", run_id="v3", limit=3)
+        with self.assertRaisesRegex(ValueError, "differ in their questions"):
+            evaluate.compare(a, short)
+        test = self._run(FakeModel(), "test", run_id="t1")
+        with self.assertRaisesRegex(ValueError, "differ in their split"):
+            evaluate.compare(a, test)
+        card = json.loads((b / "run_card.json").read_text(encoding="utf-8"))
+        card["status"] = "running"
+        (b / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "not a finished run"):
+            evaluate.compare(a, b)
+        with contextlib.redirect_stdout(io.StringIO()) as shown:
+            evaluate.main(["compare", str(a), str(a)])
+        self.assertIn("McNemar's exact test: p = 1.0000", shown.getvalue())
 
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):

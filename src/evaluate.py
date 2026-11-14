@@ -4,6 +4,7 @@
     python -m src.evaluate run --config configs/<dataset>/<model>.toml --split val [--limit 5]
     python -m src.evaluate run --config configs/<dataset>/<model>.toml --split test
     python -m src.evaluate report results/<dataset>/<model>/<run-folder>
+    python -m src.evaluate compare results/<dataset>/<model>/<run-folder> results/<dataset>/<model>/<run-folder>
 
 ``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked
 once, with a blank synthetic image (for the text dataset, with a short question and no image), so an unavailable model, a wrong
@@ -16,6 +17,9 @@ config (the base paper's practice), needs a clean Git state so its run card name
 one version. Answers are kept in a folder ending in ``.partial`` until the run is complete; the same command continues a stopped
 run.
 ``report`` rewrites metrics.json and report.md from a run's saved answers (no model is asked).
+``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
+McNemar's exact test on the questions one run gets right and the other wrong, and the difference in balanced accuracy and in
+accuracy, with paired 95% intervals (both runs resampled together, by the same groups as the reports). No model is asked.
 
 Each config names its dataset (``dataset = "image"`` or ``"text"``); the code here is shared by every dataset, so all are scored
 alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
@@ -183,13 +187,8 @@ def _percentile(sorted_values: list[float], q: float) -> float:
     return sorted_values[low] + (sorted_values[high] - sorted_values[low]) * (position - low)
 
 
-def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dict:
-    """95% percentile intervals of every score that gets one.
-
-    Whole groups are resampled with replacement inside each true class (``groups`` names each file's group: the lesion an image
-    shows, or the article a case comes from), so every resample keeps the number of groups of each class, and the files of one
-    group are drawn together. The generator is seeded: the same answers always give the same interval.
-    """
+def _units(y_true, labels, groups) -> dict:
+    """For each true class that occurs, its groups, each as the list of the positions of its files."""
     by_class = {}
     for label in labels:
         units = {}
@@ -198,15 +197,42 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
                 units.setdefault(groups[i], []).append(i)
         if units:
             by_class[label] = list(units.values())
+    return by_class
+
+
+def _resamples(by_class: dict, resamples: int, seed: int):
+    """Seeded resamples: whole groups drawn with replacement inside each class, so every resample keeps each class's number of
+    groups. Yields the positions of each resample's files (random() is stable across Python versions)."""
+    rng = random.Random(seed)
+    for _ in range(resamples):
+        yield [i for units in by_class.values() for _ in units for i in units[int(rng.random() * len(units))]]
+
+
+def mcnemar(only_a: int, only_b: int) -> float:
+    """Exact two-sided McNemar p-value: the chance of a split at least this uneven of the questions exactly one run gets right,
+    if both runs were equally good (a binomial test with p = 1/2)."""
+    n = only_a + only_b
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, k) for k in range(min(only_a, only_b) + 1)) / 2 ** n
+    return min(1.0, 2 * tail)
+
+
+def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dict:
+    """95% percentile intervals of every score that gets one.
+
+    Whole groups are resampled with replacement inside each true class (``groups`` names each file's group: the lesion an image
+    shows, or the article a case comes from), so every resample keeps the number of groups of each class, and the files of one
+    group are drawn together. The generator is seeded: the same answers always give the same interval.
+    """
+    by_class = _units(y_true, labels, groups)
     names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall"]
     if not by_class:
         return {name: None for name in names} | {"recall": {}}
-    rng = random.Random(seed)
     values = {name: [] for name in names}
     recall = {label: [] for label in by_class}
-    for _ in range(resamples):
-        sample = [i for units in by_class.values() for _ in units for i in units[int(rng.random() * len(units))]]  # random() is
-        true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]  # stable across Python versions
+    for sample in _resamples(by_class, resamples, seed):
+        true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
         scores = _scores(confusion_matrix(true, pred, labels))
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
         values["balanced_accuracy"].append(scores["macro"]["recall"])
@@ -1483,6 +1509,84 @@ def write_report(run_dir: str | Path) -> Path:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# Two runs side by side (python -m src.evaluate compare): one model or method against another, on the same questions
+
+
+def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
+    card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
+    preds = read_jsonl(run_dir / "predictions.jsonl")
+    kind = DATASETS[card["config"]["dataset"]]
+    if card["status"] != "complete" or len(preds) != card[f"n_{kind.item}s"]:
+        raise ValueError(f"{run_dir.as_posix()} is not a finished run: only finished runs are compared")
+    return card, preds
+
+
+def compare(run_a: str | Path, run_b: str | Path) -> dict:
+    """How run B differs from run A on the same questions: McNemar's exact test, and the differences (B minus A) in balanced
+    accuracy and accuracy with paired 95% intervals."""
+    (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
+    dataset = card_a["config"]["dataset"]
+    kind = DATASETS[dataset]
+    for what, a, b in (("dataset", dataset, card_b["config"]["dataset"]), ("split", card_a["split"], card_b["split"]),
+                       ("answer options", card_a["labels"], card_b["labels"]),
+                       ("questions", card_a[f"{kind.item}s_sha256"], card_b[f"{kind.item}s_sha256"])):
+        if a != b:
+            raise ValueError(f"the two runs differ in their {what}, so they cannot be compared question by question")
+    by_path = {p["path"]: p for p in preds_b}
+    if set(by_path) != {p["path"] for p in preds_a} or len(by_path) != len(preds_b):
+        raise ValueError("the two runs did not answer the same questions")
+    pairs = [(p, by_path[p["path"]]) for p in sorted(preds_a, key=lambda p: p["path"])]
+    labels = card_a["labels"]
+    y_true = [a["label"] for a, _ in pairs]
+    pred_a, pred_b = [a["prediction"] for a, _ in pairs], [b["prediction"] for _, b in pairs]
+    groups = [a.get(kind.group_column) or a["path"] for a, _ in pairs]
+    right_a = [t == p for t, p in zip(y_true, pred_a)]
+    right_b = [t == p for t, p in zip(y_true, pred_b)]
+    only_a = sum(a and not b for a, b in zip(right_a, right_b))
+    only_b = sum(b and not a for a, b in zip(right_a, right_b))
+
+    def scores(sample):
+        true = [y_true[i] for i in sample]
+        out = []
+        for pred in (pred_a, pred_b):
+            s = _scores(confusion_matrix(true, [pred[i] for i in sample], labels))
+            out.append((s["macro"]["recall"], sum(s["tp"]) / s["n"]))
+        return out[1][0] - out[0][0], out[1][1] - out[0][1]
+
+    differences = [scores(sample) for sample in _resamples(_units(y_true, labels, groups), BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)]
+
+    def interval(k):
+        series = sorted(d[k] for d in differences)
+        return (_percentile(series, 0.025), _percentile(series, 0.975))
+
+    balanced, accuracy = scores(range(len(pairs)))
+    return {"run_a": Path(run_a).as_posix(), "run_b": Path(run_b).as_posix(), "dataset": dataset, "split": card_a["split"],
+            "n": len(pairs), "both_right": sum(a and b for a, b in zip(right_a, right_b)), "only_a": only_a, "only_b": only_b,
+            "both_wrong": sum(not a and not b for a, b in zip(right_a, right_b)), "mcnemar_p": mcnemar(only_a, only_b),
+            "balanced_accuracy_difference": balanced, "balanced_accuracy_difference_ci95": interval(0),
+            "accuracy_difference": accuracy, "accuracy_difference_ci95": interval(1), "groups": f"{kind.group}s"}
+
+
+def comparison_text(c: dict) -> str:
+    """A comparison as a short Markdown report."""
+    def points(x):
+        return f"{100 * x:+.1f} points"
+
+    return "\n".join([
+        f"# {c['run_b']} against {c['run_a']}", "",
+        f"{c['dataset']} dataset, {c['split']} split, {c['n']} questions answered by both runs.", "",
+        "| | Run A right | Run A wrong |", "|---|---|---|",
+        f"| **Run B right** | {c['both_right']} | {c['only_b']} |", f"| **Run B wrong** | {c['only_a']} | {c['both_wrong']} |", "",
+        f"- McNemar's exact test: p = {c['mcnemar_p']:.4f} ({c['only_b'] + c['only_a']} questions only one run got right). "
+        "Below 0.05, the two runs differ by more than chance.",
+        f"- Balanced accuracy, B minus A: {points(c['balanced_accuracy_difference'])} (95% interval "
+        f"{points(c['balanced_accuracy_difference_ci95'][0])} to {points(c['balanced_accuracy_difference_ci95'][1])}, paired "
+        f"bootstrap over {c['groups']})",
+        f"- Accuracy, B minus A: {points(c['accuracy_difference'])} (95% interval {points(c['accuracy_difference_ci95'][0])} to "
+        f"{points(c['accuracy_difference_ci95'][1])})", ""])
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # The command line
 
 
@@ -1499,6 +1603,9 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--limit", type=int, help="only the first N files of the validation split, in the seeded order")
     rep = sub.add_parser("report", help="rewrite metrics.json and report.md from a run's saved answers")
     rep.add_argument("run_dir")
+    cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (McNemar's test, paired intervals)")
+    cmp.add_argument("run_a")
+    cmp.add_argument("run_b")
     return parser
 
 
@@ -1512,8 +1619,10 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(0 if check_setup(config, args.config) else 1)
         elif args.command == "run":
             run(args.config, args.split, args.run_id, args.limit)
-        else:
+        elif args.command == "report":
             print(write_report(args.run_dir))
+        else:
+            print(comparison_text(compare(args.run_a, args.run_b)))
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback
         raise SystemExit(f"ERROR: {exc}") from exc
 
