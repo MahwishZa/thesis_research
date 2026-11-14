@@ -83,6 +83,20 @@ The cases left out, and the answers:
 | `test/actinic keratosis/3842183-1.txt` | actinic keratosis | (unreadable) |
 | `test/actinic keratosis/pubmed-41181771.txt` | actinic keratosis | squamous cell carcinoma |
 
+## Sensitivity analysis: the last line of the answer
+
+The main score reads an answer only when it is exactly one class name, as the prompt asks. 9 answers wrote their reasoning first and then a class name alone on the last line; 7 of them name the right class. Here they are read as that class. This is a check on the main score, never a replacement for it.
+
+| Metric | Value | 95% interval |
+|---|---|---|
+| Balanced accuracy (8 classes) | 59.1% | 52.9% to 64.7% (bootstrap over articles) |
+| Accuracy | 67.4% (149/221) | 61.2% to 73.5% (bootstrap over articles) |
+| Macro-F1 (classes with cases: 8) | 60.1% | 53.8% to 65.5% (bootstrap over articles) |
+| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **40.6%** | 35.1% to 46.8% (bootstrap over articles) |
+| Hallucination rate, all questions | 32.1% (71/221) | 26.0% to 38.4% (bootstrap over articles) |
+| Missed malignancy: cancers answered as benign | 5.8% (7/120) | 1.7% to 10.0% (bootstrap over articles) |
+| Over-calls: benign lesions answered as cancer | 28.3% (28/99) | 19.8% to 37.4% (bootstrap over articles) |
+
 ## Notes
 
 - How answers ended (finish reason): MAX_TOKENS: 1, STOP: 220

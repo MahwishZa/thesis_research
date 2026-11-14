@@ -999,6 +999,13 @@ def parse_answer(text: str | None, labels: list[str]) -> str | None:
     return None
 
 
+def parse_last_line(text: str | None, labels: list[str]) -> str | None:
+    """The class named alone on the last line of a longer answer, or None. Used only for the sensitivity analysis of the report:
+    the main score never reads an answer this way, because the prompt asks for the diagnosis name only."""
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    return parse_answer(lines[-1], labels) if len(lines) > 1 else None
+
+
 def can_still_become_readable(text: str | None, labels: list[str]) -> bool:
     """For an answer that was cut off at the output limit: could the rest of it have made it a readable answer?
 
@@ -1595,6 +1602,18 @@ def write_report(run_dir: str | Path) -> Path:
     if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
         complete_facts = [p for p in preds if MISSING_FACT not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
+    abstain = card.get("abstain", False)
+    options = [*labels, ABSTAIN] if abstain else labels
+    # Sensitivity analysis: an unreadable answer that ends with a class name alone on its last line (after some reasoning), read as
+    # that class. An answer cut off at the output limit is never read this way: its last line is not what the model meant to say.
+    last_line = {p["path"]: parse_last_line(p["raw_text"], options) for p in preds
+                 if p["prediction"] is None and p["finish_reason"] != "MAX_TOKENS"}
+    last_line = {path: answer for path, answer in last_line.items() if answer}
+    if last_line:
+        reread = [{**p, "prediction": last_line.get(p["path"], p["prediction"])} for p in preds]
+        metrics["last_line_reading"] = {"answers_reread": len(last_line),
+                                        "right_among_them": sum(p["label"] == p["prediction"] for p in reread if p["path"] in last_line),
+                                        "metrics": scores(reread)}
     write_json(run_dir / "metrics.json", metrics)
 
     n_files = card[f"n_{kind.item}s"]
@@ -1617,8 +1636,6 @@ def write_report(run_dir: str | Path) -> Path:
                  + (", each with its patient's facts in the prompt" if kind.facts_column else ""))
               + f"; dataset table `{table['file']}` (SHA-256 `{table['sha256'][:12]}`); Git commit "
               f"`{(card['git']['commit'] or 'unknown')[:10]}`", ""]
-    abstain = card.get("abstain", False)
-    options = [*labels, ABSTAIN] if abstain else labels
     lines += _scoring("Results", metrics["main"], kind, abstain)
     if left_out:
         lines += _without(metrics["without_small_classes"], kind, len(labels))
@@ -1628,6 +1645,14 @@ def write_report(run_dir: str | Path) -> Path:
                   f"A missing fact (\"{MISSING_FACT}\") points to the photo's collection, and so mostly to melanoma or nevus "
                   f"(data/multimodal/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"], kind), ""]
+
+    if last_line:
+        part = metrics["last_line_reading"]
+        lines += ["## Sensitivity analysis: the last line of the answer", "",
+                  f"The main score reads an answer only when it is exactly one class name, as the prompt asks. {part['answers_reread']} "
+                  f"answers wrote their reasoning first and then a class name alone on the last line; {part['right_among_them']} of "
+                  "them name the right class. Here they are read as that class. This is a check on the main score, never a "
+                  "replacement for it.", "", *_brief(part["metrics"], kind), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
