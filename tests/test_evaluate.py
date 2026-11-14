@@ -1,6 +1,7 @@
 """The evaluation code (src/evaluate.py) with no network beyond this computer, no real key, no real data and no cost: the metrics
-(checked against values worked out by hand), the model adapters, the pipeline on a tiny synthetic project (coloured squares),
-and the repository against itself (README, command line, configs and committed tables must agree; a drift fails here).
+(checked against values worked out by hand), the model adapters, the pipeline on tiny synthetic projects (coloured squares for the
+image dataset, short invented cases for the text dataset), and the repository against itself (README, command line, configs and
+committed tables must agree; a drift fails here).
 
 Each model adapter is tested twice: with a stand-in for its SDK (to check exactly what is sent and how every kind of answer and
 error is turned into the run's own form), and with the real SDK against a local server that returns the exact bodies the real
@@ -91,7 +92,7 @@ class MetricTests(unittest.TestCase):
         self.assertEqual((d["support"], d["answered"], d["fp"]), (0, 1, 1))  # a wrong answer naming it is still a false positive
         self.assertIsNone(d["recall"])
         self.assertIsNone(d["recall_ci95"])
-        self.assertEqual(m["classes_without_test_images"], ["d"])
+        self.assertEqual(m["classes_absent"], ["d"])
         self.assertAlmostEqual(m["macro"]["precision"], (1 + 2 / 3 + 2 / 3) / 3)  # a, b, c only
         self.assertAlmostEqual(m["macro"]["recall"], (0.5 + 2 / 3 + 2 / 3) / 3)
         self.assertAlmostEqual(m["macro"]["f1"], 2 / 3)
@@ -134,7 +135,7 @@ class MetricTests(unittest.TestCase):
     def test_no_answers_at_all_gives_accuracy_zero_and_no_other_score(self):
         m = evaluate.summarize([], [], ["a", "b"])
         self.assertEqual((m["n"], m["accuracy"], m["unreadable"]), (0, 0.0, 0))
-        self.assertEqual(m["classes_without_test_images"], ["a", "b"])
+        self.assertEqual(m["classes_absent"], ["a", "b"])
         for value in (m["macro"]["f1"], m["macro"]["f1_ci95"], m["weighted"]["f1"], m["balanced_accuracy"], m["mcc"], m["kappa"]):
             self.assertIsNone(value)
 
@@ -159,7 +160,7 @@ class MetricTests(unittest.TestCase):
         pred = ["a"] * 8 + ["b"] * 4 + ["b"] * 6 + ["a"] * 6
         lesions = [f"L{i // 4}" for i in range(24)]  # four photos per lesion
         alone = evaluate.summarize(true, pred, ["a", "b"])
-        grouped = evaluate.summarize(true, pred, ["a", "b"], lesions=lesions)
+        grouped = evaluate.summarize(true, pred, ["a", "b"], groups=lesions)
         self.assertEqual(grouped["balanced_accuracy"], alone["balanced_accuracy"])  # the scores themselves do not change ...
         def width(pair):
             return pair[1] - pair[0]
@@ -167,10 +168,14 @@ class MetricTests(unittest.TestCase):
             a, g = (alone[key]["f1_ci95"], grouped[key]["f1_ci95"]) if key == "macro" else (alone[key], grouped[key])
             self.assertGreater(width(g), width(a), key)
         self.assertGreater(width(grouped["per_class"]["a"]["recall_ci95"]), width(alone["per_class"]["a"]["recall_ci95"]))
-        self.assertEqual((grouped["lesions"], grouped["interval_method"], alone["lesions"]), (6, "bootstrap over lesions", 24))
-        self.assertEqual(evaluate.summarize(true, pred, ["a", "b"], lesions=[str(i) for i in range(24)]), alone)  # one image each
-        with self.assertRaisesRegex(ValueError, "one lesion per image"):
-            evaluate.summarize(true, pred, ["a", "b"], lesions=["L1"])
+        self.assertEqual((grouped["groups"], grouped["interval_method"], alone["groups"]), (6, "bootstrap over lesions", 24))
+        self.assertEqual(evaluate.summarize(true, pred, ["a", "b"], groups=[str(i) for i in range(24)]), alone)  # one image each
+        with self.assertRaisesRegex(ValueError, "one group per answer"):
+            evaluate.summarize(true, pred, ["a", "b"], groups=["L1"])
+
+    def test_cases_of_one_article_are_resampled_together_and_the_summary_says_so(self):
+        m = evaluate.summarize(["a", "a", "a", "b"], ["a", "b", "a", "b"], ["a", "b"], groups=["p1", "p1", "p2", "p3"], group_name="article")
+        self.assertEqual((m["groups"], m["group_name"], m["interval_method"]), (3, "article", "bootstrap over articles"))
 
     def test_the_summary_can_be_saved_as_json(self):
         saved = json.loads(json.dumps(evaluate.summarize(METRIC_TRUE, METRIC_PRED, METRIC_LABELS)))
@@ -335,6 +340,11 @@ class AnthropicTests(unittest.TestCase):
         for never_sent in ("temperature", "top_p", "top_k", "fallbacks", "system"):  # the answer must come from the named model
             self.assertNotIn(never_sent, sent)
 
+    def test_a_text_case_is_sent_as_the_prompt_alone(self):
+        self._load().predict(None, None, "Case: a pearly papule.\nWhich one?")
+        (sent,) = self.client.calls
+        self.assertEqual(sent["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: a pearly papule.\nWhich one?"}]}])
+
     def test_the_answer_is_the_text_blocks_with_the_version_the_vendor_reports_and_the_token_counts(self):
         thought = types.SimpleNamespace(type="thinking", thinking="hidden")
         adapter = self._load(answer=claude_reply("  Mela", extra=[thought]))
@@ -441,7 +451,7 @@ GEMINI_ERRORS = {  # bodies seen from the Gemini API on the researcher's laptop
 
 class GeminiHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        self.server.seen.append(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))))
         model = self.path.split("/models/")[1].split(":")[0]
         if model == "slow":
             time.sleep(1.5)
@@ -487,6 +497,15 @@ class GeminiTests(unittest.TestCase):
         self.assertEqual(sent["model"], "gemini-test")
         self.assertEqual(sent["config"].temperature, 0.0)
         self.assertEqual(sent["contents"][1], "Which?")
+
+    def test_a_text_case_is_sent_as_the_prompt_alone(self):
+        t = self.genai_types
+        response = t.GenerateContentResponse(
+            candidates=[t.Candidate(content=t.Content(role="model", parts=[t.Part(text="nevus")]), finish_reason="STOP")])
+        with self._respond(response) as call:
+            answer = self.model.predict(None, None, "Case: a brown macule.\nWhich?")
+        self.assertEqual(call.call_args.kwargs["contents"], ["Case: a brown macule.\nWhich?"])
+        self.assertEqual(answer["text"], "nevus")
 
     def test_thinking_level_is_sent_and_a_deprecated_or_mistyped_setting_is_refused(self):
         with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}):
@@ -536,6 +555,12 @@ class GeminiOverHttpTests(unittest.TestCase):
 
     def test_an_answer(self):
         self.assertEqual(self._predict("fine")["text"], "melanoma")
+
+    def test_the_real_sdk_sends_a_text_case_as_the_prompt_alone(self):
+        answer = evaluate.load("gemini", GEMINI | {"id": "fine"}).predict(None, None, "Case: “café” – which?")
+        (body,) = self.server.seen
+        self.assertEqual(body["contents"], [{"parts": [{"text": "Case: “café” – which?"}], "role": "user"}])
+        self.assertEqual(answer["text"], "melanoma")
 
     def test_an_overloaded_service_can_be_retried(self):
         with self.assertRaisesRegex(evaluate.TransientError, "HTTP 503 UNAVAILABLE: This model is currently experiencing high demand"):
@@ -644,6 +669,11 @@ class OpenAICompatibleTests(unittest.TestCase):
         self.assertEqual(image["image_url"]["detail"], "high")
         self.assertEqual(text, {"type": "text", "text": "Which one?"})
         self.assertNotIn("system", [m["role"] for m in sent["messages"]])
+
+    def test_a_text_case_is_sent_as_the_prompt_alone(self):
+        self._load({"image_detail": "high"}).predict(None, None, "Case: a pearly papule.\nWhich one?")
+        (sent,) = self.client.calls
+        self.assertEqual(sent["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: a pearly papule.\nWhich one?"}]}])
 
     def test_options_that_are_not_set_are_not_sent(self):
         self._load().predict(b"x", "image/png", "?")
@@ -803,6 +833,11 @@ class OpenAICompatibleOverHttpTests(unittest.TestCase):
         self.assertEqual((answer["text"], answer["finish_reason"], answer["model_version"]), ("melanoma", "STOP", "stub-2026-01-01@StubHost"))
         self.assertEqual(answer["usage"], {"prompt_tokens": 10, "output_tokens": 1, "total_tokens": 11})
 
+    def test_the_real_sdk_sends_a_text_case_as_the_prompt_alone(self):
+        self._model("stub-2026-01-01").predict(None, None, "Case: “café” – which?")
+        (seen,) = self.server.seen
+        self.assertEqual(seen["body"]["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: “café” – which?"}]}])
+
     def test_extra_body_reaches_the_host_as_top_level_fields(self):
         self._model("stub-2026-01-01", extra_body={"provider": {"order": ["StubHost"], "allow_fallbacks": False}}).predict(b"x", "image/png", "?")
         self.assertEqual(self.server.seen[0]["body"]["provider"], {"order": ["StubHost"], "allow_fallbacks": False})
@@ -954,7 +989,7 @@ class DatasetTests(Project):
             "64 lowercase": (self.header, [f"train,nevus,{good},{sha.upper()}"]),
             "same image is also on line 2": (self.header, [self._row(good), f"test,nevus,test/nevus/copy.jpg,{sha}"]),
             "same path is also on line 2": (self.header, [self._row(good), self._row(good)]),
-            "lists no image": (self.header, []),
+            "lists no file": (self.header, []),
         }
         for message, (header, rows) in cases.items():
             with self.subTest(message):
@@ -1013,6 +1048,21 @@ class PromptTests(unittest.TestCase):
             path.write_text("no placeholder", encoding="utf-8")
             with self.assertRaises(ValueError):
                 evaluate.load_template(path)
+
+    def test_a_text_prompt_has_the_case_placeholder_once_and_an_image_prompt_has_none(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "p.txt"
+            for template, dataset in (("Pick:\n{labels}", "text"), ("{case}\n{case}\n{labels}", "text"),
+                                      ("Case: {case}\n{labels}", "image")):
+                with self.subTest(template):
+                    path.write_text(template, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "{case}"):
+                        evaluate.load_template(path, dataset)
+            path.write_text("Case: {case}\nPick one:\n{labels}\n", encoding="utf-8")
+            prompt = evaluate.build_prompt(evaluate.load_template(path, "text"), LABELS)
+        case = "A man of 70 had a {labels} lesion – “café”.\nIt grew."  # put in as it is, even text that looks like a placeholder
+        self.assertEqual(evaluate.fill_case(prompt, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
+        self.assertEqual(evaluate.fill_case("Case: {case}\nPick", " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed
 
     def test_parse_forgives_only_formatting(self):
         for answer in ["melanoma", " Melanoma.", "**melanoma**", '"melanoma"', "Diagnosis: melanoma", "MELANOMA\n"]:
@@ -1122,9 +1172,12 @@ class RunTests(Project):
         self.assertEqual((metrics["main"]["n"], metrics["main"]["correct"]), (4, 2))
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual((card["status"], card["model_versions_returned"], card["run_id"]), ("complete", ["fake-1-001"], "t1"))
+        self.assertEqual((card["n_images"], card["images_sha256"]),  # the names the image dataset's data sheet gives
+                         (4, evaluate.items_hash([i for i in evaluate.load_dataset() if i.split == "test"])))
         self.assertEqual(card["dataset_table"]["sha256"], hashlib.sha256(self.table.read_bytes()).hexdigest())
         self.assertEqual({p["lesion_group"] for p in preds}, {"lesion-melanoma", "lesion-nevus"})
-        self.assertEqual((metrics["main"]["lesions"], metrics["main"]["interval_method"]), (2, "bootstrap over lesions"))
+        self.assertEqual((metrics["main"]["groups"], metrics["main"]["interval_method"]), (2, "bootstrap over lesions"))
+        self.assertEqual(list(metrics), ["main"])  # no class of the image dataset is set apart
         text = (out / "report.md").read_text(encoding="utf-8")
         for expected in ("| **Balanced accuracy (main score: the mean recall of the classes)** | **50.0%** |",
                          "| Accuracy | 50.0% (2/4) |",
@@ -1135,6 +1188,7 @@ class RunTests(Project):
                          "it is not a clinical figure", "No ROC curve or AUC", "sent exactly as stored"):
             self.assertIn(expected, text)
         self.assertLess(text.index("Balanced accuracy (main score"), text.index("| Accuracy |"))  # the main score comes first
+        self.assertNotIn("## Without", text)
         again = FakeModel()  # the same command again: nothing is sent, nothing is overwritten
         self.assertEqual((self._run(again, "test", run_id="t1"), again.calls), (out, 0))
         self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1"])  # no .partial folder left
@@ -1223,7 +1277,7 @@ class RunTests(Project):
         self.prompt.write_text("Choose:\n{labels}", encoding="utf-8")
         with self.assertRaises(SystemExit) as raised:
             self._run(FakeModel(), "val", run_id="v1")
-        self.assertIn("different config, prompt or image set", str(raised.exception))
+        self.assertIn("different config, prompt or set of files", str(raised.exception))
 
     def test_an_unfinished_test_run_must_be_continued_not_restarted(self):
         with self.assertRaises(SystemExit):
@@ -1587,6 +1641,162 @@ class CheckTests(Project):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# The text dataset: each case goes into the prompt, word for word, with no image
+
+TEXT_CASES = {  # (split, class): the article of each case
+    ("train", "actinic keratosis"): ["101"], ("train", "melanoma"): ["102", "103"], ("train", "nevus"): ["104", "105"],
+    ("val", "actinic keratosis"): ["106"], ("val", "melanoma"): ["107"], ("val", "nevus"): ["108"],
+    ("test", "actinic keratosis"): ["201", "202"], ("test", "melanoma"): ["203", "203", "204"],  # one article, two patients
+    ("test", "nevus"): ["205", "206", "207"],
+}
+TEXT_CONFIG = CONFIG.replace('dataset = "image"', 'dataset = "text"')
+
+
+class TextProject(unittest.TestCase):
+    """A prepared text dataset (16 cases: 5 training, 3 validation, 8 test from 7 articles), its table, a prompt with the case
+    placeholder and a config, in a folder laid out like the repository; each test runs inside it."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name)
+        self.case_dir, self.table = self.base / "data" / "text" / "dataset", self.base / "data" / "text" / "dataset.csv"
+        self.texts, rows, number = {}, [], 0
+        for (split, label), articles in TEXT_CASES.items():
+            (self.case_dir / split / label).mkdir(parents=True)
+            for pmid in articles:
+                number += 1
+                path = f"{split}/{label}/{pmid}-{number}.txt"
+                self.texts[path] = f"A {40 + number}-year-old woman had a “café au lait” lesion – case {number}.\nIt grew."
+                (self.case_dir / path).write_bytes(self.texts[path].encode("utf-8"))
+                rows.append(f"{split},{label},{path},{hashlib.sha256(self.texts[path].encode('utf-8')).hexdigest()},{pmid}-{number},"
+                            f"{pmid},PMC-Patients\n")
+        self.table.write_text("split,label,path,sha256,patient_uid,pmid,source\n" + "".join(rows), encoding="utf-8")
+        self.prompt = self.base / "prompt.txt"
+        self.prompt.write_text("A case.\nCase: {case}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
+        self.config = self.base / "fake.toml"
+        self.config.write_text(TEXT_CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
+        self.results = self.base / "results"
+        previous = os.getcwd()
+        os.chdir(self.base)
+        self.addCleanup(os.chdir, previous)
+        for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
+            patcher = mock.patch(f"src.evaluate.{name}", return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+
+class RecordingModel(FakeModel):
+    """Says "melanoma" for every case, and keeps what each request carried."""
+
+    def __init__(self):
+        super().__init__()
+        self.requests = []
+
+    def predict(self, image, mime_type, prompt):
+        self.requests.append((image, mime_type, prompt))
+        return super().predict(image, mime_type, prompt)
+
+
+class TextDatasetTests(TextProject):
+    def _run(self, model, *args, **kwargs):
+        with mock.patch("src.evaluate.load", return_value=model):
+            return evaluate.run(str(self.config), *args, results=self.results, **kwargs)
+
+    def test_the_cases_load_with_their_article_as_their_group_and_only_text_files_are_accepted(self):
+        items = evaluate.load_dataset(*evaluate.dataset_paths("text"), "text")
+        self.assertEqual((len(items), evaluate.classes(items)), (16, ["actinic keratosis", "melanoma", "nevus"]))
+        self.assertEqual(sorted(i.group for i in items if i.split == "test" and i.label == "melanoma"), ["203", "203", "204"])
+        with self.assertRaisesRegex(ValueError, "is not a JPEG or PNG file"):
+            evaluate.read_table(self.table, "image")  # a text table is never read as images
+        with self.table.open("a", encoding="utf-8") as f:
+            f.write(f"train,nevus,train/nevus/photo.jpg,{'0' * 64},x,9,PMC-Patients\n")
+        with self.assertRaisesRegex(ValueError, "is not a .txt file"):
+            evaluate.read_table(self.table, "text")
+
+    def test_a_case_is_sent_exactly_as_stored_and_an_unreadable_one_stops_the_run(self):
+        item = next(i for i in evaluate.load_dataset(*evaluate.dataset_paths("text"), "text") if i.split == "test")
+        text, sent = evaluate.read_case(item, self.case_dir)
+        self.assertEqual(text, self.texts[item.path])
+        self.assertEqual((sent["sha256"], sent["words"]), (item.sha256, len(self.texts[item.path].split())))
+        for content, message in ((b"caf\xe9", "not UTF-8 text"), (b" \n", "is empty")):
+            with self.subTest(message):
+                (self.case_dir / item.path).write_bytes(content)
+                with self.assertRaisesRegex(ValueError, message):
+                    evaluate.read_case(item, self.case_dir)
+
+    def test_each_case_goes_into_the_prompt_word_for_word_and_no_image_is_sent(self):
+        model = RecordingModel()
+        out = self._run(model, "test", run_id="t1")
+        labels = ["actinic keratosis", "melanoma", "nevus"]
+        prompt = "A case.\nCase: {case}\nPick one:\n- actinic keratosis\n- melanoma\n- nevus\nAnswer with the name only."
+        preds = [json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(len(model.requests), 8)
+        for (image, mime, sent), pred in zip(model.requests, preds):
+            self.assertEqual((image, mime), (None, None))
+            self.assertEqual(sent, prompt.replace("{case}", self.texts[pred["path"]]))
+            self.assertEqual(pred["case_sent"]["sha256"], hashlib.sha256(self.texts[pred["path"]].encode("utf-8")).hexdigest())
+            self.assertEqual(pred["pmid"], pred["path"].split("/")[2].split("-")[0])
+            self.assertNotIn("image_sent", pred)
+        card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
+        self.assertEqual((card["labels"], card["n_cases"], card["group_column"], card["prompt"]), (labels, 8, "pmid", prompt))
+        self.assertEqual(card["cases_sha256"], evaluate.items_hash([i for i in evaluate.load_dataset(*evaluate.dataset_paths("text"), "text")
+                                                                    if i.split == "test"]))
+
+    def test_the_report_resamples_articles_and_gives_the_scores_without_actinic_keratosis_beside_the_main_score(self):
+        out = self._run(FakeModel(), "test", run_id="t1")  # "melanoma" for every case: right for the 3 melanomas only
+        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+        main, apart = metrics["main"], metrics["without_small_classes"]
+        self.assertEqual((main["n"], main["groups"], main["interval_method"]), (8, 7, "bootstrap over articles"))
+        self.assertAlmostEqual(main["balanced_accuracy"], 1 / 3)  # recall 0, 1, 0
+        self.assertEqual((apart["left_out"], apart["metrics"]["n"], apart["metrics"]["classes_absent"]),
+                         (["actinic keratosis"], 6, ["actinic keratosis"]))
+        self.assertEqual((apart["metrics"]["balanced_accuracy"], apart["metrics"]["accuracy"]), (0.5, 0.5))  # recall 1, 0
+        self.assertEqual([(f["label"], f["prediction"]) for f in apart["files"]], [("actinic keratosis", "melanoma")] * 2)
+        text = (out / "report.md").read_text(encoding="utf-8")
+        for expected in ("| **Balanced accuracy (main score: the mean recall of the classes)** | **33.3%** |",
+                         "| Accuracy | 37.5% (3/8) |", "(bootstrap over articles)", "Macro-F1 (classes with cases: 3)",
+                         "Patients described in one article are not independent: the intervals resample whole articles (7 articles "
+                         "for 8 cases).", "cases: 8 (hash", "each put into the prompt word for word",
+                         "## Without actinic keratosis",
+                         "The class actinic keratosis has only 2 cases in this split, so its recall can only be 0%, 50% or 100%, yet "
+                         "it weighs as much as any other class in the balanced accuracy above (one class in 3).",
+                         "never instead of it", "answering actinic keratosis for another case still counts as wrong",
+                         "| Balanced accuracy (2 classes) | 50.0% |", "| Accuracy | 50.0% (3/6) |",
+                         "| `test/actinic keratosis/201-9.txt` | actinic keratosis | melanoma |",
+                         "| `test/actinic keratosis/202-10.txt` | actinic keratosis | melanoma |"):
+            self.assertIn(expected, text)
+        self.assertLess(text.index("## Results"), text.index("## Without actinic keratosis"))  # the main score comes first
+        self.assertLess(text.index("## Without actinic keratosis"), text.index("## Notes"))
+        self.assertNotIn("image", text.split("## Notes")[0].lower().replace("multimodal", ""))
+
+    def test_a_run_whose_cases_hold_no_actinic_keratosis_has_no_second_scoring(self):
+        out = self._run(FakeModel(), "val", run_id="v1")
+        rows = [json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        kept = [r for r in rows if r["label"] != "actinic keratosis"]
+        (out / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in kept), encoding="utf-8")
+        evaluate.write_report(out)
+        self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["main"])
+        self.assertNotIn("## Without", (out / "report.md").read_text(encoding="utf-8"))
+
+    def test_the_check_asks_the_model_without_an_image_and_counts_cases(self):
+        model, lines = ProbeModel(), []
+        with mock.patch("src.evaluate.load", return_value=model):
+            ok = evaluate.check_setup(evaluate.load_config(self.config), str(self.config), say=lines.append)
+        text = "\n".join(lines)
+        self.assertTrue(ok, text)
+        self.assertIn("[  OK] Prepared dataset: 16 cases (train 5, val 3, test 8), 3 classes", text)
+        self.assertIn("one question with no image (nothing from the dataset is sent", text)
+        self.assertEqual(model.images, [(None, None, evaluate.PROBE_PROMPT)])
+        self.prompt.write_text("Pick one:\n{labels}\n", encoding="utf-8")  # a text prompt without the case
+        ok, lines = None, []
+        with mock.patch("src.evaluate.load", return_value=ProbeModel()):
+            ok = evaluate.check_setup(evaluate.load_config(self.config), str(self.config), say=lines.append)
+        self.assertFalse(ok)
+        self.assertIn("[FAIL] Prompt file: ", "\n".join(lines))
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # The repository against itself
 
 
@@ -1647,16 +1857,34 @@ class RepositoryTests(unittest.TestCase):
                 self.assertEqual(config["dataset"], path.parent.name, "a config sits in the folder of the dataset it names")
                 self.assertTrue((ROOT / config["prompt"]["file"]).is_file(), f"{path.name} names a prompt file that does not exist")
 
-    def test_the_committed_dataset_table_is_consistent(self):
-        if evaluate.TABLE.exists():  # committed once the dataset is prepared; the images themselves stay out of Git
-            evaluate.classes(evaluate.read_table())
+    def test_each_model_is_asked_the_same_way_on_every_dataset(self):
+        """The same models, settings and pace on the image and the text dataset; only the image setting is left out for text."""
+        configs = {}
+        for path in sorted((ROOT / "configs").glob("*/*.toml")):
+            config = evaluate.load_config(path)
+            configs.setdefault(config["dataset"], {})[config["name"]] = config
+        self.assertEqual(sorted(configs["text"]), sorted(configs["image"]))
+        for name, text in configs["text"].items():
+            with self.subTest(name):
+                image = configs["image"][name]
+                self.assertEqual(text["model"], {k: v for k, v in image["model"].items() if k != "image_detail"})
+                self.assertEqual(text["run"], image["run"])
+
+    def test_the_committed_dataset_tables_are_consistent(self):
+        for dataset, kind in evaluate.DATASETS.items():
+            table = evaluate.dataset_paths(dataset)[0]
+            if table.exists():  # committed once the dataset is prepared; its files stay out of Git
+                with self.subTest(dataset):
+                    labels = evaluate.classes(evaluate.read_table(table, dataset))
+                    self.assertEqual([c for c in kind.set_apart if c not in labels], [], "a class set apart must be a class")
+                    self.assertTrue(all(item.group for item in evaluate.read_table(table, dataset)), "every file needs its group")
 
     def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
         files = sorted((ROOT / "prompts").glob("*/*.txt"))
         self.assertTrue(files)
         for path in files:
             with self.subTest(path.name):
-                evaluate.load_template(path)  # refuses a file without exactly one {labels}
+                evaluate.load_template(path, path.parent.name)  # refuses a file without exactly one {labels} (and {case} for text)
                 self.assertTrue(path.read_bytes().endswith(b"\n"))
                 self.assertNotIn(b"\r", path.read_bytes(), "Windows line endings (.gitattributes should prevent this)")
                 self.assertNotIn("\n\n", path.read_text(encoding="utf-8"), "a blank line would change what the model is shown")
@@ -1697,12 +1925,14 @@ class RepositoryTests(unittest.TestCase):
                      "data/text/sources/library/statpearls/NBK1.html", "data/text/library/passages.jsonl", "data/anything_else.txt",
                      "data/x.csv",
                      "results/image/m/val_1/report.md", "results/image/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc",
+                     "results/text/m/val_1/report.md", "results/text/m/test_1.partial/predictions.jsonl",
                      "src/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
         for path in ("README.md", "data/image/dataset.csv", "data/image/raw_photos.csv", "data/image/dataset_report.md",
                      "data/image/datasheet.md", "data/text/dataset.csv", "data/text/case_candidates.csv", "data/text/article_mesh.csv", "data/text/abstract_candidates.csv",
                      "data/text/library.csv", "results/image/m/test_1/report.md",
-                     "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt"):
+                     "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt",
+                     "results/text/m/test_1/report.md", "configs/text/example.toml", "prompts/text/example.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

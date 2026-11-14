@@ -1878,7 +1878,7 @@ def shortcuts(data: str | Path = DATA) -> dict:
     images = []
     for item in sorted(items, key=lambda item: item.path):
         row = rows[item.path]
-        images.append({"split": item.split, "label": item.label, "lesion_group": item.lesion_group or item.path,
+        images.append({"split": item.split, "label": item.label, "lesion_group": item.group or item.path,
                        "source": photos[row["photo_id"]]["attribution"] or "(not recorded)", "width": int(row["width"]),
                        "height": int(row["height"]), "bytes": int(row["bytes"]), **_measure((root / item.path).read_bytes())})
     part = {name: [image for image in images if image["split"] == name] for name in ("train", "val", "test")}
@@ -1905,7 +1905,7 @@ def shortcuts(data: str | Path = DATA) -> dict:
             k = min(ks, key=lambda k: (-on_val[k], k))  # the best on the validation split; the smallest of equals
             predicted = [_vote(r, classes, weight, k) for r in ranked["test"]]
             scored = summarize(truth["test"], predicted, sorted(set(classes) | set(truth["test"])),
-                               lesions=[image["lesion_group"] for image in part["test"]])
+                               groups=[image["lesion_group"] for image in part["test"]])
             result[target] = {"k": k, "balanced_accuracy": scored["balanced_accuracy"], "ci95": scored["balanced_accuracy_ci95"],
                               "recall": {c: v["recall"] for c, v in scored["per_class"].items()}}
         results[name] = result

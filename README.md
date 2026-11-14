@@ -45,14 +45,23 @@ src/
   text/library.py           builds the reference library for retrieval, four corpora as in RAG²: PubMed abstracts of reviews,
                             PMC open full texts of reviews, clinical practice guidelines, StatPearls chapters; cut into
                             passages, with nothing that could hold a test answer
+  multimodal/prepare.py     makes the multimodal dataset from the two frozen ones, one command per step: records (which
+                            patient facts the ISIC records of the image dataset hold, by class and by photo collection),
+                            build (the questions, the knowledge open-book runs may search, and the classes)
+  multimodal/audit.py       checks the multimodal tables against their sources and files with code of its own, and measures
+                            how much the patient facts alone, with no photo, tell the class
 tests/                      one test file per code file (no API call, no real data)
   test_evaluate.py
   image/test_prepare.py
   text/test_prepare.py
   text/test_audit.py
   text/test_library.py
+  multimodal/test_prepare.py
+  multimodal/test_audit.py
 configs/image/              one settings file per AI model for the image dataset (model and generation settings, prompt)
 prompts/image/              the image prompt, diagnosis.txt; a changed prompt is a new file, never an edit
+configs/text/               the same for the text dataset: the same AI models and settings, the text prompt
+prompts/text/               the text prompt, diagnosis.txt: each case is put into it where it says {case}
 data/image/                 the image dataset
   raw/                      the original Kaggle dataset, never changed (not in Git)
   downloads/                ISIC records and pictures, HAM10000's metadata (not in Git)
@@ -78,10 +87,17 @@ data/text/                  the text dataset
   datasheet.md              the data sheet: what the dataset is, how it was made, how to use it, its limitations
   library/                  the library's passages, passages.jsonl (not in Git: research use only)
   library.csv               the reference library: one row per passage (corpus, source, licence, fingerprint; not its text)
+data/multimodal/            the multimodal dataset
+  questions.csv             one question per image of the image dataset: the photo and the same patient's age, sex and body site
+  knowledge.csv             what open-book runs may search: training images, training cases, library passages (by disease)
+  diseases.csv              per class: the ISIC diagnoses, the text names and MeSH headings, and the counts
+  dataset_report.md         the preparation report: one section per step, in the order the steps run
+  datasheet.md              the data sheet: what the dataset is, how it was made, how to use it, its limitations
 results/image/              one folder per AI model, holding its finished test run (validation runs stay on your computer)
+results/text/               the same for the text dataset
 ```
 
-The text dataset is in `src/text/` and `data/text/`; it gets its `configs/text/`, `prompts/text/` and `results/text/` when its evaluation starts. The multimodal dataset gets the same folders when its phase starts.
+The multimodal dataset gets its `configs/`, `prompts/` and `results/` folders when its evaluation starts.
 
 ## How to Run
 
@@ -91,4 +107,6 @@ The image dataset is prepared step by step: `python -m src.image.prepare invento
 
 The text dataset is prepared the same way, step by step: `python -m src.text.prepare survey`, then `python -m src.text.prepare cases`, `python -m src.text.prepare abstracts`, `python -m src.text.prepare mesh` and `python -m src.text.prepare build`; then `python -m src.text.audit` checks the dataset and `python -m src.text.library` builds the reference library. Each step rewrites only its own part of `data/text/dataset_report.md`; the case texts, abstracts and library passages stay in `data/text/sources`, `data/text/dataset` and `data/text/library` and never go into Git.
 
-To evaluate a model on the image dataset, run `python -m src.evaluate check --config configs/image/claude-sonnet-5-5.toml`, then `python -m src.evaluate run --config configs/image/claude-sonnet-5-5.toml --split test` (`configs/image/gpt-4o.toml` and `configs/image/gemini-3.1-flash-lite.toml` for the others; a stopped run continues when repeated).
+The multimodal dataset is made from the two frozen datasets: `python -m src.multimodal.prepare records`, then `python -m src.multimodal.prepare build`; then `python -m src.multimodal.audit` checks it. Both read the ISIC records the image dataset downloaded into `data/image/downloads`; the build writes `data/multimodal/questions.csv`, `data/multimodal/knowledge.csv` and `data/multimodal/diseases.csv`, and each step its section of `data/multimodal/dataset_report.md`.
+
+To evaluate a model on the image dataset, run `python -m src.evaluate check --config configs/image/claude-sonnet-5-5.toml`, then `python -m src.evaluate run --config configs/image/claude-sonnet-5-5.toml --split test` (`configs/image/gpt-4o.toml` and `configs/image/gemini-3.1-flash-lite.toml` for the others; a stopped run continues when repeated). On the text dataset, run `python -m src.evaluate check --config configs/text/claude-sonnet-5-5.toml`, then `python -m src.evaluate run --config configs/text/claude-sonnet-5-5.toml --split test` (`configs/text/gpt-4o.toml` and `configs/text/gemini-3.1-flash-lite.toml` for the others).

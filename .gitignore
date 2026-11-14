@@ -6,9 +6,10 @@ venv/
 .coverage
 htmlcov/
 
-# One folder per dataset in data/ (data/image/ now; data/text/ and data/multimodal/ later). Only the tables and reports directly in
-# a dataset's folder are committed; its originals, downloads and prepared files stay on this computer (for the image dataset:
-# data/image/raw, data/image/downloads and data/image/dataset).
+# One folder per dataset in data/ (data/image/, data/text/ and data/multimodal/). Only the tables and reports directly
+# in a dataset's folder are committed; its originals, downloads and prepared files stay on this computer (for the image dataset:
+# data/image/raw, data/image/downloads and data/image/dataset; for the text dataset: data/text/sources, data/text/dataset and
+# data/text/library).
 /data/**
 !/data/*/
 !/data/*/*.csv

@@ -1,27 +1,30 @@
-"""Evaluation of LLMs on the prepared dataset: every model gets the same images, prompt, answer reader and metrics.
+"""Evaluation of LLMs on a prepared dataset: every model gets the same files, prompt, answer reader and metrics.
 
     python -m src.evaluate check --config configs/<dataset>/<model>.toml [--model <id>]
     python -m src.evaluate run --config configs/<dataset>/<model>.toml --split val [--limit 5]
     python -m src.evaluate run --config configs/<dataset>/<model>.toml --split test
     python -m src.evaluate report results/<dataset>/<model>/<run-folder>
 
-``check`` tests everything a run needs without sending any dataset image; run it before every run. The model is asked once,
-with a blank synthetic image, so an unavailable model, a wrong key or a used-up quota shows before a run starts.
-``run`` sends every image of one split, with the prompt, to the model named in the config and saves each answer as it arrives.
-A validation run (``--split val``) is for tuning the method; it stays on this computer (Git ignores it) and is not a reported
-result, and ``--limit N`` sends only its first N images. A test run (``--split test``) is the result: it runs once per config
-(the base paper's practice), needs a clean Git state so its run card names the exact code, and needs the model pinned to one
-version. Answers are kept in a folder ending in ``.partial`` until the run is complete; the same command continues a stopped run.
+``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked
+once, with a blank synthetic image (for the text dataset, with a short question and no image), so an unavailable model, a wrong
+key or a used-up quota shows before a run starts.
+``run`` sends every file of one split, with the prompt, to the model named in the config and saves each answer as it arrives: an
+image goes next to the prompt, exactly as stored; a text case goes into the prompt word for word, where the prompt has
+``{case}``. A validation run (``--split val``) is for tuning the method; it stays on this computer (Git ignores it) and is not a
+reported result, and ``--limit N`` sends only its first N files. A test run (``--split test``) is the result: it runs once per
+config (the base paper's practice), needs a clean Git state so its run card names the exact code, and needs the model pinned to
+one version. Answers are kept in a folder ending in ``.partial`` until the run is complete; the same command continues a stopped
+run.
 ``report`` rewrites metrics.json and report.md from a run's saved answers (no model is asked).
 
-Each config names its dataset (``dataset = "image"``); the code here is shared by every dataset, so all are scored alike. A
-prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file> (the files, exactly as every model receives them;
-split: train, val or test) and data/<dataset>/dataset.csv (one row per file: split, label, path inside the dataset folder,
-sha256, and the lesion group it belongs to, plus any further columns the preparation records). The table is committed to Git and
-is the single source of truth; the files stay on this computer. Every file on disk is checked against the table before a run, so
-a changed, missing or extra file stops the run and every model is evaluated on byte-identical files. Results go to
-results/<dataset>/<model>/<run>/. Only the image dataset exists so far; the text and multimodal datasets are added in their
-phases.
+Each config names its dataset (``dataset = "image"`` or ``"text"``); the code here is shared by every dataset, so all are scored
+alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
+(the files, exactly as every model receives them: JPEG or PNG images, or UTF-8 text cases; split: train, val or test) and
+data/<dataset>/dataset.csv (one row per file: split, label, path inside the dataset folder, sha256, and the group it belongs to:
+the lesion an image shows, or the article a case comes from; plus any further columns the preparation records). The table is
+committed to Git and is the single source of truth; the files stay on this computer. Every file on disk is checked against the
+table before a run, so a changed, missing or extra file stops the run and every model is evaluated on byte-identical files.
+Results go to results/<dataset>/<model>/<run>/. The multimodal dataset is added in its phase.
 
 The file has three parts, in this order: the metrics, the model adapters (one class per API) and the pipeline with its
 command line.
@@ -58,7 +61,7 @@ from PIL import Image
 # ==============================================================================================================================
 # Metrics
 #
-# Metrics for a model that answers each image with one class name, or with nothing readable.
+# Metrics for a model that answers each file (an image or a text case) with one class name, or with nothing readable.
 #
 # Everything is computed from the saved answers (predictions.jsonl), so the metrics can be recomputed at any time without asking
 # the model again. An unreadable answer (None) is a wrong answer. In the confusion matrix it gets its own column (UNREADABLE),
@@ -68,16 +71,20 @@ from PIL import Image
 #     precision = TP / (TP + FP)         undefined (None) when class k was never answered
 #     recall    = TP / (TP + FN)         undefined (None) when no image has true class k
 #     F1        = 2 TP / (2 TP + FP + FN)
-# Averages over classes: macro (every class counts the same) and weighted (by the number of true images). Only classes that have at
-# least one true image enter an average; a class that was never answered gets precision 0 in the macro precision. Balanced accuracy
-# is the macro recall, and the main score: every class counts the same, whatever its number of test images (the measure of the ISIC
-# 2018 lesion-diagnosis challenge). With one answer per image, micro-averaged precision, recall and F1 all equal accuracy, so they
+# Averages over classes: macro (every class counts the same) and weighted (by the number of true files). Only classes that have at
+# least one true file enter an average; a class that was never answered gets precision 0 in the macro precision. Balanced accuracy
+# is the macro recall, and the main score: every class counts the same, whatever its number of test files (the measure of the ISIC
+# 2018 lesion-diagnosis challenge). With one answer per file, micro-averaged precision, recall and F1 all equal accuracy, so they
 # are not reported. MCC (Matthews correlation coefficient) and Cohen's kappa are the two usual chance-corrected scores for more
 # than two classes. Precision and F1 depend on how common each class is in the test set; recall and balanced accuracy do not.
 #
-# The 95% intervals: photos of one lesion are not independent, so when the images carry their lesion (``lesions``), every interval
-# comes from a bootstrap that resamples whole lesions within each true class. Without lesion information each image is its own
-# lesion; accuracy and the recall of each class then get the Wilson score interval.
+# The 95% intervals: photos of one lesion, like patients of one article, are not independent, so when the files carry their group
+# (``groups``), every interval comes from a bootstrap that resamples whole groups within each true class. Without group
+# information each file is its own group; accuracy and the recall of each class then get the Wilson score interval.
+#
+# A class with very few files in a split (actinic keratosis in the text dataset: 2 test cases) weighs as much as any other class
+# in balanced accuracy, yet its recall can take only a few values. The report then also gives the scores without its files,
+# beside the main score (DATASETS names such classes).
 #
 # ROC curves and AUC are deliberately absent: they need a score per class for every image, and a model that answers with one class
 # name gives none.
@@ -160,19 +167,19 @@ def _percentile(sorted_values: list[float], q: float) -> float:
     return sorted_values[low] + (sorted_values[high] - sorted_values[low]) * (position - low)
 
 
-def _bootstrap(y_true, y_pred, labels, lesions, resamples: int, seed: int) -> dict:
+def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dict:
     """95% percentile intervals of every score that gets one.
 
-    Whole lesions are resampled with replacement inside each true class (``lesions`` names each image's lesion; each image is its
-    own lesion when it does not), so every resample keeps the number of lesions of each class, and photos of one lesion are drawn
-    together. The generator is seeded: the same answers always give the same interval.
+    Whole groups are resampled with replacement inside each true class (``groups`` names each file's group: the lesion an image
+    shows, or the article a case comes from), so every resample keeps the number of groups of each class, and the files of one
+    group are drawn together. The generator is seeded: the same answers always give the same interval.
     """
     by_class = {}
     for label in labels:
         units = {}
         for i, true in enumerate(y_true):
             if true == label:
-                units.setdefault(lesions[i], []).append(i)
+                units.setdefault(groups[i], []).append(i)
         if units:
             by_class[label] = list(units.values())
     names = ["accuracy", "balanced_accuracy", "macro_f1"]
@@ -198,22 +205,24 @@ def _bootstrap(y_true, y_pred, labels, lesions, resamples: int, seed: int) -> di
     return {name: interval(series) for name, series in values.items()} | {"recall": {k: interval(v) for k, v in recall.items()}}
 
 
-def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], lesions: list[str] | None = None) -> dict:
+def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], groups: list[str] | None = None,
+              group_name: str = "lesion") -> dict:
     """All metrics of one run.
 
-    ``labels`` is the full class list; a class that has no true image appears in ``classes_without_test_images`` and is left out of
-    the averages. ``lesions`` names the lesion of each image (photos of one lesion are resampled together for the intervals). With no answers at all, every
-    score is None (and accuracy 0.0).
+    ``labels`` is the full class list (the answer options); a class that no file has as its true class appears in
+    ``classes_absent`` and is left out of the averages. ``groups`` names the group of each file, ``group_name`` what a group is
+    (the files of one group are resampled together for the intervals). With no answers at all, every score is None (and accuracy
+    0.0).
     """
     matrix = confusion_matrix(y_true, y_pred, labels)
     s = _scores(matrix)
     n = s["n"]
     correct = sum(s["tp"])
-    if lesions is not None and len(lesions) != len(y_true):
-        raise ValueError("there must be one lesion per image")
-    lesions = list(lesions) if lesions is not None else list(range(len(y_true)))
-    independent = len(set(lesions)) == len(lesions)  # every image its own lesion: Wilson intervals for accuracy and recall
-    interval = _bootstrap(y_true, y_pred, labels, lesions, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
+    if groups is not None and len(groups) != len(y_true):
+        raise ValueError("there must be one group per answer")
+    groups = list(groups) if groups is not None else list(range(len(y_true)))
+    independent = len(set(groups)) == len(groups)  # every file its own group: Wilson intervals for accuracy and recall
+    interval = _bootstrap(y_true, y_pred, labels, groups, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
     per_class = {}
     for i, label in enumerate(labels):
         per_class[label] = {"support": s["support"][i], "answered": s["answered"][i], "tp": s["tp"][i],
@@ -221,11 +230,11 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], le
                             "precision": s["precision"][i], "recall": s["recall"][i], "f1": s["f1"][i],
                             "recall_ci95": None if not s["support"][i] else
                             wilson(s["tp"][i], s["support"][i]) if independent else interval["recall"][label]}
-    return {"n": n, "correct": correct, "unreadable": s["answered"][-1], "lesions": len(set(lesions)),
-            "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else "bootstrap over lesions",
+    return {"n": n, "correct": correct, "unreadable": s["answered"][-1], "groups": len(set(groups)), "group_name": group_name,
+            "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else f"bootstrap over {group_name}s",
             "balanced_accuracy": s["macro"]["recall"], "balanced_accuracy_ci95": interval["balanced_accuracy"],
             "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n) if independent else interval["accuracy"],
-            "classes_without_test_images": [label for i, label in enumerate(labels) if not s["support"][i]],
+            "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]],
             "macro": {**s["macro"], "f1_ci95": interval["macro_f1"]},
             "weighted": s["weighted"],
             "mcc": s["mcc"], "kappa": s["kappa"],
@@ -236,14 +245,15 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], le
 # ==============================================================================================================================
 # Model adapters
 #
-# The LLM adapters: one class per API, each answering one image plus one prompt in the same form.
+# The LLM adapters: one class per API, each answering one prompt, with or without one image, in the same form.
 #
 #     anthropic          Claude through the Anthropic API
 #     gemini             Gemini through the Google Gemini API
 #     openai_compatible  GPT-4o at OpenAI, and any host that speaks the same chat API (for example Llama at OpenRouter or
 #                        Hugging Face)
 #
-# Every adapter has ``describe()`` (what is asked: provider, model id, settings) and ``predict(image, mime_type, prompt)``. The
+# Every adapter has ``describe()`` (what is asked: provider, model id, settings) and ``predict(image, mime_type, prompt)``; for a
+# text case, image and mime_type are None and only the prompt is sent (the case is inside it). The
 # answer is a dict with ``text`` (or None), ``finish_reason`` ("STOP" for a normal end, "MAX_TOKENS" when the answer was cut off at
 # the output limit; any other value passes through), ``model_version`` (as the API reports it), ``response_id`` and ``usage``
 # (token counts). A failure raises TransientError (worth retrying), QuotaExhausted (credit or a per-day quota is used up) or
@@ -251,8 +261,9 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], le
 # card records and says whether its model id is ``pinned`` to one version; ``loaded_note`` and ``probe_note`` tell the setup check
 # how to describe it.
 #
-# Every image is sent to the provider's servers, so the dataset's terms must allow it. The SDKs' own retries are off, because a
-# run retries failures itself, waits longer each time and counts them. API keys are read from .env (git-ignored), never shown.
+# Every image or case is sent to the provider's servers, so the dataset's terms must allow it. The SDKs' own retries are off,
+# because a run retries failures itself, waits longer each time and counts them. API keys are read from .env (git-ignored), never
+# shown.
 # ==============================================================================================================================
 
 
@@ -385,12 +396,13 @@ class AnthropicModel:
         return FatalError(f"Anthropic refused the request (HTTP {status} {kind or ''}: {detail}). Fix the setting the message names.",
                           status)
 
-    def predict(self, image: bytes, mime_type: str, prompt: str) -> dict:
-        if mime_type not in IMAGE_TYPES:
-            raise FatalError(f"Claude accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
-        content = [{"type": "image", "source": {"type": "base64", "media_type": mime_type,
-                                                "data": base64.standard_b64encode(image).decode("ascii")}},
-                   {"type": "text", "text": prompt}]
+    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
+        content = [{"type": "text", "text": prompt}]
+        if image is not None:
+            if mime_type not in IMAGE_TYPES:
+                raise FatalError(f"Claude accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
+            content.insert(0, {"type": "image", "source": {"type": "base64", "media_type": mime_type,
+                                                           "data": base64.standard_b64encode(image).decode("ascii")}})
         try:
             response = self.client.messages.create(model=self.model_id, max_tokens=self.max_tokens,
                                                    thinking={"type": self.thinking}, output_config={"effort": self.effort},
@@ -485,10 +497,10 @@ class GeminiModel:
                 "sdk_version": importlib.metadata.version("google-genai"),
                 "generation_config": self.config.model_dump(exclude_none=True, mode="json")}
 
-    def predict(self, image: bytes, mime_type: str, prompt: str) -> dict:
+    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
+        contents = [prompt] if image is None else [self.types.Part.from_bytes(data=image, mime_type=mime_type), prompt]
         try:
-            response = self.client.models.generate_content(
-                model=self.model_id, contents=[self.types.Part.from_bytes(data=image, mime_type=mime_type), prompt], config=self.config)
+            response = self.client.models.generate_content(model=self.model_id, contents=contents, config=self.config)
         except self.errors.APIError as exc:
             if daily := _gemini_daily_quota(exc):
                 raise QuotaExhausted(daily) from exc
@@ -593,15 +605,17 @@ class OpenAICompatibleModel:
                               "in the config.", status)
         return FatalError(f"The host refused the request (HTTP {status}: {detail}). Fix the setting the message names.", status)
 
-    def predict(self, image: bytes, mime_type: str, prompt: str) -> dict:
-        if mime_type not in IMAGE_TYPES:
-            raise FatalError(f"This adapter accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
-        picture = {"url": f"data:{mime_type};base64,{base64.standard_b64encode(image).decode('ascii')}"}
-        if self.image_detail:
-            picture["detail"] = self.image_detail
+    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
+        content = [{"type": "text", "text": prompt}]
+        if image is not None:
+            if mime_type not in IMAGE_TYPES:
+                raise FatalError(f"This adapter accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
+            picture = {"url": f"data:{mime_type};base64,{base64.standard_b64encode(image).decode('ascii')}"}
+            if self.image_detail:
+                picture["detail"] = self.image_detail
+            content.insert(0, {"type": "image_url", "image_url": picture})
         request = {"model": self.model_id, "temperature": self.temperature, "seed": self.seed, "max_tokens": self.max_tokens,
-                   "messages": [{"role": "user", "content": [{"type": "image_url", "image_url": picture},
-                                                              {"type": "text", "text": prompt}]}]}
+                   "messages": [{"role": "user", "content": content}]}
         if self.extra_body:
             request["extra_body"] = self.extra_body
         try:
@@ -631,19 +645,19 @@ class OpenAICompatibleModel:
 # ==============================================================================================================================
 
 
-DATA = Path("data")  # one folder per dataset: data/image/ (data/text/ and data/multimodal/ in later phases)
-DATASETS = ("image",)  # the datasets a config can name
+DATA = Path("data")  # one folder per dataset: data/image/ and data/text/ (data/multimodal/ in a later phase)
 TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
 RESULTS = Path("results")  # results/<dataset>/<model>/<run>/
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
 RUN_SPLITS = ("val", "test")  # the splits a model answers; the training split is only ever looked up, never answered
 COLUMNS = ("split", "label", "path", "sha256")  # required in the table; other columns are kept there but not needed here
-GROUP = "lesion_group"  # optional column: the lesion each image shows (photos of one lesion are resampled together for the intervals)
-MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}  # the image files a dataset can hold
+TEXT_TYPES = {".txt": "text/plain"}  # the text files: UTF-8, each one case
 SYSTEM_FILES = {"thumbs.db", "desktop.ini"}  # written by Windows Explorer into folders it shows; never part of the dataset
 SHA256 = re.compile(r"[0-9a-f]{64}")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 PLACEHOLDER = "{labels}"
+CASE = "{case}"  # in a text prompt: where each case goes
 LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reader forgives in front of a colon and the class name
 MAX_ATTEMPTS = 8  # waits of 10, 20, 40, 80, 120, 120, 120 seconds between them: about 8.5 minutes in all
 PROBE_ATTEMPTS = 3
@@ -655,12 +669,35 @@ PROBE_PROMPT = "Reply with the single word: ok."
 
 
 @dataclass(frozen=True)
+class Dataset:
+    """What differs between the datasets; everything else (answer reader, metrics, runs, reports) is shared."""
+
+    media_types: dict[str, str]  # the files it holds: file ending -> media type
+    file_kind: str  # the same in words, for messages
+    in_prompt: bool  # True: each file's text goes into the prompt, at {case}; False: each file is an image sent next to the prompt
+    group_column: str  # optional column of its table: the group of each file (the files of one group are resampled together)
+    item: str  # what one file is, in messages and reports
+    group: str  # what one group is
+    why_grouped: str  # why the files of one group are not independent
+    set_apart: tuple[str, ...] = ()  # classes with so few files that the report also gives the scores without them
+
+
+DATASETS = {  # the datasets a config can name
+    "image": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
+                     "Photos of one lesion are not independent"),
+    "text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
+                    "Patients described in one article are not independent",
+                    set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
+}
+
+
+@dataclass(frozen=True)
 class Item:
     split: str
     label: str
     path: str  # inside the dataset's folder of files, with forward slashes: <split>/<label>/<file>
     sha256: str
-    lesion_group: str = ""  # the lesion the image shows; empty when the table does not say
+    group: str = ""  # the lesion an image shows, or the article a case comes from; empty when the table does not say
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
@@ -671,8 +708,9 @@ def dataset_paths(dataset: str) -> tuple[Path, Path]:
 TABLE, IMAGES = dataset_paths("image")  # the defaults below
 
 
-def read_table(table: str | Path = TABLE) -> list[Item]:
-    """The rows of the table, after checking that they describe one consistent dataset (no image is opened)."""
+def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
+    """The rows of the table, after checking that they describe one consistent dataset (no file is opened)."""
+    kind = DATASETS[dataset]
     table = Path(table)
     if not table.is_file():
         raise FileNotFoundError(f"{table.as_posix()} not found: the prepared dataset does not exist yet (run the dataset "
@@ -682,9 +720,9 @@ def read_table(table: str | Path = TABLE) -> list[Item]:
         missing = [c for c in COLUMNS if c not in (reader.fieldnames or [])]
         if missing:
             raise ValueError(f"{table.as_posix()} lacks the column(s): {', '.join(missing)}")
-        items = [Item(*(row[c] for c in COLUMNS), lesion_group=(row.get(GROUP) or "").strip()) for row in reader]
+        items = [Item(*(row[c] for c in COLUMNS), group=(row.get(kind.group_column) or "").strip()) for row in reader]
     if not items:
-        raise ValueError(f"{table.as_posix()} lists no image")
+        raise ValueError(f"{table.as_posix()} lists no file")
     first_line = {}
     for line, item in enumerate(items, start=2):  # line 1 is the header
         where = f"{table.as_posix()} line {line}"
@@ -693,20 +731,21 @@ def read_table(table: str | Path = TABLE) -> list[Item]:
         parts = item.path.split("/")
         if len(parts) != 3 or parts[:2] != [item.split, item.label] or any(p in ("", ".", "..") for p in parts):
             raise ValueError(f"{where}: path {item.path!r} must be <split>/<label>/<file>, here {item.split}/{item.label}/<file>")
-        if Path(item.path).suffix.lower() not in MEDIA_TYPES:
-            raise ValueError(f"{where}: {item.path} is not a JPEG or PNG file")
+        if Path(item.path).suffix.lower() not in kind.media_types:
+            raise ValueError(f"{where}: {item.path} is not {kind.file_kind}")
         if not SHA256.fullmatch(item.sha256):
             raise ValueError(f"{where}: sha256 must be 64 lowercase hexadecimal characters")
-        for key, what in ((item.path, "path"), (item.sha256, "image")):
-            if key in first_line:  # a second copy of one image could sit in two splits: a leak between them
+        for key, what in ((item.path, "path"), (item.sha256, kind.item)):
+            if key in first_line:  # a second copy of one file could sit in two splits: a leak between them
                 raise ValueError(f"{where}: the same {what} is also on line {first_line[key]}")
             first_line[key] = line
     return items
 
 
-def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES) -> list[Item]:
-    """The table's rows, after checking that the images on disk are exactly the ones it lists, byte for byte."""
-    items = read_table(table)
+def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES, dataset: str = "image") -> list[Item]:
+    """The table's rows, after checking that the files on disk are exactly the ones it lists, byte for byte."""
+    items = read_table(table, dataset)
+    files = f"{DATASETS[dataset].item}s"
     root = Path(root)
     changed, missing = [], []
     for item in items:
@@ -722,26 +761,26 @@ def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES) -> list[I
     if changed or missing or extra:
         examples = "; ".join(f"{why}: {paths[0]}" for why, paths in (("changed", changed), ("missing", missing),
                                                                        ("not in the table", extra)) if paths)
-        raise ValueError(f"the images in {root.as_posix()} differ from {Path(table).as_posix()}: {len(changed)} changed, "
+        raise ValueError(f"the {files} in {root.as_posix()} differ from {Path(table).as_posix()}: {len(changed)} changed, "
                          f"{len(missing)} missing, {len(extra)} not in the table ({examples}). Run the dataset preparation "
-                         "again, or restore the images")
+                         f"again, or restore the {files}")
     return items
 
 
 def classes(items: list[Item]) -> list[str]:
-    """The answer options: the classes of the training split. A validation or test class without training images is refused."""
+    """The answer options: the classes of the training split. A validation or test class without training files is refused."""
     train = sorted({item.label for item in items if item.split == "train"})
     if not train:
         raise ValueError("the training split is empty, so the classes are unknown")
     unknown = sorted({item.label for item in items if item.split != "train"} - set(train))
     if unknown:
-        raise ValueError(f"classes without training images: {unknown}")
+        raise ValueError(f"classes without training files: {unknown}")
     return train
 
 
 def items_hash(items: list[Item]) -> str:
-    """One hash for a list of images: it changes if any file, label, path, split or lesion group changes."""
-    lines = sorted(f"{i.split}\t{i.label}\t{i.path}\t{i.sha256}" + (f"\t{i.lesion_group}" if i.lesion_group else "") for i in items)
+    """One hash for a list of files: it changes if any file, label, path, split or group changes."""
+    lines = sorted(f"{i.split}\t{i.label}\t{i.path}\t{i.sha256}" + (f"\t{i.group}" if i.group else "") for i in items)
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
@@ -757,22 +796,45 @@ def read_image(item: Item, root: str | Path = IMAGES) -> tuple[bytes, str, dict]
         "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(), "width": width, "height": height}
 
 
+def read_case(item: Item, root: str | Path) -> tuple[str, dict]:
+    """The text every model receives for one case (the file exactly as stored, read as UTF-8) and a record of what was sent."""
+    content = (Path(root) / item.path).read_bytes()
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:  # stops the run with a message, never a silent skip
+        raise ValueError(f"{item.path} is not UTF-8 text ({exc})") from exc
+    if not text.strip():
+        raise ValueError(f"{item.path} is empty")
+    return text, {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(), "words": len(text.split())}
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------
 # The prompt and the answer reader: the same for every model, so differences in results come from the models, not from how their
 # answers were read
 
 
-def load_template(path: str | Path) -> str:
-    """The prompt template; it must contain the label placeholder exactly once."""
+def load_template(path: str | Path, dataset: str = "image") -> str:
+    """The prompt template: the label placeholder exactly once, and the case placeholder exactly once in a prompt for text cases
+    (never in one for images, which go next to the prompt)."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:
         raise ValueError(f"{path} must contain {PLACEHOLDER} exactly once")
+    if DATASETS[dataset].in_prompt and text.count(CASE) != 1:
+        raise ValueError(f"{path} must contain {CASE} exactly once: it is where each case goes")
+    if not DATASETS[dataset].in_prompt and CASE in text:
+        raise ValueError(f"{path} must not contain {CASE}: the {dataset} dataset sends no text case")
     return text
 
 
 def build_prompt(template: str, labels: list[str]) -> str:
-    """The prompt for one image: the class names, sorted, one per line."""
+    """The prompt of a run: the class names, sorted, one per line."""
     return template.replace(PLACEHOLDER, "\n".join(f"- {label}" for label in sorted(labels))).strip()
+
+
+def fill_case(prompt: str, case: str) -> str:
+    """The prompt for one text case: the case, word for word, where the prompt has {case}."""
+    before, after = prompt.split(CASE)
+    return before + case + after
 
 
 def _normalise(text: str) -> str:
@@ -859,7 +921,7 @@ def repair_jsonl(path: Path) -> None:
         fixed = content + b"\n"
     else:
         fixed = head.encode("utf-8")
-        print(f"{path}: removed an incomplete last line (the program was stopped while writing it); that image is answered again")
+        print(f"{path}: removed an incomplete last line (the program was stopped while writing it); that file is asked again")
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_bytes(fixed)
     os.replace(tmp, path)
@@ -912,12 +974,13 @@ def _blank_image() -> bytes:
     return buffer.getvalue()
 
 
-def _probe(model, say) -> tuple[dict | None, str | None]:
-    """The answer to one blank-image request, or (None, reason) when it failed. Retries transient failures a few times;
-    a used-up quota and a refusal are not retried."""
+def _probe(model, say, image: bool = True) -> tuple[dict | None, str | None]:
+    """The answer to one request with a blank image (or, with ``image`` False, no image), or (None, reason) when it failed.
+    Retries transient failures a few times; a used-up quota and a refusal are not retried."""
+    picture = (_blank_image(), "image/png") if image else (None, None)
     for attempt in range(1, PROBE_ATTEMPTS + 1):
         try:
-            return model.predict(_blank_image(), "image/png", PROBE_PROMPT), None
+            return model.predict(*picture, PROBE_PROMPT), None
         except TransientError as exc:
             if attempt == PROBE_ATTEMPTS:
                 return None, f"temporary problem, not a setting: {exc}"
@@ -929,8 +992,10 @@ def _probe(model, say) -> tuple[dict | None, str | None]:
 
 
 def check_setup(config: dict, config_path: str, say=print) -> bool:
-    """Prints one line per check and returns True when none failed. No dataset image is sent."""
+    """Prints one line per check and returns True when none failed. Nothing from the dataset is sent."""
     failed = False
+    dataset = config["dataset"]
+    kind = DATASETS[dataset]
 
     def line(status: str, what: str, detail: str = "") -> None:
         nonlocal failed
@@ -939,15 +1004,16 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
 
     line("OK", "Config", config_path)
     try:
-        load_template(config["prompt"]["file"])
+        load_template(config["prompt"]["file"], dataset)
         line("OK", "Prompt file", config["prompt"]["file"])
     except (OSError, ValueError) as exc:
         line("FAIL", "Prompt file", str(exc))
-    try:  # every image is hashed and compared with the committed table, as a run does
-        items = load_dataset(*dataset_paths(config["dataset"]))
+    try:  # every file is hashed and compared with the committed table, as a run does
+        items = load_dataset(*dataset_paths(dataset), dataset)
         labels = classes(items)
         counts = Counter(item.split for item in items)
-        line("OK", "Prepared dataset", f"{len(items)} images ({', '.join(f'{s} {counts[s]}' for s in SPLITS)}), {len(labels)} classes")
+        line("OK", "Prepared dataset", f"{len(items)} {kind.item}s ({', '.join(f'{s} {counts[s]}' for s in SPLITS)}), "
+                                       f"{len(labels)} classes")
     except (OSError, ValueError) as exc:
         line("FAIL", "Prepared dataset", str(exc))
 
@@ -960,9 +1026,9 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
         line("FAIL", "Model adapter and access", str(exc))
         model = None
     if model is not None:
-        say(f"       asking {settings['id']} one question with a blank image (nothing from the dataset is sent; "
-            f"{getattr(model, 'probe_note', 'it counts as one request against the daily quota')}) ...")
-        answer, problem = _probe(model, say)
+        say(f"       asking {settings['id']} one question with {'no image' if kind.in_prompt else 'a blank image'} (nothing from "
+            f"the dataset is sent; {getattr(model, 'probe_note', 'it counts as one request against the daily quota')}) ...")
+        answer, problem = _probe(model, say, image=not kind.in_prompt)
         if answer is None:
             line("FAIL", f"Model {settings['id']}", problem)
         else:
@@ -1007,7 +1073,7 @@ def _versions(packages: tuple[str, ...] = ("pillow",)) -> dict:
     return out
 
 
-def _ask(model, image: bytes, mime: str, text: str, throttle, say=print) -> tuple[dict, int]:
+def _ask(model, image: bytes | None, mime: str | None, text: str, throttle, say=print) -> tuple[dict, int]:
     """One answer and the number of attempts it took. Waits longer after each transient failure; raises when all fail."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         throttle()
@@ -1040,8 +1106,9 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
                          "changes (git status shows them), then run the same command again")
     if split == "test" and git["uncommitted_changes"] is None:
         print("WARNING: Git is not available here, so the run card cannot name the code this run came from.")
-    table, root = dataset_paths(config["dataset"])
-    everything = load_dataset(table, root)  # stops if any image differs from the committed table
+    dataset = config["dataset"]
+    table, root = dataset_paths(dataset)
+    everything = load_dataset(table, root, dataset)  # stops if any file differs from the committed table
     labels = classes(everything)
     items = sorted((item for item in everything if item.split == split), key=lambda item: item.path)
     if not items:
@@ -1050,14 +1117,14 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     random.Random(config["run"]["order_seed"]).shuffle(items)
     items = items[: limit or None]
 
-    prompt_text = build_prompt(load_template(config["prompt"]["file"]), labels)
+    prompt_text = build_prompt(load_template(config["prompt"]["file"], dataset), labels)
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + items_hash(items).encode()).hexdigest()
     load_env()
     model_dir = results / config["dataset"] / config["name"]
     job = {"config": config, "config_path": config_path, "split": split, "items": items, "labels": labels,
            "prompt_text": prompt_text, "fingerprint": fingerprint, "model_dir": model_dir, "git": git,
-           "table": table, "root": root, "table_sha256": hashlib.sha256(table.read_bytes()).hexdigest()}
+           "table": table, "root": root, "table_sha256": hashlib.sha256(table.read_bytes()).hexdigest(), "kind": DATASETS[dataset]}
     if split == "val":
         return _run_once(job, run_id or f"val_{fingerprint[:8]}")  # the same settings give the same folder: a stop resumes
 
@@ -1083,16 +1150,16 @@ def _refuse_other_test_runs(model_dir: Path, name: str, fingerprint: str) -> Non
             raise SystemExit(f"the test run of this config already exists under the name {other} ({folder}). Continue it "
                              f"with --run-id {other}, or leave out --run-id if that is the default name")
         if finished:
-            raise SystemExit(f"a finished test run already exists for this config, made with other settings, prompt or images: "
+            raise SystemExit(f"a finished test run already exists for this config, made with other settings, prompt or files: "
                              f"{folder} (results are not overwritten). A changed setting needs a new config file")
-        raise SystemExit(f"an unfinished test run made with other settings, prompt or images exists: {folder}. Delete that "
+        raise SystemExit(f"an unfinished test run made with other settings, prompt or files exists: {folder}. Delete that "
                          "folder to start over, or undo the change")
 
 
 def _run_once(job: dict, run_id: str) -> Path:
-    """One run over the job's images: answers are saved as they arrive in ``<run_id>.partial``, renamed when complete."""
-    config, items, labels, prompt_text, fingerprint = (job["config"], job["items"], job["labels"], job["prompt_text"],
-                                                       job["fingerprint"])
+    """One run over the job's files: answers are saved as they arrive in ``<run_id>.partial``, renamed when complete."""
+    config, items, labels, prompt_text, fingerprint, kind = (job["config"], job["items"], job["labels"], job["prompt_text"],
+                                                             job["fingerprint"], job["kind"])
     settings = dict(config["model"])
     model = load(settings["provider"], settings)  # a missing key or model stops the run before any file is written
     if job["split"] == "test" and getattr(model, "pinned", True) is False:
@@ -1112,14 +1179,15 @@ def _run_once(job: dict, run_id: str) -> Path:
         card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
                 "seed": settings.get("seed"), "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
-                "prompt": prompt_text, "labels": labels, "n_images": len(items), "images_sha256": items_hash(items),
+                "prompt": prompt_text, "labels": labels, f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
+                "group_column": kind.group_column,
                 "dataset_table": {"file": job["table"].as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
                 "versions": _versions(getattr(model, "packages", ("pillow",))),
                 "started_utc": _now(), "finished_utc": None, "model": None, "model_versions_returned": []}
     else:
         card = json.loads(card_path.read_text(encoding="utf-8"))
         if card["fingerprint"] != fingerprint:
-            raise SystemExit(f"{out} was started with a different config, prompt or image set; delete that folder to start "
+            raise SystemExit(f"{out} was started with a different config, prompt or set of files; delete that folder to start "
                              "over, or choose another --run-id")
     card.setdefault("sessions", []).append({"utc": _now(), "commit": job["git"]["commit"],
                                             "uncommitted_changes": job["git"]["uncommitted_changes"]})
@@ -1152,13 +1220,18 @@ def _run_once(job: dict, run_id: str) -> Path:
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, item in enumerate(todo, start=len(done) + 1):
-                image, mime, sent = read_image(item, job["root"])
-                answer, attempt = _ask(model, image, mime, prompt_text, throttle, say)
+                if kind.in_prompt:  # a text case: inside the prompt, with no image
+                    case, sent = read_case(item, job["root"])
+                    image, mime, text = None, None, fill_case(prompt_text, case)
+                else:
+                    image, mime, sent = read_image(item, job["root"])
+                    text = prompt_text
+                answer, attempt = _ask(model, image, mime, text, throttle, say)
                 parsed = parse_answer(answer["text"], labels)
-                line = {"path": item.path, "label": item.label, "lesion_group": item.lesion_group, "prediction": parsed, "raw_text": answer["text"],
-                        "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
-                        "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt, "image_sent": sent,
-                        "answered_utc": _now()}
+                line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
+                        "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
+                        "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
+                        f"{kind.item}_sent": sent, "answered_utc": _now()}
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()
                 answered += 1
@@ -1193,7 +1266,7 @@ def _run_once(job: dict, run_id: str) -> Path:
         out.rename(final)
     except OSError as exc:  # Windows refuses while a program (Explorer, an editor) has the folder open
         raise SystemExit(f"The run is complete and saved in {out}, but the folder could not be renamed ({exc}). Close any "
-                         "program showing it and run the same command again; no image is sent again.") from exc
+                         "program showing it and run the same command again; nothing is sent again.") from exc
     return final
 
 
@@ -1218,23 +1291,25 @@ def _coefficient(x: float | None) -> str:
     return "–" if x is None else f"{x:.3f}"
 
 
-def _scoring(title: str, m: dict) -> list[str]:
+def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
     """The metrics of one scoring as report lines: the summary table, the per-class table and the confusion matrix."""
     counted = [c for c, v in m["per_class"].items() if v["support"]]
-    by_lesion = m["interval_method"] == "bootstrap over lesions"
-    simple = "bootstrap over lesions" if by_lesion else "Wilson"
+    item, items, groups = kind.item, f"{kind.item}s", f"{kind.group}s"
+    grouped = m["interval_method"] == f"bootstrap over {groups}"
+    over = f" over {groups}" if grouped else ""
+    simple = f"bootstrap{over}" if grouped else "Wilson"
     lines = [f"## {title}", "", "| Metric | Value | 95% interval |", "|---|---|---|",
              f"| **Balanced accuracy (main score: the mean recall of the classes)** | **{_share(m['balanced_accuracy'])}** | "
-             f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{' over lesions' if by_lesion else ''}) |",
+             f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} ({simple}) |",
              f"| Unreadable answers (counted as wrong) | {m['unreadable']} | |",
-             f"| Macro-F1 (classes with images: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
-             f"(bootstrap{' over lesions' if by_lesion else ''}) |",
+             f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
+             f"(bootstrap{over}) |",
              f"| Macro-precision | {_share(m['macro']['precision'])} | |",
-             f"| Weighted F1 (by number of true images) | {_share(m['weighted']['f1'])} | |",
+             f"| Weighted F1 (by number of true {items}) | {_share(m['weighted']['f1'])} | |",
              f"| Matthews correlation (MCC, -1 to 1) | {_coefficient(m['mcc'])} | |",
              f"| Cohen's kappa (-1 to 1) | {_coefficient(m['kappa'])} | |", "",
-             "### Per class", "", f"| Class | True images | Answered as this class | Precision | Recall (95% interval: {simple}) | F1 |",
+             "### Per class", "", f"| Class | True {items} | Answered as this class | Precision | Recall (95% interval: {simple}) | F1 |",
              "|---|---|---|---|---|---|"]
     for label, c in m["per_class"].items():
         recall = _share(c["recall"]) + (f" ({_ci(c['recall_ci95'])})" if c["recall_ci95"] else "")
@@ -1247,25 +1322,55 @@ def _scoring(title: str, m: dict) -> list[str]:
               "|---|" + "---|" * (len(matrix["rows"]) + 1)]
     lines += [f"| {i}. {label} | " + " | ".join(str(v) for v in row) + " |"
               for i, label, row in zip(numbers, matrix["rows"], matrix["counts"])]
-    absent = m["classes_without_test_images"]
+    absent = m["classes_absent"]
     supports = {v["support"] for v in m["per_class"].values() if v["support"]}
     lines += ["", "Notes on these scores:",
-              "- Balanced accuracy is the main score: every class counts the same, whatever its number of test images (the measure "
-              "of the ISIC 2018 lesion-diagnosis challenge).",
-              *([f"- Every class has the same number of test images ({supports.pop()}), so plain accuracy equals balanced accuracy."]
+              f"- Balanced accuracy is the main score: every class counts the same, whatever its number of test {items} (the "
+              "measure of the ISIC 2018 lesion-diagnosis challenge).",
+              *([f"- Every class has the same number of test {items} ({supports.pop()}), so plain accuracy equals balanced accuracy."]
                 if len(supports) == 1 and len(counted) > 1 else []),
-              "- Precision and F1 depend on how common each class is in the test set; with the same number of images per class, the "
-              "precision of a rarer disease is higher than it would be in a clinic, so it is not a clinical figure. Recall and "
-              "balanced accuracy do not depend on it.",
-              (f"- Photos of one lesion are not independent: the intervals resample whole lesions ({m['lesions']} lesions for "
-               f"{m['n']} images)." if by_lesion else "- Every image counts as its own lesion (the run recorded no lesion groups)."),
-              *([f"- No image has the true class {', '.join(absent)}: its recall is undefined and it is left out of the averages."]
+              "- Precision and F1 depend on how common each class is in the test set, and the test set's mix of classes is not a "
+              "clinic's: a rare disease is far more common here, so its precision is higher than it would be in a clinic, and it "
+              "is not a clinical figure. Recall and balanced accuracy do not depend on it.",
+              (f"- {kind.why_grouped}: the intervals resample whole {groups} ({m['groups']} {groups} for {m['n']} {items})."
+               if grouped else f"- No two {items} share one {kind.group} (or the run recorded none), so every {item} counts as independent."),
+              *([f"- No {item} has the true class {', '.join(absent)}: its recall is undefined and it is left out of the averages."]
                 if absent else []),
-              "- A dash means undefined: precision when a class was never answered, recall when no image has that class. A class "
+              f"- A dash means undefined: precision when a class was never answered, recall when no {item} has that class. A class "
               "that was never answered counts as precision 0 in the macro-precision.",
-              "- With one answer per image, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.",
+              f"- With one answer per {item}, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.",
               "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.", ""]
     return lines
+
+
+def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
+    """The report lines of the scores without the classes too small to weigh like the others, and those classes' files."""
+    m, left_out, files = set_apart["metrics"], set_apart["left_out"], set_apart["files"]
+    items, groups = f"{kind.item}s", f"{kind.group}s"
+    grouped = m["interval_method"] == f"bootstrap over {groups}"
+    over = f" over {groups}" if grouped else ""
+    lines = [f"## Without {' and '.join(left_out)}", ""]
+    for label in left_out:
+        n = sum(f["label"] == label for f in files)
+        values = sorted({round(100 * k / n) for k in range(n + 1)})
+        lines.append(f"The class {label} has only {n} {kind.item if n == 1 else items} in this split, so its recall can only be "
+                     f"{', '.join(f'{v}%' for v in values[:-1])} or {values[-1]}%, yet it weighs as much as any other class in the "
+                     f"balanced accuracy above (one class in {n_labels}).")
+    counted = [c for c, v in m["per_class"].items() if v["support"]]
+    lines += ["", f"The scores below leave out the {items} of {' and '.join(left_out)}, to show how much "
+              f"{'they move' if len(left_out) > 1 else 'it moves'} the result. They are shown beside the main score, never "
+              f"instead of it. The answer options stay the same {n_labels} classes, so answering {' or '.join(left_out)} for another "
+              f"{kind.item} still counts as wrong.", "",
+              "| Metric | Value | 95% interval |", "|---|---|---|",
+              f"| Balanced accuracy ({len(counted)} classes) | {_share(m['balanced_accuracy'])} | "
+              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
+              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} "
+              f"({f'bootstrap{over}' if grouped else 'Wilson'}) |",
+              f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
+              f"(bootstrap{over}) |", "",
+              f"The {items} left out, and the answers:", "", f"| {kind.item.capitalize()} | True class | Answer |", "|---|---|---|"]
+    lines += [f"| `{f['path']}` | {f['label']} | {f['prediction'] or UNREADABLE} |" for f in files]
+    return lines + [""]
 
 
 def write_report(run_dir: str | Path) -> Path:
@@ -1274,26 +1379,42 @@ def write_report(run_dir: str | Path) -> Path:
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = read_jsonl(run_dir / "predictions.jsonl")
     labels = card["labels"]
-    main = summarize([p["label"] for p in preds], [p["prediction"] for p in preds], labels,
-                     [p.get("lesion_group") or p["path"] for p in preds])
-    write_json(run_dir / "metrics.json", {"main": main})
+    kind = DATASETS[card["config"]["dataset"]]
 
-    complete = card["status"] == "complete" and len(preds) == card["n_images"]
+    def scores(rows):
+        return summarize([p["label"] for p in rows], [p["prediction"] for p in rows], labels,
+                         [p.get(kind.group_column) or p["path"] for p in rows], kind.group)
+
+    metrics = {"main": scores(preds)}
+    left_out = [label for label in kind.set_apart if any(p["label"] == label for p in preds)]
+    if left_out:  # a class too small to weigh like the others: the scores without it, beside the main score
+        metrics["without_small_classes"] = {
+            "left_out": left_out, "metrics": scores([p for p in preds if p["label"] not in left_out]),
+            "files": [{"path": p["path"], "label": p["label"], "prediction": p["prediction"]}
+                      for p in sorted(preds, key=lambda p: p["path"]) if p["label"] in left_out]}
+    write_json(run_dir / "metrics.json", metrics)
+
+    n_files = card[f"n_{kind.item}s"]
+    complete = card["status"] == "complete" and len(preds) == n_files
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
     if card["split"] == "val":
         lines += ["**Validation run: for tuning the method, not a reported result.**", ""]
     if not complete:
-        lines += [f"**Incomplete: {len(preds)} of {card['n_images']} images answered.**", ""]
+        lines += [f"**Incomplete: {len(preds)} of {n_files} {kind.item}s answered.**", ""]
     model = card.get("model") or {}
     table = card["dataset_table"]
     lines += [f"- Model requested: `{model.get('model_id')}`; versions returned by the API: "
               f"{', '.join(f'`{v}`' for v in card['model_versions_returned']) or 'not recorded yet'}",
               f"- Generation settings: `{json.dumps(model.get('generation_config'))}`",
               f"- Started {card['started_utc']}, finished {card['finished_utc']} (UTC)",
-              f"- Prompt: `{card['prompt_file']}` (SHA-256 `{card['prompt_sha256'][:12]}`); images: {card['n_images']} "
-              f"(hash `{card['images_sha256'][:12]}`), sent exactly as stored; dataset table `{table['file']}` "
-              f"(SHA-256 `{table['sha256'][:12]}`); Git commit `{(card['git']['commit'] or 'unknown')[:10]}`", ""]
-    lines += _scoring("Results", main)
+              f"- Prompt: `{card['prompt_file']}` (SHA-256 `{card['prompt_sha256'][:12]}`); {kind.item}s: {n_files} "
+              f"(hash `{card[f'{kind.item}s_sha256'][:12]}`), "
+              + ("each put into the prompt word for word" if kind.in_prompt else "sent exactly as stored")
+              + f"; dataset table `{table['file']}` (SHA-256 `{table['sha256'][:12]}`); Git commit "
+              f"`{(card['git']['commit'] or 'unknown')[:10]}`", ""]
+    lines += _scoring("Results", metrics["main"], kind)
+    if left_out:
+        lines += _without(metrics["without_small_classes"], kind, len(labels))
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
@@ -1329,14 +1450,14 @@ def write_report(run_dir: str | Path) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.evaluate", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
-    c = sub.add_parser("check", help="test everything a run needs, without sending any dataset image")
+    c = sub.add_parser("check", help="test everything a run needs, without sending anything from the dataset")
     c.add_argument("--config", required=True)
     c.add_argument("--model", help="test this model id instead of the config's (the config file is not changed)")
     r = sub.add_parser("run", help="run one model on the validation or the test split")
     r.add_argument("--config", required=True)
     r.add_argument("--split", choices=RUN_SPLITS, required=True)
     r.add_argument("--run-id", help="folder name; by default one that follows from the settings, so a stopped run resumes")
-    r.add_argument("--limit", type=int, help="only the first N images of the validation split, in the seeded order")
+    r.add_argument("--limit", type=int, help="only the first N files of the validation split, in the seeded order")
     rep = sub.add_parser("report", help="rewrite metrics.json and report.md from a run's saved answers")
     rep.add_argument("run_dir")
     return parser

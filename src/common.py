@@ -1,4 +1,4 @@
-"""Helpers the dataset folders share (src/image/, src/text/): a polite download that tries again when a service is busy, and a
+"""Helpers the dataset folders share (src/image/, src/text/, src/multimodal/): a polite download that tries again when a service is busy, and a
 report with one section per step that each step rewrites on its own."""
 
 from __future__ import annotations

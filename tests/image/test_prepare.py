@@ -1272,7 +1272,7 @@ class ImagesTests(unittest.TestCase):
         self.assertEqual((prepare.DATA / prepare.FILES, prepare.DATA / prepare.TABLE_NAME), (evaluate.IMAGES, evaluate.TABLE))
         prepare.images(self.data)
         items = evaluate.load_dataset(self.data / prepare.TABLE_NAME, self.data / prepare.FILES)
-        self.assertEqual(sorted((item.split, item.label, item.path, item.lesion_group) for item in items), [
+        self.assertEqual(sorted((item.split, item.label, item.path, item.group) for item in items), [
             ("test", "melanoma", "test/melanoma/ISIC_0000001.jpg", "ISIC_0000001"),
             ("test", "nevus", "test/nevus/ISIC_0000003.jpg", "ISIC_0000003"),
             ("train", "melanoma", "train/melanoma/ISIC_0000002.jpg", "ISIC_0000002"),
