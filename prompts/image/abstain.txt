@@ -1,0 +1,5 @@
+This is a dermoscopic image of a skin lesion.
+Classify the lesion as exactly one of the following answers:
+{labels}
+If the image does not give enough evidence to decide, answer uncertain instead of guessing.
+Answer with one item of the list only, exactly as written above. Do not write a sentence. Do not explain.

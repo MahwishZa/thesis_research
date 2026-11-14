@@ -1,0 +1,6 @@
+This is the description of a patient with a skin lesion, from a published case report. It ends before the diagnosis.
+Case: {case}
+Classify the lesion as exactly one of the following answers:
+{labels}
+If the case does not give enough evidence to decide, answer uncertain instead of guessing.
+Answer with one item of the list only, exactly as written above. Do not write a sentence. Do not explain.

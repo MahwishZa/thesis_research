@@ -209,6 +209,30 @@ class MetricTests(unittest.TestCase):
         low, high = grouped["balanced_rate_ci95"]
         self.assertTrue(0 <= low <= grouped["balanced_rate"] <= high <= 1)
 
+    def test_an_abstention_is_no_hallucination_no_right_answer_and_no_unreadable_answer(self):
+        true = ["a", "a", "a", "b", "b", "b", "b"]
+        pred = ["a", "uncertain", "b", "b", "uncertain", None, "a"]
+        # class a: right 1, abstained 1, wrong diagnosis 1 (b); class b: right 1, abstained 1, unreadable 1, wrong diagnosis 1 (a)
+        m = evaluate.summarize(true, pred, ["a", "b"])
+        h, a = m["hallucination"], m["abstention"]
+        self.assertEqual((m["correct"], m["unreadable"], h["wrong"], a["count"]), (2, 1, 2, 2))
+        self.assertEqual(2 + 1 + 2 + 2, m["n"])  # right + unreadable + hallucination + abstention = every question
+        self.assertEqual((h["no_valid_answer"], h["rate"], a["rate"], a["committed"], a["selective_accuracy"]), (1, 2 / 7, 2 / 7, 4, 0.5))
+        self.assertAlmostEqual(h["balanced_rate"], (1 / 3 + 1 / 4) / 2)
+        self.assertEqual((a["rate_ci95"], a["selective_accuracy_ci95"]), (evaluate.wilson(2, 7), evaluate.wilson(2, 4)))
+        self.assertEqual(m["confusion_matrix"]["counts"], [[1, 1, 1], [1, 1, 2]])  # an abstention is in the last column, as no class
+        grouped = evaluate.summarize(true, pred, ["a", "b"], groups=["L1", "L1", "L2", "L3", "L4", "L5", "L6"])["abstention"]
+        self.assertTrue(0 <= grouped["rate_ci95"][0] <= grouped["rate"] <= grouped["rate_ci95"][1] <= 1)
+        self.assertTrue(0 <= grouped["selective_accuracy_ci95"][0] <= 0.5 <= grouped["selective_accuracy_ci95"][1] <= 1)
+        # the abstention rate is 1/2 in every resample (two lesions of two photos per class), the accuracy 0 in every one
+        steady = evaluate.summarize(["a"] * 4 + ["b"] * 4, ["uncertain"] * 4 + [None] * 4, ["a", "b"],
+                                    groups=["L1", "L1", "L2", "L2", "L3", "L3", "L4", "L4"])
+        self.assertEqual((steady["abstention"]["rate_ci95"], steady["accuracy_ci95"]), ((0.5, 0.5), (0.0, 0.0)))
+        forced = evaluate.summarize(["a", "b"], ["a", "a"], ["a", "b"])["abstention"]  # a forced-choice run never abstains
+        self.assertEqual((forced["count"], forced["rate"], forced["selective_accuracy"]), (0, 0.0, 0.5))
+        silent = evaluate.summarize(["a", "b"], ["uncertain", "uncertain"], ["a", "b"])["abstention"]  # nothing named: undefined
+        self.assertEqual((silent["rate"], silent["selective_accuracy"], silent["selective_accuracy_ci95"]), (1.0, None, None))
+
     def test_mcnemar_exact_values_by_hand(self):
         self.assertEqual(evaluate.mcnemar(0, 0), 1.0)  # no question decides between the runs
         self.assertEqual(evaluate.mcnemar(0, 5), 2 / 32)  # 2 x (1/2)^5
@@ -1103,6 +1127,22 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(evaluate.fill(prompt, evaluate.CASE, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
         self.assertEqual(evaluate.fill("Case: {case}\nPick", evaluate.CASE, " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed
 
+    def test_the_answer_uncertain_exists_only_for_a_run_that_may_abstain(self):
+        self.assertEqual(evaluate.build_prompt("{labels}", LABELS, abstain=True), "- melanoma\n- nevus\n- vascular lesion\n- uncertain")
+        self.assertEqual(evaluate.build_prompt("{labels}", LABELS), "- melanoma\n- nevus\n- vascular lesion")
+        self.assertEqual(evaluate.parse_answer(" **Uncertain.** ", [*LABELS, evaluate.ABSTAIN]), "uncertain")
+        self.assertIsNone(evaluate.parse_answer("Uncertain", LABELS))  # a forced-choice run does not accept it
+        self.assertIsNone(evaluate.parse_answer("uncertain, probably melanoma", [*LABELS, evaluate.ABSTAIN]))
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "p.txt"
+            for text, abstain, message in (("{labels}\nAnswer uncertain if unsure.", False, "must not offer the answer"),
+                                           ("{labels}\nAnswer with a name.", True, "must tell the model it may answer")):
+                path.write_text(text, encoding="utf-8")
+                with self.subTest(text), self.assertRaisesRegex(ValueError, message):
+                    evaluate.load_template(path, "image", abstain)
+            path.write_text("{labels}\nAnswer Uncertain if unsure.", encoding="utf-8")
+            self.assertEqual(evaluate.load_template(path, "image", True), "{labels}\nAnswer Uncertain if unsure.")
+
     def test_parse_forgives_only_formatting(self):
         for answer in ["melanoma", " Melanoma.", "**melanoma**", '"melanoma"', "Diagnosis: melanoma", "MELANOMA\n"]:
             self.assertEqual(evaluate.parse_answer(answer, LABELS), "melanoma", answer)
@@ -1234,6 +1274,7 @@ class RunTests(Project):
             self.assertIn(expected, text)
         self.assertLess(text.index("Balanced accuracy (main score"), text.index("| Accuracy |"))  # the main score comes first
         self.assertNotIn("## Without", text)
+        self.assertNotIn("Abstention rate", text)  # a forced-choice run has no abstention to report
         again = FakeModel()  # the same command again: nothing is sent, nothing is overwritten
         self.assertEqual((self._run(again, "test", run_id="t1"), again.calls), (out, 0))
         self.assertEqual(sorted(p.name for p in self.model_dir.iterdir()), ["t1"])  # no .partial folder left
@@ -1334,6 +1375,68 @@ class RunTests(Project):
         m = evaluate.summarize(["a", "a", "b", "b"], ["a", "a", None, None], ["a", "b"], groups=["L1", "L2", "L3", "L4"])
         self.assertEqual((m["balanced_accuracy_ci95"], m["hallucination"]["balanced_rate"], m["hallucination"]["balanced_rate_ci95"]),
                          ((0.5, 0.5), 0.0, (0.0, 0.0)))
+
+    def test_a_run_that_may_abstain_offers_the_answer_records_it_and_reports_it(self):
+        self.prompt.write_text("Pick one:\n{labels}\nIf unsure, answer uncertain.\n", encoding="utf-8")
+        self.config.write_text(self.config.read_text(encoding="utf-8").replace(
+            f'file = "{self.prompt.as_posix()}"', f'file = "{self.prompt.as_posix()}"\nabstain = true'), encoding="utf-8")
+
+        class Unsure(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": "**Uncertain.**"}
+
+        out = self._run(Unsure(), "val", run_id="v1")
+        card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
+        self.assertTrue(card["abstain"])
+        self.assertTrue(card["prompt"].endswith("- melanoma\n- nevus\n- uncertain\nIf unsure, answer uncertain."))
+        self.assertEqual({p["prediction"] for p in self._preds(out)}, {"uncertain"})
+        main = json.loads((out / "metrics.json").read_text(encoding="utf-8"))["main"]
+        self.assertEqual((main["abstention"]["count"], main["abstention"]["rate"], main["correct"], main["unreadable"]), (4, 1.0, 0, 0))
+        self.assertEqual((main["hallucination"]["rate"], main["hallucination"]["no_valid_answer"]), (0.0, 0))
+        report = (out / "report.md").read_text(encoding="utf-8")
+        for expected in ("| **Abstention rate (answered \"uncertain\")** | **100.0%** (4/4) |", "This run could answer \"uncertain\"",
+                         "| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **0.0%** |"):
+            self.assertIn(expected, report)
+        self.assertNotIn("Selective accuracy", report)  # no diagnosis was named, so there is none to be accurate about
+
+    def test_a_forced_choice_run_does_not_accept_uncertain_as_an_answer(self):
+        class Unsure(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": "Uncertain."}
+
+        out = self._run(Unsure(), "val", run_id="v1")  # this config does not offer the answer
+        self.assertEqual({p["prediction"] for p in self._preds(out)}, {None})
+        main = json.loads((out / "metrics.json").read_text(encoding="utf-8"))["main"]
+        self.assertEqual((main["unreadable"], main["abstention"]["count"], main["hallucination"]["no_valid_answer"]), (4, 0, 4))
+
+    def test_abstentions_are_judged_by_the_forced_choice_run_on_the_same_questions(self):
+        """Six questions of two classes. Run A (forced): right, wrong, wrong, right, wrong, wrong. Run B (may abstain): right,
+        uncertain, right, uncertain, right, uncertain. B's abstentions on questions 1 and 5 avoided a hallucination of A's; on
+        question 3 it lost a right answer. B removed A's hallucinations on questions 2 and 4 (it was right there) and introduced
+        none."""
+        truth = ["a", "a", "a", "b", "b", "b"]
+        answers = {"A": ["a", "b", "b", "b", "a", "a"], "B": ["a", "uncertain", "a", "uncertain", "b", "uncertain"]}
+        runs = []
+        for name, predicted in answers.items():
+            folder = self.base / f"abstain_{name}"
+            folder.mkdir()
+            card = {"status": "complete", "config": {"dataset": "image"}, "n_images": 6, "images_sha256": "same", "split": "test",
+                    "labels": ["a", "b"]}
+            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+            rows = [{"path": f"test/{t}/{i}.jpg", "label": t, "lesion_group": f"L{i}", "prediction": p}
+                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+            runs.append(folder)
+        c = evaluate.compare(*runs)
+        self.assertEqual((c["abstained_a"], c["abstained_b"], c["b_avoided"], c["b_lost"], c["a_avoided"], c["a_lost"]), (0, 3, 2, 1, 0, 0))
+        self.assertEqual((c["hallucinations_removed"], c["hallucinations_introduced"]), (2, 0))  # an abstention is no hallucination
+        # A: class a wrong 2 of 3, class b wrong 2 of 3 (2/3); B names no wrong diagnosis (0): the whole rate is gone
+        self.assertAlmostEqual(c["hallucination_difference"], -2 / 3)
+        self.assertAlmostEqual(c["hallucination_reduction"], 1.0)
+        text = evaluate.comparison_text(c)
+        self.assertIn('Run B answered "uncertain" 3 times. Run A named a wrong diagnosis on 2 of those questions (hallucinations avoided) '
+                      "and the right one on 1 (right answers lost)", text)
+        self.assertNotIn("Run A answered", text)
 
     def test_only_the_validation_and_test_splits_are_run(self):
         with self.assertRaisesRegex(ValueError, "split must be one of"):
@@ -2072,7 +2175,8 @@ class RepositoryTests(unittest.TestCase):
         header = next(line for line in self.readme.splitlines() if line.startswith("| Dataset |"))
         self.assertEqual([c.strip() for c in header.strip().strip("|").split("|")],
                          ["Dataset", "Model", "Setting", "Balanced accuracy (test)", "95% interval",
-                          "Hallucination rate (wrong diagnoses)", "Missed malignancy (cancers called benign)", "Report"])
+                          "Hallucination rate (wrong diagnoses)", "Missed malignancy (cancers called benign)",
+                          "Abstention rate", "Report"])
         rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
         for row in rows:  # no row until a model has a finished test run
             link = re.search(r"\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", row)
@@ -2082,8 +2186,10 @@ class RepositoryTests(unittest.TestCase):
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             self.assertEqual(cells[:2], [link.group(2), link.group(3)], "the dataset and model must be the run's own")
             missed = main["risk"]["missed_malignancy"]
-            self.assertEqual(cells[3:7], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
-                                          pct(main["hallucination"]["balanced_rate"]), pct(missed) if missed is not None else "–"])
+            abstains = link.group(3).endswith("-abstain")
+            self.assertEqual(cells[3:8], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
+                                          pct(main["hallucination"]["balanced_rate"]), pct(missed) if missed is not None else "–",
+                                          pct(main["abstention"]["rate"]) if abstains else "–"])
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
         self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 
@@ -2096,6 +2202,9 @@ class RepositoryTests(unittest.TestCase):
                 self.assertEqual(config["name"], path.stem, "the config name is the results folder name and must match the file")
                 self.assertEqual(config["dataset"], path.parent.name, "a config sits in the folder of the dataset it names")
                 self.assertTrue((ROOT / config["prompt"]["file"]).is_file(), f"{path.name} names a prompt file that does not exist")
+                evaluate.load_template(ROOT / config["prompt"]["file"], config["dataset"], config["prompt"].get("abstain", False))
+                self.assertEqual(path.stem.endswith("-abstain"), config["prompt"].get("abstain", False),
+                                 "a run may abstain exactly when its config is named -abstain")
 
     def test_each_model_is_asked_the_same_way_on_every_dataset(self):
         """The same models, settings and pace on every dataset; only the image setting is left out for text."""
@@ -2111,6 +2220,14 @@ class RepositoryTests(unittest.TestCase):
                 self.assertEqual(text["model"], {k: v for k, v in image["model"].items() if k != "image_detail"})
                 self.assertEqual(text["run"], image["run"])
                 self.assertEqual((configs["multimodal"][name]["model"], configs["multimodal"][name]["run"]), (image["model"], image["run"]))
+        for dataset, named in configs.items():  # a run that may abstain is the forced-choice run with only its prompt changed
+            for name, config in named.items():
+                if name.endswith("-abstain"):
+                    with self.subTest(name):
+                        forced = named[name.removesuffix("-abstain")]
+                        self.assertEqual((config["model"], config["run"], config["dataset"]), (forced["model"], forced["run"], dataset))
+                        self.assertEqual((config["prompt"], forced["prompt"]), (
+                            {"file": f"prompts/{dataset}/abstain.txt", "abstain": True}, {"file": f"prompts/{dataset}/diagnosis.txt"}))
 
     def test_the_committed_dataset_tables_are_consistent(self):
         for dataset, kind in evaluate.DATASETS.items():
@@ -2126,7 +2243,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertTrue(files)
         for path in files:
             with self.subTest(path.name):
-                evaluate.load_template(path, path.parent.name)  # refuses a file without exactly one {labels} (and {case} for text)
+                evaluate.load_template(path, path.parent.name, path.stem == "abstain")  # refuses a file without exactly one {labels}
                 self.assertTrue(path.read_bytes().endswith(b"\n"))
                 self.assertNotIn(b"\r", path.read_bytes(), "Windows line endings (.gitattributes should prevent this)")
                 self.assertNotIn("\n\n", path.read_text(encoding="utf-8"), "a blank line would change what the model is shown")

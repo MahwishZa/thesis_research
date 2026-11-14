@@ -19,8 +19,8 @@ src/text/            prepare.py, audit.py: make and check the text dataset; libr
 src/multimodal/      prepare.py, audit.py: make and check the multimodal dataset
 tests/               one test file per code file: test_evaluate.py; image/, text/ and multimodal/ hold test_prepare.py,
                      test_audit.py and test_library.py
-configs/<dataset>/   one settings file per AI model
-prompts/<dataset>/   the prompt, diagnosis.txt
+configs/<dataset>/   one settings file per AI model and prompt (a name ending in -abstain allows the answer "uncertain")
+prompts/<dataset>/   the prompts: diagnosis.txt (a class must be chosen) and abstain.txt (the answer "uncertain" is allowed)
 data/<dataset>/      the dataset's tables and report; datasheet.md says how it was made and how to rebuild it
 results/<dataset>/   one folder per AI model, holding its finished test run
 ```
@@ -31,5 +31,5 @@ With Python 3.11 or newer, `pip install -r requirements.txt`, and the model's AP
 
 ## Results
 
-| Dataset | Model | Setting | Balanced accuracy (test) | 95% interval | Hallucination rate (wrong diagnoses) | Missed malignancy (cancers called benign) | Report |
-|---|---|---|---|---|---|---|---|
+| Dataset | Model | Setting | Balanced accuracy (test) | 95% interval | Hallucination rate (wrong diagnoses) | Missed malignancy (cancers called benign) | Abstention rate | Report |
+|---|---|---|---|---|---|---|---|---|

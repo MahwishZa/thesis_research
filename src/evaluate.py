@@ -100,6 +100,13 @@ from PIL import Image
 # shares of the classes (the same weighting as balanced accuracy, and the same as the plain rate when every class has the same
 # number of questions). The models are forced to choose a class, so a model cannot avoid hallucinating by saying it is unsure.
 #
+# Abstention (only a run whose prompt offers the answer "uncertain"; the main runs force a choice): the share of the questions
+# answered "uncertain" (the abstention rate), and the accuracy among the questions where a diagnosis was named (selective
+# accuracy, which is one minus the hallucination rate among them). An abstention is no hallucination and no right answer: a model
+# that always abstains has no hallucination and no use, so the three are read together. No question of these datasets is
+# unanswerable (each has its true class), so an abstention is never "correct" in itself: whether it was wise is measured by
+# comparing the run with the forced-choice run of the same model (compare: hallucinations avoided, right answers lost).
+#
 # Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
 # diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
 # precancerous and is in neither group as a true class. Both shares are of ALL the files of the group: a cancer answered as
@@ -113,6 +120,7 @@ from PIL import Image
 UNREADABLE = "(unreadable)"
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 0
+ABSTAIN = "uncertain"  # the answer of a run that may abstain (config [prompt] abstain = true); never a class name
 MALIGNANT = ("melanoma", "basal cell carcinoma", "squamous cell carcinoma")  # cancers
 BENIGN = ("nevus", "pigmented benign keratosis", "dermatofibroma", "vascular lesion")  # actinic keratosis: precancerous, in neither
 
@@ -250,15 +258,18 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
     group are drawn together. The generator is seeded: the same answers always give the same interval.
     """
     by_class = _units(y_true, labels, groups)
-    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced"]
+    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced",
+             "abstention", "selective_accuracy"]
     if not by_class:
         return {name: None for name in names} | {"recall": {}}
     values = {name: [] for name in names}
     recall = {label: [] for label in by_class}
     for sample in _resamples(by_class, resamples, seed):
         true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
-        matrix = confusion_matrix(true, pred, labels)
+        matrix = confusion_matrix(true, [None if a == ABSTAIN else a for a in pred], labels)  # an abstention is not a class
         scores, hallucination = _scores(matrix), _hallucination(matrix)
+        values["abstention"].append(sum(a == ABSTAIN for a in pred) / len(pred))
+        values["selective_accuracy"].append(_ratio(sum(scores["tp"]), sum(scores["tp"]) + hallucination["wrong"]))
         values["hallucination"].append(hallucination["rate"])
         values["hallucination_balanced"].append(hallucination["balanced_rate"])
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
@@ -288,7 +299,8 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     (the files of one group are resampled together for the intervals). With no answers at all, every score is None (and accuracy
     0.0).
     """
-    matrix = confusion_matrix(y_true, y_pred, labels)
+    abstained = sum(a == ABSTAIN for a in y_pred)  # "uncertain": no class, so the confusion matrix counts it with the unreadable
+    matrix = confusion_matrix(y_true, [None if a == ABSTAIN else a for a in y_pred], labels)
     s = _scores(matrix)
     n = s["n"]
     correct = sum(s["tp"])
@@ -300,6 +312,14 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     hallucination = _hallucination(matrix)
     hallucination["rate_ci95"] = wilson(hallucination["wrong"], n) if independent and n else interval["hallucination"]
     hallucination["balanced_rate_ci95"] = interval["hallucination_balanced"]
+    hallucination["no_valid_answer"] -= abstained  # an abstention is neither a hallucination nor a failure to answer
+    hallucination["no_valid_answer_rate"] = _ratio(hallucination["no_valid_answer"], n)
+    committed = correct + hallucination["wrong"]  # the questions where a diagnosis was named
+    abstention = {"count": abstained, "rate": _ratio(abstained, n),
+                  "rate_ci95": None if not n else wilson(abstained, n) if independent else interval["abstention"],
+                  "committed": committed, "selective_accuracy": _ratio(correct, committed),
+                  "selective_accuracy_ci95": None if not committed else wilson(correct, committed) if independent
+                  else interval["selective_accuracy"]}
     risk = _risk(y_true, y_pred)
     for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign")):
         risk[f"{share}_ci95"] = None if not risk[of] else wilson(risk[count], risk[of]) if independent else interval[share]
@@ -310,7 +330,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
                             "precision": s["precision"][i], "recall": s["recall"][i], "f1": s["f1"][i],
                             "recall_ci95": None if not s["support"][i] else
                             wilson(s["tp"][i], s["support"][i]) if independent else interval["recall"][label]}
-    return {"n": n, "correct": correct, "unreadable": s["answered"][-1], "groups": len(set(groups)), "group_name": group_name,
+    return {"n": n, "correct": correct, "unreadable": s["answered"][-1] - abstained, "groups": len(set(groups)), "group_name": group_name,
             "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else f"bootstrap over {group_name}s",
             "balanced_accuracy": s["macro"]["recall"], "balanced_accuracy_ci95": interval["balanced_accuracy"],
             "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n) if independent else interval["accuracy"],
@@ -318,6 +338,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
             "macro": {**s["macro"], "f1_ci95": interval["macro_f1"]},
             "weighted": s["weighted"],
             "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk, "hallucination": hallucination,
+            "abstention": abstention,
             "per_class": per_class,
             "confusion_matrix": {"rows": list(labels), "columns": [*labels, UNREADABLE], "counts": matrix}}
 
@@ -866,6 +887,8 @@ def classes(items: list[Item]) -> list[str]:
     train = sorted({item.label for item in items if item.split == "train"})
     if not train:
         raise ValueError("the training split is empty, so the classes are unknown")
+    if ABSTAIN in train:
+        raise ValueError(f"a class may not be called {ABSTAIN!r}: it is the answer that means no diagnosis")
     unknown = sorted({item.label for item in items if item.split != "train"} - set(train))
     if unknown:
         raise ValueError(f"classes without training files: {unknown}")
@@ -908,10 +931,10 @@ def read_case(item: Item, root: str | Path) -> tuple[str, dict]:
 # answers were read
 
 
-def load_template(path: str | Path, dataset: str = "image") -> str:
+def load_template(path: str | Path, dataset: str = "image", abstain: bool = False) -> str:
     """The prompt template: the label placeholder exactly once; the case placeholder exactly once in a prompt for text cases
     (never in one for images, which go next to the prompt); the facts placeholder exactly once in a multimodal prompt (never in
-    another)."""
+    another); and, only in a prompt of a run that may abstain, the word "uncertain" (the answer that means no diagnosis)."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:
         raise ValueError(f"{path} must contain {PLACEHOLDER} exactly once")
@@ -923,12 +946,19 @@ def load_template(path: str | Path, dataset: str = "image") -> str:
         raise ValueError(f"{path} must contain {FACTS} exactly once: it is where each patient's facts go")
     if not DATASETS[dataset].facts_column and FACTS in text:
         raise ValueError(f"{path} must not contain {FACTS}: the {dataset} dataset has no patient facts")
+    says = re.search(rf"\b{ABSTAIN}\b", text, re.IGNORECASE) is not None
+    if abstain and not says:
+        raise ValueError(f"{path} must tell the model it may answer {ABSTAIN!r}: the config says abstain = true")
+    if not abstain and says:
+        raise ValueError(f"{path} must not offer the answer {ABSTAIN!r}: the config forces a choice (abstain is not true)")
     return text
 
 
-def build_prompt(template: str, labels: list[str]) -> str:
-    """The prompt of a run: the class names, sorted, one per line."""
-    return template.replace(PLACEHOLDER, "\n".join(f"- {label}" for label in sorted(labels))).strip()
+def build_prompt(template: str, labels: list[str], abstain: bool = False) -> str:
+    """The prompt of a run: the class names, sorted, one per line, and for a run that may abstain the answer "uncertain" after
+    them."""
+    options = [*sorted(labels), *([ABSTAIN] if abstain else [])]
+    return template.replace(PLACEHOLDER, "\n".join(f"- {option}" for option in options)).strip()
 
 
 def fill(prompt: str, placeholder: str, value: str) -> str:
@@ -1057,6 +1087,8 @@ def load_config(path: str | Path) -> dict:
     _check_name(config.get("name"), f"{path}: name")  # it becomes the results folder
     if config.get("dataset") not in DATASETS:
         raise ValueError(f"{path}: dataset must be one of {list(DATASETS)} (got {config.get('dataset')!r})")
+    if not isinstance(config["prompt"].get("abstain", False), bool):
+        raise ValueError(f"{path}: [prompt] abstain must be true or false (got {config['prompt']['abstain']!r})")
     rate, seed = config["run"]["requests_per_minute"], config["run"]["order_seed"]
     if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
         raise ValueError(f"{path}: [run] requests_per_minute must be a number above 0 (got {rate!r})")
@@ -1105,7 +1137,7 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
 
     line("OK", "Config", config_path)
     try:
-        load_template(config["prompt"]["file"], dataset)
+        load_template(config["prompt"]["file"], dataset, config["prompt"].get("abstain", False))
         line("OK", "Prompt file", config["prompt"]["file"])
     except (OSError, ValueError) as exc:
         line("FAIL", "Prompt file", str(exc))
@@ -1218,7 +1250,8 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     random.Random(config["run"]["order_seed"]).shuffle(items)
     items = items[: limit or None]
 
-    prompt_text = build_prompt(load_template(config["prompt"]["file"], dataset), labels)
+    abstain = config["prompt"].get("abstain", False)
+    prompt_text = build_prompt(load_template(config["prompt"]["file"], dataset, abstain), labels, abstain)
     config_bytes = Path(config_path).read_bytes()
     fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + items_hash(items).encode()).hexdigest()
     load_env()
@@ -1280,7 +1313,7 @@ def _run_once(job: dict, run_id: str) -> Path:
         card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
                 "seed": settings.get("seed"), "config_file": Path(job["config_path"]).as_posix(), "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
-                "prompt": prompt_text, "labels": labels, f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
+                "prompt": prompt_text, "labels": labels, "abstain": config["prompt"].get("abstain", False), f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
                 "group_column": kind.group_column,
                 "dataset_table": {"file": job["table"].as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
                 "versions": _versions(getattr(model, "packages", ("pillow",))),
@@ -1328,7 +1361,7 @@ def _run_once(job: dict, run_id: str) -> Path:
                     image, mime, sent = read_image(item, job["root"])
                     text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
                 answer, attempt = _ask(model, image, mime, text, throttle, say)
-                parsed = parse_answer(answer["text"], labels)
+                parsed = parse_answer(answer["text"], [*labels, ABSTAIN] if card.get("abstain") else labels)
                 line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
                         "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
@@ -1393,7 +1426,7 @@ def _coefficient(x: float | None) -> str:
     return "–" if x is None else f"{x:.3f}"
 
 
-def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
+def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[str]:
     """The metrics of one scoring as report lines: the summary table, the per-class table and the confusion matrix."""
     counted = [c for c, v in m["per_class"].items() if v["support"]]
     item, items, groups = kind.item, f"{kind.item}s", f"{kind.group}s"
@@ -1405,6 +1438,7 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} ({simple}) |",
              *_hallucination_rows(m, over if grouped else None),
+             *(_abstention_rows(m, over if grouped else None) if abstain else []),
              f"| No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | "
              f"{m['unreadable']} | |",
              *_risk_rows(m, over if grouped else None),
@@ -1448,6 +1482,10 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
               "answer (a refusal, a sentence, two classes, a cut-off) add up to every question; a model that refuses is not "
               "hallucinating, but it is not right either. The models must choose a class, so none can avoid hallucinating by "
               f"declaring itself unsure. With the same number of {items} in every class, the two rates are the same.",
+              *([f"- This run could answer \"{ABSTAIN}\". An abstention is no hallucination and no right answer, and a model that "
+                 "always abstained would never hallucinate, so the abstention rate, the hallucination rate and the accuracy are "
+                 "read together; whether the abstentions were wise is shown by comparing this run with the same model's forced-choice "
+                 "run (compare)."] if abstain else []),
               "- Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign "
               "keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign "
               "lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the "
@@ -1464,6 +1502,17 @@ def _hallucination_rows(m: dict, over: str | None) -> list[str]:
     return [f"| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **{_share(h['balanced_rate'])}** | "
             f"{_ci(h['balanced_rate_ci95'])} (bootstrap{over or ''}) |",
             f"| Hallucination rate, all questions | {_pct(h['rate'])} ({h['wrong']}/{h['n']}) | {_ci(h['rate_ci95'])} ({method}) |"]
+
+
+def _abstention_rows(m: dict, over: str | None) -> list[str]:
+    """The abstention rows of a run that may answer "uncertain": how often it did, and how accurate it was when it did not."""
+    a, method = m["abstention"], f"bootstrap{over}" if over is not None else "Wilson"
+    rows = [f"| **Abstention rate (answered \"{ABSTAIN}\")** | **{_pct(a['rate']) if a['rate'] is not None else '–'}** ({a['count']}/{m['n']}) | "
+            f"{_ci(a['rate_ci95'])} ({method}) |"]
+    if a["committed"]:
+        rows.append(f"| Selective accuracy (right, among the {a['committed']} questions where a diagnosis was named) | "
+                    f"{_share(a['selective_accuracy'])} | {_ci(a['selective_accuracy_ci95'])} ({method}) |")
+    return rows
 
 
 def _risk_rows(m: dict, over: str | None) -> list[str]:
@@ -1555,7 +1604,9 @@ def write_report(run_dir: str | Path) -> Path:
                  + (", each with its patient's facts in the prompt" if kind.facts_column else ""))
               + f"; dataset table `{table['file']}` (SHA-256 `{table['sha256'][:12]}`); Git commit "
               f"`{(card['git']['commit'] or 'unknown')[:10]}`", ""]
-    lines += _scoring("Results", metrics["main"], kind)
+    abstain = card.get("abstain", False)
+    options = [*labels, ABSTAIN] if abstain else labels
+    lines += _scoring("Results", metrics["main"], kind, abstain)
     if left_out:
         lines += _without(metrics["without_small_classes"], kind, len(labels))
     if kind.facts_column:
@@ -1570,7 +1621,7 @@ def write_report(run_dir: str | Path) -> Path:
     finish = Counter(p["finish_reason"] for p in preds)
     other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
     cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
-    harmful = sum(can_still_become_readable(p["raw_text"], labels) for p in cut)  # the limit may have decided these
+    harmful = sum(can_still_become_readable(p["raw_text"], options) for p in cut)  # the limit may have decided these
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
               *([f"- **{harmful} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
@@ -1624,13 +1675,14 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     labels = card_a["labels"]
     y_true = [a["label"] for a, _ in pairs]
     pred_a, pred_b = [a["prediction"] for a, _ in pairs], [b["prediction"] for _, b in pairs]
+    abstained_a, abstained_b = [p == ABSTAIN for p in pred_a], [p == ABSTAIN for p in pred_b]
     groups = [a.get(kind.group_column) or a["path"] for a, _ in pairs]
     right_a = [t == p for t, p in zip(y_true, pred_a)]
     right_b = [t == p for t, p in zip(y_true, pred_b)]
     only_a = sum(a and not b for a, b in zip(right_a, right_b))
     only_b = sum(b and not a for a, b in zip(right_a, right_b))
-    hallucinated_a = [p is not None and p != t for t, p in zip(y_true, pred_a)]  # a wrong diagnosis named
-    hallucinated_b = [p is not None and p != t for t, p in zip(y_true, pred_b)]
+    hallucinated_a = [p not in (None, ABSTAIN) and p != t for t, p in zip(y_true, pred_a)]  # a wrong diagnosis named
+    hallucinated_b = [p not in (None, ABSTAIN) and p != t for t, p in zip(y_true, pred_b)]
 
     def scores(sample):
         """B minus A in balanced accuracy, accuracy and balanced hallucination rate, and the reduction of the rate (None when A's
@@ -1638,7 +1690,7 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
         true = [y_true[i] for i in sample]
         out = []
         for pred in (pred_a, pred_b):
-            matrix = confusion_matrix(true, [pred[i] for i in sample], labels)
+            matrix = confusion_matrix(true, [None if pred[i] == ABSTAIN else pred[i] for i in sample], labels)
             s = _scores(matrix)
             out.append((s["macro"]["recall"], sum(s["tp"]) / s["n"], _hallucination(matrix)["balanced_rate"]))
         (bal_a, acc_a, hall_a), (bal_b, acc_b, hall_b) = out
@@ -1662,7 +1714,14 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
             "hallucination_difference": hallucination, "hallucination_difference_ci95": interval(2),
             "hallucination_reduction": reduction, "hallucination_reduction_ci95": interval(3),
             "hallucinations_removed": sum(a and not h and r for a, h, r in zip(hallucinated_a, hallucinated_b, right_b)),
-            "hallucinations_introduced": sum(h and r for h, r in zip(hallucinated_b, right_a)), "groups": f"{kind.group}s"}
+            "hallucinations_introduced": sum(h and r for h, r in zip(hallucinated_b, right_a)),
+            # what each run's abstentions did, judged by the other run's answers on the same questions (the other run may be a
+            # forced-choice run): a hallucination avoided (the other named a wrong diagnosis) or a right answer lost
+            "abstained_a": sum(abstained_a), "abstained_b": sum(abstained_b),
+            "b_avoided": sum(x and h for x, h in zip(abstained_b, hallucinated_a)),
+            "b_lost": sum(x and r for x, r in zip(abstained_b, right_a)),
+            "a_avoided": sum(x and h for x, h in zip(abstained_a, hallucinated_b)),
+            "a_lost": sum(x and r for x, r in zip(abstained_a, right_b)), "groups": f"{kind.group}s"}
 
 
 def comparison_text(c: dict) -> str:
@@ -1691,7 +1750,11 @@ def comparison_text(c: dict) -> str:
                 f"{100 * c['hallucination_reduction_ci95'][1]:+.1f}%)" if c["hallucination_reduction_ci95"] else
                 " (no interval: run A has no hallucination in some resamples)")),
         f"- Hallucinations removed (A named a wrong diagnosis, B is right): {c['hallucinations_removed']}; introduced (A was right, "
-        f"B named a wrong diagnosis): {c['hallucinations_introduced']}", ""])
+        f"B named a wrong diagnosis): {c['hallucinations_introduced']}",
+        *[f"- Run {name} answered \"{ABSTAIN}\" {c[f'abstained_{key}']} times. Run {other} named a wrong diagnosis on "
+          f"{c[f'{key}_avoided']} of those questions (hallucinations avoided) and the right one on {c[f'{key}_lost']} (right answers "
+          "lost); if the abstentions were no better than chance, these would follow the other run's own rates."
+          for name, other, key in (("A", "B", "a"), ("B", "A", "b")) if c[f"abstained_{key}"]], ""])
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
