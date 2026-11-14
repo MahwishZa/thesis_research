@@ -1982,14 +1982,20 @@ class RepositoryTests(unittest.TestCase):
         def pct(x):
             return f"{100 * x:.1f}"
 
+        header = next(line for line in self.readme.splitlines() if line.startswith("| Dataset |"))
+        self.assertEqual([c.strip() for c in header.strip().strip("|").split("|")],
+                         ["Dataset", "Model", "Setting", "Balanced accuracy (test)", "95% interval",
+                          "Missed malignancy (cancers called benign)", "Report"])
         rows = [line for line in self.readme.splitlines() if line.startswith("| ") and "](results/" in line]
         for row in rows:  # no row until a model has a finished test run
-            link = re.search(r"\]\((results/[^)]+/report\.md)\)", row).group(1)
-            self.assertTrue((ROOT / link).is_file(), f"the README links to a report that does not exist: {link}")
-            main = json.loads((ROOT / link).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
+            link = re.search(r"\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", row)
+            self.assertTrue((ROOT / link.group(1)).is_file(), f"the README links to a report that does not exist: {link.group(1)}")
+            main = json.loads((ROOT / link.group(1)).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
             low, high = main["balanced_accuracy_ci95"]  # the main score
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
-            self.assertEqual(cells[1:3], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}"])
+            self.assertEqual(cells[:2], [link.group(2), link.group(3)], "the dataset and model must be the run's own")
+            self.assertEqual(cells[3:6], [pct(main["balanced_accuracy"]), f"{pct(low)} to {pct(high)}",
+                                          pct(main["risk"]["missed_malignancy"]) if main["risk"]["missed_malignancy"] is not None else "–"])
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
         self.assertEqual(len(rows), len(finished), "every finished test run in results/ must have exactly one README row")
 
