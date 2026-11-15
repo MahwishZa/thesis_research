@@ -1,0 +1,22 @@
+# The Llama settings of configs/image/llama-4-maverick.toml, unchanged, on the multimodal dataset: each photo is sent with its
+# patient's facts (age, sex, body site) in the prompt. Setup and notes: see that file.
+name = "llama-4-maverick"
+dataset = "multimodal"  # the prepared dataset: data/multimodal/questions.csv; results go to results/multimodal/<name>/
+
+[model]
+provider = "openai_compatible"
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+extra_body = { provider = { order = ["parasail/fp8"], allow_fallbacks = false } }  # only Parasail's fp8 route may answer (Google Vertex, the other host, does not state its precision and is excluded)
+id = "meta-llama/llama-4-maverick"
+pinned = true  # the name has no date and OpenRouter gives no revision: the model is static, and the host and its fp8 precision are fixed above. Each answer records the model name and host that answered
+temperature = 0.0  # as in the base paper (greedy decoding)
+seed = 0           # best effort: the host may ignore it, so a repeated run can differ slightly
+max_tokens = 256   # a class name needs about 12; room is left because this model may explain (an answer cut off is reported)
+
+[prompt]
+file = "prompts/multimodal/diagnosis.txt"
+
+[run]
+requests_per_minute = 20  # well below a new account's limits; a rate-limit answer is retried after a wait
+order_seed = 0            # seeded random order in which the images are sent
