@@ -2481,6 +2481,22 @@ class RepositoryTests(unittest.TestCase):
             if path and (ROOT / path).suffix in {".py", ".md", ".toml", ".txt", ".csv", ".json", ".jsonl"} and (ROOT / path).is_file():
                 self.assertIsNone(key_formats.search((ROOT / path).read_text(encoding="utf-8")), f"key-like text in {path}")
 
+    @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")
+    def test_every_run_records_a_commit_that_is_part_of_the_history(self):
+        """A run card names the Git commit it ran on. A commit that only exists as a leftover object on one computer (after a history
+        rewrite) is not in a fresh clone, so the commit must be an ancestor of the checked-out one, not merely a known object."""
+        if subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, capture_output=True, text=True).stdout.strip() == "true":
+            self.skipTest("a shallow clone does not hold the whole history")
+        cards = sorted((ROOT / "results").glob("*/*/test_*/run_card.json"))
+        self.assertTrue(cards)
+        for path in cards:
+            card = json.loads(path.read_text(encoding="utf-8"))
+            commits = {s["commit"] for s in card["sessions"]} | {card["git"]["commit"]}
+            for commit in commits:
+                with self.subTest(f"{path.parent.relative_to(ROOT).as_posix()} {commit[:10]}"):
+                    self.assertEqual(subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=ROOT).returncode, 0,
+                                     "the commit named in this run card is not in the history")
+
     def test_the_readme_uses_unix_line_endings(self):
         self.assertNotIn(b"\r", (ROOT / "README.md").read_bytes(), "Windows line endings (.gitattributes should prevent this)")
 

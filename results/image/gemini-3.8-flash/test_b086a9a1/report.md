@@ -3,7 +3,7 @@
 - Model requested: `google/gemini-3.8-flash`; versions returned by the API: `google/gemini-3.8-flash@Google AI Studio`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 2048, "image_detail": null, "extra_body": {"provider": {"order": ["google-ai-studio"], "allow_fallbacks": false}, "reasoning": {"effort": "minimal"}}}`
 - Started 2026-11-15T00:22:38+00:00, finished 2026-11-15T00:45:53+00:00 (UTC)
-- Prompt: `prompts/image/diagnosis.txt` (SHA-256 `5e1ed90af51d`); images: 320 (hash `cfa2c9e9b7c6`), sent exactly as stored; dataset table `data/image/dataset.csv` (SHA-256 `394408d529cf`); Git commit `ba9f33c36c`
+- Prompt: `prompts/image/diagnosis.txt` (SHA-256 `5e1ed90af51d`); images: 320 (hash `cfa2c9e9b7c6`), sent exactly as stored; dataset table `data/image/dataset.csv` (SHA-256 `394408d529cf`); Git commit `27c7ec0f34`
 
 ## Results
 
@@ -64,5 +64,5 @@ Notes on these scores:
 ## Notes
 
 - How answers ended (finish reason): STOP: 320
-- Sessions (starts and restarts of this run): 1; Git commits: ba9f33c36c
+- Sessions (starts and restarts of this run): 1; Git commits: 27c7ec0f34
 - Interruptions before the run finished: 0

@@ -3,7 +3,7 @@
 - Model requested: `openai/gpt-4o-2024-08-06`; versions returned by the API: `openai/gpt-4o-2024-08-06@OpenAI`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 64, "image_detail": "high", "extra_body": {"provider": {"order": ["openai"], "allow_fallbacks": false}}}`
 - Started 2026-11-14T23:28:17+00:00, finished 2026-11-14T23:44:18+00:00 (UTC)
-- Prompt: `prompts/multimodal/diagnosis.txt` (SHA-256 `d1a433195f62`); images: 320 (hash `c3de85ddfda0`), sent exactly as stored, each with its patient's facts in the prompt; dataset table `data/multimodal/questions.csv` (SHA-256 `150d699e3752`); Git commit `f29aab5b6f`
+- Prompt: `prompts/multimodal/diagnosis.txt` (SHA-256 `d1a433195f62`); images: 320 (hash `c3de85ddfda0`), sent exactly as stored, each with its patient's facts in the prompt; dataset table `data/multimodal/questions.csv` (SHA-256 `150d699e3752`); Git commit `499bc650b3`
 
 ## Results
 
@@ -78,5 +78,5 @@ A missing fact ("not recorded") points to the photo's collection, and so mostly 
 ## Notes
 
 - How answers ended (finish reason): STOP: 320
-- Sessions (starts and restarts of this run): 1; Git commits: f29aab5b6f
+- Sessions (starts and restarts of this run): 1; Git commits: 499bc650b3
 - Interruptions before the run finished: 0

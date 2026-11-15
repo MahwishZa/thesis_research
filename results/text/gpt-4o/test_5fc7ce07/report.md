@@ -3,7 +3,7 @@
 - Model requested: `openai/gpt-4o-2024-08-06`; versions returned by the API: `openai/gpt-4o-2024-08-06@OpenAI`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 64, "image_detail": null, "extra_body": {"provider": {"order": ["openai"], "allow_fallbacks": false}}}`
 - Started 2026-11-14T23:17:12+00:00, finished 2026-11-14T23:28:13+00:00 (UTC)
-- Prompt: `prompts/text/diagnosis.txt` (SHA-256 `5b6fe4db8d52`); cases: 221 (hash `a75d8b54c810`), each put into the prompt word for word; dataset table `data/text/dataset.csv` (SHA-256 `f4d40e300b62`); Git commit `f29aab5b6f`
+- Prompt: `prompts/text/diagnosis.txt` (SHA-256 `5b6fe4db8d52`); cases: 221 (hash `a75d8b54c810`), each put into the prompt word for word; dataset table `data/text/dataset.csv` (SHA-256 `f4d40e300b62`); Git commit `499bc650b3`
 
 ## Results
 
@@ -86,5 +86,5 @@ The cases left out, and the answers:
 ## Notes
 
 - How answers ended (finish reason): STOP: 221
-- Sessions (starts and restarts of this run): 1; Git commits: f29aab5b6f
+- Sessions (starts and restarts of this run): 1; Git commits: 499bc650b3
 - Interruptions before the run finished: 0

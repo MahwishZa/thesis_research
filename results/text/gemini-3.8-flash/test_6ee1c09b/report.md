@@ -3,7 +3,7 @@
 - Model requested: `google/gemini-3.8-flash`; versions returned by the API: `google/gemini-3.8-flash@Google AI Studio`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 2048, "image_detail": null, "extra_body": {"provider": {"order": ["google-ai-studio"], "allow_fallbacks": false}, "reasoning": {"effort": "minimal"}}}`
 - Started 2026-11-15T00:45:56+00:00, finished 2026-11-15T01:00:00+00:00 (UTC)
-- Prompt: `prompts/text/diagnosis.txt` (SHA-256 `5b6fe4db8d52`); cases: 221 (hash `a75d8b54c810`), each put into the prompt word for word; dataset table `data/text/dataset.csv` (SHA-256 `f4d40e300b62`); Git commit `ba9f33c36c`
+- Prompt: `prompts/text/diagnosis.txt` (SHA-256 `5b6fe4db8d52`); cases: 221 (hash `a75d8b54c810`), each put into the prompt word for word; dataset table `data/text/dataset.csv` (SHA-256 `f4d40e300b62`); Git commit `27c7ec0f34`
 
 ## Results
 
@@ -86,5 +86,5 @@ The cases left out, and the answers:
 ## Notes
 
 - How answers ended (finish reason): STOP: 221
-- Sessions (starts and restarts of this run): 1; Git commits: ba9f33c36c
+- Sessions (starts and restarts of this run): 1; Git commits: 27c7ec0f34
 - Interruptions before the run finished: 0

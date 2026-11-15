@@ -3,7 +3,7 @@
 - Model requested: `google/gemini-3.8-flash`; versions returned by the API: `google/gemini-3.8-flash@Google AI Studio`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 2048, "image_detail": null, "extra_body": {"provider": {"order": ["google-ai-studio"], "allow_fallbacks": false}, "reasoning": {"effort": "minimal"}}}`
 - Started 2026-11-15T01:00:02+00:00, finished 2026-11-15T01:24:48+00:00 (UTC)
-- Prompt: `prompts/multimodal/diagnosis.txt` (SHA-256 `d1a433195f62`); images: 320 (hash `c3de85ddfda0`), sent exactly as stored, each with its patient's facts in the prompt; dataset table `data/multimodal/questions.csv` (SHA-256 `150d699e3752`); Git commit `ba9f33c36c`
+- Prompt: `prompts/multimodal/diagnosis.txt` (SHA-256 `d1a433195f62`); images: 320 (hash `c3de85ddfda0`), sent exactly as stored, each with its patient's facts in the prompt; dataset table `data/multimodal/questions.csv` (SHA-256 `150d699e3752`); Git commit `27c7ec0f34`
 
 ## Results
 
@@ -78,5 +78,5 @@ A missing fact ("not recorded") points to the photo's collection, and so mostly 
 ## Notes
 
 - How answers ended (finish reason): STOP: 320
-- Sessions (starts and restarts of this run): 1; Git commits: ba9f33c36c
+- Sessions (starts and restarts of this run): 1; Git commits: 27c7ec0f34
 - Interruptions before the run finished: 0

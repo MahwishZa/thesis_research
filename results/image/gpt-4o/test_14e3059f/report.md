@@ -3,7 +3,7 @@
 - Model requested: `openai/gpt-4o-2024-08-06`; versions returned by the API: `openai/gpt-4o-2024-08-06@OpenAI`
 - Generation settings: `{"temperature": 0.0, "seed": 0, "max_tokens": 64, "image_detail": "high", "extra_body": {"provider": {"order": ["openai"], "allow_fallbacks": false}}}`
 - Started 2026-11-14T23:01:02+00:00, finished 2026-11-14T23:17:04+00:00 (UTC)
-- Prompt: `prompts/image/diagnosis.txt` (SHA-256 `5e1ed90af51d`); images: 320 (hash `cfa2c9e9b7c6`), sent exactly as stored; dataset table `data/image/dataset.csv` (SHA-256 `394408d529cf`); Git commit `f29aab5b6f`
+- Prompt: `prompts/image/diagnosis.txt` (SHA-256 `5e1ed90af51d`); images: 320 (hash `cfa2c9e9b7c6`), sent exactly as stored; dataset table `data/image/dataset.csv` (SHA-256 `394408d529cf`); Git commit `499bc650b3`
 
 ## Results
 
@@ -64,5 +64,5 @@ Notes on these scores:
 ## Notes
 
 - How answers ended (finish reason): STOP: 320
-- Sessions (starts and restarts of this run): 1; Git commits: f29aab5b6f
+- Sessions (starts and restarts of this run): 1; Git commits: 499bc650b3
 - Interruptions before the run finished: 0
