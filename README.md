@@ -18,6 +18,7 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 | [Claude Sonnet 5.5](results/image/claude-sonnet-5-5/test_cf5351f1/report.md) | Closed-book | 51.2% (45.7 to 56.7) | 48.8% | 25.0% |
 | [GPT-4o](results/image/gpt-4o/test_14e3059f/report.md) | Closed-book | 34.1% (29.6 to 38.7) | 65.9% | 22.5% |
 | [Gemini 3.8 Flash](results/image/gemini-3.8-flash/test_b086a9a1/report.md) | Closed-book | 49.7% (44.3 to 55.0) | 50.3% | 21.7% |
+| [Llama 4 Maverick](results/image/llama-4-maverick/test_055451fe/report.md) | Closed-book | 28.7% (24.4 to 33.1) | 71.2% | 19.2% |
 
 ### Text
 
@@ -26,6 +27,7 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 | [Claude Sonnet 5.5](results/text/claude-sonnet-5-5/test_06ce1664/report.md) | Closed-book | 55.9% (49.6 to 61.8) | 34.1% | 5.8% |
 | [GPT-4o](results/text/gpt-4o/test_5fc7ce07/report.md) | Closed-book | 50.8% (45.1 to 56.6) | 49.2% | 14.2% |
 | [Gemini 3.8 Flash](results/text/gemini-3.8-flash/test_6ee1c09b/report.md) | Closed-book | 61.4% (55.8 to 67.0) | 38.6% | 5.0% |
+| [Llama 4 Maverick](results/text/llama-4-maverick/test_32905170/report.md) | Closed-book | 46.8% (40.6 to 52.8) | 48.5% | 10.0% |
 
 ### Multimodal
 
@@ -34,6 +36,7 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 | [Claude Sonnet 5.5](results/multimodal/claude-sonnet-5-5/test_5db7a077/report.md) | Closed-book | 56.2% (50.6 to 61.7) | 43.8% | 20.8% |
 | [GPT-4o](results/multimodal/gpt-4o/test_12259e56/report.md) | Closed-book | 41.6% (36.4 to 46.7) | 58.4% | 19.2% |
 | [Gemini 3.8 Flash](results/multimodal/gemini-3.8-flash/test_2ff4fbdd/report.md) | Closed-book | 54.4% (48.6 to 59.9) | 45.6% | 21.7% |
+| [Llama 4 Maverick](results/multimodal/llama-4-maverick/test_c3b17116/report.md) | Closed-book | 34.1% (29.0 to 39.0) | 65.9% | 10.8% |
 
 ## Repository Structure
 

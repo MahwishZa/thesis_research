@@ -1609,7 +1609,17 @@ class RunTests(Project):
         self.assertEqual(part["answers_reread"], 2)  # the two with a lone class name last; two-class and one-line answers stay unreadable
         self.assertEqual(part["metrics"]["n"], 4)
         self.assertEqual(part["right_among_them"], sum(1 for p, a in zip(preds, ["nevus", "melanoma"]) if p["label"] == a))
-        self.assertIn("## Sensitivity analysis: the last line of the answer", (out / "report.md").read_text(encoding="utf-8"))
+        report = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("## Sensitivity analysis: the last line of the answer", report)
+        self.assertIn("2 answers wrote their reasoning first", report)
+        self.assertIn("Here they are read as that class.", report)
+
+        class Single(Wordy):
+            texts = ["Hard to say.\n\nnevus", "Maybe nevus or melanoma", "x y", "I think\nnevus or melanoma"]
+
+        single = (self._run(Single(), "val", run_id="w3") / "report.md").read_text(encoding="utf-8")
+        self.assertIn("1 answer wrote its reasoning first", single)
+        self.assertRegex(single, r"; [01] of them names? the right class\. Here it is read as that class\.")
         again = self._run(FakeModel(), "val", run_id="w2")  # a clean run has no such section
         self.assertNotIn("last_line_reading", json.loads((again / "metrics.json").read_text(encoding="utf-8")))
         self.assertNotIn("Sensitivity analysis", (again / "report.md").read_text(encoding="utf-8"))

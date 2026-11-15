@@ -1650,9 +1650,10 @@ def write_report(run_dir: str | Path) -> Path:
         part = metrics["last_line_reading"]
         lines += ["## Sensitivity analysis: the last line of the answer", "",
                   f"The main score reads an answer only when it is exactly one class name, as the prompt asks. {part['answers_reread']} "
-                  f"answers wrote their reasoning first and then a class name alone on the last line; {part['right_among_them']} of "
-                  "them name the right class. Here they are read as that class. This is a check on the main score, never a "
-                  "replacement for it.", "", *_brief(part["metrics"], kind), ""]
+                  f"{'answer wrote its' if part['answers_reread'] == 1 else 'answers wrote their'} reasoning first and then a class name "
+                  f"alone on the last line; {part['right_among_them']} of them {'names' if part['right_among_them'] == 1 else 'name'} the "
+                  f"right class. Here {'it is' if part['answers_reread'] == 1 else 'they are'} read as that class. This is a check on "
+                  "the main score, never a replacement for it.", "", *_brief(part["metrics"], kind), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})

@@ -85,7 +85,7 @@ The cases left out, and the answers:
 
 ## Sensitivity analysis: the last line of the answer
 
-The main score reads an answer only when it is exactly one class name, as the prompt asks. 1 answers wrote their reasoning first and then a class name alone on the last line; 1 of them name the right class. Here they are read as that class. This is a check on the main score, never a replacement for it.
+The main score reads an answer only when it is exactly one class name, as the prompt asks. 1 answer wrote its reasoning first and then a class name alone on the last line; 1 of them names the right class. Here it is read as that class. This is a check on the main score, never a replacement for it.
 
 | Metric | Value | 95% interval |
 |---|---|---|
