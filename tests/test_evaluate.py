@@ -2326,9 +2326,12 @@ class RepositoryTests(unittest.TestCase):
             rows = [line for line in text.splitlines() if f"]({link})" in line]
             self.assertEqual(len(rows), 1, f"docs/results.md must hold exactly one table row for {run}")
             main = json.loads((run / "metrics.json").read_text(encoding="utf-8"))["main"]
-            hallucination = main["hallucination"]["balanced_rate"]
-            for value in (main["balanced_accuracy"], main["accuracy"], hallucination, main["risk"]["missed_malignancy"], main["risk"]["overcall"]):
-                self.assertIn(f"{100 * value:.1f}%", rows[0], f"{run} differs from its row in docs/results.md")
+            cells = [c.strip() for c in rows[0].strip().strip("|").split("|")]  # model, balanced accuracy (CI), accuracy, hallucination, no valid, missed, over-call
+            low, high = main["balanced_accuracy_ci95"]
+            expected = [f"{100 * main['balanced_accuracy']:.1f}% ({100 * low:.1f} to {100 * high:.1f})", f"{100 * main['accuracy']:.1f}%",
+                        f"{100 * main['hallucination']['balanced_rate']:.1f}%", f"{main['hallucination']['no_valid_answer']} of {main['n']}",
+                        f"{100 * main['risk']['missed_malignancy']:.1f}%", f"{100 * main['risk']['overcall']:.1f}%"]
+            self.assertEqual(cells[1:], expected, f"{run} differs from its row in docs/results.md")
 
     def test_the_readme_uses_unix_line_endings(self):
         self.assertNotIn(b"\r", (ROOT / "README.md").read_bytes(), "Windows line endings (.gitattributes should prevent this)")
