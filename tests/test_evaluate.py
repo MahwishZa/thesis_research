@@ -2142,51 +2142,55 @@ class RepositoryTests(unittest.TestCase):
     def test_the_readme_has_its_sections_in_order_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
         self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M),
                          ["Overview", "Objectives", "Results", "Repository Structure", "How to Run"])
-        block = re.search(r"## Repository Structure\n\n```\n(.*?)\n```", self.readme, re.S).group(1)
-        parents, listed = [], set()
-        for line in block.splitlines():
-            level, name = (len(line) - len(line.lstrip())) // 4, line.strip().rstrip("/")
-            parents = parents[:level] + [name]
-            self.assertTrue(ROOT.joinpath(*parents).exists(), f"the README structure lists a path that does not exist: {'/'.join(parents)}")
-            if level == 0:
-                listed.add(name)
+        section = re.search(r"## Repository Structure\n(.*?)\n## ", self.readme, re.S).group(1)
+        listed = set()
+        for line in section.splitlines():
+            if line.startswith("| `"):
+                path = re.match(r"\| `([^`]+)` \|", line).group(1).rstrip("/")
+                self.assertTrue((ROOT / path).exists(), f"the README structure lists a path that does not exist: {path}")
+                listed.add(path)
+        self.assertTrue(listed)
         if shutil.which("git") and (ROOT / ".git").exists():
             tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
             folders = {p.split("/")[0] for p in tracked if "/" in p and not p.startswith(".")}
             self.assertEqual(sorted(folders - listed), [], "the README structure omits a top-level folder")
+            self.assertEqual(sorted(listed - folders - {p for p in tracked if p and "/" not in p}), [], "the README lists something Git does not track")
 
     def test_the_results_written_in_the_readme_match_the_saved_results(self):
         def pct(x):
-            return f"{100 * x:.1f}%"
+            return f"{100 * x:.1f}"
 
         section = re.search(r"## Results\n(.*?)\n## ", self.readme, re.S).group(1)
-        header = "| Model | Setting | Balanced accuracy (95% CI) | Hallucination rate | Missed malignancy |"
-        dataset, rows, headings = None, 0, []
-        for line in section.splitlines():
-            if line.startswith("### "):
-                dataset = line[4:].strip().lower()
-                headings.append(dataset)
-            elif line.startswith("| Model |"):
-                self.assertEqual(line, header)
-            elif line.startswith("| ["):  # a row exists only for a finished test run
-                rows += 1
-                link = re.fullmatch(r"\| \[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\) \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|", line)
-                self.assertIsNotNone(link, f"a results row must have the form of the table: {line}")
-                path, folder, model, setting, bal, hall, missed = link.groups()
-                self.assertEqual(folder, dataset, "a row belongs under the heading of its own dataset")
+        parts = re.split(r"^### (.+)$", section, flags=re.M)  # [intro, heading, body, heading, body, ...]
+        self.assertEqual(parts[1::2], ["Balanced accuracy (%)", "Hallucination rate (%)", "Missed malignancy (%)"])
+        tables = []
+        for body in parts[2::2]:
+            lines = [line for line in body.splitlines() if line.startswith("|")]
+            self.assertEqual(lines[0], "| Model | Image | Text | Multimodal |")
+            tables.append([[cell.strip() for cell in line.strip().strip("|").split("|")] for line in lines[2:]])
+        self.assertEqual([[row[0] for row in table] for table in tables], [[row[0] for row in tables[0]]] * 3, "the three tables list the same models")
+        linked = []
+        for index, row in enumerate(tables[0]):
+            for column, cell in zip(("image", "text", "multimodal"), row[1:]):
+                link = re.fullmatch(r"\[([0-9.]+) \(([0-9.]+) to ([0-9.]+)\)\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", cell)
+                self.assertIsNotNone(link, f"a balanced-accuracy cell must be a linked value with its interval: {cell}")
+                bal, low_text, high_text, path, dataset, model = link.groups()
+                self.assertEqual(dataset, column, "a cell belongs under the column of its own dataset")
                 self.assertFalse(model.endswith("-abstain"), "a run that may abstain needs an abstention column before it is listed")
                 self.assertTrue((ROOT / path).is_file(), f"the README links to a report that does not exist: {path}")
                 card = json.loads((ROOT / path).with_name("run_card.json").read_text(encoding="utf-8"))
                 main = json.loads((ROOT / path).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
                 low, high = main["balanced_accuracy_ci95"]
+                self.assertEqual(card["split"], "test")
+                self.assertEqual((bal, low_text, high_text), (pct(main["balanced_accuracy"]), pct(low), pct(high)))
                 shown = main["risk"]["missed_malignancy"]
-                self.assertEqual((card["split"], setting.strip()), ("test", "Closed-book"))
-                self.assertEqual([bal.strip(), hall.strip(), missed.strip()], [
-                    f"{pct(main['balanced_accuracy'])} ({100 * low:.1f} to {100 * high:.1f})", pct(main["hallucination"]["balanced_rate"]),
-                    pct(shown) if shown is not None else "-"])
-        self.assertEqual(headings, ["image", "text", "multimodal"])
+                self.assertEqual(tables[1][index][1 + ("image", "text", "multimodal").index(column)], pct(main["hallucination"]["balanced_rate"]))
+                self.assertEqual(tables[2][index][1 + ("image", "text", "multimodal").index(column)], pct(shown) if shown is not None else "-")
+                linked.append(path)
+            self.assertEqual(len({re.search(r"results/[^/]+/([^/]+)/", c).group(1) for c in row[1:]}), 1, "a row is one model")
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
-        self.assertEqual(rows, len(finished), "every finished test run in results/ must have exactly one README row")
+        self.assertEqual(sorted(linked), sorted(f"{p.relative_to(ROOT).as_posix()}/report.md" for p in finished),
+                         "every finished test run in results/ must be linked exactly once")
 
     def test_configs_are_valid_and_point_to_files_that_exist(self):
         configs = sorted((ROOT / "configs").glob("*/*.toml"))
