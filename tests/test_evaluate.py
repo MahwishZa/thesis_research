@@ -317,14 +317,14 @@ class LoadEnvTests(unittest.TestCase):
 
 class LoadTests(unittest.TestCase):
     def test_a_provider_without_an_adapter_is_refused_with_an_explanation(self):
-        with self.assertRaisesRegex(ValueError, r"unknown model provider: 'nothing' \(adapters: anthropic, gemini, openai_compatible\)"):
+        with self.assertRaisesRegex(ValueError, r"unknown model provider: 'nothing' \(adapters: anthropic, openai_compatible\)"):
             evaluate.load("nothing", {})
 
-    def test_a_claude_or_gpt_run_does_not_need_the_gemini_sdk(self):
+    def test_an_sdk_is_imported_only_when_its_adapter_is_loaded(self):
         code = ("import sys, src.evaluate as m; m.AnthropicModel, m.OpenAICompatibleModel; "
-                "print('google.genai' in sys.modules, 'anthropic' in sys.modules, 'openai' in sys.modules)")
+                "print('anthropic' in sys.modules, 'openai' in sys.modules)")
         shown = subprocess.run([sys.executable, "-c", code], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
-        self.assertEqual(shown, ["False", "False", "False"])  # every SDK is imported only when its adapter is loaded
+        self.assertEqual(shown, ["False", "False"])
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -484,187 +484,6 @@ class AnthropicTests(unittest.TestCase):
     def test_a_model_name_that_moves_is_not_a_pinned_version(self):
         self.assertTrue(self._load().pinned)
         self.assertFalse(self._load({"id": "claude-sonnet-latest"}).pinned)
-
-
-# ---------------------------------------------------------------------------------------------------------------------------------
-# Gemini (Google), with the real google-genai SDK: its API call replaced, then against a local server
-
-GEMINI = {"id": "gemini-test", "temperature": 0.0, "seed": 0, "max_output_tokens": 64}
-GEMINI_GOOD = {"candidates": [{"content": {"role": "model", "parts": [{"text": "melanoma"}]}, "finishReason": "STOP"}],
-               "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 1, "totalTokenCount": 11}, "modelVersion": "stub-1"}
-GEMINI_ERRORS = {  # bodies seen from the Gemini API on the researcher's laptop
-    "gone": (404, {"error": {"code": 404, "message": "This model models/gemini-2.5-flash is no longer available to new users.",
-                             "status": "NOT_FOUND"}}),
-    "level": (400, {"error": {"code": 400, "message": "Thinking level MINIMAL is not supported for this model. Please retry with "
-                                                      "other thinking level.", "status": "INVALID_ARGUMENT"}}),
-    "key": (400, {"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.", "status": "INVALID_ARGUMENT"}}),
-    "busy": (503, {"error": {"code": 503, "message": "This model is currently experiencing high demand.", "status": "UNAVAILABLE"}}),
-    "daily": (429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message":
-        "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: "
-        "https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n"
-        "* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: "
-        "gemini-3.8-flash\nDescription: Generate content requests per day limit exceeded on Free Tier. See "
-        "https://ai.google.dev/gemini-api/docs/rate-limits.\nPlease retry in 11h37m58.111642937s."}}),  # as Google sent it
-    "minute": (429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message":
-        "Quota exceeded for metric: generate_content_free_tier_requests, limit: 5, model: gemini-3.8-flash. "
-        "Generate content requests per minute limit exceeded. Please retry in 21s."}}),
-}
-
-
-class GeminiHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        self.server.seen.append(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))))
-        model = self.path.split("/models/")[1].split(":")[0]
-        if model == "slow":
-            time.sleep(1.5)
-        _send(self, *GEMINI_ERRORS.get(model, (200, GEMINI_GOOD)))
-
-    def log_message(self, *args):
-        pass
-
-
-@unittest.skipUnless(_have("google.genai"), "google-genai not installed")
-class GeminiTests(unittest.TestCase):
-    def setUp(self):
-        from google.genai import errors, types as genai_types
-
-        self.genai_types, self.errors = genai_types, errors
-        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}):
-            self.model = evaluate.load("gemini", GEMINI | {"thinking_level": "MINIMAL"})
-
-    def _respond(self, response):
-        return mock.patch.object(self.model.client.models, "generate_content", return_value=response)
-
-    def test_a_missing_key_is_explained(self):
-        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, "GEMINI_API_KEY"):
-            evaluate.load("gemini", GEMINI)
-
-    def test_missing_settings_are_named(self):
-        for key in ("temperature", "seed", "max_output_tokens", "id"):
-            with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}), self.assertRaisesRegex(ValueError, f"missing {key}"):
-                evaluate.load("gemini", {k: v for k, v in GEMINI.items() if k != key})
-
-    def test_answer_text_version_and_usage(self):
-        t = self.genai_types
-        response = t.GenerateContentResponse(
-            candidates=[t.Candidate(content=t.Content(role="model", parts=[t.Part(text="hidden", thought=True), t.Part(text="melanoma")]),
-                                    finish_reason="STOP")],
-            model_version="gemini-test-001", response_id="r1",
-            usage_metadata=t.GenerateContentResponseUsageMetadata(prompt_token_count=300, candidates_token_count=2, total_token_count=302))
-        with self._respond(response) as call:
-            answer = self.model.predict(b"\xff\xd8\xff", "image/jpeg", "Which?")
-        self.assertEqual((answer["text"], answer["finish_reason"], answer["model_version"]), ("melanoma", "STOP", "gemini-test-001"))
-        self.assertEqual(answer["usage"]["total_tokens"], 302)
-        sent = call.call_args.kwargs
-        self.assertEqual(sent["model"], "gemini-test")
-        self.assertEqual(sent["config"].temperature, 0.0)
-        self.assertEqual(sent["contents"][1], "Which?")
-
-    def test_a_text_case_is_sent_as_the_prompt_alone(self):
-        t = self.genai_types
-        response = t.GenerateContentResponse(
-            candidates=[t.Candidate(content=t.Content(role="model", parts=[t.Part(text="nevus")]), finish_reason="STOP")])
-        with self._respond(response) as call:
-            answer = self.model.predict(None, None, "Case: a brown macule.\nWhich?")
-        self.assertEqual(call.call_args.kwargs["contents"], ["Case: a brown macule.\nWhich?"])
-        self.assertEqual(answer["text"], "nevus")
-
-    def test_thinking_level_is_sent_and_a_deprecated_or_mistyped_setting_is_refused(self):
-        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}):
-            level = evaluate.load("gemini", GEMINI | {"thinking_level": "MINIMAL"})
-            self.assertEqual(level.config.thinking_config.thinking_level.value, "MINIMAL")
-            self.assertIsNone(evaluate.load("gemini", GEMINI).config.thinking_config)  # neither set: the model's default
-            with self.assertRaises(ValueError):
-                evaluate.load("gemini", GEMINI | {"thinking_budget": 0})
-            with self.assertRaises(ValueError):
-                evaluate.load("gemini", GEMINI | {"thinking_level": "OFF"})
-
-    def test_a_model_name_that_moves_is_not_a_pinned_version(self):
-        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "dummy"}):
-            self.assertTrue(evaluate.load("gemini", GEMINI | {"id": "gemini-3.5-flash-lite"}).pinned)
-            self.assertFalse(evaluate.load("gemini", GEMINI | {"id": "gemini-flash-lite-latest"}).pinned)
-
-    def test_the_run_card_records_the_exact_revision_google_serves_under_the_model_id(self):
-        with mock.patch.object(self.model.client.models, "get", return_value=types.SimpleNamespace(version="3.5-flash-lite-07-2026")) as ask:
-            self.assertEqual(self.model.describe()["model_revision"], "3.5-flash-lite-07-2026")
-        ask.assert_called_once_with(model="gemini-test")
-        unavailable = self.errors.APIError(503, {"error": {"code": 503, "message": "busy", "status": "UNAVAILABLE"}})
-        for failure in (unavailable, self.model.httpx.ConnectError("no connection")):  # the run goes on without the revision
-            with self.subTest(type(failure).__name__), mock.patch.object(self.model.client.models, "get", side_effect=failure):
-                description = self.model.describe()
-                self.assertIsNone(description["model_revision"])
-                self.assertEqual(description["model_id"], "gemini-test")
-
-    def test_blocked_prompt_gives_no_text(self):
-        t = self.genai_types
-        response = t.GenerateContentResponse(prompt_feedback=t.GenerateContentResponsePromptFeedback(block_reason="SAFETY"))
-        with self._respond(response):
-            answer = self.model.predict(b"x", "image/jpeg", "Which?")
-        self.assertIsNone(answer["text"])
-        self.assertEqual(answer["finish_reason"], "PROMPT_BLOCKED_SAFETY")
-
-    def test_rate_limit_is_transient_but_bad_request_is_not(self):
-        rate = self.errors.APIError(429, {"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}})
-        bad = self.errors.APIError(400, {"error": {"code": 400, "message": "bad", "status": "INVALID_ARGUMENT"}})
-        with mock.patch.object(self.model.client.models, "generate_content", side_effect=rate):
-            with self.assertRaises(evaluate.TransientError):
-                self.model.predict(b"x", "image/jpeg", "Which?")
-        with mock.patch.object(self.model.client.models, "generate_content", side_effect=bad):
-            with self.assertRaises(evaluate.FatalError):
-                self.model.predict(b"x", "image/jpeg", "Which?")
-
-
-@unittest.skipUnless(_have("google.genai"), "google-genai not installed")
-class GeminiOverHttpTests(unittest.TestCase):
-    def setUp(self):
-        self.server = _serve(self, GeminiHandler)
-        patcher = mock.patch.dict(os.environ, {"GOOGLE_GEMINI_BASE_URL": f"http://127.0.0.1:{self.server.server_port}",
-                                               "GEMINI_API_KEY": "dummy"})
-        patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def _predict(self, model_id):
-        return evaluate.load("gemini", GEMINI | {"id": model_id}).predict(b"\x89PNG", "image/png", "Which?")
-
-    def test_an_answer(self):
-        self.assertEqual(self._predict("fine")["text"], "melanoma")
-
-    def test_the_real_sdk_sends_a_text_case_as_the_prompt_alone(self):
-        answer = evaluate.load("gemini", GEMINI | {"id": "fine"}).predict(None, None, "Case: “café” – which?")
-        (body,) = self.server.seen
-        self.assertEqual(body["contents"], [{"parts": [{"text": "Case: “café” – which?"}], "role": "user"}])
-        self.assertEqual(answer["text"], "melanoma")
-
-    def test_an_overloaded_service_can_be_retried(self):
-        with self.assertRaisesRegex(evaluate.TransientError, "HTTP 503 UNAVAILABLE: This model is currently experiencing high demand"):
-            self._predict("busy")
-
-    def test_refusals_cannot_be_retried_and_say_what_to_do(self):
-        for model_id, code, advice in (("gone", 404, "not available to your key"), ("level", 400, "set another level"),
-                                       ("key", 400, "GEMINI_API_KEY line in .env")):
-            with self.subTest(model_id), self.assertRaises(evaluate.FatalError) as raised:
-                self._predict(model_id)
-            self.assertEqual(raised.exception.code, code)
-            self.assertIn(advice, str(raised.exception))
-
-    def test_a_used_up_daily_quota_is_not_retried_but_a_per_minute_limit_is(self):
-        with self.assertRaises(evaluate.QuotaExhausted) as raised:
-            self._predict("daily")
-        for expected in ("Daily quota used up for gemini-3.8-flash", "limit 20 requests per day on the free tier",
-                         "retry in 11h37m58s", "https://ai.dev/rate-limit"):
-            self.assertIn(expected, str(raised.exception))
-        with self.assertRaises(evaluate.TransientError):
-            self._predict("minute")
-
-    def test_a_stalled_connection_times_out_instead_of_waiting_forever(self):
-        with mock.patch.object(evaluate, "TIMEOUT_SECONDS", 0.3), self.assertRaisesRegex(evaluate.TransientError, "network problem"):
-            self._predict("slow")
-
-    def test_no_connection_is_a_transient_problem(self):
-        self.server.shutdown()
-        self.server.server_close()
-        with self.assertRaisesRegex(evaluate.TransientError, "network problem"):
-            self._predict("fine")
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -2431,8 +2250,7 @@ class RepositoryTests(unittest.TestCase):
                 name, operator, _ = re.fullmatch(r"([A-Za-z0-9._-]+)(==|>=)(\S+)", line).groups()
                 listed[name.lower()] = operator
         self.assertFalse(list(ROOT.glob("requirements*.txt"))[1:], "there must be one requirements file")
-        distribution = {"PIL": "pillow", "anthropic": "anthropic", "openai": "openai", "google": "google-genai",
-                        "httpx": "httpx", "cv2": "opencv-python-headless", "numpy": "numpy"}  # import name -> package name
+        distribution = {"PIL": "pillow", "anthropic": "anthropic", "openai": "openai", "cv2": "opencv-python-headless", "numpy": "numpy"}  # import name -> package name
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):

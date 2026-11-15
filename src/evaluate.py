@@ -349,9 +349,8 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
 # The LLM adapters: one class per API, each answering one prompt, with or without one image, in the same form.
 #
 #     anthropic          Claude through the Anthropic API
-#     gemini             Gemini through the Google Gemini API
-#     openai_compatible  GPT-4o at OpenAI, and any host that speaks the same chat API (for example Llama at OpenRouter or
-#                        Hugging Face)
+#     openai_compatible  GPT-4o, Gemini and Llama at OpenRouter, and any host that speaks the same chat API (for example OpenAI
+#                        or Hugging Face)
 #
 # Every adapter has ``describe()`` (what is asked: provider, model id, settings) and ``predict(image, mime_type, prompt)``; for a
 # text case, image and mime_type are None and only the prompt is sent (the case is inside it). The
@@ -414,7 +413,7 @@ def load_env(path: str | Path = ".env") -> None:
 
 def load(provider: str, settings: dict):
     """The adapter named by ``provider`` in a config's [model] section, set up with that section's ``settings``."""
-    adapters = {"anthropic": AnthropicModel, "gemini": GeminiModel, "openai_compatible": OpenAICompatibleModel}
+    adapters = {"anthropic": AnthropicModel, "openai_compatible": OpenAICompatibleModel}
     if provider not in adapters:
         raise ValueError(f"unknown model provider: {provider!r} (adapters: {', '.join(adapters)})")
     return adapters[provider](settings)
@@ -520,117 +519,6 @@ class AnthropicModel:
                 "response_id": response.id,
                 "usage": {"prompt_tokens": usage.input_tokens, "output_tokens": usage.output_tokens,
                           "total_tokens": usage.input_tokens + usage.output_tokens}}
-
-
-# ---------------------------------------------------------------------------------------------------------------------------------
-# Gemini (Google)
-# The key is GEMINI_API_KEY or GOOGLE_API_KEY. The SDK (google-genai) is imported only when a Gemini model is loaded, so the
-# other models do not need it.
-
-GEMINI_RETRYABLE = {429, 500, 502, 503, 504}
-
-
-def _gemini_daily_quota(exc) -> str | None:
-    """A readable message when a 429 is a per-day quota (waiting minutes cannot help); None for any other error."""
-    message = str(exc.message or "")
-    if exc.code != 429 or "per day" not in message.lower():
-        return None
-    limit = re.search(r"limit: (\d+)", message)
-    model = re.search(r"model: ([\w.\-]+)", message)
-    retry = re.search(r"retry in ((?:\d+h)?(?:\d+m)?\d+(?:\.\d+)?s)", message, re.I)
-    return ("Daily quota used up" + (f" for {model.group(1)}" if model else "")
-            + (f" (limit {limit.group(1)} requests per day" + (" on the free tier)" if "free tier" in message.lower() else ")") if limit else "")
-            + (f"; Google says to retry in {re.sub(r'[.][0-9]+', '', retry.group(1))}" if retry else "")
-            + ". Continue after the quota resets, with a paid key, or with another model; https://ai.dev/rate-limit shows your limits")
-
-
-def _gemini_explain(exc) -> str:
-    """Google's refusal in one readable message, with what to do about the cases seen so far."""
-    text = f"Google refused the request (HTTP {exc.code} {exc.status}): {exc.message}"
-    said = str(exc.message).lower()
-    if exc.code == 404:
-        hint = ("this model is not available to your key, or the id is misspelled; compare it with the model list at "
-                "https://ai.google.dev/gemini-api/docs/models and put the right id in a new config")
-    elif exc.code == 400 and "thinking" in said:
-        hint = "this model refuses the thinking_level setting; set another level (MINIMAL, LOW, MEDIUM, HIGH) in a new config file"
-    elif exc.code == 400 and "api key" in said:
-        hint = "the API key is wrong: check the GEMINI_API_KEY line in .env"
-    elif exc.code in (401, 403):
-        hint = "the key was refused: check .env and your account in Google AI Studio"
-    else:
-        hint = ""
-    return text + (f"\nWhat to do: {hint}." if hint else "")
-
-
-class GeminiModel:
-    packages = ("google-genai", "pillow", "httpx")
-
-    def __init__(self, settings: dict):
-        if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
-            raise ValueError("no Gemini API key found: put the line GEMINI_API_KEY=<your key> in a file named .env "
-                             "in the repository folder (next to README.md)")
-        _require(settings, ("id", "temperature", "seed", "max_output_tokens"), "gemini")
-        if "thinking_budget" in settings:  # Google marks it deprecated for Gemini 3 and later; it can cause 400 errors
-            raise ValueError("thinking_budget is not supported for Gemini 3 and later models: use thinking_level")
-        try:
-            import httpx  # google-genai 2.x sends its requests with httpx
-            from google import genai
-            from google.genai import errors, types
-        except ImportError as exc:
-            raise ValueError("The google-genai package is not installed: run pip install -r requirements.txt") from exc
-        self.model_id, self.httpx, self.errors, self.types = settings["id"], httpx, errors, types
-        self.pinned = not self.model_id.endswith("-latest")  # gemini-flash-latest and the like move to newer models
-        level = settings.get("thinking_level")
-        if level is not None and level not in {x.value for x in types.ThinkingLevel}:  # the SDK only warns about a typo
-            raise ValueError(f"thinking_level {level!r} is not one of {[x.value for x in types.ThinkingLevel]}")
-        self.config = types.GenerateContentConfig(
-            temperature=settings["temperature"], seed=settings["seed"],
-            max_output_tokens=settings["max_output_tokens"],  # thinking tokens count toward this limit
-            thinking_config=types.ThinkingConfig(thinking_level=level) if level is not None else None)
-        if os.environ.get("GOOGLE_API_KEY") and os.environ.get("GEMINI_API_KEY") \
-                and os.environ["GOOGLE_API_KEY"] != os.environ["GEMINI_API_KEY"]:
-            print("WARNING: GOOGLE_API_KEY and GEMINI_API_KEY are both set and differ; the Gemini SDK uses GOOGLE_API_KEY, "
-                  "not the key in .env. Remove GOOGLE_API_KEY from the environment.", file=sys.stderr)
-        self.client = genai.Client(http_options=types.HttpOptions(timeout=int(TIMEOUT_SECONDS * 1000)))  # milliseconds
-
-    def describe(self) -> dict:
-        return {"provider": "gemini", "model_id": self.model_id, "model_revision": self._revision(), "sdk": "google-genai",
-                "sdk_version": importlib.metadata.version("google-genai"),
-                "generation_config": self.config.model_dump(exclude_none=True, mode="json")}
-
-    def _revision(self) -> str | None:
-        """The exact revision Google serves under the model id (for example 3.5-flash-lite-07-2026): the answers name only the id,
-        so an update behind the same id would not show. None when it cannot be asked; the run then goes on."""
-        try:
-            return self.client.models.get(model=self.model_id).version
-        except (self.errors.APIError, self.httpx.TransportError):
-            return None
-
-    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
-        contents = [prompt] if image is None else [self.types.Part.from_bytes(data=image, mime_type=mime_type), prompt]
-        try:
-            response = self.client.models.generate_content(model=self.model_id, contents=contents, config=self.config)
-        except self.errors.APIError as exc:
-            if daily := _gemini_daily_quota(exc):
-                raise QuotaExhausted(daily) from exc
-            if exc.code in GEMINI_RETRYABLE:
-                raise TransientError(f"HTTP {exc.code} {exc.status}: {exc.message}") from exc
-            raise FatalError(_gemini_explain(exc), exc.code) from exc
-        except self.httpx.TransportError as exc:  # no connection, connection lost, or no answer within the timeout
-            raise TransientError(f"network problem ({type(exc).__name__}: {exc})") from exc
-        candidate = response.candidates[0] if response.candidates else None
-        parts = candidate.content.parts if candidate and candidate.content and candidate.content.parts else []
-        text = "".join(p.text for p in parts if p.text and not p.thought) or None
-        finish = candidate.finish_reason.value if candidate and candidate.finish_reason else None
-        feedback = response.prompt_feedback
-        if finish is None and feedback and feedback.block_reason:
-            finish = f"PROMPT_BLOCKED_{feedback.block_reason.value}"
-        usage = response.usage_metadata
-        return {"text": text, "finish_reason": finish, "model_version": response.model_version, "response_id": response.response_id,
-                "usage": {"prompt_tokens": usage.prompt_token_count if usage else None,
-                          "output_tokens": usage.candidates_token_count if usage else None,
-                          "thinking_tokens": usage.thoughts_token_count if usage else None,
-                          "total_tokens": usage.total_token_count if usage else None}}
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
