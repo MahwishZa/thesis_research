@@ -1357,6 +1357,18 @@ class RunTests(Project):
         self.assertIsNone(back["hallucination_reduction_ci95"])  # in some resamples A has none: no interval
         self.assertIn("+100.0% (no interval: run A has no hallucination in some resamples)", evaluate.comparison_text(back))
 
+    def test_the_comparison_says_a_difference_is_beyond_chance_only_when_p_is_below_0_05(self):
+        class Nevus(FakeModel):
+            def predict(self, *args):
+                return super().predict(*args) | {"text": "nevus"}
+
+        c = evaluate.compare(self._run(FakeModel(), "val", run_id="v1"), self._run(Nevus(), "val", run_id="v2"))
+        for p, beyond in ((0.0003, True), (0.0499, True), (0.05, False), (0.0534, False), (1.0, False)):
+            with self.subTest(p):
+                text = evaluate.comparison_text(c | {"mcnemar_p": p})
+                self.assertEqual("Below 0.05: the two runs differ by more than chance." in text, beyond)
+                self.assertEqual("Not below 0.05: the difference may be chance." in text, not beyond)
+
     def test_the_image_run_and_the_multimodal_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
         """The multimodal questions are the image dataset's photos with their facts: the two runs differ in dataset and in the
         questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair."""

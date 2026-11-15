@@ -1787,7 +1787,8 @@ def comparison_text(c: dict) -> str:
         "| | Run A right | Run A wrong |", "|---|---|---|",
         f"| **Run B right** | {c['both_right']} | {c['only_b']} |", f"| **Run B wrong** | {c['only_a']} | {c['both_wrong']} |", "",
         f"- McNemar's exact test: p = {c['mcnemar_p']:.4f} ({c['only_b'] + c['only_a']} questions only one run got right). "
-        "Below 0.05, the two runs differ by more than chance.",
+        + ("Below 0.05: the two runs differ by more than chance." if c["mcnemar_p"] < 0.05
+           else "Not below 0.05: the difference may be chance."),
         f"- Balanced accuracy, B minus A: {points(c['balanced_accuracy_difference'])} (95% interval "
         f"{points(c['balanced_accuracy_difference_ci95'][0])} to {points(c['balanced_accuracy_difference_ci95'][1])}, paired "
         f"bootstrap over {c['groups']})",
