@@ -11,6 +11,8 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 
 ## Results
 
+Closed-book test results of four LLMs on the three datasets. Hallucination rate is the class-balanced share of questions answered with a wrong diagnosis. Comparisons, interpretation and limits are in [docs/results.md](docs/results.md).
+
 ### Image
 
 | Model | Setting | Balanced accuracy (95% CI) | Hallucination rate | Missed malignancy |
@@ -58,6 +60,8 @@ data/
     multimodal/
         datasheet.md
 results/
+docs/
+    results.md
 requirements.txt
 ```
 

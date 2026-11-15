@@ -2315,6 +2315,21 @@ class RepositoryTests(unittest.TestCase):
                     self.assertEqual(subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=ROOT).returncode, 0,
                                      "the commit named in this run card is not in the history")
 
+    def test_the_results_document_links_every_run_with_its_scores_and_all_its_links_work(self):
+        text = (ROOT / "docs" / "results.md").read_text(encoding="utf-8")
+        for target in re.findall(r"\]\((?!https?:)([^)#]+)", text):
+            self.assertTrue((ROOT / "docs" / target).exists(), f"docs/results.md links to {target}, which does not exist")
+        runs = [p for p in (ROOT / "results").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
+        self.assertTrue(runs)
+        for run in runs:
+            link = f"../{run.relative_to(ROOT).as_posix()}/report.md"
+            rows = [line for line in text.splitlines() if f"]({link})" in line]
+            self.assertEqual(len(rows), 1, f"docs/results.md must hold exactly one table row for {run}")
+            main = json.loads((run / "metrics.json").read_text(encoding="utf-8"))["main"]
+            hallucination = main["hallucination"]["balanced_rate"]
+            for value in (main["balanced_accuracy"], main["accuracy"], hallucination, main["risk"]["missed_malignancy"], main["risk"]["overcall"]):
+                self.assertIn(f"{100 * value:.1f}%", rows[0], f"{run} differs from its row in docs/results.md")
+
     def test_the_readme_uses_unix_line_endings(self):
         self.assertNotIn(b"\r", (ROOT / "README.md").read_bytes(), "Windows line endings (.gitattributes should prevent this)")
 
