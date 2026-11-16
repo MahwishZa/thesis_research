@@ -17,7 +17,7 @@ Closed-book results (no retrieval) of four LLMs on the test split of the three d
 
 Test split: 320 photos.
 
-| Model | Accuracy | Precision | Recall (95% CI) | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
+| Model | Accuracy | Precision | Recall | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
 |---|---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](results/image/claude-sonnet-5-5/test_cf5351f1/report.md) | 51.2 | 50.8 | 51.2 (45.7 to 56.7) | 49.5 | 93.0 | 48.8 | 50.8 | 25.0 |
 | [GPT-4o](results/image/gpt-4o/test_14e3059f/report.md) | 34.1 | 36.4 | 34.1 (29.6 to 38.7) | 30.1 | 90.6 | 65.9 | 77.5 | 22.5 |
@@ -28,7 +28,7 @@ Test split: 320 photos.
 
 Test split: 221 written cases.
 
-| Model | Accuracy | Precision | Recall (95% CI) | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
+| Model | Accuracy | Precision | Recall | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
 |---|---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](results/text/claude-sonnet-5-5/test_06ce1664/report.md) | 64.3 | 63.9 | 55.9 (49.6 to 61.8) | 57.9 | 95.3 | 34.1 | 90.8 | 5.8 |
 | [GPT-4o](results/text/gpt-4o/test_5fc7ce07/report.md) | 56.6 | 54.3 | 50.8 (45.1 to 56.6) | 49.4 | 93.6 | 49.2 | 83.3 | 14.2 |
@@ -39,7 +39,7 @@ Test split: 221 written cases.
 
 Test split: the image dataset's 320 photos, each with the patient's age, sex and body site.
 
-| Model | Accuracy | Precision | Recall (95% CI) | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
+| Model | Accuracy | Precision | Recall | F1 | Specificity | Hallucination rate | Malignancy sensitivity | Missed malignancy |
 |---|---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](results/multimodal/claude-sonnet-5-5/test_5db7a077/report.md) | 56.2 | 58.3 | 56.2 (50.6 to 61.7) | 55.7 | 93.8 | 43.8 | 62.5 | 20.8 |
 | [GPT-4o](results/multimodal/gpt-4o/test_12259e56/report.md) | 41.6 | 49.7 | 41.6 (36.4 to 46.7) | 40.6 | 91.7 | 58.4 | 79.2 | 19.2 |
