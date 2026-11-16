@@ -249,6 +249,46 @@ class MetricTests(unittest.TestCase):
 # The model adapters
 # ==============================================================================================================================
 
+    def test_specificity_and_malignancy_sensitivity_by_hand(self):
+        """Five files: melanoma answered melanoma and actinic keratosis; nevus answered melanoma and unreadably; actinic keratosis
+        answered nevus."""
+        labels = ["actinic keratosis", "melanoma", "nevus"]
+        truth = ["melanoma", "melanoma", "nevus", "nevus", "actinic keratosis"]
+        answers = ["melanoma", "actinic keratosis", "melanoma", None, "nevus"]
+        m = evaluate.summarize(truth, answers, labels)
+        per = m["per_class"]
+        # of the 3 files that are not melanoma, one was answered melanoma; likewise nevus; of the 4 not actinic keratosis, one
+        self.assertEqual([(per[c]["tn"], per[c]["specificity"]) for c in labels], [(3, 3 / 4), (2, 2 / 3), (2, 2 / 3)])
+        self.assertAlmostEqual(m["macro"]["specificity"], (3 / 4 + 2 / 3 + 2 / 3) / 3)
+        risk = m["risk"]
+        # 2 cancers: one answered as a cancer, the other as actinic keratosis, which is neither detected nor missed
+        self.assertEqual((risk["detected"], risk["malignancy_sensitivity"], risk["missed"], risk["missed_malignancy"]), (1, 0.5, 0, 0.0))
+        # 2 benign lesions: one called a cancer, the other unreadable, which is neither cleared nor over-called
+        self.assertEqual((risk["cleared"], risk["benign_specificity"], risk["overcalled"], risk["overcall"]), (0, 0.0, 1, 0.5))
+        for interval in (risk["malignancy_sensitivity_ci95"], risk["benign_specificity_ci95"], m["macro"]["precision_ci95"],
+                         m["macro"]["specificity_ci95"], per["melanoma"]["specificity_ci95"]):
+            self.assertTrue(0.0 <= interval[0] <= interval[1] <= 1.0)
+        self.assertEqual(risk["malignancy_sensitivity_ci95"], evaluate.wilson(1, 2))  # every file its own group: Wilson
+        self.assertEqual(per["melanoma"]["specificity_ci95"], evaluate.wilson(2, 3))
+        self.assertTrue(risk["malignancy_sensitivity_ci95"][0] <= 0.5 <= risk["malignancy_sensitivity_ci95"][1])
+        grouped = evaluate.summarize(truth, answers, labels, groups=["g1", "g1", "g2", "g3", "g4"])  # two files of one lesion: bootstrap
+        low, high = grouped["risk"]["malignancy_sensitivity_ci95"]
+        self.assertEqual((low, high), (0.5, 0.5))  # the one melanoma lesion is drawn whole in every resample
+        self.assertEqual(grouped["per_class"]["melanoma"]["specificity"], 2 / 3)
+
+    def test_a_perfect_run_has_full_specificity_and_sensitivity_and_a_class_with_no_negatives_has_none(self):
+        labels = ["melanoma", "nevus"]
+        m = evaluate.summarize(["melanoma", "nevus", "nevus"], ["melanoma", "nevus", "nevus"], labels)
+        self.assertEqual((m["macro"]["specificity"], m["risk"]["malignancy_sensitivity"], m["risk"]["benign_specificity"]), (1.0, 1.0, 1.0))
+        self.assertEqual((m["risk"]["malignancy_sensitivity_ci95"], m["risk"]["benign_specificity_ci95"]),
+                         (evaluate.wilson(1, 1), evaluate.wilson(2, 2)))  # 1 cancer and 2 benign lesions: each share over its own group
+        only = evaluate.summarize(["melanoma", "melanoma"], ["melanoma", "nevus"], labels)  # no file that is not melanoma
+        self.assertIsNone(only["per_class"]["melanoma"]["specificity"])
+        self.assertIsNone(only["per_class"]["melanoma"]["specificity_ci95"])
+        self.assertIsNone(only["macro"]["specificity"])
+        self.assertEqual(only["per_class"]["nevus"]["specificity"], 0.5)  # of the 2 files that are not nevus, one was answered nevus
+
+
 
 def _have(module: str) -> bool:
     try:

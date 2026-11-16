@@ -112,8 +112,14 @@ from PIL import Image
 # precancerous and is in neither group as a true class. Both shares are of ALL the files of the group: a cancer answered as
 # actinic keratosis, or not readable, is no miss but stays in the total (so a model cannot lower its rate by not answering).
 #
+# Specificity of a class: of the files that are not that class, the share not answered as it (an unreadable answer is not an
+# answer of the class). With eight classes most files are negatives of any one class, so specificity is high by construction and is
+# read beside recall, never alone. Malignancy sensitivity: of the cancers, the share answered as any cancer (the right cancer or
+# another one); it is not 1 minus the missed malignancy, because a cancer answered as actinic keratosis or not readably is neither
+# detected nor missed. Benign specificity: of the benign lesions, the share answered as any benign class.
+#
 # ROC curves and AUC are deliberately absent: they need a score per class for every image, and a model that answers with one class
-# name gives none.
+# name gives none. Malignancy sensitivity with benign specificity is the one point of such a curve these answers give.
 # ==============================================================================================================================
 
 
@@ -164,9 +170,10 @@ def _scores(matrix: list[list[int]]) -> dict:
     precision = [_ratio(tp[i], answered[i]) for i in range(k)]
     recall = [_ratio(tp[i], support[i]) for i in range(k)]
     f1 = [_ratio(2 * tp[i], 2 * tp[i] + (answered[i] - tp[i]) + (support[i] - tp[i])) for i in range(k)]
+    specificity = [_ratio((n - support[i]) - (answered[i] - tp[i]), n - support[i]) for i in range(k)]  # true negatives / negatives
     present = [i for i in range(k) if support[i]]  # only these enter an average
     out = {"n": n, "support": support, "answered": answered, "tp": tp, "precision": precision, "recall": recall, "f1": f1,
-           "present": present}
+           "specificity": specificity, "present": present}
 
     def mean(values, weights=None):
         if not present:
@@ -175,7 +182,8 @@ def _scores(matrix: list[list[int]]) -> dict:
         weights = [1] * len(present) if weights is None else [weights[i] for i in present]
         return sum(v * w for v, w in zip(values, weights)) / sum(weights)
 
-    out["macro"] = {"precision": mean(precision), "recall": mean(recall), "f1": mean(f1)}
+    out["macro"] = {"precision": mean(precision), "recall": mean(recall), "f1": mean(f1),
+                    "specificity": None if None in [specificity[i] for i in present] else mean(specificity)}
     out["weighted"] = {"precision": mean(precision, support), "recall": mean(recall, support), "f1": mean(f1, support)}
     correct = sum(tp)
     if n:
@@ -203,13 +211,17 @@ def _hallucination(matrix: list[list[int]]) -> dict:
 
 
 def _risk(y_true, y_pred) -> dict:
-    """Missed malignancy (cancers answered as a benign class) and over-calls (benign lesions answered as a cancer), as counts and
-    shares; a share is None when no answer has a true class in its group."""
+    """Missed malignancy (cancers answered as a benign class), over-calls (benign lesions answered as a cancer), malignancy
+    sensitivity (cancers answered as any cancer) and benign specificity (benign lesions answered as any benign class), as counts
+    and shares; a share is None when no answer has a true class in its group."""
     cancers = [answer for true, answer in zip(y_true, y_pred) if true in MALIGNANT]
     benign = [answer for true, answer in zip(y_true, y_pred) if true in BENIGN]
     missed, overcalled = sum(a in BENIGN for a in cancers), sum(a in MALIGNANT for a in benign)
+    detected, cleared = sum(a in MALIGNANT for a in cancers), sum(a in BENIGN for a in benign)
     return {"missed_malignancy": _ratio(missed, len(cancers)), "missed": missed, "cancers": len(cancers),
-            "overcall": _ratio(overcalled, len(benign)), "overcalled": overcalled, "benign": len(benign)}
+            "overcall": _ratio(overcalled, len(benign)), "overcalled": overcalled, "benign": len(benign),
+            "malignancy_sensitivity": _ratio(detected, len(cancers)), "detected": detected,
+            "benign_specificity": _ratio(cleared, len(benign)), "cleared": cleared}
 
 
 def _percentile(sorted_values: list[float], q: float) -> float:
@@ -259,11 +271,12 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
     """
     by_class = _units(y_true, labels, groups)
     names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced",
-             "abstention", "selective_accuracy"]
+             "abstention", "selective_accuracy", "macro_precision", "macro_specificity", "malignancy_sensitivity", "benign_specificity"]
     if not by_class:
-        return {name: None for name in names} | {"recall": {}}
+        return {name: None for name in names} | {"recall": {}, "specificity": {}}
     values = {name: [] for name in names}
     recall = {label: [] for label in by_class}
+    specificity = {label: [] for label in labels}
     for sample in _resamples(by_class, resamples, seed):
         true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
         matrix = confusion_matrix(true, [None if a == ABSTAIN else a for a in pred], labels)  # an abstention is not a class
@@ -275,11 +288,15 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
         values["balanced_accuracy"].append(scores["macro"]["recall"])
         values["macro_f1"].append(scores["macro"]["f1"])
+        values["macro_precision"].append(scores["macro"]["precision"])
+        values["macro_specificity"].append(scores["macro"]["specificity"])
         risk = _risk(true, pred)
-        values["missed_malignancy"].append(risk["missed_malignancy"])
-        values["overcall"].append(risk["overcall"])
+        for name in ("missed_malignancy", "overcall", "malignancy_sensitivity", "benign_specificity"):
+            values[name].append(risk[name])
         for label in by_class:
             recall[label].append(scores["recall"][labels.index(label)])
+        for i, label in enumerate(labels):
+            specificity[label].append(scores["specificity"][i])
 
     def interval(series):  # every resample holds every class, so a score is defined in all resamples or in none
         if None in series:
@@ -287,7 +304,8 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
         series = sorted(series)
         return (_percentile(series, 0.025), _percentile(series, 0.975))
 
-    return {name: interval(series) for name, series in values.items()} | {"recall": {k: interval(v) for k, v in recall.items()}}
+    return {name: interval(series) for name, series in values.items()} | {
+        "recall": {k: interval(v) for k, v in recall.items()}, "specificity": {k: interval(v) for k, v in specificity.items()}}
 
 
 def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], groups: list[str] | None = None,
@@ -321,7 +339,8 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
                   "selective_accuracy_ci95": None if not committed else wilson(correct, committed) if independent
                   else interval["selective_accuracy"]}
     risk = _risk(y_true, y_pred)
-    for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign")):
+    for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign"),
+                             ("malignancy_sensitivity", "detected", "cancers"), ("benign_specificity", "cleared", "benign")):
         risk[f"{share}_ci95"] = None if not risk[of] else wilson(risk[count], risk[of]) if independent else interval[share]
     per_class = {}
     for i, label in enumerate(labels):
@@ -329,13 +348,18 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
                             "fp": s["answered"][i] - s["tp"][i], "fn": s["support"][i] - s["tp"][i],
                             "precision": s["precision"][i], "recall": s["recall"][i], "f1": s["f1"][i],
                             "recall_ci95": None if not s["support"][i] else
-                            wilson(s["tp"][i], s["support"][i]) if independent else interval["recall"][label]}
+                            wilson(s["tp"][i], s["support"][i]) if independent else interval["recall"][label],
+                            "tn": (n - s["support"][i]) - (s["answered"][i] - s["tp"][i]), "specificity": s["specificity"][i],
+                            "specificity_ci95": None if s["specificity"][i] is None else
+                            wilson((n - s["support"][i]) - (s["answered"][i] - s["tp"][i]), n - s["support"][i]) if independent
+                            else interval["specificity"][label]}
     return {"n": n, "correct": correct, "unreadable": s["answered"][-1] - abstained, "groups": len(set(groups)), "group_name": group_name,
             "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else f"bootstrap over {group_name}s",
             "balanced_accuracy": s["macro"]["recall"], "balanced_accuracy_ci95": interval["balanced_accuracy"],
             "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n) if independent else interval["accuracy"],
             "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]],
-            "macro": {**s["macro"], "f1_ci95": interval["macro_f1"]},
+            "macro": {**s["macro"], "f1_ci95": interval["macro_f1"], "precision_ci95": interval["macro_precision"],
+                      "specificity_ci95": interval["macro_specificity"]},
             "weighted": s["weighted"],
             "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk, "hallucination": hallucination,
             "abstention": abstention,
@@ -1351,15 +1375,18 @@ def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[
              *_risk_rows(m, over if grouped else None),
              f"| Macro-F1 (classes with {items}: {len(counted)}) | {_share(m['macro']['f1'])} | {_ci(m['macro']['f1_ci95'])} "
              f"(bootstrap{over}) |",
-             f"| Macro-precision | {_share(m['macro']['precision'])} | |",
+             f"| Macro-precision | {_share(m['macro']['precision'])} | {_ci(m['macro']['precision_ci95'])} (bootstrap{over}) |",
+             f"| Macro-specificity | {_share(m['macro']['specificity'])} | {_ci(m['macro']['specificity_ci95'])} (bootstrap{over}) |",
              f"| Weighted F1 (by number of true {items}) | {_share(m['weighted']['f1'])} | |",
              f"| Matthews correlation (MCC, -1 to 1) | {_coefficient(m['mcc'])} | |",
              f"| Cohen's kappa (-1 to 1) | {_coefficient(m['kappa'])} | |", "",
-             "### Per class", "", f"| Class | True {items} | Answered as this class | Precision | Recall (95% interval: {simple}) | F1 |",
-             "|---|---|---|---|---|---|"]
+             "### Per class", "",
+             f"| Class | True {items} | Answered as this class | Precision | Recall (95% interval: {simple}) | F1 | Specificity (95% interval: {simple}) |",
+             "|---|---|---|---|---|---|---|"]
     for label, c in m["per_class"].items():
         recall = _share(c["recall"]) + (f" ({_ci(c['recall_ci95'])})" if c["recall_ci95"] else "")
-        lines.append(f"| {label} | {c['support']} | {c['answered']} | {_share(c['precision'])} | {recall} | {_share(c['f1'])} |")
+        specificity = _share(c["specificity"]) + (f" ({_ci(c['specificity_ci95'])})" if c["specificity_ci95"] else "")
+        lines.append(f"| {label} | {c['support']} | {c['answered']} | {_share(c['precision'])} | {recall} | {_share(c['f1'])} | {specificity} |")
     matrix = m["confusion_matrix"]
     numbers = range(1, len(matrix["rows"]) + 1)
     lines += ["", "### Confusion matrix", "",
@@ -1397,7 +1424,13 @@ def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[
               "keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign "
               "lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the "
               "total; actinic keratosis as a true class is in neither group.",
-              "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.", ""]
+              "- Malignancy sensitivity: cancers answered as any cancer (the right one or another), as a share of all cancers. It is "
+              "not 100% minus the missed malignancy: a cancer answered as actinic keratosis, or not readably, is neither detected nor "
+              "missed. Benign specificity: benign lesions answered as any benign class, as a share of all benign lesions.",
+              f"- Specificity of a class: of the {items} that are not that class, the share not answered as it. With {len(m['per_class'])} "
+              "classes most are negatives of any one class, so specificity is high by construction and is read beside recall.",
+              "- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank. "
+              "Malignancy sensitivity with benign specificity is the one point of such a curve these answers give.", ""]
     return lines
 
 
@@ -1423,10 +1456,12 @@ def _abstention_rows(m: dict, over: str | None) -> list[str]:
 
 
 def _risk_rows(m: dict, over: str | None) -> list[str]:
-    """The two clinical-risk rows of a summary table (none when the run has neither cancers nor benign lesions)."""
+    """The clinical-risk rows of a summary table (none when the run has neither cancers nor benign lesions)."""
     r, method = m["risk"], f"bootstrap{over}" if over is not None else "Wilson"
     rows = []
-    for title, share, count, of in (("Missed malignancy: cancers answered as benign", "missed_malignancy", "missed", "cancers"),
+    for title, share, count, of in (("Malignancy sensitivity: cancers answered as a cancer", "malignancy_sensitivity", "detected", "cancers"),
+                                    ("Missed malignancy: cancers answered as benign", "missed_malignancy", "missed", "cancers"),
+                                    ("Benign specificity: benign lesions answered as benign", "benign_specificity", "cleared", "benign"),
                                     ("Over-calls: benign lesions answered as cancer", "overcall", "overcalled", "benign")):
         if r[of]:
             rows.append(f"| {title} | {_pct(r[share])} ({r[count]}/{r[of]}) | {_ci(r[f'{share}_ci95'])} ({method}) |")
