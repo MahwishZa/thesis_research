@@ -13,7 +13,7 @@ The image and multimodal datasets use the same photos, so they are compared ques
 | Metric | Meaning |
 |---|---|
 | Accuracy | The share of questions answered with the right diagnosis. |
-| Balanced accuracy | The mean recall over the eight diagnoses, each counting the same. It is the macro-averaged recall and the main score. Chance is 12.5%. |
+| Macro Recall | The mean recall over the eight diagnoses, each counting the same. It is the macro-averaged recall and the main score. Chance is 12.5%. |
 | Precision, recall, F1 | Per diagnosis: of the answers naming it, the share that are right (precision); of its questions, the share answered with it (recall); their harmonic mean (F1). "Macro" is the plain mean over the eight diagnoses. A diagnosis a model never names has no precision; it counts as 0 in the macro precision. |
 | Specificity | Per diagnosis: of the questions that are not that diagnosis, the share not answered with it. With eight diagnoses, most questions are negatives of any one diagnosis, so specificity is high by construction. Read it beside recall, never alone. |
 | Hallucination rate | The share of questions answered with a wrong diagnosis, averaged over the diagnoses. An answer that is not one diagnosis name ("no valid answer") counts as wrong but is not a hallucination. |
@@ -40,7 +40,7 @@ Percentages. Balanced accuracy is the macro-averaged recall (the main score), wi
 
 **Image**
 
-| Model | Accuracy | Balanced accuracy (95% CI) | Macro precision | Macro F1 | Macro specificity | Hallucination rate | No valid answer |
+| Model | Accuracy | Macro Recall (95% CI) | Macro Precision | Macro F1 | Macro Specificity | Hallucination Rate | No Valid Answer |
 |---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](../results/image/claude-sonnet-5-5/test_cf5351f1/report.md) | 51.2 | 51.2 (45.7 to 56.7) | 50.8 | 49.5 | 93.0 | 48.8 | 0 of 320 |
 | [GPT-4o](../results/image/gpt-4o/test_14e3059f/report.md) | 34.1 | 34.1 (29.6 to 38.7) | 36.4 | 30.1 | 90.6 | 65.9 | 0 of 320 |
@@ -49,7 +49,7 @@ Percentages. Balanced accuracy is the macro-averaged recall (the main score), wi
 
 **Text**
 
-| Model | Accuracy | Balanced accuracy (95% CI) | Macro precision | Macro F1 | Macro specificity | Hallucination rate | No valid answer |
+| Model | Accuracy | Macro Recall (95% CI) | Macro Precision | Macro F1 | Macro Specificity | Hallucination Rate | No Valid Answer |
 |---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](../results/text/claude-sonnet-5-5/test_06ce1664/report.md) | 64.3 | 55.9 (49.6 to 61.8) | 63.9 | 57.9 | 95.3 | 34.1 | 10 of 221 |
 | [GPT-4o](../results/text/gpt-4o/test_5fc7ce07/report.md) | 56.6 | 50.8 (45.1 to 56.6) | 54.3 | 49.4 | 93.6 | 49.2 | 0 of 221 |
@@ -58,7 +58,7 @@ Percentages. Balanced accuracy is the macro-averaged recall (the main score), wi
 
 **Multimodal**
 
-| Model | Accuracy | Balanced accuracy (95% CI) | Macro precision | Macro F1 | Macro specificity | Hallucination rate | No valid answer |
+| Model | Accuracy | Macro Recall (95% CI) | Macro Precision | Macro F1 | Macro Specificity | Hallucination Rate | No Valid Answer |
 |---|---|---|---|---|---|---|---|
 | [Claude Sonnet 5.5](../results/multimodal/claude-sonnet-5-5/test_5db7a077/report.md) | 56.2 | 56.2 (50.6 to 61.7) | 58.3 | 55.7 | 93.8 | 43.8 | 0 of 320 |
 | [GPT-4o](../results/multimodal/gpt-4o/test_12259e56/report.md) | 41.6 | 41.6 (36.4 to 46.7) | 49.7 | 40.6 | 91.7 | 58.4 | 0 of 320 |
@@ -71,7 +71,7 @@ Percentages with 95% intervals. Sensitivity and missed malignancy are shares of 
 
 **Image**
 
-| Model | Malignancy sensitivity | Missed malignancy | Benign specificity | Over-call |
+| Model | Malignancy Sensitivity | Missed Malignancy | Benign Specificity | Over-call |
 |---|---|---|---|---|
 | Claude Sonnet 5.5 | 50.8 (41.4 to 60.2) | 25.0 (17.4 to 33.1) | 74.4 (66.7 to 82.2) | 21.9 (14.5 to 29.4) |
 | GPT-4o | 77.5 (69.4 to 86.0) | 22.5 (14.0 to 30.6) | 55.6 (47.6 to 64.0) | 44.4 (36.0 to 52.4) |
@@ -80,7 +80,7 @@ Percentages with 95% intervals. Sensitivity and missed malignancy are shares of 
 
 **Text**
 
-| Model | Malignancy sensitivity | Missed malignancy | Benign specificity | Over-call |
+| Model | Malignancy Sensitivity | Missed Malignancy | Benign Specificity | Over-call |
 |---|---|---|---|---|
 | Claude Sonnet 5.5 | 90.8 (85.8 to 95.8) | 5.8 (1.7 to 10.0) | 66.7 (57.6 to 75.8) | 27.3 (18.8 to 36.4) |
 | GPT-4o | 83.3 (76.7 to 90.0) | 14.2 (8.3 to 20.8) | 74.7 (66.0 to 83.2) | 25.3 (16.8 to 34.0) |
@@ -89,7 +89,7 @@ Percentages with 95% intervals. Sensitivity and missed malignancy are shares of 
 
 **Multimodal**
 
-| Model | Malignancy sensitivity | Missed malignancy | Benign specificity | Over-call |
+| Model | Malignancy Sensitivity | Missed Malignancy | Benign Specificity | Over-call |
 |---|---|---|---|---|
 | Claude Sonnet 5.5 | 62.5 (52.6 to 71.8) | 20.8 (13.6 to 28.3) | 74.4 (66.7 to 82.1) | 23.1 (15.7 to 30.6) |
 | GPT-4o | 79.2 (71.1 to 86.4) | 19.2 (12.4 to 26.8) | 55.6 (47.4 to 64.3) | 43.1 (34.3 to 51.6) |
@@ -223,7 +223,7 @@ McNemar's test counts right against wrong answers, so on the text dataset, whose
 
 ## 6. How each model was run
 
-| Model | Model id and route | Answer limit | Other settings |
+| Model | Model ID and Route | Answer Limit | Other Settings |
 |---|---|---|---|
 | Claude Sonnet 5.5 | `claude-sonnet-5-5`, Anthropic API | 256 | no temperature (the model rejects it); thinking between tools; effort low |
 | GPT-4o | `openai/gpt-4o-2024-08-06`, OpenRouter, pinned to OpenAI | 64 | temperature 0, seed 0, image detail high |
