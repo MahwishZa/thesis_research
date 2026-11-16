@@ -5,6 +5,7 @@
     python -m src.evaluate run --config configs/<dataset>/<model>.toml --split test
     python -m src.evaluate report results/<dataset>/<model>/<run-folder>
     python -m src.evaluate compare results/<dataset>/<model>/<run-folder> results/<dataset>/<model>/<run-folder>
+    python -m src.evaluate summary
 
 ``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked
 once, with a blank synthetic image (for the text dataset, with a short question and no image), so an unavailable model, a wrong
@@ -21,6 +22,9 @@ run.
 McNemar's exact test on the questions one run gets right and the other wrong, the difference in balanced accuracy and in
 accuracy, and the change in the hallucination rate (the difference, and the reduction relative to the first run), with paired
 95% intervals (both runs resampled together, by the same groups as the reports). No model is asked.
+``summary`` rewrites the comparison tables of docs/results.md from every finished test run: the scores of every model on every
+dataset, the clinical risk, the recall per class, and every paired comparison with McNemar's exact test and its Holm correction.
+The text of the document around the tables is written by hand and is left as it is. No model is asked.
 
 Each config names its dataset (``dataset = "image"``, ``"text"`` or ``"multimodal"``); the code here is shared by every dataset, so all are scored
 alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
@@ -1735,6 +1739,146 @@ def comparison_text(c: dict) -> str:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# All finished test runs side by side (python -m src.evaluate summary): the comparison tables of docs/results.md
+
+
+SUMMARY = Path("docs") / "results.md"
+SUMMARY_START, SUMMARY_END = "<!-- tables: start -->", "<!-- tables: end -->"  # between these, the document is written by "summary"
+MODEL_NAMES = {"claude-sonnet-5-5": "Claude Sonnet 5.5", "gpt-4o": "GPT-4o", "gemini-3.8-flash": "Gemini 3.8 Flash",
+               "llama-4-maverick": "Llama 4 Maverick"}  # the order of the tables; a model not named here follows, under its folder name
+
+
+def holm(p_values: list[float]) -> list[float]:
+    """Holm's step-down correction for several tests: the smallest p-value is multiplied by the number of tests, the next by one
+    less, and so on; no adjusted value may be smaller than the one before it or larger than 1. Returned in the order given."""
+    order = sorted(range(len(p_values)), key=lambda i: p_values[i])
+    adjusted, highest = [0.0] * len(p_values), 0.0
+    for rank, i in enumerate(order):
+        highest = max(highest, min(1.0, (len(p_values) - rank) * p_values[i]))
+        adjusted[i] = highest
+    return adjusted
+
+
+def _p(value: float) -> str:
+    return "<0.001" if value < 0.001 else f"{value:.3f}"
+
+
+def _one(x: float | None) -> str:
+    return "–" if x is None else f"{100 * x:.1f}"
+
+
+def _range(pair) -> str:
+    return "" if pair is None else f" ({100 * pair[0]:.1f} to {100 * pair[1]:.1f})"
+
+
+def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[str]:
+    """The comparison tables of every finished forced-choice test run under ``results``, as Markdown lines: the scores per dataset,
+    the clinical risk, the recall per class, the photos without and with their facts, and model against model, with McNemar's
+    exact test and its Holm correction over all the tests of the page. Only saved answers are read."""
+    runs = {}  # (dataset, model) -> (folder, main metrics)
+    for card_path in sorted(Path(results).glob("*/*/test_*/run_card.json")):
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        folder = card_path.parent
+        if card["status"] != "complete" or card.get("abstain") or folder.name.endswith(".partial"):
+            continue  # a run that may abstain is another condition and needs its own tables
+        dataset, model = folder.parent.parent.name, folder.parent.name
+        if (dataset, model) in runs:
+            raise ValueError(f"two finished test runs of {model} on the {dataset} dataset: {runs[dataset, model][0].name} and {folder.name}")
+        runs[dataset, model] = (folder, json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["main"])
+    if not runs:
+        raise ValueError(f"no finished test run under {Path(results).as_posix()}")
+    datasets = [d for d in DATASETS if any(key[0] == d for key in runs)]
+    found = {key[1] for key in runs}
+    models = [m for m in MODEL_NAMES if m in found] + sorted(found - set(MODEL_NAMES))
+    name = lambda model: MODEL_NAMES.get(model, model)  # noqa: E731
+    in_dataset = lambda dataset: [m for m in models if (dataset, m) in runs]  # noqa: E731
+
+    tests = []  # every significance test of the page, so that the Holm correction covers them all
+    for model in models:
+        if ("image", model) in runs and ("multimodal", model) in runs:
+            tests.append(("facts", model, None, compare(runs["image", model][0], runs["multimodal", model][0])))
+    for dataset in datasets:
+        present = in_dataset(dataset)
+        for i, first in enumerate(present):
+            for second in present[i + 1:]:
+                tests.append((dataset, first, second, compare(runs[dataset, first][0], runs[dataset, second][0])))
+    corrected = holm([c["mcnemar_p"] for *_, c in tests])
+
+    lines = ["### Scores", "",
+             "Percentages. Balanced accuracy is the macro-averaged recall (the main score), with its 95% interval. Each model name links to "
+             "the run's report: every score with its interval, the per-class table and the confusion matrix.", ""]
+    for dataset in datasets:
+        lines += [f"**{dataset.capitalize()}**", "",
+                  "| Model | Accuracy | Balanced accuracy (95% CI) | Macro precision | Macro F1 | Macro specificity | Hallucination rate | No valid answer |",
+                  "|---|---|---|---|---|---|---|---|"]
+        for model in in_dataset(dataset):
+            folder, m = runs[dataset, model]
+            lines.append(f"| [{name(model)}]({link_prefix}{(Path(results).name / folder.relative_to(results)).as_posix()}/report.md) | {_one(m['accuracy'])} | "
+                         f"{_one(m['balanced_accuracy'])}{_range(m['balanced_accuracy_ci95'])} | {_one(m['macro']['precision'])} | "
+                         f"{_one(m['macro']['f1'])} | {_one(m['macro']['specificity'])} | {_one(m['hallucination']['balanced_rate'])} | "
+                         f"{m['hallucination']['no_valid_answer']} of {m['n']} |")
+        lines.append("")
+    lines += ["### Clinical risk", "",
+              "Percentages with 95% intervals. Sensitivity and missed malignancy are shares of the cancers; benign specificity and "
+              "over-call are shares of the benign lesions.", ""]
+    for dataset in datasets:
+        lines += [f"**{dataset.capitalize()}**", "",
+                  "| Model | Malignancy sensitivity | Missed malignancy | Benign specificity | Over-call |", "|---|---|---|---|---|"]
+        for model in in_dataset(dataset):
+            r = runs[dataset, model][1]["risk"]
+            lines.append(f"| {name(model)} | " + " | ".join(f"{_one(r[k])}{_range(r[f'{k}_ci95'])}" for k in (
+                "malignancy_sensitivity", "missed_malignancy", "benign_specificity", "overcall")) + " |")
+        lines.append("")
+    lines += ["### Recall per class", "",
+              "Percentages: of the questions of a class, the share answered with it. Precision, F1 and specificity per class are in each report.", ""]
+    for dataset in datasets:
+        present = in_dataset(dataset)
+        per = {model: runs[dataset, model][1]["per_class"] for model in present}
+        lines += [f"**{dataset.capitalize()}**", "", "| Class | Test questions | " + " | ".join(name(m) for m in present) + " |",
+                  "|---|---|" + "---|" * len(present)]
+        for label, c in per[present[0]].items():
+            lines.append(f"| {label} | {c['support']} | " + " | ".join(_one(per[m][label]["recall"]) for m in present) + " |")
+        lines.append("")
+
+    def difference(c):
+        low, high = c["balanced_accuracy_difference_ci95"]
+        return f"{100 * c['balanced_accuracy_difference']:+.1f} ({100 * low:+.1f} to {100 * high:+.1f})"
+
+    facts = [(model, c, q) for (kind, model, _, c), q in zip(tests, corrected) if kind == "facts"]
+    if facts:
+        lines += ["### The same photos without and with the patient's facts", "",
+                  "Balanced accuracy in percent; the difference is multimodal minus image in percentage points, with a paired 95% interval. "
+                  "p: McNemar's exact test; Holm p: the same, corrected for all the tests of this page.", "",
+                  "| Model | Image | Multimodal | Difference (95% CI) | p | Holm p | Wrong answers corrected / introduced |", "|---|---|---|---|---|---|---|"]
+        for model, c, q in facts:
+            lines.append(f"| {name(model)} | {_one(runs['image', model][1]['balanced_accuracy'])} | {_one(runs['multimodal', model][1]['balanced_accuracy'])} | "
+                         f"{difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} | {c['hallucinations_removed']} / {c['hallucinations_introduced']} |")
+        lines.append("")
+    lines += ["### Model against model", "",
+              "The difference in balanced accuracy, second model minus first, in percentage points with a paired 95% interval, on the same "
+              "questions. p: McNemar's exact test on right against wrong answers; Holm p: corrected for all the tests of this page "
+              f"({len(tests)}). A difference counts as significant when its Holm p is below 0.05.", ""]
+    for dataset in datasets:
+        lines += [f"**{dataset.capitalize()}**", "", "| Second minus first | Difference (95% CI) | p | Holm p |", "|---|---|---|---|"]
+        for (kind, first, second, c), q in zip(tests, corrected):
+            if kind == dataset:
+                lines.append(f"| {name(second)} − {name(first)} | {difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} |")
+        lines.append("")
+    return lines[:-1]
+
+
+def write_summary(path: Path = SUMMARY, results: Path = RESULTS) -> Path:
+    """Rewrites the tables of the results document between its two markers and leaves the written text around them as it is."""
+    text = Path(path).read_text(encoding="utf-8")
+    if text.count(SUMMARY_START) != 1 or text.count(SUMMARY_END) != 1 or text.index(SUMMARY_START) > text.index(SUMMARY_END):
+        raise ValueError(f"{Path(path).as_posix()} must hold the lines {SUMMARY_START} and {SUMMARY_END}, once each and in this order")
+    before, after = text[:text.index(SUMMARY_START)], text[text.index(SUMMARY_END) + len(SUMMARY_END):]
+    tables = "\n".join(summary_tables(results, "../" * len(Path(path).parent.parts)))
+    Path(path).write_text(f"{before}{SUMMARY_START}\n\n{tables}\n\n{SUMMARY_END}{after}", encoding="utf-8", newline="\n")
+    return Path(path)
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # The command line
 
 
@@ -1754,6 +1898,7 @@ def build_parser() -> argparse.ArgumentParser:
     cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (McNemar's test, paired intervals)")
     cmp.add_argument("run_a")
     cmp.add_argument("run_b")
+    sub.add_parser("summary", help="rewrite the comparison tables of docs/results.md from every finished test run")
     return parser
 
 
@@ -1769,6 +1914,8 @@ def main(argv: list[str] | None = None) -> None:
             run(args.config, args.split, args.run_id, args.limit)
         elif args.command == "report":
             print(write_report(args.run_dir))
+        elif args.command == "summary":
+            print(write_summary())
         else:
             print(comparison_text(compare(args.run_a, args.run_b)))
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback

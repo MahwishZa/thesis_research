@@ -2209,7 +2209,8 @@ class RepositoryTests(unittest.TestCase):
         linked = []
         for heading, body in zip(parts[1::2], parts[2::2]):
             lines = [line for line in body.splitlines() if line.startswith("|")]
-            self.assertEqual(lines[0], "| Model | Accuracy | Precision | Recall | F1 | Hallucination rate | Missed malignancy |")
+            self.assertEqual(lines[0], "| Model | Accuracy | Precision | Recall (95% CI) | F1 | Specificity | Hallucination rate | "
+                                       "Malignancy sensitivity | Missed malignancy |")
             for line in lines[2:]:
                 cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
                 link = re.fullmatch(r"\[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", cells[0])
@@ -2222,8 +2223,12 @@ class RepositoryTests(unittest.TestCase):
                 card = json.loads((ROOT / path).with_name("run_card.json").read_text(encoding="utf-8"))
                 main = json.loads((ROOT / path).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
                 self.assertEqual(card["split"], "test")
-                self.assertEqual(cells[1:], [pct(main["accuracy"]), pct(main["macro"]["precision"]), pct(main["macro"]["recall"]), pct(main["macro"]["f1"]),
-                                             pct(main["hallucination"]["balanced_rate"]), pct(main["risk"]["missed_malignancy"])], f"{path} differs from its README row")
+                low, high = main["balanced_accuracy_ci95"]
+                self.assertEqual(cells[1:], [pct(main["accuracy"]), pct(main["macro"]["precision"]),
+                                             f"{pct(main['macro']['recall'])} ({pct(low)} to {pct(high)})", pct(main["macro"]["f1"]),
+                                             pct(main["macro"]["specificity"]), pct(main["hallucination"]["balanced_rate"]),
+                                             pct(main["risk"]["malignancy_sensitivity"]), pct(main["risk"]["missed_malignancy"])],
+                                 f"{path} differs from its README row")
                 self.assertEqual(main["macro"]["recall"], main["balanced_accuracy"])  # the README calls recall the balanced accuracy
                 linked.append(path)
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
@@ -2357,23 +2362,37 @@ class RepositoryTests(unittest.TestCase):
                     self.assertEqual(subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=ROOT).returncode, 0,
                                      "the commit named in this run card is not in the history")
 
-    def test_the_results_document_links_every_run_with_its_scores_and_all_its_links_work(self):
+    def test_the_results_document_holds_the_tables_the_summary_command_writes_and_all_its_links_work(self):
         text = (ROOT / "docs" / "results.md").read_text(encoding="utf-8")
         for target in re.findall(r"\]\((?!https?:)([^)#]+)", text):
             self.assertTrue((ROOT / "docs" / target).exists(), f"docs/results.md links to {target}, which does not exist")
+        start, end = text.index(evaluate.SUMMARY_START) + len(evaluate.SUMMARY_START), text.index(evaluate.SUMMARY_END)
+        self.assertEqual(text[start:end].strip("\n").split("\n"), evaluate.summary_tables(ROOT / "results", "../"),
+                         "docs/results.md is out of date: run python -m src.evaluate summary")
         runs = [p for p in (ROOT / "results").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
-        self.assertTrue(runs)
-        for run in runs:
-            link = f"../{run.relative_to(ROOT).as_posix()}/report.md"
-            rows = [line for line in text.splitlines() if f"]({link})" in line]
-            self.assertEqual(len(rows), 1, f"docs/results.md must hold exactly one table row for {run}")
-            main = json.loads((run / "metrics.json").read_text(encoding="utf-8"))["main"]
-            cells = [c.strip() for c in rows[0].strip().strip("|").split("|")]  # model, balanced accuracy (CI), accuracy, hallucination, no valid, missed, over-call
-            low, high = main["balanced_accuracy_ci95"]
-            expected = [f"{100 * main['balanced_accuracy']:.1f}% ({100 * low:.1f} to {100 * high:.1f})", f"{100 * main['accuracy']:.1f}%",
-                        f"{100 * main['hallucination']['balanced_rate']:.1f}%", f"{main['hallucination']['no_valid_answer']} of {main['n']}",
-                        f"{100 * main['risk']['missed_malignancy']:.1f}%", f"{100 * main['risk']['overcall']:.1f}%"]
-            self.assertEqual(cells[1:], expected, f"{run} differs from its row in docs/results.md")
+        for run in runs:  # every finished run is in the tables, once, with its report linked
+            self.assertEqual(text.count(f"](../{run.relative_to(ROOT).as_posix()}/report.md)"), 1, f"{run} must be linked exactly once")
+        for word in ("ROC", "Holm", "Specificity", "Malignancy sensitivity"):
+            self.assertIn(word, text)
+
+    def test_the_holm_correction_by_hand(self):
+        # four tests: 0.01 x 4 = 0.04; 0.03 x 3 = 0.09; 0.04 x 2 = 0.08, raised to the 0.09 before it; 0.5 x 1
+        self.assertEqual(evaluate.holm([0.01, 0.04, 0.03, 0.5]), [0.04, 0.09, 0.09, 0.5])
+        self.assertEqual(evaluate.holm([0.6, 0.9]), [1.0, 1.0])  # never above 1
+        self.assertEqual((evaluate.holm([]), evaluate.holm([0.2])), ([], [0.2]))
+
+    def test_the_summary_command_rewrites_only_the_tables_between_the_markers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            page = Path(folder) / "docs" / "page.md"
+            page.parent.mkdir()
+            page.write_text(f"before\n{evaluate.SUMMARY_START}\nold\n{evaluate.SUMMARY_END}\nafter\n", encoding="utf-8")
+            with mock.patch.object(evaluate, "summary_tables", return_value=["| a |", "| b |"]):
+                evaluate.write_summary(page, ROOT / "results")
+            self.assertEqual(page.read_text(encoding="utf-8"),
+                             f"before\n{evaluate.SUMMARY_START}\n\n| a |\n| b |\n\n{evaluate.SUMMARY_END}\nafter\n")
+            page.write_text("no markers\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "must hold the lines"):
+                evaluate.write_summary(page, ROOT / "results")
 
     def test_the_readme_uses_unix_line_endings(self):
         self.assertNotIn(b"\r", (ROOT / "README.md").read_bytes(), "Windows line endings (.gitattributes should prevent this)")
