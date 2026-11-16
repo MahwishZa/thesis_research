@@ -180,7 +180,7 @@ def _scores(matrix: list[list[int]]) -> dict:
             return None
         values = [0.0 if values[i] is None else values[i] for i in present]  # a class never answered: precision 0
         weights = [1] * len(present) if weights is None else [weights[i] for i in present]
-        return sum(v * w for v, w in zip(values, weights)) / sum(weights)
+        return math.fsum(v * w for v, w in zip(values, weights)) / sum(weights)  # an exactly rounded sum: the same on every Python version
 
     out["macro"] = {"precision": mean(precision), "recall": mean(recall), "f1": mean(f1),
                     "specificity": None if None in [specificity[i] for i in present] else mean(specificity)}
@@ -206,7 +206,7 @@ def _hallucination(matrix: list[list[int]]) -> dict:
     present = [i for i in range(k) if support[i]]
     n = sum(support)
     return {"rate": _ratio(sum(wrong), n), "wrong": sum(wrong), "n": n,
-            "balanced_rate": _ratio(sum(wrong[i] / support[i] for i in present), len(present)),
+            "balanced_rate": _ratio(math.fsum(wrong[i] / support[i] for i in present), len(present)),
             "no_valid_answer": sum(row[k] for row in matrix), "no_valid_answer_rate": _ratio(sum(row[k] for row in matrix), n)}
 
 

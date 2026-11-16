@@ -14,26 +14,29 @@
 | **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **48.5%** | 42.6% to 54.6% (bootstrap over articles) |
 | Hallucination rate, all questions | 41.2% (91/221) | 35.0% to 47.1% (bootstrap over articles) |
 | No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 11 | |
+| Malignancy sensitivity: cancers answered as a cancer | 84.2% (101/120) | 77.5% to 90.8% (bootstrap over articles) |
 | Missed malignancy: cancers answered as benign | 10.0% (12/120) | 5.0% to 15.8% (bootstrap over articles) |
+| Benign specificity: benign lesions answered as benign | 69.7% (69/99) | 59.8% to 78.2% (bootstrap over articles) |
 | Over-calls: benign lesions answered as cancer | 24.2% (24/99) | 16.5% to 33.0% (bootstrap over articles) |
 | Macro-F1 (classes with cases: 8) | 47.0% | 40.0% to 53.0% (bootstrap over articles) |
-| Macro-precision | 53.8% | |
+| Macro-precision | 53.8% | 45.9% to 60.6% (bootstrap over articles) |
+| Macro-specificity | 93.9% | 93.0% to 94.9% (bootstrap over articles) |
 | Weighted F1 (by number of true cases) | 54.4% | |
 | Matthews correlation (MCC, -1 to 1) | 0.466 | |
 | Cohen's kappa (-1 to 1) | 0.458 | |
 
 ### Per class
 
-| Class | True cases | Answered as this class | Precision | Recall (95% interval: bootstrap over articles) | F1 |
-|---|---|---|---|---|---|
-| actinic keratosis | 2 | 2 | 0.0% | 0.0% (0.0% to 0.0%) | 0.0% |
-| basal cell carcinoma | 40 | 19 | 84.2% | 40.0% (25.0% to 55.0%) | 54.2% |
-| dermatofibroma | 21 | 8 | 75.0% | 28.6% (5.3% to 52.2%) | 41.4% |
-| melanoma | 40 | 49 | 46.9% | 57.5% (42.5% to 72.5%) | 51.7% |
-| nevus | 40 | 31 | 67.7% | 52.5% (37.5% to 67.5%) | 59.2% |
-| pigmented benign keratosis | 22 | 16 | 56.2% | 40.9% (18.2% to 59.1%) | 47.4% |
-| squamous cell carcinoma | 40 | 59 | 54.2% | 80.0% (67.5% to 92.5%) | 64.6% |
-| vascular lesion | 16 | 26 | 46.2% | 75.0% (50.0% to 93.8%) | 57.1% |
+| Class | True cases | Answered as this class | Precision | Recall (95% interval: bootstrap over articles) | F1 | Specificity (95% interval: bootstrap over articles) |
+|---|---|---|---|---|---|---|
+| actinic keratosis | 2 | 2 | 0.0% | 0.0% (0.0% to 0.0%) | 0.0% | 99.1% (97.7% to 100.0%) |
+| basal cell carcinoma | 40 | 19 | 84.2% | 40.0% (25.0% to 55.0%) | 54.2% | 98.3% (96.1% to 100.0%) |
+| dermatofibroma | 21 | 8 | 75.0% | 28.6% (5.3% to 52.2%) | 41.4% | 99.0% (97.5% to 100.0%) |
+| melanoma | 40 | 49 | 46.9% | 57.5% (42.5% to 72.5%) | 51.7% | 85.6% (80.7% to 90.2%) |
+| nevus | 40 | 31 | 67.7% | 52.5% (37.5% to 67.5%) | 59.2% | 94.5% (91.2% to 97.3%) |
+| pigmented benign keratosis | 22 | 16 | 56.2% | 40.9% (18.2% to 59.1%) | 47.4% | 96.5% (93.5% to 98.5%) |
+| squamous cell carcinoma | 40 | 59 | 54.2% | 80.0% (67.5% to 92.5%) | 64.6% | 85.1% (80.4% to 89.5%) |
+| vascular lesion | 16 | 26 | 46.2% | 75.0% (50.0% to 93.8%) | 57.1% | 93.2% (89.8% to 96.6%) |
 
 ### Confusion matrix
 
@@ -58,7 +61,9 @@ Notes on these scores:
 - With one answer per case, micro-averaged precision, recall and F1 equal accuracy, so they are not listed.
 - Hallucination: an answer that names a wrong diagnosis. Right answers, hallucinations and answers with no valid answer (a refusal, a sentence, two classes, a cut-off) add up to every question; a model that refuses is not hallucinating, but it is not right either. The models must choose a class, so none can avoid hallucinating by declaring itself unsure. With the same number of cases in every class, the two rates are the same.
 - Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the total; actinic keratosis as a true class is in neither group.
-- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank.
+- Malignancy sensitivity: cancers answered as any cancer (the right one or another), as a share of all cancers. It is not 100% minus the missed malignancy: a cancer answered as actinic keratosis, or not readably, is neither detected nor missed. Benign specificity: benign lesions answered as any benign class, as a share of all benign lesions.
+- Specificity of a class: of the cases that are not that class, the share not answered as it. With 8 classes most are negatives of any one class, so specificity is high by construction and is read beside recall.
+- No ROC curve or AUC: the models answer with one class name, not a score per class, so there is nothing to rank. Malignancy sensitivity with benign specificity is the one point of such a curve these answers give.
 
 ## Without actinic keratosis
 
@@ -73,7 +78,9 @@ The scores below leave out the cases of actinic keratosis, to show how much it m
 | Macro-F1 (classes with cases: 7) | 53.8% | 45.7% to 61.1% (bootstrap over articles) |
 | **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **41.1%** | 34.3% to 48.2% (bootstrap over articles) |
 | Hallucination rate, all questions | 40.6% (89/219) | 34.5% to 47.0% (bootstrap over articles) |
+| Malignancy sensitivity: cancers answered as a cancer | 84.2% (101/120) | 77.5% to 90.8% (bootstrap over articles) |
 | Missed malignancy: cancers answered as benign | 10.0% (12/120) | 5.0% to 15.8% (bootstrap over articles) |
+| Benign specificity: benign lesions answered as benign | 69.7% (69/99) | 60.6% to 78.2% (bootstrap over articles) |
 | Over-calls: benign lesions answered as cancer | 24.2% (24/99) | 16.2% to 33.0% (bootstrap over articles) |
 
 The cases left out, and the answers:
@@ -94,7 +101,9 @@ The main score reads an answer only when it is exactly one class name, as the pr
 | Macro-F1 (classes with cases: 8) | 47.2% | 40.2% to 53.2% (bootstrap over articles) |
 | **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **48.5%** | 42.6% to 54.6% (bootstrap over articles) |
 | Hallucination rate, all questions | 41.2% (91/221) | 35.0% to 47.1% (bootstrap over articles) |
+| Malignancy sensitivity: cancers answered as a cancer | 84.2% (101/120) | 77.5% to 90.8% (bootstrap over articles) |
 | Missed malignancy: cancers answered as benign | 10.0% (12/120) | 5.0% to 15.8% (bootstrap over articles) |
+| Benign specificity: benign lesions answered as benign | 70.7% (70/99) | 60.8% to 79.2% (bootstrap over articles) |
 | Over-calls: benign lesions answered as cancer | 24.2% (24/99) | 16.5% to 33.0% (bootstrap over articles) |
 
 ## Notes
