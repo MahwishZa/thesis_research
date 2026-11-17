@@ -5556,6 +5556,8 @@ appearance-PMC12856975-6,appearance,PMC12856975,FIRST‐LEVEL PSL TRIAGE,,yes,ye
 appearance-PMC13613359-11,appearance,PMC13613359,DIAGNOSIS,,yes,yes,no,no,no,no,4,1
 appearance-PMC13613359-13,appearance,PMC13613359,DIAGNOSIS,,yes,yes,no,no,yes,no,2,0
 appearance-PMC11727731-10,appearance,PMC11727731,Methods,,yes,yes,no,no,no,no,2,0
+appearance-PMC11975216-10,appearance,PMC11975216,RESULTS,,yes,yes,no,no,no,no,3,0
+appearance-PMC11975216-9,appearance,PMC11975216,RESULTS,,yes,no,yes,yes,no,no,0,5
 appearance-PMC12418919-1,appearance,PMC12418919,Introduction,,yes,yes,no,yes,no,yes,2,0
 appearance-PMC12553134-6,appearance,PMC12553134,MATERIALS AND METHODS,,yes,yes,no,no,no,no,2,0
 appearance-PMC12710984-13,appearance,PMC12710984,Results,,yes,yes,no,no,no,no,2,1
@@ -5611,6 +5613,9 @@ appearance-PMC6153581-2,appearance,PMC6153581,New algorithms and revision of cri
 appearance-PMC6153581-4,appearance,PMC6153581,New algorithms and revision of criteria,,yes,yes,no,no,no,no,2,2
 appearance-PMC6153581-6,appearance,PMC6153581,New algorithms and revision of criteria,,yes,yes,no,no,no,no,2,0
 appearance-PMC6153581-8,appearance,PMC6153581,New algorithms and revision of criteria,,yes,yes,no,no,no,no,2,0
+appearance-PMC6244569-10,appearance,PMC6244569,Oral Mucosal Toxicities,,yes,no,yes,no,yes,no,1,3
+appearance-PMC6244569-5,appearance,PMC6244569,Skin Toxicities,,yes,yes,no,no,no,no,2,2
+appearance-PMC6244569-9,appearance,PMC6244569,Oral Mucosal Toxicities,,yes,no,yes,no,no,no,0,3
 appearance-PMC6244635-10,appearance,PMC6244635,Nevoid Melanoma,,yes,no,yes,no,no,no,0,6
 appearance-PMC6244635-11,appearance,PMC6244635,Nevoid Melanoma,,yes,yes,no,no,no,no,5,0
 appearance-PMC6244635-12,appearance,PMC6244635,Amelanotic Melanoma,,yes,yes,no,no,no,no,6,2
@@ -5641,6 +5646,8 @@ appearance-PMC5445663-25,appearance,PMC5445663,"Acquired MN, NOS",,yes,yes,no,no
 appearance-PMC5445663-3,appearance,PMC5445663,Congenital MN,,yes,no,yes,no,no,no,0,6
 appearance-PMC5445663-4,appearance,PMC5445663,Congenital MN,,yes,yes,no,yes,no,no,4,0
 appearance-PMC3900335-6,appearance,PMC3900335,CLINICAL FEATURES,appearance,yes,no,yes,no,no,no,0,3
+appearance-PMC3505710-10,appearance,PMC3505710,Introduction,,yes,no,yes,yes,no,no,0,3
+appearance-PMC3505710-12,appearance,PMC3505710,Discussion,,yes,no,yes,yes,no,no,0,3
 appearance-PMC3519649-11,appearance,PMC3519649,Results and discussion,,yes,yes,no,no,no,no,2,0
 appearance-PMC3519649-13,appearance,PMC3519649,Results and discussion,,yes,yes,no,no,no,no,2,0
 appearance-PMC3519649-5,appearance,PMC3519649,Results and discussion,,yes,yes,no,no,no,no,4,1
