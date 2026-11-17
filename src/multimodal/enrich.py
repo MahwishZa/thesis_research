@@ -11,6 +11,12 @@ morphology; their open full texts are cut into passages as the library's are, an
 appearance, is not already in the library, and shares no run of 12 words with a question of the text dataset. The table is
 data/multimodal/appearance.csv (committed); the texts are in data/text/library/appearance.jsonl (not committed, as the library's).
 
+For three classes the first search found almost nothing (0, 0 and 1 reviews: dermatofibroma, pigmented benign keratosis and vascular
+lesion, left short of the target by the first run on 2026-11-17), so they get a wider search: the reviews indexed with the class's
+headings as a main subject OR naming one of the class's names (class_terms.csv, the ones that count) in the title or abstract, without
+the dermoscopy and morphology words. A review that names a condition class_terms.csv says does not count (and not only inside a name
+that counts) is left out. Nothing else changes, and the target of 30 passages from 8 documents is not lowered.
+
 ``aspects`` tags every passage of the library and of the appearance corpus by words (fixed lists below) and checks its own tags
 against an independent signal: the title of the section a passage sits in, which its authors chose (a passage under "Treatment" is
 about treatment). It then counts, per class, the passages that describe appearance against a target fixed here. No person reads
@@ -38,6 +44,7 @@ from pathlib import Path
 
 from ..common import write_section
 from ..text import library as textlib
+from ..text import prepare as textprep
 from .prepare import DATA, IMAGE, NOT_RECORDED, TEXT, _read_csv, _write_csv, fact_values, read_images
 
 REPORT = "enrichment_report.md"
@@ -54,6 +61,10 @@ TARGET_PASSAGES, TARGET_DOCUMENTS = 30, 8  # per class: passages that describe a
 REVIEWS_ASKED, FULLTEXTS_PER_CLASS, MAX_PER_CLASS = 100, 40, 150
 APPEARANCE_QUERY = (f"{textlib.REVIEW_QUERY} AND free full text[sb] AND (dermoscopy[Title/Abstract] OR dermoscopic[Title/Abstract] "
                     "OR dermatoscopy[Title/Abstract] OR dermatoscopic[Title/Abstract] OR morphology[Title/Abstract])")
+
+WIDER_CLASSES = ("dermatofibroma", "pigmented benign keratosis", "vascular lesion")  # decided on 2026-11-17, after the first search left
+# these three short (0, 1 and 0 reviews). They are searched by their names as well, and without the dermoscopy and morphology words.
+WIDER_QUERY = f"{textlib.REVIEW_QUERY} AND free full text[sb]"
 
 # What a passage is about, found by words. A passage has an aspect when it uses at least THRESHOLDS[aspect] different words of the
 # list (a word counts once). The lists and thresholds are fixed here; they were not tuned on any result.
@@ -128,6 +139,45 @@ def agreement(rows: list[dict]) -> dict[str, dict]:
     return out
 
 
+def _class_names(text: Path, label: str) -> tuple[list[str], list[str], list[str]]:
+    """The class's names (term_check.csv, which the survey checked against class_terms.csv): those that count and that PubMed
+    finds in a title or abstract (searched for), all those that count, and those that do not count."""
+    rows = [r for r in textlib._read_csv(Path(text) / textprep.CHECK, textprep.CHECK_COLUMNS, "survey") if r["class"] == label]
+    return ([r["term"] for r in rows if r["counts"] == "yes" and int(r["pubmed_articles"] or 0)],
+            [r["term"] for r in rows if r["counts"] == "yes"], [r["term"] for r in rows if r["counts"] == "no"])
+
+
+def _spans(tokens: list[str], name: str) -> list[tuple[int, int]]:
+    """Where a name stands in a text, both as plain words (lower case, American spelling, singular)."""
+    words = textlib._tokens(name)
+    return [(i, i + len(words)) for i in range(len(tokens) - len(words) + 1) if words and tokens[i:i + len(words)] == words]
+
+
+def other_condition(record: dict, counts: list[str], not_counts: list[str]) -> str | None:
+    """The first name that does not count (class_terms.csv) that a review's title or abstract uses, unless it only stands inside a
+    longer name that counts ("lobular capillary hemangioma" holds "hemangioma"); None when there is none."""
+    tokens = textlib._tokens(" ".join([record["title"]] + [text for _, text in record["sections"]]))
+    inside = [span for name in counts for span in _spans(tokens, name)]
+    for name in not_counts:
+        for start, end in _spans(tokens, name):
+            if not any(a <= start and end <= b for a, b in inside):
+                return name
+    return None
+
+
+def _wider(label: str, headings: list[str], names: list[str], excluded: set[str], say) -> list[str]:
+    """The newest reviews (free full text, no dermoscopy words asked) PubMed finds for the class's headings as a main subject OR its
+    names in the title or abstract, without the dataset's articles."""
+    subjects = ([textlib._subject(headings)] if headings else []) + (
+        ["(" + " OR ".join(f'"{name}"[Title/Abstract]' for name in names) + ")"] if names else [])
+    ids = []
+    if subjects:
+        answer = textlib._search("pubmed", f"({' OR '.join(subjects)}) AND {WIDER_QUERY}", retmax=REVIEWS_ASKED, sort="pub_date")
+        ids = [p for p in answer.get("idlist") or [] if p not in excluded]
+    say(f"{label}: {len(ids)} reviews found by the wider search")
+    return ids
+
+
 def _topics(value: str) -> list[str]:
     return [t.strip() for t in value.split(";") if t.strip()]
 
@@ -158,10 +208,21 @@ def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None =
     library = {r["sha256"] for r in _read_csv(text / textlib.LIBRARY_TABLE)}
 
     found = textlib._newest(classes, headings, APPEARANCE_QUERY, REVIEWS_ASKED, excluded, say, "reviews on appearance")
+    names = {}
+    for label in (c for c in classes if c in WIDER_CLASSES):
+        names[label] = _class_names(text, label)
+        found[label] = _wider(label, headings[label], names[label][0], excluded, say)
     records = textlib._records(sorted({p for ids in found.values() for p in ids}, key=int), say)
+    refused = {label: Counter() for label in names}  # per wider class: the reviews left out, by the name that does not count
+    usable = {}
+    for label in classes:
+        usable[label] = [records[p] for p in found[label] if p in records]
+        if label in names:
+            checked = [(r, other_condition(r, names[label][1], names[label][2])) for r in usable[label]]
+            refused[label].update(name for _, name in checked if name)
+            usable[label] = [r for r, name in checked if not name]
     bodies = {}
-    full = {label: textlib._full_texts([records[p] for p in found[label] if p in records], bodies, say, label, FULLTEXTS_PER_CLASS)
-            for label in classes}
+    full = {label: textlib._full_texts(usable[label], bodies, say, label, FULLTEXTS_PER_CLASS) for label in classes}
     topics, chosen = defaultdict(list), {}
     for label in classes:
         for record in full[label]:
@@ -196,31 +257,41 @@ def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None =
     partial.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in texts), encoding="utf-8", newline="\n")
     os.replace(partial, folder / APPEARANCE_FILE)
     _write_csv(data / APPEARANCE_TABLE, textlib.LIBRARY_COLUMNS, table)
-    lines = _appearance_summary(day, classes, headings, found, full, documents, table, dropped)
+    lines = _appearance_summary(day, classes, headings, found, full, documents, table, dropped, names, refused)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "appearance", lines)
     return {"table": (data / APPEARANCE_TABLE).as_posix(), "passages": (folder / APPEARANCE_FILE).as_posix(), "rows": table,
             "documents": documents, "dropped": dropped, "report": (data / REPORT).as_posix()}
 
 
-def _appearance_summary(day, classes, headings, found, full, documents, table, dropped) -> list[str]:
+def _appearance_summary(day, classes, headings, found, full, documents, table, dropped, names, refused) -> list[str]:
     lines = ["## Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance", "",
              f"Written on {day}. For each class, PubMed's reviews (the class's MeSH headings as a main subject, on the skin, in English, "
              "about people, not case reports, not guidelines, with a free full text, and the words dermoscopy, dermoscopic, dermatoscopy, "
              f"dermatoscopic or morphology in the title or abstract), the newest {REVIEWS_ASKED} asked, and of those the newest "
              f"{FULLTEXTS_PER_CLASS} that PubMed Central gives in full. Their paragraphs are cut into passages as the library's are. A "
              "passage is kept when it describes appearance (words of the lists in `enrich.py`), is not already in the library and shares "
-             f"no run of {textlib.SHARED_RUN} words with a question of the text dataset; at most {MAX_PER_CLASS} per class, the newest first.", "",
-             "| Class | MeSH headings (main topic) | Reviews found | Open full texts | Passages kept | Documents of those passages |",
-             "|---|---|---|---|---|---|"]
+             f"no run of {textlib.SHARED_RUN} words with a question of the text dataset; at most {MAX_PER_CLASS} per class, the newest first.", ""]
+    if names:
+        lines += [f"The first search found almost no review for {', '.join(names)}, so these classes were searched wider (column "
+                  "Search): the same reviews as above, but without the dermoscopy and morphology words, and found by the class's "
+                  "headings as a main subject OR by one of its names in the title or abstract. A review that names a condition "
+                  "class_terms.csv says does not count is left out, unless the name stands only inside a longer name that counts. "
+                  "The target is the same for every class.", ""]
+        lines += [f"- {label}: searched for {'; '.join(names[label][0]) or 'no name'}; not counted: {'; '.join(names[label][2]) or 'none'}"
+                  for label in names] + [""]
+    lines += ["| Class | MeSH headings (main topic) | Search | Reviews found | Left out: names another condition | Open full texts | "
+              "Passages kept | Documents of those passages |", "|---|---|---|---|---|---|---|---|"]
     for label in classes:
         mine = [r for r in table if label in _topics(r["topics"])]
-        lines.append(f"| {label} | {'; '.join(headings[label]) or 'none'} | {len(found[label])} | {len(full[label])} | {len(mine)} | "
-                     f"{len({r['source'] for r in mine})} |")
+        left = ", ".join(f"{n} ({k})" for n, k in sorted(refused[label].items())) if label in refused else ""
+        lines.append(f"| {label} | {'; '.join(headings[label]) or 'none'} | {'wider' if label in names else 'first'} | {len(found[label])} | "
+                     f"{sum(refused[label].values()) if label in refused else 0}{' (' + left + ')' if left else ''} | {len(full[label])} | "
+                     f"{len(mine)} | {len({r['source'] for r in mine})} |")
     licences = Counter(d["licence"] or "not stated" for d in documents if any(r["source"] == d["source"] for r in table))
     lines += ["", f"Passages kept: {len(table)} from {len({r['source'] for r in table})} documents. Licences (documents): "
               + ("; ".join(f"{k}: {n}" for k, n in sorted(licences.items())) or "none"), "",
               "Left out: " + (", ".join(f"{k}: {n}" for k, n in sorted(dropped.items())) or "nothing"), "",
-              f"Query: {APPEARANCE_QUERY}.", "",
+              f"Query: {APPEARANCE_QUERY}." + (f" Wider search, with the class's headings OR names: {WIDER_QUERY}." if names else ""), "",
               "No person has read the passages. A passage is about its review's class(es), found by the search, and describes appearance "
               "by a word count; neither is a medical judgement. The texts are under their publishers' licences (in the table) and stay "
               "on this computer for research use.", ""]

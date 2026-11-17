@@ -213,6 +213,7 @@ The audit of the hypothesis (see `docs/results.md`) found that the knowledge ite
 
 **Rules the code applies**
 - Appearance passages: reviews only, no case reports; none from an article of the text dataset; none that shares a run of 12 words with a text question; none already in the library; at most 150 passages per class, newest first.
+- Wider search for three classes: the first search found 0, 1 and 0 reviews for dermatofibroma, pigmented benign keratosis and vascular lesion, so these three are also searched by their names (class_terms.csv, those that count) in the title or abstract, without the dermoscopy and morphology words. A review that names a condition that does not count (for example hemangioma for vascular lesion) is left out, unless the name stands only inside a longer name that counts. The target is the same for every class.
 - Cards: training photos only, never a validation or test photo; the card never names the photo's collection; every card is worked out again from its columns and must be the same text.
 - Targets: at least 30 passages about appearance, from at least 8 documents, for every class. The targets are fixed. A class that falls short is reported as short and is not given an easier target.
 

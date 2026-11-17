@@ -212,7 +212,7 @@ class AppearanceTests(TextFolder):
         texts = [json.loads(line) for line in (self.text / "library" / enrich.APPEARANCE_FILE).read_text(encoding="utf-8").splitlines()]
         self.assertEqual({t["passage_id"]: t["text"] for t in texts}, {"appearance-PMC1-1": DERMOSCOPY, "appearance-PMC2-1": VESSELS})
         report = (self.data / enrich.REPORT).read_text(encoding="utf-8")
-        for expected in ("<!-- step: appearance -->", "| melanoma | Melanoma | 2 | 2 | 2 | 2 |", "| nevus | Nevi | 1 | 1 | 1 | 1 |",
+        for expected in ("<!-- step: appearance -->", "| melanoma | Melanoma | first | 2 | 0 | 2 | 2 | 2 |", "| nevus | Nevi | first | 1 | 0 | 1 | 1 | 1 |",
                          "CC BY 4.0: 1", "No person has read the passages", "already in the library: 1"):
             self.assertIn(expected, report)
         self.assertEqual((self.text / "library.csv").read_text(encoding="utf-8").count("\n"), 2)  # the library's own table is not rewritten
@@ -228,10 +228,120 @@ class AppearanceTests(TextFolder):
         self.assertEqual(done["rows"][1]["topics"], "melanoma; nevus")
         self.assertFalse(done["dropped"].get("over the limit of 1 per class"))
 
+    def wider_step(self, **limits):
+        """Nevus is a class of the wider search: found by its heading or by its names, without the dermoscopy words."""
+        columns = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
+        write_csv(self.text / "term_check.csv", [dict(zip(columns, row)) for row in (
+            ("nevus", "nevus", "yes", "heading", "D1", "Nevi", "50"), ("nevus", "blue nevus", "yes", "no", "", "", "3"),
+            ("nevus", "pale nevus", "yes", "no", "", "", "0"), ("nevus", "pale", "no", "no", "", "", "4"),  # invented: a name nobody searches
+            ("nevus", "dermal nevus", "yes", "no", "", "", "0"), ("nevus", "spider nevus", "no", "no", "", "", "4"),
+            ("melanoma", "melanoma", "yes", "heading", "D2", "Melanoma", "90"))])
+        sections = [["", "A review."]]
+        records = {"101": {"pmid": "101", "pmcid": "PMC1", "title": "Review one", "year": "2024", "sections": sections},
+                   "102": {"pmid": "102", "pmcid": "PMC2", "title": "Review two", "year": "2025", "sections": sections},
+                   "103": {"pmid": "103", "pmcid": "PMC3", "title": "The blue nevus", "year": "2023", "sections": sections},
+                   "104": {"pmid": "104", "pmcid": "PMC4", "title": "The spider nevus", "year": "2022", "sections": sections},
+                   "106": {"pmid": "106", "pmcid": "PMC6", "title": "The pale nevus", "year": "2021", "sections": sections}}
+        bodies = {"1": {"licence": "CC BY 4.0", "sections": [["Dermoscopy", [DERMOSCOPY]]]},
+                  "2": {"licence": "CC BY-NC 4.0", "sections": [["Dermoscopic findings", [VESSELS]]]},
+                  "3": {"licence": "CC BY 4.0", "sections": [["Dermoscopy", [BLUE]]]},
+                  "6": {"licence": "CC BY 4.0", "sections": []}}  # the pale nevus: its name stands inside a longer name that counts  # the spider nevus review has no full text to ask for
+        asked, searched = [], []
+
+        def full_texts(chosen, store, say, what, cap=None):
+            asked.append((what, [r["pmid"] for r in chosen]))
+            store.update({r["pmcid"].removeprefix("PMC"): bodies[r["pmcid"].removeprefix("PMC")] for r in chosen})
+            return chosen[:cap]
+
+        def search(db, term, retmax=0, **extra):
+            searched.append((term, retmax, extra))
+            return {"idlist": ["102", "105", "103", "104", "106"]}  # 105 is an article of the dataset
+
+        patches = [mock.patch.object(textlib, "_checked_headings", return_value=([], {"melanoma": ["Melanoma"], "nevus": ["Nevi"]})),
+                   mock.patch.object(textlib, "_question_runs", return_value=enrich.textlib._runs(CLINICAL)),
+                   mock.patch.object(textlib, "_dataset_articles", return_value={"105"}),
+                   mock.patch.object(textlib, "_newest", return_value={"melanoma": ["101", "102"], "nevus": ["102"]}),
+                   mock.patch.object(textlib, "_search", side_effect=search),
+                   mock.patch.object(textlib, "_records", return_value=records),
+                   mock.patch.object(textlib, "_full_texts", side_effect=full_texts),
+                   mock.patch.object(enrich, "WIDER_CLASSES", ("nevus",))]
+        patches += [mock.patch.object(enrich, name, value) for name, value in limits.items()]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+        return enrich.appearance(self.text, self.data, classes=["melanoma", "nevus"]), asked, searched
+
+    def test_a_wider_class_is_searched_by_its_heading_or_its_names_without_the_dermoscopy_words(self):
+        _, _, searched = self.wider_step()
+        self.assertEqual(len(searched), 1)  # melanoma keeps its first search
+        term, retmax, extra = searched[0]
+        self.assertEqual((retmax, extra), (enrich.REVIEWS_ASKED, {"sort": "pub_date"}))
+        self.assertTrue(term.startswith('(("Nevi"[MeSH Major Topic]) OR ("nevus"[Title/Abstract] OR "blue nevus"[Title/Abstract])) AND '), term)
+        self.assertNotIn("dermal nevus", term)  # no article of PubMed uses it: PubMed would not understand the phrase
+        self.assertNotIn("spider nevus", term)
+        self.assertNotIn("dermoscopy[Title/Abstract]", term)
+        for part in ("review[Publication Type]", "free full text[sb]", 'NOT "case reports"[Publication Type]', "english[Language]"):
+            self.assertIn(part, term)
+
+    def test_a_wider_class_leaves_out_the_dataset_s_articles_and_the_reviews_that_name_another_condition(self):
+        done, asked, _ = self.wider_step()
+        self.assertEqual(asked, [("melanoma", ["101", "102"]), ("nevus", ["102", "103", "106"])])  # 105 is the dataset's, 104 names the spider nevus
+        kept = {r["passage_id"]: r for r in self.table(enrich.APPEARANCE_TABLE)}
+        self.assertEqual(set(kept), {"appearance-PMC1-1", "appearance-PMC2-1", "appearance-PMC3-1"})
+        self.assertEqual(kept["appearance-PMC3-1"]["topics"], "nevus")
+        self.assertEqual(kept["appearance-PMC2-1"]["topics"], "melanoma; nevus")
+        report = (self.data / enrich.REPORT).read_text(encoding="utf-8")
+        self.assertIn("| nevus | Nevi | wider | 4 | 1 (spider nevus (1)) | 3 | 2 | 2 |", report)
+        self.assertIn("- nevus: searched for nevus; blue nevus; not counted: pale; spider nevus", report)
+        self.assertIn("| melanoma | Melanoma | first | 2 | 0 | 2 | 2 | 2 |", report)
+
+    def test_the_wider_search_is_for_the_three_classes_the_first_search_left_short(self):
+        self.assertEqual(enrich.WIDER_CLASSES, ("dermatofibroma", "pigmented benign keratosis", "vascular lesion"))
+
+    def test_a_class_that_is_not_wider_keeps_its_first_search_and_leaves_no_review_out(self):
+        done, asked, _ = self.wider_step(WIDER_CLASSES=())  # nothing wider: nevus is searched as before, from the patched first search
+        self.assertEqual(asked, [("melanoma", ["101", "102"]), ("nevus", ["102"])])
+        self.assertIn("| nevus | Nevi | first | 1 | 0 | 1 | 1 | 1 |", (self.data / enrich.REPORT).read_text(encoding="utf-8"))
+
     def test_the_query_asks_for_reviews_with_a_free_full_text_that_mention_dermoscopy_or_morphology(self):
         for part in ("review[Publication Type]", 'NOT "case reports"[Publication Type]', "free full text[sb]", "dermoscopy[Title/Abstract]",
                      "morphology[Title/Abstract]", "english[Language]", "NOT (animals[MeSH Terms] NOT humans[MeSH Terms])"):
             self.assertIn(part, enrich.APPEARANCE_QUERY)
+
+
+BLUE = ("Dermoscopy of the blue nevus shows a homogeneous blue-gray pigmentation without any pigment network or globules, a finding "
+        "that is helpful to tell this benign lesion from a nodular melanoma in the clinic and in the reading of images by experts.")
+
+
+class NameTests(unittest.TestCase):
+    """A review that names a condition that does not count is left out, unless the name only stands inside a longer name that counts."""
+
+    def judge(self, title, abstract, counts, not_counts):
+        return enrich.other_condition({"title": title, "sections": [["", abstract]]}, counts, not_counts)
+
+    def test_a_name_that_does_not_count_is_found_in_the_title_or_the_abstract(self):
+        counts, not_counts = ["lobular capillary hemangioma", "pyogenic granuloma"], ["hemangioma", "port-wine stain"]
+        self.assertIsNone(self.judge("Pyogenic granuloma", "A common benign growth of vessels of the skin.", counts, not_counts))
+        self.assertEqual(self.judge("Pyogenic granuloma", "It is not an infantile hemangioma.", counts, not_counts), "hemangioma")
+        self.assertEqual(self.judge("Port-wine stains and pyogenic granuloma", "A review.", counts, not_counts), "port-wine stain")  # plural
+        self.assertEqual(self.judge("Hemangiomas of infancy", "A review of pyogenic granuloma.", counts, not_counts), "hemangioma")
+
+    def test_a_name_that_stands_inside_a_longer_name_that_counts_does_not_refuse_the_review(self):
+        counts, not_counts = ["lobular capillary hemangioma"], ["hemangioma"]
+        self.assertIsNone(self.judge("Lobular capillary hemangioma", "Lobular capillary hemangioma of the lip.", counts, not_counts))
+        self.assertEqual(self.judge("Lobular capillary hemangioma", "Unlike a hemangioma of infancy.", counts, not_counts), "hemangioma")
+
+    def test_a_longer_name_that_does_not_count_is_not_hidden_by_a_shorter_name_that_counts(self):
+        self.assertEqual(self.judge("Spider nevus", "A review.", ["nevus"], ["spider nevus"]), "spider nevus")
+        self.assertIsNone(self.judge("Nevus", "A review.", ["nevus"], ["spider nevus"]))
+
+    def test_the_names_of_a_class_come_from_the_checked_survey(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            columns = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
+            write_csv(Path(tmp) / "term_check.csv", [dict(zip(columns, row)) for row in (
+                ("nevus", "nevus", "yes", "heading", "D1", "Nevus", "50"), ("nevus", "dermal nevus", "yes", "no", "", "", "0"),
+                ("nevus", "spider nevus", "no", "no", "", "", "4"), ("melanoma", "melanoma", "yes", "heading", "D2", "Melanoma", "90"))])
+            self.assertEqual(enrich._class_names(Path(tmp), "nevus"), (["nevus"], ["nevus", "dermal nevus"], ["spider nevus"]))
 
 
 PASSAGE_IN_LIBRARY = ("Dermoscopy often shows a regular pigment network with evenly distributed globules in benign melanocytic lesions, "
