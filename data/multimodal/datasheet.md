@@ -149,8 +149,8 @@ Three commands, each writing its section of `dataset_report.md`:
 ## 6. Distribution
 
 **What is shared and what isn't**
-- In Git: the three tables, `dataset_report.md` and this data sheet.
-- On this computer only: the photos, the case texts and the passages. They come from the image and text datasets, under their own licences.
+- In Git: the three tables, `dataset_report.md` and this data sheet; since the additions of section 8, also `appearance.csv`, `passage_aspects.csv`, `image_cards.csv` and `enrichment_report.md`.
+- On this computer only: the photos, the case texts and the passages (also `data/text/library/appearance.jsonl`). They come from the image and text datasets, or from open-access reviews of PubMed Central, under their own licences.
 
 **Licences and credit**
 - Photos: as the ISIC Archive gives them: CC-BY-NC or CC-0, with the credit line in `collection`.
@@ -199,6 +199,26 @@ Three commands, each writing its section of `dataset_report.md`:
 | `diseases.csv` | `4b0b5f889b1643751720bbe9f7fd01832e71a6f451bcf0cd2850c598b4909fb5` |
 
 Every photo, case and passage has its own SHA-256 in these tables; the audit checks the files against them.
+
+## 8. Additions after the freeze (knowledge base version 2)
+
+The audit of the hypothesis (see `docs/results.md`) found that the knowledge items are linked to the photos by disease only, and that only 2–7% of the library's passages describe how a lesion looks. Three tables fill this gap. They are made by `python -m src.multimodal.enrich`, they add to the files above and change none of them: `questions.csv`, `knowledge.csv`, `diseases.csv`, the library and every closed-book result stay as they were, and the fingerprints in section 7 still hold. The numbers (rows, passages, documents, classes still short) are in `enrichment_report.md`, written by the same command.
+
+| File | What it holds |
+|---|---|
+| `passage_aspects.csv` | one row per library passage and per passage of `appearance.csv`: which of four aspects it is about (appearance, histology, treatment, epidemiology), by counting key words, with whether it is about dermoscopy |
+| `appearance.csv` | open-access reviews on dermoscopy and morphology from PubMed Central, split into passages like the library's (same columns, licence recorded). The passage texts are in `data/text/library/appearance.jsonl`, on this computer only |
+| `image_cards.csv` | one text card per training photo, made only from that photo's own ISIC record: its diagnosis and how it was confirmed, age, sex, body site, finer site, size, and melanoma history; a missing fact is left out or shown as "not recorded", never guessed |
+| `enrichment_report.md` | the counts and the checks of the three steps |
+
+**Rules the code applies**
+- Appearance passages: reviews only, no case reports; none from an article of the text dataset; none that shares a run of 12 words with a text question; none already in the library; at most 150 passages per class, newest first.
+- Cards: training photos only, never a validation or test photo; the card never names the photo's collection; every card is worked out again from its columns and must be the same text.
+- Targets: at least 30 passages about appearance, from at least 8 documents, for every class. The targets are fixed. A class that falls short is reported as short and is not given an easier target.
+
+**How it is checked, with no clinician.** Each passage's tags are compared with the authors' own section titles ("Dermoscopy", "Histopathology", "Treatment", "Epidemiology"): for every aspect the report gives how often a passage under such a title is tagged (recall), how often a tagged passage is under such a title (precision), and how much better that is than chance (lift). The code also stops, with an error, on any rule above that is broken.
+
+**What this does not show.** The tags are word counts. The comparison with section titles shows that they are consistent with how the authors organised their reviews; it does not show that a passage is medically correct. A card and a passage describe the disease, or another patient's photo, never the test patient. Whether they help is shown only by the open-book runs.
 
 ## References
 
