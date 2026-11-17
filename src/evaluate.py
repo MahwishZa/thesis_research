@@ -1805,11 +1805,11 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
     corrected = holm([c["mcnemar_p"] for *_, c in tests])
 
     lines = ["### Scores", "",
-             "Percentages. Balanced accuracy is the macro-averaged recall (the main score), with its 95% interval. Each model name links to "
+             "Percentages. Macro recall (balanced accuracy) is the main score, with its 95% interval. Each model name links to "
              "the run's report: every score with its interval, the per-class table and the confusion matrix.", ""]
     for dataset in datasets:
         lines += [f"**{dataset.capitalize()}**", "",
-                  "| Model | Accuracy | Balanced accuracy (95% CI) | Macro precision | Macro F1 | Macro specificity | Hallucination rate | No valid answer |",
+                  "| Model | Accuracy | Macro Recall (95% CI) | Macro Precision | Macro F1 | Macro Specificity | Hallucination Rate | No Valid Answer |",
                   "|---|---|---|---|---|---|---|---|"]
         for model in in_dataset(dataset):
             folder, m = runs[dataset, model]
@@ -1823,7 +1823,7 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
               "over-call are shares of the benign lesions.", ""]
     for dataset in datasets:
         lines += [f"**{dataset.capitalize()}**", "",
-                  "| Model | Malignancy sensitivity | Missed malignancy | Benign specificity | Over-call |", "|---|---|---|---|---|"]
+                  "| Model | Malignancy Sensitivity | Missed Malignancy | Benign Specificity | Over-call |", "|---|---|---|---|---|"]
         for model in in_dataset(dataset):
             r = runs[dataset, model][1]["risk"]
             lines.append(f"| {name(model)} | " + " | ".join(f"{_one(r[k])}{_range(r[f'{k}_ci95'])}" for k in (

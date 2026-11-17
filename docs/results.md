@@ -13,7 +13,7 @@ The image and multimodal datasets use the same photos, so they are compared ques
 | Metric | Meaning |
 |---|---|
 | Accuracy | The share of questions answered with the right diagnosis. |
-| Macro Recall | The mean recall over the eight diagnoses, each counting the same. It is the macro-averaged recall and the main score. Chance is 12.5%. |
+| Macro Recall (balanced accuracy) | The mean recall over the eight diagnoses, each counting the same. It is the main score and is also called balanced accuracy, the name used in the text below and in the reports. Chance is 12.5%. |
 | Precision, recall, F1 | Per diagnosis: of the answers naming it, the share that are right (precision); of its questions, the share answered with it (recall); their harmonic mean (F1). "Macro" is the plain mean over the eight diagnoses. A diagnosis a model never names has no precision; it counts as 0 in the macro precision. |
 | Specificity | Per diagnosis: of the questions that are not that diagnosis, the share not answered with it. With eight diagnoses, most questions are negatives of any one diagnosis, so specificity is high by construction. Read it beside recall, never alone. |
 | Hallucination rate | The share of questions answered with a wrong diagnosis, averaged over the diagnoses. An answer that is not one diagnosis name ("no valid answer") counts as wrong but is not a hallucination. |
@@ -36,7 +36,7 @@ The tables in this section are written by `python -m src.evaluate summary`.
 
 ### Scores
 
-Percentages. Balanced accuracy is the macro-averaged recall (the main score), with its 95% interval. Each model name links to the run's report: every score with its interval, the per-class table and the confusion matrix.
+Percentages. Macro recall (balanced accuracy) is the main score, with its 95% interval. Each model name links to the run's report: every score with its interval, the per-class table and the confusion matrix.
 
 **Image**
 

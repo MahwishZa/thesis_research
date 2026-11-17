@@ -2209,8 +2209,7 @@ class RepositoryTests(unittest.TestCase):
         linked = []
         for heading, body in zip(parts[1::2], parts[2::2]):
             lines = [line for line in body.splitlines() if line.startswith("|")]
-            self.assertEqual(lines[0], "| Model | Accuracy | Precision | Recall (95% CI) | F1 | Specificity | Hallucination rate | "
-                                       "Malignancy sensitivity | Missed malignancy |")
+            self.assertEqual(lines[0], "| Model | Accuracy | Precision | Recall | F1 | Hallucination rate | Missed malignancy |")
             for line in lines[2:]:
                 cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
                 link = re.fullmatch(r"\[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", cells[0])
@@ -2223,12 +2222,8 @@ class RepositoryTests(unittest.TestCase):
                 card = json.loads((ROOT / path).with_name("run_card.json").read_text(encoding="utf-8"))
                 main = json.loads((ROOT / path).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
                 self.assertEqual(card["split"], "test")
-                low, high = main["balanced_accuracy_ci95"]
-                self.assertEqual(cells[1:], [pct(main["accuracy"]), pct(main["macro"]["precision"]),
-                                             f"{pct(main['macro']['recall'])} ({pct(low)} to {pct(high)})", pct(main["macro"]["f1"]),
-                                             pct(main["macro"]["specificity"]), pct(main["hallucination"]["balanced_rate"]),
-                                             pct(main["risk"]["malignancy_sensitivity"]), pct(main["risk"]["missed_malignancy"])],
-                                 f"{path} differs from its README row")
+                self.assertEqual(cells[1:], [pct(main["accuracy"]), pct(main["macro"]["precision"]), pct(main["macro"]["recall"]), pct(main["macro"]["f1"]),
+                                             pct(main["hallucination"]["balanced_rate"]), pct(main["risk"]["missed_malignancy"])], f"{path} differs from its README row")
                 self.assertEqual(main["macro"]["recall"], main["balanced_accuracy"])  # the README calls recall the balanced accuracy
                 linked.append(path)
         finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
