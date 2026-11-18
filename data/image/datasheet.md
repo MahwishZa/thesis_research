@@ -204,7 +204,7 @@ Made with Pillow 13.0.0 (libjpeg-turbo 6.2, Little CMS 2.19).
 **Rebuild**
 1. Set up Python 3.11 or newer with the packages in `requirements.txt`.
 2. Put the Kaggle `Train` and `Test` folders in `data/image/raw`.
-3. Run, in order: `python -m src.image.prepare inventory`, `isic`, `identity`, `ham10000`, `labels`, `duplicates`, `lesions`, `splits`, `images`, `shortcuts`.
+3. Run, in order: `python -m src.build.image.prepare inventory`, `isic`, `identity`, `ham10000`, `labels`, `duplicates`, `lesions`, `splits`, `images`, `shortcuts`.
 
 A full re-run on 2026-11-12 reproduced `raw_photos.csv`, `dataset.csv` and every image byte for byte. It also brought the same-lesion search up to date with the second eye check, removing the 14 pairs that involve the 13 copies it left out.
 

@@ -57,9 +57,7 @@ Test split: the image dataset's 320 photos, each with the patient's age, sex and
 thesis_research/
 ├── src/                 evaluation and dataset preparation code
 │   ├── evaluate.py
-│   ├── image/
-│   ├── text/
-│   └── multimodal/
+│   └── build/           one folder per dataset: how it is made and checked
 ├── configs/             one configuration per model and dataset
 ├── prompts/             one prompt per dataset
 ├── data/                dataset tables and data sheets

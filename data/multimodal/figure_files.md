@@ -1,6 +1,6 @@
 # Pictures of the figures that count
 
-Written by `python -m src.multimodal.figures download` on 2026-11-18. The pictures come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/multimodal/figures/images/`). Nothing in them was changed, and no person looked at them.
+Written by `python -m src.build.cases.prepare download` on 2026-11-18. The pictures come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/multimodal/figures/images/`). Nothing in them was changed, and no person looked at them.
 
 | Class | Test: cases with a picture | Validation | Train |
 |---|---|---|---|

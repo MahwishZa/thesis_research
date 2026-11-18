@@ -1,7 +1,7 @@
 # Data sheet: the case dataset (published case reports with the same patient's photos)
 
 This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come
-from the files `python -m src.multimodal.figures` writes: `figure_count.md` (step `count`), `figure_files.md` (`download`),
+from the files `python -m src.build.cases.prepare` writes: `figure_count.md` (step `count`), `figure_files.md` (`download`),
 `figure_checks.md` (`check`) and `cases.md` (`build`); the questions are in `cases.csv`.
 
 ## At a glance
@@ -63,7 +63,7 @@ better, and invents less, when it sees the photos with the written case, and how
 
 ## 6. Maintenance
 
-- **Rebuild:** with the text dataset prepared, run in order `python -m src.multimodal.figures count`, `download`, `check`, `build`.
+- **Rebuild:** with the text dataset prepared, run in order `python -m src.build.cases.prepare count`, `download`, `check`, `build`.
   `count` and `download` need the internet; `check` needs the packages in `requirements.txt` and downloads its two models once.
 - **Fingerprints:** every question's text and every photo has its SHA-256 in `cases.csv`; every run checks the files against them.
 - **Versions:** a change to a question, photo or split makes a new version, with a new tag and an entry here.

@@ -1,6 +1,6 @@
 # The knowledge base: additions (version 2)
 
-Written by `python -m src.multimodal.enrich`; one section per step. The frozen version 1 files are unchanged.
+Written by `python -m src.build.knowledge.enrich`; one section per step. The frozen version 1 files are unchanged.
 
 <!-- step: appearance -->
 ### Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance

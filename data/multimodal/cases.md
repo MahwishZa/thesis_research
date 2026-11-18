@@ -1,6 +1,6 @@
 # The case dataset
 
-Written by `python -m src.multimodal.figures build`. One question per case of the text dataset whose own article shows the lesion in pictures that passed every check (`figure_checks.md`): the frozen text question, word for word, and the pictures, byte for byte, in the order of their figures. No caption is shown. The splits are the text dataset's.
+Written by `python -m src.build.cases.prepare build`. One question per case of the text dataset whose own article shows the lesion in pictures that passed every check (`figure_checks.md`): the frozen text question, word for word, and the pictures, byte for byte, in the order of their figures. No caption is shown. The splits are the text dataset's.
 
 | Class | Test | Validation | Train |
 |---|---|---|---|

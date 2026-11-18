@@ -1,6 +1,6 @@
 # Preparation of the multimodal dataset
 
-Made by `python -m src.multimodal.prepare <step>`, one section per step, in the order the steps run. Each step rewrites only its own section.
+Made by `python -m src.build.image_metadata.prepare <step>`, one section per step, in the order the steps run. Each step rewrites only its own section.
 
 <!-- step: records -->
 ### Records: the patient facts in the ISIC records

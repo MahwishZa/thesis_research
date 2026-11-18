@@ -1,3 +1,2 @@
-"""The thesis code: one folder per dataset makes that dataset (image/, text/ and multimodal/), common.py
-holds what the dataset folders share, and evaluate.py, shared by all of them, runs the AI models on a prepared dataset and
-scores them."""
+"""The thesis code: build/ makes and checks each dataset (one folder per dataset), common.py holds what they share, and
+evaluate.py runs the models on a prepared dataset and scores them."""

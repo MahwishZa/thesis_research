@@ -227,7 +227,7 @@ These cases stay in the dataset: changing a single case by hand would break the 
 
 **Rebuild**
 1. Set up Python 3.11 or newer with the packages in `requirements.txt`.
-2. Run, in order: `python -m src.text.prepare survey`, `cases`, `abstracts`, `mesh`, `build`, then `python -m src.text.audit` and `python -m src.text.library`. The steps download their sources themselves.
+2. Run, in order: `python -m src.build.text.prepare survey`, `cases`, `abstracts`, `mesh`, `build`, then `python -m src.build.text.audit` and `python -m src.build.knowledge.library`. The steps download their sources themselves.
 
 Because PubMed changes (section 5), a rebuild reproduces the method, not version 2. Version 2's texts come back only from the backup.
 

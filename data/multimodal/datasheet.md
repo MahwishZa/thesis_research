@@ -108,7 +108,7 @@ Three commands, each writing its section of `dataset_report.md`:
    - Age is written "about N years", sex and site in lower case.
    - Two photos are held twice by ISIC (`ISIC_0000279` with `ISIC_0000280`, `ISIC_0000477` with `ISIC_0000512`, both in train). A fact counts only where their two records agree; on a disagreement it is "not recorded", never guessed.
    - The build stops if a validation or test item would enter the knowledge.
-4. **`audit`** (`python -m src.multimodal.audit`) checks everything again with code of its own (section 7).
+4. **`audit`** (`python -m src.build.image_metadata.audit`) checks everything again with code of its own (section 7).
 
 **Not done:** no photo was changed or added, no fact was corrected or guessed, no text was attached to a photo, and no item was chosen by hand.
 
@@ -164,7 +164,7 @@ Three commands, each writing its section of `dataset_report.md`:
 
 **Versions.** Any change to a question, fact, split or knowledge item makes a new version, with new fingerprints, a new tag and an entry here.
 
-**Checks.** The audit (`python -m src.multimodal.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed:
+**Checks.** The audit (`python -m src.build.image_metadata.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed:
 - **Questions:** one per photo of the image dataset, each matching it in split, class, file, fingerprint and lesion group.
 - **Facts:** every fact sentence worked out again from the ISIC records, each record checked against the image dataset's fingerprint.
 - **Files:** every photo and training case present with its fingerprint, and every passage present in `passages.jsonl` with its text.
@@ -189,7 +189,7 @@ Three commands, each writing its section of `dataset_report.md`:
 
 **Rebuild**
 1. The image and text datasets must be prepared, with the image dataset's ISIC records in `data/image/downloads/isic/` and the text dataset's downloads in `data/text/sources/`.
-2. Run, in order: `python -m src.multimodal.prepare records`, `python -m src.multimodal.prepare build`, `python -m src.multimodal.audit`.
+2. Run, in order: `python -m src.build.image_metadata.prepare records`, `python -m src.build.image_metadata.prepare build`, `python -m src.build.image_metadata.audit`.
 3. The same sources give the same files, byte for byte.
 
 **Fingerprints**
@@ -204,7 +204,7 @@ Every photo, case and passage has its own SHA-256 in these tables; the audit che
 
 ## 8. Additions after the freeze (knowledge base version 2)
 
-The audit of the hypothesis (see `docs/results.md`) found that the knowledge items are linked to the photos by disease only, and that only 2–7% of the library's passages describe how a lesion looks. Three tables fill this gap. They are made by `python -m src.multimodal.enrich`, they add to the files above and change none of them: `questions.csv`, `knowledge.csv`, `diseases.csv`, the library and every closed-book result stay as they were, and the fingerprints in section 7 still hold. The numbers (rows, passages, documents, classes still short) are in `enrichment_report.md`, written by the same command.
+The audit of the hypothesis (see `docs/results.md`) found that the knowledge items are linked to the photos by disease only, and that only 2–7% of the library's passages describe how a lesion looks. Three tables fill this gap. They are made by `python -m src.build.knowledge.enrich`, they add to the files above and change none of them: `questions.csv`, `knowledge.csv`, `diseases.csv`, the library and every closed-book result stay as they were, and the fingerprints in section 7 still hold. The numbers (rows, passages, documents, classes still short) are in `enrichment_report.md`, written by the same command.
 
 | File | What it holds |
 |---|---|

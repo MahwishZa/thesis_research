@@ -1,11 +1,11 @@
 # Preparation of the text dataset
 
-Written by `python -m src.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `class_terms.csv` is written by people: the names doctors use for each of the image dataset's classes, and whether each name counts for that class.
+Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `class_terms.csv` is written by people: the names doctors use for each of the image dataset's classes, and whether each name counts for that class.
 
 <!-- step: survey -->
 ## Survey: the names checked in MeSH, and how much PubMed holds per class
 
-Written by `python -m src.text.prepare survey` on 2026-11-14. Every name in `class_terms.csv` was looked up in MeSH, the US National Library of Medicine's list of medical subject headings, through NCBI's E-utilities; the result for each name is in `term_check.csv`, with the number of PubMed articles that use the name in their title or summary. Then PubMed was searched per class with the MeSH headings of the class's confirmed names (as main topics), limited to skin lesions. Only MeSH records and search counts were downloaded, no article text; nothing else was changed.
+Written by `python -m src.build.text.prepare survey` on 2026-11-14. Every name in `class_terms.csv` was looked up in MeSH, the US National Library of Medicine's list of medical subject headings, through NCBI's E-utilities; the result for each name is in `term_check.csv`, with the number of PubMed articles that use the name in their title or summary. Then PubMed was searched per class with the MeSH headings of the class's confirmed names (as main topics), limited to skin lesions. Only MeSH records and search counts were downloaded, no article text; nothing else was changed.
 
 ### MeSH check
 
@@ -133,7 +133,7 @@ Each count is the class's headings AND one of these conditions:
 <!-- step: cases -->
 ## Cases: candidate patient cases for each class
 
-Written by `python -m src.text.prepare cases`. The cases come from PMC-Patients (Zhao et al., Scientific Data 10, 909, 2023): patient descriptions taken from published case reports in PubMed Central whose licence allows reuse. A patient is a candidate when the title of the article it comes from names one of the classes, by the names that count in `class_terms.csv` (a case report's title usually names its diagnosis). Nothing is chosen, read or cut yet: the marks show where a person should look first. The case texts stay on this computer; `case_candidates.csv` holds only each patient's numbers, publication year, title, age, sex, length, how often the case text names the class (by a full name and by its short form) and marks.
+Written by `python -m src.build.text.prepare cases`. The cases come from PMC-Patients (Zhao et al., Scientific Data 10, 909, 2023): patient descriptions taken from published case reports in PubMed Central whose licence allows reuse. A patient is a candidate when the title of the article it comes from names one of the classes, by the names that count in `class_terms.csv` (a case report's title usually names its diagnosis). Nothing is chosen, read or cut yet: the marks show where a person should look first. The case texts stay on this computer; `case_candidates.csv` holds only each patient's numbers, publication year, title, age, sex, length, how often the case text names the class (by a full name and by its short form) and marks.
 
 ### Source
 
@@ -173,7 +173,7 @@ Short forms counted in the case texts (a case text that uses the short form name
 <!-- step: abstracts -->
 ## Abstracts: case reports PubMed holds as an abstract
 
-Written by `python -m src.text.prepare abstracts`. Most case reports are in PubMed only as an abstract, without open full text. For every class, PubMed was asked for its case reports (the class's headings as a main subject, on the skin, in English) and, by the class's names in the title, for the case reports it has not indexed (journals outside MEDLINE have no subject headings, so the first search cannot find them); the articles PMC-Patients already gave were left out, and the titles and abstracts of the others were downloaded. Each abstract's case part (its sections whose label names the case or the patient, or else the whole abstract) is judged by the rules of `cases`; for a candidate article (its title passes the rules) with an open full text in PubMed Central, of any year, the case sections of the full text (titled as the case, such as "Case presentation"; figures and tables left out) are used instead of the abstract. The texts stay in `data/text/sources/pubmed/`; `abstract_candidates.csv` holds only each article's numbers, year, title, length and marks.
+Written by `python -m src.build.text.prepare abstracts`. Most case reports are in PubMed only as an abstract, without open full text. For every class, PubMed was asked for its case reports (the class's headings as a main subject, on the skin, in English) and, by the class's names in the title, for the case reports it has not indexed (journals outside MEDLINE have no subject headings, so the first search cannot find them); the articles PMC-Patients already gave were left out, and the titles and abstracts of the others were downloaded. Each abstract's case part (its sections whose label names the case or the patient, or else the whole abstract) is judged by the rules of `cases`; for a candidate article (its title passes the rules) with an open full text in PubMed Central, of any year, the case sections of the full text (titled as the case, such as "Case presentation"; figures and tables left out) are used instead of the abstract. The texts stay in `data/text/sources/pubmed/`; `abstract_candidates.csv` holds only each article's numbers, year, title, length and marks.
 
 - Asked on 2026-11-13: 30368 case reports found; already given by PMC-Patients (left out): 2548; downloaded: 27820 (not returned by PubMed: 0); without an abstract: 10037
 - Candidate articles (title passes) with a PMC number, asked from PMC: 1382; with an open full text and a case section (used instead of the abstract): 771
@@ -199,7 +199,7 @@ Queries for each class: its headings as a main subject AND ("skin neoplasms"[MeS
 <!-- step: mesh -->
 ## MeSH: the subject headings of each candidate article
 
-Written by `python -m src.text.prepare mesh`. For every article in `case_candidates.csv`, PubMed was asked whether it has subject headings at all (`medline[sb]`: PubMed indexes the articles of MEDLINE journals) and which classes they name (one of the headings of the class's names that count in `term_check.csv`, or a narrower heading) while it is also indexed under skin neoplasms or skin diseases. The US National Library of Medicine gives these headings, independently of the authors' titles and of this code. In the build, the headings of an indexed article must name its class; an article without headings is judged by its title and case text.
+Written by `python -m src.build.text.prepare mesh`. For every article in `case_candidates.csv`, PubMed was asked whether it has subject headings at all (`medline[sb]`: PubMed indexes the articles of MEDLINE journals) and which classes they name (one of the headings of the class's names that count in `term_check.csv`, or a narrower heading) while it is also indexed under skin neoplasms or skin diseases. The US National Library of Medicine gives these headings, independently of the authors' titles and of this code. In the build, the headings of an indexed article must name its class; an article without headings is judged by its title and case text.
 
 - Asked on 2026-11-13: 16029 articles, 10267 of them indexed; article numbers PubMed does not know: 0
 
@@ -223,7 +223,7 @@ Skin: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]).
 <!-- step: build -->
 ## Build: the text dataset
 
-Written by `python -m src.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a real patient description from a published case report: a patient of PMC-Patients, the case sections of an open full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task is the image dataset's: name the class. `dataset.csv` lists the cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them again, the same, from the downloaded files.
+Written by `python -m src.build.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a real patient description from a published case report: a patient of PMC-Patients, the case sections of an open full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task is the image dataset's: name the class. `dataset.csv` lists the cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them again, the same, from the downloaded files.
 
 ### Rules
 
@@ -273,12 +273,12 @@ Left out, per class (each case counted for the first rule it fails, in this orde
 
 - No person has checked the labels: each rests on sources that agree (the authors' title and the case text, and PubMed's subject headings where the article is indexed), not on a dermatologist's review.
 - Cases come from articles published from 1977 to 2026 (the year is in `dataset.csv`): a model may have read them in training.
-- The reference library for retrieval is built by `python -m src.text.library`, not here.
+- The reference library for retrieval is built by `python -m src.build.knowledge.library`, not here.
 
 <!-- step: audit -->
 ## Audit: an independent check of the questions
 
-Written by `python -m src.text.audit`, on the computer that holds the texts, with code of its own (not the build's): every question file is checked against its fingerprint and its source, and for the class's names, short forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis). 10 questions per class, each with the text after it in its source, are written into `data/text/sources/audit_sample.txt` for reading (not committed).
+Written by `python -m src.build.text.audit`, on the computer that holds the texts, with code of its own (not the build's): every question file is checked against its fingerprint and its source, and for the class's names, short forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis). 10 questions per class, each with the text after it in its source, are written into `data/text/sources/audit_sample.txt` for reading (not committed).
 
 - Questions checked: 745
 
@@ -307,7 +307,7 @@ All checks passed.
 <!-- step: library -->
 ## Library: the reference texts for retrieval
 
-Written by `python -m src.text.library` on 2026-11-14. Four corpora, as in RAG² (PubMed, PMC, clinical practice guidelines, textbooks), from public sources of the US National Library of Medicine, found by fixed rules with no person choosing a text: the abstracts of PubMed's reviews about each class (its headings as a main subject, on the skin, in English, about people; not case reports or guidelines; the newest 200 per class); the open full texts of those reviews in PubMed Central (per class the newest 25 that PMC gives in full); PubMed's clinical practice guidelines about each class (the newest 50 per class, as open full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or summary (its "Continuing Education Activity") names a class by a name that counts in `class_terms.csv` and whose title names no other site and no animal. Every text is cut word for word into passages of whole paragraphs of at most 300 words. `library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/text/library/` (not in Git).
+Written by `python -m src.build.knowledge.library` on 2026-11-14. Four corpora, as in RAG² (PubMed, PMC, clinical practice guidelines, textbooks), from public sources of the US National Library of Medicine, found by fixed rules with no person choosing a text: the abstracts of PubMed's reviews about each class (its headings as a main subject, on the skin, in English, about people; not case reports or guidelines; the newest 200 per class); the open full texts of those reviews in PubMed Central (per class the newest 25 that PMC gives in full); PubMed's clinical practice guidelines about each class (the newest 50 per class, as open full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or summary (its "Continuing Education Activity") names a class by a name that counts in `class_terms.csv` and whose title names no other site and no animal. Every text is cut word for word into passages of whole paragraphs of at most 300 words. `library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/text/library/` (not in Git).
 
 ### Per class
 
@@ -352,7 +352,7 @@ Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statp
 <!-- step: review -->
 ## Review: signals of a doubtful label or of leakage
 
-Written by `python -m src.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. Closed-book test runs read: 4.
+Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. Closed-book test runs read: 4.
 
 | Signal | Test | Validation | Train | All |
 |---|---|---|---|---|

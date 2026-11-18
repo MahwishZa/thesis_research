@@ -1,6 +1,6 @@
 # Checks of the pictures, each by itself
 
-Written by `python -m src.multimodal.figures check` on 2026-11-18. No person looked at the pictures. Image model: open_clip ViT-B-32 (laion2b_s34b_b79k), asked which of these a picture is: clinical photo ("a clinical photograph of a skin lesion"); dermoscopy ("a dermoscopy image of a skin lesion"); microscopy ("a microscope image of stained tissue"); scan ("a medical scan such as CT, MRI, X-ray or ultrasound"); drawing ("a chart, diagram, table or drawing"). Writing: EasyOCR (English). Versions of the models' answers made in this run: easyocr 1.7.2, open_clip 4.2.2, torch 2.15.0+cpu.
+Written by `python -m src.build.cases.prepare check` on 2026-11-18. No person looked at the pictures. Image model: open_clip ViT-B-32 (laion2b_s34b_b79k), asked which of these a picture is: clinical photo ("a clinical photograph of a skin lesion"); dermoscopy ("a dermoscopy image of a skin lesion"); microscopy ("a microscope image of stained tissue"); scan ("a medical scan such as CT, MRI, X-ray or ultrasound"); drawing ("a chart, diagram, table or drawing"). Writing: EasyOCR (English). Versions of the models' answers made in this run: easyocr 1.7.2, open_clip 4.2.2, torch 2.15.0+cpu.
 
 **After the checks: 104 test cases keep a picture; 7 classes have at least 8 (basal cell carcinoma, dermatofibroma, melanoma, nevus, pigmented benign keratosis, squamous cell carcinoma, vascular lesion). The rule for building the dataset (at least 80 test cases and 6 classes) is met.**
 

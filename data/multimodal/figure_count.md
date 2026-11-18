@@ -1,6 +1,6 @@
 # Figures of the text dataset's cases: a free count
 
-Written by `python -m src.multimodal.figures count` on 2026-11-18. Only the captions were read: no image was downloaded or looked at. The rules are in `src/multimodal/figures.py`. A case counts when its article's full text is open in PubMed Central, the article holds no other case of the text dataset, and at least one figure's caption shows the lesion (it names dermoscopy, a clinical photo or a lesion) and names no microscope or stain, scan, state after treatment or at follow-up, removed specimen, drawing or chart, and no numbered case or several patients.
+Written by `python -m src.build.cases.prepare count` on 2026-11-18. Only the captions were read: no image was downloaded or looked at. The rules are in `src/multimodal/figures.py`. A case counts when its article's full text is open in PubMed Central, the article holds no other case of the text dataset, and at least one figure's caption shows the lesion (it names dermoscopy, a clinical photo or a lesion) and names no microscope or stain, scan, state after treatment or at follow-up, removed specimen, drawing or chart, and no numbered case or several patients.
 
 Rule fixed before the count: build the dataset when at least 80 test cases count and at least 6 classes have at least 8 test cases that count.
 
