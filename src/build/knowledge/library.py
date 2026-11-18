@@ -43,7 +43,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from ...common import fetch, write_section
-from ...evaluate import FILES, TABLE_NAME
+from ...datasets import FILES, TABLE_NAME
 from ..text.prepare import (ABSTRACT_CANDIDATES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
                       HUMANS, IMAGE_TABLE, NOT_SKIN, SKIN, SOURCES, _checked_headings, _efetch,
                       _found, _licence, _matcher, _named, _pmc_articles, _read_csv, _search, _sentence_starts, _sha256, _stream,

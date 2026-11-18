@@ -103,9 +103,9 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from ...common import USER_AGENT, fetch, write_section
-from ...evaluate import FILES, TABLE_NAME
-from ...evaluate import classes as image_classes
-from ...evaluate import read_table
+from ...datasets import FILES, TABLE_NAME
+from ...datasets import classes as image_classes
+from ...datasets import read_table
 
 DATA = Path("data/text")
 IMAGE_TABLE = Path("data/image/dataset.csv")  # the classes of the text dataset are the image dataset's

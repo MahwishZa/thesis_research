@@ -103,8 +103,9 @@ import PIL
 from PIL import Image, ImageChops, ImageCms, ImageOps, ImageStat, features
 
 from ...common import fetch, flatten, write_section
-from ...evaluate import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, items_hash, load_dataset, summarize
-from ...evaluate import classes as training_classes
+from ...datasets import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, items_hash, load_dataset
+from ...datasets import classes as training_classes
+from ...metrics import summarize
 
 DATA = Path("data/image")  # the image dataset's folder: its committed tables and reports, and raw/, downloads/ and dataset/ (on this computer)
 PHOTOS = "build/raw_photos.csv"  # one row per original photo: everything the steps find out about it

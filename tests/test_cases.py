@@ -9,8 +9,8 @@ from unittest import mock
 
 from PIL import Image
 
-from src import evaluate
-from tests.test_evaluate import TEXT_CONFIG, FakeModel, TextProject
+from src import datasets, evaluate, run
+from tests.fixtures import TEXT_CONFIG, FakeModel, TextProject
 
 CASES = ["train/actinic keratosis/101-1.txt", "train/melanoma/102-2.txt", "train/melanoma/103-3.txt", "train/nevus/104-4.txt",
          "val/melanoma/107-7.txt", "test/actinic keratosis/201-9.txt", "test/melanoma/203-11.txt", "test/melanoma/204-13.txt",
@@ -61,32 +61,32 @@ class CaseProject(TextProject):
         return path
 
     def ask(self, dataset, model, **kwargs):
-        with mock.patch("src.evaluate.load", return_value=model):
-            return evaluate.run(str(self.config_for(dataset)), "test", results=self.results, **kwargs)
+        with mock.patch("src.run.load", return_value=model):
+            return run.run(str(self.config_for(dataset)), "test", results=self.results, **kwargs)
 
 
 class CaseDatasetTests(CaseProject):
     def test_the_cases_load_as_a_subset_of_the_text_dataset_with_their_photos(self):
         for dataset in ("cases", "case_photos"):
-            items = evaluate.load_dataset(*evaluate.dataset_paths(dataset), dataset)  # the text dataset's other cases are expected
+            items = datasets.load_dataset(*datasets.dataset_paths(dataset), dataset)  # the text dataset's other cases are expected
             self.assertEqual(sorted(i.path for i in items), sorted(CASES))
             self.assertEqual({i.path: list(i.pictures) for i in items}, self.pictures)
             self.assertEqual(items[0].group, "101")
 
     def test_the_questions_fingerprint_changes_with_any_photo(self):
-        items = evaluate.read_table(self.cases_table, "cases")
+        items = datasets.read_table(self.cases_table, "cases")
         moved = [items[0].__class__(**{**items[0].__dict__, "pictures": items[0].pictures[::-1] + (("x.png", "f" * 64),)}), *items[1:]]
-        self.assertNotEqual(evaluate.items_hash(items), evaluate.items_hash(moved))
-        self.assertEqual(evaluate.items_hash(items), evaluate.items_hash(list(reversed(items))))
+        self.assertNotEqual(datasets.items_hash(items), datasets.items_hash(moved))
+        self.assertEqual(datasets.items_hash(items), datasets.items_hash(list(reversed(items))))
 
     def test_a_changed_or_missing_photo_stops_the_run(self):
         file = self.base / "data" / "cases" / self.pictures[CASES[6]][0][0]
         file.write_bytes(picture((1, 2, 3)))
         with self.assertRaisesRegex(ValueError, "1 changed, 0 missing"):
-            evaluate.load_dataset(*evaluate.dataset_paths("cases"), "cases")
+            datasets.load_dataset(*datasets.dataset_paths("cases"), "cases")
         file.unlink()
         with self.assertRaisesRegex(ValueError, "0 changed, 1 missing"):
-            evaluate.load_dataset(*evaluate.dataset_paths("cases"), "cases")
+            datasets.load_dataset(*datasets.dataset_paths("cases"), "cases")
 
     def test_the_table_must_give_each_case_its_photos_once(self):
         text = self.cases_table.read_text(encoding="utf-8")
@@ -94,15 +94,15 @@ class CaseDatasetTests(CaseProject):
         first = lines[1].split(",")
         self.cases_table.write_text("\n".join([lines[0], ",".join(first[:5] + ["", "0"]), *lines[2:]]) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "lists no picture"):
-            evaluate.read_table(self.cases_table, "cases")
+            datasets.read_table(self.cases_table, "cases")
         second = lines[2].split(",")
         self.cases_table.write_text("\n".join([lines[0], lines[1], ",".join(second[:5] + [first[5], "1"]), *lines[3:]]) + "\n",
                                     encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "the same picture is also on line 2"):
-            evaluate.read_table(self.cases_table, "cases")
+            datasets.read_table(self.cases_table, "cases")
         self.cases_table.write_text(text.replace("|", "#", 1), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "file\\|sha256"):
-            evaluate.read_table(self.cases_table, "cases")
+            datasets.read_table(self.cases_table, "cases")
 
     def test_the_text_and_photos_run_sends_every_photo_in_order_and_the_case_in_the_prompt(self):
         model = Recorder()
@@ -131,8 +131,8 @@ class CaseDatasetTests(CaseProject):
             self.ask("case_photos", Recorder(), run_id="p2")
 
     def test_a_text_run_is_compared_with_a_case_run_on_the_shared_cases_only(self):
-        with mock.patch("src.evaluate.load", return_value=FakeModel()):
-            text_run = evaluate.run(str(self.config), "test", run_id="t", results=self.results)
+        with mock.patch("src.run.load", return_value=FakeModel()):
+            text_run = run.run(str(self.config), "test", run_id="t", results=self.results)
         cases_run = self.ask("cases", FakeModel(), run_id="c")
         photos_run = self.ask("case_photos", FakeModel(), run_id="p")
         for a, b in ((text_run, cases_run), (cases_run, text_run), (photos_run, cases_run)):
@@ -148,7 +148,7 @@ class CaseDatasetTests(CaseProject):
 
     def test_the_setup_check_sends_two_blank_pictures_for_a_case_dataset(self):
         model = Recorder()
-        answer, problem = evaluate._probe(model, print, images=2)
+        answer, problem = run._probe(model, print, images=2)
         self.assertIsNone(problem)
         ((images, prompt),) = model.requests
-        self.assertEqual((len(images), prompt), (2, evaluate.PROBE_PROMPT))
+        self.assertEqual((len(images), prompt), (2, run.PROBE_PROMPT))

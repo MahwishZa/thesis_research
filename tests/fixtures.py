@@ -1,0 +1,253 @@
+"""Shared test fixtures: tiny synthetic projects laid out like the repository (coloured squares for the image dataset, short
+invented cases for the text dataset, photos with facts for the image + metadata dataset) and stand-in models. No tests here."""
+
+import contextlib
+import csv
+import hashlib
+import io
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from PIL import Image
+
+from src import models, run
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+# ==============================================================================================================================
+# The pipeline and the repository
+# ==============================================================================================================================
+
+
+COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120)}
+SIZES = {"train": 3, "val": 2, "test": 2}  # images per class and split in the synthetic project
+CONFIG = """name = "fake"
+dataset = "image"
+[model]
+provider = "fake"
+id = "fake-1"
+[prompt]
+file = "{prompt}"
+[run]
+requests_per_minute = 600000
+order_seed = 0
+"""
+LABELS = ["nevus", "melanoma", "vascular lesion"]
+
+
+def write_table(base: Path) -> Path:
+    """data/image/dataset.csv for the images now in data/image/dataset (as the dataset preparation writes it)."""
+    image_dir, table = base / "data" / "image" / "dataset", base / "data" / "image" / "dataset.csv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    with table.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(["split", "label", "path", "sha256", "lesion_group", "source"])  # and a further column, as the preparation adds
+        for file in sorted(image_dir.rglob("*.jpg")):
+            split, label, _ = file.relative_to(image_dir).parts
+            group = f"lesion-{label}" if split == "test" else file.stem  # each class's two test images show one lesion
+            writer.writerow([split, label, file.relative_to(image_dir).as_posix(), hashlib.sha256(file.read_bytes()).hexdigest(), group,
+                             "kaggle"])
+    return table
+
+
+class Project(unittest.TestCase):
+    """A prepared dataset (3+3 training, 2+2 validation, 2+2 test images: ISIC_0000001 to ISIC_0000014, in that order), its
+    table, a prompt and a config, in a folder laid out like the repository; each test runs inside it."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name)
+        self.image_dir = self.base / "data" / "image" / "dataset"
+        number = 0
+        for split, n in SIZES.items():
+            for label, colour in COLOURS.items():
+                folder = self.image_dir / split / label
+                folder.mkdir(parents=True, exist_ok=True)
+                for _ in range(n):
+                    number += 1
+                    image = Image.new("RGB", (60, 45), colour)
+                    image.paste((255, 255, 255), (0, 0, 2 + number, 2 + number))  # every image differs from every other
+                    image.save(folder / f"ISIC_{number:07d}.jpg", quality=95)
+        self.table = write_table(self.base)
+        self.prompt = self.base / "prompt.txt"
+        self.prompt.write_text("Pick one:\n{labels}\nAnswer with the name only.", encoding="utf-8")
+        self.config = self.base / "fake.toml"
+        self.config.write_text(CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
+        self.results = self.base / "results"
+        previous = os.getcwd()
+        os.chdir(self.base)  # the paths data/image/dataset and data/image/dataset.csv point into the project
+        self.addCleanup(os.chdir, previous)
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))  # the progress lines of the runs inside the tests
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Runs
+
+
+class FakeModel:
+    """Says "melanoma" for every image. Calls are counted, including retries.
+
+    ``fail_on``: call numbers that fail once with a transient error; ``fail_from``: every call from this number on fails
+    transiently; ``fatal_from``: every call from this number on fails with an error that retrying cannot fix;
+    ``quota_from``: every call from this number on finds the daily quota used up.
+    """
+
+    def __init__(self, fail_on=(), fail_from=None, fatal_from=None, quota_from=None):
+        self.calls, self.fail_on, self.fail_from, self.fatal_from, self.quota_from = 0, set(fail_on), fail_from, fatal_from, quota_from
+
+    def describe(self):
+        return {"model_id": "fake-1", "generation_config": {}}
+
+    def predict(self, images, prompt):
+        self.calls += 1
+        if self.quota_from and self.calls >= self.quota_from:
+            raise models.QuotaExhausted("Daily quota used up for fake-1 (limit 20 requests per day on the free tier)")
+        if self.fatal_from and self.calls >= self.fatal_from:
+            raise models.FatalError("Provider refused the request (HTTP 404 NOT_FOUND): gone", 404)
+        if self.calls in self.fail_on or (self.fail_from and self.calls >= self.fail_from):
+            raise models.TransientError("rate limited")
+        return {"text": "Melanoma.", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": str(self.calls),
+                "usage": {}}
+
+
+class UnpinnedModel(FakeModel):
+    """A model whose name may move to a newer version (the adapter says ``pinned = False``)."""
+
+    pinned = False
+
+
+class RunProject(Project):
+    def setUp(self):
+        super().setUp()
+        self.model_dir = self.results / "image" / "fake"
+        patcher = mock.patch("src.run.time.sleep")
+        self.sleep = patcher.start()
+        self.addCleanup(patcher.stop)
+        self.clean = mock.patch("src.run._git", return_value={"commit": "c" * 40, "uncommitted_changes": False})
+        self.clean.start()
+        self.addCleanup(self.clean.stop)
+
+    def _run(self, model, *args, **kwargs):
+        with mock.patch("src.run.load", return_value=model):
+            return run.run(str(self.config), *args, results=self.results, **kwargs)
+
+    def _preds(self, folder):
+        return [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# The setup check
+
+
+class ProbeModel:
+    """Answers the blank-image question as told: ``answer`` (a dict), or raises ``error``."""
+
+    def __init__(self, answer=None, error=None):
+        self.answer = answer or {"text": "ok", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": "r",
+                                 "usage": {"output_tokens": 1}}
+        self.error, self.calls, self.images = error, 0, []
+
+    def predict(self, images, prompt):
+        self.calls += 1
+        self.images.append((*(images[0] if images else (None, None)), prompt))  # the first image, as a single-image request sends it
+        self.sent = images
+        if self.error:
+            raise self.error
+        return self.answer
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# The text dataset: each case goes into the prompt, word for word, with no image
+
+TEXT_CASES = {  # (split, class): the article of each case
+    ("train", "actinic keratosis"): ["101"], ("train", "melanoma"): ["102", "103"], ("train", "nevus"): ["104", "105"],
+    ("val", "actinic keratosis"): ["106"], ("val", "melanoma"): ["107"], ("val", "nevus"): ["108"],
+    ("test", "actinic keratosis"): ["201", "202"], ("test", "melanoma"): ["203", "203", "204"],  # one article, two patients
+    ("test", "nevus"): ["205", "206", "207"],
+}
+TEXT_CONFIG = CONFIG.replace('dataset = "image"', 'dataset = "text"')
+
+
+class TextProject(unittest.TestCase):
+    """A prepared text dataset (16 cases: 5 training, 3 validation, 8 test from 7 articles), its table, a prompt with the case
+    placeholder and a config, in a folder laid out like the repository; each test runs inside it."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name)
+        self.case_dir, self.table = self.base / "data" / "text" / "dataset", self.base / "data" / "text" / "dataset.csv"
+        self.texts, rows, number = {}, [], 0
+        for (split, label), articles in TEXT_CASES.items():
+            (self.case_dir / split / label).mkdir(parents=True)
+            for pmid in articles:
+                number += 1
+                path = f"{split}/{label}/{pmid}-{number}.txt"
+                self.texts[path] = f"A {40 + number}-year-old woman had a “café au lait” lesion – case {number}.\nIt grew."
+                (self.case_dir / path).write_bytes(self.texts[path].encode("utf-8"))
+                rows.append(f"{split},{label},{path},{hashlib.sha256(self.texts[path].encode('utf-8')).hexdigest()},{pmid}-{number},"
+                            f"{pmid},PMC-Patients\n")
+        self.table.write_text("split,label,path,sha256,patient_uid,pmid,source\n" + "".join(rows), encoding="utf-8")
+        self.prompt = self.base / "prompt.txt"
+        self.prompt.write_text("A case.\nCase: {case}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
+        self.config = self.base / "fake.toml"
+        self.config.write_text(TEXT_CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
+        self.results = self.base / "results"
+        previous = os.getcwd()
+        os.chdir(self.base)
+        self.addCleanup(os.chdir, previous)
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))  # the progress lines of the runs inside the tests
+        for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
+            patcher = mock.patch(f"src.run.{name}", return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+
+class RecordingModel(FakeModel):
+    """Says "melanoma" for every case, and keeps what each request carried."""
+
+    def __init__(self):
+        super().__init__()
+        self.requests = []
+
+    def predict(self, images, prompt):
+        self.requests.append((*(images[0] if images else (None, None)), prompt))
+        return super().predict(images, prompt)
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# The multimodal dataset: each photo with its patient's facts in the prompt
+
+class MultimodalProject(Project):
+    """The image project, with data/image_metadata/dataset.csv giving each photo its patient's facts (one test photo lacks a fact),
+    a prompt with the facts placeholder and a multimodal config."""
+
+    MISSING = "test/nevus/ISIC_0000013.jpg"
+
+    def setUp(self):
+        super().setUp()
+        with self.table.open(encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f))
+        self.questions = self.base / "data" / "image_metadata" / "dataset.csv"
+        self.questions.parent.mkdir(parents=True)
+        with self.questions.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["split", "label", "path", "sha256", "lesion_group", "facts"], lineterminator="\n")
+            writer.writeheader()
+            for i, row in enumerate(rows):
+                site = "not recorded" if row["path"] == self.MISSING else "trunk"
+                writer.writerow({k: row[k] for k in ("split", "label", "path", "sha256", "lesion_group")}
+                                | {"facts": f"Age: about {30 + 5 * i} years. Sex: female. Body site: {site}."})
+        self.prompt.write_text("A photo.\nPatient: {facts}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
+        self.config.write_text(CONFIG.replace('dataset = "image"', 'dataset = "multimodal"').format(prompt=self.prompt.as_posix()),
+                               encoding="utf-8")
+        for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
+            patcher = mock.patch(f"src.run.{name}", return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)

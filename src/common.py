@@ -1,10 +1,12 @@
-"""Helpers the dataset builders share (src/build/): a polite download that tries again when a service
-is busy, a report with one section per step that each step rewrites on its own, reading a table, and a nested record as flat
-names."""
+"""Helpers the code shares: for the dataset builders (src/build/), a polite download that tries again when a service is busy, a
+report with one section per step that each step rewrites on its own, reading a table, and a nested record as flat names; for the
+runs (src/run.py, src/evaluate.py), crash-safe answer files."""
 
 from __future__ import annotations
 
 import csv
+import json
+import os
 import http.client
 import re
 import time
@@ -79,3 +81,66 @@ def flatten(value, prefix: str = "") -> dict:
             out.update(flatten(item, f"{prefix}.{key}" if prefix else str(key)))
         return out
     return {prefix: value}
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Crash-safe files: a run can be stopped at any moment (power cut, Ctrl+C) and continued without losing or damaging answers
+
+
+def _split_last_line(content: bytes) -> tuple[str, bytes]:
+    """The complete lines of a JSON-lines file (decoded strictly) and the bytes after its last end of line."""
+    cut = content.rfind(b"\n") + 1
+    return content[:cut].decode("utf-8"), content[cut:]
+
+
+def _complete_row(tail: bytes) -> dict | None:
+    """The row in bytes that lack their end of line, or None when they are a cut-off line (even one cut inside a character)."""
+    try:
+        row = json.loads(tail.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return row if isinstance(row, dict) else None
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    """The rows of a JSON-lines file. An incomplete last line (the program was stopped while writing it) is ignored; a damaged
+    line anywhere else is an error, never silently skipped."""
+    if not path.exists():
+        return []
+    head, tail = _split_last_line(path.read_bytes())
+    rows = []
+    for number, line in enumerate(head.split("\n"), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path}: line {number} is not valid JSON ({exc.msg}); the file is damaged") from exc
+    if tail.strip() and (last := _complete_row(tail)) is not None:
+        rows.append(last)
+    return rows
+
+
+def repair_jsonl(path: Path) -> None:
+    """Before answers are appended: remove an incomplete last line, or add the missing end of line after a complete one."""
+    if not path.exists():
+        return
+    content = path.read_bytes()
+    if not content or content.endswith(b"\n"):
+        return
+    head, tail = _split_last_line(content)
+    if _complete_row(tail) is not None:
+        fixed = content + b"\n"
+    else:
+        fixed = head.encode("utf-8")
+        print(f"{path}: removed an incomplete last line (the program was stopped while writing it); that file is asked again")
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(fixed)
+    os.replace(tmp, path)
+
+
+def write_json(path: Path, content: dict) -> None:
+    """Written to a temporary file first, so a stop in the middle never leaves a half-written file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(content, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    os.replace(tmp, path)

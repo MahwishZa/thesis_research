@@ -1,2 +1,3 @@
-"""The thesis code: build/ makes and checks each dataset (one folder per dataset), common.py holds what they share, and
-evaluate.py runs the models on a prepared dataset and scores them."""
+"""The thesis code. build/ makes and checks each dataset and the knowledge base (one folder each); datasets.py reads a prepared
+dataset; prompts.py, models.py and run.py ask the models; metrics.py and evaluate.py score the saved answers; common.py holds
+what they share."""

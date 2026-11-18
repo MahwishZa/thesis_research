@@ -22,7 +22,7 @@ from unittest import mock
 import PIL
 from PIL import Image, ImageChops, ImageCms, ImageStat, JpegImagePlugin
 
-from src import evaluate
+from src import datasets
 from src.build.image import prepare
 
 
@@ -1269,9 +1269,9 @@ class ImagesTests(unittest.TestCase):
             self.assertEqual(image.mode, "RGB")
 
     def test_images_csv_is_what_the_evaluation_reads_and_photos_in_no_split_get_no_image(self):
-        self.assertEqual((prepare.DATA / prepare.FILES, prepare.DATA / prepare.TABLE_NAME), (evaluate.IMAGES, evaluate.TABLE))
+        self.assertEqual((prepare.DATA / prepare.FILES, prepare.DATA / prepare.TABLE_NAME), (datasets.IMAGES, datasets.TABLE))
         prepare.images(self.data)
-        items = evaluate.load_dataset(self.data / prepare.TABLE_NAME, self.data / prepare.FILES)
+        items = datasets.load_dataset(self.data / prepare.TABLE_NAME, self.data / prepare.FILES)
         self.assertEqual(sorted((item.split, item.label, item.path, item.group) for item in items), [
             ("test", "melanoma", "test/melanoma/ISIC_0000001.jpg", "ISIC_0000001"),
             ("test", "nevus", "test/nevus/ISIC_0000003.jpg", "ISIC_0000003"),
@@ -1321,7 +1321,7 @@ class ImagesTests(unittest.TestCase):
     def test_the_report_says_how_every_image_was_made_and_gives_the_fingerprints(self):
         prepare.images(self.data)
         text = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        items = evaluate.read_table(self.data / prepare.TABLE_NAME)
+        items = datasets.read_table(self.data / prepare.TABLE_NAME)
         for expected in ("## Images: the prepared dataset", "Fitted whole within 600 x 450 pixels", "Nothing is cut and nothing is added",
                          "quality 95 with full colour resolution (4:4:4 chroma), without metadata", f"Made with Pillow {PIL.__version__}",
                          "| melanoma | 1 | 1 | 2 | 4 |", "| nevus | 1 | 1 | 1 | 3 |", "| **Total** | 2 | 2 | 3 | 7 |",
@@ -1332,7 +1332,7 @@ class ImagesTests(unittest.TestCase):
                          "- Turned from portrait to landscape: 2 (ISIC_0000003, ISIC_0000006)",
                          "- Colours converted from an embedded colour profile: 1 (ISIC_0000006: sRGB",
                          "- Converted to RGB from another colour mode: 0", "marks the 1 photos from the Kaggle dataset's Test folder: "
-                         "test 1, val 0, train 0", *(f"- {part}: `{evaluate.items_hash([i for i in items if i.split == part])}`"
+                         "test 1, val 0, train 0", *(f"- {part}: `{datasets.items_hash([i for i in items if i.split == part])}`"
                                                      for part in ("test", "val", "train")),
                          "- Photos in no split (2) get no image."):
             self.assertIn(expected, text)

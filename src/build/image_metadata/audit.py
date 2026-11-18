@@ -32,7 +32,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from ...common import read_rows, write_section
-from ...evaluate import summarize
+from ...metrics import summarize
 from .prepare import DATA, IMAGE, KNOWLEDGE, REPORT, REPORT_HEAD, STEPS, TEXT
 
 AUDIT_STEPS = STEPS

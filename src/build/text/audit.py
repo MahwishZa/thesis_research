@@ -62,7 +62,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from ...common import write_section
-from ...evaluate import FILES, SYSTEM_FILES, TABLE_NAME
+from ...datasets import FILES, SYSTEM_FILES, TABLE_NAME
 from ..knowledge.library import FOLDER as KNOWLEDGE_TEXTS, KNOWLEDGE
 from .prepare import (ABSTRACTS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
                       SKIN_WORDS, SOURCES, STEPS, SURFACE, TERMS, _json_list)
