@@ -27,9 +27,15 @@ Phase 1, closed-book (no retrieval): four LLMs answered the test split of three 
 
 ```
 thesis_research/
-├── src/                 evaluation and dataset preparation code
-│   ├── evaluate.py
-│   └── build/           how each dataset and the knowledge base are made and checked
+├── src/                 the code
+│   ├── build/           how each dataset and the knowledge base are made and checked
+│   ├── datasets.py      reads a prepared dataset and checks every file
+│   ├── prompts.py       the prompt and the answer reader
+│   ├── models.py        one adapter per model API
+│   ├── run.py           runs a model on a dataset (python -m src.run)
+│   ├── metrics.py       the scores
+│   ├── evaluate.py      reports and comparisons from saved answers (python -m src.evaluate)
+│   └── common.py        helpers they share
 ├── configs/             the models and their settings (models.toml)
 ├── prompts/             one prompt per dataset and approach
 ├── data/                one folder per dataset and the knowledge base: table, report, data sheet, build records
