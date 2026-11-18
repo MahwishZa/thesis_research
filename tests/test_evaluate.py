@@ -2223,7 +2223,7 @@ class RepositoryTests(unittest.TestCase):
 
         section = re.search(r"## Results\n(.*?)\n## ", self.readme, re.S).group(1)
         parts = re.split(r"^### (.+)$", section, flags=re.M)  # [intro, heading, body, heading, body, ...]
-        self.assertEqual(parts[1::2], ["Image", "Text", "Multimodal"])
+        self.assertEqual(parts[1::2], ["Image", "Text", "Image + metadata"])
         linked = []
         for heading, body in zip(parts[1::2], parts[2::2]):
             lines = [line for line in body.splitlines() if line.startswith("|")]
@@ -2233,7 +2233,7 @@ class RepositoryTests(unittest.TestCase):
                 link = re.fullmatch(r"\[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", cells[0])
                 self.assertIsNotNone(link, f"the first cell of a results row links the run's report: {line}")
                 path, dataset, model = link.groups()
-                self.assertEqual(dataset, heading.lower(), "a row belongs under the heading of its own dataset")
+                self.assertEqual(dataset, {"Image + metadata": "multimodal"}.get(heading, heading.lower()), "a row belongs under the heading of its own dataset")
                 self.assertFalse(model.endswith("-abstain"), "a run that may abstain needs an abstention column before it is listed")
                 self.assertTrue((ROOT / path).is_file(), f"the README links to a report that does not exist: {path}")
                 self.assertIn("### Confusion matrix", (ROOT / path).read_text(encoding="utf-8"))  # the README says the report holds it

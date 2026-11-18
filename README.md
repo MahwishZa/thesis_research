@@ -35,7 +35,7 @@ Test split: 221 written cases.
 | [Gemini 3.8 Flash](results/text/gemini-3.8-flash/test_6ee1c09b/report.md) | 69.2 | 65.1 | 61.4 | 61.3 | 38.6 | 5.0 |
 | [Llama 4 Maverick](results/text/llama-4-maverick/test_32905170/report.md) | 53.8 | 53.8 | 46.8 | 47.0 | 48.5 | 10.0 |
 
-### Multimodal
+### Image + metadata
 
 Test split: the image dataset's 320 photos, each with the patient's age, sex and body site.
 
@@ -49,7 +49,7 @@ Test split: the image dataset's 320 photos, each with the patient's age, sex and
 - **Precision, Recall, F1:** averaged over the eight diagnoses, each counting the same (macro average). Recall is the main score (balanced accuracy); chance is 12.5.
 - **Hallucination rate:** the share of questions answered with a wrong diagnosis, averaged over the diagnoses.
 - **Missed malignancy:** melanoma, basal cell carcinoma or squamous cell carcinoma answered as a benign diagnosis, as a share of all cancers.
-- **Comparing datasets:** the image and multimodal datasets use the same photos, so they can be compared directly. The text dataset describes different patients, so its scores are not directly comparable with the other two.
+- **Comparing datasets:** the image and image + metadata datasets use the same photos, so they can be compared directly. The text dataset describes different patients, so its scores are not directly comparable with the other two.
 
 ## Repository Structure
 
