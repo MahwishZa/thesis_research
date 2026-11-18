@@ -1,6 +1,7 @@
 """Independent check of the text dataset, run where its texts are (they are not in Git):
 
-    python -m src.text.audit
+    python -m src.text.audit            the checks every question must pass (a failure stops)
+    python -m src.text.audit review     signals of a doubtful label or of leakage, for deciding on a new version (no failure)
 
 It reads dataset.csv, the question files in data/text/dataset/ and the downloaded sources, and checks, with code of its own (not
 the build's), that every question:
@@ -26,6 +27,20 @@ It writes the result into the audit section of dataset_report.md, and 10 questio
 the text that follows it in its source (where its label can be checked), into data/text/sources/audit_sample.txt (not committed)
 for anyone who wants to read real questions. It exits with an error when a check
 fails.
+
+``review`` looks for signals that a label may be doubtful or that a question leaks, with rules fixed before it was first run
+(2026-11-18), and changes nothing. For every question it records:
+    - the confirming result names another class: a sentence of the test result that confirms the class (as the audit finds it)
+      also names another class, not negated ("no evidence of melanoma"): a lesion of two diagnoses, or a doubtful label;
+    - look-alike wording around the result: "mimic", "simulate", "resemble", "masquerade", "mistaken", "misdiagnosed", "initially
+      diagnosed", "clinically diagnosed", "suspected" or "differential diagnosis" in the confirming sentences;
+    - the other classes the question names (allowed: they are clinical information, such as "a nodule suspicious of melanoma");
+    - the same wrong answer from every closed-book test run (results/text/.../predictions.jsonl): a signal only, as the models
+      that are evaluated would otherwise decide which questions they are evaluated on;
+    - the passages of the knowledge base (data/text/library/passages.jsonl and appearance.jsonl) that share a run of 12 words
+      with the question: a leak into retrieval, to be removed from the knowledge base, never from the questions;
+    - its source (PMC-Patients, a PMC full text, a PubMed abstract), year and length.
+It writes data/text/review_flags.csv (committed: no text) and the review section of dataset_report.md.
 """
 
 from __future__ import annotations
@@ -66,6 +81,13 @@ SPELLING = (("’", "'"), ("naev", "nev"), ("haem", "hem"), ("oedem", "edem"), (
 PATIENT = re.compile(r"\b(\d+[- ]?(year|yr|month|week|day)s?[- ]?old|aged? \d+|\d+ years? of age|man|woman|boy|girl|male|female|"
                      r"infant|newborn|neonate|child|gentleman|lady)\b", re.I)  # a patient: an age or a sex
 SHORT_STOPS = {"e.g.", "i.e.", "dr.", "mr.", "mrs.", "ms.", "vs.", "approx.", "fig.", "figs.", "no.", "al.", "st.", "ca."}
+LOOKALIKE = re.compile(r"\b(mimic|simulat|resembl|masquerad|mistaken|misdiagnos|initially diagnosed|clinically diagnosed|suspect|"
+                       r"differential diagnos)\w*")
+NEGATED = re.compile(r"\b(no|not|without|negative for|ruled out|rule out|excluded|exclude|absence of|free of|rather than)"
+                     r"(?: [a-z0-9]+){0,5}$")  # right before a name (which starts with its space): the name is negated
+REVIEW_FLAGS = "review_flags.csv"
+REVIEW_COLUMNS = ["patient_uid", "split", "label", "source", "year", "words", "result_names_other_class", "lookalike_wording",
+                  "other_classes_in_question", "same_wrong_answer", "knowledge_passages_sharing_12_words"]
 SAMPLE, SAMPLE_PER_CLASS, SAMPLE_AFTER = "audit_sample.txt", 10, 2000  # questions per class; characters of the text after each
 SAMPLE_SEED = "text-audit-8"  # changed after rules were drawn from a reading of the sample: the next reading is of unseen questions
 SHARED_RUN, SAME_PATIENT = 12, 0.10  # questions of two articles sharing this share of their runs of 12 words: one patient
@@ -211,6 +233,157 @@ def audit(data: str | Path = DATA, show=None) -> dict:
             "sample": (data / SOURCES / SAMPLE).as_posix()}
 
 
+def review(data: str | Path = DATA, results: str | Path = "results", show=None) -> dict:
+    """The review (see the module's description): review_flags.csv and the review section of dataset_report.md."""
+    data, results = Path(data), Path(results)
+    say = show or (lambda message: None)
+    with (data / TABLE_NAME).open(encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    with (data / TERMS).open(encoding="utf-8", newline="") as f:
+        counting = defaultdict(list)
+        for t in csv.DictReader(f):
+            if t["counts"] == "yes" and t["term"].lower() not in VAGUE:
+                counting[t["class"]].append(t["term"])
+    confirms = {label: _name_pattern(names) for label, names in counting.items()}
+    short = {label: re.compile(r"\b(?:" + "|".join(re.escape(f) for f in forms) + r")s?\b", re.I)
+             for label, forms in SHORT_FORMS.items()}
+    texts = {}
+    for row in rows:
+        path = data / FILES / row["path"]
+        if not path.is_file():
+            raise FileNotFoundError(f"{path.as_posix()} not found: the review reads every question (run it where the texts are)")
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != row["sha256"]:
+            raise ValueError(f"{path.as_posix()} differs from its fingerprint: the review is of the frozen dataset only")
+        texts[row["patient_uid"]] = content.decode("utf-8")
+    sources = _sources(data, rows, show)
+    answers = _closed_book_answers(results)
+    runs_of = _passage_runs(data / "library", say)
+    out = []
+    for row in rows:
+        uid, label, question = row["patient_uid"], row["label"], texts[row["patient_uid"]]
+        defined = _defined(sources.get(uid, ()), confirms[label], short.get(label), ending=True)
+        found = [c for source in sources.get(uid, ()) if question in source
+                 for c in _confirming(source[source.index(question) + len(question):], confirms[label], short.get(label), defined)]
+        windows = [s for window, _ in found for s in window]
+        others = sorted({other for _, naming in found for sentence in naming for other, pattern in confirms.items()
+                         if other != label and _named_not_negated(pattern, _plain(sentence))})
+        mentioned = sorted(other for other, pattern in confirms.items() if other != label and pattern.search(_plain(question)))
+        given = answers.get(row["path"], [])
+        same = given[0] if given and len(set(given)) == 1 and given[0] not in (None, label) and len(given) >= 2 else ""
+        mine = {tuple(w) for w in _word_runs(question)}
+        out.append({"patient_uid": uid, "split": row["split"], "label": label, "source": row["source"], "year": row["year"],
+                     "words": len(question.split()), "result_names_other_class": "; ".join(others),
+                     "lookalike_wording": "yes" if any(LOOKALIKE.search(_plain(w)) for w in windows) else "no",
+                     "other_classes_in_question": "; ".join(mentioned), "same_wrong_answer": same,
+                     "knowledge_passages_sharing_12_words": "; ".join(sorted({pid for run in mine for pid in runs_of.get(run, ())}))})
+    with (data / REVIEW_FLAGS).open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=REVIEW_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(out)
+    write_section(data / REPORT, REPORT_HEAD, STEPS, "review", _review_summary(out, _runs_used(results)))
+    return {"rows": out, "table": (data / REVIEW_FLAGS).as_posix(), "summary": (data / REPORT).as_posix()}
+
+
+def _confirming(rest: str, names: re.Pattern, short: re.Pattern | None, defined: set[str]) -> list[tuple[list[str], list[str]]]:
+    """Each confirmation of the class in the rest of the source: a test-result sentence and the two after it (the window), when
+    one of the three names the class in a sentence that names no relative; with the window's sentences that name the class.
+    "keratinocyte carcinoma" (GROUP) is no test result."""
+    sentences = _sentences(rest.strip())
+
+    def named(sentence: str) -> bool:
+        return not RELATIVE.search(_plain(sentence)) and bool(
+            names.search(_plain(sentence)) or (short and short.search(sentence))
+            or any(re.search(rf"\b{re.escape(form)}s?\b", sentence) for form in defined))
+    found = []
+    for n, sentence in enumerate(sentences):
+        window = sentences[n:n + 3]
+        naming = [s for s in window if named(s)]
+        if RESULT.search(GROUP.sub(" ", _plain(sentence))) and naming:
+            found.append((window, naming))
+    return found
+
+
+def _named_not_negated(pattern: re.Pattern, plain: str) -> bool:
+    """Whether the (plain) text names the class without a negation in the six words before the name (a name's match starts with
+    the space before it)."""
+    return any(not NEGATED.search(plain[:m.start()]) for m in pattern.finditer(plain))
+
+
+def _word_runs(text: str) -> list[list[str]]:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return [words[i:i + SHARED_RUN] for i in range(len(words) - SHARED_RUN + 1)]
+
+
+def _passage_runs(folder: Path, say) -> dict[tuple, set[str]]:
+    """Every run of SHARED_RUN words of the knowledge base's passages, with the passages that hold it."""
+    runs = defaultdict(set)
+    for name in ("passages.jsonl", "appearance.jsonl"):
+        path = folder / name
+        if not path.is_file():
+            raise FileNotFoundError(f"{path.as_posix()} not found: the review checks the questions against the whole knowledge base")
+        say(f"reading {path.as_posix()}")
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    passage = json.loads(line)
+                    for run in _word_runs(passage["text"]):
+                        runs[tuple(run)].add(passage["passage_id"])
+    return runs
+
+
+def _closed_book_answers(results: Path) -> dict[str, list]:
+    """Per question path: the answer of every finished closed-book test run of the text dataset (one per model)."""
+    answers = defaultdict(list)
+    for path in _runs_used(results):
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    answer = json.loads(line)
+                    answers[answer["path"]].append(answer["prediction"])
+    return answers
+
+
+def _runs_used(results: Path) -> list[Path]:
+    return sorted(p for p in results.glob("text/**/test_*/predictions.jsonl") if (p.parent / "run_card.json").is_file())
+
+
+def _review_summary(rows: list[dict], runs: list[Path]) -> list[str]:
+    def count(rows_, key, value=None):
+        return sum(1 for r in rows_ if (r[key] == value if value is not None else bool(r[key])))
+    lines = ["# Review: signals of a doubtful label or of leakage", "",
+             "Written by `python -m src.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). "
+             "It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. "
+             f"Closed-book test runs read: {len(runs)}.", "",
+             "| Signal | Test | Validation | Train | All |", "|---|---|---|---|---|"]
+    signals = [("the confirming result also names another class (not negated)", "result_names_other_class", None),
+               ("look-alike wording around the confirming result", "lookalike_wording", "yes"),
+               ("the question names another class", "other_classes_in_question", None),
+               ("every closed-book run gave the same wrong answer", "same_wrong_answer", None),
+               ("a knowledge-base passage shares 12 words in a row", "knowledge_passages_sharing_12_words", None)]
+    for name, key, value in signals:
+        by = {s: count([r for r in rows if r["split"] == s], key, value) for s in ("test", "val", "train")}
+        lines.append(f"| {name} | {by['test']} | {by['val']} | {by['train']} | {sum(by.values())} |")
+    test = [r for r in rows if r["split"] == "test"]
+    both = [r for r in test if r["same_wrong_answer"] and r["result_names_other_class"]]
+    lines += ["", "On the test split, the questions every run got wrong in the same way, and what the review finds for them:", "",
+              f"- with a confirming result that also names another class: {len(both)}",
+              f"- with look-alike wording: {sum(r['lookalike_wording'] == 'yes' for r in test if r['same_wrong_answer'])}",
+              f"- with neither: {sum(1 for r in test if r['same_wrong_answer'] and not r['result_names_other_class'] and r['lookalike_wording'] == 'no')}",
+              "", "| Class | Test questions | Confirming result names another class | Look-alike wording | Same wrong answer |",
+              "|---|---|---|---|---|"]
+    for label in sorted({r["label"] for r in rows}):
+        mine = [r for r in test if r["label"] == label]
+        lines.append(f"| {label} | {len(mine)} | {count(mine, 'result_names_other_class')} | {count(mine, 'lookalike_wording', 'yes')} | "
+                     f"{count(mine, 'same_wrong_answer')} |")
+    by_source = defaultdict(list)
+    for r in test:
+        by_source[r["source"]].append(int(r["words"]))
+    lines += ["", "Test questions by source: " + "; ".join(f"{s} {len(w)} (median {sorted(w)[len(w) // 2]} words)"
+                                                       for s, w in sorted(by_source.items())) + ".", ""]
+    return lines
+
+
 def _on_skin(question: str) -> bool:
     """Whether a sentence of the question names a lesion and where it is on the skin or the body's surface, reporting no scan,
     and it or a sentence next to it what the lesion looks or feels like."""
@@ -223,14 +396,7 @@ def _confirms(rest: str, names: re.Pattern, short: re.Pattern | None, defined: s
     """Whether a sentence of the rest of the source reports a test result (RESULT) and names the class (``names``, its short
     form, or a short form the source defines), itself or in one of the two sentences after it, in a sentence that names no
     relative; "keratinocyte carcinoma" (GROUP) is no test result."""
-    sentences = _sentences(rest.strip())
-
-    def named(sentence: str) -> bool:
-        return not RELATIVE.search(_plain(sentence)) and bool(
-            names.search(_plain(sentence)) or (short and short.search(sentence))
-            or any(re.search(rf"\b{re.escape(form)}s?\b", sentence) for form in defined))
-    return any(RESULT.search(GROUP.sub(" ", _plain(sentence))) and any(map(named, sentences[n:n + 3]))
-               for n, sentence in enumerate(sentences))
+    return bool(_confirming(rest, names, short, defined))
 
 
 def _shared_runs(rows: list[dict], texts: dict[str, str]) -> list[tuple[dict, dict, float, str]]:
@@ -347,8 +513,16 @@ def _summary(rows, failures) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    if argv == ["review"]:
+        try:
+            done = review(show=print)
+        except (ValueError, FileNotFoundError) as exc:
+            raise SystemExit(f"ERROR: {exc}") from exc
+        print(f"Reviewed {len(done['rows'])} questions. Written: {done['table']} and {done['summary']} (the review section). "
+              "Commit both.")
+        return
     if argv:
-        raise SystemExit("usage: python -m src.text.audit")
+        raise SystemExit("usage: python -m src.text.audit [review]")
     try:
         done = audit(show=print)
     except (ValueError, FileNotFoundError) as exc:

@@ -108,7 +108,7 @@ IMAGE_TABLE = Path("data/image/dataset.csv")  # the classes of the text dataset 
 TERMS = "class_terms.csv"  # written by people
 CHECK = "term_check.csv"
 REPORT = "dataset_report.md"
-STEPS = ("survey", "cases", "abstracts", "mesh", "build", "audit", "library")  # the report's sections, in the order they run;
+STEPS = ("survey", "cases", "abstracts", "mesh", "build", "audit", "library", "review")  # the report's sections, in the order they run;
 # audit and library are commands of their own (python -m src.text.audit, python -m src.text.library)
 REPORT_HEAD = ["# Preparation of the text dataset", "",
                "Written by `python -m src.text.prepare`, one section per step in the order the steps run; each step rewrites only "

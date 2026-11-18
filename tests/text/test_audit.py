@@ -10,6 +10,8 @@ from src.text import audit, prepare
 
 from .test_prepare import BCC_TEXT, BuildData
 
+REVIEW = audit.review
+
 
 class AuditTests(BuildData):
     def setUp(self):
@@ -250,3 +252,95 @@ class AuditTests(BuildData):
         self.assertIn("FAILED question file missing: 1 (for example 2010-1)", shown.getvalue())
         with self.assertRaises(SystemExit):
             audit.main(["extra"])
+
+
+class ReviewTests(BuildData):
+    """The review: signals of a doubtful label or a leak, on the built made-up dataset (9 questions)."""
+
+    def setUp(self):
+        super().setUp()
+        prepare.build(self.data, classes=self.CLASSES)
+        self.rows = {r["patient_uid"]: r for r in self._table()}
+        self.texts = {uid: (self.data / "dataset" / r["path"]).read_text(encoding="utf-8") for uid, r in self.rows.items()}
+        library = self.data / "library"
+        library.mkdir(exist_ok=True)
+        leaked = " ".join(self.texts["2008-1"].split()[:14])  # a passage that quotes 14 words of a question
+        (library / "passages.jsonl").write_text(json.dumps({"passage_id": "pmc-1", "text": f"As reported, {leaked} and more."}) + "\n"
+                                                + json.dumps({"passage_id": "pmc-2", "text": "Unrelated words about something else entirely."})
+                                                + "\n", encoding="utf-8")
+        (library / "appearance.jsonl").write_text("", encoding="utf-8")
+        self.results = self.data.parent / "results"
+        for run, answer in (("a", "melanoma"), ("b", "melanoma"), ("c", None)):
+            folder = self.results / "text" / run / "test_1"
+            folder.mkdir(parents=True)
+            (folder / "run_card.json").write_text("{}", encoding="utf-8")
+            lines = [{"path": r["path"], "prediction": r["label"]} for r in self.rows.values()]
+            for line in lines:
+                if line["path"] == self.rows["2001-1"]["path"]:  # basal cell carcinoma: two runs say melanoma
+                    line["prediction"] = answer if run != "c" else "melanoma"
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
+
+    def sources(self, rests):
+        found = audit._sources(self.data, list(self.rows.values()))
+        for uid, rest in rests.items():
+            found[uid] = [self.texts[uid] + " " + rest]
+        return mock.patch.object(audit, "_sources", return_value=found)
+
+    def test_every_question_gets_a_row_and_a_built_dataset_shows_only_the_signals_it_has(self):
+        audit.audit(self.data)
+        done = audit.review(self.data, self.results)
+        rows = {r["patient_uid"]: r for r in done["rows"]}
+        self.assertEqual(set(rows), set(self.rows))
+        self.assertEqual(rows["2001-1"]["same_wrong_answer"], "melanoma")  # all three runs gave the same wrong answer
+        self.assertEqual({uid for uid, r in rows.items() if r["same_wrong_answer"]}, {"2001-1"})  # right answers are no signal
+        self.assertEqual(rows["2008-1"]["knowledge_passages_sharing_12_words"], "pmc-1")
+        self.assertEqual({uid for uid, r in rows.items() if r["knowledge_passages_sharing_12_words"]}, {"2008-1"})
+        self.assertEqual({uid for uid, r in rows.items() if r["result_names_other_class"]}, set())
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("## Review: signals of a doubtful label or of leakage", report)
+        self.assertIn("Closed-book test runs read: 3.", report)
+        self.assertLess(report.index("<!-- step: audit -->"), report.index("<!-- step: review -->"))
+        with (self.data / audit.REVIEW_FLAGS).open(encoding="utf-8") as f:
+            self.assertEqual(next(iter(f)).strip().split(","), audit.REVIEW_COLUMNS)
+
+    def test_one_run_alone_gives_no_signal(self):
+        for run in ("b", "c"):
+            for path in (self.results / "text" / run).rglob("*"):
+                if path.is_file():
+                    path.unlink()
+        self.assertEqual(self._row("2001-1")["same_wrong_answer"], "")
+
+    def test_a_confirming_result_that_also_names_another_class_unless_negated(self):
+        with self.sources({"2001-1": "Histology showed a basal cell carcinoma colliding with a melanoma."}):
+            self.assertEqual(self._row("2001-1")["result_names_other_class"], "melanoma")
+        with self.sources({"2001-1": "Histology showed a basal cell carcinoma, with no evidence of melanoma."}):
+            self.assertEqual(self._row("2001-1")["result_names_other_class"], "")
+        with self.sources({"2001-1": "Histology showed a basal cell carcinoma. The patient had a melanoma ten years ago."}):
+            self.assertEqual(self._row("2001-1")["result_names_other_class"], "")  # not in a sentence that confirms the class
+
+    def test_look_alike_wording_in_the_confirming_sentences(self):
+        with self.sources({"2001-1": "Histology showed a basal cell carcinoma. It had been clinically diagnosed as a wart."}):
+            self.assertEqual(self._row("2001-1")["lookalike_wording"], "yes")
+        with self.sources({"2001-1": "It was suspected to be a wart. Much later, many things happened. And then more things. "
+                                     "Histology showed a basal cell carcinoma."}):
+            self.assertEqual(self._row("2001-1")["lookalike_wording"], "no")  # far before the result: not in its window
+
+    def test_a_changed_question_or_a_missing_knowledge_base_stops_the_review(self):
+        (self.data / "library" / "appearance.jsonl").unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "appearance.jsonl not found"):
+            audit.review(self.data, self.results)
+        (self.data / "library" / "appearance.jsonl").write_text("", encoding="utf-8")
+        (self.data / "dataset" / self.rows["2001-1"]["path"]).write_text("changed", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "differs from its fingerprint"):
+            audit.review(self.data, self.results)
+
+    def test_the_command_line(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out, \
+                mock.patch.object(audit, "review", side_effect=lambda show=None: REVIEW(self.data, self.results, show)):
+            audit.main(["review"])
+        self.assertIn("Reviewed 9 questions.", out.getvalue())
+        with self.assertRaises(SystemExit):
+            audit.main(["other"])
+
+    def _row(self, uid):
+        return {r["patient_uid"]: r for r in audit.review(self.data, self.results)["rows"]}[uid]
