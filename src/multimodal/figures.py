@@ -376,7 +376,9 @@ def figure_files(xml: bytes, media: list[str], wanted: list[dict]) -> dict[str, 
         by_label.setdefault(" ".join("".join(label.itertext()).split()) if label is not None else "", fig)
     found = {}
     for figure in wanted:
-        fig = by_id.get(figure["figure"]) or (by_label.get(figure["label"]) if figure["label"] else None)
+        fig = by_id.get(figure["figure"])
+        if fig is None and figure["label"]:  # an element's truth value is not whether it exists
+            fig = by_label.get(figure["label"])
         pictures = []
         for graphic in (fig.iter("graphic") if fig is not None else []):
             href = os.path.basename(graphic.get("{http://www.w3.org/1999/xlink}href") or "")
