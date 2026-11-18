@@ -95,7 +95,7 @@ Each step is one command. Its full numbers, the queries and the word lists are i
 | abstracts | Downloaded PubMed's case reports of each class not in PMC-Patients, with open full texts where PMC gives them, and judged them by the same rules | 27,820 downloaded; 12,686 candidates |
 | mesh | Asked PubMed whether each candidate article is indexed, and which classes its headings name on the skin | 16,029 articles; 10,267 indexed |
 | build | Labelled the cases, cut the questions, applied the checks and made the splits, by the rules below | 745 cases (version 2) |
-| audit | Checked the built dataset with code of its own | All 17 checks passed on version 2 |
+| audit | Checked the built dataset with code of its own | All 17 checks passed (version 2 and version 3) |
 | review | Looked for signals of a doubtful label or a leak, by rules fixed before it was first run (section 7) | 29 questions whose confirming result also names another class |
 | revise | Took those 29 questions out; every other question kept its row, file and split | 716 cases (version 3) |
 
@@ -210,7 +210,7 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 - for a test result after it in its source that names its class
 - for the same patient in two articles
 
-All 17 checks passed on all 745 questions of version 2.
+All 17 checks passed on all 745 questions of version 2, and again on all 716 questions of version 3 (2026-11-18).
 
 **Review (2026-11-18).** `python -m src.build.text.audit review` looked at every question of version 2 for five signals, with rules fixed before it was first run (`build/review_flags.csv`, one row per question):
 

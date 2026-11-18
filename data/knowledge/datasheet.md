@@ -18,7 +18,7 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 | Reference library | 5,553 passages from 1,267 documents in four corpora, as in RAG²: PubMed abstracts of reviews, PubMed Central full texts of reviews, clinical practice guidelines, StatPearls chapters |
 | Appearance corpus | 108 passages from 28 open-access reviews that describe how a lesion looks (dermoscopy, clinical look) |
 | Image cards | 1,739: one per training photo of the image dataset, made from that photo's own ISIC record |
-| Index | every training photo of the image dataset (1,739), every training case of the text dataset (429 in version 3) and every library passage (5,553) |
+| Index | 7,721 items: every training photo of the image dataset (1,739), every training case of the text dataset (429, version 3) and every library passage (5,553) |
 | Held out | no validation or test photo, case or question of any dataset; no case report and no article of the text dataset's candidates in the library |
 | Link to a question | by disease only: an item describes the disease, or another patient's photo or case, never the patient of a question |
 | Classes short of appearance text | dermatofibroma, pigmented benign keratosis, vascular lesion (section 5) |
@@ -121,7 +121,7 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 **Versions.** Any change to a passage, card or item makes a new version, with new fingerprints and an entry here.
 - **2026-11-14:** the library and the index.
 - **2026-11-17:** the appearance corpus, the aspects and the cards (added; nothing earlier changed).
-- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/`; the index's case items follow version 3 of the text dataset.
+- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/`; the index's case items follow version 3 of the text dataset (444 → 429; 7,736 → 7,721 items). The image + metadata audit passed all its checks on the rebuilt index.
 
 **Checks.** The library step checks the StatPearls archive against its fingerprint on every run. The enrich steps stop on any broken rule (a held-out photo with a card, a card that names a collection, a card not made from its columns, a passage table and its texts that differ). The image + metadata audit checks the index against its sources (`data/image_metadata/datasheet.md`, section 7).
 
@@ -135,6 +135,8 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 | `appearance.csv` | `6dc290e4b6a044c400cf757c299c55663b4673622db59f17d58fcbaeee70b3e5` |
 | `passage_aspects.csv` | `dca44093d9a1755980e935d3664da84f5485c1b8dbbfbdf6dec6de288141785b` |
 | `image_cards.csv` | `507ef7ed7fe61eb2d2a05210da0e0353b3945e67bc68ad2ebabdc0cd7f94309f` |
+| `index.csv` | `a09d7a7d22302f7a8251ff7b5cb7a35b2f79a721910d94f7695a34e3ad46679d` |
+| `diseases.csv` | `fe926daddd30b38cf3ed33bc1d828d6a6d198c4bad4cfffdf020629ec4f505ae` |
 
 Every passage has its own SHA-256 in its table; the steps check the texts against them.
 

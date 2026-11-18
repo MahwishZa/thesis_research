@@ -145,7 +145,7 @@ Three commands, each writing its section of `dataset_report.md`:
 
 **Versions.** Any change to a question, fact or split makes a new version, with new fingerprints, a new tag and an entry here. On 2026-11-18 the files moved from `data/multimodal/` to `data/image_metadata/` (`questions.csv` became `dataset.csv`, unchanged byte for byte) and the knowledge tables to `data/knowledge/`.
 
-**Checks.** The audit (`python -m src.build.image_metadata.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed:
+**Checks.** The audit (`python -m src.build.image_metadata.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed; run again on 2026-11-18 after the knowledge index followed version 3 of the text dataset (7,721 items), all passed again, and the facts-alone scores below did not change:
 - **Questions:** one per photo of the image dataset, each matching it in split, class, file, fingerprint and lesion group.
 - **Facts:** every fact sentence worked out again from the ISIC records, each record checked against the image dataset's fingerprint.
 - **Files:** every photo and training case present with its fingerprint, and every passage present in `passages.jsonl` with its text.
