@@ -280,7 +280,7 @@ Left out, per class (each case counted for the first rule it fails, in this orde
 
 Written by `python -m src.build.text.audit`, on the computer that holds the texts, with code of its own (not the build's): every question file is checked against its fingerprint and its source, and for the class's names, short forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis). 10 questions per class, each with the text after it in its source, are written into `data/text/sources/audit_sample.txt` for reading (not committed).
 
-- Questions checked: 745
+- Questions checked: 716
 
 | Check | Failed | Examples |
 |---|---|---|

@@ -167,10 +167,10 @@ Photos with more than one ISIC record (uploaded more than once): 2 (ISIC_0000279
 <!-- step: build -->
 ### Build: the three tables
 
-- `questions.csv`: 2179 questions, one per image of the image dataset, with its split, class, file and lesion group unchanged: train 1739, val 120, test 320.
+- `dataset.csv`: 2179 questions, one per image of the image dataset, with its split, class, file and lesion group unchanged: train 1739, val 120, test 320.
 - Facts shown with each photo: age, sex, body site (chosen from the records report). A missing fact, or one the photo's two ISIC records disagree on, is shown as "not recorded".
-- `knowledge.csv`: 7736 items open-book runs may search: 1739 training images, 444 training cases and 5553 library passages. No validation or test item of either dataset is among them. Each is linked to the questions only by its disease: the two datasets share no patient.
-- `diseases.csv`: 8 classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.
+- `data/knowledge/index.csv`: 7721 items open-book runs may search: 1739 training images, 429 training cases and 5553 library passages. No validation or test item of either dataset is among them. Each is linked to the questions only by its disease: the two datasets share no patient.
+- `data/knowledge/diseases.csv`: 8 classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.
 
 #### Questions with all three facts
 
@@ -196,13 +196,13 @@ A missing fact points to melanoma or nevus (their photo collection records fewer
 
 #### Not done in this step
 
-- Whether retrieval may see the facts of training images is still to be decided: knowledge.csv names the training images, and their facts are in questions.csv, so either choice needs no new build.
+- Whether retrieval may see the facts of training images is still to be decided: the knowledge index names the training images, and their facts are in dataset.csv, so either choice needs no new build.
 - The audit checks the tables against their sources and measures how much each fact, and its absence, gives the class away.
 
 <!-- step: audit -->
 ### Audit: the tables against their sources, and what the facts alone tell
 
-Checked with code of its own: 2179 questions and 7736 knowledge items.
+Checked with code of its own: 2179 questions and 7721 knowledge items.
 
 | Check | Failures |
 |---|---|
