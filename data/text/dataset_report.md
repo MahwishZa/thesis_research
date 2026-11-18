@@ -348,3 +348,35 @@ Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statp
 - No person has read the passages. A passage is about its document's class(es) (`topics`), not checked line by line.
 - The texts are under their publishers' copyright or licences (in `library.csv`), so they stay on this computer and are used for research only.
 - Retrieval (how passages are chosen for a question, evenly from the four corpora as in RAG²) belongs to the evaluation, not to the library.
+
+<!-- step: review -->
+## Review: signals of a doubtful label or of leakage
+
+Written by `python -m src.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. Closed-book test runs read: 4.
+
+| Signal | Test | Validation | Train | All |
+|---|---|---|---|---|
+| the confirming result also names another class (not negated) | 12 | 2 | 15 | 29 |
+| look-alike wording around the confirming result | 11 | 2 | 38 | 51 |
+| the question names another class | 16 | 2 | 52 | 70 |
+| every closed-book run gave the same wrong answer | 20 | 0 | 0 | 20 |
+| a knowledge-base passage shares 12 words in a row | 0 | 0 | 0 | 0 |
+
+On the test split, the questions every run got wrong in the same way, and what the review finds for them:
+
+- with a confirming result that also names another class: 2
+- with look-alike wording: 0
+- with neither: 18
+
+| Class | Test questions | Confirming result names another class | Look-alike wording | Same wrong answer |
+|---|---|---|---|---|
+| actinic keratosis | 2 | 0 | 0 | 1 |
+| basal cell carcinoma | 40 | 0 | 1 | 7 |
+| dermatofibroma | 21 | 1 | 1 | 2 |
+| melanoma | 40 | 3 | 2 | 2 |
+| nevus | 40 | 1 | 1 | 4 |
+| pigmented benign keratosis | 22 | 4 | 3 | 1 |
+| squamous cell carcinoma | 40 | 3 | 3 | 2 |
+| vascular lesion | 16 | 0 | 0 | 1 |
+
+Test questions by source: PMC full text 66 (median 108 words); PMC-Patients 104 (median 97 words); PubMed abstract 51 (median 41 words).
