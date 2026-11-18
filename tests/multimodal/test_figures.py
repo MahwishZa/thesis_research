@@ -277,7 +277,7 @@ class DownloadTests(unittest.TestCase):
         (self.data / "figures").mkdir()
         (self.data / figures.CAPTIONS).write_text("".join(json.dumps(c) + "\n" for c in lines), encoding="utf-8")
         self.packages = {"PMC1": package({"f1": ["fig1"], "f2": ["fig2"], "f3": ["fig3"], "f5": ["fig5"]},
-                                         {"x/fig1.jpg": png(), "x/fig2.jpg": png(), "x/fig3.jpg": png(), "x/fig5.png": b"not a picture"})}
+                                         {"x/fig1.jpg": png(), "x/fig2.jpg": png(), "x/fig3.jpg": png(), "x/fig5.png": png()[:-30]})}  # cut short: it opens, but its pixels cannot be read
         self.asked = []
 
         def oa(pmcid):
