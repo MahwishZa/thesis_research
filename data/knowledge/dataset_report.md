@@ -1,9 +1,54 @@
-# The knowledge base: additions (version 2)
+# The knowledge base
 
-Written by `python -m src.build.knowledge.enrich`; one section per step. The frozen version 1 files are unchanged.
+What open-book runs may retrieve: training items only, never a validation or test question. One section per step, written by `src/build/knowledge/` (`library.py`: the library; `enrich.py`: appearance, aspects and cards); each step rewrites only its own section.
+
+<!-- step: library -->
+## Library: the reference texts for retrieval
+
+Written by `python -m src.build.knowledge.library` on 2026-11-14. Four corpora, as in RAG² (PubMed, PMC, clinical practice guidelines, textbooks), from public sources of the US National Library of Medicine, found by fixed rules with no person choosing a text: the abstracts of PubMed's reviews about each class (its headings as a main subject, on the skin, in English, about people; not case reports or guidelines; the newest 200 per class); the open full texts of those reviews in PubMed Central (per class the newest 25 that PMC gives in full); PubMed's clinical practice guidelines about each class (the newest 50 per class, as open full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or summary (its "Continuing Education Activity") names a class by a name that counts in `data/text/build/class_terms.csv` and whose title names no other site and no animal. Every text is cut word for word into passages of whole paragraphs of at most 300 words. `library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/text/library/` (not in Git).
+
+### Per class
+
+| Class | MeSH headings (main topic) | Reviews (abstracts) | Open full texts of reviews | Guidelines | StatPearls chapters |
+|---|---|---|---|---|---|
+| actinic keratosis | Keratosis, Actinic | 200 | 25 | 14 | 11 |
+| basal cell carcinoma | Basal Cell Carcinoma | 200 | 25 | 32 | 20 |
+| dermatofibroma | Histiocytoma, Benign Fibrous | 35 | 0 | 0 | 3 |
+| melanoma | Melanoma; Hutchinson's Melanotic Freckle; Melanoma, Amelanotic | 200 | 25 | 50 | 31 |
+| nevus | Nevus; Nevus, Pigmented; Dysplastic Nevus Syndrome; Nevus, Epithelioid and Spindle Cell; Nevus, Blue; Nevus, Halo; Nevus, Intradermal | 200 | 25 | 6 | 13 |
+| pigmented benign keratosis | Keratosis, Seborrheic | 33 | 2 | 0 | 11 |
+| squamous cell carcinoma | Carcinoma, Squamous Cell; Bowen's Disease; Cutaneous Squamous Cell Carcinoma | 200 | 25 | 44 | 28 |
+| vascular lesion | Angiokeratoma; Granuloma, Pyogenic | 18 | 2 | 0 | 10 |
+
+### Per corpus
+
+| Corpus | Documents | Passages | Words | Licences (documents) |
+|---|---|---|---|---|
+| PubMed: abstracts of reviews | 953 | 1012 | 183440 | publisher's copyright (abstract in PubMed): 953 |
+| PMC: open full texts of reviews | 124 | 2595 | 548311 | http://creativecommons.org/licenses/by/4.0/: 1; https://creativecommons.org/licenses/by-nc-nd/4.0/: 15; https://creativecommons.org/licenses/by-nc/4.0/: 19; https://creativecommons.org/licenses/by-nd/4.0/: 1; https://creativecommons.org/licenses/by/4.0/: 83; not stated: 5 |
+| Clinical practice guidelines | 99 | 493 | 99080 | http://creativecommons.org/licenses/by/4.0/: 1; https://creativecommons.org/licenses/by-nc-nd/4.0/: 2; https://creativecommons.org/licenses/by-nc/4.0/: 4; https://creativecommons.org/licenses/by/4.0/: 6; not stated: 2; publisher's copyright (abstract in PubMed): 84 |
+| Textbook: StatPearls chapters | 91 | 1453 | 242863 | https://creativecommons.org/licenses/by-nc-nd/4.0/: 91 |
+| all | 1267 | 5553 | 1073694 | |
+
+### Checks
+
+- Case reports and the dataset's candidate articles are not searched for or are left out, so no case of the dataset is in the library.
+- Passages left out because they share a run of 12 words with a question of the dataset: 1
+- Passages left out because they are the same as an earlier one: 2
+
+Query for reviews, with each class's headings as a main subject: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]) AND review[Publication Type] NOT (guideline[Publication Type] OR "practice guideline"[Publication Type]) NOT "case reports"[Publication Type] AND english[Language] NOT (animals[MeSH Terms] NOT humans[MeSH Terms]).
+Query for guidelines: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]) AND (guideline[Publication Type] OR "practice guideline"[Publication Type]) NOT "case reports"[Publication Type] AND english[Language] NOT (animals[MeSH Terms] NOT humans[MeSH Terms]).
+
+Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statpearls_NBK430685.tar.gz`, 2047364463 bytes, SHA-256 `08117bcff46ed366a7ab9033d134b81bf345e81cb9a1537b6075400418bb09bd` (checked), downloaded 2026-11-13; chapters read: 9653; chapter files that could not be read: 0
+
+### Not done in this step
+
+- No person has read the passages. A passage is about its document's class(es) (`topics`), not checked line by line.
+- The texts are under their publishers' copyright or licences (in `library.csv`), so they stay on this computer and are used for research only.
+- Retrieval (how passages are chosen for a question, evenly from the four corpora as in RAG²) belongs to the evaluation, not to the library.
 
 <!-- step: appearance -->
-### Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance
+## Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance
 
 Written on 2026-11-17. For each class, PubMed's reviews (the class's MeSH headings as a main subject, on the skin, in English, about people, not case reports, not guidelines, with a free full text, and the words dermoscopy, dermoscopic, dermatoscopy, dermatoscopic or morphology in the title or abstract), the newest 100 asked, and of those the newest 40 that PubMed Central gives in full. Their paragraphs are cut into passages as the library's are. A passage is kept when it describes appearance (words of the lists in `enrich.py`), is not already in the library and shares no run of 12 words with a question of the text dataset; at most 150 per class, the newest first.
 
@@ -33,11 +78,11 @@ Query: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]) AND review[
 No person has read the passages. A passage is about its review's class(es), found by the search, and describes appearance by a word count; neither is a medical judgement. The texts are under their publishers' licences (in the table) and stay on this computer for research use.
 
 <!-- step: aspects -->
-### Aspects: what each passage is about
+## Aspects: what each passage is about
 
 5661 passages tagged (library: 5553, appearance: 108), in `passage_aspects.csv`. A passage has an aspect when it uses several different words of that aspect's list (fixed in `enrich.py`): appearance is dermoscopy (2 words) or clinical look (3 words); histology 3, treatment 3, epidemiology 2. A passage can have several aspects, and a passage about several classes counts for each.
 
-#### Do the tags follow the authors' section titles?
+### Do the tags follow the authors' section titles?
 
 The check uses an independent signal: the title of the section a passage sits in. Only passages under a title that names one aspect count (for example "Treatment / Management" names treatment). Recall: of the passages under a title of the aspect, the share the words tag with it. Precision: of the tagged passages, the share under a title of the aspect. Lift: precision against the share of all titled passages under that aspect; above 1.0, the tag tells more than chance.
 
@@ -51,7 +96,7 @@ The check uses an independent signal: the title of the section a passage sits in
 Every aspect has a lift above 1.0: the tags follow the authors' titles better than chance.
 This is a check of consistency with the authors' own headings. It does not show that a passage is medically right or sufficient, and a passage under no informative title is not checked at all.
 
-#### Coverage of appearance
+### Coverage of appearance
 
 Target per class, fixed before the corpus was built: at least 30 passages that describe appearance, from at least 8 different documents.
 
@@ -69,13 +114,13 @@ Target per class, fixed before the corpus was built: at least 30 passages that d
 Classes short of the target: dermatofibroma, pigmented benign keratosis, vascular lesion. They stay short: the target is not lowered, and what is missing is a limit of the retrieval experiments for these classes.
 
 <!-- step: cards -->
-### Cards: one text card per training photo
+## Cards: one text card per training photo
 
-1739 cards in `image_cards.csv`, one for each training photo of `knowledge.csv`, made from the photo's own ISIC record. Core fields (diagnosis, confirmation, age, sex, body site) read "not recorded" when the record lacks them; the finer body site, the size and the melanoma history are left out when not recorded. Nothing is guessed. The collection and the licence are columns of the table, never part of a card's text.
+1739 cards in `image_cards.csv`, one for each training photo of `index.csv`, made from the photo's own ISIC record. Core fields (diagnosis, confirmation, age, sex, body site) read "not recorded" when the record lacks them; the finer body site, the size and the melanoma history are left out when not recorded. Nothing is guessed. The collection and the licence are columns of the table, never part of a card's text.
 
-Checks that stop the step when one fails: the cards are exactly the training photos of `knowledge.csv`; no validation or test photo has a card; every card's diagnosis is one that `diseases.csv` lists for its class; no card's text names the photo's collection; every card's text is made from its columns alone.
+Checks that stop the step when one fails: the cards are exactly the training photos of `index.csv`; no validation or test photo has a card; every card's diagnosis is one that `diseases.csv` lists for its class; no card's text names the photo's collection; every card's text is made from its columns alone.
 
-#### How often each field is recorded, by class
+### How often each field is recorded, by class
 
 | Class | Cards | Confirmation | Age | Sex | Body site | Finer site | Size | Melanoma history |
 |---|---|---|---|---|---|---|---|---|
@@ -88,7 +133,7 @@ Checks that stop the step when one fails: the cards are exactly the training pho
 | squamous cell carcinoma | 141 | 141 | 141 | 141 | 141 | 58 | 0 | 0 |
 | vascular lesion | 87 | 87 | 87 | 87 | 87 | 47 | 0 | 0 |
 
-#### Example
+### Example
 
 > Dermoscopic photo of a skin lesion. Diagnosis (ISIC): Indeterminate > Indeterminate epidermal proliferations > Solar or actinic keratosis. Confirmed by: histopathology. Age: about 85 years. Sex: male. Body site: head and neck. Lesion size: 6 mm (longest diameter). Personal history of melanoma: yes. Family history of melanoma: no.
 

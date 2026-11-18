@@ -1,4 +1,4 @@
-"""The image dataset's preparation (src/image/prepare.py) on a tiny synthetic data/image/raw holding every kind of problem it must find, with local
+"""The image dataset's preparation (src/build/image/prepare.py) on a tiny synthetic data/image/raw holding every kind of problem it must find, with local
 stand-ins for the ISIC Archive and Harvard Dataverse (no real data, no network beyond this computer), and the files the steps
 share: raw_photos.csv, similar_photo_pairs.csv and dataset_report.md, of which each step rewrites only its own part."""
 
@@ -820,7 +820,7 @@ class DuplicatesTests(unittest.TestCase):
             rows.append({c: "" for c in prepare.PHOTO_COLUMNS} | {
                 "photo_id": number, "isic_ids": number, "sha256": hashlib.sha256(content).hexdigest(), "files": path, "label": label,
                 "status": "labelled" if label else "unreadable file", "lesion_id": lesion})
-        self.data.mkdir(parents=True, exist_ok=True)
+        (self.data / "build").mkdir(parents=True, exist_ok=True)
         with (self.data / prepare.PHOTOS).open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=prepare.PHOTO_COLUMNS, lineterminator="\n")
             writer.writeheader()
@@ -855,7 +855,7 @@ class DuplicatesTests(unittest.TestCase):
                          "- near-identical: 2 groups holding 5 photos; sizes: 1 of 2, 1 of 3",
                          # ... while the looser tier links two different look-alike lesions into one group: the risk the summary names
                          "- near-identical or similar: 1 groups holding 5 photos", "A flagged pair decides nothing by itself",
-                         "No image or label is changed. The eye check's verdicts go into `eye_check_verdicts.csv`."):
+                         "No image or label is changed. The eye check's verdicts go into `build/eye_check_verdicts.csv`."):
             self.assertIn(expected, text)
         self.assertNotIn("ISIC_1000005", text)  # the clearly different lesion is never linked
 
@@ -930,7 +930,7 @@ class LesionsTests(unittest.TestCase):
             rows.append({c: "" for c in prepare.PHOTO_COLUMNS} | {
                 "photo_id": number, "isic_ids": number, "sha256": hashlib.sha256(content).hexdigest(), "files": path, "label": label,
                 "status": "labelled" if label else "collision: two lesions in one photo", "lesion_id": lesion})
-        self.data.mkdir(parents=True, exist_ok=True)
+        (self.data / "build").mkdir(parents=True, exist_ok=True)
         with (self.data / prepare.PHOTOS).open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=prepare.PHOTO_COLUMNS, lineterminator="\n")
             writer.writeheader()
@@ -1509,6 +1509,7 @@ class EyeCheckTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.path = Path(tmp.name) / prepare.EYE_CHECK
+        self.path.parent.mkdir(parents=True)
 
     def _read(self, *rows, columns=None):
         with self.path.open("w", newline="", encoding="utf-8") as f:

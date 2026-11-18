@@ -1,4 +1,4 @@
-"""The text dataset's preparation (src/text/prepare.py), with a local stand-in for NCBI's E-utilities (MeSH records and PubMed
+"""The text dataset's preparation (src/build/text/prepare.py), with a local stand-in for NCBI's E-utilities (MeSH records and PubMed
 counts), so no test reaches the internet."""
 
 import contextlib
@@ -46,7 +46,7 @@ class EutilsServer(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name) / "data" / "text"
-        self.data.mkdir(parents=True)
+        (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
         self.queries, self.mode = [], "normal"
         test = self
@@ -211,7 +211,7 @@ class HuggingFaceServer(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name) / "data" / "text"
-        self.data.mkdir(parents=True)
+        (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "text" / prepare.TERMS).read_bytes())
         self.requests, self.mode, self.content, self.version = [], "normal", CONTENT, COMMIT
         test = self
@@ -506,7 +506,7 @@ class AbstractsTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name) / "data" / "text"
-        self.data.mkdir(parents=True)
+        (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "text" / prepare.TERMS).read_bytes())
         headings = {"actinic keratosis": "Keratosis, Actinic", "seborrheic keratosis": "Keratosis, Seborrheic"}
         terms = prepare.read_terms(self.data / prepare.TERMS, self.CLASSES)
@@ -674,7 +674,7 @@ class MeshServer(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name) / "data" / "text"
-        self.data.mkdir(parents=True)
+        (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
         prepare._write_csv(self.data / prepare.CHECK, prepare.CHECK_COLUMNS, [
             {"class": c, "term": t, "counts": n, "in_mesh": "heading" if h else "no", "mesh_ids": "", "mesh_headings": h,
@@ -759,7 +759,7 @@ class MeshTests(MeshServer):
 
     def test_names_not_checked_by_the_survey_a_refusal_or_an_answer_that_does_not_fit_stop_the_step(self):
         (self.data / prepare.TERMS).write_text(TERMS + "nevus,Spitz nevus,yes,ISIC,\n", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "does not list the names of class_terms.csv as they are now: run python -m "
+        with self.assertRaisesRegex(ValueError, "does not list the names of build/class_terms.csv as they are now: run python -m "
                                                 "src.build.text.prepare survey again"):
             prepare.mesh(self.data, classes=CLASSES)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
@@ -1290,6 +1290,7 @@ class TermsTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.path = Path(tmp.name) / prepare.TERMS
+        self.path.parent.mkdir(parents=True)
 
     def _read(self, text):
         self.path.write_text(text, encoding="utf-8")

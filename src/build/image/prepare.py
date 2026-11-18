@@ -107,11 +107,11 @@ from ...evaluate import FILES, MEDIA_TYPES, SPLITS, SYSTEM_FILES, TABLE_NAME, it
 from ...evaluate import classes as training_classes
 
 DATA = Path("data/image")  # the image dataset's folder: its committed tables and reports, and raw/, downloads/ and dataset/ (on this computer)
-PHOTOS = "raw_photos.csv"  # one row per original photo: everything the steps find out about it
-PAIRS = "similar_photo_pairs.csv"  # pairs of photos found alike: by comparing whole pictures, or by skin pattern
+PHOTOS = "build/raw_photos.csv"  # one row per original photo: everything the steps find out about it
+PAIRS = "build/similar_photo_pairs.csv"  # pairs of photos found alike: by comparing whole pictures, or by skin pattern
 REPORT = "dataset_report.md"  # one section per step, in the order the steps run
-NAMING_RULE = "isic_to_class.csv"  # written by people, not by code: which ISIC wording belongs to which class
-EYE_CHECK = "eye_check_verdicts.csv"  # written by people, not by code: the verdicts of the eye check on flagged pairs
+NAMING_RULE = "build/isic_to_class.csv"  # written by people, not by code: which ISIC wording belongs to which class
+EYE_CHECK = "build/eye_check_verdicts.csv"  # written by people, not by code: the verdicts of the eye check on flagged pairs
 STEPS = ("inventory", "isic", "identity", "ham10000", "labels", "duplicates", "lesions", "splits", "images", "shortcuts")
 STEP_COLUMNS = {  # the columns of raw_photos.csv that each step writes (and rewrites when run again); every other column is kept
     "inventory": ["photo_id", "isic_ids", "files", "kaggle_labels", "kaggle_test", "sha256", "bytes", "format", "mode", "width",
@@ -138,8 +138,8 @@ PAIR_COLUMNS = ["photo_a", "photo_b", "label_a", "label_b", "found_by", "isic_le
 FOUND_BY = {"duplicates": "picture comparison", "lesions": "skin pattern"}  # each step rewrites only the pairs it found
 REPORT_HEAD = ["# Preparation of the dataset", "",
                "Written by `python -m src.build.image.prepare`, one section per step in the order the steps run; each step rewrites only its own "
-               "section. What the steps find out about each photo is in `raw_photos.csv` (one row per original photo), the pairs of photos "
-               "found alike are in `similar_photo_pairs.csv`, and `isic_to_class.csv` and `eye_check_verdicts.csv` are written by people. Nothing in `data/image/raw` "
+               "section. What the steps find out about each photo is in `build/raw_photos.csv` (one row per original photo), the pairs of photos "
+               "found alike are in `build/similar_photo_pairs.csv`, and `build/isic_to_class.csv` and `build/eye_check_verdicts.csv` are written by people. Nothing in `data/image/raw` "
                "is ever changed.", ""]
 ISIC_API = "https://api.isic-archive.com/api/v2/images/{}/"
 ISIC_DELAY = 0.3  # seconds between requests: a polite pace for a free public service (about 15 minutes for 2,200 records)
@@ -218,7 +218,7 @@ def _read_photos(data: Path, *after: str) -> dict[str, dict]:
 
 
 def _write_photos(data: Path, photos: dict[str, dict]) -> None:
-    data.mkdir(parents=True, exist_ok=True)
+    (data / PHOTOS).parent.mkdir(parents=True, exist_ok=True)
     with (data / PHOTOS).open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=PHOTO_COLUMNS, lineterminator="\n")
         writer.writeheader()
@@ -257,7 +257,7 @@ def _update_pairs(data: Path, step: str, rows: list[dict]) -> None:
             kept = [row for row in csv.DictReader(f) if row["found_by"] != FOUND_BY[step]]
     new = [{c: "" for c in PAIR_COLUMNS} | row | {"found_by": FOUND_BY[step]} for row in rows]
     order = list(FOUND_BY.values())
-    data.mkdir(parents=True, exist_ok=True)
+    table.parent.mkdir(parents=True, exist_ok=True)
     with table.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=PAIR_COLUMNS, lineterminator="\n")
         writer.writeheader()
@@ -371,7 +371,7 @@ def _summary(rows: list[dict], others: list[str]) -> list[str]:
 
     lines = ["# Inventory of the original dataset", "",
              "Written by `python -m src.build.image.prepare inventory` from the files in `data/image/raw`, which it does not change. One row per photo "
-             "(identical files count once, with every file named) is in `raw_photos.csv`.", "",
+             "(identical files count once, with every file named) is in `build/raw_photos.csv`.", "",
              f"Fingerprint of `data/image/raw` (the path and SHA-256 of every image file): `{_fingerprint(rows)}`", "",
              "## Files", "", "| | Files |", "|---|---|",
              f"| Image files in `<split>/<class>/` folders | {len(rows)} |",
@@ -527,7 +527,7 @@ def _isic_summary(raw_rows: list[dict], records: dict[str, dict]) -> list[str]:
 
     lines = ["# ISIC Archive records of the original dataset", "",
              "Written by `python -m src.build.image.prepare isic` from the public ISIC Archive record of every ISIC number of the photos (the "
-             "records themselves are kept unchanged in `data/image/downloads/isic/`; what they say about each photo is in `raw_photos.csv`, with "
+             "records themselves are kept unchanged in `data/image/downloads/isic/`; what they say about each photo is in `build/raw_photos.csv`, with "
              "a fingerprint of each record). "
              "No label has been changed: this is the evidence for the naming rule that maps ISIC's wording to the class names.", "",
              f"- ISIC numbers: {len(records)}; found in the ISIC Archive: {len(found)}; not found: {len(missing)}"
@@ -709,7 +709,7 @@ def _identity_summary(rows: list[dict]) -> list[str]:
              "Written by `python -m src.build.image.prepare identity`. For every ISIC number, the photo in `data/image/raw` is compared with the preview "
              "picture the ISIC Archive serves for that number: the shape (width / height), the mean colour difference of 32 x 32 "
              "versions (0 to 255; 0 = the same) and a 64-bit difference hash of an 8 x 9 grey version (0 = the same outline). Nothing "
-             "is changed; the result for each photo is in `raw_photos.csv`.", "",
+             "is changed; the result for each photo is in `build/raw_photos.csv`.", "",
              f"- ISIC numbers: {len(rows)}; " + "; ".join(f"{verdict}: {n}" for verdict, n in sorted(verdicts.items())),
              f"- \"same picture\" means: shapes differ by at most {SAME['shape_difference_pct']}%, mean difference at most "
              f"{SAME['mean_difference']} and hash distance at most {SAME['hash_distance']} of 64. Anything else is listed below for an "
@@ -865,7 +865,7 @@ def _ham_summary(rows: list[dict], info: dict, path: Path, raw_rows: list[dict],
     lines = ["# HAM10000 cross-check", "",
              "Written by `python -m src.build.image.prepare ham10000`. Every photo of this dataset that is also in HAM10000 is compared with "
              "HAM10000's own metadata: its diagnosis group, how the diagnosis was confirmed, and which photos show the same lesion. "
-             "No label is changed; the result for each photo is in `raw_photos.csv`.", "",
+             "No label is changed; the result for each photo is in `build/raw_photos.csv`.", "",
              f"Source: HAM10000 (Tschandl, Rosendahl and Kittler, *Scientific Data* 5:180161, 2018), Harvard Dataverse {HAM_DOI}, "
              f"version {info['listing']['data']['latestVersion'].get('versionNumber', '?')}."
              f"{info['listing']['data']['latestVersion'].get('versionMinorNumber', '?')}, file `{info['name']}`, downloaded "
@@ -1038,8 +1038,8 @@ def _labels_summary(photos: list[dict], rules: list[dict], records: dict[str, di
                 per_rule[(rule["level"], rule["isic_wording"])] += 1
     lines = ["# Labels of the original dataset", "",
              "Written by `python -m src.build.image.prepare labels`. Each unique photo (identical files count once) is labelled from its ISIC "
-             "Archive record by the naming rule in `isic_to_class.csv`, never from its Kaggle folder. One row per photo is in "
-             "`raw_photos.csv`. No image is changed and no split is made in this step.", "",
+             "Archive record by the naming rule in `build/isic_to_class.csv`, never from its Kaggle folder. One row per photo is in "
+             "`build/raw_photos.csv`. No image is changed and no split is made in this step.", "",
              f"- Photos: {len(photos)}; labelled: {len(labelled)}; without a class: {len(photos) - len(labelled)}",
              f"- Classes: {len(classes)} ({', '.join(classes)})", "",
              "## The naming rule", "", "| ISIC level | ISIC wording | Class | Reason | ISIC numbers |", "|---|---|---|---|---|"]
@@ -1072,7 +1072,7 @@ def _labels_summary(photos: list[dict], rules: list[dict], records: dict[str, di
         lines += [f"| {p['photo_id']} | {p['kaggle_labels']} | {p['isic_diagnosis'] or '-'} | {p['label'] or '(no class)'} | {p['status']} |"
                   for p in moved]
     lines += ["", "## Not done in this step", "",
-              "- No image is changed and no split is made. Photos without a class stay in `raw_photos.csv`, marked, and go into no split.",
+              "- No image is changed and no split is made. Photos without a class stay in `build/raw_photos.csv`, marked, and go into no split.",
               "- Near-identical photos (different files of the same picture) and photos of the same lesion are handled in the next steps.",
               ""]
     return lines
@@ -1178,8 +1178,8 @@ def _duplicates_summary(ids, flagged, known_same, measured, lesion) -> list[str]
         return ", ".join(f"{values[int(q * (len(values) - 1))]}" for q in (0, 0.25, 0.5, 0.75, 1)) if values else "–"
 
     lines = ["# Near-duplicates: different files of one picture, and second photos of one lesion", "",
-             "Written by `python -m src.build.image.prepare duplicates`. Every photo in `raw_photos.csv` is compared with every other one (identical "
-             "files were already merged by the inventory). Flagged pairs are in `similar_photo_pairs.csv` (found by \"picture comparison\"). No image is "
+             "Written by `python -m src.build.image.prepare duplicates`. Every photo in `build/raw_photos.csv` is compared with every other one (identical "
+             "files were already merged by the inventory). Flagged pairs are in `build/similar_photo_pairs.csv` (found by \"picture comparison\"). No image is "
              "changed.", "",
              f"- Photos compared: {len(ids)}; pairs: {len(ids) * (len(ids) - 1) // 2}",
              f"- Flagged pairs: {len(flagged)} (near-identical: {tiers['near-identical']}; similar: {tiers['similar']})",
@@ -1585,7 +1585,7 @@ def _splits_summary(rows, groups, scores, start_scores, random_scores, seed, tes
              f"(seed {seed}, fixed in advance; Python {sys.version_info.major}.{sys.version_info.minor}'s random module) and then swaps lesion groups of equal size between the parts whenever that brings the "
              "test and validation parts closer to their class's own mix of subtype (ISIC diagnosis), how the diagnosis was "
              "confirmed, source (credit line) and original image size. Only these facts, known before any experiment, are used; "
-             "never a model's result. The split column of `raw_photos.csv` holds the result; no image is changed.", "",
+             "never a model's result. The split column of `build/raw_photos.csv` holds the result; no image is changed.", "",
              "## Photos per class and split", "",
              "| Class | Test | Validation | Train | Photos | Original test photos (test / val / train) |", "|---|---|---|---|---|---|"]
 
@@ -1740,7 +1740,7 @@ def _images_summary(rows: list[dict], items: list, photos: dict[str, dict]) -> l
 
     lines = ["# Images: the prepared dataset", "",
              "Written by `python -m src.build.image.prepare images`. Every photo in a split is made from its original file in `data/image/raw` (checked "
-             "against its fingerprint in `raw_photos.csv`; nothing in `data/image/raw` is changed) and saved as "
+             "against its fingerprint in `build/raw_photos.csv`; nothing in `data/image/raw` is changed) and saved as "
              f"`{(DATA / FILES).as_posix()}/<split>/<class>/<photo_id>.jpg`. `{TABLE_NAME}` lists every image: its split, class, file, SHA-256, "
              "lesion group, whether it is an original test photo, its size and what was done to it. The evaluation checks every "
              "image against that table before a run, so every model gets byte-identical images.", "",

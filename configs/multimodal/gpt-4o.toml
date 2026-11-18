@@ -1,7 +1,7 @@
 # The gpt-4o settings of configs/image/gpt-4o.toml, unchanged, on the multimodal dataset: each photo is sent with its
 # patient's facts (age, sex, body site) in the prompt. Setup, terms and notes: see that file.
 name = "gpt-4o"
-dataset = "multimodal"  # the prepared dataset: data/multimodal/questions.csv; results go to results/multimodal/<name>/
+dataset = "multimodal"  # the image + metadata dataset: data/image_metadata/dataset.csv; results go to results/multimodal/<name>/
 
 [model]
 provider = "openai_compatible"

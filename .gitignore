@@ -6,14 +6,16 @@ venv/
 .coverage
 htmlcov/
 
-# One folder per dataset in data/ (data/image/, data/text/ and data/multimodal/). Only the tables and reports directly
-# in a dataset's folder are committed; its originals, downloads and prepared files stay on this computer (for the image dataset:
-# data/image/raw, data/image/downloads and data/image/dataset; for the text dataset: data/text/sources, data/text/dataset and
-# data/text/library).
+# One folder per dataset in data/ (image, text, image_metadata, cases) and the knowledge base (data/knowledge/). Only the tables
+# and reports directly in a folder, and the build records in its build/ folder, are committed; originals, downloads and prepared
+# files stay on this computer (image: raw/, downloads/, dataset/; text: sources/, dataset/; cases: figures/; knowledge: texts/,
+# sources/).
 /data/**
 !/data/*/
 !/data/*/*.csv
 !/data/*/*.md
+!/data/*/build/
+!/data/*/build/*.csv
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes)
 *.partial/

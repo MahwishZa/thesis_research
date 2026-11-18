@@ -1,4 +1,4 @@
-# Preparation of the multimodal dataset
+# Preparation of the image + metadata dataset
 
 Made by `python -m src.build.image_metadata.prepare <step>`, one section per step, in the order the steps run. Each step rewrites only its own section.
 

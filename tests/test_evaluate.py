@@ -2082,7 +2082,7 @@ class TextDatasetTests(TextProject):
 # The multimodal dataset: each photo with its patient's facts in the prompt
 
 class MultimodalProject(Project):
-    """The image project, with data/multimodal/questions.csv giving each photo its patient's facts (one test photo lacks a fact),
+    """The image project, with data/image_metadata/dataset.csv giving each photo its patient's facts (one test photo lacks a fact),
     a prompt with the facts placeholder and a multimodal config."""
 
     MISSING = "test/nevus/ISIC_0000013.jpg"
@@ -2091,7 +2091,7 @@ class MultimodalProject(Project):
         super().setUp()
         with self.table.open(encoding="utf-8", newline="") as f:
             rows = list(csv.DictReader(f))
-        self.questions = self.base / "data" / "multimodal" / "questions.csv"
+        self.questions = self.base / "data" / "image_metadata" / "dataset.csv"
         self.questions.parent.mkdir(parents=True)
         with self.questions.open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=["split", "label", "path", "sha256", "lesion_group", "facts"], lineterminator="\n")
@@ -2115,7 +2115,7 @@ class MultimodalTests(MultimodalProject):
             return evaluate.run(str(self.config), *args, results=self.results, **kwargs)
 
     def test_the_questions_are_the_image_dataset_s_photos_with_their_facts(self):
-        self.assertEqual(evaluate.dataset_paths("multimodal"), (Path("data/multimodal/questions.csv"), Path("data/image/dataset")))
+        self.assertEqual(evaluate.dataset_paths("multimodal"), (Path("data/image_metadata/dataset.csv"), Path("data/image/dataset")))
         items = evaluate.load_dataset(*evaluate.dataset_paths("multimodal"), "multimodal")
         self.assertEqual(len(items), 14)
         missing = next(i for i in items if i.path == self.MISSING)
@@ -2336,15 +2336,19 @@ class RepositoryTests(unittest.TestCase):
                      "data/image/dataset/x.csv", "data/text/sources/pmc_patients/PMC-Patients-V2.json",
                      "data/text/sources/pmc_patients/download.json", "data/text/sources/x.csv", "data/text/dataset/test/melanoma/1-1.txt",
                      "data/text/sources/pubmed/abstracts.jsonl", "data/text/sources/audit_sample.txt",
-                     "data/text/sources/library/statpearls/NBK1.html", "data/text/library/passages.jsonl", "data/anything_else.txt",
+                     "data/knowledge/sources/statpearls/NBK1.html", "data/knowledge/texts/passages.jsonl", "data/anything_else.txt",
+                     "data/cases/figures/images/PMC1/f1.jpg", "data/cases/figures/captions.jsonl", "data/text/sources/removed/test/x/1-1.txt",
+                     "data/image/build/x.txt", "data/text/build/nested/x.csv",
                      "data/x.csv",
                      "results/image/m/val_1/report.md", "results/image/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc",
                      "results/text/m/val_1/report.md", "results/text/m/test_1.partial/predictions.jsonl",
-                     "src/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
+                     "src/build/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "data/image/dataset.csv", "data/image/raw_photos.csv", "data/image/dataset_report.md",
-                     "data/image/datasheet.md", "data/text/dataset.csv", "data/text/case_candidates.csv", "data/text/article_mesh.csv", "data/text/abstract_candidates.csv",
-                     "data/text/library.csv", "results/image/m/test_1/report.md",
+        for path in ("README.md", "data/image/dataset.csv", "data/image/build/raw_photos.csv", "data/image/dataset_report.md",
+                     "data/image/datasheet.md", "data/text/dataset.csv", "data/text/build/case_candidates.csv", "data/text/build/article_mesh.csv",
+                     "data/text/build/abstract_candidates.csv", "data/text/build/review_flags.csv", "data/image_metadata/dataset.csv",
+                     "data/cases/dataset.csv", "data/cases/build/figure_checks.csv", "data/cases/datasheet.md", "data/knowledge/library.csv",
+                     "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/m/test_1/report.md",
                      "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt",
                      "results/text/m/test_1/report.md", "configs/text/example.toml", "prompts/text/example.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")

@@ -37,10 +37,10 @@ fails.
     - the other classes the question names (allowed: they are clinical information, such as "a nodule suspicious of melanoma");
     - the same wrong answer from every closed-book test run (results/text/.../predictions.jsonl): a signal only, as the models
       that are evaluated would otherwise decide which questions they are evaluated on;
-    - the passages of the knowledge base (data/text/library/passages.jsonl and appearance.jsonl) that share a run of 12 words
+    - the passages of the knowledge base (data/knowledge/texts/passages.jsonl and appearance.jsonl) that share a run of 12 words
       with the question: a leak into retrieval, to be removed from the knowledge base, never from the questions;
     - its source (PMC-Patients, a PMC full text, a PubMed abstract), year and length.
-It writes data/text/review_flags.csv (committed: no text) and the review section of dataset_report.md.
+It writes data/text/build/review_flags.csv (committed: no text) and the review section of dataset_report.md.
 
 Decision rule for a new version, fixed with these signals and before the review was first run (2026-11-18):
     - a question whose confirming result also names another class (not negated) has a doubtful label: it leaves the dataset;
@@ -63,7 +63,8 @@ from pathlib import Path
 
 from ...common import write_section
 from ...evaluate import FILES, SYSTEM_FILES, TABLE_NAME
-from .prepare import (ABSTRACTS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
+from ..knowledge.library import FOLDER as KNOWLEDGE_TEXTS, KNOWLEDGE
+from .prepare import (ABSTRACTS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
                       SKIN_WORDS, SOURCES, STEPS, SURFACE, TERMS, _json_list)
 
 MIN_WORDS = 25
@@ -93,9 +94,6 @@ LOOKALIKE = re.compile(r"\b(mimic|simulat|resembl|masquerad|mistaken|misdiagnos|
                        r"differential diagnos)\w*")
 NEGATED = re.compile(r"\b(no|not|without|negative for|ruled out|rule out|excluded|exclude|absence of|free of|rather than)"
                      r"(?: [a-z0-9]+){0,5}$")  # right before a name (which starts with its space): the name is negated
-REVIEW_FLAGS = "review_flags.csv"
-REVIEW_COLUMNS = ["patient_uid", "split", "label", "source", "year", "words", "result_names_other_class", "lookalike_wording",
-                  "other_classes_in_question", "same_wrong_answer", "knowledge_passages_sharing_12_words"]
 SAMPLE, SAMPLE_PER_CLASS, SAMPLE_AFTER = "audit_sample.txt", 10, 2000  # questions per class; characters of the text after each
 SAMPLE_SEED = "text-audit-8"  # changed after rules were drawn from a reading of the sample: the next reading is of unseen questions
 SHARED_RUN, SAME_PATIENT = 12, 0.10  # questions of two articles sharing this share of their runs of 12 words: one patient
@@ -241,9 +239,9 @@ def audit(data: str | Path = DATA, show=None) -> dict:
             "sample": (data / SOURCES / SAMPLE).as_posix()}
 
 
-def review(data: str | Path = DATA, results: str | Path = "results", show=None) -> dict:
-    """The review (see the module's description): review_flags.csv and the review section of dataset_report.md."""
-    data, results = Path(data), Path(results)
+def review(data: str | Path = DATA, results: str | Path = "results", knowledge: str | Path = KNOWLEDGE, show=None) -> dict:
+    """The review (see the module's description): build/review_flags.csv and the review section of dataset_report.md."""
+    data, results, knowledge = Path(data), Path(results), Path(knowledge)
     say = show or (lambda message: None)
     with (data / TABLE_NAME).open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
@@ -266,7 +264,7 @@ def review(data: str | Path = DATA, results: str | Path = "results", show=None) 
         texts[row["patient_uid"]] = content.decode("utf-8")
     sources = _sources(data, rows, show)
     answers = _closed_book_answers(results)
-    runs_of = _passage_runs(data / "library", say)
+    runs_of = _passage_runs(knowledge / KNOWLEDGE_TEXTS, say)
     out = []
     for row in rows:
         uid, label, question = row["patient_uid"], row["label"], texts[row["patient_uid"]]
@@ -285,6 +283,7 @@ def review(data: str | Path = DATA, results: str | Path = "results", show=None) 
                      "lookalike_wording": "yes" if any(LOOKALIKE.search(_plain(w)) for w in windows) else "no",
                      "other_classes_in_question": "; ".join(mentioned), "same_wrong_answer": same,
                      "knowledge_passages_sharing_12_words": "; ".join(sorted({pid for run in mine for pid in runs_of.get(run, ())}))})
+    (data / REVIEW_FLAGS).parent.mkdir(parents=True, exist_ok=True)
     with (data / REVIEW_FLAGS).open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=REVIEW_COLUMNS, lineterminator="\n")
         writer.writeheader()
@@ -360,8 +359,8 @@ def _review_summary(rows: list[dict], runs: list[Path]) -> list[str]:
     def count(rows_, key, value=None):
         return sum(1 for r in rows_ if (r[key] == value if value is not None else bool(r[key])))
     lines = ["# Review: signals of a doubtful label or of leakage", "",
-             "Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). "
-             "It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. "
+             "Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/build/text/audit.py`). "
+             "It changes nothing: it gives the evidence for deciding on a new version. One row per question in `build/review_flags.csv`. "
              f"Closed-book test runs read: {len(runs)}.", "",
              "| Signal | Test | Validation | Train | All |", "|---|---|---|---|---|"]
     signals = [("the confirming result also names another class (not negated)", "result_names_other_class", None),

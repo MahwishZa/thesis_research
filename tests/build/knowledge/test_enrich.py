@@ -1,4 +1,4 @@
-"""The knowledge base's additions (src/multimodal/enrich.py), on tiny invented data: no network, no real data."""
+"""The knowledge base's additions (src/build/knowledge/enrich.py), on tiny invented data: no network, no real data."""
 
 import csv
 import hashlib
@@ -82,7 +82,7 @@ class TagTests(unittest.TestCase):
 
 
 class TextFolder(unittest.TestCase):
-    """data/text/ with library.csv and the passages' texts, and data/multimodal/ beside it."""
+    """data/knowledge/ with library.csv and the passages' texts (texts/passages.jsonl), and data/text/ beside it."""
 
     PASSAGES = [("pmc-PMC1-1", "pmc", "PMC1", "Treatment / Management", TREATMENT, "melanoma"),
                 ("pmc-PMC1-2", "pmc", "PMC1", "Dermoscopy", DERMOSCOPY, "melanoma"),
@@ -93,16 +93,15 @@ class TextFolder(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.text, self.data = self.base / "data" / "text", self.base / "data" / "multimodal"
-        self.data.mkdir(parents=True)
+        self.text, self.data = self.base / "data" / "text", self.base / "data" / "knowledge"
+        (self.data / "texts").mkdir(parents=True)
         rows, texts = [], []
         for pid, corpus, source, section, body, topics in self.PASSAGES:
             rows.append({"passage_id": pid, "corpus": corpus, "source": source, "title": "T", "section": section, "year": "2024",
                          "licence": "CC BY", "topics": topics, "words": len(body.split()), "sha256": sha(body)})
             texts.append({**{k: v for k, v in rows[-1].items() if k not in ("words", "sha256")}, "text": body})
-        write_csv(self.text / "library.csv", rows)
-        (self.text / "library").mkdir()
-        (self.text / "library" / "passages.jsonl").write_text("".join(json.dumps(t) + "\n" for t in texts), encoding="utf-8")
+        write_csv(self.data / "library.csv", rows)
+        (self.data / "texts" / "passages.jsonl").write_text("".join(json.dumps(t) + "\n" for t in texts), encoding="utf-8")
 
     def table(self, name):
         with (self.data / name).open(encoding="utf-8", newline="") as f:
@@ -112,7 +111,7 @@ class TextFolder(unittest.TestCase):
 class AspectsTests(TextFolder):
     def test_every_passage_is_tagged_and_the_coverage_is_counted_per_class(self):
         with mock.patch.object(enrich, "TARGET_PASSAGES", 1), mock.patch.object(enrich, "TARGET_DOCUMENTS", 1):
-            done = enrich.aspects(self.text, self.data)
+            done = enrich.aspects(self.data)
         rows = {r["passage_id"]: r for r in self.table(enrich.ASPECTS_TABLE)}
         self.assertEqual(set(rows), {p[0] for p in self.PASSAGES})
         self.assertEqual((rows["pmc-PMC1-1"]["treatment"], rows["pmc-PMC1-1"]["appearance"], rows["pmc-PMC1-1"]["heading_aspect"]), ("yes", "no", "treatment"))
@@ -132,38 +131,38 @@ class AspectsTests(TextFolder):
         for passages, documents, short in ((1, 1, ["nevus"]), (1, 2, ["melanoma", "nevus"]), (2, 1, ["melanoma", "nevus"]), (0, 0, ["melanoma", "nevus"])):
             with self.subTest((passages, documents)), mock.patch.object(enrich, "TARGET_PASSAGES", passages), \
                     mock.patch.object(enrich, "TARGET_DOCUMENTS", documents):
-                self.assertEqual(enrich.aspects(self.text, self.data)["short"], [] if (passages, documents) == (0, 0) else short)
+                self.assertEqual(enrich.aspects(self.data)["short"], [] if (passages, documents) == (0, 0) else short)
 
     def test_the_target_is_not_lowered_for_a_short_class(self):
-        done = enrich.aspects(self.text, self.data)  # the real target: 30 passages from 8 documents
+        done = enrich.aspects(self.data)  # the real target: 30 passages from 8 documents
         self.assertEqual(done["short"], ["melanoma", "nevus"])
         self.assertEqual((enrich.TARGET_PASSAGES, enrich.TARGET_DOCUMENTS), (30, 8))
 
     def test_a_changed_text_or_a_missing_text_stops_the_step(self):
-        path = self.text / "library" / "passages.jsonl"
+        path = self.data / "texts" / "passages.jsonl"
         lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         lines[0]["text"] += " changed"
         path.write_text("".join(json.dumps(t) + "\n" for t in lines), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "not the one its fingerprint"):
-            enrich.aspects(self.text, self.data)
+            enrich.aspects(self.data)
         path.write_text("".join(json.dumps(t) + "\n" for t in lines[1:]), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "do not list the same passages"):
-            enrich.aspects(self.text, self.data)
+            enrich.aspects(self.data)
         path.unlink()
         with self.assertRaisesRegex(FileNotFoundError, "passages.jsonl not found"):
-            enrich.aspects(self.text, self.data)
+            enrich.aspects(self.data)
 
     def test_the_appearance_corpus_is_read_beside_the_library(self):
         row = {"passage_id": "appearance-PMC9-1", "corpus": "appearance", "source": "PMC9", "title": "T", "section": "Dermoscopy", "year": "2025",
                "licence": "CC BY", "topics": "nevus", "words": len(VESSELS.split()), "sha256": sha(VESSELS)}
         write_csv(self.data / enrich.APPEARANCE_TABLE, [row])
-        (self.text / "library" / enrich.APPEARANCE_FILE).write_text(json.dumps({**row, "text": VESSELS}) + "\n", encoding="utf-8")
-        done = enrich.aspects(self.text, self.data)
+        (self.data / "texts" / enrich.APPEARANCE_FILE).write_text(json.dumps({**row, "text": VESSELS}) + "\n", encoding="utf-8")
+        done = enrich.aspects(self.data)
         self.assertEqual((done["coverage"]["nevus"]["library"], done["coverage"]["nevus"]["new"], done["coverage"]["nevus"]["total"]), (0, 1, 1))
         self.assertEqual({r["origin"] for r in done["rows"]}, {"library", "appearance"})
-        (self.text / "library" / enrich.APPEARANCE_FILE).unlink()  # a table without its texts
+        (self.data / "texts" / enrich.APPEARANCE_FILE).unlink()  # a table without its texts
         with self.assertRaisesRegex(FileNotFoundError, "run python -m src.build.knowledge.enrich appearance first"):
-            enrich.aspects(self.text, self.data)
+            enrich.aspects(self.data)
 
 
 class AppearanceTests(TextFolder):
@@ -196,8 +195,8 @@ class AppearanceTests(TextFolder):
         super().setUp()
         rows = [{"passage_id": "pmc-OLD-1", "corpus": "pmc", "source": "PMC0", "title": "T", "section": "S", "year": "2020",
                                    "licence": "CC BY", "topics": "melanoma", "words": 40, "sha256": sha(PASSAGE_IN_LIBRARY)}]
-        write_csv(self.text / "library.csv", rows)  # the library already holds one of the passages
-        (self.text / "library" / "passages.jsonl").write_text(json.dumps({**rows[0], "text": PASSAGE_IN_LIBRARY}) + "\n", encoding="utf-8")
+        write_csv(self.data / "library.csv", rows)  # the library already holds one of the passages
+        (self.data / "texts" / "passages.jsonl").write_text(json.dumps({**rows[0], "text": PASSAGE_IN_LIBRARY}) + "\n", encoding="utf-8")
 
     def test_only_new_passages_that_describe_appearance_and_share_no_run_with_a_question_are_kept(self):
         done = self.run_step()
@@ -210,13 +209,13 @@ class AppearanceTests(TextFolder):
         self.assertEqual(kept["appearance-PMC2-1"]["sha256"], sha(VESSELS))
         self.assertEqual(dict(done["dropped"]), {"does not describe appearance": 1, "already in the library": 1,
                                                  "shares a run of words with a question": 1})
-        texts = [json.loads(line) for line in (self.text / "library" / enrich.APPEARANCE_FILE).read_text(encoding="utf-8").splitlines()]
+        texts = [json.loads(line) for line in (self.data / "texts" / enrich.APPEARANCE_FILE).read_text(encoding="utf-8").splitlines()]
         self.assertEqual({t["passage_id"]: t["text"] for t in texts}, {"appearance-PMC1-1": DERMOSCOPY, "appearance-PMC2-1": VESSELS})
         report = (self.data / enrich.REPORT).read_text(encoding="utf-8")
         for expected in ("<!-- step: appearance -->", "| melanoma | Melanoma | first | 2 | 0 | 2 | 2 | 2 |", "| nevus | Nevi | first | 1 | 0 | 1 | 1 | 1 |",
                          "CC BY 4.0: 1", "No person has read the passages", "already in the library: 1"):
             self.assertIn(expected, report)
-        self.assertEqual((self.text / "library.csv").read_text(encoding="utf-8").count("\n"), 2)  # the library's own table is not rewritten
+        self.assertEqual((self.data / "library.csv").read_text(encoding="utf-8").count("\n"), 2)  # the library's own table is not rewritten
 
     def test_at_most_so_many_passages_are_kept_per_class_newest_first(self):
         done = self.run_step(MAX_PER_CLASS=1)
@@ -232,7 +231,7 @@ class AppearanceTests(TextFolder):
     def wider_step(self, **limits):
         """Nevus is a class of the wider search: found by its heading or by its names, without the dermoscopy words."""
         columns = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
-        write_csv(self.text / "term_check.csv", [dict(zip(columns, row)) for row in (
+        write_csv(self.text / "build" / "term_check.csv", [dict(zip(columns, row)) for row in (
             ("nevus", "nevus", "yes", "heading", "D1", "Nevi", "50"), ("nevus", "blue nevus", "yes", "no", "", "", "3"),
             ("nevus", "pale nevus", "yes", "no", "", "", "0"), ("nevus", "pale", "no", "no", "", "", "4"),  # invented: a name nobody searches
             ("nevus", "dermal nevus", "yes", "no", "", "", "0"), ("nevus", "spider nevus", "no", "no", "", "", "4"),
@@ -339,7 +338,7 @@ class NameTests(unittest.TestCase):
     def test_the_names_of_a_class_come_from_the_checked_survey(self):
         with tempfile.TemporaryDirectory() as tmp:
             columns = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
-            write_csv(Path(tmp) / "term_check.csv", [dict(zip(columns, row)) for row in (
+            write_csv(Path(tmp) / "build" / "term_check.csv", [dict(zip(columns, row)) for row in (
                 ("nevus", "nevus", "yes", "heading", "D1", "Nevus", "50"), ("nevus", "dermal nevus", "yes", "no", "", "", "0"),
                 ("nevus", "spider nevus", "no", "no", "", "", "4"), ("melanoma", "melanoma", "yes", "heading", "D2", "Melanoma", "90"))])
             self.assertEqual(enrich._class_names(Path(tmp), "nevus"), (["nevus"], ["nevus", "dermal nevus"], ["spider nevus"]))
@@ -350,14 +349,14 @@ PASSAGE_IN_LIBRARY = ("Dermoscopy often shows a regular pigment network with eve
 
 
 class CardTests(Project):
-    """The ISIC records of the multimodal tests, with the columns the cards need."""
+    """The ISIC records of the image + metadata tests, with the columns the cards need."""
 
     def setUp(self):
         super().setUp()
-        photos = prepare._read_csv(self.image / "raw_photos.csv")
+        photos = prepare._read_csv(self.image / "build" / "raw_photos.csv")
         for row in photos:
             row["diagnosis_confirm_type"] = "histopathology" if row["photo_id"] == "ISIC_0000002" else ""
-        write_csv(self.image / "raw_photos.csv", photos)
+        write_csv(self.image / "build" / "raw_photos.csv", photos)
         prepare.records()
         prepare.build()
 
@@ -375,7 +374,7 @@ class CardTests(Project):
                                          "Family history of melanoma: no.")  # no size recorded: left out, not guessed
         rows = self.table(enrich.CARDS_TABLE)
         self.assertEqual([r["source"] for r in rows], ["ISIC ISIC_0000004", "ISIC ISIC_0000002"])  # by class, then file
-        report = (self.data / enrich.REPORT).read_text(encoding="utf-8")
+        report = (self.knowledge / enrich.REPORT).read_text(encoding="utf-8")
         self.assertIn("<!-- step: cards -->", report)
         self.assertIn("| melanoma | 1 | 1 | 1 | 1 | 1 | 0 | 1 | 1 |", report)
 
@@ -388,25 +387,25 @@ class CardTests(Project):
             self.assertNotIn(name, text)
 
     def test_a_card_that_breaks_a_rule_stops_the_step(self):
-        photos = prepare._read_csv(self.image / "raw_photos.csv")
+        photos = prepare._read_csv(self.image / "build" / "raw_photos.csv")
         for row in photos:  # a confirmation text that names the collection
             if row["photo_id"] == "ISIC_0000002":
                 row["diagnosis_confirm_type"] = "reviewed by Anonymous"
-        write_csv(self.image / "raw_photos.csv", photos)
+        write_csv(self.image / "build" / "raw_photos.csv", photos)
         with self.assertRaisesRegex(ValueError, "names the photo's collection"):
             enrich.cards()
-        diseases = prepare._read_csv(self.data / "diseases.csv")  # a diagnosis its class does not list
+        diseases = prepare._read_csv(self.knowledge / "diseases.csv")  # a diagnosis its class does not list
         for row in diseases:
             row["isic_diagnoses"] = "Something else (1)"
-        write_csv(self.data / "diseases.csv", diseases)
+        write_csv(self.knowledge / "diseases.csv", diseases)
         photos[0]["diagnosis_confirm_type"] = "histopathology"
-        write_csv(self.image / "raw_photos.csv", photos)
+        write_csv(self.image / "build" / "raw_photos.csv", photos)
         with self.assertRaisesRegex(ValueError, "not one that diseases.csv lists"):
             enrich.cards()
 
-    def test_the_cards_must_be_exactly_the_training_photos_of_the_knowledge_table(self):
-        knowledge = prepare._read_csv(self.data / "knowledge.csv")
-        write_csv(self.data / "knowledge.csv", [r for r in knowledge if r["item_id"] != "image:train/melanoma/ISIC_0000002.jpg"])
+    def test_the_cards_must_be_exactly_the_training_photos_of_the_knowledge_index(self):
+        knowledge = prepare._read_csv(self.knowledge / "index.csv")
+        write_csv(self.knowledge / "index.csv", [r for r in knowledge if r["item_id"] != "image:train/melanoma/ISIC_0000002.jpg"])
         with self.assertRaisesRegex(ValueError, "not exactly the training photos"):
             enrich.cards()
         card = {"diagnosis": "d", "confirmation": "c", "age": "a", "sex": "s", "site": "t", "site_detail": "", "size_mm": "", "personal_hx_mm": "",
@@ -428,7 +427,7 @@ class CardTests(Project):
                          ["yes", "yes", "yes", "no", "no", "no", None, None, None, None])
 
     def table(self, name):
-        with (self.data / name).open(encoding="utf-8", newline="") as f:
+        with (self.knowledge / name).open(encoding="utf-8", newline="") as f:
             return list(csv.DictReader(f))
 
 
@@ -441,7 +440,7 @@ class CommandLineTests(unittest.TestCase):
             parser.parse_args(["other"])
 
     def test_the_documentation_names_every_step(self):
-        for step in enrich.STEPS:
+        for step in enrich.COMMANDS:
             self.assertIn(f"python -m src.build.knowledge.enrich {step}", enrich.__doc__)
 
 

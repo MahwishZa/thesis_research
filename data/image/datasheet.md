@@ -1,8 +1,8 @@
 # Data sheet: the skin-lesion image dataset (version 1)
 
-This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Every number in it comes from three files the preparation code (`src/image/prepare.py`) writes:
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Every number in it comes from three files the preparation code (`src/build/image/prepare.py`) writes:
 - `dataset_report.md`: the full report of every step
-- `raw_photos.csv`: one row per original photo
+- `build/raw_photos.csv`: one row per original photo
 - `dataset.csv`: one row per prepared image
 
 ## At a glance
@@ -64,7 +64,7 @@ The split keeps these subtypes balanced between test, validation and train.
   - its lesion group
   - whether it was in the Kaggle Test folder (`kaggle_test`)
   - its size and what was done to it
-- **`raw_photos.csv`:** everything known about the original photo, such as:
+- **`build/raw_photos.csv`:** everything known about the original photo, such as:
   - the full ISIC diagnosis and how it was confirmed
   - the lesion number, licence and credit line
   - the HAM10000 cross-check
@@ -78,7 +78,7 @@ The split keeps these subtypes balanced between test, validation and train.
 
 **Recommended splits.** The splits are fixed and part of the dataset (the `split` column). They must not be redrawn.
 
-**Licences.** Each image carries the licence of its ISIC record (`licence` and `attribution` in `raw_photos.csv`):
+**Licences.** Each image carries the licence of its ISIC record (`licence` and `attribution` in `build/raw_photos.csv`):
 - CC-BY-NC: 1,436 images, credit "MILK study team"
 - CC-0: 743 images, credit "Anonymous"
 
@@ -89,13 +89,13 @@ The split keeps these subtypes balanced between test, validation and train.
   - **What its page says:** the images were sorted by ISIC's classification. Section 4 shows where the ISIC records disagree with the folders.
   - Every file name carries an ISIC number: 2,202 numbers in all, every one found in the ISIC Archive.
   - The files are kept unchanged in `data/image/raw`. Their fingerprint is `0915dd82f562136d1151b61be6181e8fd1ab6072dadd4d0f47f69dc4ddd0bfaa`, computed from the path and SHA-256 of every file.
-- **ISIC Archive records.** The public record of every ISIC number was downloaded on 2026-11-11 from `api.isic-archive.com`. It gives the diagnosis, how it was confirmed, the image type, lesion number, licence and credit line. Each record is fingerprinted in `raw_photos.csv`.
+- **ISIC Archive records.** The public record of every ISIC number was downloaded on 2026-11-11 from `api.isic-archive.com`. It gives the diagnosis, how it was confirmed, the image type, lesion number, licence and credit line. Each record is fingerprinted in `build/raw_photos.csv`.
 - **HAM10000 metadata.** Downloaded from Harvard Dataverse (doi:10.7910/DVN/DBW86T; Tschandl et al., 2018), and used as a second source for the 1,437 ISIC numbers that are also in HAM10000.
 - **No new photos.** No photo was taken or added by the researcher. No person was contacted.
 
 ## 4. Preparation: every change from the Kaggle dataset
 
-Each step is one command of `src/image/prepare.py`. Its full numbers are in the matching section of `dataset_report.md`.
+Each step is one command of `src/build/image/prepare.py`. Its full numbers are in the matching section of `dataset_report.md`.
 
 | Step | What it did | Result |
 |---|---|---|
@@ -103,10 +103,10 @@ Each step is one command of `src/image/prepare.py`. Its full numbers are in the 
 | isic | Downloaded the ISIC record of every ISIC number | 2,202 of 2,202 found |
 | identity | Compared every photo with ISIC's own picture of its number | 2,202 of 2,202 the same picture |
 | ham10000 | Compared the photos also in HAM10000 with HAM10000's metadata | 1,437 numbers: diagnosis group, confirmation and lesion groups agree for all |
-| labels | Labelled every photo from its ISIC record by the rule in `isic_to_class.csv`, never from its Kaggle folder | 2,196 labelled; 4 photos show two lesions (ISIC "collision") and get no class |
+| labels | Labelled every photo from its ISIC record by the rule in `build/isic_to_class.csv`, never from its Kaggle folder | 2,196 labelled; 4 photos show two lesions (ISIC "collision") and get no class |
 | duplicates | Compared every photo with every other one, whole picture | 210 pairs flagged for the eye check |
 | lesions | Looked for second photos of one lesion by skin pattern (OpenCV SIFT, ratio test, RANSAC) | 222 of the 446 known same-lesion pairs found, with 1 false alarm among 233,456 known different pairs |
-| eye check | A person judged the flagged pairs (`eye_check_verdicts.csv`) | 17 pairs are the same photograph, so one copy of each is left out (an original test photo or the lower ISIC number is kept); 10 pairs are different lesions (3 of them added by the audit described in section 7) |
+| eye check | A person judged the flagged pairs (`build/eye_check_verdicts.csv`) | 17 pairs are the same photograph, so one copy of each is left out (an original test photo or the lower ISIC number is kept); 10 pairs are different lesions (3 of them added by the audit described in section 7) |
 | splits | Train, validation and test, new, ignoring the Kaggle folders | See below |
 | images | Made the image of every photo in a split, all the same way | See below |
 | shortcuts | Measured what simple image properties reveal about the class | Measures only; see section 5 |
@@ -184,7 +184,7 @@ Made with Pillow 13.0.0 (libjpeg-turbo 6.2, Little CMS 2.19).
 - **In the repository:** the tables, the report, this data sheet and the code. Anyone with the Kaggle download can rebuild the dataset exactly.
 
 **Licences and credit**
-- Each image's licence is in `raw_photos.csv`: CC-BY-NC (non-commercial, with credit) or CC-0.
+- Each image's licence is in `build/raw_photos.csv`: CC-BY-NC (non-commercial, with credit) or CC-0.
 - Showing images in a publication must respect their licence and credit line.
 - The Kaggle page's own terms should be checked too.
 
@@ -195,18 +195,18 @@ Made with Pillow 13.0.0 (libjpeg-turbo 6.2, Little CMS 2.19).
 
 ## 7. Maintenance and checking
 
-**Version 1** is frozen and marked in Git by the tag `image-dataset`. Any change to an image, label or split makes a new version, with new fingerprints, a new tag and an entry in this data sheet. The text and multimodal datasets of later phases are documented separately.
+**Version 1** is frozen and marked in Git by the tag `image-dataset`. Any change to an image, label or split makes a new version, with new fingerprints, a new tag and an entry in this data sheet. The text, image + metadata and case datasets, and the knowledge base, are documented separately.
 
-**Changes since the tag.** On 2026-11-12 the repository was reorganised for three datasets: the image dataset's files moved from `data/` to `data/image/`, and its code to `src/image/prepare.py`. No image, label, split or fingerprint changed; the full re-run below proves it.
+**Changes since the tag.** On 2026-11-12 the repository was reorganised for three datasets: the image dataset's files moved from `data/` to `data/image/`, and its code to `src/image/prepare.py`. No image, label, split or fingerprint changed; the full re-run below proves it. On 2026-11-18 the code moved to `src/build/image/prepare.py`, and the four build records (`raw_photos.csv`, `similar_photo_pairs.csv`, `isic_to_class.csv`, `eye_check_verdicts.csv`) moved into `build/`, unchanged byte for byte.
 
-**Independent audit (2026-11-12).** A fresh check of the frozen tables found the dataset as described: no lesion in two splits, every label re-derived from its ISIC record, and every fingerprint matching. It found one gap: 3 same-class look-alike pairs from the whole-picture comparison sat in different splits and had never been looked at. A person checked them by eye: all 3 are different lesions. They are recorded in `eye_check_verdicts.csv`, and re-running the split with them gives exactly the same split.
+**Independent audit (2026-11-12).** A fresh check of the frozen tables found the dataset as described: no lesion in two splits, every label re-derived from its ISIC record, and every fingerprint matching. It found one gap: 3 same-class look-alike pairs from the whole-picture comparison sat in different splits and had never been looked at. A person checked them by eye: all 3 are different lesions. They are recorded in `build/eye_check_verdicts.csv`, and re-running the split with them gives exactly the same split.
 
 **Rebuild**
 1. Set up Python 3.11 or newer with the packages in `requirements.txt`.
 2. Put the Kaggle `Train` and `Test` folders in `data/image/raw`.
 3. Run, in order: `python -m src.build.image.prepare inventory`, `isic`, `identity`, `ham10000`, `labels`, `duplicates`, `lesions`, `splits`, `images`, `shortcuts`.
 
-A full re-run on 2026-11-12 reproduced `raw_photos.csv`, `dataset.csv` and every image byte for byte. It also brought the same-lesion search up to date with the second eye check, removing the 14 pairs that involve the 13 copies it left out.
+A full re-run on 2026-11-12 reproduced `build/raw_photos.csv`, `dataset.csv` and every image byte for byte. It also brought the same-lesion search up to date with the second eye check, removing the 14 pairs that involve the 13 copies it left out.
 
 **Check.** Every image is checked against `dataset.csv` before each run; a changed, missing or extra image stops the run. Each split also has its own fingerprint, which a run's run card shows as `images_sha256` when the run answered the whole split:
 

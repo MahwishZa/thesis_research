@@ -1,4 +1,4 @@
-"""The multimodal dataset's audit (src/multimodal/audit.py) on the tiny synthetic project of test_prepare.py: no network."""
+"""The image + metadata dataset's audit (src/build/image_metadata/audit.py) on the tiny synthetic project of test_prepare.py: no network."""
 
 import contextlib
 import csv
@@ -12,7 +12,7 @@ from tests.build.image_metadata.test_prepare import Project
 
 
 class AuditTests(Project):
-    """The project with its files on disk, as on the researcher's computer, and the multimodal tables built."""
+    """The project with its files on disk, as on the researcher's computer, and the image + metadata tables built."""
 
     def setUp(self):
         super().setUp()
@@ -29,15 +29,15 @@ class AuditTests(Project):
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_bytes(content)
         self._write(text / "dataset.csv", cases)
-        passages = self._source("text", "library.csv")
+        passages = self._source("knowledge", "library.csv")
         lines = []
         for row in passages:
             body = f"Passage {row['passage_id']} about {row['topics']}."
             row["sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
             lines.append(json.dumps({"passage_id": row["passage_id"], "text": body}))
-        self._write(text / "library.csv", passages)
-        (text / "library").mkdir()
-        (text / "library" / "passages.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self._write(self.knowledge / "library.csv", passages)
+        (self.knowledge / "texts").mkdir()
+        (self.knowledge / "texts" / "passages.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
         prepare.records()
         prepare.build()
 
@@ -69,18 +69,18 @@ class AuditTests(Project):
                          {"age": "about 65 years", "sex": "male", "site": "trunk"})
         two = [{"metadata": {"clinical": {"age_approx": 80, "sex": "male"}}}, {"metadata": {"clinical": {"age_approx": 70, "sex": "male"}}}]
         self.assertEqual(audit.expected_facts(two), {"age": "not recorded", "sex": "male", "site": "not recorded"})
-        rows = self._source("multimodal", "questions.csv")
+        rows = self._source("image_metadata", "dataset.csv")
         rows[0]["facts"] = rows[0]["facts"].replace("Sex: male", "Sex: female")
         rows[1]["site"] = "posterior trunk"
-        self._write(self.data / "questions.csv", rows)
+        self._write(self.data / "dataset.csv", rows)
         self.assertEqual(len(self._failed()["facts differ from the ISIC records"]), 2)
 
     def test_a_held_out_item_in_the_knowledge_or_a_changed_file_fails(self):
-        knowledge = self._source("multimodal", "knowledge.csv")
+        knowledge = self._source("knowledge", "index.csv")
         knowledge.append({**knowledge[0], "item_id": "image:test/melanoma/ISIC_0000001.jpg",
                           "path": "data/image/dataset/test/melanoma/ISIC_0000001.jpg"})
         knowledge = [k for k in knowledge if k["item_id"] != "passage:book-2-1"]
-        self._write(self.data / "knowledge.csv", knowledge)
+        self._write(self.knowledge / "index.csv", knowledge)
         (self.image / "dataset" / "test" / "nevus" / "ISIC_0000003.jpg").write_bytes(b"changed")
         (self.base / "data" / "text" / "dataset" / "train" / "nevus" / "13-1.txt").unlink()
         failed = self._failed()
@@ -91,22 +91,22 @@ class AuditTests(Project):
         self.assertIn("**", (self.data / "dataset_report.md").read_text(encoding="utf-8").split("checks failed")[0][-6:])
 
     def test_a_case_licence_that_differs_from_its_source_fails(self):
-        knowledge = self._source("multimodal", "knowledge.csv")
+        knowledge = self._source("knowledge", "index.csv")
         for k in knowledge:
             if k["item_id"] == "case:pubmed-16":
                 k["licence"] = "the article's open-access licence in PMC"  # vague: not the licence PMC gives this full text
-        self._write(self.data / "knowledge.csv", knowledge)
+        self._write(self.knowledge / "index.csv", knowledge)
         self.assertEqual(self._failed(), {"knowledge case licence differs from its source": ["case:pubmed-16"]})
 
     def test_a_passage_from_a_candidate_article_and_a_wrong_count_fail(self):
-        path = self.base / "data" / "text" / "library.csv"
-        rows = self._source("text", "library.csv")
+        path = self.knowledge / "library.csv"
+        rows = self._source("knowledge", "library.csv")
         rows[0]["source"] = "PMID 13"  # the article of a case of the text dataset
         self._write(path, rows)
         prepare.build()
-        diseases = self._source("multimodal", "diseases.csv")
+        diseases = self._source("knowledge", "diseases.csv")
         diseases[0]["passages"] = "9"
-        self._write(self.data / "diseases.csv", diseases)
+        self._write(self.knowledge / "diseases.csv", diseases)
         failed = self._failed()
         self.assertEqual(failed["passage from an article of the text dataset's candidates"], ["pmc-1-1"])
         self.assertEqual(failed["disease count differs from the sources"], [diseases[0]["class"]])

@@ -1,4 +1,4 @@
-"""The free count of the text dataset's figures (src/multimodal/figures.py), on invented data: no network, no real data."""
+"""The free count of the text dataset's figures (src/build/cases/prepare.py), on invented data: no network, no real data."""
 
 import csv
 import hashlib
@@ -103,7 +103,7 @@ class CountTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.text, self.data = base / "data" / "text", base / "data" / "multimodal"
+        self.text, self.data = base / "data" / "text", base / "data" / "cases"
         rows = []
         for uid, split, label, pmid, question in self.CASES:
             path = f"{split}/{label}/{uid}.txt"
@@ -157,7 +157,7 @@ class CountTests(unittest.TestCase):
         self.assertIn({"patient_uid": "c1", "pmcid": "PMC11", "figure": "f1", "label": "Figure 1", "number": 1,
                        "caption": "Clinical photograph of the nodule.", "pictures": 1, "dermoscopy": False, "clinical": True,
                        "lesion": True, "left_out_for": []}, captions)
-        report = (self.data / figures.COUNT_REPORT).read_text(encoding="utf-8")
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         for expected in ("**Result: 1 test cases count; 0 classes have at least 8 (none). The rule is not met: the dataset is not built.**",
                          "| melanoma | 2 | 1 | 0 | 0 | 0 | 1 | 0 |", "| all | 5 | 1 | 0 | 2 | 0 | 1 | 0 |",
                          "| no PMC number | 1 |", "| the article holds another case of the dataset | 2 |",
@@ -176,7 +176,7 @@ class CountTests(unittest.TestCase):
                 mock.patch.object(figures, "GO_PER_CLASS", 1):
             done = figures.count(self.text, self.data)
         self.assertEqual(done["decision"], {"test_cases": 1, "per_class": {"melanoma": 1}, "classes_with_enough": ["melanoma"], "build": True})
-        self.assertIn("The rule is met: the dataset can be built.", (self.data / figures.COUNT_REPORT).read_text(encoding="utf-8"))
+        self.assertIn("The rule is met: the dataset can be built.", (self.data / figures.REPORT).read_text(encoding="utf-8"))
 
 
 class ReportTests(unittest.TestCase):
@@ -277,6 +277,7 @@ class DownloadTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name)
+        (self.data / "build").mkdir()
         cases = [("c1", "test", "melanoma", "PMC1"), ("c2", "test", "nevus", "PMC2"), ("c3", "val", "nevus", "PMC3"),
                  ("c4", "train", "nevus", "PMC4"), ("c5", "train", "nevus", "PMC5")]
         with (self.data / figures.COUNT_TABLE).open("w", encoding="utf-8", newline="") as f:
@@ -332,7 +333,7 @@ class DownloadTests(unittest.TestCase):
         self.assertEqual(rows[("c3", "f1")]["status"], figures.RETRACTED)
         self.assertEqual(rows[("c4", "f1")]["status"], figures.NOT_OPEN)  # not in the bucket at all
         self.assertEqual(sorted(p.name for p in (self.data / "figures" / "images" / "PMC1").iterdir()), ["f1-fig1.jpg", "record.json"])
-        report = (self.data / figures.FILES_REPORT).read_text(encoding="utf-8")
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         self.assertIn("Pictures saved: 1 for 1 of 4 cases.", report)
         self.assertIn("| melanoma | 1 | 0 | 0 |", report)
 

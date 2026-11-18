@@ -1,14 +1,12 @@
-# Data sheet: the skin-lesion multimodal dataset, image + metadata (version 1)
+# Data sheet: the image + metadata dataset (version 1)
 
-This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/multimodal/prepare.py`, `src/multimodal/audit.py`) writes:
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/build/image_metadata/prepare.py`, `src/build/image_metadata/audit.py`) writes:
 - `dataset_report.md`: the full report of every step (records, build, audit)
-- `questions.csv`: one row per question
-- `knowledge.csv`: one row per item that open-book runs may search
-- `diseases.csv`: one row per class
+- `dataset.csv`: one row per question
 
-The dataset is made from the two frozen datasets: the image dataset (tag `image-dataset`, `data/image/datasheet.md`) and the text dataset (tag `text-dataset`, `data/text/datasheet.md`). It adds no image and no text of its own.
+The questions are made from the frozen image dataset (tag `image-dataset`, `data/image/datasheet.md`) and its ISIC records; the dataset adds no image and no text of its own. Its build also writes the knowledge base's index of training items and its table of classes (`data/knowledge/index.csv` and `diseases.csv`, described in `data/knowledge/datasheet.md`).
 
-In the thesis this dataset is called **image + metadata**: an ISIC photo with three recorded facts, not a written case. The dataset with a written case and the same patient's photos is the case dataset (`cases_datasheet.md`).
+In the thesis this dataset is called **image + metadata**: an ISIC photo with three recorded facts, not a written case. It is the ablation of the photo with the patient's recorded facts; the dataset with a written case and the same patient's photos is the case dataset (`data/cases/datasheet.md`). Its dataset name in the configs is still `multimodal`.
 
 ## At a glance
 
@@ -21,17 +19,16 @@ In the thesis this dataset is called **image + metadata**: an ISIC photo with th
 | Labels | the image dataset's labels, unchanged |
 | Facts shown | one sentence per photo, for example "Age: about 65 years. Sex: male. Body site: trunk."; a fact that is missing is shown as "not recorded" |
 | Questions with all three facts | test 289 of 320, validation 106 of 120, train 1,545 of 1,739 |
-| Knowledge | 7,736 items open-book runs may search: 1,739 training photos, 444 training cases of the text dataset, 5,553 library passages; no validation or test item of either dataset |
-| Link between photo and text | by disease only: the two datasets share no patient |
+| Knowledge | what open-book runs may search is the knowledge base (`data/knowledge/`): training items only, linked to a photo by disease only |
 | Audit | all 19 checks passed on 2026-11-14 (section 7) |
 | Facts alone, no photo | 35.9% balanced accuracy on test (95% interval 30.0–41.5%; chance 12.5%) |
 
 ## 1. Motivation
 
-**Purpose.** The dataset was prepared for the multimodal phase of an MS thesis on diagnosing skin lesions with large language models (LLMs), and on reducing their hallucinations with retrieval. It answers one question: does a model diagnose better, and invent less, when it sees the patient's recorded facts with the photo, and when it can retrieve knowledge across photos and texts?
+**Purpose.** The dataset was prepared for an MS thesis on diagnosing skin lesions with large language models (LLMs), and on reducing their hallucinations with retrieval. It answers one question: does a model diagnose better, and invent less, when it sees the patient's recorded facts with the photo, and when it can retrieve knowledge across photos and texts?
 
 **Why this form.** The image and text datasets share no patient: the photos come from the ISIC Archive, the texts from published case reports. So:
-- A multimodal question is one photo with facts about the same patient, from the photo's own ISIC record: a real patient, nothing invented.
+- A question is one photo with facts about the same patient, from the photo's own ISIC record: a real patient, nothing invented.
 - A case text is never attached to a photo as "the same patient". That would invent a patient who does not exist.
 - A text is never chosen for a question by the question's label. That would put the answer into the question.
 - Texts and photos meet only in the knowledge that open-book runs search, linked by disease.
@@ -60,7 +57,7 @@ The 320 test photos show 248 lesions; photos of one lesion are in one split, and
 
 **Missing facts.** Over all 2,179 questions, age is not recorded for 231, sex for 213 and body site for 148. In test: age 31, sex 27, body site 17. Of the 31 test questions with a missing fact, 29 are melanoma or nevus (section 5, limitation 1).
 
-**The columns of `questions.csv`**
+**The columns of `dataset.csv`**
 - `split`, `label`, `path`, `sha256`, `lesion_group`: as in the image dataset's `dataset.csv`. `path` is inside `data/image/dataset/`.
 - `isic_id`: the photo's ISIC number (two numbers for the two photos ISIC holds twice).
 - `collection`: the ISIC credit line of the photo ("Anonymous" or "MILK study team"). It is for analysis and must never be shown to a model.
@@ -68,28 +65,13 @@ The 320 test photos show 248 lesions; photos of one lesion are in one split, and
 - `complete`: "yes" when all three facts are recorded.
 - `facts`: the sentence the model is shown with the photo.
 
-**The columns of `knowledge.csv`**
-- `item_id`: `image:<path>`, `case:<patient_uid>` or `passage:<passage_id>`.
-- `kind`: image, case or passage.
-- `diseases`: the item's class, or a passage's topics (several are separated by "; ").
-- `link`: always "disease".
-- `path`: where the item is on this computer; a passage is `data/text/library/passages.jsonl#<passage_id>`.
-- `sha256`: the item's fingerprint, as in its own dataset.
-- `source`: the ISIC number, the PubMed number, or the passage's source.
-- `licence`: as below.
+**Recommended splits.** The splits are fixed and part of the dataset. They must not be redrawn: they are the image dataset's own, so the photo-only and image + metadata results can be compared question by question.
 
-**`diseases.csv`.** Per class: the ISIC diagnoses of its photos, the names and MeSH headings the text dataset counts for it, its questions per split, its test questions with all three facts, its cases per split and its library passages.
-
-**Recommended splits.** The splits are fixed and part of the dataset. They must not be redrawn: they are the image dataset's own, so the photo-only and multimodal results can be compared question by question.
-
-**Licences**
-- Photos: CC-BY-NC (1,436, credit "MILK study team") or CC-0 (743, credit "Anonymous"), as the ISIC Archive gives them.
-- Training cases: PMC-Patients CC BY-NC-SA 4.0 (202); the publisher's copyright of a PubMed abstract (71); each PMC full text's own licence, exactly as PMC gives it (171): 159 give a Creative Commons address, 5 say only "open-access", and 7 give none ("(no licence given by PMC)").
-- Library passages: as in the text dataset's `library.csv`, copied unchanged, including its spelling (`http://` and `https://` addresses both occur). 130 passages carry no licence there and are listed as "(not recorded)".
+**Licences.** Photos: CC-BY-NC (1,436, credit "MILK study team") or CC-0 (743, credit "Anonymous"), as the ISIC Archive gives them. The knowledge base's licences are in its own data sheet.
 
 ## 3. Collection
 
-Nothing new was collected. The facts come from the ISIC records the image dataset downloaded (`data/image/downloads/isic/`), each checked against the fingerprint the image dataset saved for it. The cases and passages come from the text dataset, unchanged.
+Nothing new was collected. The facts come from the ISIC records the image dataset downloaded (`data/image/downloads/isic/`), each checked against the fingerprint the image dataset saved for it.
 
 ## 4. Preparation
 
@@ -103,7 +85,7 @@ Three commands, each writing its section of `dataset_report.md`:
    - lesion size: recorded only for 267 melanomas and 2 actinic keratoses, so it would almost name melanoma;
    - body site levels 2 to 5: their words differ between the two collections ("shoulder", "thigh" and "breast" occur only in the melanoma and nevus collection);
    - "acral" (`anatom_site_special`): 36 photos only.
-3. **`build`** writes the three tables:
+3. **`build`** writes `dataset.csv` and, for the knowledge base, `data/knowledge/index.csv` and `diseases.csv`:
    - One question per photo, with the split, class, file and lesion group copied unchanged.
    - Age is written "about N years", sex and site in lower case.
    - Two photos are held twice by ISIC (`ISIC_0000279` with `ISIC_0000280`, `ISIC_0000477` with `ISIC_0000512`, both in train). A fact counts only where their two records agree; on a disagreement it is "not recorded", never guessed.
@@ -117,8 +99,8 @@ Three commands, each writing its section of `dataset_report.md`:
 **Intended uses**
 - **Test split:** the reported result, run once per model and setting.
 - **Validation split:** tuning prompts and retrieval settings. It is never reported as a result.
-- **Train split and `knowledge.csv`:** the only items a run may use as examples or retrieve. Validation and test items must never be used that way.
-- **Scoring:** balanced accuracy is the main score, with 95% intervals that resample whole lesions, as for the image dataset. Every multimodal result is read against two baselines:
+- **Train split and the knowledge base:** the only items a run may use as examples or retrieve. Validation and test items must never be used that way.
+- **Scoring:** balanced accuracy is the main score, with 95% intervals that resample whole lesions, as for the image dataset. Every result on this dataset is read against two baselines:
   - the photo alone: the image dataset's run on the same 320 photos;
   - the facts alone: 35.9% (section 7).
 
@@ -128,7 +110,7 @@ Three commands, each writing its section of `dataset_report.md`:
 1. **A missing fact points to melanoma or nevus.**
    - **Why:** the melanoma and nevus photos come from a collection ("Anonymous") that records fewer facts. Of the 31 test questions with a missing fact, 29 are melanoma or nevus.
    - **What it means:** a model shown training examples with their facts could learn that "not recorded" means melanoma or nevus. No clinic works that way.
-   - **What to do:** report every multimodal result twice: on all 320 test questions, and on the 289 with all three facts.
+   - **What to do:** report every result on this dataset twice: on all 320 test questions, and on the 289 with all three facts.
 2. **The photos carry the image dataset's own limitations** (`data/image/datasheet.md`). Above all:
    - melanoma and nevus come from a different collection than the other six classes, and the border colour alone tells the collection;
    - lesions, not patients, are kept apart between splits.
@@ -138,10 +120,10 @@ Three commands, each writing its section of `dataset_report.md`:
    - Age is in steps of 5 years; the highest value in the records is 85.
    - The body site has five broad values.
    - Many facts are the same for many classes, so the facts alone reach 35.9%: far above chance, far from a diagnosis.
-4. **The training cases and passages carry the text dataset's own limitations** (`data/text/datasheet.md`): about 2.7% wrong labels among the cases, and published texts the models may have read.
-5. **The text and the photos are of different patients.** The dataset measures whether knowledge about a disease helps diagnose a photo; it cannot measure whether a patient's own written history helps.
+4. **What is retrieved carries its own limitations** (`data/knowledge/datasheet.md`): passages about the disease, and other patients' photos and cases.
+5. **No written case.** The dataset measures whether recorded facts, and knowledge about a disease, help diagnose a photo; whether a patient's own written history helps is measured on the case dataset.
 
-**Still to decide before open-book runs:** whether retrieval may show the facts of training photos. `knowledge.csv` names the training photos and their facts are in `questions.csv`, so either choice needs no new build. Showing them is what could teach limitation 1.
+**Still to decide before open-book runs:** whether retrieval may show the facts of training photos. The knowledge index names the training photos and their facts are in `dataset.csv`, so either choice needs no new build. Showing them is what could teach limitation 1.
 
 **Not intended for**
 - Clinical use or advice of any kind.
@@ -151,18 +133,17 @@ Three commands, each writing its section of `dataset_report.md`:
 ## 6. Distribution
 
 **What is shared and what isn't**
-- In Git: the three tables, `dataset_report.md` and this data sheet; since the additions of section 8, also `appearance.csv`, `passage_aspects.csv`, `image_cards.csv` and `enrichment_report.md`.
-- On this computer only: the photos, the case texts and the passages (also `data/text/library/appearance.jsonl`). They come from the image and text datasets, or from open-access reviews of PubMed Central, under their own licences.
+- In Git: `dataset.csv`, `dataset_report.md` and this data sheet.
+- On this computer only: the photos, in the image dataset's folder, under their own licences.
 
 **Licences and credit**
 - Photos: as the ISIC Archive gives them: CC-BY-NC or CC-0, with the credit line in `collection`.
-- Cases and passages: as stated in the text dataset's data sheet.
 
-**Cite** the image and text datasets' sources as their data sheets say, and the ISIC Archive for the patient facts.
+**Cite** the image dataset's sources as its data sheet says, and the ISIC Archive for the patient facts.
 
 ## 7. Maintenance and checking
 
-**Versions.** Any change to a question, fact, split or knowledge item makes a new version, with new fingerprints, a new tag and an entry here.
+**Versions.** Any change to a question, fact or split makes a new version, with new fingerprints, a new tag and an entry here. On 2026-11-18 the files moved from `data/multimodal/` to `data/image_metadata/` (`questions.csv` became `dataset.csv`, unchanged byte for byte) and the knowledge tables to `data/knowledge/`.
 
 **Checks.** The audit (`python -m src.build.image_metadata.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed:
 - **Questions:** one per photo of the image dataset, each matching it in split, class, file, fingerprint and lesion group.
@@ -188,7 +169,7 @@ Three commands, each writing its section of `dataset_report.md`:
 | all three facts, questions with all three | 289 | 30.3% (24.6–35.9%) | 54.5% (49.6–59.8%) |
 
 **Rebuild**
-1. The image and text datasets must be prepared, with the image dataset's ISIC records in `data/image/downloads/isic/` and the text dataset's downloads in `data/text/sources/`.
+1. The image and text datasets and the library must be prepared, with the image dataset's ISIC records in `data/image/downloads/isic/` and the text dataset's downloads in `data/text/sources/`.
 2. Run, in order: `python -m src.build.image_metadata.prepare records`, `python -m src.build.image_metadata.prepare build`, `python -m src.build.image_metadata.audit`.
 3. The same sources give the same files, byte for byte.
 
@@ -196,36 +177,13 @@ Three commands, each writing its section of `dataset_report.md`:
 
 | File | SHA-256 |
 |---|---|
-| `questions.csv` | `150d699e3752e46b6d0a46ee3456bc4a479809fe6553eea8c96ec0b3b18a17c6` |
-| `knowledge.csv` | `bf17cb7d7f650c8aacc8ffdc7c111ab82b7634cda5aa9d7798263f3e8b37d881` |
-| `diseases.csv` | `4b0b5f889b1643751720bbe9f7fd01832e71a6f451bcf0cd2850c598b4909fb5` |
+| `dataset.csv` | `150d699e3752e46b6d0a46ee3456bc4a479809fe6553eea8c96ec0b3b18a17c6` |
 
-Every photo, case and passage has its own SHA-256 in these tables; the audit checks the files against them.
-
-## 8. Additions after the freeze (knowledge base version 2)
-
-The audit of the hypothesis (see `docs/results.md`) found that the knowledge items are linked to the photos by disease only, and that only 2–7% of the library's passages describe how a lesion looks. Three tables fill this gap. They are made by `python -m src.build.knowledge.enrich`, they add to the files above and change none of them: `questions.csv`, `knowledge.csv`, `diseases.csv`, the library and every closed-book result stay as they were, and the fingerprints in section 7 still hold. The numbers (rows, passages, documents, classes still short) are in `enrichment_report.md`, written by the same command.
-
-| File | What it holds |
-|---|---|
-| `passage_aspects.csv` | one row per library passage and per passage of `appearance.csv`: which of four aspects it is about (appearance, histology, treatment, epidemiology), by counting key words, with whether it is about dermoscopy |
-| `appearance.csv` | open-access reviews on dermoscopy and morphology from PubMed Central, split into passages like the library's (same columns, licence recorded). The passage texts are in `data/text/library/appearance.jsonl`, on this computer only |
-| `image_cards.csv` | one text card per training photo, made only from that photo's own ISIC record: its diagnosis and how it was confirmed, age, sex, body site, finer site, size, and melanoma history; a missing fact is left out or shown as "not recorded", never guessed |
-| `enrichment_report.md` | the counts and the checks of the three steps |
-
-**Rules the code applies**
-- Appearance passages: reviews only, no case reports; none from an article of the text dataset; none that shares a run of 12 words with a text question; none already in the library; at most 150 passages per class, newest first.
-- Wider search for three classes: the first search found 0, 1 and 0 reviews for dermatofibroma, pigmented benign keratosis and vascular lesion, so these three are also searched by their names (class_terms.csv, those that count) in the title or abstract, without the dermoscopy and morphology words. A review that names a condition that does not count (for example hemangioma for vascular lesion) is left out, unless the name stands only inside a longer name that counts. The target is the same for every class.
-- Cards: training photos only, never a validation or test photo; the card never names the photo's collection; every card is worked out again from its columns and must be the same text.
-- Targets: at least 30 passages about appearance, from at least 8 documents, for every class. The targets are fixed. A class that falls short is reported as short and is not given an easier target.
-
-**How it is checked, with no clinician.** Each passage's tags are compared with the authors' own section titles ("Dermoscopy", "Histopathology", "Treatment", "Epidemiology"): for every aspect the report gives how often a passage under such a title is tagged (recall), how often a tagged passage is under such a title (precision), and how much better that is than chance (lift). The code also stops, with an error, on any rule above that is broken.
-
-**What this does not show.** The tags are word counts. The comparison with section titles shows that they are consistent with how the authors organised their reviews; it does not show that a passage is medically correct. A card and a passage describe the disease, or another patient's photo, never the test patient. Whether they help is shown only by the open-book runs.
+Every photo has its own SHA-256 in the table; the audit checks the files against them.
 
 ## References
 
 - Gebru, T., Morgenstern, J., Vecchione, B., Vaughan, J. W., Wallach, H., Daumé III, H., and Crawford, K. (2021). Datasheets for datasets. *Communications of the ACM*, 64(12), 86–92.
 - Tschandl, P., Rosendahl, C., and Kittler, H. (2018). The HAM10000 dataset, a large collection of multi-source dermatoscopic images of common pigmented skin lesions. *Scientific Data*, 5, 180161.
 - ISIC Archive, International Skin Imaging Collaboration: https://www.isic-archive.com/
-- The image and text datasets' own references: `data/image/datasheet.md` and `data/text/datasheet.md`.
+- The image dataset's own references: `data/image/datasheet.md`.

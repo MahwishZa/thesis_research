@@ -22,8 +22,8 @@ ends). Nothing that could hold a test answer gets in: no case report, no article
 shares a run of 12 words with a question of the dataset.
 
 It writes library.csv (committed: one row per passage, with its source, licence and fingerprint, not its text), the passages into
-data/text/library/passages.jsonl (not committed: their licences allow research use only) and the library section of
-dataset_report.md. The StatPearls archive (several gigabytes) is downloaded once into data/text/sources/library/statpearls/ (a
+data/knowledge/texts/passages.jsonl (not committed: their licences allow research use only) and the library section of
+data/knowledge/dataset_report.md. The StatPearls archive (several gigabytes) is downloaded once into data/knowledge/sources/statpearls/ (a
 stopped download continues) and checked against its fingerprint on every later run; everything else is asked anew on every run
 (PubMed grows every day, so the library is dated).
 """
@@ -45,13 +45,20 @@ from xml.etree import ElementTree
 from ...common import fetch, write_section
 from ...evaluate import FILES, TABLE_NAME
 from ..text.prepare import (ABSTRACT_CANDIDATES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
-                      HUMANS, IMAGE_TABLE, NOT_SKIN, REPORT, REPORT_HEAD, SKIN, SOURCES, STEPS, _checked_headings, _efetch,
+                      HUMANS, IMAGE_TABLE, NOT_SKIN, SKIN, SOURCES, _checked_headings, _efetch,
                       _found, _licence, _matcher, _named, _pmc_articles, _read_csv, _search, _sentence_starts, _sha256, _stream,
                       _subject, _tokens, _write_csv, image_classes, read_table)
 
+KNOWLEDGE = Path("data/knowledge")  # the knowledge base: its committed tables and report; texts/ and sources/ on this computer
+REPORT = "dataset_report.md"
+STEPS = ("library", "appearance", "aspects", "cards")  # the report's sections, in the order the steps run
+REPORT_HEAD = ["# The knowledge base", "",
+               "What open-book runs may retrieve: training items only, never a validation or test question. One section per step, "
+               "written by `src/build/knowledge/` (`library.py`: the library; `enrich.py`: appearance, aspects and cards); each step "
+               "rewrites only its own section.", ""]
 LIBRARY_TABLE = "library.csv"
 LIBRARY_COLUMNS = ["passage_id", "corpus", "source", "title", "section", "year", "licence", "topics", "words", "sha256"]
-FOLDER = "library"  # data/text/library/passages.jsonl, and the StatPearls pages in data/text/sources/library/statpearls/
+FOLDER = "texts"  # data/knowledge/texts/passages.jsonl (not in Git); the StatPearls archive is in data/knowledge/sources/statpearls/
 CORPORA = ("pubmed", "pmc", "guidelines", "textbook")
 NOT_CASES = '"case reports"[Publication Type]'
 GUIDELINE = '(guideline[Publication Type] OR "practice guideline"[Publication Type])'
@@ -67,10 +74,10 @@ PASSAGE_WORDS, SHORTEST = 300, 20  # words in a passage: at most, and at least (
 SHARED_RUN = 12  # a passage sharing this many words in a row with a question of the dataset is left out
 
 
-def library(data: str | Path = DATA, classes: list[str] | None = None, show=None) -> dict:
-    """Builds the four corpora (see the module's description); writes library.csv, data/text/library/passages.jsonl and the
-    library section of dataset_report.md."""
-    data = Path(data)
+def library(data: str | Path = DATA, knowledge: str | Path = KNOWLEDGE, classes: list[str] | None = None, show=None) -> dict:
+    """Builds the four corpora (see the module's description) for the text dataset in ``data``; writes library.csv,
+    texts/passages.jsonl and the library section of dataset_report.md in ``knowledge``."""
+    data, knowledge = Path(data), Path(knowledge)
     classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
     terms, headings = _checked_headings(data, classes)
     runs = _question_runs(data)
@@ -110,21 +117,21 @@ def library(data: str | Path = DATA, classes: list[str] | None = None, show=None
     for pmcid in sorted(chosen, key=lambda p: int(p.removeprefix("PMC"))):
         body = bodies[pmcid.removeprefix("PMC")]
         documents.append(_document("pmc", pmcid, chosen[pmcid], body["sections"], body["licence"], topics[pmcid]))
-    textbook, archive = _textbook(data, terms, classes, say)
+    textbook, archive = _textbook(knowledge, terms, classes, say)
     documents += textbook
 
     rows, passages, dropped = _passages_of(documents, runs)
-    folder = data / FOLDER
+    folder = knowledge / FOLDER
     folder.mkdir(parents=True, exist_ok=True)
     partial = folder / "passages.jsonl.partial"
     partial.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in passages), encoding="utf-8", newline="\n")
     os.replace(partial, folder / "passages.jsonl")
-    _write_csv(data / LIBRARY_TABLE, LIBRARY_COLUMNS, rows)
-    write_section(data / REPORT, REPORT_HEAD, STEPS, "library",
+    _write_csv(knowledge / LIBRARY_TABLE, LIBRARY_COLUMNS, rows)
+    write_section(knowledge / REPORT, REPORT_HEAD, STEPS, "library",
                   _summary(day, classes, headings, reviews, guidelines, full, documents, rows, dropped, archive))
     return {"rows": rows, "documents": documents, "classes": classes, "dropped": dropped, "archive": archive,
-            "table": (data / LIBRARY_TABLE).as_posix(), "passages": (folder / "passages.jsonl").as_posix(),
-            "summary": (data / REPORT).as_posix()}
+            "table": (knowledge / LIBRARY_TABLE).as_posix(), "passages": (folder / "passages.jsonl").as_posix(),
+            "summary": (knowledge / REPORT).as_posix()}
 
 
 def _question_runs(data: Path) -> set[tuple[str, ...]]:
@@ -210,14 +217,14 @@ def _document(corpus, source, record, sections, licence, topics) -> dict:
 # The textbook: StatPearls on NCBI's Bookshelf
 
 
-def _textbook(data: Path, terms: list[dict], classes: list[str], say) -> tuple[list[dict], dict]:
+def _textbook(knowledge: Path, terms: list[dict], classes: list[str], say) -> tuple[list[dict], dict]:
     """The StatPearls chapters whose title or summary (the "Continuing Education Activity") names a class, and whose title names
     no other site and no animal, read from the archive of the Bookshelf's Open Access subset; and the archive's record."""
-    meta = _statpearls_archive(data / SOURCES / FOLDER / "statpearls", say)
+    meta = _statpearls_archive(knowledge / SOURCES / "statpearls", say)
     matcher = _matcher(terms)
     blocked = {tuple(_tokens(word)): word for word in NOT_SKIN + ANIMALS}
     documents, read, unreadable = [], 0, []
-    with tarfile.open(data / SOURCES / FOLDER / "statpearls" / meta["file"], mode="r|gz") as archive:
+    with tarfile.open(knowledge / SOURCES / "statpearls" / meta["file"], mode="r|gz") as archive:
         for member in archive:
             if not (member.isfile() and member.name.endswith(".nxml")):
                 continue
@@ -418,9 +425,9 @@ def _summary(day, classes, headings, reviews, guidelines, full, documents, rows,
              f"open full texts of those reviews in PubMed Central (per class the newest {FULLTEXTS_PER_CLASS} that PMC gives in "
              f"full); PubMed's clinical practice guidelines about each class (the newest {GUIDELINES_PER_CLASS} per class, as open "
              "full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or "
-             "summary (its \"Continuing Education Activity\") names a class by a name that counts in `class_terms.csv` and whose title names no other site and no "
+             "summary (its \"Continuing Education Activity\") names a class by a name that counts in `data/text/build/class_terms.csv` and whose title names no other site and no "
              f"animal. Every text is cut word for word into passages of whole paragraphs of at most {PASSAGE_WORDS} words. "
-             "`library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/text/library/` (not in "
+             "`library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/knowledge/texts/` (not in "
              "Git).", "",
              "## Per class", "",
              "| Class | MeSH headings (main topic) | Reviews (abstracts) | Open full texts of reviews | Guidelines | StatPearls "

@@ -26,15 +26,15 @@ accuracy, and the change in the hallucination rate (the difference, and the redu
 dataset, the clinical risk, the recall per class, and every paired comparison with McNemar's exact test and its Holm correction.
 The text of the document around the tables is written by hand and is left as it is. No model is asked.
 
-Each config names its dataset (``dataset = "image"``, ``"text"`` or ``"multimodal"``); the code here is shared by every dataset, so all are scored
-alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
+Each config names its dataset (``dataset = "image"``, ``"text"``, ``"multimodal"``, ``"cases"`` or ``"case_photos"``); the code
+here is shared by every dataset, so all are scored alike, and DATASETS says what differs between them. A prepared dataset is read from data/<dataset>/dataset/<split>/<class>/<file>
 (the files, exactly as every model receives them: JPEG or PNG images, or UTF-8 text cases; split: train, val or test) and
 data/<dataset>/dataset.csv (one row per file: split, label, path inside the dataset folder, sha256, and the group it belongs to:
-the lesion an image shows, or the article a case comes from; plus any further columns the preparation records). The multimodal
-dataset is the exception: its table is data/multimodal/questions.csv, with each photo's facts, and its files are the image
-dataset's. The table is
-committed to Git and is the single source of truth; the files stay on this computer. Every file on disk is checked against the
-table before a run, so a changed, missing or extra file stops the run and every model is evaluated on byte-identical files.
+the lesion an image shows, or the article a case comes from; plus any further columns the preparation records). Three datasets
+reuse another's files: the image + metadata dataset ("multimodal": data/image_metadata/dataset.csv, each photo with its patient's
+facts) asks the image dataset's photos, and the case dataset ("cases" and "case_photos": data/cases/dataset.csv) asks the text
+dataset's cases with their own photos (data/cases/figures/). The table is committed to Git and is the single source of truth;
+the files stay on this computer. Every file on disk is checked against the table before a run, so a changed, missing or extra file stops the run and every model is evaluated on byte-identical files.
 Results go to results/<dataset>/<model>/<run>/.
 
 The file has three parts, in this order: the metrics, the model adapters (one class per API) and the pipeline with its
@@ -674,7 +674,7 @@ class OpenAICompatibleModel:
 # ==============================================================================================================================
 
 
-DATA = Path("data")  # one folder per dataset: data/image/, data/text/ and data/multimodal/
+DATA = Path("data")  # one folder per dataset (image, text, image_metadata, cases), and the knowledge base (data/knowledge/)
 TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
 RESULTS = Path("results")  # results/<dataset>/<model>/<run>/
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
@@ -727,17 +727,17 @@ DATASETS = {  # the datasets a config can name
                     "Patients described in one article are not independent",
                     set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
     "multimodal": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
-                          "Photos of one lesion are not independent", facts_column="facts", table="questions.csv",
-                          files="image/dataset"),  # the image dataset's photos, each with its patient's facts
-    # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/multimodal/cases.csv), asked
+                          "Photos of one lesion are not independent", facts_column="facts", folder="image_metadata",
+                          files="image/dataset"),  # the image + metadata dataset: the image dataset's photos, each with its patient's facts
+    # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/cases/dataset.csv), asked
     # with the case text and the photos ("cases") or with the photos only ("case_photos"); the text only is the text dataset.
     "cases": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article", "Patients described in one article are not independent",
-                     set_apart=("actinic keratosis",), table="cases.csv", files="text/dataset", folder="multimodal",
-                     pictures_column="pictures", pictures_root="multimodal", subset=True),
+                     set_apart=("actinic keratosis",), files="text/dataset", folder="cases",
+                     pictures_column="pictures", pictures_root="cases", subset=True),
     "case_photos": Dataset(TEXT_TYPES, "a .txt file", False, "pmid", "case", "article",
                            "Patients described in one article are not independent", set_apart=("actinic keratosis",),
-                           table="cases.csv", files="text/dataset", folder="multimodal", pictures_column="pictures",
-                           pictures_root="multimodal", subset=True),
+                           files="text/dataset", folder="cases", pictures_column="pictures",
+                           pictures_root="cases", subset=True),
 }
 SAME_QUESTIONS = ({"image", "multimodal"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
 
@@ -754,8 +754,8 @@ class Item:
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
-    """The table and the folder of files of one prepared dataset: data/<dataset>/dataset.csv and data/<dataset>/dataset/ (the
-    multimodal dataset: data/multimodal/questions.csv and the image dataset's folder)."""
+    """The table and the folder of files of one prepared dataset: data/<folder>/dataset.csv and data/<dataset>/dataset/, or the
+    folders DATASETS names (the image + metadata dataset: data/image_metadata/dataset.csv and the image dataset's folder)."""
     kind = DATASETS[dataset]
     return DATA / (kind.folder or dataset) / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
 
@@ -1638,7 +1638,7 @@ def write_report(run_dir: str | Path) -> Path:
         part = metrics["all_facts_recorded"]
         lines += ["## Questions with all facts recorded", "",
                   f"A missing fact (\"{MISSING_FACT}\") points to the photo's collection, and so mostly to melanoma or nevus "
-                  f"(data/multimodal/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
+                  f"(data/image_metadata/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"], kind), ""]
 
     if last_line:

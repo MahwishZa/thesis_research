@@ -10,25 +10,25 @@ Pairing a photo with a case text as "one patient" would invent a case, and choos
 the answer into the question, so neither is ever done.
 
 ``records`` reads the ISIC record of every image of the image dataset (downloaded by ``python -m src.build.image.prepare isic`` into
-data/image/downloads/isic/, on this computer) and reports in data/multimodal/dataset_report.md which patient facts the records
+data/image/downloads/isic/, on this computer) and reports in data/image_metadata/dataset_report.md which patient facts the records
 hold and how often: by class and by photo collection, since the classes come from two collections (melanoma and nevus almost
 all from one, the other six almost all from the other) and a fact recorded differently by each collection would give the class
 away. A field whose name points to the diagnosis (a diagnosis, benign or malignant, melanocytic, a melanoma or nevus detail, a
 biopsy, a history of melanoma) or that is an identifier is listed but never offered as a fact. The step checks that each record
-is the very one the image dataset was made from (its fingerprint in data/image/raw_photos.csv), changes no file of the image
+is the very one the image dataset was made from (its fingerprint in data/image/build/raw_photos.csv), changes no file of the image
 dataset and asks no service.
 
 ``build`` writes the three tables, from the frozen tables and the ISIC records only (no file is copied; every row names its file
 and fingerprint):
-- questions.csv: one question per image of the image dataset, with its split, class, file and lesion group exactly as there, and
+- dataset.csv: one question per image of the image dataset, with its split, class, file and lesion group exactly as there, and
   the facts the researcher chose (FACTS: age, sex and body site at its broadest level, the three that both photo collections
   record with the same values), written as one sentence the model is shown; a fact that is missing, or on which a photo's two
   ISIC records disagree, is written "not recorded" in the same way for every image. ``complete`` marks the questions with all
   three facts.
-- knowledge.csv: what open-book runs may search: the training images, the training cases of the text dataset and the passages
+- data/knowledge/index.csv: what open-book runs may search: the training images, the training cases of the text dataset and the passages
   of the text dataset's library. No validation or test item of either dataset is in it. An item is linked to a question only
   by its disease (``link`` = disease): the two datasets share no patient.
-- diseases.csv: one row per class: the ISIC diagnoses its images have, the names and MeSH headings of the text dataset, and how
+- data/knowledge/diseases.csv: one row per class: the ISIC diagnoses its images have, the names and MeSH headings of the text dataset, and how
   many questions, cases and passages it has.
 """
 
@@ -46,12 +46,13 @@ from pathlib import Path
 
 from ...common import flatten, read_rows, write_section
 
-IMAGE = Path("data/image")  # the frozen image dataset: dataset.csv, raw_photos.csv and, on this computer, downloads/isic/
-DATA = Path("data/multimodal")  # this dataset's folder: its committed tables and reports
+IMAGE = Path("data/image")  # the frozen image dataset: dataset.csv, build/raw_photos.csv and, on this computer, downloads/isic/
+DATA = Path("data/image_metadata")  # this dataset's folder: its committed table, report and data sheet
+KNOWLEDGE = Path("data/knowledge")  # where the build writes the knowledge index (index.csv) and diseases.csv
 RECORDS = Path("downloads") / "isic"  # inside the image dataset's folder: one ISIC record per photo, as downloaded
 REPORT = "dataset_report.md"
-STEPS = ("records", "build", "audit")  # the report's sections, in the order the steps run (the audit is src/multimodal/audit.py)
-TEXT = Path("data/text")  # the frozen text dataset: dataset.csv, class_terms.csv, term_check.csv and library.csv
+STEPS = ("records", "build", "audit")  # the report's sections, in the order the steps run (the audit is src/build/image_metadata/audit.py)
+TEXT = Path("data/text")  # the text dataset: dataset.csv, and build/class_terms.csv and build/term_check.csv
 FACTS = (("age_approx", "Age"), ("sex", "Sex"), ("anatom_site_1", "Body site"))  # chosen from the records report (2026-11-14)
 NOT_RECORDED = "not recorded"
 QUESTION_COLUMNS = ["split", "label", "path", "sha256", "lesion_group", "isic_id", "collection", "age", "sex", "site", "complete",
@@ -62,7 +63,7 @@ DISEASE_COLUMNS = ["class", "isic_diagnoses", "text_terms", "mesh_headings", "qu
 CASE_LICENCES = {"PMC-Patients": "CC BY-NC-SA 4.0 (PMC-Patients)", "PubMed abstract": "publisher's copyright (abstract in PubMed)"}
 FULL_TEXTS = Path("sources") / "pubmed" / "abstracts.jsonl"  # in the text dataset's folder (on this computer): each full text's licence
 NO_LICENCE = "(no licence given by PMC)"
-REPORT_HEAD = ["# Preparation of the multimodal dataset", "",
+REPORT_HEAD = ["# Preparation of the image + metadata dataset", "",
                "Made by `python -m src.build.image_metadata.prepare <step>`, one section per step, in the order the steps run. Each step "
                "rewrites only its own section.", ""]
 PATIENT_GROUPS = ("metadata.clinical.", "metadata.patient.")  # where ISIC keeps what it knows about the patient and the lesion
@@ -72,7 +73,7 @@ TOP_VALUES = 8  # values listed per fact and collection
 
 
 def _record_hash(record) -> str:
-    """The fingerprint the image dataset gave the record (src/image/prepare.py): its JSON with sorted keys."""
+    """The fingerprint the image dataset gave the record (src/build/image/prepare.py): its JSON with sorted keys."""
     return hashlib.sha256(json.dumps(record, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
@@ -96,7 +97,7 @@ def read_images(image: Path = IMAGE) -> list[dict]:
     A photo uploaded to ISIC more than once has one record per upload (raw_photos.csv lists their numbers and fingerprints in the
     same order). A field counts only when every record that has it gives the same value; a disagreement is kept in ``conflicts``
     and the field is left out for that photo, never guessed."""
-    photos = {row["photo_id"]: row for row in _read_csv(image / "raw_photos.csv")}
+    photos = {row["photo_id"]: row for row in _read_csv(image / "build" / "raw_photos.csv")}
     rows, missing, changed = [], [], []
     for row in _read_csv(image / "dataset.csv"):
         photo = photos.get(row["photo_id"])
@@ -240,13 +241,15 @@ def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
     tmp.replace(path)
 
 
-def build(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
-    """The build step: questions.csv, knowledge.csv and diseases.csv, from the frozen tables and the ISIC records."""
+def build(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA, knowledge: Path = KNOWLEDGE) -> dict:
+    """The build step: the questions (dataset.csv), the knowledge index (index.csv) and diseases.csv, from the frozen tables
+    and the ISIC records."""
+    knowledge_folder = Path(knowledge)
     images = read_images(image)
     table = {row["path"]: row for row in _read_csv(image / "dataset.csv")}
-    photos = {row["photo_id"]: row for row in _read_csv(image / "raw_photos.csv")}
+    photos = {row["photo_id"]: row for row in _read_csv(image / "build" / "raw_photos.csv")}
     cases = _read_csv(text / "dataset.csv")
-    passages = _read_csv(text / "library.csv")
+    passages = _read_csv(knowledge_folder / "library.csv")
     labels = sorted({r["label"] for r in images})
     if sorted({c["label"] for c in cases}) != labels:
         raise ValueError("the image and text datasets do not have the same classes")
@@ -274,15 +277,15 @@ def build(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
                               "licence": CASE_LICENCES.get(c["source"]) or licences.get(c["pmid"]) or NO_LICENCE})
     for p in passages:
         knowledge.append({"item_id": f"passage:{p['passage_id']}", "kind": "passage", "diseases": p["topics"], "link": "disease",
-                          "path": f"data/text/library/passages.jsonl#{p['passage_id']}", "sha256": p["sha256"],
+                          "path": f"data/knowledge/texts/passages.jsonl#{p['passage_id']}", "sha256": p["sha256"],
                           "source": p["source"], "licence": p["licence"] or "(not recorded)"})
     held_out = {q["path"] for q in questions if q["split"] != "train"} | {c["path"] for c in cases if c["split"] != "train"}
     leaked = [k["item_id"] for k in knowledge if k["path"].split("/dataset/", 1)[-1] in held_out]
     if leaked:  # cannot happen by construction; a guard against a later change
         raise ValueError(f"validation or test items in the knowledge table: {leaked[:3]}")
 
-    terms = _read_csv(text / "class_terms.csv")
-    mesh = _read_csv(text / "term_check.csv")
+    terms = _read_csv(text / "build" / "class_terms.csv")
+    mesh = _read_csv(text / "build" / "term_check.csv")
     diseases = []
     for label in labels:
         diagnoses = Counter(photos[table[q["path"]]["photo_id"]]["isic_diagnosis"] for q in questions if q["label"] == label)
@@ -297,9 +300,9 @@ def build(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
                          **{f"cases_{s}": sum(c["label"] == label and c["split"] == s for c in cases) for s in ("train", "val", "test")},
                          "passages": sum(label in p["topics"].split("; ") for p in passages)})
 
-    _write_csv(data / "questions.csv", QUESTION_COLUMNS, questions)
-    _write_csv(data / "knowledge.csv", KNOWLEDGE_COLUMNS, knowledge)
-    _write_csv(data / "diseases.csv", DISEASE_COLUMNS, diseases)
+    _write_csv(data / "dataset.csv", QUESTION_COLUMNS, questions)
+    _write_csv(knowledge_folder / "index.csv", KNOWLEDGE_COLUMNS, knowledge)
+    _write_csv(knowledge_folder / "diseases.csv", DISEASE_COLUMNS, diseases)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "build", _build_summary(questions, knowledge, diseases, labels))
     return {"questions": len(questions), "knowledge": Counter(k["kind"] for k in knowledge),
             "complete": Counter(q["split"] for q in questions if q["complete"] == "yes"),
@@ -324,14 +327,14 @@ def _build_summary(questions: list[dict], knowledge: list[dict], diseases: list[
     splits = ("train", "val", "test")
     kinds = Counter(k["kind"] for k in knowledge)
     lines = ["## Build: the three tables", "",
-             f"- `questions.csv`: {len(questions)} questions, one per image of the image dataset, with its split, class, file and "
+             f"- `dataset.csv`: {len(questions)} questions, one per image of the image dataset, with its split, class, file and "
              "lesion group unchanged: " + ", ".join(f"{s} {sum(q['split'] == s for q in questions)}" for s in splits) + ".",
              "- Facts shown with each photo: " + ", ".join(label.lower() for _, label in FACTS) + " (chosen from the records "
              f"report). A missing fact, or one the photo's two ISIC records disagree on, is shown as \"{NOT_RECORDED}\".",
-             f"- `knowledge.csv`: {len(knowledge)} items open-book runs may search: {kinds['image']} training images, "
+             f"- `data/knowledge/index.csv`: {len(knowledge)} items open-book runs may search: {kinds['image']} training images, "
              f"{kinds['case']} training cases and {kinds['passage']} library passages. No validation or test item of either "
              "dataset is among them. Each is linked to the questions only by its disease: the two datasets share no patient.",
-             f"- `diseases.csv`: {len(diseases)} classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.",
+             f"- `data/knowledge/diseases.csv`: {len(diseases)} classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.",
              "", "### Questions with all three facts", "",
              "A missing fact points to melanoma or nevus (their photo collection records fewer facts), so each run is also scored on "
              "the questions with all three facts.", "",
@@ -348,8 +351,8 @@ def _build_summary(questions: list[dict], knowledge: list[dict], diseases: list[
             seen.append(q["facts"])
     lines += [f"- \"{s}\"" for s in seen]
     lines += ["", "### Not done in this step", "",
-              "- Whether retrieval may see the facts of training images is still to be decided: knowledge.csv names the training "
-              "images, and their facts are in questions.csv, so either choice needs no new build.",
+              "- Whether retrieval may see the facts of training images is still to be decided: the knowledge index names the training "
+              "images, and their facts are in dataset.csv, so either choice needs no new build.",
               "- The audit checks the tables against their sources and measures how much each fact, and its absence, gives the class "
               "away.", ""]
     return lines
@@ -359,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.build.image_metadata.prepare", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("records", help="report which patient facts the ISIC records of the image dataset hold (no file is changed)")
-    sub.add_parser("build", help="write questions.csv, knowledge.csv and diseases.csv from the frozen datasets and the ISIC records")
+    sub.add_parser("build", help="write dataset.csv, and the knowledge index and diseases.csv in data/knowledge/, from the frozen datasets and the ISIC records")
     return parser
 
 

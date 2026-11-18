@@ -1,11 +1,12 @@
-"""A free count before a case-report multimodal dataset is built: how many cases of the frozen text dataset have, in their own
-article's open full text in PubMed Central, a figure whose caption shows the patient's skin lesion as a clinical or a dermoscopic
-photo. A case report's figures show its own patient, so such a figure and the case text are one patient's photo and description.
+"""The case dataset: cases of the text dataset with the same patient's photos, published in the case's own article. A case
+report's figures show its own patient, so such a figure and the case text are one patient's photo and description. Four steps:
+a free count of the cases whose article's open full text in PubMed Central has a figure whose caption shows the patient's skin
+lesion as a clinical or a dermoscopic photo, then the download, the check and the build.
 
     python -m src.build.cases.prepare count     (needs the internet; downloads PubMed records and PMC full texts, no image)
     python -m src.build.cases.prepare download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
     python -m src.build.cases.prepare check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
-    python -m src.build.cases.prepare build     (the case dataset's table, data/multimodal/cases.csv, from the committed tables)
+    python -m src.build.cases.prepare build     (the case dataset's table, data/cases/dataset.csv, from the committed tables)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/text/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
@@ -24,27 +25,29 @@ at least 6 of the 8 classes with at least 8 such test cases each.
 the cloud (the AWS Open Data bucket pmc-oa-opendata; PMC's former open-access web service no longer answers). An article that is not
 open access, or that is marked retracted, gives no picture. Otherwise the article's latest version, its XML (which names each
 figure's picture files) and only the pictures of the figures that count are downloaded; each file is checked against the MD5
-checksum PMC publishes for it, and the pictures are kept byte for byte in data/multimodal/figures/images/ (not in Git). Each picture is opened once to check that it is a readable picture. The table
-data/multimodal/figure_files.csv lists every picture with its fingerprint; data/multimodal/figure_files.md gives the counts. The
-download can be stopped and run again: an article already done is not asked again.
+checksum PMC publishes for it, and the pictures are kept byte for byte in data/cases/figures/images/ (not in Git). Each picture
+is opened once to check that it is a readable picture. The table data/cases/build/figure_files.csv lists every picture with its
+fingerprint; the download section of dataset_report.md gives the counts. The download can be stopped and run again: an article
+already done is not asked again.
 
 ``check`` checks every saved picture by itself, with no person looking: it must be at least MIN_SIDE pixels on its shorter side;
-no writing in it (read by EasyOCR) may name a diagnosis (any name in data/text/class_terms.csv, or a class's short form); an image
+no writing in it (read by EasyOCR) may name a diagnosis (any name in data/text/build/class_terms.csv, or a class's short form); an image
 model (open_clip, asked which of KINDS the picture is) must see a clinical photo or a dermoscopy image, so a caption that missed a
 panel of histology or a scan is caught; and it may not be the same picture as one of another case or of the image dataset (the
 image dataset's own rule for "the same picture"). A case keeps the pictures that pass; the rule for building the dataset is applied
-again to the cases that keep one. The table data/multimodal/figure_checks.csv gives every picture's results; figure_checks.md the
+again to the cases that keep one. The table data/cases/build/figure_checks.csv gives every picture's results; the check section of dataset_report.md the
 counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
-are kept in data/multimodal/figures/checks.jsonl (not in Git), so a second run does not ask them again.
+are kept in data/cases/figures/checks.jsonl (not in Git), so a second run does not ask them again.
 
-``build`` writes the case dataset: one question per case that keeps a picture, in data/multimodal/cases.csv. A question is the
+``build`` writes the case dataset: one question per case that keeps a picture, in data/cases/dataset.csv. A question is the
 text dataset's frozen question (path and fingerprint as in data/text/dataset.csv, same split and class) and the case's kept
-pictures, in the order of their figures. The evaluation asks it with the text and the pictures (dataset "cases") or with the
-pictures only ("case_photos"); the text only is the text dataset itself. No caption is shown. data/multimodal/cases.md gives the
-counts.
+pictures, in the order of their figures. A case with kept pictures that the text dataset no longer holds (taken out by a later
+version) gets no question and is listed in the report. The evaluation asks a question with the text and the pictures (dataset
+"cases") or with the pictures only ("case_photos"); the text only is the text dataset itself. No caption is shown. The build
+section of dataset_report.md gives the counts.
 
-``count`` writes data/multimodal/figure_count.csv (one row per case, no caption text), data/multimodal/figure_count.md (the counts and the
-rule) and data/multimodal/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
+``count`` writes data/cases/build/figure_count.csv (one row per case, no caption text), the count section of dataset_report.md
+(the counts and the rule) and data/cases/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
 under their publishers' licences).
 """
 
@@ -67,21 +70,29 @@ from PIL import Image
 from ...common import fetch
 from ..image import prepare as imageprep
 from ..text import prepare as textprep
-from ..image_metadata.prepare import DATA, TEXT, _read_csv, _write_csv
+from ...common import write_section
+from ..image_metadata.prepare import TEXT, _read_csv, _write_csv
 
-COUNT_TABLE, COUNT_REPORT = "figure_count.csv", "figure_count.md"
-CAPTIONS = Path("figures") / "captions.jsonl"  # in data/multimodal/, not in Git
+DATA = Path("data/cases")  # the case dataset: dataset.csv, dataset_report.md, datasheet.md and build/; figures/ on this computer
+REPORT = "dataset_report.md"
+STEPS = ("count", "download", "check", "build")  # the report's sections, in the order the steps run
+REPORT_HEAD = ["# Preparation of the case dataset", "",
+               "Written by `python -m src.build.cases.prepare`, one section per step in the order the steps run; each step "
+               "rewrites only its own section. The build records are in `build/`; the captions, pictures and the models' answers "
+               "stay on this computer in `figures/`.", ""]
+COUNT_TABLE = "build/figure_count.csv"
+CAPTIONS = Path("figures") / "captions.jsonl"  # in data/cases/, not in Git
 CLOUD = "https://pmc-oa-opendata.s3.amazonaws.com/"  # PMC Article Datasets: NCBI's copy of PMC's open-access articles (AWS Open Data)
 CLOUD_BUCKET = "s3://pmc-oa-opendata/"
-FILES_TABLE, FILES_REPORT = "figure_files.csv", "figure_files.md"
-IMAGES = Path("figures") / "images"  # in data/multimodal/, not in Git: one folder per article
+FILES_TABLE = "build/figure_files.csv"
+IMAGES = Path("figures") / "images"  # in data/cases/, not in Git: one folder per article
 FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "picture", "file", "sha256", "width", "height", "licence",
                 "status"]
 PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
 SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not open access in PMC", "the article is retracted",
                                                    "no picture file for the figure among the article's files", "the picture cannot be opened")
-CHECKS_TABLE, CHECKS_REPORT = "figure_checks.csv", "figure_checks.md"
-CHECK_CACHE = Path("figures") / "checks.jsonl"  # in data/multimodal/, not in Git: the models' answers, by picture fingerprint
+CHECKS_TABLE = "build/figure_checks.csv"
+CHECK_CACHE = Path("figures") / "checks.jsonl"  # in data/cases/, not in Git: the models' answers, by picture fingerprint
 MIN_SIDE = 128  # pixels on the shorter side; fixed before any picture was seen
 IMAGE_MODEL = ("ViT-B-32", "laion2b_s34b_b79k")  # open_clip's model and weights
 KINDS = {  # what the image model chooses from; fixed before any picture was seen
@@ -95,7 +106,7 @@ CHECK_REASONS = ("smaller than the least size", "writing in the picture names a 
                  "the same picture is in the image dataset", "the same picture is in another case", "the same picture twice in this case")
 CHECK_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "width", "height", "caption_type", "model_kind",
                  "model_score", "writing", "diagnosis_words", "kept", "reason"]
-CASES_TABLE, CASES_REPORT = "cases.csv", "cases.md"
+CASES_TABLE = "dataset.csv"
 CASES_COLUMNS = ["split", "label", "path", "sha256", "pmid", "patient_uid", "pictures", "n_pictures"]
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
 
@@ -195,7 +206,7 @@ def _question(text: Path, row: dict) -> str | None:
 
 
 def count(text: Path = TEXT, data: Path = DATA, show=None) -> dict:
-    """The count (see the module's description): writes figure_count.csv, figure_count.md and the local captions."""
+    """The count (see the module's description): writes build/figure_count.csv, the count section of the report and the local captions."""
     text, data = Path(text), Path(data)
     say = show or (lambda message: None)
     cases = _read_csv(text / "dataset.csv")
@@ -245,8 +256,8 @@ def count(text: Path = TEXT, data: Path = DATA, show=None) -> dict:
     partial.write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in captions), encoding="utf-8", newline="\n")
     os.replace(partial, local)
     decision = go(rows)
-    report = data / COUNT_REPORT
-    report.write_text("\n".join(_report(rows, captions, decision)) + "\n", encoding="utf-8", newline="\n")
+    report = data / REPORT
+    write_section(report, REPORT_HEAD, STEPS, "count", _report(rows, captions, decision))
     return {"rows": rows, "captions": len(captions), "decision": decision, "table": (data / COUNT_TABLE).as_posix(),
             "report": report.as_posix(), "local": local.as_posix()}
 
@@ -275,7 +286,7 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
     classes = sorted({r["class"] for r in rows})
     lines = ["# Figures of the text dataset's cases: a free count", "",
              f"Written by `python -m src.build.cases.prepare count` on {day}. Only the captions were read: no image was downloaded or "
-             "looked at. The rules are in `src/multimodal/figures.py`. A case counts when its article's full text is open in PubMed "
+             "looked at. The rules are in `src/build/cases/prepare.py`. A case counts when its article's full text is open in PubMed "
              "Central, the article holds no other case of the text dataset, and at least one figure's caption shows the lesion (it names "
              "dermoscopy, a clinical photo or a lesion) and names no microscope or stain, scan, state after treatment or at follow-up, "
              "removed specimen, drawing or chart, and no numbered case or several patients.", "",
@@ -319,7 +330,7 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
               "- No image was looked at. A caption can be wrong or incomplete; the build step checks the images themselves (what kind of "
               "picture each is, writing in the picture, the same picture twice, a picture also in the image dataset).",
               "- A figure that counts may still show more than the lesion (an arrow, a ruler, a second panel the caption does not name).",
-              "- The captions stay on this computer (`data/multimodal/figures/captions.jsonl`), under their publishers' licences.", ""]
+              "- The captions stay on this computer (`data/cases/figures/captions.jsonl`), under their publishers' licences.", ""]
     return lines
 
 
@@ -404,7 +415,7 @@ def _safe(name: str) -> str:
 
 
 def download(data: Path = DATA, show=None) -> dict:
-    """The download step (see the module's description): figure_files.csv, figure_files.md and the pictures."""
+    """The download step (see the module's description): build/figure_files.csv, the download section of the report and the pictures."""
     data = Path(data)
     say = show or (lambda message: None)
     cases = [r for r in _read_csv(data / COUNT_TABLE) if r["counts"] == "yes"]
@@ -466,8 +477,8 @@ def download(data: Path = DATA, show=None) -> dict:
         say(f"{number} of {len(cases)} articles done ({case['pmcid']}: {sum(r['status'] == SAVED for r in mine)} pictures)")
     rows.sort(key=lambda r: (r["split"], r["class"], r["patient_uid"], r["figure"], r["picture"]))
     _write_csv(data / FILES_TABLE, FILE_COLUMNS, rows)
-    report = data / FILES_REPORT
-    report.write_text("\n".join(_files_report(rows, cases)) + "\n", encoding="utf-8", newline="\n")
+    report = data / REPORT
+    write_section(report, REPORT_HEAD, STEPS, "download", _files_report(rows, cases))
     return {"rows": rows, "table": (data / FILES_TABLE).as_posix(), "report": report.as_posix()}
 
 
@@ -476,7 +487,7 @@ def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
     with_picture = {r["patient_uid"] for r in saved}
     lines = ["# Pictures of the figures that count", "",
              f"Written by `python -m src.build.cases.prepare download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
-             "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/multimodal/figures/images/`). "
+             "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/cases/figures/images/`). "
              "Nothing in them was changed, and no person looked at them.", "",
              "| Class | Test: cases with a picture | Validation | Train |", "|---|---|---|---|"]
     for label in sorted({c["class"] for c in cases}) + ["all"]:
@@ -566,7 +577,7 @@ def kappa(pairs: list[tuple[bool, bool]]) -> float | None:
 
 def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
           classify=None, read=None, show=None) -> dict:
-    """The check step (see the module's description): figure_checks.csv and figure_checks.md."""
+    """The check step (see the module's description): build/figure_checks.csv and the check section of the report."""
     data, text, image = Path(data), Path(text), Path(image)
     say = show or (lambda message: None)
     pictures = [r for r in _read_csv(data / FILES_TABLE) if r["status"] == SAVED]
@@ -642,13 +653,13 @@ def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
     cases = _read_csv(data / COUNT_TABLE)
     kept = {r["patient_uid"] for r in rows if r["kept"] == "yes"}
     decision = go([{**c, "counts": "yes" if c["patient_uid"] in kept else "no"} for c in cases])
-    report = data / CHECKS_REPORT
-    report.write_text("\n".join(_checks_report(rows, cases, kept, decision, versions)) + "\n", encoding="utf-8", newline="\n")
+    report = data / REPORT
+    write_section(report, REPORT_HEAD, STEPS, "check", _checks_report(rows, cases, kept, decision, versions))
     return {"rows": rows, "decision": decision, "table": (data / CHECKS_TABLE).as_posix(), "report": report.as_posix()}
 
 
 def _same(a: dict, b: dict) -> bool:
-    """The image dataset's rule for "the same picture" (src/image/prepare.py, SAME)."""
+    """The image dataset's rule for "the same picture" (src/build/image/prepare.py, SAME)."""
     if (a["hash"] ^ b["hash"]).bit_count() > imageprep.SAME["hash_distance"]:
         return False
     found = imageprep._compare(a, b)
@@ -692,7 +703,8 @@ def _checks_report(rows, cases, kept, decision, versions) -> list[str]:
 
 
 def build(data: Path = DATA, text: Path = TEXT) -> dict:
-    """The build step (see the module's description): cases.csv and cases.md, from figure_checks.csv, figure_files.csv and the
+    """The build step (see the module's description): dataset.csv and the build section of the report, from build/figure_checks.csv,
+    build/figure_files.csv and the
     text dataset's table."""
     data, text = Path(data), Path(text)
     kept = [r for r in _read_csv(data / CHECKS_TABLE) if r["kept"] == "yes"]
@@ -701,11 +713,12 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
     by_case = {}
     for picture in kept:
         by_case.setdefault(picture["patient_uid"], []).append(picture)
-    rows = []
+    rows, left_out = [], []
     for uid, pictures in by_case.items():
         question = questions.get(uid)
-        if question is None:
-            raise ValueError(f"{uid} has pictures in {CHECKS_TABLE} but is no case of the text dataset")
+        if question is None:  # the text dataset no longer holds the case (its review left it out): no question either
+            left_out.append(uid)
+            continue
         for picture in pictures:
             if (picture["split"], picture["class"]) != (question["split"], question["label"]):
                 raise ValueError(f"{picture['file']} is listed for {uid} in {picture['split']}/{picture['class']}, but the text dataset "
@@ -716,15 +729,15 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
                      "n_pictures": len(pictures)})
     rows.sort(key=lambda r: r["path"])
     _write_csv(data / CASES_TABLE, CASES_COLUMNS, rows)
-    report = data / CASES_REPORT
-    report.write_text("\n".join(_cases_report(rows)) + "\n", encoding="utf-8", newline="\n")
+    report = data / REPORT
+    write_section(report, REPORT_HEAD, STEPS, "build", _cases_report(rows, left_out))
     return {"rows": rows, "table": (data / CASES_TABLE).as_posix(), "report": report.as_posix()}
 
 
-def _cases_report(rows: list[dict]) -> list[str]:
+def _cases_report(rows: list[dict], left_out: list[str]) -> list[str]:
     lines = ["# The case dataset", "",
              "Written by `python -m src.build.cases.prepare build`. One question per case of the text dataset whose own article shows "
-             "the lesion in pictures that passed every check (`figure_checks.md`): the frozen text question, word for word, and the "
+             "the lesion in pictures that passed every check (the check section): the frozen text question, word for word, and the "
              "pictures, byte for byte, in the order of their figures. No caption is shown. The splits are the text dataset's.", "",
              "| Class | Test | Validation | Train |", "|---|---|---|---|"]
     for label in sorted({r["label"] for r in rows}) + ["all"]:
@@ -733,7 +746,9 @@ def _cases_report(rows: list[dict]) -> list[str]:
         lines.append(f"| {label} | {n('test')} | {n('val')} | {n('train')} |")
     many = Counter(int(r["n_pictures"]) for r in rows)
     lines += ["", f"Questions: {len(rows)}; pictures: {sum(int(r['n_pictures']) for r in rows)}. Pictures per question: "
-              + ", ".join(f"{k}: {many[k]}" for k in sorted(many)) + ".", ""]
+              + ", ".join(f"{k}: {many[k]}" for k in sorted(many)) + ".",
+              f"Cases with kept pictures that the text dataset no longer holds (left out by its review): {len(left_out)}"
+              + (f" ({', '.join(sorted(left_out))})" if left_out else "") + ".", ""]
     return lines
 
 
@@ -743,7 +758,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")
     sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
-    sub.add_parser("build", help="write the case dataset's table, data/multimodal/cases.csv, from the committed tables")
+    sub.add_parser("build", help="write the case dataset's table, data/cases/dataset.csv, from the committed tables")
     return parser
 
 
@@ -766,7 +781,7 @@ def main(argv: list[str] | None = None) -> None:
             done = download(show=print)
             saved = [r for r in done["rows"] if r["status"] == SAVED]
             print(f"{len(saved)} pictures saved for {len({r['patient_uid'] for r in saved})} cases. Written: {done['table']} and "
-                  f"{done['report']}; the pictures stay in data/multimodal/figures/images/ (not in Git). Commit {done['table']} and "
+                  f"{done['report']}; the pictures stay in data/cases/figures/images/ (not in Git). Commit {done['table']} and "
                   f"{done['report']}.")
             return
         done = count(show=print)

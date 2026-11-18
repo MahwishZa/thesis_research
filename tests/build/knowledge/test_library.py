@@ -1,4 +1,4 @@
-"""The reference library (src/text/library.py), with a local stand-in for NCBI (PubMed, PubMed Central and the Bookshelf's Open
+"""The reference library (src/build/knowledge/library.py), with a local stand-in for NCBI (PubMed, PubMed Central and the Bookshelf's Open
 Access subset), on a dataset built from the build's made-up cases, so no test reaches the internet."""
 
 import contextlib
@@ -115,6 +115,7 @@ ARCHIVE = _archive()
 class LibraryTests(BuildData):
     def setUp(self):
         super().setUp()
+        self.knowledge = self.data.parent / "knowledge"  # never the repository's data/knowledge/
         prepare.build(self.data, classes=self.CLASSES)
         terms = prepare.read_terms(self.data / prepare.TERMS, self.CLASSES)
         prepare._write_csv(self.data / prepare.CHECK, prepare.CHECK_COLUMNS, [
@@ -179,13 +180,13 @@ class LibraryTests(BuildData):
             self.addCleanup(patcher.stop)
 
     def _library(self):
-        with (self.data / "library.csv").open(encoding="utf-8", newline="") as f:
+        with (self.knowledge / "library.csv").open(encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             self.assertEqual(reader.fieldnames, library.LIBRARY_COLUMNS)
             return list(reader)
 
     def test_four_corpora_are_found_by_fixed_rules_and_cut_word_for_word_into_passages(self):
-        done = library.library(self.data, classes=self.CLASSES)
+        done = library.library(self.data, self.knowledge, classes=self.CLASSES)
         rows = self._library()
         self.assertEqual([(r["passage_id"], r["source"], r["section"], r["topics"]) for r in rows], [
             ("pubmed-5001-1", "PMID 5001", "Abstract", "melanoma; nevus"), ("pubmed-5003-1", "PMID 5003", "Abstract", "melanoma"),
@@ -197,7 +198,7 @@ class LibraryTests(BuildData):
             ("textbook-NBK101-2", "NBK101", "Treatment / Management", "melanoma"),  # without a Bookshelf number: the file's name
             ("textbook-article-102-1", "article-102", "Introduction", "squamous cell carcinoma")])
         texts = {}
-        with (self.data / "library" / "passages.jsonl").open(encoding="utf-8") as f:
+        with (self.knowledge / "texts" / "passages.jsonl").open(encoding="utf-8") as f:
             for line in f:
                 passage = json.loads(line)
                 texts[passage["passage_id"]] = passage["text"]
@@ -239,13 +240,15 @@ class LibraryTests(BuildData):
         self.assertEqual(meta["sha256"], library.hashlib.sha256(ARCHIVE).hexdigest())
 
     def test_the_report_counts_each_class_and_corpus_and_a_second_run_reads_the_kept_archive(self):
-        library.library(self.data, classes=self.CLASSES)
-        first = (self.data / "library.csv").read_bytes()
-        library.library(self.data, classes=self.CLASSES)
-        self.assertEqual((self.data / "library.csv").read_bytes(), first)
+        library.library(self.data, self.knowledge, classes=self.CLASSES)
+        first = (self.knowledge / "library.csv").read_bytes()
+        library.library(self.data, self.knowledge, classes=self.CLASSES)
+        self.assertEqual((self.knowledge / "library.csv").read_bytes(), first)
         self.assertEqual(sum(entry[0] == "open access" for entry in self.ncbi), 2)  # not downloaded again
-        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        self.assertLess(report.index("<!-- step: build -->"), report.index("<!-- step: library -->"))
+        report = (self.knowledge / library.REPORT).read_text(encoding="utf-8")
+        self.assertTrue(report.startswith("# The knowledge base\n"))
+        self.assertIn("<!-- step: library -->", report)
+        self.assertNotIn("<!-- step: library -->", (self.data / prepare.REPORT).read_text(encoding="utf-8"))  # not the text dataset's report
         for expected in ("## Library: the reference texts for retrieval", "| melanoma | Melanoma | 3 | 1 | 1 | 1 |",
                          "| nevus | Nevus, Pigmented | 2 | 1 | 0 | 0 |", "| basal cell carcinoma | Carcinoma, Basal Cell | 1 | 0 | 0 | 0 |",
                          "| squamous cell carcinoma | none | 0 | 0 | 0 | 1 |", "| PubMed: abstracts of reviews | 4 | 3 |",
@@ -259,17 +262,17 @@ class LibraryTests(BuildData):
         self.page_mode = "no statpearls"
         with self.assertRaisesRegex(ValueError, "has no archive for StatPearls .NBK430685.; its columns are: File, Citation, "
                                                 "Accession ID"):
-            library.library(self.data, classes=self.CLASSES)
-        self.assertFalse((self.data / "library.csv").exists())
+            library.library(self.data, self.knowledge, classes=self.CLASSES)
+        self.assertFalse((self.knowledge / "library.csv").exists())
         self.page_mode = "normal"
-        library.library(self.data, classes=self.CLASSES)
-        with (self.data / "sources" / "library" / "statpearls" / "statpearls_NBK430685.tar.gz").open("ab") as f:
+        library.library(self.data, self.knowledge, classes=self.CLASSES)
+        with (self.knowledge / "sources" / "statpearls" / "statpearls_NBK430685.tar.gz").open("ab") as f:
             f.write(b"changed")
         with self.assertRaisesRegex(ValueError, "statpearls_NBK430685.tar.gz has changed since it was downloaded"):
-            library.library(self.data, classes=self.CLASSES)
+            library.library(self.data, self.knowledge, classes=self.CLASSES)
         (self.data / "dataset.csv").unlink()
         with self.assertRaisesRegex(FileNotFoundError, "dataset.csv not found: run python -m src.build.text.prepare build first"):
-            library.library(self.data, classes=self.CLASSES)
+            library.library(self.data, self.knowledge, classes=self.CLASSES)
 
     def test_passages_are_whole_paragraphs_of_one_section_within_the_word_limit(self):
         with mock.patch.object(library, "PASSAGE_WORDS", 10), mock.patch.object(library, "SHORTEST", 3):
@@ -285,7 +288,7 @@ class LibraryTests(BuildData):
 
     def test_the_command_line_prints_each_corpus_and_what_to_commit(self):
         real = library.library
-        with mock.patch.object(library, "library", lambda show=None: real(self.data, classes=self.CLASSES, show=show)), \
+        with mock.patch.object(library, "library", lambda show=None: real(self.data, self.knowledge, classes=self.CLASSES, show=show)), \
                 contextlib.redirect_stdout(io.StringIO()) as shown:
             library.main([])
         for expected in ("  pubmed: 4 documents, 3 passages", "  textbook: 2 documents, 3 passages", "Passages left out: 2",

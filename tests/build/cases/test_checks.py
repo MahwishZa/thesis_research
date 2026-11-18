@@ -1,4 +1,4 @@
-"""The check of the saved pictures (src/multimodal/figures.py, step "check"), with the image model and the reader replaced."""
+"""The check of the saved pictures (src/build/cases/prepare.py, step "check"), with the image model and the reader replaced."""
 
 import csv
 import hashlib
@@ -65,7 +65,7 @@ class CheckTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.data, self.text, self.image = base / "multimodal", base / "text", base / "image"
+        self.data, self.text, self.image = base / "cases", base / "text", base / "image"
         files, captions, self.kinds, self.writing = [], [], {}, {}
         for uid, split, label, fig, seed, size, kind, writing in self.PICTURES:
             content = noise(seed, size)
@@ -82,7 +82,7 @@ class CheckTests(unittest.TestCase):
         cases = [{"patient_uid": u, "split": s, "class": c, "counts": "yes"} for u, s, c, *_ in self.PICTURES]
         cases = list({c["patient_uid"]: c for c in cases}.values()) + [{"patient_uid": "c9", "split": "test", "class": "nevus", "counts": "no"}]
         write_csv(self.data / figures.COUNT_TABLE, figures.CASE_COLUMNS, cases)
-        write_csv(self.text / "class_terms.csv", ["class", "term", "counts", "source", "note"],
+        write_csv(self.text / "build" / "class_terms.csv", ["class", "term", "counts", "source", "note"],
                   [{"class": "melanoma", "term": "melanoma", "counts": "yes"}, {"class": "nevus", "term": "spider nevus", "counts": "no"}])
         (self.image / "dataset" / "train" / "nevus").mkdir(parents=True)
         (self.image / "dataset" / "train" / "nevus" / "a.png").write_bytes(noise(7))
@@ -124,7 +124,7 @@ class CheckTests(unittest.TestCase):
         self.run_check(GO_TEST_CASES=1, GO_CLASSES=1, GO_PER_CLASS=1)
         with (self.data / figures.CHECKS_TABLE).open(encoding="utf-8", newline="") as f:
             self.assertEqual(list(next(csv.reader(f))), figures.CHECK_COLUMNS)
-        report = (self.data / figures.CHECKS_REPORT).read_text(encoding="utf-8")
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         for expected in ("**After the checks: 1 test cases keep a picture; 1 classes have at least 1 (melanoma). The rule for building the "
                          "dataset (at least 1 test cases and 1 classes) is met.**", "| melanoma | 1 | 0 | 0 |", "| all | 1 | 0 | 0 |",
                          "Pictures checked: 9; kept: 1.", "| the same picture is in another case | 2 |",
@@ -158,7 +158,7 @@ class BuildTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.data, self.text = base / "multimodal", base / "text"
+        self.data, self.text = base / "cases", base / "text"
         checks = [{"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f10", "file": "figures/images/P1/f10-a.jpg",
                    "sha256": "a" * 64, "kept": "yes"},
                   {"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f2", "file": "figures/images/P1/f2-b.jpg",
@@ -185,7 +185,7 @@ class BuildTests(unittest.TestCase):
              "pictures": f"figures/images/P1/f2-b.jpg|{'b' * 64};figures/images/P1/f10-a.jpg|{'a' * 64}", "n_pictures": 2},
             {"split": "train", "label": "nevus", "path": "train/nevus/c2.txt", "sha256": "2" * 64, "pmid": "12", "patient_uid": "c2",
              "pictures": f"figures/images/P2/F1-d.jpg|{'d' * 64}", "n_pictures": 1}])
-        report = (self.data / figures.CASES_REPORT).read_text(encoding="utf-8")
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         self.assertIn("| all | 1 | 0 | 1 |", report)
         self.assertIn("Questions: 2; pictures: 3. Pictures per question: 1: 1, 2: 1.", report)
         with (self.data / figures.CASES_TABLE).open(encoding="utf-8", newline="") as f:
@@ -196,6 +196,12 @@ class BuildTests(unittest.TestCase):
         write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions)
         with self.assertRaisesRegex(ValueError, "but the text dataset has the case in test/nevus"):
             figures.build(self.data, self.text)
-        write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions[2:])
-        with self.assertRaisesRegex(ValueError, "is no case of the text dataset"):
-            figures.build(self.data, self.text)
+        self.assertFalse((self.data / figures.CASES_TABLE).exists())
+
+    def test_a_case_the_text_dataset_no_longer_holds_is_left_out_and_reported(self):
+        write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions[1:])
+        done = figures.build(self.data, self.text)  # c1 (kept pictures) was left out of the text dataset by its review
+        self.assertEqual([r["patient_uid"] for r in done["rows"]], ["c2"])
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
+        self.assertIn("Cases with kept pictures that the text dataset no longer holds (left out by its review): 1 (c1).", report)
+        self.assertNotIn("c1", (self.data / figures.CASES_TABLE).read_text(encoding="utf-8"))

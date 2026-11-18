@@ -1,4 +1,5 @@
-"""The independent check of the text dataset (src/text/audit.py), on a dataset built from the build's made-up cases."""
+"""The independent check of the text dataset (src/build/text/audit.py) and the revision it leads to (src/build/text/prepare.py,
+step revise), on a dataset built from the build's made-up cases."""
 
 import contextlib
 import io
@@ -254,16 +255,18 @@ class AuditTests(BuildData):
             audit.main(["extra"])
 
 
-class ReviewTests(BuildData):
-    """The review: signals of a doubtful label or a leak, on the built made-up dataset (9 questions)."""
+class ReviewData(BuildData):
+    """The built made-up dataset (9 questions), a knowledge base with one passage that quotes a question, and three closed-book
+    runs; no tests of its own."""
 
     def setUp(self):
         super().setUp()
         prepare.build(self.data, classes=self.CLASSES)
         self.rows = {r["patient_uid"]: r for r in self._table()}
         self.texts = {uid: (self.data / "dataset" / r["path"]).read_text(encoding="utf-8") for uid, r in self.rows.items()}
-        library = self.data / "library"
-        library.mkdir(exist_ok=True)
+        self.knowledge = self.data.parent / "knowledge"
+        library = self.knowledge / "texts"
+        library.mkdir(parents=True)
         leaked = " ".join(self.texts["2008-1"].split()[:14])  # a passage that quotes 14 words of a question
         (library / "passages.jsonl").write_text(json.dumps({"passage_id": "pmc-1", "text": f"As reported, {leaked} and more."}) + "\n"
                                                 + json.dumps({"passage_id": "pmc-2", "text": "Unrelated words about something else entirely."})
@@ -286,9 +289,16 @@ class ReviewTests(BuildData):
             found[uid] = [self.texts[uid] + " " + rest]
         return mock.patch.object(audit, "_sources", return_value=found)
 
+    def _row(self, uid):
+        return {r["patient_uid"]: r for r in audit.review(self.data, self.results, self.knowledge)["rows"]}[uid]
+
+
+class ReviewTests(ReviewData):
+    """The review: signals of a doubtful label or a leak."""
+
     def test_every_question_gets_a_row_and_a_built_dataset_shows_only_the_signals_it_has(self):
         audit.audit(self.data)
-        done = audit.review(self.data, self.results)
+        done = audit.review(self.data, self.results, self.knowledge)
         rows = {r["patient_uid"]: r for r in done["rows"]}
         self.assertEqual(set(rows), set(self.rows))
         self.assertEqual(rows["2001-1"]["same_wrong_answer"], "melanoma")  # all three runs gave the same wrong answer
@@ -326,21 +336,90 @@ class ReviewTests(BuildData):
             self.assertEqual(self._row("2001-1")["lookalike_wording"], "no")  # far before the result: not in its window
 
     def test_a_changed_question_or_a_missing_knowledge_base_stops_the_review(self):
-        (self.data / "library" / "appearance.jsonl").unlink()
+        (self.knowledge / "texts" / "appearance.jsonl").unlink()
         with self.assertRaisesRegex(FileNotFoundError, "appearance.jsonl not found"):
-            audit.review(self.data, self.results)
-        (self.data / "library" / "appearance.jsonl").write_text("", encoding="utf-8")
+            audit.review(self.data, self.results, self.knowledge)
+        (self.knowledge / "texts" / "appearance.jsonl").write_text("", encoding="utf-8")
         (self.data / "dataset" / self.rows["2001-1"]["path"]).write_text("changed", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "differs from its fingerprint"):
-            audit.review(self.data, self.results)
+            audit.review(self.data, self.results, self.knowledge)
 
     def test_the_command_line(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, \
-                mock.patch.object(audit, "review", side_effect=lambda show=None: REVIEW(self.data, self.results, show)):
+                mock.patch.object(audit, "review", side_effect=lambda show=None: REVIEW(self.data, self.results, self.knowledge, show)):
             audit.main(["review"])
         self.assertIn("Reviewed 9 questions.", out.getvalue())
         with self.assertRaises(SystemExit):
             audit.main(["other"])
 
-    def _row(self, uid):
-        return {r["patient_uid"]: r for r in audit.review(self.data, self.results)["rows"]}[uid]
+
+class ReviseTests(ReviewData):
+    """Version 3: the review flags 2001-1 (its confirming result also names melanoma; every run gave the same wrong answer) and
+    2008-1 (look-alike wording, and a knowledge passage that quotes it); revise takes out 2001-1 only."""
+
+    def setUp(self):
+        super().setUp()
+        audit.audit(self.data)
+        with self.sources({"2001-1": "Histology showed a basal cell carcinoma colliding with a melanoma.",
+                           "2008-1": "Histology showed a melanoma. It had been clinically diagnosed as a wart."}):
+            flags = {r["patient_uid"]: r for r in audit.review(self.data, self.results, self.knowledge)["rows"]}
+        self.assertEqual((flags["2008-1"]["lookalike_wording"], flags["2008-1"]["knowledge_passages_sharing_12_words"],
+                          flags["2008-1"]["result_names_other_class"]), ("yes", "pmc-1", ""))  # signals that are never a reason
+        self.before = self._table()
+        self.path = self.rows["2001-1"]["path"]
+
+    def test_only_the_flagged_question_is_taken_out_and_its_file_moved_not_deleted(self):
+        content = (self.data / "dataset" / self.path).read_bytes()
+        done = prepare.revise(self.data)
+        self.assertEqual([r["patient_uid"] for r in done["removed"]], ["2001-1"])
+        self.assertEqual(self._table(), [r for r in self.before if r["patient_uid"] != "2001-1"])  # every other row as it was
+        self.assertFalse((self.data / "dataset" / self.path).exists())
+        self.assertEqual((self.data / prepare.SOURCES / prepare.REMOVED / self.path).read_bytes(), content)
+        self.assertEqual((done["taken_out_now"], done["moved"]), (1, [self.path]))
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        for expected in ("## Revision: version 3", "- Questions in version 2 (reviewed): 9; taken out: 1; version 3: 8",
+                         "Taken out (the other class its confirming result names): 2001-1 (test, basal cell carcinoma: melanoma)."):
+            self.assertIn(expected, report)
+        self.assertLess(report.index("<!-- step: review -->"), report.index("<!-- step: revise -->"))
+        self.assertEqual(len((self.data / audit.REVIEW_FLAGS).read_text(encoding="utf-8").splitlines()), 10)  # the review is kept
+
+    def test_a_second_run_changes_nothing(self):
+        prepare.revise(self.data)
+        files = {name: (self.data / name).read_bytes() for name in ("dataset.csv", prepare.REPORT)}
+        done = prepare.revise(self.data)
+        self.assertEqual({name: (self.data / name).read_bytes() for name in files}, files)
+        self.assertEqual((done["taken_out_now"], done["moved"], len(done["removed"])), (0, [], 1))
+
+    def test_a_table_already_at_version_3_moves_the_files_the_same_way(self):
+        prepare.revise(self.data)
+        moved = self.data / prepare.SOURCES / prepare.REMOVED / self.path
+        (self.data / "dataset" / self.path).write_bytes(moved.read_bytes())  # a computer with the new table and the old files
+        moved.unlink()
+        table = (self.data / "dataset.csv").read_bytes()
+        done = prepare.revise(self.data)
+        self.assertEqual(done["moved"], [self.path])
+        self.assertTrue(moved.is_file())
+        self.assertEqual((self.data / "dataset.csv").read_bytes(), table)
+
+    def test_a_question_the_review_has_not_seen_or_in_another_place_stops_the_step(self):
+        flags = (self.data / audit.REVIEW_FLAGS).read_text(encoding="utf-8")
+        (self.data / audit.REVIEW_FLAGS).write_text("\n".join(line for line in flags.splitlines() if not line.startswith("2008-1,")) + "\n",
+                                                   encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "has no row for 1 questions .for example 2008-1."):
+            prepare.revise(self.data)
+        (self.data / audit.REVIEW_FLAGS).write_text(flags.replace("2008-1,test,", "2008-1,train,"), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "2008-1 is in test/melanoma in dataset.csv but in train/melanoma"):
+            prepare.revise(self.data)
+        (self.data / audit.REVIEW_FLAGS).unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.build.text.audit review first"):
+            prepare.revise(self.data)
+        self.assertEqual(self._table(), self.before)  # nothing written
+        self.assertTrue((self.data / "dataset" / self.path).is_file())
+
+    def test_the_command_line(self):
+        real = prepare.revise
+        with mock.patch.object(prepare, "revise", lambda show=None: real(self.data, show)), \
+                contextlib.redirect_stdout(io.StringIO()) as shown:
+            prepare.main(["revise"])
+        self.assertIn("Version 3: 8 questions, each in its split; taken out by the rule: 1 (from the table now: 1; files moved now: 1",
+                      shown.getvalue())

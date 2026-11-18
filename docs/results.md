@@ -4,7 +4,7 @@ Four LLMs answered the test split of three datasets without retrieval (closed-bo
 
 - **Image:** 320 photos, 40 per diagnosis ([data sheet](../data/image/datasheet.md)).
 - **Text:** 221 written cases, unequal across diagnoses ([data sheet](../data/text/datasheet.md)).
-- **Multimodal:** the image dataset's 320 photos, each with the patient's age, sex and body site ([data sheet](../data/multimodal/datasheet.md)).
+- **Multimodal:** the image dataset's 320 photos, each with the patient's age, sex and body site ([data sheet](../data/image_metadata/datasheet.md)).
 
 The image and multimodal datasets use the same photos, so they are compared question by question. The text dataset describes different patients, so its scores are not compared with the other two (section 4).
 

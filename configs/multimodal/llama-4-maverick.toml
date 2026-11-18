@@ -1,7 +1,7 @@
 # The Llama settings of configs/image/llama-4-maverick.toml, unchanged, on the multimodal dataset: each photo is sent with its
 # patient's facts (age, sex, body site) in the prompt. Setup and notes: see that file.
 name = "llama-4-maverick"
-dataset = "multimodal"  # the prepared dataset: data/multimodal/questions.csv; results go to results/multimodal/<name>/
+dataset = "multimodal"  # the image + metadata dataset: data/image_metadata/dataset.csv; results go to results/multimodal/<name>/
 
 [model]
 provider = "openai_compatible"

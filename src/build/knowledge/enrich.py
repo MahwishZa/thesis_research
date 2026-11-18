@@ -1,5 +1,6 @@
-"""Additions to the multimodal knowledge base (version 2). The frozen version 1 (knowledge.csv) links photos and texts only by
-disease and holds little text that describes how a lesion looks. Three steps add to it, each in a new file; no frozen file changes:
+"""Additions to the knowledge base (data/knowledge/). The library (src/build/knowledge/library.py) and the index of training items
+(index.csv, written by the image + metadata build) link photos and texts only by disease and hold little text that describes how a
+lesion looks. Three steps add to them, each in a file of its own; no earlier file changes:
 
     python -m src.build.knowledge.enrich appearance   open full texts of reviews on dermoscopy and clinical appearance (needs the internet)
     python -m src.build.knowledge.enrich aspects      what each library passage is about (appearance, histology, treatment, epidemiology)
@@ -9,12 +10,12 @@ disease and holds little text that describes how a lesion looks. Three steps add
 skin, English, about people, not case reports, the dataset's articles left out) and finds the reviews that mention dermoscopy or
 morphology; their open full texts are cut into passages as the library's are, and a passage is kept only when it describes
 appearance, is not already in the library, and shares no run of 12 words with a question of the text dataset. The table is
-data/multimodal/appearance.csv (committed); the texts are in data/text/library/appearance.jsonl (not committed, as the library's).
+data/knowledge/appearance.csv (committed); the texts are in data/knowledge/texts/appearance.jsonl (not committed, as the library's).
 
 For three classes the first search found almost nothing (0, 0 and 1 reviews: dermatofibroma, pigmented benign keratosis and vascular
 lesion, left short of the target by the first run on 2026-11-17), so they get a wider search: the reviews indexed with the class's
-headings as a main subject OR naming one of the class's names (class_terms.csv, the ones that count) in the title or abstract, without
-the dermoscopy and morphology words. A review that names a condition class_terms.csv says does not count (and not only inside a name
+headings as a main subject OR naming one of the class's names (data/text/build/class_terms.csv, the ones that count) in the title or
+abstract, without the dermoscopy and morphology words. A review that names a condition class_terms.csv says does not count (and not only inside a name
 that counts) is left out. Nothing else changes, and the target of 30 passages from 8 documents is not lowered.
 
 ``aspects`` tags every passage of the library and of the appearance corpus by words (fixed lists below) and checks its own tags
@@ -45,14 +46,14 @@ from pathlib import Path
 from ...common import write_section
 from . import library as textlib
 from ..text import prepare as textprep
-from ..image_metadata.prepare import DATA, IMAGE, NOT_RECORDED, TEXT, _read_csv, _write_csv, fact_values, read_images
+from ..image_metadata.prepare import DATA as IMAGE_METADATA
+from ..image_metadata.prepare import IMAGE, NOT_RECORDED, TEXT, _read_csv, _write_csv, fact_values, read_images
+from .library import KNOWLEDGE, REPORT, REPORT_HEAD, STEPS
 
-REPORT = "enrichment_report.md"
-STEPS = ("appearance", "aspects", "cards")
-REPORT_HEAD = ["# The knowledge base: additions (version 2)", "",
-               "Written by `python -m src.build.knowledge.enrich`; one section per step. The frozen version 1 files are unchanged.", ""]
+COMMANDS = ("appearance", "aspects", "cards")  # this module's steps; the report's sections are STEPS (the library first)
+
 APPEARANCE_TABLE = "appearance.csv"
-APPEARANCE_FILE = "appearance.jsonl"  # in the text dataset's library folder, not in Git
+APPEARANCE_FILE = "appearance.jsonl"  # in data/knowledge/texts/, not in Git
 ASPECTS_TABLE = "passage_aspects.csv"
 CARDS_TABLE = "image_cards.csv"
 
@@ -195,9 +196,9 @@ def _pct(x: float | None) -> str:
 # Step "appearance": reviews on dermoscopy and clinical appearance, from PubMed Central
 
 
-def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None = None, show=None) -> dict:
-    """Finds, cuts and keeps the appearance passages (see the module's description); writes data/multimodal/appearance.csv, the
-    texts into the library folder of the text dataset and the "appearance" section of the report."""
+def appearance(text: Path = TEXT, data: Path = KNOWLEDGE, classes: list[str] | None = None, show=None) -> dict:
+    """Finds, cuts and keeps the appearance passages (see the module's description); writes data/knowledge/appearance.csv, the
+    texts into data/knowledge/texts/ and the "appearance" section of the report."""
     text, data = Path(text), Path(data)
     classes = classes if classes is not None else textlib.image_classes(textlib.read_table(textlib.IMAGE_TABLE))
     _, headings = textlib._checked_headings(text, classes)
@@ -205,7 +206,7 @@ def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None =
     excluded = textlib._dataset_articles(text)
     say = show or (lambda message: None)
     day = datetime.now(timezone.utc).date().isoformat()
-    library = {r["sha256"] for r in _read_csv(text / textlib.LIBRARY_TABLE)}
+    library = {r["sha256"] for r in _read_csv(data / textlib.LIBRARY_TABLE)}
 
     found = textlib._newest(classes, headings, APPEARANCE_QUERY, REVIEWS_ASKED, excluded, say, "reviews on appearance")
     names = {}
@@ -251,7 +252,7 @@ def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None =
         table.append({**row, "passage_id": pid, "corpus": "appearance"})
         texts.append({**passage, "passage_id": pid, "corpus": "appearance"})
 
-    folder = text / textlib.FOLDER
+    folder = data / textlib.FOLDER
     folder.mkdir(parents=True, exist_ok=True)
     partial = folder / f"{APPEARANCE_FILE}.partial"
     partial.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in texts), encoding="utf-8", newline="\n")
@@ -264,7 +265,7 @@ def appearance(text: Path = TEXT, data: Path = DATA, classes: list[str] | None =
 
 
 def _appearance_summary(day, classes, headings, found, full, documents, table, dropped, names, refused) -> list[str]:
-    lines = ["## Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance", "",
+    lines = ["# Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance", "",
              f"Written on {day}. For each class, PubMed's reviews (the class's MeSH headings as a main subject, on the skin, in English, "
              "about people, not case reports, not guidelines, with a free full text, and the words dermoscopy, dermoscopic, dermatoscopy, "
              f"dermatoscopic or morphology in the title or abstract), the newest {REVIEWS_ASKED} asked, and of those the newest "
@@ -302,13 +303,13 @@ def _appearance_summary(day, classes, headings, found, full, documents, table, d
 # Step "aspects": what each passage is about, and how much of the library describes appearance
 
 
-def aspects(text: Path = TEXT, data: Path = DATA) -> dict:
-    """Tags every passage of the library and of the appearance corpus; writes data/multimodal/passage_aspects.csv and the
+def aspects(data: Path = KNOWLEDGE) -> dict:
+    """Tags every passage of the library and of the appearance corpus; writes data/knowledge/passage_aspects.csv and the
     "aspects" section of the report (the tags checked against the section titles, and the coverage of appearance per class)."""
-    text, data = Path(text), Path(data)
-    sources = [("library", text / textlib.LIBRARY_TABLE, text / textlib.FOLDER / "passages.jsonl")]
-    if (data / APPEARANCE_TABLE).is_file() or (text / textlib.FOLDER / APPEARANCE_FILE).is_file():
-        sources.append(("appearance", data / APPEARANCE_TABLE, text / textlib.FOLDER / APPEARANCE_FILE))
+    data = Path(data)
+    sources = [("library", data / textlib.LIBRARY_TABLE, data / textlib.FOLDER / "passages.jsonl")]
+    if (data / APPEARANCE_TABLE).is_file() or (data / textlib.FOLDER / APPEARANCE_FILE).is_file():
+        sources.append(("appearance", data / APPEARANCE_TABLE, data / textlib.FOLDER / APPEARANCE_FILE))
     rows, meta = [], {}
     for origin, table, texts in sources:
         for path in (table, texts):
@@ -354,12 +355,12 @@ def _coverage(rows: list[dict], meta: dict, labels: list[str]) -> dict[str, dict
 
 def _aspects_summary(rows, labels, coverage, check, origins) -> list[str]:
     per_origin = ", ".join(o + ": " + str(sum(r["origin"] == o for r in rows)) for o in origins)
-    lines = ["## Aspects: what each passage is about", "",
+    lines = ["# Aspects: what each passage is about", "",
              f"{len(rows)} passages tagged ({per_origin}), in `{ASPECTS_TABLE}`. "
              "A passage has an aspect when it uses several different words of that aspect's list (fixed in `enrich.py`): "
              "appearance is dermoscopy (2 words) or clinical look (3 words); histology 3, treatment 3, epidemiology 2. A passage can have "
              "several aspects, and a passage about several classes counts for each.", "",
-             "### Do the tags follow the authors' section titles?", "",
+             "## Do the tags follow the authors' section titles?", "",
              "The check uses an independent signal: the title of the section a passage sits in. Only passages under a title that names one "
              "aspect count (for example \"Treatment / Management\" names treatment). Recall: of the passages under a title of the aspect, "
              "the share the words tag with it. Precision: of the tagged passages, the share under a title of the aspect. Lift: precision "
@@ -374,7 +375,7 @@ def _aspects_summary(rows, labels, coverage, check, origins) -> list[str]:
                    "**Not every aspect has a lift above 1.0 (or has titled passages to check): read the tags of that aspect with caution.**"),
               "This is a check of consistency with the authors' own headings. It does not show that a passage is medically right or "
               "sufficient, and a passage under no informative title is not checked at all.", "",
-              "### Coverage of appearance", "",
+              "## Coverage of appearance", "",
               f"Target per class, fixed before the corpus was built: at least {TARGET_PASSAGES} passages that describe appearance, from at "
               f"least {TARGET_DOCUMENTS} different documents.", "",
               "| Class | Passages | In the library | In the appearance corpus | Describing appearance | Of which dermoscopy | Documents | Target |",
@@ -415,13 +416,13 @@ def render_card(c: dict) -> str:
     return " ".join(parts)
 
 
-def cards(image: Path = IMAGE, data: Path = DATA) -> dict:
-    """Writes data/multimodal/image_cards.csv and the "cards" section of the report (see the module's description)."""
+def cards(image: Path = IMAGE, data: Path = KNOWLEDGE, metadata: Path = IMAGE_METADATA) -> dict:
+    """Writes data/knowledge/image_cards.csv and the "cards" section of the report (see the module's description)."""
     image, data = Path(image), Path(data)
-    photos = {r["photo_id"]: r for r in _read_csv(image / "raw_photos.csv")}
+    photos = {r["photo_id"]: r for r in _read_csv(image / "build" / "raw_photos.csv")}
     table = {r["path"]: r for r in _read_csv(image / "dataset.csv")}
-    questions = {r["path"]: r for r in _read_csv(data / "questions.csv")}
-    knowledge = {r["item_id"] for r in _read_csv(data / "knowledge.csv") if r["kind"] == "image"}
+    questions = {r["path"]: r for r in _read_csv(metadata / "dataset.csv")}
+    knowledge = {r["item_id"] for r in _read_csv(data / "index.csv") if r["kind"] == "image"}
     diseases = {r["class"]: {re.sub(r" \(\d+\)$", "", d) for d in r["isic_diagnoses"].split("; ")} for r in _read_csv(data / "diseases.csv")}
     out = []
     for r in sorted(read_images(image), key=lambda r: (r["label"], r["path"])):
@@ -451,7 +452,7 @@ def _card_checks(out, photos, table, questions, knowledge, diseases) -> dict:
     """Checks that stop the step when one fails; returns what they counted."""
     ids = {c["item_id"] for c in out}
     if ids != knowledge:
-        raise ValueError(f"the cards are not exactly the training photos of knowledge.csv ({len(ids ^ knowledge)} differ)")
+        raise ValueError(f"the cards are not exactly the training photos of index.csv ({len(ids ^ knowledge)} differ)")
     held_out = [p for p, q in questions.items() if q["split"] != "train" and f"image:{p}" in ids]
     if held_out:
         raise ValueError(f"a validation or test photo has a card: {held_out[:3]}")
@@ -470,15 +471,15 @@ def _card_checks(out, photos, table, questions, knowledge, diseases) -> dict:
 
 def _cards_summary(out: list[dict], checks: dict) -> list[str]:
     classes = sorted({c["class"] for c in out})
-    lines = ["## Cards: one text card per training photo", "",
-             f"{len(out)} cards in `{CARDS_TABLE}`, one for each training photo of `knowledge.csv`, made from the photo's own ISIC record. "
+    lines = ["# Cards: one text card per training photo", "",
+             f"{len(out)} cards in `{CARDS_TABLE}`, one for each training photo of `index.csv`, made from the photo's own ISIC record. "
              "Core fields (diagnosis, confirmation, age, sex, body site) read \"not recorded\" when the record lacks them; the finer body "
              "site, the size and the melanoma history are left out when not recorded. Nothing is guessed. The collection and the licence "
              "are columns of the table, never part of a card's text.", "",
-             "Checks that stop the step when one fails: the cards are exactly the training photos of `knowledge.csv`; no validation or "
+             "Checks that stop the step when one fails: the cards are exactly the training photos of `index.csv`; no validation or "
              "test photo has a card; every card's diagnosis is one that `diseases.csv` lists for its class; no card's text names the "
              "photo's collection; every card's text is made from its columns alone.", "",
-             "### How often each field is recorded, by class", "",
+             "## How often each field is recorded, by class", "",
              "| Class | Cards | Confirmation | Age | Sex | Body site | Finer site | Size | Melanoma history |", "|---|---|---|---|---|---|---|---|---|"]
     for label in classes:
         mine = [c for c in out if c["class"] == label]
@@ -486,7 +487,7 @@ def _cards_summary(out: list[dict], checks: dict) -> list[str]:
         count = lambda f: sum(bool(c[f]) and c[f] != NOT_RECORDED for c in mine)  # noqa: E731
         lines.append(f"| {label} | {n} | {count('confirmation')} | {count('age')} | {count('sex')} | {count('site')} | {count('site_detail')} | "
                      f"{count('size_mm')} | {sum(bool(c['personal_hx_mm'] or c['family_hx_mm']) for c in mine)} |")
-    lines += ["", "### Example", "", "> " + out[0]["card"] if out else "no card", "",
+    lines += ["", "## Example", "", "> " + out[0]["card"] if out else "no card", "",
               "A card describes another patient's photo, not the photo of a question: it can be retrieved as evidence, and it carries the "
               "diagnosis of its own photo only.", ""]
     return lines

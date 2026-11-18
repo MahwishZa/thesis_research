@@ -1,17 +1,17 @@
 # Preparation of the text dataset
 
-Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `class_terms.csv` is written by people: the names doctors use for each of the image dataset's classes, and whether each name counts for that class.
+Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the image dataset's classes, and whether each name counts for that class.
 
 <!-- step: survey -->
 ## Survey: the names checked in MeSH, and how much PubMed holds per class
 
-Written by `python -m src.build.text.prepare survey` on 2026-11-14. Every name in `class_terms.csv` was looked up in MeSH, the US National Library of Medicine's list of medical subject headings, through NCBI's E-utilities; the result for each name is in `term_check.csv`, with the number of PubMed articles that use the name in their title or summary. Then PubMed was searched per class with the MeSH headings of the class's confirmed names (as main topics), limited to skin lesions. Only MeSH records and search counts were downloaded, no article text; nothing else was changed.
+Written by `python -m src.build.text.prepare survey` on 2026-11-14. Every name in `build/class_terms.csv` was looked up in MeSH, the US National Library of Medicine's list of medical subject headings, through NCBI's E-utilities; the result for each name is in `build/term_check.csv`, with the number of PubMed articles that use the name in their title or summary. Then PubMed was searched per class with the MeSH headings of the class's confirmed names (as main topics), limited to skin lesions. Only MeSH records and search counts were downloaded, no article text; nothing else was changed.
 
 ### MeSH check
 
 - Names: 121; a MeSH heading: 32; an entry term of a heading (another name MeSH lists for it): 17; not in MeSH: 72 (used in PubMed titles or summaries: 69; in none: 3)
 
-A name that is not in MeSH is not wrong: MeSH lists the names used to index articles, not every name in use (subtypes and older names are often missing). The PubMed count shows whether such a name is in use. A name in neither is for a person to confirm, change or remove in `class_terms.csv`.
+A name that is not in MeSH is not wrong: MeSH lists the names used to index articles, not every name in use (subtypes and older names are often missing). The PubMed count shows whether such a name is in use. A name in neither is for a person to confirm, change or remove in `build/class_terms.csv`.
 
 | Class | Name not in MeSH | Counts for the class | PubMed articles using it | Source in class_terms.csv |
 |---|---|---|---|---|
@@ -128,12 +128,12 @@ Each count is the class's headings AND one of these conditions:
 ### Not done in this step
 
 - No article, abstract or case text is downloaded, and nothing is chosen for the dataset.
-- The names in `class_terms.csv` are not changed: a person decides what to do with the names MeSH does not have.
+- The names in `build/class_terms.csv` are not changed: a person decides what to do with the names MeSH does not have.
 
 <!-- step: cases -->
 ## Cases: candidate patient cases for each class
 
-Written by `python -m src.build.text.prepare cases`. The cases come from PMC-Patients (Zhao et al., Scientific Data 10, 909, 2023): patient descriptions taken from published case reports in PubMed Central whose licence allows reuse. A patient is a candidate when the title of the article it comes from names one of the classes, by the names that count in `class_terms.csv` (a case report's title usually names its diagnosis). Nothing is chosen, read or cut yet: the marks show where a person should look first. The case texts stay on this computer; `case_candidates.csv` holds only each patient's numbers, publication year, title, age, sex, length, how often the case text names the class (by a full name and by its short form) and marks.
+Written by `python -m src.build.text.prepare cases`. The cases come from PMC-Patients (Zhao et al., Scientific Data 10, 909, 2023): patient descriptions taken from published case reports in PubMed Central whose licence allows reuse. A patient is a candidate when the title of the article it comes from names one of the classes, by the names that count in `build/class_terms.csv` (a case report's title usually names its diagnosis). Nothing is chosen, read or cut yet: the marks show where a person should look first. The case texts stay on this computer; `build/case_candidates.csv` holds only each patient's numbers, publication year, title, age, sex, length, how often the case text names the class (by a full name and by its short form) and marks.
 
 ### Source
 
@@ -157,7 +157,7 @@ Written by `python -m src.build.text.prepare cases`. The cases come from PMC-Pat
 | squamous cell carcinoma | 1539 | 1381 | 254 | 24 | 17 | 1134 | 227 | 212 | 520 | 2002–2024 |
 | vascular lesion | 194 | 174 | 42 | 3 | 8 | 88 | 1 | 93 | 0 | 2008–2024 |
 
-A patient whose title names two or more classes is counted under each of them (its class is empty in `case_candidates.csv` until a person decides).
+A patient whose title names two or more classes is counted under each of them (its class is empty in `build/case_candidates.csv` until a person decides).
 
 Words in a title that point to a site other than the skin (such a case is marked, not dropped): adrenal, anal, anorectal, anus, appendiceal, appendix, biliary, bladder, bone, bowel, brain, breast, bronchial, bronchogenic, bronchus, buccal, caecum, cardiac, cecal, cecum, central nervous system, cerebellopontine, cerebral, cervix, choroid, choroidal, ciliary, colon, colonic, colorectal, conjunctiva, conjunctival, cornea, corneal, duodenal, duodenum, dural, endobronchial, endometrial, endometrium, esophageal, esophagogastric, esophagus, ethmoid, eye, gallbladder, gastric, gastroesophageal, gastrointestinal, gingiva, gingival, head and neck, heart, hepatic, hypopharyngeal, hypopharynx, ileal, ileum, intestinal, intestine, intracranial, intradural, intramedullary, intranasal, intraocular, intraoral, intraosseous, intrauterine, intravascular, intravenous, intussusception, iris, jejunal, jejunum, kidney, lacrimal, laryngeal, larynx, leptomeningeal, lip, liver, lung, lymph node, mandible, mandibular, maxilla, maxillary, mediastinal, mediastinum, meningeal, meninges, metastases, metastasis, metastatic, mouth, mucosa, mucosal, nasal cavity, nasopharyngeal, nasopharynx, nodal, ocular, odontogenic, oral, orbit, orbital, oropharyngeal, oropharynx, ovarian, ovary, palatal, palate, pancreas, pancreatic, paranasal, paratracheal, parotid, pelvic, penile, penis, perianal, peritoneal, pharyngeal, pharynx, pituitary, pleural, prostate, prostatic, pulmonary, rectal, rectum, renal, retina, retinal, salivary, sigmoid, sinonasal, sphenoid, spinal, spine, spleen, splenic, stomach, submandibular, testicular, thoracic, thymic, thymus, thyroid, tongue, tonsil, tonsillar, trachea, tracheal, urethra, urethral, urinary, uterine, uterus, uvea, uveal, vagina, vaginal, vulva, vulvar.
 
@@ -173,7 +173,7 @@ Short forms counted in the case texts (a case text that uses the short form name
 <!-- step: abstracts -->
 ## Abstracts: case reports PubMed holds as an abstract
 
-Written by `python -m src.build.text.prepare abstracts`. Most case reports are in PubMed only as an abstract, without open full text. For every class, PubMed was asked for its case reports (the class's headings as a main subject, on the skin, in English) and, by the class's names in the title, for the case reports it has not indexed (journals outside MEDLINE have no subject headings, so the first search cannot find them); the articles PMC-Patients already gave were left out, and the titles and abstracts of the others were downloaded. Each abstract's case part (its sections whose label names the case or the patient, or else the whole abstract) is judged by the rules of `cases`; for a candidate article (its title passes the rules) with an open full text in PubMed Central, of any year, the case sections of the full text (titled as the case, such as "Case presentation"; figures and tables left out) are used instead of the abstract. The texts stay in `data/text/sources/pubmed/`; `abstract_candidates.csv` holds only each article's numbers, year, title, length and marks.
+Written by `python -m src.build.text.prepare abstracts`. Most case reports are in PubMed only as an abstract, without open full text. For every class, PubMed was asked for its case reports (the class's headings as a main subject, on the skin, in English) and, by the class's names in the title, for the case reports it has not indexed (journals outside MEDLINE have no subject headings, so the first search cannot find them); the articles PMC-Patients already gave were left out, and the titles and abstracts of the others were downloaded. Each abstract's case part (its sections whose label names the case or the patient, or else the whole abstract) is judged by the rules of `cases`; for a candidate article (its title passes the rules) with an open full text in PubMed Central, of any year, the case sections of the full text (titled as the case, such as "Case presentation"; figures and tables left out) are used instead of the abstract. The texts stay in `data/text/sources/pubmed/`; `build/abstract_candidates.csv` holds only each article's numbers, year, title, length and marks.
 
 - Asked on 2026-11-13: 30368 case reports found; already given by PMC-Patients (left out): 2548; downloaded: 27820 (not returned by PubMed: 0); without an abstract: 10037
 - Candidate articles (title passes) with a PMC number, asked from PMC: 1382; with an open full text and a case section (used instead of the abstract): 771
@@ -199,7 +199,7 @@ Queries for each class: its headings as a main subject AND ("skin neoplasms"[MeS
 <!-- step: mesh -->
 ## MeSH: the subject headings of each candidate article
 
-Written by `python -m src.build.text.prepare mesh`. For every article in `case_candidates.csv`, PubMed was asked whether it has subject headings at all (`medline[sb]`: PubMed indexes the articles of MEDLINE journals) and which classes they name (one of the headings of the class's names that count in `term_check.csv`, or a narrower heading) while it is also indexed under skin neoplasms or skin diseases. The US National Library of Medicine gives these headings, independently of the authors' titles and of this code. In the build, the headings of an indexed article must name its class; an article without headings is judged by its title and case text.
+Written by `python -m src.build.text.prepare mesh`. For every article in `build/case_candidates.csv`, PubMed was asked whether it has subject headings at all (`medline[sb]`: PubMed indexes the articles of MEDLINE journals) and which classes they name (one of the headings of the class's names that count in `build/term_check.csv`, or a narrower heading) while it is also indexed under skin neoplasms or skin diseases. The US National Library of Medicine gives these headings, independently of the authors' titles and of this code. In the build, the headings of an indexed article must name its class; an article without headings is judged by its title and case text.
 
 - Asked on 2026-11-13: 16029 articles, 10267 of them indexed; article numbers PubMed does not know: 0
 
@@ -227,8 +227,8 @@ Written by `python -m src.build.text.prepare build`, with no person choosing, la
 
 ### Rules
 
-- Label: a case gets class X when the article title names X and no other class, with no mark (`cases`, `abstracts`; their title rules are applied again here, as they are now, so that a rule or a name added since counts: among them a title that names another lesion, a word ending in -oma or a polyp that is no name in `class_terms.csv`, unless named only as what the lesion looked like), and the case text names X, by a full name or its short form; where PubMed has indexed the article, its subject headings must also name X on the skin (`mesh`), else the case is left out. `dataset.csv` says for every case whether PubMed agrees (three sources) or has not indexed the article (two sources). The case text after the question must also report a test result that names X (a sentence with a word beginning biops, histopatholog, histolog, patholog, dermatopatholog, immunohistochem ... that names X by a name that counts or its short form, or one of whose two next sentences does; a sentence naming a relative (father, mother, brother, sister, son, daughter, sibling, parent, grandfather, grandmother, grandparent, aunt, uncle, cousin, niece, nephew, twin, husband, wife, family, relative) does not count): a diagnosis by eye or by dermoscopy alone, a result that names another diagnosis, or a group of diseases (keratinocyte carcinoma, keratinocyte cancer, keratinocytic carcinoma) is not enough. A short form the article defines names X in a result when a name of X ends right before its brackets ("nodular basal cell carcinoma (nBCC)").
-- Question: the case text word for word, up to the first sentence that names the case's own class (any of its names in `class_terms.csv`, counting or not; except mole, too vague to be one), its short form (AK, BCC, SK, SCC, cSCC, or one the article defines, such as "pyogenic granuloma (PG)"), or that reports a test result (words beginning biops, histopatholog, histolog, patholog, dermatopatholog, immunohistochem, histochem, immunostain, immunoreactiv, excis, microscop, cytolog, cytoplasm, nucle, mitos, mitot, specimen, multinucleat, fibroblastic, histiocytic, aspirat, dermis, epidermis, collagen, macrophag, storiform, spindle, epithelioid, keratinocyt, lymphocyt, atypia). It starts at the start of the case text, or, when a sentence before the first sentence about the patient already names the class (a background), at that first sentence about the patient. Names of the other classes stay, as clinical information (a history, a suspicion). Nothing is rewritten.
+- Label: a case gets class X when the article title names X and no other class, with no mark (`cases`, `abstracts`; their title rules are applied again here, as they are now, so that a rule or a name added since counts: among them a title that names another lesion, a word ending in -oma or a polyp that is no name in `build/class_terms.csv`, unless named only as what the lesion looked like), and the case text names X, by a full name or its short form; where PubMed has indexed the article, its subject headings must also name X on the skin (`mesh`), else the case is left out. `dataset.csv` says for every case whether PubMed agrees (three sources) or has not indexed the article (two sources). The case text after the question must also report a test result that names X (a sentence with a word beginning biops, histopatholog, histolog, patholog, dermatopatholog, immunohistochem ... that names X by a name that counts or its short form, or one of whose two next sentences does; a sentence naming a relative (father, mother, brother, sister, son, daughter, sibling, parent, grandfather, grandmother, grandparent, aunt, uncle, cousin, niece, nephew, twin, husband, wife, family, relative) does not count): a diagnosis by eye or by dermoscopy alone, a result that names another diagnosis, or a group of diseases (keratinocyte carcinoma, keratinocyte cancer, keratinocytic carcinoma) is not enough. A short form the article defines names X in a result when a name of X ends right before its brackets ("nodular basal cell carcinoma (nBCC)").
+- Question: the case text word for word, up to the first sentence that names the case's own class (any of its names in `build/class_terms.csv`, counting or not; except mole, too vague to be one), its short form (AK, BCC, SK, SCC, cSCC, or one the article defines, such as "pyogenic granuloma (PG)"), or that reports a test result (words beginning biops, histopatholog, histolog, patholog, dermatopatholog, immunohistochem, histochem, immunostain, immunoreactiv, excis, microscop, cytolog, cytoplasm, nucle, mitos, mitot, specimen, multinucleat, fibroblastic, histiocytic, aspirat, dermis, epidermis, collagen, macrophag, storiform, spindle, epithelioid, keratinocyt, lymphocyt, atypia). It starts at the start of the case text, or, when a sentence before the first sentence about the patient already names the class (a background), at that first sentence about the patient. Names of the other classes stay, as clinical information (a history, a suspicion). Nothing is rewritten.
 - Kept when the question has at least 25 words, describes a lesion (lesion, nodule, papule, plaque, patch, patches, macule, mass, masses, tumour, ulcer, growth, spot) and one patient (an age or a sex; not "patients", a mean or median age, a second case, or two different ages of a man, woman, boy, girl, male, female, patient, gentleman or lady; a heading such as "Case 2." at its start does not count), describes a lesion as seen on the skin (one sentence with a lesion word, or mole, lump, swelling, rash, rashes, eruption, wound, stain, and the skin (skin, cutaneous, subcutaneous, dermal, dermatology, dermatological, dermoscopy, dermoscopic, dermatoscopy, dermatoscopic) or a place on the body's surface (scalp, vertex, face, facial, forehead, glabella, temple, temporal, frontal, parietal, occipital, cheek, nose, nasal ala, nasal tip, nasal bridge, nasal dorsum, nasal sidewall, nasal root, ear, pinna, auricle, auricular, earlobe, helix, preauricular, postauricular, retroauricular, eyelid, lid, canthus, eyebrow, periorbital, lip, perioral, philtrum, chin, jaw, neck, nape, nuchal, shoulder, axilla, axillae, axillary, arm, forearm, elbow, wrist, hand, palm, palmar, finger, thumb, nail, fingernail, toenail, subungual, periungual, digit, back, chest, breast, nipple, areola, abdomen, abdominal, trunk, flank, umbilicus, umbilical, groin, inguinal, pubic, scrotum, scrotal, penis, perineum, perineal, buttock, gluteal, sacral, hip, thigh, leg, knee, shin, pretibial, calf, ankle, malleolus, foot, feet, sole, plantar, heel, toe, limb, extremity, scapula, scapular, supraclavicular, sternal, presternal, lumbar, dorsum, prepuce), with no scan or look inside the body (ct, computed tomography, tomography, mri, magnetic resonance, ultrasound, ultrasonography, sonography, radiograph, radiography, x ray, pet, scan, scintigraphy, imaging, endoscopy, cystoscopy, colonoscopy, bronchoscopy, laryngoscopy, laparotomy, laparoscopy); and what it looks or feels like: in that sentence the skin words, pigment, papule, plaque, macule, patch, patches, or the colours, surfaces and shapes below; in the sentence before or after it, the same but for the skin words), describes what the lesion looks like (a size in mm or cm, a lesion type: nodule, papule, plaque, patch, patches, macule, ulcer, spot, or a colour, surface or shape: red, reddish, pink, pinkish, brown, brownish, black, blackish, blue, bluish, purple, purplish, violet, violaceous, white, whitish, yellow, yellowish, grey, gray, greyish, grayish, tan, dark, erythematous, pigmented, hyperpigmented, hypopigmented, depigmented, colored, coloured, pearly, translucent, shiny, scaly, crusted, crusting, ulcerated, ulcerating, eroded, verrucous, warty, keratotic, hyperkeratotic, papillomatous, pedunculated, exophytic, nodular, polypoid, polypoidal, fungating, raised, elevated, flat, depressed, atrophic, firm, hard, soft, smooth, rough, friable, bleeding, hemorrhagic, lobulated, annular, irregular, circumscribed, demarcated, indurated, cystic, compressible), and has no sentence that puts a lesion inside the body (intraoral, gingiva, gingival, gingivae, palate, palatal, retromolar, alveolar ridge, alveolar mucosa, oral cavity, oral mucosa, buccal mucosa, labial mucosa, floor of the mouth, tongue, nasal cavity, nasal mucosa, conjunctiva, conjunctival, vulva, vulvar, anogenital, anal canal, choroid, choroidal, uvea, uveal, iris, retina, retinal, intraocular, mediastinum, mediastinal, cervix, middle ear, eustachian tube, tympanic, nasopharynx). When the questions of two articles share at least 10% of the shorter one's runs of 12 words, they tell the same patient's case: the article PubMed listed first (the lower PubMed number) keeps it.
 - Splits: every article whole in one split, in a fixed random order (seed `text-dataset`): for each class, 60% of its cases into test (at most 40), 20% into validation (at most 15), the rest into train; an article that would pass a class's share goes into the next split.
 
@@ -304,55 +304,10 @@ Written by `python -m src.build.text.audit`, on the computer that holds the text
 
 All checks passed.
 
-<!-- step: library -->
-## Library: the reference texts for retrieval
-
-Written by `python -m src.build.knowledge.library` on 2026-11-14. Four corpora, as in RAG² (PubMed, PMC, clinical practice guidelines, textbooks), from public sources of the US National Library of Medicine, found by fixed rules with no person choosing a text: the abstracts of PubMed's reviews about each class (its headings as a main subject, on the skin, in English, about people; not case reports or guidelines; the newest 200 per class); the open full texts of those reviews in PubMed Central (per class the newest 25 that PMC gives in full); PubMed's clinical practice guidelines about each class (the newest 50 per class, as open full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or summary (its "Continuing Education Activity") names a class by a name that counts in `class_terms.csv` and whose title names no other site and no animal. Every text is cut word for word into passages of whole paragraphs of at most 300 words. `library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/text/library/` (not in Git).
-
-### Per class
-
-| Class | MeSH headings (main topic) | Reviews (abstracts) | Open full texts of reviews | Guidelines | StatPearls chapters |
-|---|---|---|---|---|---|
-| actinic keratosis | Keratosis, Actinic | 200 | 25 | 14 | 11 |
-| basal cell carcinoma | Basal Cell Carcinoma | 200 | 25 | 32 | 20 |
-| dermatofibroma | Histiocytoma, Benign Fibrous | 35 | 0 | 0 | 3 |
-| melanoma | Melanoma; Hutchinson's Melanotic Freckle; Melanoma, Amelanotic | 200 | 25 | 50 | 31 |
-| nevus | Nevus; Nevus, Pigmented; Dysplastic Nevus Syndrome; Nevus, Epithelioid and Spindle Cell; Nevus, Blue; Nevus, Halo; Nevus, Intradermal | 200 | 25 | 6 | 13 |
-| pigmented benign keratosis | Keratosis, Seborrheic | 33 | 2 | 0 | 11 |
-| squamous cell carcinoma | Carcinoma, Squamous Cell; Bowen's Disease; Cutaneous Squamous Cell Carcinoma | 200 | 25 | 44 | 28 |
-| vascular lesion | Angiokeratoma; Granuloma, Pyogenic | 18 | 2 | 0 | 10 |
-
-### Per corpus
-
-| Corpus | Documents | Passages | Words | Licences (documents) |
-|---|---|---|---|---|
-| PubMed: abstracts of reviews | 953 | 1012 | 183440 | publisher's copyright (abstract in PubMed): 953 |
-| PMC: open full texts of reviews | 124 | 2595 | 548311 | http://creativecommons.org/licenses/by/4.0/: 1; https://creativecommons.org/licenses/by-nc-nd/4.0/: 15; https://creativecommons.org/licenses/by-nc/4.0/: 19; https://creativecommons.org/licenses/by-nd/4.0/: 1; https://creativecommons.org/licenses/by/4.0/: 83; not stated: 5 |
-| Clinical practice guidelines | 99 | 493 | 99080 | http://creativecommons.org/licenses/by/4.0/: 1; https://creativecommons.org/licenses/by-nc-nd/4.0/: 2; https://creativecommons.org/licenses/by-nc/4.0/: 4; https://creativecommons.org/licenses/by/4.0/: 6; not stated: 2; publisher's copyright (abstract in PubMed): 84 |
-| Textbook: StatPearls chapters | 91 | 1453 | 242863 | https://creativecommons.org/licenses/by-nc-nd/4.0/: 91 |
-| all | 1267 | 5553 | 1073694 | |
-
-### Checks
-
-- Case reports and the dataset's candidate articles are not searched for or are left out, so no case of the dataset is in the library.
-- Passages left out because they share a run of 12 words with a question of the dataset: 1
-- Passages left out because they are the same as an earlier one: 2
-
-Query for reviews, with each class's headings as a main subject: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]) AND review[Publication Type] NOT (guideline[Publication Type] OR "practice guideline"[Publication Type]) NOT "case reports"[Publication Type] AND english[Language] NOT (animals[MeSH Terms] NOT humans[MeSH Terms]).
-Query for guidelines: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]) AND (guideline[Publication Type] OR "practice guideline"[Publication Type]) NOT "case reports"[Publication Type] AND english[Language] NOT (animals[MeSH Terms] NOT humans[MeSH Terms]).
-
-Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statpearls_NBK430685.tar.gz`, 2047364463 bytes, SHA-256 `08117bcff46ed366a7ab9033d134b81bf345e81cb9a1537b6075400418bb09bd` (checked), downloaded 2026-11-13; chapters read: 9653; chapter files that could not be read: 0
-
-### Not done in this step
-
-- No person has read the passages. A passage is about its document's class(es) (`topics`), not checked line by line.
-- The texts are under their publishers' copyright or licences (in `library.csv`), so they stay on this computer and are used for research only.
-- Retrieval (how passages are chosen for a question, evenly from the four corpora as in RAG²) belongs to the evaluation, not to the library.
-
 <!-- step: review -->
 ## Review: signals of a doubtful label or of leakage
 
-Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/text/audit.py`). It changes nothing: it gives the evidence for deciding on a new version. One row per question in `review_flags.csv`. Closed-book test runs read: 4.
+Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/build/text/audit.py`). It changes nothing: it gives the evidence for deciding on a new version. One row per question in `build/review_flags.csv`. Closed-book test runs read: 4.
 
 | Signal | Test | Validation | Train | All |
 |---|---|---|---|---|
@@ -380,3 +335,24 @@ On the test split, the questions every run got wrong in the same way, and what t
 | vascular lesion | 16 | 0 | 0 | 1 |
 
 Test questions by source: PMC full text 66 (median 108 words); PMC-Patients 104 (median 97 words); PubMed abstract 51 (median 41 words).
+
+<!-- step: revise -->
+## Revision: version 3
+
+Written by `python -m src.build.text.prepare revise`. The rule, fixed before the review was first run: a question whose confirming test result also names another class, not negated, has a doubtful label and leaves the dataset. Every other question keeps its row, file and split: nothing is moved between splits or reshuffled. Look-alike wording, other classes in the question and the same wrong answer from every model are never a reason to take a question out. The review (`build/review_flags.csv`) is of version 2 and is kept as the evidence.
+
+- Questions in version 2 (reviewed): 745; taken out: 29; version 3: 716
+
+| Class | Test: taken out | Test: version 3 | Validation: taken out | Validation: version 3 | Train: taken out | Train: version 3 |
+|---|---|---|---|---|---|---|
+| actinic keratosis | 0 | 2 | 0 | 1 | 0 | 1 |
+| basal cell carcinoma | 0 | 40 | 0 | 15 | 4 | 117 |
+| dermatofibroma | 1 | 20 | 0 | 7 | 0 | 7 |
+| melanoma | 3 | 37 | 1 | 14 | 6 | 119 |
+| nevus | 1 | 39 | 1 | 14 | 1 | 23 |
+| pigmented benign keratosis | 4 | 18 | 0 | 7 | 1 | 6 |
+| squamous cell carcinoma | 3 | 37 | 0 | 15 | 3 | 150 |
+| vascular lesion | 0 | 16 | 0 | 5 | 0 | 6 |
+| all | 12 | 209 | 2 | 78 | 15 | 429 |
+
+Taken out (the other class its confirming result names): 6452477-1 (test, dermatofibroma: melanoma); 6684299-1 (test, melanoma: nevus); 11035014-1 (test, melanoma: nevus); pubmed-37715977 (test, melanoma: nevus); pubmed-34231495 (test, nevus: melanoma); pubmed-18187992 (test, pigmented benign keratosis: squamous cell carcinoma); pubmed-23785597 (test, pigmented benign keratosis: melanoma; nevus); pubmed-38901381 (test, pigmented benign keratosis: basal cell carcinoma; melanoma); pubmed-40250188 (test, pigmented benign keratosis: melanoma); 3764943-1 (test, squamous cell carcinoma: actinic keratosis); pubmed-16519572 (test, squamous cell carcinoma: basal cell carcinoma); pubmed-24396723 (test, squamous cell carcinoma: melanoma); pubmed-42199973 (val, melanoma: nevus); 10751467-1 (val, nevus: melanoma); 4777905-1 (train, basal cell carcinoma: melanoma); 9588167-2 (train, basal cell carcinoma: squamous cell carcinoma); pubmed-27051742 (train, basal cell carcinoma: actinic keratosis); pubmed-33584954 (train, basal cell carcinoma: actinic keratosis; squamous cell carcinoma); 5690489-2 (train, melanoma: nevus); 10640706-1 (train, melanoma: nevus); pubmed-23569358 (train, melanoma: nevus); pubmed-24520521 (train, melanoma: nevus); pubmed-33997213 (train, melanoma: nevus); pubmed-42245639 (train, melanoma: nevus); pubmed-39165299 (train, nevus: melanoma); pubmed-41493242 (train, pigmented benign keratosis: melanoma; nevus); 10056737-4 (train, squamous cell carcinoma: actinic keratosis); pubmed-28370387 (train, squamous cell carcinoma: pigmented benign keratosis); pubmed-35872878 (train, squamous cell carcinoma: actinic keratosis).

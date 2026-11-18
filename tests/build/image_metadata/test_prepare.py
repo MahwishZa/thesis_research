@@ -1,4 +1,4 @@
-"""The multimodal dataset's preparation (src/multimodal/prepare.py) on a tiny synthetic image dataset: no network, no real data."""
+"""The image + metadata dataset's preparation (src/build/image_metadata/prepare.py) on a tiny synthetic image dataset: no network, no real data."""
 
 import contextlib
 import csv
@@ -25,14 +25,17 @@ def record(number: str, label: str, clinical: dict) -> dict:
 
 
 class Project(unittest.TestCase):
-    """data/image/ with dataset.csv, raw_photos.csv and downloads/isic/, as the image dataset leaves them."""
+    """data/image/ with dataset.csv, build/raw_photos.csv and downloads/isic/, as the image dataset leaves them; data/text/ and
+    data/knowledge/library.csv, as the text dataset and the library leave them."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.image, self.data = self.base / "data" / "image", self.base / "data" / "multimodal"
+        self.image, self.data = self.base / "data" / "image", self.base / "data" / "image_metadata"
+        self.knowledge = self.base / "data" / "knowledge"
         (self.image / "downloads" / "isic").mkdir(parents=True)
+        (self.image / "build").mkdir()
         cases = [("ISIC_0000001", "test", "melanoma", {"age_approx": 60, "sex": "male", "anatom_site_general": "back",
                                                         "anatom_site_1": "Trunk", "anatom_site_2": "Posterior trunk"}),
                  ("ISIC_0000002", "train", "melanoma", {"age_approx": 70, "sex": "female", "anatom_site_general": "lower extremity",
@@ -50,13 +53,13 @@ class Project(unittest.TestCase):
             photos.append({"photo_id": number, "isic_ids": number, "attribution": COLLECTIONS[label], "isic_diagnosis": f"Diagnosis of {label}",
                            "licence": "CC-0" if COLLECTIONS[label] == "Anonymous" else "CC-BY-NC",
                            "isic_record_sha256": hashlib.sha256(json.dumps(entry["record"], sort_keys=True).encode("utf-8")).hexdigest()})
-        for name, rows in (("dataset.csv", dataset), ("raw_photos.csv", photos)):
+        for name, rows in (("dataset.csv", dataset), ("build/raw_photos.csv", photos)):
             with (self.image / name).open("w", encoding="utf-8", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
                 writer.writeheader()
                 writer.writerows(rows)
         text = self.base / "data" / "text"
-        text.mkdir(parents=True)
+        (text / "build").mkdir(parents=True)
         tables = {
             "dataset.csv": [{"split": split, "label": label, "path": f"{split}/{label}/{uid}.txt", "sha256": uid[-1] * 64,
                              "patient_uid": uid, "pmid": pmid, "source": source}
@@ -65,10 +68,10 @@ class Project(unittest.TestCase):
                                 ("train", "melanoma", "pubmed-16", "16", "PMC full text"),
                                 ("train", "nevus", "13-1", "13", "PMC-Patients"), ("val", "nevus", "pubmed-14", "14", "PMC full text"),
                                 ("train", "basal cell carcinoma", "15-1", "15", "PMC-Patients"))],
-            "class_terms.csv": [{"class": "melanoma", "term": "melanoma", "counts": "yes"}, {"class": "melanoma", "term": "melanoma in situ", "counts": "yes"},
+            "build/class_terms.csv": [{"class": "melanoma", "term": "melanoma", "counts": "yes"}, {"class": "melanoma", "term": "melanoma in situ", "counts": "yes"},
                                 {"class": "nevus", "term": "nevus", "counts": "yes"}, {"class": "nevus", "term": "nevoid", "counts": "no"},
                                 {"class": "basal cell carcinoma", "term": "basal cell carcinoma", "counts": "yes"}],
-            "term_check.csv": [{"class": "melanoma", "counts": "yes", "mesh_headings": "Melanoma; Hutchinson's Melanotic Freckle"},
+            "build/term_check.csv": [{"class": "melanoma", "counts": "yes", "mesh_headings": "Melanoma; Hutchinson's Melanotic Freckle"},
                                {"class": "nevus", "counts": "yes", "mesh_headings": "Nevus"},
                                {"class": "basal cell carcinoma", "counts": "yes", "mesh_headings": "Carcinoma, Basal Cell"}],
             "library.csv": [{"passage_id": "pmc-1-1", "source": "PMCID PMC1", "licence": "https://creativecommons.org/licenses/by/4.0/",
@@ -76,7 +79,9 @@ class Project(unittest.TestCase):
                             {"passage_id": "book-2-1", "source": "StatPearls NBK2", "licence": "", "topics": "basal cell carcinoma",
                              "sha256": "b" * 64}]}
         for name, rows in tables.items():
-            with (text / name).open("w", encoding="utf-8", newline="") as f:
+            path = self.knowledge / name if name == "library.csv" else text / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
                 writer.writeheader()
                 writer.writerows(rows)
@@ -88,8 +93,8 @@ class Project(unittest.TestCase):
         os.chdir(self.base)
         self.addCleanup(os.chdir, previous)
 
-    def _table(self, name):
-        with (self.data / name).open(encoding="utf-8", newline="") as f:
+    def _table(self, name, folder=None):
+        with ((folder or self.data) / name).open(encoding="utf-8", newline="") as f:
             return list(csv.DictReader(f))
 
 
@@ -126,7 +131,7 @@ class RecordsTests(Project):
         second = record("ISIC_0000006", "melanoma", {"age_approx": 60, "sex": "female", "anatom_site_general": "back"})
         entry = {"isic_id": "ISIC_0000006", "status": "found", "record": second}
         (self.image / "downloads" / "isic" / "ISIC_0000006.json").write_text(json.dumps(entry), encoding="utf-8")
-        table = self.image / "raw_photos.csv"
+        table = self.image / "build" / "raw_photos.csv"
         with table.open(encoding="utf-8", newline="") as f:
             rows = list(csv.DictReader(f))
         rows[0]["isic_ids"] += " ISIC_0000006"
@@ -164,9 +169,9 @@ class RecordsTests(Project):
         with contextlib.redirect_stdout(io.StringIO()) as shown:
             prepare.main(["records"])
         for expected in ("ISIC records read and checked: 5", "metadata.clinical.sex: fact, in 4 records",
-                         "metadata.clinical.melanocytic: hint, in 5 records", "data/multimodal/dataset_report.md"):
+                         "metadata.clinical.melanocytic: hint, in 5 records", "data/image_metadata/dataset_report.md"):
             self.assertIn(expected, shown.getvalue())
-        (self.image / "raw_photos.csv").unlink()
+        (self.image / "build" / "raw_photos.csv").unlink()
         with self.assertRaisesRegex(SystemExit, "raw_photos.csv not found"):
             prepare.main(["records"])
 
@@ -174,7 +179,7 @@ class RecordsTests(Project):
 class BuildTests(Project):
     def test_each_image_becomes_one_question_with_the_chosen_facts_and_nothing_else(self):
         prepare.build()
-        questions = {q["isic_id"]: q for q in self._table("questions.csv")}
+        questions = {q["isic_id"]: q for q in self._table("dataset.csv")}
         self.assertEqual(len(questions), 5)
         first = questions["ISIC_0000001"]
         self.assertEqual({k: first[k] for k in ("split", "label", "path", "sha256", "lesion_group", "collection")},
@@ -185,13 +190,13 @@ class BuildTests(Project):
         self.assertEqual((questions["ISIC_0000003"]["facts"], questions["ISIC_0000003"]["complete"]),
                          ("Age: about 30 years. Sex: female. Body site: not recorded.", "no"))
         self.assertEqual(questions["ISIC_0000005"]["facts"], "Age: not recorded. Sex: not recorded. Body site: not recorded.")
-        everything = (self.data / "questions.csv").read_text(encoding="utf-8")
+        everything = (self.data / "dataset.csv").read_text(encoding="utf-8")
         for never in ("Posterior trunk", "8.0", "back", "head/neck", "Malignant", "IL_ISIC"):  # other sites, size, hints, identifiers
             self.assertNotIn(never, everything)
 
     def test_the_knowledge_holds_only_training_items_and_library_passages_linked_by_disease(self):
         prepare.build()
-        knowledge = self._table("knowledge.csv")
+        knowledge = self._table("index.csv", self.knowledge)
         self.assertEqual([(k["kind"], k["item_id"]) for k in knowledge], [
             ("image", "image:train/basal cell carcinoma/ISIC_0000004.jpg"), ("image", "image:train/melanoma/ISIC_0000002.jpg"),
             ("case", "case:15-1"), ("case", "case:pubmed-11"), ("case", "case:pubmed-16"), ("case", "case:13-1"),
@@ -206,12 +211,12 @@ class BuildTests(Project):
         self.assertEqual(next(k for k in knowledge if k["kind"] == "image")["licence"], "CC-BY-NC")
         self.assertEqual(knowledge[-1]["licence"], "(not recorded)")
         for held_out in ("ISIC_0000001", "ISIC_0000003", "ISIC_0000005", "12-1", "pubmed-14"):
-            self.assertNotIn(held_out, (self.data / "knowledge.csv").read_text(encoding="utf-8"))
+            self.assertNotIn(held_out, (self.knowledge / "index.csv").read_text(encoding="utf-8"))
 
     def test_the_disease_table_and_the_report_count_what_each_class_has(self):
         prepare.records()
         done = prepare.build()
-        diseases = {d["class"]: d for d in self._table("diseases.csv")}
+        diseases = {d["class"]: d for d in self._table("diseases.csv", self.knowledge)}
         melanoma = diseases["melanoma"]
         self.assertEqual({k: melanoma[k] for k in ("isic_diagnoses", "text_terms", "mesh_headings", "questions_train", "questions_test",
                                                   "complete_test", "cases_train", "cases_test", "passages")},
@@ -221,21 +226,22 @@ class BuildTests(Project):
         self.assertEqual(diseases["nevus"]["text_terms"], "nevus")  # a name that does not count is left out
         self.assertEqual((done["questions"], done["knowledge"]["passage"], done["complete"]["test"]), (5, 2, 1))
         report = (self.data / "dataset_report.md").read_text(encoding="utf-8")
-        for expected in ("<!-- step: records -->", "<!-- step: build -->", "`questions.csv`: 5 questions", "train 2, val 1, test 2",
+        for expected in ("<!-- step: records -->", "<!-- step: build -->", "`dataset.csv`: 5 questions", "train 2, val 1, test 2",
                          "2 training images, 4 training cases and 2 library passages", "| nevus | 0 of 0 | 0 of 0 | 0 of 1 | 0 | 0 | 1 |",
                          '- "Age: about 60 years. Sex: male. Body site: trunk."'):
             self.assertIn(expected, report)
         self.assertLess(report.index("<!-- step: records -->"), report.index("<!-- step: build -->"))
-        before = {name: (self.data / name).read_bytes() for name in ("questions.csv", "knowledge.csv", "diseases.csv", "dataset_report.md")}
+        files = [self.data / "dataset.csv", self.knowledge / "index.csv", self.knowledge / "diseases.csv", self.data / "dataset_report.md"]
+        before = {path: path.read_bytes() for path in files}
         prepare.build()
-        self.assertEqual({name: (self.data / name).read_bytes() for name in before}, before)  # the same sources give the same files
+        self.assertEqual({path: path.read_bytes() for path in files}, before)  # the same sources give the same files
 
     def test_classes_that_differ_between_the_datasets_stop_the_build(self):
         path = self.base / "data" / "text" / "dataset.csv"
         path.write_text(path.read_text(encoding="utf-8").replace("basal cell carcinoma", "dermatofibroma"), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "not have the same classes"):
             prepare.build()
-        self.assertFalse((self.data / "questions.csv").exists())
+        self.assertFalse((self.data / "dataset.csv").exists())
 
     def test_the_command_line_runs_the_build(self):
         with contextlib.redirect_stdout(io.StringIO()) as shown:

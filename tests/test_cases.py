@@ -43,13 +43,13 @@ class CaseProject(TextProject):
             for k in range(1 + number % 3):  # one, two or three photos
                 content = picture((10 * number, 20 * k, 7))
                 file = f"figures/images/{name[:-4]}/f{k + 1}.png"
-                (self.base / "data" / "multimodal" / file).parent.mkdir(parents=True, exist_ok=True)
-                (self.base / "data" / "multimodal" / file).write_bytes(content)
+                (self.base / "data" / "cases" / file).parent.mkdir(parents=True, exist_ok=True)
+                (self.base / "data" / "cases" / file).write_bytes(content)
                 files.append((file, hashlib.sha256(content).hexdigest()))
             self.pictures[path] = files
             sha = hashlib.sha256(self.texts[path].encode("utf-8")).hexdigest()
             rows.append(f"{split},{label},{path},{sha},{name.split('-')[0]},{';'.join(f'{f}|{s}' for f, s in files)},{len(files)}\n")
-        self.cases_table = self.base / "data" / "multimodal" / "cases.csv"
+        self.cases_table = self.base / "data" / "cases" / "dataset.csv"
         self.cases_table.write_text("split,label,path,sha256,pmid,pictures,n_pictures\n" + "".join(rows), encoding="utf-8")
         self.photo_prompt = self.base / "photos.txt"
         self.photo_prompt.write_text("Photos of a lesion.\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
@@ -80,7 +80,7 @@ class CaseDatasetTests(CaseProject):
         self.assertEqual(evaluate.items_hash(items), evaluate.items_hash(list(reversed(items))))
 
     def test_a_changed_or_missing_photo_stops_the_run(self):
-        file = self.base / "data" / "multimodal" / self.pictures[CASES[6]][0][0]
+        file = self.base / "data" / "cases" / self.pictures[CASES[6]][0][0]
         file.write_bytes(picture((1, 2, 3)))
         with self.assertRaisesRegex(ValueError, "1 changed, 0 missing"):
             evaluate.load_dataset(*evaluate.dataset_paths("cases"), "cases")
@@ -111,7 +111,7 @@ class CaseDatasetTests(CaseProject):
         self.assertEqual(len(model.requests), 5)
         for images, prompt in model.requests:
             path = next(p for p in preds if self.texts[p] in prompt)  # the case text, word for word
-            expected = [(self.base / "data" / "multimodal" / f).read_bytes() for f, _ in self.pictures[path]]
+            expected = [(self.base / "data" / "cases" / f).read_bytes() for f, _ in self.pictures[path]]
             self.assertEqual([content for content, _ in images], expected)
             self.assertEqual({mime for _, mime in images}, {"image/png"})
             sent = preds[path]["case_sent"]

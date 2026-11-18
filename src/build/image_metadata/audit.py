@@ -2,13 +2,13 @@
 
     python -m src.build.image_metadata.audit
 
-The checks do not reuse the build's code (src/multimodal/prepare.py): each rule is written again here, so a mistake in the build
+The checks do not reuse the build's code (src/build/image_metadata/prepare.py): each rule is written again here, so a mistake in the build
 is not repeated in its check.
 
 1. Questions: one per image of the image dataset, with the same split, class, file, fingerprint and lesion group; each fact
    sentence worked out again from the photo's ISIC records (each record checked against the fingerprint the image dataset saved).
 2. Files on this computer: every image and training case the tables name exists and matches its fingerprint, and every passage is
-   in data/text/library/passages.jsonl with the text its fingerprint was made from.
+   in data/knowledge/texts/passages.jsonl with the text its fingerprint was made from.
 3. Knowledge: every training image and training case once, every library passage once, no validation or test item of either
    dataset, and no passage from an article that was a candidate case of the text dataset.
 4. Diseases: every count recounted from the sources.
@@ -19,7 +19,7 @@ interval: bootstrap over lesions, as in the evaluation) is what the facts alone 
 read against. Chance is 12.5% for the 8 classes; the same is measured for the photo collection (chance 50%), which the classes
 follow almost exactly.
 
-The result goes into the audit section of data/multimodal/dataset_report.md. A failed check stops with exit code 1.
+The result goes into the audit section of data/image_metadata/dataset_report.md. A failed check stops with exit code 1.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from pathlib import Path
 
 from ...common import read_rows, write_section
 from ...evaluate import summarize
-from .prepare import DATA, IMAGE, REPORT, REPORT_HEAD, STEPS, TEXT
+from .prepare import DATA, IMAGE, KNOWLEDGE, REPORT, REPORT_HEAD, STEPS, TEXT
 
 AUDIT_STEPS = STEPS
 SITE_LEVEL = "anatom_site_1"  # the broadest body site; the finer levels are not shown
@@ -92,12 +92,13 @@ def _sentence(facts: dict) -> str:
     return f"Age: {facts['age']}. Sex: {facts['sex']}. Body site: {facts['site']}."
 
 
-def audit(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
-    questions, knowledge, diseases = (_rows(data / name) for name in ("questions.csv", "knowledge.csv", "diseases.csv"))
+def audit(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA, knowledge_folder: Path = KNOWLEDGE) -> dict:
+    questions = _rows(data / "dataset.csv")
+    knowledge, diseases = (_rows(knowledge_folder / name) for name in ("index.csv", "diseases.csv"))
     images = {r["path"]: r for r in _rows(image / "dataset.csv")}
-    photos = {r["photo_id"]: r for r in _rows(image / "raw_photos.csv")}
+    photos = {r["photo_id"]: r for r in _rows(image / "build" / "raw_photos.csv")}
     cases = {r["path"]: r for r in _rows(text / "dataset.csv")}
-    passages = {r["passage_id"]: r for r in _rows(text / "library.csv")}
+    passages = {r["passage_id"]: r for r in _rows(knowledge_folder / "library.csv")}
     failures = defaultdict(list)
     full_texts = {}
     if (text / "sources" / "pubmed" / "abstracts.jsonl").is_file():
@@ -136,7 +137,7 @@ def audit(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
         if not file.is_file() or _digest(file.read_bytes()) != q["sha256"]:
             failures["image file missing or changed"].append(q["path"])
     texts = {}
-    library = text / "library" / "passages.jsonl"
+    library = knowledge_folder / "texts" / "passages.jsonl"
     if library.is_file():
         for line in library.read_text(encoding="utf-8").splitlines():
             if line.strip():
@@ -179,8 +180,8 @@ def audit(image: Path = IMAGE, text: Path = TEXT, data: Path = DATA) -> dict:
             passage = passages.get(k["item_id"].removeprefix("passage:"), {})
             if passage.get("sha256") != k["sha256"] or k["diseases"] != passage.get("topics"):
                 failures["knowledge passage differs from the library"].append(k["item_id"])
-    candidates = [r for name in ("case_candidates.csv", "abstract_candidates.csv") if (text / name).is_file()
-                  for r in _rows(text / name)]
+    candidates = [r for name in ("case_candidates.csv", "abstract_candidates.csv") if (text / "build" / name).is_file()
+                  for r in _rows(text / "build" / name)]
     pmids = {r["pmid"] for r in candidates} | {r["pmid"] for r in cases.values()}
     pmcids = {"PMC" + r["patient_uid"].split("-")[0] for r in candidates + list(cases.values())
               if not r["patient_uid"].startswith("pubmed-")}
@@ -263,7 +264,7 @@ def _summary(questions, knowledge, failures, shortcuts, have_library) -> list[st
               for c in checks]
     lines += ["", "**All checks passed.**" if not failed else f"**{len(failed)} checks failed.**", ""]
     if not have_library:
-        lines += ["data/text/library/passages.jsonl was not found, so every passage counts as missing: build the library first.", ""]
+        lines += ["data/knowledge/texts/passages.jsonl was not found, so every passage counts as missing: build the library first.", ""]
     lines += ["### What the facts alone tell, with no photo", "",
               "A counting model learns from the 1,739 training questions which class (and which photo collection) each value of a "
               "fact points to, every class weighing the same, and answers the test questions from the facts alone. Balanced "

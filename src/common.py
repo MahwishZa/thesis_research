@@ -1,4 +1,4 @@
-"""Helpers the dataset folders share (src/image/, src/text/, src/multimodal/): a polite download that tries again when a service
+"""Helpers the dataset builders share (src/build/): a polite download that tries again when a service
 is busy, a report with one section per step that each step rewrites on its own, reading a table, and a nested record as flat
 names."""
 

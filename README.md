@@ -26,7 +26,7 @@ Test split: 320 photos.
 
 ### Text
 
-Test split: 221 written cases.
+Test split: 221 written cases (version 2 of the text dataset; version 3, used from now on, has 209).
 
 | Model | Accuracy | Precision | Recall | F1 | Hallucination rate | Missed malignancy |
 |---|---|---|---|---|---|---|
@@ -57,10 +57,15 @@ Test split: the image dataset's 320 photos, each with the patient's age, sex and
 thesis_research/
 ├── src/                 evaluation and dataset preparation code
 │   ├── evaluate.py
-│   └── build/           one folder per dataset: how it is made and checked
+│   └── build/           how each dataset and the knowledge base are made and checked
 ├── configs/             one configuration per model and dataset
 ├── prompts/             one prompt per dataset
-├── data/                dataset tables and data sheets
+├── data/                one folder per dataset and the knowledge base: table, report, data sheet, build records
+│   ├── image/           dermoscopic photos
+│   ├── text/            written cases from published case reports
+│   ├── cases/           written cases with the same patient's published photos
+│   ├── image_metadata/  photos with the patient's age, sex and body site (ablation)
+│   └── knowledge/       what open-book runs may retrieve
 ├── results/             one folder per test run
 ├── docs/                results and interpretation
 ├── tests/               unit tests
