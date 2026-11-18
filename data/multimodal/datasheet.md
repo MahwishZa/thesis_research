@@ -1,4 +1,4 @@
-# Data sheet: the skin-lesion multimodal dataset (version 1)
+# Data sheet: the skin-lesion multimodal dataset, image + metadata (version 1)
 
 This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/multimodal/prepare.py`, `src/multimodal/audit.py`) writes:
 - `dataset_report.md`: the full report of every step (records, build, audit)
@@ -7,6 +7,8 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 - `diseases.csv`: one row per class
 
 The dataset is made from the two frozen datasets: the image dataset (tag `image-dataset`, `data/image/datasheet.md`) and the text dataset (tag `text-dataset`, `data/text/datasheet.md`). It adds no image and no text of its own.
+
+In the thesis this dataset is called **image + metadata**: an ISIC photo with three recorded facts, not a written case. The dataset with a written case and the same patient's photos is the case dataset (`cases_datasheet.md`).
 
 ## At a glance
 

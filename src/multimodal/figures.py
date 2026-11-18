@@ -5,6 +5,7 @@ photo. A case report's figures show its own patient, so such a figure and the ca
     python -m src.multimodal.figures count     (needs the internet; downloads PubMed records and PMC full texts, no image)
     python -m src.multimodal.figures download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
     python -m src.multimodal.figures check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
+    python -m src.multimodal.figures build     (the case dataset's table, data/multimodal/cases.csv, from the committed tables)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/text/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
@@ -35,6 +36,12 @@ image dataset's own rule for "the same picture"). A case keeps the pictures that
 again to the cases that keep one. The table data/multimodal/figure_checks.csv gives every picture's results; figure_checks.md the
 counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
 are kept in data/multimodal/figures/checks.jsonl (not in Git), so a second run does not ask them again.
+
+``build`` writes the case dataset: one question per case that keeps a picture, in data/multimodal/cases.csv. A question is the
+text dataset's frozen question (path and fingerprint as in data/text/dataset.csv, same split and class) and the case's kept
+pictures, in the order of their figures. The evaluation asks it with the text and the pictures (dataset "cases") or with the
+pictures only ("case_photos"); the text only is the text dataset itself. No caption is shown. data/multimodal/cases.md gives the
+counts.
 
 ``count`` writes data/multimodal/figure_count.csv (one row per case, no caption text), data/multimodal/figure_count.md (the counts and the
 rule) and data/multimodal/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
@@ -88,6 +95,8 @@ CHECK_REASONS = ("smaller than the least size", "writing in the picture names a 
                  "the same picture is in the image dataset", "the same picture is in another case", "the same picture twice in this case")
 CHECK_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "width", "height", "caption_type", "model_kind",
                  "model_score", "writing", "diagnosis_words", "kept", "reason"]
+CASES_TABLE, CASES_REPORT = "cases.csv", "cases.md"
+CASES_COLUMNS = ["split", "label", "path", "sha256", "pmid", "patient_uid", "pictures", "n_pictures"]
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
 
 DERMOSCOPY = re.compile(r"dermoscop|dermatoscop|epiluminescence")
@@ -678,18 +687,74 @@ def _checks_report(rows, cases, kept, decision, versions) -> list[str]:
     return lines
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Step "build": the case dataset's table
+
+
+def build(data: Path = DATA, text: Path = TEXT) -> dict:
+    """The build step (see the module's description): cases.csv and cases.md, from figure_checks.csv, figure_files.csv and the
+    text dataset's table."""
+    data, text = Path(data), Path(text)
+    kept = [r for r in _read_csv(data / CHECKS_TABLE) if r["kept"] == "yes"]
+    labels = {(r["patient_uid"], r["figure"]): r["label"] for r in _read_csv(data / FILES_TABLE)}
+    questions = {r["patient_uid"]: r for r in _read_csv(text / "dataset.csv")}
+    by_case = {}
+    for picture in kept:
+        by_case.setdefault(picture["patient_uid"], []).append(picture)
+    rows = []
+    for uid, pictures in by_case.items():
+        question = questions.get(uid)
+        if question is None:
+            raise ValueError(f"{uid} has pictures in {CHECKS_TABLE} but is no case of the text dataset")
+        for picture in pictures:
+            if (picture["split"], picture["class"]) != (question["split"], question["label"]):
+                raise ValueError(f"{picture['file']} is listed for {uid} in {picture['split']}/{picture['class']}, but the text dataset "
+                                 f"has the case in {question['split']}/{question['label']}")
+        pictures.sort(key=lambda p: (_number(labels.get((uid, p["figure"]), ""), 10 ** 6), p["file"]))
+        rows.append({"split": question["split"], "label": question["label"], "path": question["path"], "sha256": question["sha256"],
+                     "pmid": question["pmid"], "patient_uid": uid, "pictures": ";".join(f"{p['file']}|{p['sha256']}" for p in pictures),
+                     "n_pictures": len(pictures)})
+    rows.sort(key=lambda r: r["path"])
+    _write_csv(data / CASES_TABLE, CASES_COLUMNS, rows)
+    report = data / CASES_REPORT
+    report.write_text("\n".join(_cases_report(rows)) + "\n", encoding="utf-8", newline="\n")
+    return {"rows": rows, "table": (data / CASES_TABLE).as_posix(), "report": report.as_posix()}
+
+
+def _cases_report(rows: list[dict]) -> list[str]:
+    lines = ["# The case dataset", "",
+             "Written by `python -m src.multimodal.figures build`. One question per case of the text dataset whose own article shows "
+             "the lesion in pictures that passed every check (`figure_checks.md`): the frozen text question, word for word, and the "
+             "pictures, byte for byte, in the order of their figures. No caption is shown. The splits are the text dataset's.", "",
+             "| Class | Test | Validation | Train |", "|---|---|---|---|"]
+    for label in sorted({r["label"] for r in rows}) + ["all"]:
+        def n(split):
+            return sum(1 for r in rows if r["split"] == split and label in ("all", r["label"]))
+        lines.append(f"| {label} | {n('test')} | {n('val')} | {n('train')} |")
+    many = Counter(int(r["n_pictures"]) for r in rows)
+    lines += ["", f"Questions: {len(rows)}; pictures: {sum(int(r['n_pictures']) for r in rows)}. Pictures per question: "
+              + ", ".join(f"{k}: {many[k]}" for k in sorted(many)) + ".", ""]
+    return lines
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.multimodal.figures", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")
     sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
+    sub.add_parser("build", help="write the case dataset's table, data/multimodal/cases.csv, from the committed tables")
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     try:
+        if args.step == "build":
+            done = build()
+            print(f"{len(done['rows'])} questions ({sum(r['split'] == 'test' for r in done['rows'])} test). Written: {done['table']} and "
+                  f"{done['report']}.")
+            return
         if args.step == "check":
             done = check(show=print)
             d = done["decision"]

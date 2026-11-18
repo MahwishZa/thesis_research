@@ -524,13 +524,15 @@ class AnthropicModel:
         return FatalError(f"Anthropic refused the request (HTTP {status} {kind or ''}: {detail}). Fix the setting the message names.",
                           status)
 
-    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
-        content = [{"type": "text", "text": prompt}]
-        if image is not None:
+    def predict(self, images: list[tuple[bytes, str]], prompt: str) -> dict:
+        """One answer to the prompt, with the images (none, one or several) before it, in their order."""
+        content = []
+        for image, mime_type in images:
             if mime_type not in IMAGE_TYPES:
                 raise FatalError(f"Claude accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
-            content.insert(0, {"type": "image", "source": {"type": "base64", "media_type": mime_type,
-                                                           "data": base64.standard_b64encode(image).decode("ascii")}})
+            content.append({"type": "image", "source": {"type": "base64", "media_type": mime_type,
+                                                        "data": base64.standard_b64encode(image).decode("ascii")}})
+        content.append({"type": "text", "text": prompt})
         try:
             response = self.client.messages.create(model=self.model_id, max_tokens=self.max_tokens,
                                                    thinking={"type": self.thinking}, output_config={"effort": self.effort},
@@ -630,15 +632,17 @@ class OpenAICompatibleModel:
                               "in the config.", status)
         return FatalError(f"The host refused the request (HTTP {status}: {detail}). Fix the setting the message names.", status)
 
-    def predict(self, image: bytes | None, mime_type: str | None, prompt: str) -> dict:
-        content = [{"type": "text", "text": prompt}]
-        if image is not None:
+    def predict(self, images: list[tuple[bytes, str]], prompt: str) -> dict:
+        """One answer to the prompt, with the images (none, one or several) before it, in their order."""
+        content = []
+        for image, mime_type in images:
             if mime_type not in IMAGE_TYPES:
                 raise FatalError(f"This adapter accepts JPEG, PNG, GIF and WebP images, not {mime_type}")
             picture = {"url": f"data:{mime_type};base64,{base64.standard_b64encode(image).decode('ascii')}"}
             if self.image_detail:
                 picture["detail"] = self.image_detail
-            content.insert(0, {"type": "image_url", "image_url": picture})
+            content.append({"type": "image_url", "image_url": picture})
+        content.append({"type": "text", "text": prompt})
         request = {"model": self.model_id, "temperature": self.temperature, "seed": self.seed, "max_tokens": self.max_tokens,
                    "messages": [{"role": "user", "content": content}]}
         if self.extra_body:
@@ -708,8 +712,12 @@ class Dataset:
     why_grouped: str  # why the files of one group are not independent
     set_apart: tuple[str, ...] = ()  # classes with so few files that the report also gives the scores without them
     facts_column: str = ""  # the table's column with each file's patient facts, put into the prompt at {facts}
-    table: str = TABLE_NAME  # its table, in data/<dataset>/
+    table: str = TABLE_NAME  # its table, in data/<folder>/
     files: str = ""  # its folder of files, inside data/ (default: <dataset>/dataset)
+    folder: str = ""  # its folder in data/, which holds its table (default: the dataset's name)
+    pictures_column: str = ""  # the table's column with each question's pictures ("file|sha256;file|sha256"), sent next to the prompt
+    pictures_root: str = ""  # the folder in data/ the pictures' paths start from
+    subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
 
 
 DATASETS = {  # the datasets a config can name
@@ -721,7 +729,17 @@ DATASETS = {  # the datasets a config can name
     "multimodal": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
                           "Photos of one lesion are not independent", facts_column="facts", table="questions.csv",
                           files="image/dataset"),  # the image dataset's photos, each with its patient's facts
+    # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/multimodal/cases.csv), asked
+    # with the case text and the photos ("cases") or with the photos only ("case_photos"); the text only is the text dataset.
+    "cases": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article", "Patients described in one article are not independent",
+                     set_apart=("actinic keratosis",), table="cases.csv", files="text/dataset", folder="multimodal",
+                     pictures_column="pictures", pictures_root="multimodal", subset=True),
+    "case_photos": Dataset(TEXT_TYPES, "a .txt file", False, "pmid", "case", "article",
+                           "Patients described in one article are not independent", set_apart=("actinic keratosis",),
+                           table="cases.csv", files="text/dataset", folder="multimodal", pictures_column="pictures",
+                           pictures_root="multimodal", subset=True),
 }
+SAME_QUESTIONS = ({"image", "multimodal"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
 
 
 @dataclass(frozen=True)
@@ -732,13 +750,14 @@ class Item:
     sha256: str
     group: str = ""  # the lesion an image shows, or the article a case comes from; empty when the table does not say
     facts: str = ""  # a multimodal question's patient facts, as the model is shown them
+    pictures: tuple = ()  # a case question's pictures: (path inside the pictures' folder, sha256), in the order they are sent
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
     """The table and the folder of files of one prepared dataset: data/<dataset>/dataset.csv and data/<dataset>/dataset/ (the
     multimodal dataset: data/multimodal/questions.csv and the image dataset's folder)."""
     kind = DATASETS[dataset]
-    return DATA / dataset / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
+    return DATA / (kind.folder or dataset) / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
 
 
 TABLE, IMAGES = dataset_paths("image")  # the defaults below
@@ -753,11 +772,13 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
                                 "preparation first)")
     with table.open(encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
-        missing = [c for c in (*COLUMNS, *([kind.facts_column] if kind.facts_column else [])) if c not in (reader.fieldnames or [])]
+        needed = (*COLUMNS, *([kind.facts_column] if kind.facts_column else []), *([kind.pictures_column] if kind.pictures_column else []))
+        missing = [c for c in needed if c not in (reader.fieldnames or [])]
         if missing:
             raise ValueError(f"{table.as_posix()} lacks the column(s): {', '.join(missing)}")
         items = [Item(*(row[c] for c in COLUMNS), group=(row.get(kind.group_column) or "").strip(),
-                      facts=(row[kind.facts_column] or "").strip() if kind.facts_column else "") for row in reader]
+                      facts=(row[kind.facts_column] or "").strip() if kind.facts_column else "",
+                      pictures=_pictures(row[kind.pictures_column]) if kind.pictures_column else ()) for row in reader]
     if not items:
         raise ValueError(f"{table.as_posix()} lists no file")
     first_line = {}
@@ -774,11 +795,32 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
             raise ValueError(f"{where}: sha256 must be 64 lowercase hexadecimal characters")
         if kind.facts_column and not item.facts:
             raise ValueError(f"{where}: the {kind.facts_column} column is empty (a missing fact is written \"{MISSING_FACT}\")")
-        for key, what in ((item.path, "path"), (item.sha256, kind.item)):
+        if kind.pictures_column and not item.pictures:
+            raise ValueError(f"{where}: the {kind.pictures_column} column lists no picture")
+        for picture, sha in item.pictures:
+            if Path(picture).suffix.lower() not in MEDIA_TYPES or any(p in ("", ".", "..") for p in picture.split("/")):
+                raise ValueError(f"{where}: picture {picture!r} must be a JPEG or PNG file inside the pictures' folder")
+            if not SHA256.fullmatch(sha):
+                raise ValueError(f"{where}: the sha256 of picture {picture} must be 64 lowercase hexadecimal characters")
+        for key, what in ((item.path, "path"), (item.sha256, kind.item), *((p, "picture") for p, _ in item.pictures),
+                          *((s, "picture") for _, s in item.pictures)):
             if key in first_line:  # a second copy of one file could sit in two splits: a leak between them
                 raise ValueError(f"{where}: the same {what} is also on line {first_line[key]}")
             first_line[key] = line
     return items
+
+
+def _pictures(value: str) -> tuple:
+    """A table's list of pictures, "file|sha256;file|sha256", as ((file, sha256), ...)."""
+    pairs = [part.split("|") for part in (value or "").split(";") if part.strip()]
+    if any(len(pair) != 2 for pair in pairs):
+        raise ValueError(f"a list of pictures must read file|sha256;file|sha256 (got {value!r})")
+    return tuple((path.strip(), sha.strip()) for path, sha in pairs)
+
+
+def pictures_root(dataset: str) -> Path:
+    """The folder a dataset's pictures' paths start from (data/<pictures_root>/)."""
+    return DATA / DATASETS[dataset].pictures_root
 
 
 def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES, dataset: str = "image") -> list[Item]:
@@ -793,10 +835,19 @@ def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES, dataset: 
             missing.append(item.path)
         elif hashlib.sha256(file.read_bytes()).hexdigest() != item.sha256:
             changed.append(item.path)
+    pictures = pictures_root(dataset) if DATASETS[dataset].pictures_column else None
+    for item in items:
+        for picture, sha in item.pictures:
+            file = pictures / picture
+            if not file.is_file():
+                missing.append(picture)
+            elif hashlib.sha256(file.read_bytes()).hexdigest() != sha:
+                changed.append(picture)
     listed = {item.path for item in items}
-    extra = sorted(p.relative_to(root).as_posix() for split in SPLITS if (root / split).is_dir() for p in (root / split).rglob("*")
-                   if p.is_file() and p.relative_to(root).as_posix() not in listed and not p.name.startswith(".")
-                   and p.name.lower() not in SYSTEM_FILES)
+    extra = [] if DATASETS[dataset].subset else sorted(
+        p.relative_to(root).as_posix() for split in SPLITS if (root / split).is_dir() for p in (root / split).rglob("*")
+        if p.is_file() and p.relative_to(root).as_posix() not in listed and not p.name.startswith(".")
+        and p.name.lower() not in SYSTEM_FILES)
     if changed or missing or extra:
         examples = "; ".join(f"{why}: {paths[0]}" for why, paths in (("changed", changed), ("missing", missing),
                                                                        ("not in the table", extra)) if paths)
@@ -822,19 +873,24 @@ def classes(items: list[Item]) -> list[str]:
 def items_hash(items: list[Item]) -> str:
     """One hash for a list of files: it changes if any file, label, path, split, group or fact changes."""
     lines = sorted(f"{i.split}\t{i.label}\t{i.path}\t{i.sha256}" + (f"\t{i.group}" if i.group else "")
-                   + (f"\t{i.facts}" if i.facts else "") for i in items)
+                   + (f"\t{i.facts}" if i.facts else "") + "".join(f"\t{p}|{s}" for p, s in i.pictures) for i in items)
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
 def read_image(item: Item, root: str | Path = IMAGES) -> tuple[bytes, str, dict]:
     """The bytes every model receives for one image (the file exactly as stored), its media type, and a record of what was sent."""
-    content = (Path(root) / item.path).read_bytes()
+    return read_picture(item.path, root)
+
+
+def read_picture(path: str, root: str | Path) -> tuple[bytes, str, dict]:
+    """One picture as every model receives it (the file exactly as stored), its media type, and a record of what was sent."""
+    content = (Path(root) / path).read_bytes()
     try:
         with Image.open(io.BytesIO(content)) as image:
             width, height = image.size
     except Exception as exc:  # any decoding failure stops the run with a message, never a silent skip
-        raise ValueError(f"{item.path} is not a readable image ({exc})") from exc
-    return content, MEDIA_TYPES[Path(item.path).suffix.lower()], {
+        raise ValueError(f"{path} is not a readable image ({exc})") from exc
+    return content, MEDIA_TYPES[Path(path).suffix.lower()], {
         "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(), "width": width, "height": height}
 
 
@@ -1038,13 +1094,13 @@ def _blank_image() -> bytes:
     return buffer.getvalue()
 
 
-def _probe(model, say, image: bool = True) -> tuple[dict | None, str | None]:
-    """The answer to one request with a blank image (or, with ``image`` False, no image), or (None, reason) when it failed.
-    Retries transient failures a few times; a used-up quota and a refusal are not retried."""
-    picture = (_blank_image(), "image/png") if image else (None, None)
+def _probe(model, say, images: int = 1) -> tuple[dict | None, str | None]:
+    """The answer to one request with that many blank images (0: none), or (None, reason) when it failed. Retries transient
+    failures a few times; a used-up quota and a refusal are not retried."""
+    pictures = [(_blank_image(), "image/png")] * images
     for attempt in range(1, PROBE_ATTEMPTS + 1):
         try:
-            return model.predict(*picture, PROBE_PROMPT), None
+            return model.predict(pictures, PROBE_PROMPT), None
         except TransientError as exc:
             if attempt == PROBE_ATTEMPTS:
                 return None, f"temporary problem, not a setting: {exc}"
@@ -1090,9 +1146,10 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
         line("FAIL", "Model adapter and access", str(exc))
         model = None
     if model is not None:
-        say(f"       asking {settings['id']} one question with {'no image' if kind.in_prompt else 'a blank image'} (nothing from "
+        blank = 2 if kind.pictures_column else 0 if kind.in_prompt else 1  # a case dataset sends several pictures: two show it works
+        say(f"       asking {settings['id']} one question with {['no image', 'a blank image', 'two blank images'][blank]} (nothing from "
             f"the dataset is sent; {getattr(model, 'probe_note', 'it counts as one request against the daily quota')}) ...")
-        answer, problem = _probe(model, say, image=not kind.in_prompt)
+        answer, problem = _probe(model, say, images=blank)
         if answer is None:
             line("FAIL", f"Model {settings['id']}", problem)
         else:
@@ -1140,12 +1197,12 @@ def _versions(packages: tuple[str, ...] = ("pillow",)) -> dict:
     return out
 
 
-def _ask(model, image: bytes | None, mime: str | None, text: str, throttle, say=print) -> tuple[dict, int]:
+def _ask(model, images: list[tuple[bytes, str]], text: str, throttle, say=print) -> tuple[dict, int]:
     """One answer and the number of attempts it took. Waits longer after each transient failure; raises when all fail."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         throttle()
         try:
-            return model.predict(image, mime, text), attempt
+            return model.predict(images, text), attempt
         except TransientError as exc:
             if attempt == MAX_ATTEMPTS:
                 raise
@@ -1289,13 +1346,24 @@ def _run_once(job: dict, run_id: str) -> Path:
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, item in enumerate(todo, start=len(done) + 1):
-                if kind.in_prompt:  # a text case: inside the prompt, with no image
+                images = []
+                if kind.pictures_column:  # a case question: its pictures, and with the case text only when the prompt holds it
+                    shown = [read_picture(path, pictures_root(config["dataset"])) for path, _ in item.pictures]
+                    images = [(content, mime) for content, mime, _ in shown]
+                    sent = {"pictures": [record for _, _, record in shown]}
+                    if kind.in_prompt:
+                        case, sent["case"] = read_case(item, job["root"])
+                        text = fill(prompt_text, CASE, case)
+                    else:
+                        text = prompt_text
+                elif kind.in_prompt:  # a text case: inside the prompt, with no image
                     case, sent = read_case(item, job["root"])
-                    image, mime, text = None, None, fill(prompt_text, CASE, case)
+                    text = fill(prompt_text, CASE, case)
                 else:
                     image, mime, sent = read_image(item, job["root"])
+                    images = [(image, mime)]
                     text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
-                answer, attempt = _ask(model, image, mime, text, throttle, say)
+                answer, attempt = _ask(model, images, text, throttle, say)
                 parsed = parse_answer(answer["text"], [*labels, ABSTAIN] if card.get("abstain") else labels)
                 line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
@@ -1636,17 +1704,25 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     # The one pair of different datasets that can be compared: the same photos without and with their patients' facts (the
     # multimodal questions are the image dataset's photos). Then the questions differ by the facts, so the photos and their
     # classes are compared instead of the questions' fingerprint.
+    # The case datasets ask some of the text dataset's cases with their photos: a text run is compared on those cases only.
     same_photos = {dataset, dataset_b} == {"image", "multimodal"}
-    if dataset != dataset_b and not same_photos:
+    same_cases = dataset != dataset_b and {dataset, dataset_b} <= SAME_QUESTIONS[1]
+    if dataset != dataset_b and not (same_photos or same_cases):
         raise ValueError("the two runs differ in their dataset, so they cannot be compared question by question")
     checks = [("split", card_a["split"], card_b["split"]), ("answer options", card_a["labels"], card_b["labels"])]
-    if not same_photos:
+    if not (same_photos or same_cases):
         checks.append(("questions", card_a[f"{kind.item}s_sha256"], card_b[f"{kind.item}s_sha256"]))
     for what, a, b in checks:
         if a != b:
             raise ValueError(f"the two runs differ in their {what}, so they cannot be compared question by question")
-    if same_photos and {(p["path"], p["label"]) for p in preds_a} != {(p["path"], p["label"]) for p in preds_b}:
-        raise ValueError("the two runs did not answer the same photos with the same classes")
+    if same_cases:
+        shared = {p["path"] for p in preds_a} & {p["path"] for p in preds_b}
+        smaller = min(({p["path"] for p in preds_a}, {p["path"] for p in preds_b}), key=len)
+        if shared != smaller:
+            raise ValueError("the cases of one run are not all among the other run's cases")
+        preds_a, preds_b = [p for p in preds_a if p["path"] in shared], [p for p in preds_b if p["path"] in shared]
+    if (same_photos or same_cases) and {(p["path"], p["label"]) for p in preds_a} != {(p["path"], p["label"]) for p in preds_b}:
+        raise ValueError(f"the two runs did not answer the same {'photos' if same_photos else 'cases'} with the same classes")
     by_path = {p["path"]: p for p in preds_b}
     if set(by_path) != {p["path"] for p in preds_a} or len(by_path) != len(preds_b):
         raise ValueError("the two runs did not answer the same questions")

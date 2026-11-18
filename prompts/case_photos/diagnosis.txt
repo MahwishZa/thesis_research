@@ -1,0 +1,4 @@
+These are the photographs of a patient's skin lesion, published in a case report.
+Classify the lesion as exactly one of the following diagnoses:
+{labels}
+Answer with the diagnosis name only, exactly as written in the list above. Do not write a sentence. Do not explain.

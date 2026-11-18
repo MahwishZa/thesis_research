@@ -428,7 +428,7 @@ class AnthropicTests(unittest.TestCase):
 
     def test_the_request_carries_the_picture_then_the_prompt_and_only_the_settings_of_the_config(self):
         adapter = self._load()
-        adapter.predict(b"\xff\xd8picture", "image/jpeg", "Which one?")
+        adapter.predict([(b"\xff\xd8picture", "image/jpeg")], "Which one?")
         (sent,) = self.client.calls
         self.assertEqual({k: v for k, v in sent.items() if k != "messages"},
                          {"model": "claude-test-1", "max_tokens": 64, "thinking": {"type": "between_tools"}, "output_config": {"effort": "low"}})
@@ -443,15 +443,23 @@ class AnthropicTests(unittest.TestCase):
             self.assertNotIn(never_sent, sent)
 
     def test_a_text_case_is_sent_as_the_prompt_alone(self):
-        self._load().predict(None, None, "Case: a pearly papule.\nWhich one?")
+        self._load().predict([], "Case: a pearly papule.\nWhich one?")
         (sent,) = self.client.calls
         self.assertEqual(sent["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: a pearly papule.\nWhich one?"}]}])
+
+    def test_several_pictures_go_before_the_prompt_in_their_order(self):
+        self._load().predict([(b"one", "image/jpeg"), (b"two", "image/png")], "Which one?")
+        (sent,) = self.client.calls
+        first, second, text = sent["messages"][0]["content"]
+        self.assertEqual([base64.b64decode(p["source"]["data"]) for p in (first, second)], [b"one", b"two"])
+        self.assertEqual((first["source"]["media_type"], second["source"]["media_type"]), ("image/jpeg", "image/png"))
+        self.assertEqual(text, {"type": "text", "text": "Which one?"})
 
     def test_the_answer_is_the_text_blocks_with_the_version_the_vendor_reports_and_the_token_counts(self):
         thought = types.SimpleNamespace(type="thinking", thinking="hidden")
         adapter = self._load(answer=claude_reply("  Mela", extra=[thought]))
         self.client.answer.content.append(types.SimpleNamespace(type="text", text="noma \n"))
-        answer = adapter.predict(b"x", "image/png", "?")
+        answer = adapter.predict([(b"x", "image/png")], "?")
         self.assertEqual(answer, {"text": "Mela" + "noma", "finish_reason": "STOP", "model_version": "claude-test-1-served",
                                   "response_id": "msg_1",
                                   "usage": {"prompt_tokens": 1500, "output_tokens": 3, "total_tokens": 1503}})
@@ -460,8 +468,8 @@ class AnthropicTests(unittest.TestCase):
         expected = {"end_turn": "STOP", "stop_sequence": "STOP", "max_tokens": "MAX_TOKENS", "refusal": "REFUSAL", "pause_turn": "PAUSE_TURN"}
         for stop, finish in expected.items():
             with self.subTest(stop):
-                self.assertEqual(self._load(answer=claude_reply(stop=stop)).predict(b"x", "image/png", "?")["finish_reason"], finish)
-        nothing = self._load(answer=claude_reply(text=None, stop="refusal")).predict(b"x", "image/png", "?")
+                self.assertEqual(self._load(answer=claude_reply(stop=stop)).predict([(b"x", "image/png")], "?")["finish_reason"], finish)
+        nothing = self._load(answer=claude_reply(text=None, stop="refusal")).predict([(b"x", "image/png")], "?")
         self.assertEqual((nothing["text"], nothing["finish_reason"]), (None, "REFUSAL"))
 
     def test_the_key_comes_from_the_environment_and_the_sdks_own_retries_are_off(self):
@@ -482,18 +490,18 @@ class AnthropicTests(unittest.TestCase):
                  AnthropicStatusError(409, "conflict_error"), AnthropicConnectionError("down"), AnthropicTimeoutError("slow")]
         for error in retry:
             with self.subTest(repr(error)), self.assertRaises(evaluate.TransientError):
-                self._load(error=error).predict(b"x", "image/png", "?")
+                self._load(error=error).predict([(b"x", "image/png")], "?")
         for error in (AnthropicStatusError(402, "billing_error"),
                       AnthropicStatusError(400, "invalid_request_error", "enforced_spend_limit_reached")):
             with self.subTest(repr(error)), self.assertRaisesRegex(evaluate.QuotaExhausted, "run the same command again"):
-                self._load(error=error).predict(b"x", "image/png", "?")
+                self._load(error=error).predict([(b"x", "image/png")], "?")
         for status, kind, words in ((401, "authentication_error", "key"), (403, "permission_error", "country"), (404, "not_found_error", "model"),
                                     (400, "invalid_request_error", "Fix the setting"), (413, "request_too_large", "Fix the setting")):
             with self.subTest(status), self.assertRaisesRegex(evaluate.FatalError, words) as raised:
-                self._load(error=AnthropicStatusError(status, kind)).predict(b"x", "image/png", "?")
+                self._load(error=AnthropicStatusError(status, kind)).predict([(b"x", "image/png")], "?")
             self.assertEqual(raised.exception.code, status)
         with self.assertRaisesRegex(evaluate.FatalError, "SDK failed"):
-            self._load(error=AnthropicAPIError("odd")).predict(b"x", "image/png", "?")
+            self._load(error=AnthropicAPIError("odd")).predict([(b"x", "image/png")], "?")
 
     def test_settings_are_checked_with_the_name_of_the_wrong_one(self):
         for key in ("id", "max_tokens", "thinking", "effort"):
@@ -510,7 +518,7 @@ class AnthropicTests(unittest.TestCase):
     def test_a_picture_type_claude_does_not_take_is_refused_before_any_request(self):
         adapter = self._load()
         with self.assertRaisesRegex(evaluate.FatalError, "JPEG, PNG, GIF and WebP"):
-            adapter.predict(b"x", "image/tiff", "?")
+            adapter.predict([(b"x", "image/tiff")], "?")
         self.assertEqual(self.client.calls, [])
 
     def test_the_run_card_records_what_was_asked_and_that_the_default_sampling_was_used(self):
@@ -588,7 +596,7 @@ class OpenAICompatibleTests(unittest.TestCase):
 
     def test_the_request_carries_the_picture_then_the_prompt_and_the_decoding_settings_of_the_config(self):
         adapter = self._load({"image_detail": "high"})
-        adapter.predict(b"\xff\xd8picture", "image/jpeg", "Which one?")
+        adapter.predict([(b"\xff\xd8picture", "image/jpeg")], "Which one?")
         (sent,) = self.client.calls
         self.assertEqual({k: v for k, v in sent.items() if k != "messages"},
                          {"model": "gpt-test-2026-01-01", "temperature": 0.0, "seed": 0, "max_tokens": 64})
@@ -603,38 +611,47 @@ class OpenAICompatibleTests(unittest.TestCase):
         self.assertNotIn("system", [m["role"] for m in sent["messages"]])
 
     def test_a_text_case_is_sent_as_the_prompt_alone(self):
-        self._load({"image_detail": "high"}).predict(None, None, "Case: a pearly papule.\nWhich one?")
+        self._load({"image_detail": "high"}).predict([], "Case: a pearly papule.\nWhich one?")
         (sent,) = self.client.calls
         self.assertEqual(sent["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: a pearly papule.\nWhich one?"}]}])
 
+    def test_several_pictures_go_before_the_prompt_in_their_order(self):
+        self._load({"image_detail": "high"}).predict([(b"one", "image/jpeg"), (b"two", "image/png")], "Which one?")
+        (sent,) = self.client.calls
+        first, second, text = sent["messages"][0]["content"]
+        self.assertEqual([p["image_url"]["url"] for p in (first, second)],
+                         [f"data:image/jpeg;base64,{base64.b64encode(b'one').decode()}", f"data:image/png;base64,{base64.b64encode(b'two').decode()}"])
+        self.assertEqual((first["image_url"]["detail"], second["image_url"]["detail"]), ("high", "high"))
+        self.assertEqual(text, {"type": "text", "text": "Which one?"})
+
     def test_options_that_are_not_set_are_not_sent(self):
-        self._load().predict(b"x", "image/png", "?")
+        self._load().predict([(b"x", "image/png")], "?")
         (sent,) = self.client.calls
         self.assertNotIn("detail", sent["messages"][0]["content"][0]["image_url"])
         self.assertNotIn("extra_body", sent)
-        self._load({"extra_body": {"provider": {"order": ["Host"], "allow_fallbacks": False}}}).predict(b"x", "image/png", "?")
+        self._load({"extra_body": {"provider": {"order": ["Host"], "allow_fallbacks": False}}}).predict([(b"x", "image/png")], "?")
         self.assertEqual(self.client.calls[0]["extra_body"], {"provider": {"order": ["Host"], "allow_fallbacks": False}})
 
     def test_the_answer_is_the_text_with_the_model_name_the_host_reports_and_the_token_counts(self):
-        answer = self._load(answer=openai_reply("  Melanoma \n")).predict(b"x", "image/png", "?")
+        answer = self._load(answer=openai_reply("  Melanoma \n")).predict([(b"x", "image/png")], "?")
         self.assertEqual(answer, {"text": "Melanoma", "finish_reason": "STOP", "model_version": "gpt-test-2026-01-01",
                                   "response_id": "chatcmpl-1",
                                   "usage": {"prompt_tokens": 900, "output_tokens": 3, "total_tokens": 903}})
 
     def test_the_back_end_that_answered_is_recorded_when_the_host_names_it(self):
-        answer = self._load(answer=openai_reply(extra={"provider": "SomeHost"})).predict(b"x", "image/png", "?")
+        answer = self._load(answer=openai_reply(extra={"provider": "SomeHost"})).predict([(b"x", "image/png")], "?")
         self.assertEqual(answer["model_version"], "gpt-test-2026-01-01@SomeHost")
 
     def test_how_an_answer_ended(self):
         expected = {"stop": "STOP", "length": "MAX_TOKENS", "content_filter": "CONTENT_FILTER", "tool_calls": "TOOL_CALLS"}
         for finish, shown in expected.items():
             with self.subTest(finish):
-                self.assertEqual(self._load(answer=openai_reply(finish=finish)).predict(b"x", "image/png", "?")["finish_reason"], shown)
-        refused = self._load(answer=openai_reply(text=None, refusal="I can't help with that.")).predict(b"x", "image/png", "?")
+                self.assertEqual(self._load(answer=openai_reply(finish=finish)).predict([(b"x", "image/png")], "?")["finish_reason"], shown)
+        refused = self._load(answer=openai_reply(text=None, refusal="I can't help with that.")).predict([(b"x", "image/png")], "?")
         self.assertEqual((refused["text"], refused["finish_reason"]), (None, "REFUSAL"))
-        empty = self._load(answer=openai_reply(text="")).predict(b"x", "image/png", "?")
+        empty = self._load(answer=openai_reply(text="")).predict([(b"x", "image/png")], "?")
         self.assertEqual((empty["text"], empty["finish_reason"]), (None, "STOP"))
-        silent = self._load(answer=openai_reply(usage=False)).predict(b"x", "image/png", "?")["usage"]
+        silent = self._load(answer=openai_reply(usage=False)).predict([(b"x", "image/png")], "?")["usage"]
         self.assertEqual(silent, {"prompt_tokens": None, "output_tokens": None, "total_tokens": None})
 
     def test_the_key_comes_from_the_variable_the_config_names_and_the_sdks_own_retries_are_off(self):
@@ -655,19 +672,19 @@ class OpenAICompatibleTests(unittest.TestCase):
                  OpenAITimeoutError("slow")]
         for error in retry:
             with self.subTest(repr(error)), self.assertRaises(evaluate.TransientError):
-                self._load(error=error).predict(b"x", "image/png", "?")
+                self._load(error=error).predict([(b"x", "image/png")], "?")
         stop = [OpenAIStatusError(429, "insufficient_quota", "You exceeded your current quota"),
                 OpenAIStatusError(402, 402, "Insufficient credits"), OpenAIStatusError(429, 429, "Rate limit exceeded: free-models-per-day")]
         for error in stop:
             with self.subTest(repr(error)), self.assertRaisesRegex(evaluate.QuotaExhausted, "run the same command again"):
-                self._load(error=error).predict(b"x", "image/png", "?")
+                self._load(error=error).predict([(b"x", "image/png")], "?")
         for status, words in ((401, "OPENAI_API_KEY"), (403, "country"), (404, "does not know the model"), (400, "Fix the setting"),
                               (413, "Fix the setting")):
             with self.subTest(status), self.assertRaisesRegex(evaluate.FatalError, words) as raised:
-                self._load(error=OpenAIStatusError(status)).predict(b"x", "image/png", "?")
+                self._load(error=OpenAIStatusError(status)).predict([(b"x", "image/png")], "?")
             self.assertEqual(raised.exception.code, status)
         with self.assertRaisesRegex(evaluate.FatalError, "SDK failed"):
-            self._load(error=OpenAIAPIError("odd")).predict(b"x", "image/png", "?")
+            self._load(error=OpenAIAPIError("odd")).predict([(b"x", "image/png")], "?")
 
     def test_settings_are_checked_with_the_name_of_the_wrong_one(self):
         for key in ("id", "temperature", "seed", "max_tokens"):
@@ -686,7 +703,7 @@ class OpenAICompatibleTests(unittest.TestCase):
     def test_a_picture_type_the_host_does_not_take_is_refused_before_any_request(self):
         adapter = self._load()
         with self.assertRaisesRegex(evaluate.FatalError, "JPEG, PNG, GIF and WebP"):
-            adapter.predict(b"x", "image/tiff", "?")
+            adapter.predict([(b"x", "image/tiff")], "?")
         self.assertEqual(self.client.calls, [])
 
     def test_the_run_card_records_what_was_asked_and_where(self):
@@ -752,7 +769,7 @@ class OpenAICompatibleOverHttpTests(unittest.TestCase):
         return evaluate.load("openai_compatible", settings | more)
 
     def test_the_real_sdk_sends_the_request_the_adapter_means_to_send(self):
-        answer = self._model("stub-2026-01-01").predict(b"\x89PNGdata", "image/png", "Which?")
+        answer = self._model("stub-2026-01-01").predict([(b"\x89PNGdata", "image/png")], "Which?")
         (seen,) = self.server.seen
         self.assertEqual((seen["path"], seen["authorization"]), ("/v1/chat/completions", "Bearer dummy-key"))
         body = seen["body"]
@@ -766,16 +783,16 @@ class OpenAICompatibleOverHttpTests(unittest.TestCase):
         self.assertEqual(answer["usage"], {"prompt_tokens": 10, "output_tokens": 1, "total_tokens": 11})
 
     def test_the_real_sdk_sends_a_text_case_as_the_prompt_alone(self):
-        self._model("stub-2026-01-01").predict(None, None, "Case: “café” – which?")
+        self._model("stub-2026-01-01").predict([], "Case: “café” – which?")
         (seen,) = self.server.seen
         self.assertEqual(seen["body"]["messages"], [{"role": "user", "content": [{"type": "text", "text": "Case: “café” – which?"}]}])
 
     def test_extra_body_reaches_the_host_as_top_level_fields(self):
-        self._model("stub-2026-01-01", extra_body={"provider": {"order": ["StubHost"], "allow_fallbacks": False}}).predict(b"x", "image/png", "?")
+        self._model("stub-2026-01-01", extra_body={"provider": {"order": ["StubHost"], "allow_fallbacks": False}}).predict([(b"x", "image/png")], "?")
         self.assertEqual(self.server.seen[0]["body"]["provider"], {"order": ["StubHost"], "allow_fallbacks": False})
 
     def test_an_answer_cut_off_at_the_limit_says_so(self):
-        answer = self._model("limit").predict(b"x", "image/png", "?")
+        answer = self._model("limit").predict([(b"x", "image/png")], "?")
         self.assertEqual((answer["text"], answer["finish_reason"]), ("Mela", "MAX_TOKENS"))
 
     def test_the_real_error_answers_are_sorted_correctly(self):
@@ -783,26 +800,26 @@ class OpenAICompatibleOverHttpTests(unittest.TestCase):
                                ("rate", evaluate.TransientError), ("busy", evaluate.TransientError),
                                ("key", evaluate.FatalError), ("gone", evaluate.FatalError)):
             with self.subTest(model_id), self.assertRaises(kind):
-                self._model(model_id).predict(b"x", "image/png", "?")
+                self._model(model_id).predict([(b"x", "image/png")], "?")
 
     def test_a_refused_key_and_an_unknown_model_say_what_to_do(self):
         with self.assertRaisesRegex(evaluate.FatalError, "STUB_KEY in .env") as raised:
-            self._model("key").predict(b"x", "image/png", "?")
+            self._model("key").predict([(b"x", "image/png")], "?")
         self.assertEqual(raised.exception.code, 401)
         with self.assertRaisesRegex(evaluate.FatalError, "Check the id and base_url") as raised:
-            self._model("gone").predict(b"x", "image/png", "?")
+            self._model("gone").predict([(b"x", "image/png")], "?")
         self.assertEqual(raised.exception.code, 404)
 
     def test_a_stalled_connection_times_out_instead_of_waiting_forever(self):
         with mock.patch.object(evaluate, "TIMEOUT_SECONDS", 0.3), self.assertRaisesRegex(evaluate.TransientError, "cannot reach the host"):
-            self._model("slow").predict(b"x", "image/png", "?")
+            self._model("slow").predict([(b"x", "image/png")], "?")
 
     def test_no_connection_is_a_transient_problem(self):
         model = self._model("stub-2026-01-01")
         self.server.shutdown()
         self.server.server_close()
         with self.assertRaisesRegex(evaluate.TransientError, "cannot reach the host"):
-            model.predict(b"x", "image/png", "?")
+            model.predict([(b"x", "image/png")], "?")
 
 
 # ==============================================================================================================================
@@ -1072,7 +1089,7 @@ class FakeModel:
     def describe(self):
         return {"model_id": "fake-1", "generation_config": {}}
 
-    def predict(self, image, mime_type, prompt):
+    def predict(self, images, prompt):
         self.calls += 1
         if self.quota_from and self.calls >= self.quota_from:
             raise evaluate.QuotaExhausted("Daily quota used up for fake-1 (limit 20 requests per day on the free tier)")
@@ -1454,8 +1471,8 @@ class RunTests(Project):
         class Wordy(FakeModel):
             texts = ["Hard to say.\n\nnevus", "It is not listed.\nMelanoma.", "Reasoning that was cut off\nnevus", "I think\nnevus or melanoma"]
 
-            def predict(self, image, mime_type, prompt):
-                out = super().predict(image, mime_type, prompt)
+            def predict(self, images, prompt):
+                out = super().predict(images, prompt)
                 text = self.texts[(self.calls - 1) % len(self.texts)]
                 return out | {"text": text, "finish_reason": "MAX_TOKENS" if text.endswith("off\nnevus") else "STOP"}
 
@@ -1784,9 +1801,10 @@ class ProbeModel:
                                  "usage": {"output_tokens": 1}}
         self.error, self.calls, self.images = error, 0, []
 
-    def predict(self, image, mime_type, prompt):
+    def predict(self, images, prompt):
         self.calls += 1
-        self.images.append((image, mime_type, prompt))
+        self.images.append((*(images[0] if images else (None, None)), prompt))  # the first image, as a single-image request sends it
+        self.sent = images
         if self.error:
             raise self.error
         return self.answer
@@ -1947,9 +1965,9 @@ class RecordingModel(FakeModel):
         super().__init__()
         self.requests = []
 
-    def predict(self, image, mime_type, prompt):
-        self.requests.append((image, mime_type, prompt))
-        return super().predict(image, mime_type, prompt)
+    def predict(self, images, prompt):
+        self.requests.append((*(images[0] if images else (None, None)), prompt))
+        return super().predict(images, prompt)
 
 
 class TextDatasetTests(TextProject):

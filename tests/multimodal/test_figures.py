@@ -348,11 +348,11 @@ class DownloadTests(unittest.TestCase):
             figures.download(self.data)
 
 class CommandLineTests(unittest.TestCase):
-    def test_the_steps_are_count_and_download(self):
-        self.assertEqual(figures.build_parser().parse_args(["count"]).step, "count")
-        self.assertEqual(figures.build_parser().parse_args(["download"]).step, "download")
+    def test_the_steps_are_count_download_check_and_build(self):
+        for step in ("count", "download", "check", "build"):
+            self.assertEqual(figures.build_parser().parse_args([step]).step, step)
         with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-            figures.build_parser().parse_args(["build"])
+            figures.build_parser().parse_args(["train"])
 
     def test_an_error_is_one_line(self):
         with mock.patch.object(figures, "count", side_effect=FileNotFoundError("data/text/dataset.csv not found")):

@@ -151,3 +151,51 @@ class CheckTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BuildTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        base = Path(tmp.name)
+        self.data, self.text = base / "multimodal", base / "text"
+        checks = [{"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f10", "file": "figures/images/P1/f10-a.jpg",
+                   "sha256": "a" * 64, "kept": "yes"},
+                  {"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f2", "file": "figures/images/P1/f2-b.jpg",
+                   "sha256": "b" * 64, "kept": "yes"},
+                  {"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f3", "file": "figures/images/P1/f3-c.jpg",
+                   "sha256": "c" * 64, "kept": "no"},
+                  {"patient_uid": "c2", "split": "train", "class": "nevus", "figure": "F1", "file": "figures/images/P2/F1-d.jpg",
+                   "sha256": "d" * 64, "kept": "yes"},
+                  {"patient_uid": "c3", "split": "val", "class": "nevus", "figure": "F1", "file": "figures/images/P3/F1-e.jpg",
+                   "sha256": "e" * 64, "kept": "no"}]
+        write_csv(self.data / figures.CHECKS_TABLE, figures.CHECK_COLUMNS, checks)
+        write_csv(self.data / figures.FILES_TABLE, figures.FILE_COLUMNS,
+                  [{"patient_uid": c["patient_uid"], "figure": c["figure"], "label": f"Figure {c['figure'][1:]}"} for c in checks])
+        self.questions = [{"split": "test", "label": "melanoma", "path": "test/melanoma/c1.txt", "sha256": "1" * 64, "patient_uid": "c1", "pmid": "11"},
+                          {"split": "train", "label": "nevus", "path": "train/nevus/c2.txt", "sha256": "2" * 64, "patient_uid": "c2", "pmid": "12"},
+                          {"split": "val", "label": "nevus", "path": "val/nevus/c3.txt", "sha256": "3" * 64, "patient_uid": "c3", "pmid": "13"},
+                          {"split": "test", "label": "nevus", "path": "test/nevus/c4.txt", "sha256": "4" * 64, "patient_uid": "c4", "pmid": "14"}]
+        write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions)
+
+    def test_one_question_per_case_that_keeps_a_picture_with_its_pictures_in_figure_order(self):
+        done = figures.build(self.data, self.text)
+        self.assertEqual(done["rows"], [
+            {"split": "test", "label": "melanoma", "path": "test/melanoma/c1.txt", "sha256": "1" * 64, "pmid": "11", "patient_uid": "c1",
+             "pictures": f"figures/images/P1/f2-b.jpg|{'b' * 64};figures/images/P1/f10-a.jpg|{'a' * 64}", "n_pictures": 2},
+            {"split": "train", "label": "nevus", "path": "train/nevus/c2.txt", "sha256": "2" * 64, "pmid": "12", "patient_uid": "c2",
+             "pictures": f"figures/images/P2/F1-d.jpg|{'d' * 64}", "n_pictures": 1}])
+        report = (self.data / figures.CASES_REPORT).read_text(encoding="utf-8")
+        self.assertIn("| all | 1 | 0 | 1 |", report)
+        self.assertIn("Questions: 2; pictures: 3. Pictures per question: 1: 1, 2: 1.", report)
+        with (self.data / figures.CASES_TABLE).open(encoding="utf-8", newline="") as f:
+            self.assertEqual(next(csv.reader(f)), figures.CASES_COLUMNS)
+
+    def test_a_picture_whose_case_is_elsewhere_in_the_text_dataset_stops_the_build(self):
+        self.questions[1]["split"] = "test"
+        write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions)
+        with self.assertRaisesRegex(ValueError, "but the text dataset has the case in test/nevus"):
+            figures.build(self.data, self.text)
+        write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions[2:])
+        with self.assertRaisesRegex(ValueError, "is no case of the text dataset"):
+            figures.build(self.data, self.text)
