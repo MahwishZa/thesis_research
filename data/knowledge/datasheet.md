@@ -9,7 +9,7 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 - `index.csv`: one row per item a run may retrieve (photos, cases and passages)
 - `diseases.csv`: one row per class, with its names and counts
 
-`index.csv` and `diseases.csv` are written by the image + metadata build (`python -m src.build.image_metadata.prepare build`), which reads the image dataset, the text dataset and `library.csv`.
+`index.csv` and `diseases.csv` are written by `src/build/knowledge/index.py`, from the image, image + metadata and text datasets and `library.csv`.
 
 ## At a glance
 
@@ -92,7 +92,7 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 | appearance | `python -m src.build.knowledge.enrich appearance` | found, cut and kept the passages on appearance not already in the library | 108 passages from 28 documents |
 | aspects | `python -m src.build.knowledge.enrich aspects` | tagged every passage by aspect and checked the tags against the authors' section titles | 5,661 passages tagged; every aspect follows the titles better than chance (lift 1.6–6.6) |
 | cards | `python -m src.build.knowledge.enrich cards` | one card per training photo, from its own record | 1,739 cards |
-| index | `python -m src.build.image_metadata.prepare build` | listed every training photo, training case and passage, and the counts per class | `index.csv`, `diseases.csv` |
+| index | `python -m src.build.knowledge.index` | listed every training photo, training case and passage, and the counts per class | 7,721 items in `index.csv`; `diseases.csv` |
 
 **Rules that keep test answers out.** No case report is searched for, no article of the text dataset's candidates is kept, and a passage that shares a run of 12 words with a question of the text dataset is left out. The index holds training items only; the build and the audit (`python -m src.build.image_metadata.audit`) stop on any validation or test item.
 
@@ -121,11 +121,11 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 **Versions.** Any change to a passage, card or item makes a new version, with new fingerprints and an entry here.
 - **2026-11-14:** the library and the index.
 - **2026-11-17:** the appearance corpus, the aspects and the cards (added; nothing earlier changed).
-- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/`; the index's case items follow version 3 of the text dataset (444 → 429; 7,736 → 7,721 items). The image + metadata audit passed all its checks on the rebuilt index.
+- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/`; the index has its own step (it was written by the image + metadata build, byte for byte the same); the index's case items follow version 3 of the text dataset (444 → 429; 7,736 → 7,721 items). The image + metadata audit passed all its checks on the rebuilt index.
 
 **Checks.** The library step checks the StatPearls archive against its fingerprint on every run. The enrich steps stop on any broken rule (a held-out photo with a card, a card that names a collection, a card not made from its columns, a passage table and its texts that differ). The image + metadata audit checks the index against its sources (`data/image_metadata/datasheet.md`, section 7).
 
-**Rebuild.** With the image and text datasets prepared: `python -m src.build.knowledge.library`, then `python -m src.build.image_metadata.prepare build`, then `python -m src.build.knowledge.enrich appearance`, `aspects` and `cards`. The library and appearance steps ask NCBI; a later run finds other documents.
+**Rebuild.** With the image, text and image + metadata datasets prepared: `python -m src.build.knowledge.library`, then `python -m src.build.knowledge.index`, then `python -m src.build.knowledge.enrich appearance`, `aspects` and `cards`. The library and appearance steps ask NCBI; a later run finds other documents.
 
 **Fingerprints**
 

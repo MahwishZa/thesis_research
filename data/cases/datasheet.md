@@ -69,7 +69,7 @@ better, and invents less, when it sees the photos with the written case, and how
   `count` and `download` need the internet; `check` needs the packages in `requirements.txt` and downloads its two models once.
 - **Fingerprints:** every question's text and every photo has its SHA-256 in `dataset.csv`; every run checks the files against them.
   `dataset.csv` itself: SHA-256 `cee3aa4b2699140bd59862c89d0fcd44fb959c84e45cb4bac1248ac642ac509f`.
-- **Versions:** a change to a question, photo or split makes a new version, with a new tag and an entry here.
+- **Versions:** a change to a question, photo or split makes a new version, with an entry here.
   - Version 1 (2026-11-18): 335 questions (104 test), built on version 2 of the text dataset.
   - Version 2 (2026-11-18): 324 questions (100 test). The text dataset's version 3 took out 29 questions whose confirming test
     result also names another class; 11 of them had kept pictures, so the build leaves them out too (listed in the build section

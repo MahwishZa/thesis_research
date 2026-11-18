@@ -1,6 +1,6 @@
 # The knowledge base
 
-What open-book runs may retrieve: training items only, never a validation or test question. One section per step, written by `src/build/knowledge/` (`library.py`: the library; `enrich.py`: appearance, aspects and cards); each step rewrites only its own section.
+What open-book runs may retrieve: training items only, never a validation or test question. One section per step, written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance, aspects and cards); each step rewrites only its own section.
 
 <!-- step: library -->
 ## Library: the reference texts for retrieval
@@ -46,6 +46,27 @@ Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statp
 - No person has read the passages. A passage is about its document's class(es) (`topics`), not checked line by line.
 - The texts are under their publishers' copyright or licences (in `library.csv`), so they stay on this computer and are used for research only.
 - Retrieval (how passages are chosen for a question, evenly from the four corpora as in RAG²) belongs to the evaluation, not to the library.
+
+<!-- step: index -->
+## Index: what open-book runs may retrieve
+
+Written by `python -m src.build.knowledge.index`, from the committed tables of the image, image + metadata and text datasets and the library.
+
+- `index.csv`: 7721 items: 1739 training images, 429 training cases and 5553 library passages. No validation or test item of any dataset is among them. Each is linked to the questions only by its disease: the photos and the texts share no patient.
+- `diseases.csv`: 8 classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.
+
+| Class | Training images | Training cases | Passages |
+|---|---|---|---|
+| actinic keratosis | 76 | 1 | 852 |
+| basal cell carcinoma | 337 | 117 | 1177 |
+| dermatofibroma | 56 | 7 | 73 |
+| melanoma | 381 | 119 | 1626 |
+| nevus | 238 | 23 | 851 |
+| pigmented benign keratosis | 423 | 6 | 219 |
+| squamous cell carcinoma | 141 | 150 | 1374 |
+| vascular lesion | 87 | 6 | 234 |
+
+Each item's licence is in the table, as its source gives it.
 
 <!-- step: appearance -->
 ## Appearance corpus: open full texts of reviews on dermoscopy and clinical appearance

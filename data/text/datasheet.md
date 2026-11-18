@@ -22,7 +22,7 @@ The error rate in section 5 comes from reading questions together with the text 
 | Labels | automatic: the article's title and case text name the class, a test result in the case text names it and names no other class, and PubMed's subject headings agree where PubMed has indexed the article (212 cases). No person chose, labelled or cut a case. Reading 74 questions of version 2 that no rule was drawn from found 2 wrong labels (2.7%, 95% interval 0.3–9.4%) and 3 mixed lesions (wrong or mixed: 6.8%, 95% interval 2.2–15.1%) |
 | Sources of the texts | PMC-Patients (332), the open full texts of PubMed Central (252), PubMed abstracts (132) |
 | Built from | PMC-Patients V2 (Zhao et al., 2023), PubMed, PubMed Central and MeSH (asked through NCBI's E-utilities on 2026-11-13 and 2026-11-14) |
-| Version | 3, made on 2026-11-18: version 2 without the 29 questions whose confirming test result also names another class (section 7). Version 2 (745 cases) is marked in Git by the tag `text-dataset`; version 1 (1,049 cases) was withdrawn |
+| Version | 3, made on 2026-11-18: version 2 without the 29 questions whose confirming test result also names another class (section 7). Version 2 (745 cases) was frozen on 2026-11-14 (commit `5539bb4`); version 1 (1,049 cases) was withdrawn |
 
 ## 1. Motivation
 
@@ -198,10 +198,10 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 
 ## 7. Maintenance and checking
 
-**Versions.** Any change to a case, label or split makes a new version, with new fingerprints, a new tag and an entry here.
-- **Version 1** (2026-11-13): 1,049 cases. A reading of 102 questions put its wrong labels at about 13% (95% interval roughly 6–25%): lesions not on the skin, cases that only looked like the class, articles about another diagnosis, and questions that were not one patient's case. It was withdrawn, and its tag removed.
-- **Version 2** (2026-11-14): 745 cases, made by the rules of section 4. It is frozen and marked in Git by the tag `text-dataset`. The closed-book runs of the first phase (`results/text/`) were made on it.
-- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.text.prepare revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/text/sources/removed/`.
+**Versions.** Any change to a case, label or split makes a new version, with new fingerprints and an entry here.
+- **Version 1** (2026-11-13): 1,049 cases. A reading of 102 questions put its wrong labels at about 13% (95% interval roughly 6–25%): lesions not on the skin, cases that only looked like the class, articles about another diagnosis, and questions that were not one patient's case. It was withdrawn.
+- **Version 2** (2026-11-14): 745 cases, made by the rules of section 4. It was frozen (commit `5539bb4`). The closed-book runs of the first phase (`results/phase1/text/`) were made on it.
+- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.text.prepare revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/text/sources/removed/`. Version 3 is in commit `00e9711` and later.
 
 **Checks.** The build checks that every question is part of its case text word for word, that no question names its class, and that no article is in two splits. The audit then checks every question again with code of its own:
 - against its fingerprint and its source

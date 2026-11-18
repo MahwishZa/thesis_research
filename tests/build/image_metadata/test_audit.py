@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from src.build.image_metadata import audit, prepare
+from src.build.knowledge import index
 from tests.build.image_metadata.test_prepare import Project
 
 
@@ -40,6 +41,7 @@ class AuditTests(Project):
         (self.knowledge / "texts" / "passages.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
         prepare.records()
         prepare.build()
+        index.index()
 
     def _source(self, dataset, name):
         with (self.base / "data" / dataset / name).open(encoding="utf-8", newline="") as f:
@@ -103,7 +105,7 @@ class AuditTests(Project):
         rows = self._source("knowledge", "library.csv")
         rows[0]["source"] = "PMID 13"  # the article of a case of the text dataset
         self._write(path, rows)
-        prepare.build()
+        index.index()
         diseases = self._source("knowledge", "diseases.csv")
         diseases[0]["passages"] = "9"
         self._write(self.knowledge / "diseases.csv", diseases)

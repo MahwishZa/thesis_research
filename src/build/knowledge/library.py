@@ -51,10 +51,11 @@ from ..text.prepare import (ABSTRACT_CANDIDATES, ANIMALS, CANDIDATE_COLUMNS, CAN
 
 KNOWLEDGE = Path("data/knowledge")  # the knowledge base: its committed tables and report; texts/ and sources/ on this computer
 REPORT = "dataset_report.md"
-STEPS = ("library", "appearance", "aspects", "cards")  # the report's sections, in the order the steps run
+STEPS = ("library", "index", "appearance", "aspects", "cards")  # the report's sections, in the order the steps run
 REPORT_HEAD = ["# The knowledge base", "",
                "What open-book runs may retrieve: training items only, never a validation or test question. One section per step, "
-               "written by `src/build/knowledge/` (`library.py`: the library; `enrich.py`: appearance, aspects and cards); each step "
+               "written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance, aspects "
+               "and cards); each step "
                "rewrites only its own section.", ""]
 LIBRARY_TABLE = "library.csv"
 LIBRARY_COLUMNS = ["passage_id", "corpus", "source", "title", "section", "year", "licence", "topics", "words", "sha256"]

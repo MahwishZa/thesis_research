@@ -4,7 +4,7 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 - `dataset_report.md`: the full report of every step (records, build, audit)
 - `dataset.csv`: one row per question
 
-The questions are made from the frozen image dataset (tag `image-dataset`, `data/image/datasheet.md`) and its ISIC records; the dataset adds no image and no text of its own. Its build also writes the knowledge base's index of training items and its table of classes (`data/knowledge/index.csv` and `diseases.csv`, described in `data/knowledge/datasheet.md`).
+The questions are made from the frozen image dataset (version 1, `data/image/datasheet.md`) and its ISIC records; the dataset adds no image and no text of its own. What open-book runs may retrieve is described in `data/knowledge/datasheet.md`.
 
 In the thesis this dataset is called **image + metadata**: an ISIC photo with three recorded facts, not a written case. It is the ablation of the photo with the patient's recorded facts; the dataset with a written case and the same patient's photos is the case dataset (`data/cases/datasheet.md`). Its dataset name in the configs is still `multimodal`.
 
@@ -85,7 +85,7 @@ Three commands, each writing its section of `dataset_report.md`:
    - lesion size: recorded only for 267 melanomas and 2 actinic keratoses, so it would almost name melanoma;
    - body site levels 2 to 5: their words differ between the two collections ("shoulder", "thigh" and "breast" occur only in the melanoma and nevus collection);
    - "acral" (`anatom_site_special`): 36 photos only.
-3. **`build`** writes `dataset.csv` and, for the knowledge base, `data/knowledge/index.csv` and `diseases.csv`:
+3. **`build`** writes `dataset.csv`:
    - One question per photo, with the split, class, file and lesion group copied unchanged.
    - Age is written "about N years", sex and site in lower case.
    - Two photos are held twice by ISIC (`ISIC_0000279` with `ISIC_0000280`, `ISIC_0000477` with `ISIC_0000512`, both in train). A fact counts only where their two records agree; on a disagreement it is "not recorded", never guessed.
@@ -143,7 +143,7 @@ Three commands, each writing its section of `dataset_report.md`:
 
 ## 7. Maintenance and checking
 
-**Versions.** Any change to a question, fact or split makes a new version, with new fingerprints, a new tag and an entry here. On 2026-11-18 the files moved from `data/multimodal/` to `data/image_metadata/` (`questions.csv` became `dataset.csv`, unchanged byte for byte) and the knowledge tables to `data/knowledge/`.
+**Versions.** Any change to a question, fact or split makes a new version, with new fingerprints and an entry here. Version 1 was frozen on 2026-11-14 (commit `b1bb3e7`). On 2026-11-18 the files moved from `data/multimodal/` to `data/image_metadata/` (`questions.csv` became `dataset.csv`, unchanged byte for byte) and the knowledge tables to `data/knowledge/`.
 
 **Checks.** The audit (`python -m src.build.image_metadata.audit`) checks everything with code of its own. Run on 2026-11-14, all 19 checks passed; run again on 2026-11-18 after the knowledge index followed version 3 of the text dataset (7,721 items), all passed again, and the facts-alone scores below did not change:
 - **Questions:** one per photo of the image dataset, each matching it in split, class, file, fingerprint and lesion group.
@@ -170,7 +170,7 @@ Three commands, each writing its section of `dataset_report.md`:
 
 **Rebuild**
 1. The image and text datasets and the library must be prepared, with the image dataset's ISIC records in `data/image/downloads/isic/` and the text dataset's downloads in `data/text/sources/`.
-2. Run, in order: `python -m src.build.image_metadata.prepare records`, `python -m src.build.image_metadata.prepare build`, `python -m src.build.image_metadata.audit`.
+2. Run, in order: `python -m src.build.image_metadata.prepare records`, `python -m src.build.image_metadata.prepare build`, `python -m src.build.knowledge.index`, `python -m src.build.image_metadata.audit` (the audit also checks the knowledge index).
 3. The same sources give the same files, byte for byte.
 
 **Fingerprints**

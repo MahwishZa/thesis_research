@@ -165,12 +165,11 @@ Photos with more than one ISIC record (uploaded more than once): 2 (ISIC_0000279
 - Whether a fact gives the class away is measured in the audit, like the image dataset's shortcut check.
 
 <!-- step: build -->
-### Build: the three tables
+### Build: the questions
 
 - `dataset.csv`: 2179 questions, one per image of the image dataset, with its split, class, file and lesion group unchanged: train 1739, val 120, test 320.
 - Facts shown with each photo: age, sex, body site (chosen from the records report). A missing fact, or one the photo's two ISIC records disagree on, is shown as "not recorded".
-- `data/knowledge/index.csv`: 7721 items open-book runs may search: 1739 training images, 429 training cases and 5553 library passages. No validation or test item of either dataset is among them. Each is linked to the questions only by its disease: the two datasets share no patient.
-- `data/knowledge/diseases.csv`: 8 classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.
+- What open-book runs may retrieve is the knowledge base's index (`python -m src.build.knowledge.index`, which reads this table).
 
 #### Questions with all three facts
 

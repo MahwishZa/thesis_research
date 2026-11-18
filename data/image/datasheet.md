@@ -15,7 +15,7 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 | Labels | from each photo's own ISIC Archive record; 74% confirmed by biopsy |
 | Images as stored | JPEG in sRGB colours, each whole photo fitted within 600 × 450 pixels (2,013 are exactly 600 × 450) |
 | Built from | "Skin Cancer ISIC" on Kaggle, by Andrey Katanskiy (https://www.kaggle.com/datasets/nodoubttome/skin-cancer9-classesisic): 2,357 ISIC images in nine class folders, downloaded on or before 2026-11-03 |
-| Version | 1, frozen on 2026-11-12; marked in Git by the tag `image-dataset` |
+| Version | 1, frozen on 2026-11-12 (commit `f716e1d`) |
 
 ## 1. Motivation
 
@@ -195,9 +195,9 @@ Made with Pillow 13.0.0 (libjpeg-turbo 6.2, Little CMS 2.19).
 
 ## 7. Maintenance and checking
 
-**Version 1** is frozen and marked in Git by the tag `image-dataset`. Any change to an image, label or split makes a new version, with new fingerprints, a new tag and an entry in this data sheet. The text, image + metadata and case datasets, and the knowledge base, are documented separately.
+**Version 1** is frozen (commit `f716e1d`). Any change to an image, label or split makes a new version, with new fingerprints and an entry in this data sheet. Git tags mark only the final version of the research (the researcher's decision of 2026-11-18). The text, image + metadata and case datasets, and the knowledge base, are documented separately.
 
-**Changes since the tag.** On 2026-11-12 the repository was reorganised for three datasets: the image dataset's files moved from `data/` to `data/image/`, and its code to `src/image/prepare.py`. No image, label, split or fingerprint changed; the full re-run below proves it. On 2026-11-18 the code moved to `src/build/image/prepare.py`, and the four build records (`raw_photos.csv`, `similar_photo_pairs.csv`, `isic_to_class.csv`, `eye_check_verdicts.csv`) moved into `build/`, unchanged byte for byte.
+**Changes since the freeze.** On 2026-11-12 the repository was reorganised for three datasets: the image dataset's files moved from `data/` to `data/image/`, and its code to `src/image/prepare.py`. No image, label, split or fingerprint changed; the full re-run below proves it. On 2026-11-18 the code moved to `src/build/image/prepare.py`, and the four build records (`raw_photos.csv`, `similar_photo_pairs.csv`, `isic_to_class.csv`, `eye_check_verdicts.csv`) moved into `build/`, unchanged byte for byte.
 
 **Independent audit (2026-11-12).** A fresh check of the frozen tables found the dataset as described: no lesion in two splits, every label re-derived from its ISIC record, and every fingerprint matching. It found one gap: 3 same-class look-alike pairs from the whole-picture comparison sat in different splits and had never been looked at. A person checked them by eye: all 3 are different lesions. They are recorded in `build/eye_check_verdicts.csv`, and re-running the split with them gives exactly the same split.
 

@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from src.build.knowledge import enrich
+from src.build.knowledge import enrich, index
 from src.build.image_metadata import prepare
 from src.build.knowledge import library as textlib
 from tests.build.image_metadata.test_prepare import Project
@@ -359,6 +359,7 @@ class CardTests(Project):
         write_csv(self.image / "build" / "raw_photos.csv", photos)
         prepare.records()
         prepare.build()
+        index.index()
 
     def test_a_card_for_each_training_photo_from_its_own_record(self):
         done = enrich.cards()

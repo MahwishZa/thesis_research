@@ -42,7 +42,7 @@ FEATURES = ("age", "sex", "site")
 
 
 def _rows(path: Path) -> list[dict]:
-    return read_rows(path, "prepare the image and text datasets, then run python -m src.build.image_metadata.prepare build")
+    return read_rows(path, "prepare the image and text datasets, then run python -m src.build.image_metadata.prepare build and python -m src.build.knowledge.index")
 
 
 def _digest(content: bytes) -> str:

@@ -194,44 +194,17 @@ class BuildTests(Project):
         for never in ("Posterior trunk", "8.0", "back", "head/neck", "Malignant", "IL_ISIC"):  # other sites, size, hints, identifiers
             self.assertNotIn(never, everything)
 
-    def test_the_knowledge_holds_only_training_items_and_library_passages_linked_by_disease(self):
-        prepare.build()
-        knowledge = self._table("index.csv", self.knowledge)
-        self.assertEqual([(k["kind"], k["item_id"]) for k in knowledge], [
-            ("image", "image:train/basal cell carcinoma/ISIC_0000004.jpg"), ("image", "image:train/melanoma/ISIC_0000002.jpg"),
-            ("case", "case:15-1"), ("case", "case:pubmed-11"), ("case", "case:pubmed-16"), ("case", "case:13-1"),
-            ("passage", "passage:pmc-1-1"), ("passage", "passage:book-2-1")])
-        self.assertEqual({k["link"] for k in knowledge}, {"disease"})
-        case = next(k for k in knowledge if k["item_id"] == "case:pubmed-11")
-        self.assertEqual((case["path"], case["source"], case["licence"]),
-                         ("data/text/dataset/train/melanoma/pubmed-11.txt", "PMID 11", "publisher's copyright (abstract in PubMed)"))
-        self.assertEqual(next(k for k in knowledge if k["item_id"] == "case:pubmed-16")["licence"],
-                         "https://creativecommons.org/licenses/by/4.0/")  # the full text's own licence, as PMC gives it
-        self.assertEqual(next(k for k in knowledge if k["item_id"] == "case:13-1")["licence"], "CC BY-NC-SA 4.0 (PMC-Patients)")
-        self.assertEqual(next(k for k in knowledge if k["kind"] == "image")["licence"], "CC-BY-NC")
-        self.assertEqual(knowledge[-1]["licence"], "(not recorded)")
-        for held_out in ("ISIC_0000001", "ISIC_0000003", "ISIC_0000005", "12-1", "pubmed-14"):
-            self.assertNotIn(held_out, (self.knowledge / "index.csv").read_text(encoding="utf-8"))
-
-    def test_the_disease_table_and_the_report_count_what_each_class_has(self):
+    def test_the_report_counts_the_questions_and_a_second_build_gives_the_same_files(self):
         prepare.records()
         done = prepare.build()
-        diseases = {d["class"]: d for d in self._table("diseases.csv", self.knowledge)}
-        melanoma = diseases["melanoma"]
-        self.assertEqual({k: melanoma[k] for k in ("isic_diagnoses", "text_terms", "mesh_headings", "questions_train", "questions_test",
-                                                  "complete_test", "cases_train", "cases_test", "passages")},
-                         {"isic_diagnoses": "Diagnosis of melanoma (2)", "text_terms": "melanoma; melanoma in situ",
-                          "mesh_headings": "Hutchinson's Melanotic Freckle; Melanoma", "questions_train": "1", "questions_test": "1",
-                          "complete_test": "1", "cases_train": "2", "cases_test": "1", "passages": "1"})
-        self.assertEqual(diseases["nevus"]["text_terms"], "nevus")  # a name that does not count is left out
-        self.assertEqual((done["questions"], done["knowledge"]["passage"], done["complete"]["test"]), (5, 2, 1))
+        self.assertEqual((done["questions"], done["complete"]["test"]), (5, 1))
         report = (self.data / "dataset_report.md").read_text(encoding="utf-8")
         for expected in ("<!-- step: records -->", "<!-- step: build -->", "`dataset.csv`: 5 questions", "train 2, val 1, test 2",
-                         "2 training images, 4 training cases and 2 library passages", "| nevus | 0 of 0 | 0 of 0 | 0 of 1 | 0 | 0 | 1 |",
-                         '- "Age: about 60 years. Sex: male. Body site: trunk."'):
+                         "| nevus | 0 of 0 | 0 of 0 | 0 of 1 | 0 | 0 | 1 |", '- "Age: about 60 years. Sex: male. Body site: trunk."'):
             self.assertIn(expected, report)
         self.assertLess(report.index("<!-- step: records -->"), report.index("<!-- step: build -->"))
-        files = [self.data / "dataset.csv", self.knowledge / "index.csv", self.knowledge / "diseases.csv", self.data / "dataset_report.md"]
+        self.assertFalse(self.knowledge.joinpath("index.csv").exists())  # the knowledge index is its own step
+        files = [self.data / "dataset.csv", self.data / "dataset_report.md"]
         before = {path: path.read_bytes() for path in files}
         prepare.build()
         self.assertEqual({path: path.read_bytes() for path in files}, before)  # the same sources give the same files
@@ -246,9 +219,7 @@ class BuildTests(Project):
     def test_the_command_line_runs_the_build(self):
         with contextlib.redirect_stdout(io.StringIO()) as shown:
             prepare.main(["build"])
-        for expected in ("Questions: 5 (train 2, val 1, test 2); with all three facts: train 2, val 0, test 1",
-                         "Knowledge items: case 4, image 2, passage 2"):
-            self.assertIn(expected, shown.getvalue())
+        self.assertIn("Questions: 5 (train 2, val 1, test 2); with all three facts: train 2, val 0, test 1", shown.getvalue())
 
 
 if __name__ == "__main__":
