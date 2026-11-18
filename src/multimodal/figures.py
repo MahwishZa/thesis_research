@@ -4,6 +4,7 @@ photo. A case report's figures show its own patient, so such a figure and the ca
 
     python -m src.multimodal.figures count     (needs the internet; downloads PubMed records and PMC full texts, no image)
     python -m src.multimodal.figures download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
+    python -m src.multimodal.figures check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/text/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
@@ -24,6 +25,15 @@ licence) is downloaded, and only the pictures of the figures that count are kept
 (not in Git); nothing else of the package is written. Each picture is opened once to check that it is a readable picture. The table
 data/multimodal/figure_files.csv lists every picture with its fingerprint; data/multimodal/figure_files.md gives the counts. The
 download can be stopped and run again: an article already done is not asked again.
+
+``check`` checks every saved picture by itself, with no person looking: it must be at least MIN_SIDE pixels on its shorter side;
+no writing in it (read by EasyOCR) may name a diagnosis (any name in data/text/class_terms.csv, or a class's short form); an image
+model (open_clip, asked which of KINDS the picture is) must see a clinical photo or a dermoscopy image, so a caption that missed a
+panel of histology or a scan is caught; and it may not be the same picture as one of another case or of the image dataset (the
+image dataset's own rule for "the same picture"). A case keeps the pictures that pass; the rule for building the dataset is applied
+again to the cases that keep one. The table data/multimodal/figure_checks.csv gives every picture's results; figure_checks.md the
+counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
+are kept in data/multimodal/figures/checks.jsonl (not in Git), so a second run does not ask them again.
 
 ``count`` writes data/multimodal/figure_count.csv (one row per case, no caption text), data/multimodal/figure_count.md (the counts and the
 rule) and data/multimodal/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
@@ -48,6 +58,7 @@ from xml.etree import ElementTree
 from PIL import Image
 
 from ..common import fetch
+from ..image import prepare as imageprep
 from ..text import prepare as textprep
 from .prepare import DATA, TEXT, _read_csv, _write_csv
 
@@ -61,6 +72,21 @@ FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "pi
 PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
 SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not in PMC's open-access subset", "the article is retracted",
                                                    "no picture file for the figure in the package", "the picture cannot be opened")
+CHECKS_TABLE, CHECKS_REPORT = "figure_checks.csv", "figure_checks.md"
+CHECK_CACHE = Path("figures") / "checks.jsonl"  # in data/multimodal/, not in Git: the models' answers, by picture fingerprint
+MIN_SIDE = 128  # pixels on the shorter side; fixed before any picture was seen
+IMAGE_MODEL = ("ViT-B-32", "laion2b_s34b_b79k")  # open_clip's model and weights
+KINDS = {  # what the image model chooses from; fixed before any picture was seen
+    "clinical photo": "a clinical photograph of a skin lesion",
+    "dermoscopy": "a dermoscopy image of a skin lesion",
+    "microscopy": "a microscope image of stained tissue",
+    "scan": "a medical scan such as CT, MRI, X-ray or ultrasound",
+    "drawing": "a chart, diagram, table or drawing"}
+SKIN_KINDS = ("clinical photo", "dermoscopy")
+CHECK_REASONS = ("smaller than the least size", "writing in the picture names a diagnosis", "the image model sees no photo of the skin",
+                 "the same picture is in the image dataset", "the same picture is in another case", "the same picture twice in this case")
+CHECK_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "width", "height", "caption_type", "model_kind",
+                 "model_score", "writing", "diagnosis_words", "kept", "reason"]
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
 
 DERMOSCOPY = re.compile(r"dermoscop|dermatoscop|epiluminescence")
@@ -436,17 +462,223 @@ def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
     return lines + [""]
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Step "check": every saved picture, checked by itself
+
+
+def _image_model():
+    """open_clip's model as a function: a picture's path -> the probability of each of KINDS."""
+    try:
+        import open_clip
+        import torch
+    except ImportError as exc:
+        raise FileNotFoundError("the check needs PyTorch and open_clip: pip install torch==2.15.0 torchvision==0.29.2 "
+                                "open_clip_torch==4.2.2 easyocr==1.7.2") from exc
+    model, _, preprocess = open_clip.create_model_and_transforms(IMAGE_MODEL[0], pretrained=IMAGE_MODEL[1])
+    model.eval()
+    tokens = open_clip.get_tokenizer(IMAGE_MODEL[0])(list(KINDS.values()))
+    with torch.no_grad():
+        texts = model.encode_text(tokens, normalize=True)
+
+    def classify(path: Path) -> dict[str, float]:
+        with Image.open(path) as picture:
+            pixels = preprocess(picture.convert("RGB")).unsqueeze(0)
+        with torch.no_grad():
+            chances = (100.0 * model.encode_image(pixels, normalize=True) @ texts.T).softmax(dim=-1)[0].tolist()
+        return {kind: round(p, 4) for kind, p in zip(KINDS, chances)}
+    return classify, {"torch": torch.__version__, "open_clip": getattr(open_clip, "__version__", "?")}
+
+
+def _reader():
+    """EasyOCR as a function: a picture's path -> the pieces of writing it finds."""
+    try:
+        import easyocr
+        import numpy
+    except ImportError as exc:
+        raise FileNotFoundError("the check needs EasyOCR: pip install torch==2.15.0 torchvision==0.29.2 open_clip_torch==4.2.2 "
+                                "easyocr==1.7.2") from exc
+    reader = easyocr.Reader(["en"], gpu=False, verbose=False)
+
+    def read(path: Path) -> list[str]:
+        with Image.open(path) as picture:
+            grey = numpy.asarray(picture.convert("L"))  # one channel: EasyOCR reads it the same way for every kind of file
+        return [str(piece) for piece in reader.readtext(grey, detail=0)]
+    return read, {"easyocr": getattr(easyocr, "__version__", "?")}
+
+
+def diagnosis_words(pieces: list[str], names: list[str], short_forms: list[str]) -> list[str]:
+    """The names of diagnoses in a picture's writing: a name of class_terms.csv as plain words (any case, singular or plural,
+    either spelling), or a short form written as a whole word in capitals ("BCC")."""
+    joined = " ".join(pieces)
+    tokens = textprep._tokens(joined)
+    found = [name for name in names if _spans(tokens, name)]
+    found += [form for form in short_forms if re.search(rf"(?<![A-Za-z]){re.escape(form)}s?(?![A-Za-z])", joined)]
+    return sorted(set(found))
+
+
+def _spans(tokens: list[str], name: str) -> bool:
+    words = textprep._tokens(name)
+    return bool(words) and any(tokens[i:i + len(words)] == words for i in range(len(tokens) - len(words) + 1))
+
+
+def _caption_type(caption: dict) -> str:
+    return {(True, True): "clinical and dermoscopic", (True, False): "dermoscopic", (False, True): "clinical"}.get(
+        (bool(caption.get("dermoscopy")), bool(caption.get("clinical"))), "")
+
+
+def kappa(pairs: list[tuple[bool, bool]]) -> float | None:
+    """Cohen's kappa (Cohen, 1960) of two yes/no judgements of the same items."""
+    n = len(pairs)
+    if not n:
+        return None
+    observed = sum(a == b for a, b in pairs) / n
+    a_yes, b_yes = sum(a for a, _ in pairs) / n, sum(b for _, b in pairs) / n
+    expected = a_yes * b_yes + (1 - a_yes) * (1 - b_yes)
+    return None if expected == 1 else (observed - expected) / (1 - expected)
+
+
+def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
+          classify=None, read=None, show=None) -> dict:
+    """The check step (see the module's description): figure_checks.csv and figure_checks.md."""
+    data, text, image = Path(data), Path(text), Path(image)
+    say = show or (lambda message: None)
+    pictures = [r for r in _read_csv(data / FILES_TABLE) if r["status"] == SAVED]
+    with (data / CAPTIONS).open(encoding="utf-8") as f:
+        captions = {(c["patient_uid"], c["figure"]): c for c in map(json.loads, f) if c}
+    terms = [r["term"] for r in _read_csv(text / textprep.TERMS)]
+    names = sorted(set(terms) | {r["label"] for r in _read_csv(image / "dataset.csv")})
+    short_forms = sorted({form for forms in textprep.SHORT_FORMS.values() for form in forms})
+    cache_path = data / CHECK_CACHE
+    cache = {}
+    if cache_path.is_file():
+        with cache_path.open(encoding="utf-8") as f:
+            cache = {e["sha256"]: e for e in map(json.loads, f) if e}
+    versions = {}
+    signatures, rows = [], []
+    for number, picture in enumerate(pictures, start=1):
+        path = data / picture["file"]
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != picture["sha256"]:
+            raise ValueError(f"{path.as_posix()} is not the picture {FILES_TABLE} lists (its fingerprint differs): run python -m "
+                             "src.multimodal.figures download again")
+        known = cache.get(picture["sha256"])
+        if not known or known.get("model") != list(IMAGE_MODEL) or known.get("kinds") != list(KINDS):
+            if classify is None:
+                classify, found = _image_model()
+                versions.update(found)
+            if read is None:
+                read, found = _reader()
+                versions.update(found)
+            known = {"sha256": picture["sha256"], "model": list(IMAGE_MODEL), "kinds": list(KINDS), "scores": classify(path),
+                     "writing": read(path)}
+            cache[picture["sha256"]] = known
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            with cache_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(known, ensure_ascii=False) + "\n")
+        kind = max(known["scores"], key=known["scores"].get)
+        words = diagnosis_words(known["writing"], names, short_forms)
+        signatures.append(imageprep._signature(content))
+        rows.append({"patient_uid": picture["patient_uid"], "split": picture["split"], "class": picture["class"], "pmcid": picture["pmcid"],
+                     "figure": picture["figure"], "file": picture["file"], "sha256": picture["sha256"], "width": int(picture["width"]),
+                     "height": int(picture["height"]), "caption_type": _caption_type(captions.get((picture["patient_uid"], picture["figure"]), {})),
+                     "model_kind": kind, "model_score": known["scores"][kind], "writing": "yes" if known["writing"] else "no",
+                     "diagnosis_words": "; ".join(words), "_reasons": set()})
+        if number % 50 == 0:
+            say(f"{number} of {len(pictures)} pictures checked")
+
+    for row in rows:
+        if min(row["width"], row["height"]) < MIN_SIDE:
+            row["_reasons"].add(CHECK_REASONS[0])
+        if row["diagnosis_words"]:
+            row["_reasons"].add(CHECK_REASONS[1])
+        if row["model_kind"] not in SKIN_KINDS:
+            row["_reasons"].add(CHECK_REASONS[2])
+    for entry in _read_csv(image / "dataset.csv"):
+        theirs = imageprep._signature((image / "dataset" / entry["path"]).read_bytes())
+        for row, mine in zip(rows, signatures):
+            if _same(mine, theirs):
+                row["_reasons"].add(CHECK_REASONS[3])
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            if _same(signatures[i], signatures[j]):
+                if rows[i]["patient_uid"] == rows[j]["patient_uid"]:
+                    rows[j]["_reasons"].add(CHECK_REASONS[5])
+                else:
+                    rows[i]["_reasons"].add(CHECK_REASONS[4])
+                    rows[j]["_reasons"].add(CHECK_REASONS[4])
+    for row in rows:
+        found = row.pop("_reasons")
+        reasons = [r for r in CHECK_REASONS if r in found]
+        row["kept"], row["reason"] = ("no", "; ".join(reasons)) if reasons else ("yes", "")
+
+    _write_csv(data / CHECKS_TABLE, CHECK_COLUMNS, rows)
+    cases = _read_csv(data / COUNT_TABLE)
+    kept = {r["patient_uid"] for r in rows if r["kept"] == "yes"}
+    decision = go([{**c, "counts": "yes" if c["patient_uid"] in kept else "no"} for c in cases])
+    report = data / CHECKS_REPORT
+    report.write_text("\n".join(_checks_report(rows, cases, kept, decision, versions)) + "\n", encoding="utf-8", newline="\n")
+    return {"rows": rows, "decision": decision, "table": (data / CHECKS_TABLE).as_posix(), "report": report.as_posix()}
+
+
+def _same(a: dict, b: dict) -> bool:
+    """The image dataset's rule for "the same picture" (src/image/prepare.py, SAME)."""
+    if (a["hash"] ^ b["hash"]).bit_count() > imageprep.SAME["hash_distance"]:
+        return False
+    found = imageprep._compare(a, b)
+    return all(found[k] <= limit for k, limit in imageprep.SAME.items())
+
+
+def _checks_report(rows, cases, kept, decision, versions) -> list[str]:
+    classes = sorted({c["class"] for c in cases})
+    lines = ["# Checks of the pictures, each by itself", "",
+             f"Written by `python -m src.multimodal.figures check` on {datetime.now(timezone.utc).date().isoformat()}. No person looked at "
+             f"the pictures. Image model: open_clip {IMAGE_MODEL[0]} ({IMAGE_MODEL[1]}), asked which of these a picture is: "
+             + "; ".join(f"{k} (\"{v}\")" for k, v in KINDS.items()) + ". Writing: EasyOCR (English). Versions of the models' answers "
+             "made in this run: " + (", ".join(f"{k} {v}" for k, v in sorted(versions.items())) or "none (all answers were kept from an "
+             "earlier run)") + ".", "",
+             f"**After the checks: {decision['test_cases']} test cases keep a picture; {len(decision['classes_with_enough'])} classes have at "
+             f"least {GO_PER_CLASS} ({', '.join(decision['classes_with_enough']) or 'none'}). The rule for building the dataset "
+             f"(at least {GO_TEST_CASES} test cases and {GO_CLASSES} classes) is {'met' if decision['build'] else 'not met'}.**", "",
+             "| Class | Test: cases with a picture kept | Validation | Train |", "|---|---|---|---|"]
+    for label in classes + ["all"]:
+        def n(split):
+            return sum(1 for c in cases if c["split"] == split and (label == "all" or c["class"] == label) and c["patient_uid"] in kept)
+        lines.append(f"| {label} | {n('test')} | {n('val')} | {n('train')} |")
+    reasons = Counter(r for row in rows for r in row["reason"].split("; ") if r)
+    lines += ["", f"Pictures checked: {len(rows)}; kept: {sum(r['kept'] == 'yes' for r in rows)}.", "",
+              "| Left out because (a picture can have several reasons) | Pictures |", "|---|---|"]
+    lines += [f"| {reason} | {reasons[reason]} |" for reason in CHECK_REASONS]
+    skin = [r for r in rows if r["model_kind"] in SKIN_KINDS and r["caption_type"]]
+    pairs = [("dermoscopic" in r["caption_type"], r["model_kind"] == "dermoscopy") for r in skin]
+    agreement = kappa(pairs)
+    lines += ["", "## Do the captions and the image model agree on dermoscopy?", "",
+              f"Of {len(skin)} pictures the model sees as a skin photo, the caption and the model agree on whether it is a dermoscopy image "
+              f"for {sum(a == b for a, b in pairs)}; Cohen's kappa {'–' if agreement is None else f'{agreement:.2f}'}. A low kappa means the "
+              "picture type cannot be taken from either alone.", "",
+              f"Pictures with any writing (labels, arrows' letters, scale bars): {sum(r['writing'] == 'yes' for r in rows)}; with the name of a "
+              f"diagnosis: {sum(bool(r['diagnosis_words']) for r in rows)}.", ""]
+    return lines
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.multimodal.figures", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's open-access packages (needs the internet)")
+    sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     try:
+        if args.step == "check":
+            done = check(show=print)
+            d = done["decision"]
+            print(f"{sum(r['kept'] == 'yes' for r in done['rows'])} of {len(done['rows'])} pictures kept; {d['test_cases']} test cases keep "
+                  f"one; classes with at least {GO_PER_CLASS}: {len(d['classes_with_enough'])}. Rule {'met' if d['build'] else 'not met'}. "
+                  f"Written: {done['table']} and {done['report']}. Commit both.")
+            return
         if args.step == "download":
             done = download(show=print)
             saved = [r for r in done["rows"] if r["status"] == SAVED]
