@@ -2,7 +2,9 @@
 
 import csv
 import hashlib
+import io
 import json
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -207,9 +209,120 @@ class RuleTests(unittest.TestCase):
             self.assertEqual(figures.licence_kind(licence), kind)
 
 
+def png(colour=(200, 50, 50)) -> bytes:
+    from PIL import Image
+    out = io.BytesIO()
+    Image.new("RGB", (4, 3), colour).save(out, format="PNG")
+    return out.getvalue()
+
+
+def package(figs: dict, files: dict, nxml_count: int = 1) -> bytes:
+    """A gzipped tar like PMC's: the article's XML (figures with their graphics) and the files."""
+    xml = ('<article xmlns:xlink="http://www.w3.org/1999/xlink"><body>' + "".join(
+        f'<fig id="{fid}">' + "".join(f'<graphic xlink:href="{h}"/>' for h in hrefs) + "</fig>" for fid, hrefs in figs.items())
+        + "</body></article>").encode()
+    out = io.BytesIO()
+    with tarfile.open(fileobj=out, mode="w:gz") as archive:
+        for name, content in [*[(f"PMC1/a{i}.nxml", xml) for i in range(nxml_count)], *files.items()]:
+            info = tarfile.TarInfo(name)
+            info.size = len(content)
+            archive.addfile(info, io.BytesIO(content))
+    return out.getvalue()
+
+
+OA = ('<OA><records><record id="{id}" license="CC BY" retracted="{retracted}"><link format="tgz" '
+      'href="ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_package/00/00/{id}.tar.gz"/></record></records></OA>')
+
+
+class OpenAccessTests(unittest.TestCase):
+    def test_the_service_s_answers(self):
+        self.assertEqual(figures.parse_oa(OA.format(id="PMC1", retracted="no").encode()),
+                         {"licence": "CC BY", "retracted": False, "package": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_package/00/00/PMC1.tar.gz"})
+        self.assertTrue(figures.parse_oa(OA.format(id="PMC1", retracted="yes").encode())["retracted"])
+        self.assertEqual(figures.parse_oa(b'<OA><error code="idIsNotOpenAccess">identifier PMC2 is not Open Access</error></OA>'),
+                         {"error": "idIsNotOpenAccess: identifier PMC2 is not Open Access"})
+        with self.assertRaisesRegex(ValueError, "unexpected form"):
+            figures.parse_oa(b"<html/>")
+
+    def test_only_the_wanted_figures_pictures_are_read(self):
+        content = package({"f1": ["fig1"], "f2": ["fig2.jpg"], "f3": ["missing"], "f4": ["fig4a", "fig4b"]},
+                          {"PMC1/fig1.tif": b"t", "PMC1/fig1.jpg": b"j", "PMC1/fig2.jpg": b"two", "PMC1/fig4a.png": b"a",
+                           "PMC1/fig4b.gif": b"b", "PMC1/article.pdf": b"%PDF"})
+        found = figures.pictures_in_package(content, ["f1", "f3", "f4", "f9"])
+        self.assertEqual(found, {"f1": [("fig1.jpg", b"j")], "f3": [], "f4": [("fig4a.png", b"a"), ("fig4b.gif", b"b")], "f9": []})
+        self.assertEqual(figures.pictures_in_package(content, ["f2"]), {"f2": [("fig2.jpg", b"two")]})
+
+    def test_a_package_must_hold_one_article(self):
+        with self.assertRaisesRegex(ValueError, "2 article files"):
+            figures.pictures_in_package(package({}, {}, nxml_count=2), [])
+
+
+class DownloadTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.data = Path(tmp.name)
+        cases = [("c1", "test", "melanoma", "PMC1", "yes"), ("c2", "test", "nevus", "PMC2", "yes"), ("c3", "val", "nevus", "PMC3", "yes"),
+                 ("c4", "train", "nevus", "PMC4", "no")]
+        with (self.data / figures.COUNT_TABLE).open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=figures.CASE_COLUMNS, lineterminator="\n")
+            writer.writeheader()
+            for uid, split, label, pmcid, counts in cases:
+                writer.writerow({c: "" for c in figures.CASE_COLUMNS} | {"patient_uid": uid, "split": split, "class": label, "pmcid": pmcid,
+                                                                          "counts": counts})
+        def caption(uid, pmcid, fid, lesion=True, left=()):
+            return {"patient_uid": uid, "pmcid": pmcid, "figure": fid, "label": f"Figure {fid[-1]}", "lesion": lesion, "left_out_for": list(left)}
+        lines = [caption("c1", "PMC1", "f1"), caption("c1", "PMC1", "f2", left=["scan"]), caption("c1", "PMC1", "f3", lesion=False),
+                 caption("c1", "PMC1", "f5"), caption("c2", "PMC2", "f1"), caption("c3", "PMC3", "f1"), caption("c4", "PMC4", "f1")]
+        (self.data / "figures").mkdir()
+        (self.data / figures.CAPTIONS).write_text("".join(json.dumps(c) + "\n" for c in lines), encoding="utf-8")
+        self.packages = {"PMC1": package({"f1": ["fig1"], "f2": ["fig2"], "f3": ["fig3"], "f5": ["fig5"]},
+                                         {"x/fig1.jpg": png(), "x/fig2.jpg": png(), "x/fig3.jpg": png(), "x/fig5.png": b"not a picture"})}
+        self.asked = []
+
+        def oa(pmcid):
+            self.asked.append(pmcid)
+            if pmcid == "PMC2":
+                return {"error": "idIsNotOpenAccess: no"}
+            return {"licence": "CC BY", "retracted": pmcid == "PMC3", "package": f"https://x/{pmcid}.tar.gz"}
+        for patch in (mock.patch.object(figures, "_oa_record", side_effect=oa),
+                      mock.patch.object(figures, "_package", side_effect=lambda url: self.packages[url.split("/")[-1][:-7]])):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_the_pictures_of_the_figures_that_count_are_saved_byte_for_byte(self):
+        done = figures.download(self.data)
+        rows = {(r["patient_uid"], r["figure"]): r for r in done["rows"]}
+        self.assertEqual(set(rows), {("c1", "f1"), ("c1", "f5"), ("c2", "f1"), ("c3", "f1")})  # f2, f3 and c4 do not count
+        first = rows[("c1", "f1")]
+        self.assertEqual((first["status"], first["width"], first["height"], first["licence"], first["file"]),
+                         (figures.SAVED, 4, 3, "CC BY", "figures/images/PMC1/f1-fig1.jpg"))
+        self.assertEqual((self.data / first["file"]).read_bytes(), png())
+        self.assertEqual(first["sha256"], hashlib.sha256(png()).hexdigest())
+        self.assertEqual(rows[("c1", "f5")]["status"], figures.UNREADABLE)
+        self.assertEqual(rows[("c2", "f1")]["status"], figures.NOT_OPEN)
+        self.assertEqual(rows[("c3", "f1")]["status"], figures.RETRACTED)
+        self.assertEqual(sorted(p.name for p in (self.data / "figures" / "images" / "PMC1").iterdir()), ["f1-fig1.jpg", "record.json"])
+        report = (self.data / figures.FILES_REPORT).read_text(encoding="utf-8")
+        self.assertIn("Pictures saved: 1 for 1 of 3 cases.", report)
+        self.assertIn("| melanoma | 1 | 0 | 0 |", report)
+
+    def test_a_second_run_asks_nothing_again(self):
+        first = figures.download(self.data)["rows"]
+        self.asked.clear()
+        self.assertEqual(figures.download(self.data)["rows"], first)
+        self.assertEqual(self.asked, [])
+
+    def test_a_case_that_counts_needs_its_figures(self):
+        (self.data / figures.CAPTIONS).write_text("", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "no figure of it does"):
+            figures.download(self.data)
+
+
 class CommandLineTests(unittest.TestCase):
-    def test_the_only_step_is_count(self):
+    def test_the_steps_are_count_and_download(self):
         self.assertEqual(figures.build_parser().parse_args(["count"]).step, "count")
+        self.assertEqual(figures.build_parser().parse_args(["download"]).step, "download")
         with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
             figures.build_parser().parse_args(["build"])
 

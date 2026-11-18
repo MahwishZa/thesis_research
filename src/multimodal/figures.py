@@ -3,6 +3,7 @@ article's open full text in PubMed Central, a figure whose caption shows the pat
 photo. A case report's figures show its own patient, so such a figure and the case text are one patient's photo and description.
 
     python -m src.multimodal.figures count     (needs the internet; downloads PubMed records and PMC full texts, no image)
+    python -m src.multimodal.figures download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/text/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
@@ -17,7 +18,14 @@ is counted apart: it could be used only if its panels were cut apart.
 The rule that decides whether the dataset is built was fixed before the count (2026-11-18): at least 80 test cases that count, and
 at least 6 of the 8 classes with at least 8 such test cases each.
 
-Writes data/multimodal/figure_count.csv (one row per case, no caption text), data/multimodal/figure_count.md (the counts and the
+``download`` asks PMC's open-access service for each counted case's article. An article that is not in the open-access subset,
+or that is marked retracted, gives no picture. Otherwise its package (the article's XML and its picture files, under the article's
+licence) is downloaded, and only the pictures of the figures that count are kept, byte for byte, in data/multimodal/figures/images/
+(not in Git); nothing else of the package is written. Each picture is opened once to check that it is a readable picture. The table
+data/multimodal/figure_files.csv lists every picture with its fingerprint; data/multimodal/figure_files.md gives the counts. The
+download can be stopped and run again: an article already done is not asked again.
+
+``count`` writes data/multimodal/figure_count.csv (one row per case, no caption text), data/multimodal/figure_count.md (the counts and the
 rule) and data/multimodal/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
 under their publishers' licences).
 """
@@ -26,14 +34,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import re
 import sys
+import tarfile
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
+
+from PIL import Image
 
 from ..common import fetch
 from ..text import prepare as textprep
@@ -41,6 +53,14 @@ from .prepare import DATA, TEXT, _read_csv, _write_csv
 
 COUNT_TABLE, COUNT_REPORT = "figure_count.csv", "figure_count.md"
 CAPTIONS = Path("figures") / "captions.jsonl"  # in data/multimodal/, not in Git
+OA_SERVICE = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"  # PMC's open-access web service: an article's package
+FILES_TABLE, FILES_REPORT = "figure_files.csv", "figure_files.md"
+IMAGES = Path("figures") / "images"  # in data/multimodal/, not in Git: one folder per article
+FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "picture", "file", "sha256", "width", "height", "licence",
+                "status"]
+PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
+SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not in PMC's open-access subset", "the article is retracted",
+                                                   "no picture file for the figure in the package", "the picture cannot be opened")
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
 
 DERMOSCOPY = re.compile(r"dermoscop|dermatoscop|epiluminescence")
@@ -267,16 +287,173 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
     return lines
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Step "download": the pictures of the figures that count
+
+
+def parse_oa(content: bytes) -> dict:
+    """PMC's open-access service's answer for one article: its licence, whether it is retracted and its package's address, or the
+    service's error (an article outside the open-access subset)."""
+    root = ElementTree.fromstring(content)
+    if root.tag != "OA":
+        raise ValueError(f"PMC's open-access service answered in an unexpected form (<{root.tag}>)")
+    error = root.find("error")
+    if error is not None:
+        return {"error": f"{error.get('code') or 'error'}: {' '.join(''.join(error.itertext()).split())}"}
+    record = root.find("records/record")
+    if record is None:
+        return {"error": "no record"}
+    package = [link.get("href") for link in record.findall("link") if link.get("format") == "tgz" and link.get("href")]
+    if not package:
+        return {"error": "no package"}
+    href = package[0]
+    return {"licence": record.get("license") or "", "retracted": record.get("retracted") == "yes",
+            "package": "https://" + href.removeprefix("ftp://") if href.startswith("ftp://") else href}
+
+
+def _oa_record(pmcid: str) -> dict:
+    return fetch(f"{OA_SERVICE}?id={pmcid}", "application/xml", parse_oa, delay=textprep.NCBI_DELAY, attempts=textprep.NCBI_ATTEMPTS)
+
+
+def _package(url: str) -> bytes:
+    return fetch(url, "application/gzip", delay=textprep.NCBI_DELAY, attempts=textprep.NCBI_ATTEMPTS)
+
+
+def pictures_in_package(content: bytes, wanted: list[str]) -> dict[str, list[tuple[str, bytes]]]:
+    """For each wanted figure (by its id in the article's XML), its picture files in the package, as (name, bytes), in the order
+    of the figure's graphics; a figure with no picture file gets an empty list. Only regular files are read, by name; nothing in
+    the package is written or run."""
+    with tarfile.open(fileobj=io.BytesIO(content), mode="r:gz") as archive:
+        files = {m.name: m for m in archive.getmembers() if m.isfile()}
+        articles = [name for name in files if name.endswith(".nxml")]
+        if len(articles) != 1:
+            raise ValueError(f"the package holds {len(articles)} article files, not one")
+        root = ElementTree.fromstring(archive.extractfile(files[articles[0]]).read())
+        by_stem = {}
+        for name in files:
+            stem, kind = os.path.splitext(os.path.basename(name))
+            if kind.lower() in PICTURE_TYPES:
+                by_stem.setdefault(stem, []).append(name)
+        found = {}
+        figs = {fig.get("id"): fig for fig in root.iter("fig")}
+        for figure in wanted:
+            pictures = []
+            for graphic in (figs[figure].iter("graphic") if figure in figs else []):
+                href = graphic.get("{http://www.w3.org/1999/xlink}href") or ""
+                stem, kind = os.path.splitext(os.path.basename(href))
+                names = by_stem.get(stem if kind.lower() in PICTURE_TYPES else os.path.basename(href), [])
+                if names:
+                    name = min(names, key=lambda n: PICTURE_TYPES.index(os.path.splitext(n)[1].lower()))
+                    pictures.append((os.path.basename(name), archive.extractfile(files[name]).read()))
+            found[figure] = pictures
+        return found
+
+
+def _safe(name: str) -> str:
+    return re.sub(r"[^\w.-]", "_", name)
+
+
+def download(data: Path = DATA, show=None) -> dict:
+    """The download step (see the module's description): figure_files.csv, figure_files.md and the pictures."""
+    data = Path(data)
+    say = show or (lambda message: None)
+    cases = [r for r in _read_csv(data / COUNT_TABLE) if r["counts"] == "yes"]
+    if not (data / CAPTIONS).is_file():
+        raise FileNotFoundError(f"{(data / CAPTIONS).as_posix()} not found: run python -m src.multimodal.figures count first")
+    with (data / CAPTIONS).open(encoding="utf-8") as f:
+        captions = [json.loads(line) for line in f if line.strip()]
+    chosen = {}
+    for c in captions:
+        if c["lesion"] and not c["left_out_for"]:
+            chosen.setdefault(c["patient_uid"], []).append(c)
+    rows = []
+    for number, case in enumerate(sorted(cases, key=lambda r: r["pmcid"]), start=1):
+        figures = chosen.get(case["patient_uid"], [])
+        if not figures:
+            raise ValueError(f"{case['patient_uid']} counts in {COUNT_TABLE} but no figure of it does in {CAPTIONS.as_posix()}: run "
+                             "python -m src.multimodal.figures count again")
+        folder = data / IMAGES / _safe(case["pmcid"])
+        done = folder / "record.json"
+        if done.is_file():
+            rows += json.loads(done.read_text(encoding="utf-8"))
+            continue
+        base = {"patient_uid": case["patient_uid"], "split": case["split"], "class": case["class"], "pmcid": case["pmcid"]}
+        record = _oa_record(case["pmcid"])
+        found, status = {}, ""
+        if "error" in record:
+            status = NOT_OPEN
+        elif record["retracted"]:
+            status = RETRACTED
+        else:
+            found = pictures_in_package(_package(record["package"]), [f["figure"] for f in figures])
+        mine = []
+        for f in figures:
+            pictures = found.get(f["figure"], [])
+            if status or not pictures:
+                mine.append({**base, "figure": f["figure"], "label": f["label"], "picture": "", "file": "", "sha256": "", "width": "",
+                             "height": "", "licence": record.get("licence", ""), "status": status or NO_FILE})
+            for name, content in pictures:
+                entry = {**base, "figure": f["figure"], "label": f["label"], "picture": name, "licence": record.get("licence", "")}
+                try:
+                    with Image.open(io.BytesIO(content)) as picture:
+                        picture.load()
+                        width, height = picture.size
+                except Exception:  # any picture Pillow cannot read
+                    mine.append({**entry, "file": "", "sha256": "", "width": "", "height": "", "status": UNREADABLE})
+                    continue
+                path = folder / f"{_safe(f['figure'])}-{_safe(name)}"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.with_name(path.name + ".partial").write_bytes(content)
+                os.replace(path.with_name(path.name + ".partial"), path)
+                mine.append({**entry, "file": path.relative_to(data).as_posix(), "sha256": hashlib.sha256(content).hexdigest(),
+                             "width": width, "height": height, "status": SAVED})
+        folder.mkdir(parents=True, exist_ok=True)
+        done.write_text(json.dumps(mine, ensure_ascii=False), encoding="utf-8")
+        rows += mine
+        say(f"{number} of {len(cases)} articles done ({case['pmcid']}: {sum(r['status'] == SAVED for r in mine)} pictures)")
+    rows.sort(key=lambda r: (r["split"], r["class"], r["patient_uid"], r["figure"], r["picture"]))
+    _write_csv(data / FILES_TABLE, FILE_COLUMNS, rows)
+    report = data / FILES_REPORT
+    report.write_text("\n".join(_files_report(rows, cases)) + "\n", encoding="utf-8", newline="\n")
+    return {"rows": rows, "table": (data / FILES_TABLE).as_posix(), "report": report.as_posix()}
+
+
+def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
+    saved = [r for r in rows if r["status"] == SAVED]
+    with_picture = {r["patient_uid"] for r in saved}
+    lines = ["# Pictures of the figures that count", "",
+             f"Written by `python -m src.multimodal.figures download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
+             "come from PMC's open-access packages, byte for byte, and stay on this computer (`data/multimodal/figures/images/`). "
+             "Nothing in them was changed, and no person looked at them.", "",
+             "| Class | Test: cases with a picture | Validation | Train |", "|---|---|---|---|"]
+    for label in sorted({c["class"] for c in cases}) + ["all"]:
+        def n(split):
+            return sum(1 for c in cases if c["split"] == split and (label == "all" or c["class"] == label) and c["patient_uid"] in with_picture)
+        lines.append(f"| {label} | {n('test')} | {n('val')} | {n('train')} |")
+    status = Counter(r["status"] for r in rows)
+    lines += ["", f"Pictures saved: {len(saved)} for {len(with_picture)} of {len(cases)} cases.", "",
+              "| Figure or picture | Count |", "|---|---|"] + [f"| {s} | {status[s]} |" for s in (SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE)]
+    return lines + [""]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.multimodal.figures", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
+    sub.add_parser("download", help="download the pictures of the figures that count, from PMC's open-access packages (needs the internet)")
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
-    build_parser().parse_args(argv)
+    args = build_parser().parse_args(argv)
     try:
+        if args.step == "download":
+            done = download(show=print)
+            saved = [r for r in done["rows"] if r["status"] == SAVED]
+            print(f"{len(saved)} pictures saved for {len({r['patient_uid'] for r in saved})} cases. Written: {done['table']} and "
+                  f"{done['report']}; the pictures stay in data/multimodal/figures/images/ (not in Git). Commit {done['table']} and "
+                  f"{done['report']}.")
+            return
         done = count(show=print)
     except (ValueError, FileNotFoundError) as exc:
         raise SystemExit(f"ERROR: {exc}") from exc
