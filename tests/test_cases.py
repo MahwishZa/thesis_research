@@ -10,7 +10,7 @@ from unittest import mock
 from PIL import Image
 
 from src import datasets, evaluate, run
-from tests.fixtures import TEXT_CONFIG, FakeModel, TextProject
+from tests.fixtures import FakeModel, TextProject
 
 CASES = ["train/actinic keratosis/101-1.txt", "train/melanoma/102-2.txt", "train/melanoma/103-3.txt", "train/nevus/104-4.txt",
          "val/melanoma/107-7.txt", "test/actinic keratosis/201-9.txt", "test/melanoma/203-11.txt", "test/melanoma/204-13.txt",
@@ -54,15 +54,16 @@ class CaseProject(TextProject):
         self.photo_prompt = self.base / "photos.txt"
         self.photo_prompt.write_text("Photos of a lesion.\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
 
-    def config_for(self, dataset):
-        prompt = self.prompt if dataset == "cases" else self.photo_prompt
-        path = self.base / f"{dataset}.toml"
-        path.write_text(TEXT_CONFIG.format(prompt=prompt.as_posix()).replace('dataset = "text"', f'dataset = "{dataset}"'), encoding="utf-8")
-        return path
+    def prompt_for(self, dataset):
+        """prompts/<dataset>/closed_book.txt: the text prompt (with the case) for "cases", the photo prompt for "case_photos"."""
+        path = self.base / "prompts" / dataset / "closed_book.txt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text((self.prompt if dataset == "cases" else self.photo_prompt).read_text(encoding="utf-8"), encoding="utf-8")
 
     def ask(self, dataset, model, **kwargs):
+        self.prompt_for(dataset)
         with mock.patch("src.run.load", return_value=model):
-            return run.run(str(self.config_for(dataset)), "test", results=self.results, **kwargs)
+            return run.run("fake", dataset, "test", results=self.results, **kwargs)
 
 
 class CaseDatasetTests(CaseProject):
@@ -132,7 +133,7 @@ class CaseDatasetTests(CaseProject):
 
     def test_a_text_run_is_compared_with_a_case_run_on_the_shared_cases_only(self):
         with mock.patch("src.run.load", return_value=FakeModel()):
-            text_run = run.run(str(self.config), "test", run_id="t", results=self.results)
+            text_run = run.run("fake", "text", "test", run_id="t", results=self.results)
         cases_run = self.ask("cases", FakeModel(), run_id="c")
         photos_run = self.ask("case_photos", FakeModel(), run_id="p")
         for a, b in ((text_run, cases_run), (cases_run, text_run), (photos_run, cases_run)):
@@ -141,7 +142,7 @@ class CaseDatasetTests(CaseProject):
         other = self.results / "image-copy"
         shutil.copytree(cases_run, other)
         card = json.loads((other / "run_card.json").read_text(encoding="utf-8"))
-        card["config"]["dataset"], card["n_images"] = "multimodal", card["n_cases"]  # photos of other patients: nothing pairs
+        card["config"]["dataset"], card["n_images"] = "image_metadata", card["n_cases"]  # photos of other patients: nothing pairs
         (other / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(text_run, other)

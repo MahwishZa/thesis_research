@@ -12,7 +12,6 @@ from pathlib import Path
 
 from PIL import Image
 
-from .metrics import ABSTAIN
 
 
 DATA = Path("data")  # one folder per dataset (image, text, image_metadata, cases), and the knowledge base (data/knowledge/)
@@ -23,7 +22,7 @@ MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 TEXT_TYPES = {".txt": "text/plain"}  # the text files: UTF-8, each one case
 SYSTEM_FILES = {"thumbs.db", "desktop.ini"}  # written by Windows Explorer into folders it shows; never part of the dataset
 SHA256 = re.compile(r"[0-9a-f]{64}")
-MISSING_FACT = "not recorded"  # how a missing fact is written in a multimodal question
+MISSING_FACT = "not recorded"  # how a missing fact is written in an image + metadata question
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -57,7 +56,7 @@ DATASETS = {  # the datasets a config can name
     "text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
                     "Patients described in one article are not independent",
                     set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
-    "multimodal": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
+    "image_metadata": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
                           "Photos of one lesion are not independent", facts_column="facts", folder="image_metadata",
                           files="image/dataset"),  # the image + metadata dataset: the image dataset's photos, each with its patient's facts
     # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/cases/dataset.csv), asked
@@ -70,7 +69,16 @@ DATASETS = {  # the datasets a config can name
                            files="text/dataset", folder="cases", pictures_column="pictures",
                            pictures_root="cases", subset=True),
 }
-SAME_QUESTIONS = ({"image", "multimodal"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
+SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
+TITLES = {"image": "Image", "text": "Text", "image_metadata": "Image + metadata", "cases": "Cases: text and photos",
+          "case_photos": "Cases: photos only"}  # how tables and reports name the datasets
+ALIASES = {"multimodal": "image_metadata"}  # an earlier name of a dataset, as the run cards of the first phase record it
+
+
+def dataset_of(card: dict) -> str:
+    """The dataset a run card names, under its current name."""
+    name = card["config"]["dataset"]
+    return ALIASES.get(name, name)
 
 
 @dataclass(frozen=True)
@@ -80,7 +88,7 @@ class Item:
     path: str  # inside the dataset's folder of files, with forward slashes: <split>/<label>/<file>
     sha256: str
     group: str = ""  # the lesion an image shows, or the article a case comes from; empty when the table does not say
-    facts: str = ""  # a multimodal question's patient facts, as the model is shown them
+    facts: str = ""  # an image + metadata question's patient facts, as the model is shown them
     pictures: tuple = ()  # a case question's pictures: (path inside the pictures' folder, sha256), in the order they are sent
 
 
@@ -193,8 +201,6 @@ def classes(items: list[Item]) -> list[str]:
     train = sorted({item.label for item in items if item.split == "train"})
     if not train:
         raise ValueError("the training split is empty, so the classes are unknown")
-    if ABSTAIN in train:
-        raise ValueError(f"a class may not be called {ABSTAIN!r}: it is the answer that means no diagnosis")
     unknown = sorted({item.label for item in items if item.split != "train"} - set(train))
     if unknown:
         raise ValueError(f"classes without training files: {unknown}")

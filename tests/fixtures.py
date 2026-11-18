@@ -27,17 +27,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120)}
 SIZES = {"train": 3, "val": 2, "test": 2}  # images per class and split in the synthetic project
-CONFIG = """name = "fake"
-dataset = "image"
-[model]
-provider = "fake"
-id = "fake-1"
-[prompt]
-file = "{prompt}"
-[run]
+MODEL_LIST = """[[models]]
+name = "fake"
 requests_per_minute = 600000
 order_seed = 0
-"""
+[models.settings]
+provider = "fake"
+id = "fake-1"
+"""  # configs/models.toml of the synthetic projects: one stand-in model
+
+
+def write_project_files(base: Path, dataset: str, prompt: str) -> tuple[Path, Path]:
+    """configs/models.toml and prompts/<dataset>/closed_book.txt, as in the repository."""
+    config, prompt_path = base / "configs" / "models.toml", base / "prompts" / dataset / "closed_book.txt"
+    for path, text in ((config, MODEL_LIST), (prompt_path, prompt)):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    return config, prompt_path
 LABELS = ["nevus", "melanoma", "vascular lesion"]
 
 
@@ -58,7 +64,9 @@ def write_table(base: Path) -> Path:
 
 class Project(unittest.TestCase):
     """A prepared dataset (3+3 training, 2+2 validation, 2+2 test images: ISIC_0000001 to ISIC_0000014, in that order), its
-    table, a prompt and a config, in a folder laid out like the repository; each test runs inside it."""
+    table, a prompt and the model list, in a folder laid out like the repository; each test runs inside it."""
+
+    dataset = "image"
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -76,13 +84,10 @@ class Project(unittest.TestCase):
                     image.paste((255, 255, 255), (0, 0, 2 + number, 2 + number))  # every image differs from every other
                     image.save(folder / f"ISIC_{number:07d}.jpg", quality=95)
         self.table = write_table(self.base)
-        self.prompt = self.base / "prompt.txt"
-        self.prompt.write_text("Pick one:\n{labels}\nAnswer with the name only.", encoding="utf-8")
-        self.config = self.base / "fake.toml"
-        self.config.write_text(CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
+        self.config, self.prompt = write_project_files(self.base, self.dataset, "Pick one:\n{labels}\nAnswer with the name only.")
         self.results = self.base / "results"
         previous = os.getcwd()
-        os.chdir(self.base)  # the paths data/image/dataset and data/image/dataset.csv point into the project
+        os.chdir(self.base)  # the paths data/, configs/ and prompts/ point into the project
         self.addCleanup(os.chdir, previous)
         self.enterContext(contextlib.redirect_stdout(io.StringIO()))  # the progress lines of the runs inside the tests
 
@@ -126,7 +131,7 @@ class UnpinnedModel(FakeModel):
 class RunProject(Project):
     def setUp(self):
         super().setUp()
-        self.model_dir = self.results / "image" / "fake"
+        self.model_dir = self.results / self.dataset / "closed_book" / "fake"
         patcher = mock.patch("src.run.time.sleep")
         self.sleep = patcher.start()
         self.addCleanup(patcher.stop)
@@ -136,7 +141,7 @@ class RunProject(Project):
 
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.run.load", return_value=model):
-            return run.run(str(self.config), *args, results=self.results, **kwargs)
+            return run.run("fake", self.dataset, *args, results=self.results, **kwargs)
 
     def _preds(self, folder):
         return [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -172,12 +177,13 @@ TEXT_CASES = {  # (split, class): the article of each case
     ("test", "actinic keratosis"): ["201", "202"], ("test", "melanoma"): ["203", "203", "204"],  # one article, two patients
     ("test", "nevus"): ["205", "206", "207"],
 }
-TEXT_CONFIG = CONFIG.replace('dataset = "image"', 'dataset = "text"')
 
 
 class TextProject(unittest.TestCase):
     """A prepared text dataset (16 cases: 5 training, 3 validation, 8 test from 7 articles), its table, a prompt with the case
-    placeholder and a config, in a folder laid out like the repository; each test runs inside it."""
+    placeholder and the model list, in a folder laid out like the repository; each test runs inside it."""
+
+    dataset = "text"
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -195,10 +201,8 @@ class TextProject(unittest.TestCase):
                 rows.append(f"{split},{label},{path},{hashlib.sha256(self.texts[path].encode('utf-8')).hexdigest()},{pmid}-{number},"
                             f"{pmid},PMC-Patients\n")
         self.table.write_text("split,label,path,sha256,patient_uid,pmid,source\n" + "".join(rows), encoding="utf-8")
-        self.prompt = self.base / "prompt.txt"
-        self.prompt.write_text("A case.\nCase: {case}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
-        self.config = self.base / "fake.toml"
-        self.config.write_text(TEXT_CONFIG.format(prompt=self.prompt.as_posix()), encoding="utf-8")
+        self.config, self.prompt = write_project_files(self.base, self.dataset,
+                                                       "A case.\nCase: {case}\nPick one:\n{labels}\nAnswer with the name only.\n")
         self.results = self.base / "results"
         previous = os.getcwd()
         os.chdir(self.base)
@@ -223,11 +227,13 @@ class RecordingModel(FakeModel):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# The multimodal dataset: each photo with its patient's facts in the prompt
+# The image + metadata dataset: each photo with its patient's facts in the prompt
 
 class MultimodalProject(Project):
-    """The image project, with data/image_metadata/dataset.csv giving each photo its patient's facts (one test photo lacks a fact),
-    a prompt with the facts placeholder and a multimodal config."""
+    """The image project, with data/image_metadata/dataset.csv giving each photo its patient's facts (one test photo lacks a fact)
+    and a prompt with the facts placeholder."""
+
+    dataset = "image_metadata"
 
     MISSING = "test/nevus/ISIC_0000013.jpg"
 
@@ -245,8 +251,6 @@ class MultimodalProject(Project):
                 writer.writerow({k: row[k] for k in ("split", "label", "path", "sha256", "lesion_group")}
                                 | {"facts": f"Age: about {30 + 5 * i} years. Sex: female. Body site: {site}."})
         self.prompt.write_text("A photo.\nPatient: {facts}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
-        self.config.write_text(CONFIG.replace('dataset = "image"', 'dataset = "multimodal"').format(prompt=self.prompt.as_posix()),
-                               encoding="utf-8")
         for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
             patcher = mock.patch(f"src.run.{name}", return_value=value)
             patcher.start()

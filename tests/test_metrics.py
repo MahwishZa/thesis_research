@@ -179,30 +179,6 @@ class MetricTests(unittest.TestCase):
         low, high = grouped["balanced_rate_ci95"]
         self.assertTrue(0 <= low <= grouped["balanced_rate"] <= high <= 1)
 
-    def test_an_abstention_is_no_hallucination_no_right_answer_and_no_unreadable_answer(self):
-        true = ["a", "a", "a", "b", "b", "b", "b"]
-        pred = ["a", "uncertain", "b", "b", "uncertain", None, "a"]
-        # class a: right 1, abstained 1, wrong diagnosis 1 (b); class b: right 1, abstained 1, unreadable 1, wrong diagnosis 1 (a)
-        m = metrics.summarize(true, pred, ["a", "b"])
-        h, a = m["hallucination"], m["abstention"]
-        self.assertEqual((m["correct"], m["unreadable"], h["wrong"], a["count"]), (2, 1, 2, 2))
-        self.assertEqual(2 + 1 + 2 + 2, m["n"])  # right + unreadable + hallucination + abstention = every question
-        self.assertEqual((h["no_valid_answer"], h["rate"], a["rate"], a["committed"], a["selective_accuracy"]), (1, 2 / 7, 2 / 7, 4, 0.5))
-        self.assertAlmostEqual(h["balanced_rate"], (1 / 3 + 1 / 4) / 2)
-        self.assertEqual((a["rate_ci95"], a["selective_accuracy_ci95"]), (metrics.wilson(2, 7), metrics.wilson(2, 4)))
-        self.assertEqual(m["confusion_matrix"]["counts"], [[1, 1, 1], [1, 1, 2]])  # an abstention is in the last column, as no class
-        grouped = metrics.summarize(true, pred, ["a", "b"], groups=["L1", "L1", "L2", "L3", "L4", "L5", "L6"])["abstention"]
-        self.assertTrue(0 <= grouped["rate_ci95"][0] <= grouped["rate"] <= grouped["rate_ci95"][1] <= 1)
-        self.assertTrue(0 <= grouped["selective_accuracy_ci95"][0] <= 0.5 <= grouped["selective_accuracy_ci95"][1] <= 1)
-        # the abstention rate is 1/2 in every resample (two lesions of two photos per class), the accuracy 0 in every one
-        steady = metrics.summarize(["a"] * 4 + ["b"] * 4, ["uncertain"] * 4 + [None] * 4, ["a", "b"],
-                                    groups=["L1", "L1", "L2", "L2", "L3", "L3", "L4", "L4"])
-        self.assertEqual((steady["abstention"]["rate_ci95"], steady["accuracy_ci95"]), ((0.5, 0.5), (0.0, 0.0)))
-        forced = metrics.summarize(["a", "b"], ["a", "a"], ["a", "b"])["abstention"]  # a forced-choice run never abstains
-        self.assertEqual((forced["count"], forced["rate"], forced["selective_accuracy"]), (0, 0.0, 0.5))
-        silent = metrics.summarize(["a", "b"], ["uncertain", "uncertain"], ["a", "b"])["abstention"]  # nothing named: undefined
-        self.assertEqual((silent["rate"], silent["selective_accuracy"], silent["selective_accuracy_ci95"]), (1.0, None, None))
-
     def test_mcnemar_exact_values_by_hand(self):
         self.assertEqual(metrics.mcnemar(0, 0), 1.0)  # no question decides between the runs
         self.assertEqual(metrics.mcnemar(0, 5), 2 / 32)  # 2 x (1/2)^5

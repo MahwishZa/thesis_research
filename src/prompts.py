@@ -7,12 +7,11 @@ import re
 from pathlib import Path
 
 from .datasets import DATASETS
-from .metrics import ABSTAIN
 
 
 PLACEHOLDER = "{labels}"
 CASE = "{case}"  # in a text prompt: where each case goes
-FACTS = "{facts}"  # in a multimodal prompt: where the patient's facts go
+FACTS = "{facts}"  # in an image + metadata prompt: where the patient's facts go
 LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reader forgives in front of a colon and the class name
 
 
@@ -21,10 +20,10 @@ LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reade
 # answers were read
 
 
-def load_template(path: str | Path, dataset: str = "image", abstain: bool = False) -> str:
+def load_template(path: str | Path, dataset: str = "image") -> str:
     """The prompt template: the label placeholder exactly once; the case placeholder exactly once in a prompt for text cases
-    (never in one for images, which go next to the prompt); the facts placeholder exactly once in a multimodal prompt (never in
-    another); and, only in a prompt of a run that may abstain, the word "uncertain" (the answer that means no diagnosis)."""
+    (never in one for images, which go next to the prompt); the facts placeholder exactly once in an image + metadata prompt (never in
+    another)."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:
         raise ValueError(f"{path} must contain {PLACEHOLDER} exactly once")
@@ -36,19 +35,12 @@ def load_template(path: str | Path, dataset: str = "image", abstain: bool = Fals
         raise ValueError(f"{path} must contain {FACTS} exactly once: it is where each patient's facts go")
     if not DATASETS[dataset].facts_column and FACTS in text:
         raise ValueError(f"{path} must not contain {FACTS}: the {dataset} dataset has no patient facts")
-    says = re.search(rf"\b{ABSTAIN}\b", text, re.IGNORECASE) is not None
-    if abstain and not says:
-        raise ValueError(f"{path} must tell the model it may answer {ABSTAIN!r}: the config says abstain = true")
-    if not abstain and says:
-        raise ValueError(f"{path} must not offer the answer {ABSTAIN!r}: the config forces a choice (abstain is not true)")
     return text
 
 
-def build_prompt(template: str, labels: list[str], abstain: bool = False) -> str:
-    """The prompt of a run: the class names, sorted, one per line, and for a run that may abstain the answer "uncertain" after
-    them."""
-    options = [*sorted(labels), *([ABSTAIN] if abstain else [])]
-    return template.replace(PLACEHOLDER, "\n".join(f"- {option}" for option in options)).strip()
+def build_prompt(template: str, labels: list[str]) -> str:
+    """The prompt of a run: the class names, sorted, one per line."""
+    return template.replace(PLACEHOLDER, "\n".join(f"- {label}" for label in sorted(labels))).strip()
 
 
 def fill(prompt: str, placeholder: str, value: str) -> str:

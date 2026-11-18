@@ -71,25 +71,25 @@ class RunTests(RunProject):
         git = lambda *args: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=self.base,
                                            capture_output=True, check=True)
         git("init", "-q")
-        (self.base / ".gitignore").write_text("*.partial/\nresults/*/*/val_*/\n", encoding="utf-8")
+        (self.base / ".gitignore").write_text("*.partial/\nresults/**/val_*/\n", encoding="utf-8")
         git("add", "-A")
         git("commit", "-qm", "code and data")
         self.assertEqual(run._git()["uncommitted_changes"], False)
         first = self._run(FakeModel(), "test")
         self.assertTrue(first.is_dir())
         self.assertEqual(run._git()["uncommitted_changes"], False)  # only a results folder is new
-        second_config = self.base / "other.toml"
-        second_config.write_text(self.config.read_text(encoding="utf-8").replace('name = "fake"', 'name = "other"'), encoding="utf-8")
-        git("add", "other.toml")
-        git("commit", "-qm", "another config")
+        listed = self.config.read_text(encoding="utf-8")
+        self.config.write_text(listed + listed.replace('name = "fake"', 'name = "other"'), encoding="utf-8")
+        git("add", "configs/models.toml")
+        git("commit", "-qm", "another model")
         with mock.patch("src.run.load", return_value=FakeModel()), mock.patch("src.run.time.sleep"):
-            second = run.run(str(second_config), "test", results=self.results)
+            second = run.run("other", self.dataset, "test", results=self.results)
         card = json.loads((second / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual(card["git"]["uncommitted_changes"], False)
         self.assertEqual(len(card["git"]["commit"]), 40)
-        (self.base / "prompt.txt").write_text("changed {labels}", encoding="utf-8")  # tracked code or settings changed
+        self.prompt.write_text("changed {labels}", encoding="utf-8")  # tracked code or settings changed
         self.assertEqual(run._git()["uncommitted_changes"], True)
-        git("checkout", "--", "prompt.txt")
+        git("checkout", "--", self.prompt.relative_to(self.base).as_posix())
         (self.base / "new_code.py").write_text("x = 1\n", encoding="utf-8")  # a new file outside results/
         self.assertEqual(run._git()["uncommitted_changes"], True)
 
@@ -254,10 +254,10 @@ class RunTests(RunProject):
 
     def test_images_are_sent_in_the_seeded_random_order(self):
         original, by_seed = self.config.read_text(encoding="utf-8"), {}
-        for seed in (0, 1):  # each seed in a results folder of its own: one config has one test run
+        for seed in (0, 1):  # each seed in a results folder of its own: one model, dataset and approach have one test run
             self.config.write_text(original.replace("order_seed = 0", f"order_seed = {seed}"), encoding="utf-8")
             with mock.patch("src.run.load", return_value=FakeModel()):
-                out = run.run(str(self.config), "test", run_id="t1", results=self.results / f"seed{seed}")
+                out = run.run("fake", self.dataset, "test", run_id="t1", results=self.results / f"seed{seed}")
             by_seed[seed] = [p["path"] for p in self._preds(out)]
             expected = sorted(i.path for i in datasets.load_dataset() if i.split == "test")
             random.Random(seed).shuffle(expected)
@@ -383,8 +383,15 @@ class RunTests(RunProject):
                          ('name = "fake"', ""), ('id = "fake-1"', "")):
             self.config.write_text(text.replace(old, new), encoding="utf-8")
             with self.assertRaises(ValueError, msg=new):
-                run.load_config(self.config)
+                run.load_config("fake", self.dataset)
+        self.config.write_text(text + text, encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "a model name is listed twice"):
+            run.load_config("fake", self.dataset)
         self.config.write_text(text, encoding="utf-8")
+        for model, dataset, approach in (("other", "image", "closed_book"), ("fake", "multimodal", "closed_book"),
+                                         ("fake", "image", "open_book")):
+            with self.assertRaises(ValueError, msg=(model, dataset, approach)):
+                run.load_config(model, dataset, approach)
         for limit in (0, -3):
             with self.assertRaises(ValueError):
                 self._run(FakeModel(), "val", limit=limit)
@@ -471,16 +478,16 @@ class RunTests(RunProject):
 
     def test_a_missing_key_stops_the_run_before_anything_is_written(self):
         with mock.patch("src.run.load", side_effect=ValueError("no key")), self.assertRaises(ValueError):
-            run.run(str(self.config), "test", results=self.results)
+            run.run("fake", self.dataset, "test", results=self.results)
         self.assertFalse(self.results.exists())
 
     def test_the_command_line_turns_expected_problems_into_messages(self):
         with self.assertRaises(SystemExit) as raised:
-            run.main(["run", "--config", str(self.config.with_name("missing.toml")), "--split", "val"])
+            run.main(["run", "--model", "missing", "--dataset", "image", "--split", "val"])
         self.assertTrue(str(raised.exception).startswith("ERROR: "))
         self.table.unlink()  # the dataset is not prepared yet
         with self.assertRaises(SystemExit) as raised:
-            run.main(["run", "--config", str(self.config), "--split", "test"])
+            run.main(["run", "--model", "fake", "--dataset", "image", "--split", "test"])
         self.assertIn("does not exist yet", str(raised.exception))
 
 
@@ -494,14 +501,14 @@ class CheckTests(Project):
     def _check(self, model=None, load_error=None):
         lines = []
         with mock.patch("src.run.load", return_value=model, side_effect=load_error):
-            ok = run.check_setup(run.load_config(self.config), str(self.config), say=lines.append)
+            ok = run.check_setup(run.load_config("fake", self.dataset), say=lines.append)
         return ok, "\n".join(lines)
 
     def test_everything_in_order(self):
         model = ProbeModel()
         ok, text = self._check(model)
         self.assertTrue(ok, text)
-        for expected in ("[  OK] Config", "[  OK] Prompt file", "[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes",
+        for expected in ("[  OK] Settings: model fake (configs/models.toml), dataset image, approach closed_book", "[  OK] Prompt file: prompts/image/closed_book.txt", "[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes",
                          "[  OK] Model adapter and access", "[  OK] Model fake-1", "All checks passed"):
             self.assertIn(expected, text)
         image, mime, _ = model.images[0]  # only a blank synthetic image is ever sent
@@ -570,7 +577,7 @@ class CheckTests(Project):
         self.assertFalse(ok)
         self.assertIn("[FAIL] Prompt file", text)
 
-    def test_the_check_can_try_another_model_without_changing_the_config(self):
+    def test_the_check_can_try_another_model_id_without_changing_the_model_list(self):
         seen = []
 
         def load(provider, settings):
@@ -580,7 +587,7 @@ class CheckTests(Project):
         before = self.config.read_text(encoding="utf-8")
         with mock.patch("src.run.load", side_effect=load), \
                 contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as raised:
-            run.main(["check", "--config", str(self.config), "--model", "other-model"])
+            run.main(["check", "--model", "fake", "--dataset", "image", "--try-id", "other-model"])
         self.assertEqual((seen, raised.exception.code), (["other-model"], 0))
         self.assertEqual(self.config.read_text(encoding="utf-8"), before)  # the file itself is unchanged
 
@@ -588,7 +595,7 @@ class CheckTests(Project):
 class TextDatasetTests(TextProject):
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.run.load", return_value=model):
-            return run.run(str(self.config), *args, results=self.results, **kwargs)
+            return run.run("fake", self.dataset, *args, results=self.results, **kwargs)
 
     def test_the_cases_load_with_their_article_as_their_group_and_only_text_files_are_accepted(self):
         items = datasets.load_dataset(*datasets.dataset_paths("text"), "text")
@@ -679,7 +686,7 @@ class TextDatasetTests(TextProject):
     def test_the_check_asks_the_model_without_an_image_and_counts_cases(self):
         model, lines = ProbeModel(), []
         with mock.patch("src.run.load", return_value=model):
-            ok = run.check_setup(run.load_config(self.config), str(self.config), say=lines.append)
+            ok = run.check_setup(run.load_config("fake", self.dataset), say=lines.append)
         text = "\n".join(lines)
         self.assertTrue(ok, text)
         self.assertIn("[  OK] Prepared dataset: 16 cases (train 5, val 3, test 8), 3 classes", text)
@@ -688,7 +695,7 @@ class TextDatasetTests(TextProject):
         self.prompt.write_text("Pick one:\n{labels}\n", encoding="utf-8")  # a text prompt without the case
         ok, lines = None, []
         with mock.patch("src.run.load", return_value=ProbeModel()):
-            ok = run.check_setup(run.load_config(self.config), str(self.config), say=lines.append)
+            ok = run.check_setup(run.load_config("fake", self.dataset), say=lines.append)
         self.assertFalse(ok)
         self.assertIn("[FAIL] Prompt file: ", "\n".join(lines))
 
@@ -696,11 +703,11 @@ class TextDatasetTests(TextProject):
 class MultimodalTests(MultimodalProject):
     def _run(self, model, *args, **kwargs):
         with mock.patch("src.run.load", return_value=model):
-            return run.run(str(self.config), *args, results=self.results, **kwargs)
+            return run.run("fake", self.dataset, *args, results=self.results, **kwargs)
 
     def test_the_questions_are_the_image_dataset_s_photos_with_their_facts(self):
-        self.assertEqual(datasets.dataset_paths("multimodal"), (Path("data/image_metadata/dataset.csv"), Path("data/image/dataset")))
-        items = datasets.load_dataset(*datasets.dataset_paths("multimodal"), "multimodal")
+        self.assertEqual(datasets.dataset_paths("image_metadata"), (Path("data/image_metadata/dataset.csv"), Path("data/image/dataset")))
+        items = datasets.load_dataset(*datasets.dataset_paths("image_metadata"), "image_metadata")
         self.assertEqual(len(items), 14)
         missing = next(i for i in items if i.path == self.MISSING)
         self.assertTrue(missing.facts.endswith("Body site: not recorded."))
@@ -709,13 +716,13 @@ class MultimodalTests(MultimodalProject):
         text = self.questions.read_text(encoding="utf-8")
         self.questions.write_text(text.replace("Age: about 30 years. Sex: female. Body site: trunk.", ""), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "the facts column is empty"):
-            datasets.read_table(self.questions, "multimodal")
+            datasets.read_table(self.questions, "image_metadata")
         self.questions.write_text(text.replace(",facts\n", "\n", 1), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "lacks the column"):
-            datasets.read_table(self.questions, "multimodal")
+            datasets.read_table(self.questions, "image_metadata")
 
-    def test_a_multimodal_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
-        for template, dataset in (("Pick:\n{labels}", "multimodal"), ("Patient: {facts}\n{labels}", "image"),
+    def test_an_image_metadata_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
+        for template, dataset in (("Pick:\n{labels}", "image_metadata"), ("Patient: {facts}\n{labels}", "image"),
                                   ("Case: {case}\nPatient: {facts}\n{labels}", "text")):
             with self.subTest(dataset):
                 self.prompt.write_text(template, encoding="utf-8")
@@ -746,7 +753,7 @@ class MultimodalTests(MultimodalProject):
     def test_the_check_sends_a_blank_image_and_counts_the_questions(self):
         model, lines = ProbeModel(), []
         with mock.patch("src.run.load", return_value=model):
-            ok = run.check_setup(run.load_config(self.config), str(self.config), say=lines.append)
+            ok = run.check_setup(run.load_config("fake", self.dataset), say=lines.append)
         self.assertTrue(ok, "\n".join(lines))
         self.assertIn("[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes", "\n".join(lines))
         self.assertEqual(model.images[0][1:], ("image/png", run.PROBE_PROMPT))

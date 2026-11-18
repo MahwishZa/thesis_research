@@ -21,7 +21,7 @@ htmlcov/
 *.partial/
 
 # Validation runs tune the method; they stay on this computer and are not reported results.
-results/*/*/val_*/
+results/**/val_*/
 
 # API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env

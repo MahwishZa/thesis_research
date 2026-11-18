@@ -1,8 +1,12 @@
 """Runs: one model answers one split of one dataset, every answer saved as it arrives.
 
-    python -m src.run check --config configs/<dataset>/<model>.toml [--model <id>]
-    python -m src.run run --config configs/<dataset>/<model>.toml --split val [--limit 5]
-    python -m src.run run --config configs/<dataset>/<model>.toml --split test
+    python -m src.run check --model claude-sonnet-5-5 --dataset text [--approach closed_book] [--try-id <id>]
+    python -m src.run run --model claude-sonnet-5-5 --dataset text [--approach closed_book] --split val [--limit 5]
+    python -m src.run run --model claude-sonnet-5-5 --dataset text [--approach closed_book] --split test
+
+A run is one model of the model list (configs/models.toml: each model's provider, id, settings and request pace), one dataset
+(image, text, image_metadata, cases or case_photos) and one approach (closed_book: the model alone). The prompt is
+prompts/<dataset>/<approach>.txt, the same for every model.
 
 ``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked
 once, with a blank synthetic image (for a text dataset, with a short question and no image), so an unavailable model, a wrong
@@ -12,10 +16,10 @@ image goes next to the prompt, exactly as stored; a text case goes into the prom
 ``{case}``; an image + metadata question is its image with its patient's facts in the prompt, where the prompt has ``{facts}``;
 a case question sends its photos, with its case text where the prompt has ``{case}``. A validation run (``--split val``) is for
 tuning the method; it stays on this computer (Git ignores it) and is not a reported result, and ``--limit N`` sends only its first
-N files. A test run (``--split test``) is the result: it runs once per config (the base paper's practice), needs a clean Git state
+N files. A test run (``--split test``) is the result: it runs once per model, dataset and approach (the base paper's practice), needs a clean Git state
 so its run card names the exact code, and needs the model pinned to one version. Answers are kept in a folder ending in
 ``.partial`` until the run is complete; the same command continues a stopped run. A finished run gets its report
-(src/evaluate.py). Results go to results/<dataset>/<model>/<run>/.
+(src/evaluate.py). Results go to results/<dataset>/<approach>/<model>/<run>/.
 """
 
 from __future__ import annotations
@@ -43,20 +47,22 @@ from .common import read_jsonl, repair_jsonl, write_json
 from .datasets import (DATASETS, SPLITS, classes, dataset_paths, items_hash, load_dataset, pictures_root, read_case, read_image, 
                        read_picture)
 from .evaluate import RESULTS, write_report
-from .metrics import ABSTAIN
 from .models import FatalError, QuotaExhausted, TransientError, load, load_env
 from .prompts import CASE, FACTS, build_prompt, fill, load_template, parse_answer
 
 
 RUN_SPLITS = ("val", "test")  # the splits a model answers; the training split is only ever looked up, never answered
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
+MODELS = Path("configs") / "models.toml"  # the models and their settings, one entry each
+PROMPTS = Path("prompts")  # prompts/<dataset>/<approach>.txt
+APPROACHES = ("closed_book",)  # how a question is answered: closed_book = the model alone, with no retrieval
 MAX_ATTEMPTS = 8  # waits of 10, 20, 40, 80, 120, 120, 120 seconds between them: about 8.5 minutes in all
 PROBE_ATTEMPTS = 3
 PROBE_PROMPT = "Reply with the single word: ok."
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# Settings: one config file per dataset and model (configs/<dataset>/<model>.toml)
+# Settings: one list of models (configs/models.toml); a run is a model, a dataset and an approach
 
 
 def _check_name(value, what: str) -> None:
@@ -66,25 +72,43 @@ def _check_name(value, what: str) -> None:
                          f"digit (got {value!r})")
 
 
-def load_config(path: str | Path) -> dict:
-    """A model's settings file, checked before anything is sent."""
-    with open(path, "rb") as f:
-        config = tomllib.load(f)
-    for section, keys in {"model": ("provider", "id"), "prompt": ("file",), "run": ("requests_per_minute", "order_seed")}.items():
-        for key in keys:
-            if key not in config.get(section, {}):
-                raise ValueError(f"{path}: missing [{section}] {key}")
-    _check_name(config.get("name"), f"{path}: name")  # it becomes the results folder
-    if config.get("dataset") not in DATASETS:
-        raise ValueError(f"{path}: dataset must be one of {list(DATASETS)} (got {config.get('dataset')!r})")
-    if not isinstance(config["prompt"].get("abstain", False), bool):
-        raise ValueError(f"{path}: [prompt] abstain must be true or false (got {config['prompt']['abstain']!r})")
-    rate, seed = config["run"]["requests_per_minute"], config["run"]["order_seed"]
+def prompt_file(dataset: str, approach: str) -> Path:
+    """The prompt of an approach on a dataset: prompts/<dataset>/<approach>.txt."""
+    return PROMPTS / dataset / f"{approach}.txt"
+
+
+def load_config(model: str, dataset: str, approach: str = APPROACHES[0], path: str | Path = MODELS) -> dict:
+    """The settings of one run, checked before anything is sent: the model's entry in the model list, the dataset, the approach
+    and its prompt file. Every model gets the same prompt and answer reader on a dataset; only its entry differs."""
+    path = Path(path)
+    with path.open("rb") as f:
+        listed = tomllib.load(f).get("models", [])
+    names = [entry.get("name") for entry in listed]
+    for name in names:
+        _check_name(name, f"{path}: name")  # it becomes the results folder
+    if len(set(names)) != len(names):
+        raise ValueError(f"{path}: a model name is listed twice")
+    if model not in names:
+        raise ValueError(f"{path} has no model {model!r} (models: {', '.join(names) or 'none'})")
+    entry = listed[names.index(model)]
+    for key in ("requests_per_minute", "order_seed", "settings"):
+        if key not in entry:
+            raise ValueError(f"{path}: model {model} is missing {key}")
+    for key in ("provider", "id"):
+        if key not in entry["settings"]:
+            raise ValueError(f"{path}: model {model} is missing settings.{key}")
+    if dataset not in DATASETS:
+        raise ValueError(f"dataset must be one of {list(DATASETS)} (got {dataset!r})")
+    if approach not in APPROACHES:
+        raise ValueError(f"approach must be one of {list(APPROACHES)} (got {approach!r})")
+    rate, seed = entry["requests_per_minute"], entry["order_seed"]
     if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
-        raise ValueError(f"{path}: [run] requests_per_minute must be a number above 0 (got {rate!r})")
+        raise ValueError(f"{path}: model {model}: requests_per_minute must be a number above 0 (got {rate!r})")
     if isinstance(seed, bool) or not isinstance(seed, int):
-        raise ValueError(f"{path}: [run] order_seed must be a whole number (got {seed!r})")
-    return config
+        raise ValueError(f"{path}: model {model}: order_seed must be a whole number (got {seed!r})")
+    return {"name": model, "dataset": dataset, "approach": approach, "model": dict(entry["settings"]),
+            "prompt": {"file": prompt_file(dataset, approach).as_posix()},
+            "run": {"requests_per_minute": rate, "order_seed": seed}, "model_list": path.as_posix()}
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -114,7 +138,7 @@ def _probe(model, say, images: int = 1) -> tuple[dict | None, str | None]:
     raise AssertionError("unreachable")
 
 
-def check_setup(config: dict, config_path: str, say=print) -> bool:
+def check_setup(config: dict, say=print) -> bool:
     """Prints one line per check and returns True when none failed. Nothing from the dataset is sent."""
     failed = False
     dataset = config["dataset"]
@@ -125,9 +149,9 @@ def check_setup(config: dict, config_path: str, say=print) -> bool:
         failed = failed or status == "FAIL"
         say(f"[{status:>4}] {what}" + (f": {detail}" if detail else ""))
 
-    line("OK", "Config", config_path)
+    line("OK", "Settings", f"model {config['name']} ({config['model_list']}), dataset {dataset}, approach {config['approach']}")
     try:
-        load_template(config["prompt"]["file"], dataset, config["prompt"].get("abstain", False))
+        load_template(config["prompt"]["file"], dataset)
         line("OK", "Prompt file", config["prompt"]["file"])
     except (OSError, ValueError) as exc:
         line("FAIL", "Prompt file", str(exc))
@@ -215,10 +239,11 @@ def _ask(model, images: list[tuple[bytes, str]], text: str, throttle, say=print)
     raise AssertionError("unreachable")
 
 
-def run(config_path: str, split: str, run_id: str | None = None, limit: int | None = None, results: Path = RESULTS) -> Path:
-    """A validation or test run (one folder each). Returns the finished run's folder, or the ``.partial`` folder of a stopped
-    run (the same command continues it)."""
-    config = load_config(config_path)
+def run(model: str, dataset: str, split: str, approach: str = APPROACHES[0], run_id: str | None = None, limit: int | None = None,
+        results: Path = RESULTS, model_list: str | Path = MODELS) -> Path:
+    """A validation or test run of one model on one dataset with one approach (one folder each). Returns the finished run's
+    folder, or the ``.partial`` folder of a stopped run (the same command continues it)."""
+    config = load_config(model, dataset, approach, model_list)
     if split not in RUN_SPLITS:
         raise ValueError(f"split must be one of {list(RUN_SPLITS)} (got {split!r})")
     if run_id is not None:
@@ -244,13 +269,12 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
     random.Random(config["run"]["order_seed"]).shuffle(items)
     items = items[: limit or None]
 
-    abstain = config["prompt"].get("abstain", False)
-    prompt_text = build_prompt(load_template(config["prompt"]["file"], dataset, abstain), labels, abstain)
-    config_bytes = Path(config_path).read_bytes()
-    fingerprint = hashlib.sha256(config_bytes + prompt_text.encode("utf-8") + items_hash(items).encode()).hexdigest()
+    prompt_text = build_prompt(load_template(config["prompt"]["file"], dataset), labels)
+    settings = json.dumps({k: v for k, v in config.items() if k != "model_list"}, sort_keys=True).encode("utf-8")
+    fingerprint = hashlib.sha256(settings + prompt_text.encode("utf-8") + items_hash(items).encode()).hexdigest()
     load_env()
-    model_dir = results / config["dataset"] / config["name"]
-    job = {"config": config, "config_path": config_path, "split": split, "items": items, "labels": labels,
+    model_dir = results / config["dataset"] / config["approach"] / config["name"]
+    job = {"config": config, "split": split, "items": items, "labels": labels,
            "prompt_text": prompt_text, "fingerprint": fingerprint, "model_dir": model_dir, "git": git,
            "table": table, "root": root, "table_sha256": hashlib.sha256(table.read_bytes()).hexdigest(), "kind": DATASETS[dataset]}
     if split == "val":
@@ -265,7 +289,7 @@ def run(config_path: str, split: str, run_id: str | None = None, limit: int | No
 
 
 def _refuse_other_test_runs(model_dir: Path, name: str, fingerprint: str) -> None:
-    """The test split is run once per config: any other test run of this config stops the command."""
+    """The test split is run once per model, dataset and approach: any other test run of these stops the command."""
     for card_path in sorted(model_dir.glob("*/run_card.json")):
         card = json.loads(card_path.read_text(encoding="utf-8"))
         if card["split"] != "test":
@@ -275,11 +299,12 @@ def _refuse_other_test_runs(model_dir: Path, name: str, fingerprint: str) -> Non
         if other == name and card["fingerprint"] == fingerprint:
             continue  # this command's own run
         if card["fingerprint"] == fingerprint:
-            raise SystemExit(f"the test run of this config already exists under the name {other} ({folder}). Continue it "
+            raise SystemExit(f"the test run of these settings already exists under the name {other} ({folder}). Continue it "
                              f"with --run-id {other}, or leave out --run-id if that is the default name")
         if finished:
-            raise SystemExit(f"a finished test run already exists for this config, made with other settings, prompt or files: "
-                             f"{folder} (results are not overwritten). A changed setting needs a new config file")
+            raise SystemExit(f"a finished test run already exists for this model, dataset and approach, made with other settings, "
+                             f"prompt or files: {folder} (results are not overwritten). A changed setting needs a new model entry "
+                             "(another name) in the model list")
         raise SystemExit(f"an unfinished test run made with other settings, prompt or files exists: {folder}. Delete that "
                          "folder to start over, or undo the change")
 
@@ -292,8 +317,8 @@ def _run_once(job: dict, run_id: str) -> Path:
     model = load(settings["provider"], settings)  # a missing key or model stops the run before any file is written
     if job["split"] == "test" and getattr(model, "pinned", True) is False:
         raise SystemExit("a test run needs the model pinned to one version: use a fixed model id (a dated snapshot, not a name "
-                         "that moves such as one ending in -latest) in the config, and commit the config, so that every answer "
-                         "comes from the same model")
+                         f"that moves such as one ending in -latest) in {config['model_list']}, and commit it, so that every "
+                         "answer comes from the same model")
     described = model.describe()
 
     model_dir = job["model_dir"]
@@ -305,9 +330,9 @@ def _run_once(job: dict, run_id: str) -> Path:
     if created:
         out.mkdir(parents=True, exist_ok=True)
         card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
-                "seed": settings.get("seed"), "config_file": Path(job["config_path"]).as_posix(), "config": config,
+                "seed": settings.get("seed"), "config_file": config["model_list"], "config": config,
                 "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
-                "prompt": prompt_text, "labels": labels, "abstain": config["prompt"].get("abstain", False), f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
+                "prompt": prompt_text, "labels": labels, f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
                 "group_column": kind.group_column,
                 "dataset_table": {"file": job["table"].as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
                 "versions": _versions(getattr(model, "packages", ("pillow",))),
@@ -367,7 +392,7 @@ def _run_once(job: dict, run_id: str) -> Path:
                     images = [(image, mime)]
                     text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
                 answer, attempt = _ask(model, images, text, throttle, say)
-                parsed = parse_answer(answer["text"], [*labels, ABSTAIN] if card.get("abstain") else labels)
+                parsed = parse_answer(answer["text"], labels)
                 line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
                         "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
@@ -418,14 +443,18 @@ def _run_once(job: dict, run_id: str) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.run", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
-    c = sub.add_parser("check", help="test everything a run needs, without sending anything from the dataset")
-    c.add_argument("--config", required=True)
-    c.add_argument("--model", help="test this model id instead of the config's (the config file is not changed)")
-    r = sub.add_parser("run", help="run one model on the validation or the test split")
-    r.add_argument("--config", required=True)
-    r.add_argument("--split", choices=RUN_SPLITS, required=True)
-    r.add_argument("--run-id", help="folder name; by default one that follows from the settings, so a stopped run resumes")
-    r.add_argument("--limit", type=int, help="only the first N files of the validation split, in the seeded order")
+    for name, text in (("check", "test everything a run needs, without sending anything from the dataset"),
+                       ("run", "run one model on the validation or the test split")):
+        p = sub.add_parser(name, help=text)
+        p.add_argument("--model", required=True, help=f"a model's name in {MODELS.as_posix()}")
+        p.add_argument("--dataset", required=True, choices=list(DATASETS))
+        p.add_argument("--approach", choices=APPROACHES, default=APPROACHES[0])
+        if name == "check":
+            p.add_argument("--try-id", help="test this model id instead of the listed one (the list is not changed)")
+        else:
+            p.add_argument("--split", choices=RUN_SPLITS, required=True)
+            p.add_argument("--run-id", help="folder name; by default one that follows from the settings, so a stopped run resumes")
+            p.add_argument("--limit", type=int, help="only the first N files of the validation split, in the seeded order")
     return parser
 
 
@@ -433,12 +462,12 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "check":
-            config = load_config(args.config)
-            if args.model:
-                config["model"] = {**config["model"], "id": args.model}
-            sys.exit(0 if check_setup(config, args.config) else 1)
+            config = load_config(args.model, args.dataset, args.approach)
+            if args.try_id:
+                config["model"] = {**config["model"], "id": args.try_id}
+            sys.exit(0 if check_setup(config) else 1)
         else:
-            run(args.config, args.split, args.run_id, args.limit)
+            run(args.model, args.dataset, args.split, args.approach, args.run_id, args.limit)
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback
         raise SystemExit(f"ERROR: {exc}") from exc
 

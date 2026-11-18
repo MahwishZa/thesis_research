@@ -93,16 +93,17 @@ class CompareTests(RunProject):
                 self.assertEqual("Below 0.05: the two runs differ by more than chance." in text, beyond)
                 self.assertEqual("Not below 0.05: the difference may be chance." in text, not beyond)
 
-    def test_the_image_run_and_the_multimodal_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
-        """The multimodal questions are the image dataset's photos with their facts: the two runs differ in dataset and in the
-        questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair."""
+    def test_the_image_run_and_the_image_metadata_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
+        """The image + metadata questions are the image dataset's photos with their facts: the two runs differ in dataset and in
+        the questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair. A run card of the
+        first phase names the dataset by its earlier name, "multimodal", and is read under the current one."""
         truth = ["a", "a", "b", "b"]
         runs = {}
-        for name, dataset, predicted in (("image", "image", ["a", "b", "b", "a"]), ("multi", "multimodal", ["a", "a", "b", "b"]),
-                                         ("text", "text", ["a", "a", "b", "b"])):
+        for name, dataset, predicted in (("image", "image", ["a", "b", "b", "a"]), ("multi", "image_metadata", ["a", "a", "b", "b"]),
+                                         ("text", "text", ["a", "a", "b", "b"]), ("phase1", "multimodal", ["a", "a", "b", "b"])):
             folder = self.base / f"pair_{name}"
             folder.mkdir()
-            kind = datasets.DATASETS[dataset]
+            kind = datasets.DATASETS[datasets.ALIASES.get(dataset, dataset)]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
                     f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
@@ -111,13 +112,14 @@ class CompareTests(RunProject):
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
             runs[name] = folder
         c = evaluate.compare(runs["image"], runs["multi"])
-        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("image and multimodal", 4, 0, 2))  # the facts fixed 2
+        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("image and image_metadata", 4, 0, 2))  # the facts fixed 2
         self.assertEqual(c["balanced_accuracy_difference"], 0.5)
-        self.assertIn("image and multimodal dataset, test split, 4 questions", evaluate.comparison_text(c))
+        self.assertIn("image and image_metadata dataset, test split, 4 questions", evaluate.comparison_text(c))
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(runs["image"], runs["text"])
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(runs["multi"], runs["text"])
+        self.assertEqual(evaluate.compare(runs["image"], runs["phase1"])["dataset"], "image and image_metadata")
         rows = [json.loads(x) for x in (runs["multi"] / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
         rows[0]["label"] = "b"  # another photo, or another class for the same photo
         (runs["multi"] / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
@@ -153,69 +155,6 @@ class CompareTests(RunProject):
         m = metrics.summarize(["a", "a", "b", "b"], ["a", "a", None, None], ["a", "b"], groups=["L1", "L2", "L3", "L4"])
         self.assertEqual((m["balanced_accuracy_ci95"], m["hallucination"]["balanced_rate"], m["hallucination"]["balanced_rate_ci95"]),
                          ((0.5, 0.5), 0.0, (0.0, 0.0)))
-
-    def test_a_run_that_may_abstain_offers_the_answer_records_it_and_reports_it(self):
-        self.prompt.write_text("Pick one:\n{labels}\nIf unsure, answer uncertain.\n", encoding="utf-8")
-        self.config.write_text(self.config.read_text(encoding="utf-8").replace(
-            f'file = "{self.prompt.as_posix()}"', f'file = "{self.prompt.as_posix()}"\nabstain = true'), encoding="utf-8")
-
-        class Unsure(FakeModel):
-            def predict(self, *args):
-                return super().predict(*args) | {"text": "**Uncertain.**"}
-
-        out = self._run(Unsure(), "val", run_id="v1")
-        card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
-        self.assertTrue(card["abstain"])
-        self.assertTrue(card["prompt"].endswith("- melanoma\n- nevus\n- uncertain\nIf unsure, answer uncertain."))
-        self.assertEqual({p["prediction"] for p in self._preds(out)}, {"uncertain"})
-        main = json.loads((out / "metrics.json").read_text(encoding="utf-8"))["main"]
-        self.assertEqual((main["abstention"]["count"], main["abstention"]["rate"], main["correct"], main["unreadable"]), (4, 1.0, 0, 0))
-        self.assertEqual((main["hallucination"]["rate"], main["hallucination"]["no_valid_answer"]), (0.0, 0))
-        report = (out / "report.md").read_text(encoding="utf-8")
-        for expected in ("| **Abstention rate (answered \"uncertain\")** | **100.0%** (4/4) |", "This run could answer \"uncertain\"",
-                         "| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **0.0%** |"):
-            self.assertIn(expected, report)
-        self.assertNotIn("Selective accuracy", report)  # no diagnosis was named, so there is none to be accurate about
-
-    def test_a_forced_choice_run_does_not_accept_uncertain_as_an_answer(self):
-        class Unsure(FakeModel):
-            def predict(self, *args):
-                return super().predict(*args) | {"text": "Uncertain."}
-
-        out = self._run(Unsure(), "val", run_id="v1")  # this config does not offer the answer
-        self.assertEqual({p["prediction"] for p in self._preds(out)}, {None})
-        main = json.loads((out / "metrics.json").read_text(encoding="utf-8"))["main"]
-        self.assertEqual((main["unreadable"], main["abstention"]["count"], main["hallucination"]["no_valid_answer"]), (4, 0, 4))
-
-    def test_abstentions_are_judged_by_the_forced_choice_run_on_the_same_questions(self):
-        """Six questions of two classes. Run A (forced): right, wrong, wrong, right, wrong, wrong. Run B (may abstain): right,
-        uncertain, right, uncertain, right, uncertain. B's abstentions on questions 1 and 5 avoided a hallucination of A's; on
-        question 3 it lost a right answer. B removed A's hallucinations on questions 2 and 4 (it was right there) and introduced
-        none."""
-        truth = ["a", "a", "a", "b", "b", "b"]
-        answers = {"A": ["a", "b", "b", "b", "a", "a"], "B": ["a", "uncertain", "a", "uncertain", "b", "uncertain"]}
-        runs = []
-        for name, predicted in answers.items():
-            folder = self.base / f"abstain_{name}"
-            folder.mkdir()
-            card = {"status": "complete", "config": {"dataset": "image"}, "n_images": 6, "images_sha256": "same", "split": "test",
-                    "labels": ["a", "b"]}
-            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
-            rows = [{"path": f"test/{t}/{i}.jpg", "label": t, "lesion_group": f"L{i}", "prediction": p}
-                    for i, (t, p) in enumerate(zip(truth, predicted))]
-            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
-            runs.append(folder)
-        c = evaluate.compare(*runs)
-        self.assertEqual((c["abstained_a"], c["abstained_b"], c["b_avoided"], c["b_lost"], c["a_avoided"], c["a_lost"]), (0, 3, 2, 1, 0, 0))
-        self.assertEqual((c["hallucinations_removed"], c["hallucinations_introduced"]), (2, 0))  # an abstention is no hallucination
-        # A: class a wrong 2 of 3, class b wrong 2 of 3 (2/3); B names no wrong diagnosis (0): the whole rate is gone
-        self.assertAlmostEqual(c["hallucination_difference"], -2 / 3)
-        self.assertAlmostEqual(c["hallucination_reduction"], 1.0)
-        text = evaluate.comparison_text(c)
-        self.assertIn('Run B answered "uncertain" 3 times. Run A named a wrong diagnosis on 2 of those questions (hallucinations avoided) '
-                      "and the right one on 1 (right answers lost)", text)
-        self.assertNotIn("Run A answered", text)
-
 
 
 if __name__ == "__main__":

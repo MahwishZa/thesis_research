@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -44,11 +45,16 @@ class RepositoryTests(unittest.TestCase):
                 self.assertIn(f"python -m src.{name} {command}", module.__doc__, f"the usage documentation omits '{command}'")
 
     def test_the_commands_written_in_the_readme_are_accepted_by_the_command_line(self):
-        for name, command in re.findall(r"`python -m src\.(run|evaluate) ([^`]+)`", self.readme):  # the section may stay empty until the end
+        found = re.findall(r"`python -m src\.(run|evaluate) ([^`]+)`", self.readme)
+        self.assertTrue(found)
+        for name, command in found:
             with self.subTest(command):
                 args = {"run": run, "evaluate": evaluate}[name].build_parser().parse_args(shlex.split(command))
-                if hasattr(args, "config"):
-                    self.assertTrue((ROOT / args.config).is_file(), f"the README names a config that does not exist: {args.config}")
+                if name == "run":
+                    run.load_config(args.model, args.dataset, args.approach)  # a model of the list, a dataset and an approach
+                for folder in (getattr(args, key, None) for key in ("run_dir", "run_a", "run_b")):
+                    if folder:
+                        self.assertTrue((ROOT / folder / "run_card.json").is_file(), f"the README names a run that does not exist: {folder}")
 
     def test_the_readme_has_its_sections_in_order_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
         self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M),
@@ -71,71 +77,38 @@ class RepositoryTests(unittest.TestCase):
             self.assertEqual(sorted(folders - listed), [], "the README structure omits a top-level folder")
 
     def test_the_results_written_in_the_readme_match_the_saved_results(self):
-        def pct(x):
-            return f"{100 * x:.1f}"
-
+        """The README gives balanced accuracy with its 95% interval for every finished test run of phase 1, once each."""
         section = re.search(r"## Results\n(.*?)\n## ", self.readme, re.S).group(1)
-        parts = re.split(r"^### (.+)$", section, flags=re.M)  # [intro, heading, body, heading, body, ...]
-        self.assertEqual(parts[1::2], ["Image", "Text", "Image + metadata"])
-        linked = []
-        for heading, body in zip(parts[1::2], parts[2::2]):
-            lines = [line for line in body.splitlines() if line.startswith("|")]
-            self.assertEqual(lines[0], "| Model | Accuracy | Precision | Recall | F1 | Hallucination rate | Missed malignancy |")
-            for line in lines[2:]:
-                cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-                link = re.fullmatch(r"\[[^\]]+\]\((results/([^/]+)/([^/]+)/[^)]+/report\.md)\)", cells[0])
-                self.assertIsNotNone(link, f"the first cell of a results row links the run's report: {line}")
-                path, dataset, model = link.groups()
-                self.assertEqual(dataset, {"Image + metadata": "multimodal"}.get(heading, heading.lower()), "a row belongs under the heading of its own dataset")
-                self.assertFalse(model.endswith("-abstain"), "a run that may abstain needs an abstention column before it is listed")
-                self.assertTrue((ROOT / path).is_file(), f"the README links to a report that does not exist: {path}")
-                self.assertIn("### Confusion matrix", (ROOT / path).read_text(encoding="utf-8"))  # the README says the report holds it
-                card = json.loads((ROOT / path).with_name("run_card.json").read_text(encoding="utf-8"))
-                main = json.loads((ROOT / path).with_name("metrics.json").read_text(encoding="utf-8"))["main"]
-                self.assertEqual(card["split"], "test")
-                self.assertEqual(cells[1:], [pct(main["accuracy"]), pct(main["macro"]["precision"]), pct(main["macro"]["recall"]), pct(main["macro"]["f1"]),
-                                             pct(main["hallucination"]["balanced_rate"]), pct(main["risk"]["missed_malignancy"])], f"{path} differs from its README row")
-                self.assertEqual(main["macro"]["recall"], main["balanced_accuracy"])  # the README calls recall the balanced accuracy
-                linked.append(path)
-        finished = [p for p in (ROOT / "results").glob("*/*/*") if p.is_dir() and p.name.startswith("test_") and not p.name.endswith(".partial")]
-        self.assertEqual(sorted(linked), sorted(f"{p.relative_to(ROOT).as_posix()}/report.md" for p in finished),
-                         "every finished test run in results/ must be linked exactly once")
+        lines = [line for line in section.splitlines() if line.startswith("|")]
+        header = [cell.strip() for cell in lines[0].strip().strip("|").split("|")]
+        self.assertEqual(header[0], "Model")
+        titles = {title: dataset for dataset, title in datasets.TITLES.items()}
+        columns = [titles[title] for title in header[1:]]
+        names = {name: model for model, name in evaluate.MODEL_NAMES.items()}
+        shown = set()
+        for line in lines[2:]:
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            model = names[cells[0]]
+            for dataset, cell in zip(columns, cells[1:]):
+                with self.subTest((model, dataset)):
+                    (folder,) = [p for p in (ROOT / "results" / "phase1" / dataset / model).glob("test_*") if not p.name.endswith(".partial")]
+                    main = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["main"]
+                    low, high = main["balanced_accuracy_ci95"]
+                    self.assertEqual(cell, f"{100 * main['balanced_accuracy']:.1f} ({100 * low:.1f} to {100 * high:.1f})")
+                    shown.add(folder)
+        finished = {p for p in (ROOT / "results" / "phase1").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")}
+        self.assertEqual(shown, finished, "every finished test run of phase 1 is in the README once")
 
-    def test_configs_are_valid_and_point_to_files_that_exist(self):
-        configs = sorted((ROOT / "configs").glob("*/*.toml"))
-        self.assertTrue(configs)
-        for path in configs:
-            with self.subTest(path.name):
-                config = run.load_config(path)
-                self.assertEqual(config["name"], path.stem, "the config name is the results folder name and must match the file")
-                self.assertEqual(config["dataset"], path.parent.name, "a config sits in the folder of the dataset it names")
-                self.assertTrue((ROOT / config["prompt"]["file"]).is_file(), f"{path.name} names a prompt file that does not exist")
-                prompts.load_template(ROOT / config["prompt"]["file"], config["dataset"], config["prompt"].get("abstain", False))
-                self.assertEqual(path.stem.endswith("-abstain"), config["prompt"].get("abstain", False),
-                                 "a run may abstain exactly when its config is named -abstain")
-
-    def test_each_model_is_asked_the_same_way_on_every_dataset(self):
-        """The same models, settings and pace on every dataset; only the image setting is left out for text."""
-        configs = {}
-        for path in sorted((ROOT / "configs").glob("*/*.toml")):
-            config = run.load_config(path)
-            configs.setdefault(config["dataset"], {})[config["name"]] = config
-        self.assertEqual(sorted(configs["text"]), sorted(configs["image"]))
-        self.assertEqual(sorted(configs["multimodal"]), sorted(configs["image"]))
-        for name, text in configs["text"].items():
-            with self.subTest(name):
-                image = configs["image"][name]
-                self.assertEqual(text["model"], {k: v for k, v in image["model"].items() if k != "image_detail"})
-                self.assertEqual(text["run"], image["run"])
-                self.assertEqual((configs["multimodal"][name]["model"], configs["multimodal"][name]["run"]), (image["model"], image["run"]))
-        for dataset, named in configs.items():  # a run that may abstain is the forced-choice run with only its prompt changed
-            for name, config in named.items():
-                if name.endswith("-abstain"):
-                    with self.subTest(name):
-                        forced = named[name.removesuffix("-abstain")]
-                        self.assertEqual((config["model"], config["run"], config["dataset"]), (forced["model"], forced["run"], dataset))
-                        self.assertEqual((config["prompt"], forced["prompt"]), (
-                            {"file": f"prompts/{dataset}/abstain.txt", "abstain": True}, {"file": f"prompts/{dataset}/diagnosis.txt"}))
+    def test_every_model_of_the_list_can_run_every_dataset_and_approach_with_its_prompt(self):
+        with (ROOT / run.MODELS).open("rb") as f:
+            names = [entry["name"] for entry in tomllib.load(f)["models"]]
+        self.assertEqual(names, list(evaluate.MODEL_NAMES), "the model list and the names in the tables must agree")
+        for model in names:
+            for dataset in datasets.DATASETS:
+                for approach in run.APPROACHES:
+                    with self.subTest((model, dataset, approach)):
+                        config = run.load_config(model, dataset, approach)
+                        prompts.load_template(ROOT / config["prompt"]["file"], dataset)
 
     def test_the_committed_dataset_tables_are_consistent(self):
         for dataset, kind in datasets.DATASETS.items():
@@ -147,11 +120,12 @@ class RepositoryTests(unittest.TestCase):
                     self.assertTrue(all(item.group for item in datasets.read_table(table, dataset)), "every file needs its group")
 
     def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
-        files = sorted((ROOT / "prompts").glob("*/*.txt"))
-        self.assertTrue(files)
-        for path in files:
+        files = sorted((ROOT / "prompts").rglob("*"))
+        self.assertEqual(sorted(p for p in files if p.is_file()), sorted(ROOT / run.prompt_file(d, a) for d in datasets.DATASETS for a in run.APPROACHES),
+                         "one prompt per dataset and approach, and nothing else")
+        for path in (p for p in files if p.is_file()):
             with self.subTest(path.name):
-                prompts.load_template(path, path.parent.name, path.stem == "abstain")  # refuses a file without exactly one {labels}
+                prompts.load_template(path, path.parent.name)  # refuses a file without exactly one {labels}
                 self.assertTrue(path.read_bytes().endswith(b"\n"))
                 self.assertNotIn(b"\r", path.read_bytes(), "Windows line endings (.gitattributes should prevent this)")
                 self.assertNotIn("\n\n", path.read_text(encoding="utf-8"), "a blank line would change what the model is shown")
@@ -193,17 +167,18 @@ class RepositoryTests(unittest.TestCase):
                      "data/cases/figures/images/PMC1/f1.jpg", "data/cases/figures/captions.jsonl", "data/text/sources/removed/test/x/1-1.txt",
                      "data/image/build/x.txt", "data/text/build/nested/x.csv",
                      "data/x.csv",
-                     "results/image/m/val_1/report.md", "results/image/m/test_1.partial/predictions.jsonl", "src/__pycache__/x.pyc",
-                     "results/text/m/val_1/report.md", "results/text/m/test_1.partial/predictions.jsonl",
+                     "results/image/closed_book/m/val_1/report.md", "results/image/closed_book/m/test_1.partial/predictions.jsonl",
+                     "src/__pycache__/x.pyc", "results/text/closed_book/m/val_1/report.md",
+                     "results/text/closed_book/m/test_1.partial/predictions.jsonl",
                      "src/build/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
         for path in ("README.md", "data/image/dataset.csv", "data/image/build/raw_photos.csv", "data/image/dataset_report.md",
                      "data/image/datasheet.md", "data/text/dataset.csv", "data/text/build/case_candidates.csv", "data/text/build/article_mesh.csv",
                      "data/text/build/abstract_candidates.csv", "data/text/build/review_flags.csv", "data/image_metadata/dataset.csv",
                      "data/cases/dataset.csv", "data/cases/build/figure_checks.csv", "data/cases/datasheet.md", "data/knowledge/library.csv",
-                     "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/m/test_1/report.md",
-                     "results/image/m/test_1/predictions.jsonl", "configs/image/example.toml", "prompts/image/example.txt",
-                     "results/text/m/test_1/report.md", "configs/text/example.toml", "prompts/text/example.txt"):
+                     "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/closed_book/m/test_1/report.md",
+                     "results/image/closed_book/m/test_1/predictions.jsonl", "configs/models.toml", "prompts/image/closed_book.txt",
+                     "results/text/closed_book/m/test_1/report.md", "results/phase1/text/m/test_1/report.md"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")
@@ -223,7 +198,7 @@ class RepositoryTests(unittest.TestCase):
         rewrite) is not in a fresh clone, so the commit must be an ancestor of the checked-out one, not merely a known object."""
         if subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, capture_output=True, text=True).stdout.strip() == "true":
             self.skipTest("a shallow clone does not hold the whole history")
-        cards = sorted((ROOT / "results").glob("*/*/test_*/run_card.json"))
+        cards = sorted(p for p in (ROOT / "results").rglob("run_card.json") if p.parent.name.startswith("test_"))
         self.assertTrue(cards)
         for path in cards:
             card = json.loads(path.read_text(encoding="utf-8"))
@@ -238,9 +213,9 @@ class RepositoryTests(unittest.TestCase):
         for target in re.findall(r"\]\((?!https?:)([^)#]+)", text):
             self.assertTrue((ROOT / "docs" / target).exists(), f"docs/results.md links to {target}, which does not exist")
         start, end = text.index(evaluate.SUMMARY_START) + len(evaluate.SUMMARY_START), text.index(evaluate.SUMMARY_END)
-        self.assertEqual(text[start:end].strip("\n").split("\n"), evaluate.summary_tables(ROOT / "results", "../"),
+        self.assertEqual(text[start:end].strip("\n").split("\n"), evaluate.summary_tables(ROOT / "results" / "phase1", "../"),
                          "docs/results.md is out of date: run python -m src.evaluate summary")
-        runs = [p for p in (ROOT / "results").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
+        runs = [p for p in (ROOT / "results" / "phase1").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
         for finished in runs:  # every finished run is in the tables, once, with its report linked
             self.assertEqual(text.count(f"](../{finished.relative_to(ROOT).as_posix()}/report.md)"), 1, f"{finished} must be linked exactly once")
         for word in ("ROC", "Holm", "Specificity", "Malignancy sensitivity"):

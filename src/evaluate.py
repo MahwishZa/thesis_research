@@ -1,16 +1,18 @@
 """Scores of finished runs, from their saved answers only: no model is asked.
 
-    python -m src.evaluate report results/<dataset>/<model>/<run-folder>
-    python -m src.evaluate compare results/<dataset>/<model>/<run-folder> results/<dataset>/<model>/<run-folder>
+    python -m src.evaluate report results/<dataset>/<approach>/<model>/<run-folder>
+    python -m src.evaluate compare results/<dataset>/<approach>/<model>/<run-folder> results/<dataset>/<approach>/<model>/<run-folder>
     python -m src.evaluate summary
+
+A run folder of the first phase is results/phase1/<dataset>/<model>/<run-folder>.
 
 ``report`` rewrites metrics.json and report.md from a run's saved answers.
 ``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
 McNemar's exact test on the questions one run gets right and the other wrong, the difference in balanced accuracy and in
 accuracy, and the change in the hallucination rate (the difference, and the reduction relative to the first run), with paired
 95% intervals (both runs resampled together, by the same groups as the reports).
-``summary`` rewrites the comparison tables of docs/results.md from every finished test run: the scores of every model on every
-dataset, the clinical risk, the recall per class, and every paired comparison with McNemar's exact test and its Holm correction.
+``summary`` rewrites the comparison tables of docs/results.md from every finished test run of the first phase (results/phase1/):
+the scores of every model on every dataset, the clinical risk, the recall per class, and every paired comparison with McNemar's exact test and its Holm correction.
 The text of the document around the tables is written by hand and is left as it is.
 """
 
@@ -23,12 +25,12 @@ from collections import Counter
 from pathlib import Path
 
 from .common import read_jsonl, write_json
-from .datasets import DATASETS, MISSING_FACT, SAME_QUESTIONS, Dataset
-from .metrics import (ABSTAIN, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, UNREADABLE, _hallucination, 
+from .datasets import DATASETS, MISSING_FACT, SAME_QUESTIONS, TITLES, Dataset, dataset_of
+from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, UNREADABLE, _hallucination, 
                       _percentile, _resamples, _scores, _units, confusion_matrix, mcnemar, summarize)
 from .prompts import parse_last_line, can_still_become_readable
 
-RESULTS = Path("results")  # results/<dataset>/<model>/<run>/
+RESULTS = Path("results")  # results/<dataset>/<approach>/<model>/<run>/; the first phase in results/phase1/
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -52,7 +54,7 @@ def _coefficient(x: float | None) -> str:
     return "–" if x is None else f"{x:.3f}"
 
 
-def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[str]:
+def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
     """The metrics of one scoring as report lines: the summary table, the per-class table and the confusion matrix."""
     counted = [c for c, v in m["per_class"].items() if v["support"]]
     item, items, groups = kind.item, f"{kind.item}s", f"{kind.group}s"
@@ -64,7 +66,6 @@ def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[
              f"{_ci(m['balanced_accuracy_ci95'])} (bootstrap{over}) |",
              f"| Accuracy | {_pct(m['accuracy'])} ({m['correct']}/{m['n']}) | {_ci(m['accuracy_ci95'])} ({simple}) |",
              *_hallucination_rows(m, over if grouped else None),
-             *(_abstention_rows(m, over if grouped else None) if abstain else []),
              f"| No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | "
              f"{m['unreadable']} | |",
              *_risk_rows(m, over if grouped else None),
@@ -111,10 +112,6 @@ def _scoring(title: str, m: dict, kind: Dataset, abstain: bool = False) -> list[
               "answer (a refusal, a sentence, two classes, a cut-off) add up to every question; a model that refuses is not "
               "hallucinating, but it is not right either. The models must choose a class, so none can avoid hallucinating by "
               f"declaring itself unsure. With the same number of {items} in every class, the two rates are the same.",
-              *([f"- This run could answer \"{ABSTAIN}\". An abstention is no hallucination and no right answer, and a model that "
-                 "always abstained would never hallucinate, so the abstention rate, the hallucination rate and the accuracy are "
-                 "read together; whether the abstentions were wise is shown by comparing this run with the same model's forced-choice "
-                 "run (compare)."] if abstain else []),
               "- Missed malignancy: melanoma, basal cell carcinoma and squamous cell carcinoma answered as nevus, pigmented benign "
               "keratosis, dermatofibroma or vascular lesion, as a share of all cancers. Over-call: the reverse, as a share of all benign "
               "lesions. An unreadable answer, or actinic keratosis (precancerous) given for a cancer, is no miss but stays in the "
@@ -137,17 +134,6 @@ def _hallucination_rows(m: dict, over: str | None) -> list[str]:
     return [f"| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **{_share(h['balanced_rate'])}** | "
             f"{_ci(h['balanced_rate_ci95'])} (bootstrap{over or ''}) |",
             f"| Hallucination rate, all questions | {_pct(h['rate'])} ({h['wrong']}/{h['n']}) | {_ci(h['rate_ci95'])} ({method}) |"]
-
-
-def _abstention_rows(m: dict, over: str | None) -> list[str]:
-    """The abstention rows of a run that may answer "uncertain": how often it did, and how accurate it was when it did not."""
-    a, method = m["abstention"], f"bootstrap{over}" if over is not None else "Wilson"
-    rows = [f"| **Abstention rate (answered \"{ABSTAIN}\")** | **{_pct(a['rate']) if a['rate'] is not None else '–'}** ({a['count']}/{m['n']}) | "
-            f"{_ci(a['rate_ci95'])} ({method}) |"]
-    if a["committed"]:
-        rows.append(f"| Selective accuracy (right, among the {a['committed']} questions where a diagnosis was named) | "
-                    f"{_share(a['selective_accuracy'])} | {_ci(a['selective_accuracy_ci95'])} ({method}) |")
-    return rows
 
 
 def _risk_rows(m: dict, over: str | None) -> list[str]:
@@ -204,7 +190,7 @@ def write_report(run_dir: str | Path) -> Path:
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = read_jsonl(run_dir / "predictions.jsonl")
     labels = card["labels"]
-    kind = DATASETS[card["config"]["dataset"]]
+    kind = DATASETS[dataset_of(card)]
 
     def scores(rows):
         return summarize([p["label"] for p in rows], [p["prediction"] for p in rows], labels,
@@ -220,11 +206,9 @@ def write_report(run_dir: str | Path) -> Path:
     if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
         complete_facts = [p for p in preds if MISSING_FACT not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
-    abstain = card.get("abstain", False)
-    options = [*labels, ABSTAIN] if abstain else labels
     # Sensitivity analysis: an unreadable answer that ends with a class name alone on its last line (after some reasoning), read as
     # that class. An answer cut off at the output limit is never read this way: its last line is not what the model meant to say.
-    last_line = {p["path"]: parse_last_line(p["raw_text"], options) for p in preds
+    last_line = {p["path"]: parse_last_line(p["raw_text"], labels) for p in preds
                  if p["prediction"] is None and p["finish_reason"] != "MAX_TOKENS"}
     last_line = {path: answer for path, answer in last_line.items() if answer}
     if last_line:
@@ -254,7 +238,7 @@ def write_report(run_dir: str | Path) -> Path:
                  + (", each with its patient's facts in the prompt" if kind.facts_column else ""))
               + f"; dataset table `{table['file']}` (SHA-256 `{table['sha256'][:12]}`); Git commit "
               f"`{(card['git']['commit'] or 'unknown')[:10]}`", ""]
-    lines += _scoring("Results", metrics["main"], kind, abstain)
+    lines += _scoring("Results", metrics["main"], kind)
     if left_out:
         lines += _without(metrics["without_small_classes"], kind, len(labels))
     if kind.facts_column:
@@ -279,12 +263,12 @@ def write_report(run_dir: str | Path) -> Path:
     finish = Counter(p["finish_reason"] for p in preds)
     other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
     cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
-    harmful = sum(can_still_become_readable(p["raw_text"], options) for p in cut)  # the limit may have decided these
+    harmful = sum(can_still_become_readable(p["raw_text"], labels) for p in cut)  # the limit may have decided these
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
               *([f"- **{harmful} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
-                 "the output limit in the config (max_tokens or max_output_tokens) is too low for this model (hidden reasoning "
-                 "can count toward it). Results are not valid until it is raised in a new config.**"] if harmful else []),
+                 "the output limit in the model list (max_tokens) is too low for this model (hidden reasoning can count toward "
+                 "it). Results are not valid until it is raised, under a new model entry.**"] if harmful else []),
               *([f"- {len(cut) - harmful} answers reached the output limit but already differed from every class name before it "
                  "(an essay, or a second class name), so the limit did not change their score; they count as wrong."]
                 if len(cut) > harmful else []),
@@ -311,7 +295,7 @@ def write_report(run_dir: str | Path) -> Path:
 def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = read_jsonl(run_dir / "predictions.jsonl")
-    kind = DATASETS[card["config"]["dataset"]]
+    kind = DATASETS[dataset_of(card)]
     if card["status"] != "complete" or len(preds) != card[f"n_{kind.item}s"]:
         raise ValueError(f"{run_dir.as_posix()} is not a finished run: only finished runs are compared")
     return card, preds
@@ -322,13 +306,13 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     accuracy and class-balanced hallucination rate, and the hallucination reduction (A minus B, as a share of A), with paired 95%
     intervals; and the hallucinations B removed and introduced."""
     (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
-    dataset, dataset_b = card_a["config"]["dataset"], card_b["config"]["dataset"]
+    dataset, dataset_b = dataset_of(card_a), dataset_of(card_b)
     kind = DATASETS[dataset]
     # The one pair of different datasets that can be compared: the same photos without and with their patients' facts (the
-    # multimodal questions are the image dataset's photos). Then the questions differ by the facts, so the photos and their
+    # image + metadata questions are the image dataset's photos). Then the questions differ by the facts, so the photos and their
     # classes are compared instead of the questions' fingerprint.
     # The case datasets ask some of the text dataset's cases with their photos: a text run is compared on those cases only.
-    same_photos = {dataset, dataset_b} == {"image", "multimodal"}
+    same_photos = {dataset, dataset_b} == SAME_QUESTIONS[0]
     same_cases = dataset != dataset_b and {dataset, dataset_b} <= SAME_QUESTIONS[1]
     if dataset != dataset_b and not (same_photos or same_cases):
         raise ValueError("the two runs differ in their dataset, so they cannot be compared question by question")
@@ -353,14 +337,13 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     labels = card_a["labels"]
     y_true = [a["label"] for a, _ in pairs]
     pred_a, pred_b = [a["prediction"] for a, _ in pairs], [b["prediction"] for _, b in pairs]
-    abstained_a, abstained_b = [p == ABSTAIN for p in pred_a], [p == ABSTAIN for p in pred_b]
     groups = [a.get(kind.group_column) or a["path"] for a, _ in pairs]
     right_a = [t == p for t, p in zip(y_true, pred_a)]
     right_b = [t == p for t, p in zip(y_true, pred_b)]
     only_a = sum(a and not b for a, b in zip(right_a, right_b))
     only_b = sum(b and not a for a, b in zip(right_a, right_b))
-    hallucinated_a = [p not in (None, ABSTAIN) and p != t for t, p in zip(y_true, pred_a)]  # a wrong diagnosis named
-    hallucinated_b = [p not in (None, ABSTAIN) and p != t for t, p in zip(y_true, pred_b)]
+    hallucinated_a = [p is not None and p != t for t, p in zip(y_true, pred_a)]  # a wrong diagnosis named
+    hallucinated_b = [p is not None and p != t for t, p in zip(y_true, pred_b)]
 
     def scores(sample):
         """B minus A in balanced accuracy, accuracy and balanced hallucination rate, and the reduction of the rate (None when A's
@@ -368,7 +351,7 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
         true = [y_true[i] for i in sample]
         out = []
         for pred in (pred_a, pred_b):
-            matrix = confusion_matrix(true, [None if pred[i] == ABSTAIN else pred[i] for i in sample], labels)
+            matrix = confusion_matrix(true, [pred[i] for i in sample], labels)
             s = _scores(matrix)
             out.append((s["macro"]["recall"], sum(s["tp"]) / s["n"], _hallucination(matrix)["balanced_rate"]))
         (bal_a, acc_a, hall_a), (bal_b, acc_b, hall_b) = out
@@ -393,14 +376,7 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
             "hallucination_difference": hallucination, "hallucination_difference_ci95": interval(2),
             "hallucination_reduction": reduction, "hallucination_reduction_ci95": interval(3),
             "hallucinations_removed": sum(a and not h and r for a, h, r in zip(hallucinated_a, hallucinated_b, right_b)),
-            "hallucinations_introduced": sum(h and r for h, r in zip(hallucinated_b, right_a)),
-            # what each run's abstentions did, judged by the other run's answers on the same questions (the other run may be a
-            # forced-choice run): a hallucination avoided (the other named a wrong diagnosis) or a right answer lost
-            "abstained_a": sum(abstained_a), "abstained_b": sum(abstained_b),
-            "b_avoided": sum(x and h for x, h in zip(abstained_b, hallucinated_a)),
-            "b_lost": sum(x and r for x, r in zip(abstained_b, right_a)),
-            "a_avoided": sum(x and h for x, h in zip(abstained_a, hallucinated_b)),
-            "a_lost": sum(x and r for x, r in zip(abstained_a, right_b)), "groups": f"{kind.group}s"}
+            "hallucinations_introduced": sum(h and r for h, r in zip(hallucinated_b, right_a)), "groups": f"{kind.group}s"}
 
 
 def comparison_text(c: dict) -> str:
@@ -430,11 +406,7 @@ def comparison_text(c: dict) -> str:
                 f"{100 * c['hallucination_reduction_ci95'][1]:+.1f}%)" if c["hallucination_reduction_ci95"] else
                 " (no interval: run A has no hallucination in some resamples)")),
         f"- Hallucinations removed (A named a wrong diagnosis, B is right): {c['hallucinations_removed']}; introduced (A was right, "
-        f"B named a wrong diagnosis): {c['hallucinations_introduced']}",
-        *[f"- Run {name} answered \"{ABSTAIN}\" {c[f'abstained_{key}']} times. Run {other} named a wrong diagnosis on "
-          f"{c[f'{key}_avoided']} of those questions (hallucinations avoided) and the right one on {c[f'{key}_lost']} (right answers "
-          "lost); if the abstentions were no better than chance, these would follow the other run's own rates."
-          for name, other, key in (("A", "B", "a"), ("B", "A", "b")) if c[f"abstained_{key}"]], ""])
+        f"B named a wrong diagnosis): {c['hallucinations_introduced']}", ""])
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -470,17 +442,25 @@ def _range(pair) -> str:
     return "" if pair is None else f" ({100 * pair[0]:.1f} to {100 * pair[1]:.1f})"
 
 
+def _from_results(folder: Path) -> str:
+    """A run folder's path from the repository's results folder on (results/...), wherever the repository is."""
+    parts = Path(folder).parts
+    return "/".join(parts[len(parts) - 1 - parts[::-1].index(RESULTS.name):])
+
+
 def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[str]:
-    """The comparison tables of every finished forced-choice test run under ``results``, as Markdown lines: the scores per dataset,
+    """The comparison tables of every finished test run under ``results``, as Markdown lines: the scores per dataset,
     the clinical risk, the recall per class, the photos without and with their facts, and model against model, with McNemar's
     exact test and its Holm correction over all the tests of the page. Only saved answers are read."""
     runs = {}  # (dataset, model) -> (folder, main metrics)
-    for card_path in sorted(Path(results).glob("*/*/test_*/run_card.json")):
-        card = json.loads(card_path.read_text(encoding="utf-8"))
+    for card_path in sorted(Path(results).rglob("run_card.json")):
         folder = card_path.parent
-        if card["status"] != "complete" or card.get("abstain") or folder.name.endswith(".partial"):
-            continue  # a run that may abstain is another condition and needs its own tables
-        dataset, model = folder.parent.parent.name, folder.parent.name
+        if not folder.name.startswith("test_"):
+            continue
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        if card["status"] != "complete":
+            continue
+        dataset, model = dataset_of(card), card["name"]
         if (dataset, model) in runs:
             raise ValueError(f"two finished test runs of {model} on the {dataset} dataset: {runs[dataset, model][0].name} and {folder.name}")
         runs[dataset, model] = (folder, json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["main"])
@@ -494,8 +474,8 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
 
     tests = []  # every significance test of the page, so that the Holm correction covers them all
     for model in models:
-        if ("image", model) in runs and ("multimodal", model) in runs:
-            tests.append(("facts", model, None, compare(runs["image", model][0], runs["multimodal", model][0])))
+        if ("image", model) in runs and ("image_metadata", model) in runs:
+            tests.append(("facts", model, None, compare(runs["image", model][0], runs["image_metadata", model][0])))
     for dataset in datasets:
         present = in_dataset(dataset)
         for i, first in enumerate(present):
@@ -507,12 +487,12 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
              "Percentages. Macro recall (balanced accuracy) is the main score, with its 95% interval. Each model name links to "
              "the run's report: every score with its interval, the per-class table and the confusion matrix.", ""]
     for dataset in datasets:
-        lines += [f"**{dataset.capitalize()}**", "",
+        lines += [f"**{TITLES[dataset]}**", "",
                   "| Model | Accuracy | Macro Recall (95% CI) | Macro Precision | Macro F1 | Macro Specificity | Hallucination Rate | No Valid Answer |",
                   "|---|---|---|---|---|---|---|---|"]
         for model in in_dataset(dataset):
             folder, m = runs[dataset, model]
-            lines.append(f"| [{name(model)}]({link_prefix}{(Path(results).name / folder.relative_to(results)).as_posix()}/report.md) | {_one(m['accuracy'])} | "
+            lines.append(f"| [{name(model)}]({link_prefix}{_from_results(folder)}/report.md) | {_one(m['accuracy'])} | "
                          f"{_one(m['balanced_accuracy'])}{_range(m['balanced_accuracy_ci95'])} | {_one(m['macro']['precision'])} | "
                          f"{_one(m['macro']['f1'])} | {_one(m['macro']['specificity'])} | {_one(m['hallucination']['balanced_rate'])} | "
                          f"{m['hallucination']['no_valid_answer']} of {m['n']} |")
@@ -521,7 +501,7 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
               "Percentages with 95% intervals. Sensitivity and missed malignancy are shares of the cancers; benign specificity and "
               "over-call are shares of the benign lesions.", ""]
     for dataset in datasets:
-        lines += [f"**{dataset.capitalize()}**", "",
+        lines += [f"**{TITLES[dataset]}**", "",
                   "| Model | Malignancy Sensitivity | Missed Malignancy | Benign Specificity | Over-call |", "|---|---|---|---|---|"]
         for model in in_dataset(dataset):
             r = runs[dataset, model][1]["risk"]
@@ -533,7 +513,7 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
     for dataset in datasets:
         present = in_dataset(dataset)
         per = {model: runs[dataset, model][1]["per_class"] for model in present}
-        lines += [f"**{dataset.capitalize()}**", "", "| Class | Test questions | " + " | ".join(name(m) for m in present) + " |",
+        lines += [f"**{TITLES[dataset]}**", "", "| Class | Test questions | " + " | ".join(name(m) for m in present) + " |",
                   "|---|---|" + "---|" * len(present)]
         for label, c in per[present[0]].items():
             lines.append(f"| {label} | {c['support']} | " + " | ".join(_one(per[m][label]["recall"]) for m in present) + " |")
@@ -546,11 +526,11 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
     facts = [(model, c, q) for (kind, model, _, c), q in zip(tests, corrected) if kind == "facts"]
     if facts:
         lines += ["### The same photos without and with the patient's facts", "",
-                  "Balanced accuracy in percent; the difference is multimodal minus image in percentage points, with a paired 95% interval. "
+                  "Balanced accuracy in percent; the difference is image + metadata minus image in percentage points, with a paired 95% interval. "
                   "p: McNemar's exact test; Holm p: the same, corrected for all the tests of this page.", "",
-                  "| Model | Image | Multimodal | Difference (95% CI) | p | Holm p | Wrong answers corrected / introduced |", "|---|---|---|---|---|---|---|"]
+                  "| Model | Image | Image + metadata | Difference (95% CI) | p | Holm p | Wrong answers corrected / introduced |", "|---|---|---|---|---|---|---|"]
         for model, c, q in facts:
-            lines.append(f"| {name(model)} | {_one(runs['image', model][1]['balanced_accuracy'])} | {_one(runs['multimodal', model][1]['balanced_accuracy'])} | "
+            lines.append(f"| {name(model)} | {_one(runs['image', model][1]['balanced_accuracy'])} | {_one(runs['image_metadata', model][1]['balanced_accuracy'])} | "
                          f"{difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} | {c['hallucinations_removed']} / {c['hallucinations_introduced']} |")
         lines.append("")
     lines += ["### Model against model", "",
@@ -558,7 +538,7 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
               "questions. p: McNemar's exact test on right against wrong answers; Holm p: corrected for all the tests of this page "
               f"({len(tests)}). A difference counts as significant when its Holm p is below 0.05.", ""]
     for dataset in datasets:
-        lines += [f"**{dataset.capitalize()}**", "", "| Second minus first | Difference (95% CI) | p | Holm p |", "|---|---|---|---|"]
+        lines += [f"**{TITLES[dataset]}**", "", "| Second minus first | Difference (95% CI) | p | Holm p |", "|---|---|---|---|"]
         for (kind, first, second, c), q in zip(tests, corrected):
             if kind == dataset:
                 lines.append(f"| {name(second)} − {name(first)} | {difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} |")
@@ -566,7 +546,7 @@ def summary_tables(results: Path = RESULTS, link_prefix: str = "../") -> list[st
     return lines[:-1]
 
 
-def write_summary(path: Path = SUMMARY, results: Path = RESULTS) -> Path:
+def write_summary(path: Path = SUMMARY, results: Path = RESULTS / "phase1") -> Path:
     """Rewrites the tables of the results document between its two markers and leaves the written text around them as it is."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(SUMMARY_START) != 1 or text.count(SUMMARY_END) != 1 or text.index(SUMMARY_START) > text.index(SUMMARY_END):
@@ -589,7 +569,7 @@ def build_parser() -> argparse.ArgumentParser:
     cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (McNemar's test, paired intervals)")
     cmp.add_argument("run_a")
     cmp.add_argument("run_b")
-    sub.add_parser("summary", help="rewrite the comparison tables of docs/results.md from every finished test run")
+    sub.add_parser("summary", help="rewrite the comparison tables of docs/results.md from the finished test runs of the first phase")
     return parser
 
 

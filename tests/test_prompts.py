@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src import metrics, prompts
+from src import prompts
 
 from tests.fixtures import LABELS
 
@@ -42,21 +42,9 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(prompts.fill(prompt, prompts.CASE, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
         self.assertEqual(prompts.fill("Case: {case}\nPick", prompts.CASE, " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed
 
-    def test_the_answer_uncertain_exists_only_for_a_run_that_may_abstain(self):
-        self.assertEqual(prompts.build_prompt("{labels}", LABELS, abstain=True), "- melanoma\n- nevus\n- vascular lesion\n- uncertain")
+    def test_the_options_are_the_classes_only(self):
         self.assertEqual(prompts.build_prompt("{labels}", LABELS), "- melanoma\n- nevus\n- vascular lesion")
-        self.assertEqual(prompts.parse_answer(" **Uncertain.** ", [*LABELS, metrics.ABSTAIN]), "uncertain")
-        self.assertIsNone(prompts.parse_answer("Uncertain", LABELS))  # a forced-choice run does not accept it
-        self.assertIsNone(prompts.parse_answer("uncertain, probably melanoma", [*LABELS, metrics.ABSTAIN]))
-        with tempfile.TemporaryDirectory() as d:
-            path = Path(d) / "p.txt"
-            for text, abstain, message in (("{labels}\nAnswer uncertain if unsure.", False, "must not offer the answer"),
-                                           ("{labels}\nAnswer with a name.", True, "must tell the model it may answer")):
-                path.write_text(text, encoding="utf-8")
-                with self.subTest(text), self.assertRaisesRegex(ValueError, message):
-                    prompts.load_template(path, "image", abstain)
-            path.write_text("{labels}\nAnswer Uncertain if unsure.", encoding="utf-8")
-            self.assertEqual(prompts.load_template(path, "image", True), "{labels}\nAnswer Uncertain if unsure.")
+        self.assertIsNone(prompts.parse_answer("Uncertain", LABELS))  # the model must name a class
 
     def test_parse_forgives_only_formatting(self):
         for answer in ["melanoma", " Melanoma.", "**melanoma**", '"melanoma"', "Diagnosis: melanoma", "MELANOMA\n"]:

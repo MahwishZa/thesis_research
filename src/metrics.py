@@ -43,13 +43,6 @@ import random
 # shares of the classes (the same weighting as balanced accuracy, and the same as the plain rate when every class has the same
 # number of questions). The models are forced to choose a class, so a model cannot avoid hallucinating by saying it is unsure.
 #
-# Abstention (only a run whose prompt offers the answer "uncertain"; the main runs force a choice): the share of the questions
-# answered "uncertain" (the abstention rate), and the accuracy among the questions where a diagnosis was named (selective
-# accuracy, which is one minus the hallucination rate among them). An abstention is no hallucination and no right answer: a model
-# that always abstains has no hallucination and no use, so the three are read together. No question of these datasets is
-# unanswerable (each has its true class), so an abstention is never "correct" in itself: whether it was wise is measured by
-# comparing the run with the forced-choice run of the same model (compare: hallucinations avoided, right answers lost).
-#
 # Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
 # diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
 # precancerous and is in neither group as a true class. Both shares are of ALL the files of the group: a cancer answered as
@@ -69,7 +62,6 @@ import random
 UNREADABLE = "(unreadable)"
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 0
-ABSTAIN = "uncertain"  # the answer of a run that may abstain (config [prompt] abstain = true); never a class name
 MALIGNANT = ("melanoma", "basal cell carcinoma", "squamous cell carcinoma")  # cancers
 BENIGN = ("nevus", "pigmented benign keratosis", "dermatofibroma", "vascular lesion")  # actinic keratosis: precancerous, in neither
 
@@ -214,7 +206,7 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
     """
     by_class = _units(y_true, labels, groups)
     names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced",
-             "abstention", "selective_accuracy", "macro_precision", "macro_specificity", "malignancy_sensitivity", "benign_specificity"]
+             "macro_precision", "macro_specificity", "malignancy_sensitivity", "benign_specificity"]
     if not by_class:
         return {name: None for name in names} | {"recall": {}, "specificity": {}}
     values = {name: [] for name in names}
@@ -222,10 +214,8 @@ def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dic
     specificity = {label: [] for label in labels}
     for sample in _resamples(by_class, resamples, seed):
         true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
-        matrix = confusion_matrix(true, [None if a == ABSTAIN else a for a in pred], labels)  # an abstention is not a class
+        matrix = confusion_matrix(true, pred, labels)
         scores, hallucination = _scores(matrix), _hallucination(matrix)
-        values["abstention"].append(sum(a == ABSTAIN for a in pred) / len(pred))
-        values["selective_accuracy"].append(_ratio(sum(scores["tp"]), sum(scores["tp"]) + hallucination["wrong"]))
         values["hallucination"].append(hallucination["rate"])
         values["hallucination_balanced"].append(hallucination["balanced_rate"])
         values["accuracy"].append(sum(scores["tp"]) / scores["n"])
@@ -260,8 +250,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     (the files of one group are resampled together for the intervals). With no answers at all, every score is None (and accuracy
     0.0).
     """
-    abstained = sum(a == ABSTAIN for a in y_pred)  # "uncertain": no class, so the confusion matrix counts it with the unreadable
-    matrix = confusion_matrix(y_true, [None if a == ABSTAIN else a for a in y_pred], labels)
+    matrix = confusion_matrix(y_true, y_pred, labels)
     s = _scores(matrix)
     n = s["n"]
     correct = sum(s["tp"])
@@ -273,14 +262,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
     hallucination = _hallucination(matrix)
     hallucination["rate_ci95"] = wilson(hallucination["wrong"], n) if independent and n else interval["hallucination"]
     hallucination["balanced_rate_ci95"] = interval["hallucination_balanced"]
-    hallucination["no_valid_answer"] -= abstained  # an abstention is neither a hallucination nor a failure to answer
     hallucination["no_valid_answer_rate"] = _ratio(hallucination["no_valid_answer"], n)
-    committed = correct + hallucination["wrong"]  # the questions where a diagnosis was named
-    abstention = {"count": abstained, "rate": _ratio(abstained, n),
-                  "rate_ci95": None if not n else wilson(abstained, n) if independent else interval["abstention"],
-                  "committed": committed, "selective_accuracy": _ratio(correct, committed),
-                  "selective_accuracy_ci95": None if not committed else wilson(correct, committed) if independent
-                  else interval["selective_accuracy"]}
     risk = _risk(y_true, y_pred)
     for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign"),
                              ("malignancy_sensitivity", "detected", "cancers"), ("benign_specificity", "cleared", "benign")):
@@ -296,7 +278,7 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
                             "specificity_ci95": None if s["specificity"][i] is None else
                             wilson((n - s["support"][i]) - (s["answered"][i] - s["tp"][i]), n - s["support"][i]) if independent
                             else interval["specificity"][label]}
-    return {"n": n, "correct": correct, "unreadable": s["answered"][-1] - abstained, "groups": len(set(groups)), "group_name": group_name,
+    return {"n": n, "correct": correct, "unreadable": s["answered"][-1], "groups": len(set(groups)), "group_name": group_name,
             "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else f"bootstrap over {group_name}s",
             "balanced_accuracy": s["macro"]["recall"], "balanced_accuracy_ci95": interval["balanced_accuracy"],
             "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n) if independent else interval["accuracy"],
@@ -305,6 +287,5 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
                       "specificity_ci95": interval["macro_specificity"]},
             "weighted": s["weighted"],
             "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk, "hallucination": hallucination,
-            "abstention": abstention,
             "per_class": per_class,
             "confusion_matrix": {"rows": list(labels), "columns": [*labels, UNREADABLE], "counts": matrix}}
