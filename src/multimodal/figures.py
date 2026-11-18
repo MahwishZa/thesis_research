@@ -19,10 +19,11 @@ is counted apart: it could be used only if its panels were cut apart.
 The rule that decides whether the dataset is built was fixed before the count (2026-11-18): at least 80 test cases that count, and
 at least 6 of the 8 classes with at least 8 such test cases each.
 
-``download`` asks PMC's open-access service for each counted case's article. An article that is not in the open-access subset,
-or that is marked retracted, gives no picture. Otherwise its package (the article's XML and its picture files, under the article's
-licence) is downloaded, and only the pictures of the figures that count are kept, byte for byte, in data/multimodal/figures/images/
-(not in Git); nothing else of the package is written. Each picture is opened once to check that it is a readable picture. The table
+``download`` reads each counted case's article from PMC Article Datasets, NCBI's copy of PubMed Central's open-access articles in
+the cloud (the AWS Open Data bucket pmc-oa-opendata; PMC's former open-access web service no longer answers). An article that is not
+open access, or that is marked retracted, gives no picture. Otherwise the article's latest version, its XML (which names each
+figure's picture files) and only the pictures of the figures that count are downloaded; each file is checked against the MD5
+checksum PMC publishes for it, and the pictures are kept byte for byte in data/multimodal/figures/images/ (not in Git). Each picture is opened once to check that it is a readable picture. The table
 data/multimodal/figure_files.csv lists every picture with its fingerprint; data/multimodal/figure_files.md gives the counts. The
 download can be stopped and run again: an article already done is not asked again.
 
@@ -49,7 +50,6 @@ import json
 import os
 import re
 import sys
-import tarfile
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -64,14 +64,15 @@ from .prepare import DATA, TEXT, _read_csv, _write_csv
 
 COUNT_TABLE, COUNT_REPORT = "figure_count.csv", "figure_count.md"
 CAPTIONS = Path("figures") / "captions.jsonl"  # in data/multimodal/, not in Git
-OA_SERVICE = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"  # PMC's open-access web service: an article's package
+CLOUD = "https://pmc-oa-opendata.s3.amazonaws.com/"  # PMC Article Datasets: NCBI's copy of PMC's open-access articles (AWS Open Data)
+CLOUD_BUCKET = "s3://pmc-oa-opendata/"
 FILES_TABLE, FILES_REPORT = "figure_files.csv", "figure_files.md"
 IMAGES = Path("figures") / "images"  # in data/multimodal/, not in Git: one folder per article
 FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "picture", "file", "sha256", "width", "height", "licence",
                 "status"]
 PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
-SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not in PMC's open-access subset", "the article is retracted",
-                                                   "no picture file for the figure in the package", "the picture cannot be opened")
+SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not open access in PMC", "the article is retracted",
+                                                   "no picture file for the figure among the article's files", "the picture cannot be opened")
 CHECKS_TABLE, CHECKS_REPORT = "figure_checks.csv", "figure_checks.md"
 CHECK_CACHE = Path("figures") / "checks.jsonl"  # in data/multimodal/, not in Git: the models' answers, by picture fingerprint
 MIN_SIDE = 128  # pixels on the shorter side; fixed before any picture was seen
@@ -317,62 +318,74 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
 # Step "download": the pictures of the figures that count
 
 
-def parse_oa(content: bytes) -> dict:
-    """PMC's open-access service's answer for one article: its licence, whether it is retracted and its package's address, or the
-    service's error (an article outside the open-access subset)."""
+def parse_versions(content: bytes) -> list[int]:
+    """The versions of an article in the cloud bucket, from its folder listing ("PMC123.1/", "PMC123.2/")."""
     root = ElementTree.fromstring(content)
-    if root.tag != "OA":
-        raise ValueError(f"PMC's open-access service answered in an unexpected form (<{root.tag}>)")
-    error = root.find("error")
-    if error is not None:
-        return {"error": f"{error.get('code') or 'error'}: {' '.join(''.join(error.itertext()).split())}"}
-    record = root.find("records/record")
-    if record is None:
-        return {"error": "no record"}
-    package = [link.get("href") for link in record.findall("link") if link.get("format") == "tgz" and link.get("href")]
-    if not package:
-        return {"error": "no package"}
-    href = package[0]
-    return {"licence": record.get("license") or "", "retracted": record.get("retracted") == "yes",
-            "package": "https://" + href.removeprefix("ftp://") if href.startswith("ftp://") else href}
+    if not root.tag.endswith("ListBucketResult"):
+        raise ValueError(f"the cloud bucket answered in an unexpected form (<{root.tag}>)")
+    found = []
+    for prefix in root.iter():
+        if prefix.tag.endswith("}Prefix") and prefix.text and re.fullmatch(r"PMC\d+\.\d+/", prefix.text):
+            found.append(int(prefix.text[:-1].rsplit(".", 1)[1]))
+    return sorted(found)
 
 
-def _oa_record(pmcid: str) -> dict:
-    return fetch(f"{OA_SERVICE}?id={pmcid}", "application/xml", parse_oa, delay=textprep.NCBI_DELAY, attempts=textprep.NCBI_ATTEMPTS)
+def _latest(pmcid: str) -> str | None:
+    """The folder of the article's latest version in the bucket ("PMC123.2/"), or None when the bucket does not hold it."""
+    versions = fetch(f"{CLOUD}?list-type=2&delimiter=/&prefix={pmcid}.", "application/xml", parse_versions, delay=0.1,
+                     attempts=textprep.NCBI_ATTEMPTS)
+    return f"{pmcid}.{versions[-1]}/" if versions else None
 
 
-def _package(url: str) -> bytes:
-    return fetch(url, "application/gzip", delay=textprep.NCBI_DELAY, attempts=textprep.NCBI_ATTEMPTS)
+def cloud_address(url: str) -> tuple[str, str]:
+    """A file of the bucket as PMC's metadata names it ("s3://pmc-oa-opendata/KEY?md5=..."): its web address and its MD5."""
+    if not url.startswith(CLOUD_BUCKET):
+        raise ValueError(f"{url!r} is not a file of the bucket {CLOUD_BUCKET}")
+    key, _, query = url[len(CLOUD_BUCKET):].partition("?")
+    md5 = dict(part.split("=", 1) for part in query.split("&") if "=" in part).get("md5", "")
+    if not re.fullmatch(r"[0-9a-f]{32}", md5):
+        raise ValueError(f"{url!r} gives no MD5 checksum")
+    return CLOUD + key, md5
 
 
-def pictures_in_package(content: bytes, wanted: list[str]) -> dict[str, list[tuple[str, bytes]]]:
-    """For each wanted figure (by its id in the article's XML), its picture files in the package, as (name, bytes), in the order
-    of the figure's graphics; a figure with no picture file gets an empty list. Only regular files are read, by name; nothing in
-    the package is written or run."""
-    with tarfile.open(fileobj=io.BytesIO(content), mode="r:gz") as archive:
-        files = {m.name: m for m in archive.getmembers() if m.isfile()}
-        articles = [name for name in files if name.endswith(".nxml")]
-        if len(articles) != 1:
-            raise ValueError(f"the package holds {len(articles)} article files, not one")
-        root = ElementTree.fromstring(archive.extractfile(files[articles[0]]).read())
-        by_stem = {}
-        for name in files:
-            stem, kind = os.path.splitext(os.path.basename(name))
-            if kind.lower() in PICTURE_TYPES:
-                by_stem.setdefault(stem, []).append(name)
-        found = {}
-        figs = {fig.get("id"): fig for fig in root.iter("fig")}
-        for figure in wanted:
-            pictures = []
-            for graphic in (figs[figure].iter("graphic") if figure in figs else []):
-                href = graphic.get("{http://www.w3.org/1999/xlink}href") or ""
-                stem, kind = os.path.splitext(os.path.basename(href))
-                names = by_stem.get(stem if kind.lower() in PICTURE_TYPES else os.path.basename(href), [])
-                if names:
-                    name = min(names, key=lambda n: PICTURE_TYPES.index(os.path.splitext(n)[1].lower()))
-                    pictures.append((os.path.basename(name), archive.extractfile(files[name]).read()))
-            found[figure] = pictures
-        return found
+def _get(url: str, md5: str | None = None) -> bytes:
+    """A file of the bucket; with ``md5``, checked against it (a damaged download is asked again)."""
+    def check(content: bytes) -> bytes:
+        if md5 and hashlib.md5(content).hexdigest() != md5:
+            raise ValueError(f"{url} does not match the MD5 checksum PMC gives for it")
+        return content
+    return fetch(url, "*/*", check, delay=0.1, attempts=textprep.NCBI_ATTEMPTS)
+
+
+def figure_files(xml: bytes, media: list[str], wanted: list[dict]) -> dict[str, list[tuple[str, str, str]]]:
+    """For each wanted figure (its id, else its label, in the article's XML), its picture files among the article's media, as
+    (file name, web address, MD5), in the order of the figure's graphics; a figure with none gets an empty list."""
+    root = ElementTree.fromstring(xml)
+    by_stem = {}
+    for url in media:
+        address, md5 = cloud_address(url)
+        name = address.rsplit("/", 1)[1]
+        stem, kind = os.path.splitext(name)
+        if kind.lower() in PICTURE_TYPES:
+            by_stem.setdefault(stem, []).append((name, address, md5))
+    figs = list(root.iter("fig"))
+    by_id = {fig.get("id"): fig for fig in figs if fig.get("id")}
+    by_label = {}
+    for fig in figs:
+        label = fig.find("label")
+        by_label.setdefault(" ".join("".join(label.itertext()).split()) if label is not None else "", fig)
+    found = {}
+    for figure in wanted:
+        fig = by_id.get(figure["figure"]) or (by_label.get(figure["label"]) if figure["label"] else None)
+        pictures = []
+        for graphic in (fig.iter("graphic") if fig is not None else []):
+            href = os.path.basename(graphic.get("{http://www.w3.org/1999/xlink}href") or "")
+            stem, kind = os.path.splitext(href)
+            files = by_stem.get(stem if kind.lower() in PICTURE_TYPES else href, [])
+            if files:
+                pictures.append(min(files, key=lambda f: PICTURE_TYPES.index(os.path.splitext(f[0])[1].lower())))
+        found[figure["figure"]] = pictures
+    return found
 
 
 def _safe(name: str) -> str:
@@ -404,22 +417,25 @@ def download(data: Path = DATA, show=None) -> dict:
             rows += json.loads(done.read_text(encoding="utf-8"))
             continue
         base = {"patient_uid": case["patient_uid"], "split": case["split"], "class": case["class"], "pmcid": case["pmcid"]}
-        record = _oa_record(case["pmcid"])
+        version = _latest(case["pmcid"])
+        record = json.loads(_get(f"{CLOUD}{version}{version[:-1]}.json")) if version else {}
         found, status = {}, ""
-        if "error" in record:
+        if not record.get("is_pmc_openaccess"):
             status = NOT_OPEN
-        elif record["retracted"]:
+        elif record.get("is_retracted"):
             status = RETRACTED
         else:
-            found = pictures_in_package(_package(record["package"]), [f["figure"] for f in figures])
+            found = figure_files(_get(*cloud_address(record["xml_url"])), record.get("media_urls") or [], figures)
+        licence = record.get("license_code") or ""
         mine = []
         for f in figures:
             pictures = found.get(f["figure"], [])
             if status or not pictures:
                 mine.append({**base, "figure": f["figure"], "label": f["label"], "picture": "", "file": "", "sha256": "", "width": "",
-                             "height": "", "licence": record.get("licence", ""), "status": status or NO_FILE})
-            for name, content in pictures:
-                entry = {**base, "figure": f["figure"], "label": f["label"], "picture": name, "licence": record.get("licence", "")}
+                             "height": "", "licence": licence, "status": status or NO_FILE})
+            for name, address, md5 in pictures:
+                content = _get(address, md5)
+                entry = {**base, "figure": f["figure"], "label": f["label"], "picture": name, "licence": licence}
                 try:
                     with Image.open(io.BytesIO(content)) as picture:
                         picture.load()
@@ -449,7 +465,7 @@ def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
     with_picture = {r["patient_uid"] for r in saved}
     lines = ["# Pictures of the figures that count", "",
              f"Written by `python -m src.multimodal.figures download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
-             "come from PMC's open-access packages, byte for byte, and stay on this computer (`data/multimodal/figures/images/`). "
+             "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/multimodal/figures/images/`). "
              "Nothing in them was changed, and no person looked at them.", "",
              "| Class | Test: cases with a picture | Validation | Train |", "|---|---|---|---|"]
     for label in sorted({c["class"] for c in cases}) + ["all"]:
@@ -664,7 +680,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m src.multimodal.figures", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
-    sub.add_parser("download", help="download the pictures of the figures that count, from PMC's open-access packages (needs the internet)")
+    sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")
     sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
     return parser
 

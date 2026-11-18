@@ -4,7 +4,6 @@ import csv
 import hashlib
 import io
 import json
-import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -216,45 +215,61 @@ def png(colour=(200, 50, 50)) -> bytes:
     return out.getvalue()
 
 
-def package(figs: dict, files: dict, nxml_count: int = 1) -> bytes:
-    """A gzipped tar like PMC's: the article's XML (figures with their graphics) and the files."""
-    xml = ('<article xmlns:xlink="http://www.w3.org/1999/xlink"><body>' + "".join(
-        f'<fig id="{fid}">' + "".join(f'<graphic xlink:href="{h}"/>' for h in hrefs) + "</fig>" for fid, hrefs in figs.items())
-        + "</body></article>").encode()
-    out = io.BytesIO()
-    with tarfile.open(fileobj=out, mode="w:gz") as archive:
-        for name, content in [*[(f"PMC1/a{i}.nxml", xml) for i in range(nxml_count)], *files.items()]:
-            info = tarfile.TarInfo(name)
-            info.size = len(content)
-            archive.addfile(info, io.BytesIO(content))
-    return out.getvalue()
+BUCKET = "s3://pmc-oa-opendata/"
 
 
-OA = ('<OA><records><record id="{id}" license="CC BY" retracted="{retracted}"><link format="tgz" '
-      'href="ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_package/00/00/{id}.tar.gz"/></record></records></OA>')
+def media(key: str, content: bytes) -> str:
+    return f"{BUCKET}{key}?md5={hashlib.md5(content).hexdigest()}"
 
 
-class OpenAccessTests(unittest.TestCase):
-    def test_the_service_s_answers(self):
-        self.assertEqual(figures.parse_oa(OA.format(id="PMC1", retracted="no").encode()),
-                         {"licence": "CC BY", "retracted": False, "package": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_package/00/00/PMC1.tar.gz"})
-        self.assertTrue(figures.parse_oa(OA.format(id="PMC1", retracted="yes").encode())["retracted"])
-        self.assertEqual(figures.parse_oa(b'<OA><error code="idIsNotOpenAccess">identifier PMC2 is not Open Access</error></OA>'),
-                         {"error": "idIsNotOpenAccess: identifier PMC2 is not Open Access"})
+def article_xml(figs: dict) -> bytes:
+    """An article's XML as the bucket holds it: figures with their labels and graphics."""
+    return ('<!DOCTYPE article><article xmlns:xlink="http://www.w3.org/1999/xlink"><body>' + "".join(
+        f'<fig id="{fid}"><label>{label}</label>' + "".join(f'<graphic xlink:href="{h}"/>' for h in hrefs) + "</fig>"
+        for fid, (label, hrefs) in figs.items()) + "</body></article>").encode()
+
+
+class CloudTests(unittest.TestCase):
+    def test_the_versions_of_an_article(self):
+        listing = ('<?xml version="1.0"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Prefix>PMC12.</Prefix>'
+                   '<CommonPrefixes><Prefix>PMC12.1/</Prefix></CommonPrefixes><CommonPrefixes><Prefix>PMC12.10/</Prefix></CommonPrefixes>'
+                   '<CommonPrefixes><Prefix>PMC12.2/</Prefix></CommonPrefixes></ListBucketResult>').encode()
+        self.assertEqual(figures.parse_versions(listing), [1, 2, 10])  # the latest is 10, not 2
+        with mock.patch.object(figures, "fetch", return_value=[1, 2, 10]):
+            self.assertEqual(figures._latest("PMC12"), "PMC12.10/")
+        with mock.patch.object(figures, "fetch", return_value=[]):
+            self.assertIsNone(figures._latest("PMC12"))
         with self.assertRaisesRegex(ValueError, "unexpected form"):
-            figures.parse_oa(b"<html/>")
+            figures.parse_versions(b"<html/>")
 
-    def test_only_the_wanted_figures_pictures_are_read(self):
-        content = package({"f1": ["fig1"], "f2": ["fig2.jpg"], "f3": ["missing"], "f4": ["fig4a", "fig4b"]},
-                          {"PMC1/fig1.tif": b"t", "PMC1/fig1.jpg": b"j", "PMC1/fig2.jpg": b"two", "PMC1/fig4a.png": b"a",
-                           "PMC1/fig4b.gif": b"b", "PMC1/article.pdf": b"%PDF"})
-        found = figures.pictures_in_package(content, ["f1", "f3", "f4", "f9"])
-        self.assertEqual(found, {"f1": [("fig1.jpg", b"j")], "f3": [], "f4": [("fig4a.png", b"a"), ("fig4b.gif", b"b")], "f9": []})
-        self.assertEqual(figures.pictures_in_package(content, ["f2"]), {"f2": [("fig2.jpg", b"two")]})
+    def test_a_file_s_address_and_checksum(self):
+        self.assertEqual(figures.cloud_address(f"{BUCKET}PMC1.1/a.jpg?md5={'a' * 32}"),
+                         ("https://pmc-oa-opendata.s3.amazonaws.com/PMC1.1/a.jpg", "a" * 32))
+        with self.assertRaisesRegex(ValueError, "not a file of the bucket"):
+            figures.cloud_address("https://elsewhere/a.jpg")
+        with self.assertRaisesRegex(ValueError, "no MD5"):
+            figures.cloud_address(f"{BUCKET}PMC1.1/a.jpg")
 
-    def test_a_package_must_hold_one_article(self):
-        with self.assertRaisesRegex(ValueError, "2 article files"):
-            figures.pictures_in_package(package({}, {}, nxml_count=2), [])
+    def test_a_damaged_download_is_refused(self):
+        def fetch(url, accept, check, **kwargs):
+            return check(b"damaged")
+        with mock.patch.object(figures, "fetch", side_effect=fetch):
+            self.assertEqual(figures._get("u", hashlib.md5(b"damaged").hexdigest()), b"damaged")
+            with self.assertRaisesRegex(ValueError, "does not match the MD5"):
+                figures._get("u", hashlib.md5(b"good").hexdigest())
+
+    def test_only_the_wanted_figures_picture_files_are_found(self):
+        files = {"PMC1.1/fig1.tif": b"t", "PMC1.1/fig1.jpg": b"j", "PMC1.1/fig2.jpg": b"two", "PMC1.1/fig4a.png": b"a",
+                 "PMC1.1/fig4b.gif": b"b", "PMC1.1/PMC1.1.pdf": b"%PDF"}
+        urls = [media(k, v) for k, v in files.items()]
+        xml = article_xml({"f1": ("Figure 1", ["fig1"]), "f2": ("Figure 2", ["fig2.jpg"]), "f3": ("Figure 3", ["missing"]),
+                           "f4": ("Figure 4", ["fig4a", "fig4b"])})
+        found = figures.figure_files(xml, urls, [{"figure": f, "label": ""} for f in ("f1", "f2", "f3", "f4", "f9")])
+        self.assertEqual({f: [name for name, _, _ in pictures] for f, pictures in found.items()},
+                         {"f1": ["fig1.jpg"], "f2": ["fig2.jpg"], "f3": [], "f4": ["fig4a.png", "fig4b.gif"], "f9": []})
+        self.assertEqual(found["f2"][0][1:], ("https://pmc-oa-opendata.s3.amazonaws.com/PMC1.1/fig2.jpg", hashlib.md5(b"two").hexdigest()))
+        by_label = figures.figure_files(xml, urls, [{"figure": "other-id", "label": "Figure 2"}])  # the id differs: found by its label
+        self.assertEqual([name for name, _, _ in by_label["other-id"]], ["fig2.jpg"])
 
 
 class DownloadTests(unittest.TestCase):
@@ -262,49 +277,63 @@ class DownloadTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.data = Path(tmp.name)
-        cases = [("c1", "test", "melanoma", "PMC1", "yes"), ("c2", "test", "nevus", "PMC2", "yes"), ("c3", "val", "nevus", "PMC3", "yes"),
-                 ("c4", "train", "nevus", "PMC4", "no")]
+        cases = [("c1", "test", "melanoma", "PMC1"), ("c2", "test", "nevus", "PMC2"), ("c3", "val", "nevus", "PMC3"),
+                 ("c4", "train", "nevus", "PMC4"), ("c5", "train", "nevus", "PMC5")]
         with (self.data / figures.COUNT_TABLE).open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=figures.CASE_COLUMNS, lineterminator="\n")
             writer.writeheader()
-            for uid, split, label, pmcid, counts in cases:
+            for uid, split, label, pmcid in cases:
                 writer.writerow({c: "" for c in figures.CASE_COLUMNS} | {"patient_uid": uid, "split": split, "class": label, "pmcid": pmcid,
-                                                                          "counts": counts})
+                                                                          "counts": "no" if uid == "c5" else "yes"})
+
         def caption(uid, pmcid, fid, lesion=True, left=()):
             return {"patient_uid": uid, "pmcid": pmcid, "figure": fid, "label": f"Figure {fid[-1]}", "lesion": lesion, "left_out_for": list(left)}
         lines = [caption("c1", "PMC1", "f1"), caption("c1", "PMC1", "f2", left=["scan"]), caption("c1", "PMC1", "f3", lesion=False),
-                 caption("c1", "PMC1", "f5"), caption("c2", "PMC2", "f1"), caption("c3", "PMC3", "f1"), caption("c4", "PMC4", "f1")]
+                 caption("c1", "PMC1", "f5"), caption("c2", "PMC2", "f1"), caption("c3", "PMC3", "f1"), caption("c4", "PMC4", "f1"),
+                 caption("c5", "PMC5", "f1")]
         (self.data / "figures").mkdir()
         (self.data / figures.CAPTIONS).write_text("".join(json.dumps(c) + "\n" for c in lines), encoding="utf-8")
-        self.packages = {"PMC1": package({"f1": ["fig1"], "f2": ["fig2"], "f3": ["fig3"], "f5": ["fig5"]},
-                                         {"x/fig1.jpg": png(), "x/fig2.jpg": png(), "x/fig3.jpg": png(), "x/fig5.png": png()[:-30]})}  # cut short: it opens, but its pixels cannot be read
+        files = {"PMC1.2/fig1.jpg": png(), "PMC1.2/fig2.jpg": png(), "PMC1.2/fig3.jpg": png(), "PMC1.2/fig5.png": png()[:-30]}
+        xml = article_xml({f"f{i}": (f"Figure {i}", [f"fig{i}"]) for i in (1, 2, 3, 5)})
+        self.store = {**files, "PMC1.2/PMC1.2.xml": xml}
+        self.records = {
+            "PMC1": {"is_pmc_openaccess": True, "is_retracted": False, "license_code": "CC BY", "xml_url": media("PMC1.2/PMC1.2.xml", xml),
+                     "media_urls": [media(k, v) for k, v in files.items()]},
+            "PMC2": {"is_pmc_openaccess": False, "is_retracted": False, "license_code": "", "xml_url": "", "media_urls": []},
+            "PMC3": {"is_pmc_openaccess": True, "is_retracted": True, "license_code": "CC BY", "xml_url": "", "media_urls": []}}
         self.asked = []
 
-        def oa(pmcid):
+        def latest(pmcid):
             self.asked.append(pmcid)
-            if pmcid == "PMC2":
-                return {"error": "idIsNotOpenAccess: no"}
-            return {"licence": "CC BY", "retracted": pmcid == "PMC3", "package": f"https://x/{pmcid}.tar.gz"}
-        for patch in (mock.patch.object(figures, "_oa_record", side_effect=oa),
-                      mock.patch.object(figures, "_package", side_effect=lambda url: self.packages[url.split("/")[-1][:-7]])):
+            return {"PMC1": "PMC1.2/", "PMC2": "PMC2.1/", "PMC3": "PMC3.1/"}.get(pmcid)  # PMC4 is not in the bucket
+
+        def get(url, md5=None):
+            key = url.removeprefix(figures.CLOUD)
+            if key.endswith(".json"):
+                return json.dumps(self.records[key.split(".")[0]]).encode()
+            content = self.store[key]
+            self.assertEqual(hashlib.md5(content).hexdigest(), md5)  # every picture and XML is asked with its checksum
+            return content
+        for patch in (mock.patch.object(figures, "_latest", side_effect=latest), mock.patch.object(figures, "_get", side_effect=get)):
             patch.start()
             self.addCleanup(patch.stop)
 
     def test_the_pictures_of_the_figures_that_count_are_saved_byte_for_byte(self):
         done = figures.download(self.data)
         rows = {(r["patient_uid"], r["figure"]): r for r in done["rows"]}
-        self.assertEqual(set(rows), {("c1", "f1"), ("c1", "f5"), ("c2", "f1"), ("c3", "f1")})  # f2, f3 and c4 do not count
+        self.assertEqual(set(rows), {("c1", "f1"), ("c1", "f5"), ("c2", "f1"), ("c3", "f1"), ("c4", "f1")})  # f2, f3 and c5 do not count
         first = rows[("c1", "f1")]
-        self.assertEqual((first["status"], first["width"], first["height"], first["licence"], first["file"]),
-                         (figures.SAVED, 4, 3, "CC BY", "figures/images/PMC1/f1-fig1.jpg"))
+        self.assertEqual((first["status"], first["width"], first["height"], first["licence"], first["file"], first["picture"]),
+                         (figures.SAVED, 4, 3, "CC BY", "figures/images/PMC1/f1-fig1.jpg", "fig1.jpg"))
         self.assertEqual((self.data / first["file"]).read_bytes(), png())
         self.assertEqual(first["sha256"], hashlib.sha256(png()).hexdigest())
         self.assertEqual(rows[("c1", "f5")]["status"], figures.UNREADABLE)
         self.assertEqual(rows[("c2", "f1")]["status"], figures.NOT_OPEN)
         self.assertEqual(rows[("c3", "f1")]["status"], figures.RETRACTED)
+        self.assertEqual(rows[("c4", "f1")]["status"], figures.NOT_OPEN)  # not in the bucket at all
         self.assertEqual(sorted(p.name for p in (self.data / "figures" / "images" / "PMC1").iterdir()), ["f1-fig1.jpg", "record.json"])
         report = (self.data / figures.FILES_REPORT).read_text(encoding="utf-8")
-        self.assertIn("Pictures saved: 1 for 1 of 3 cases.", report)
+        self.assertIn("Pictures saved: 1 for 1 of 4 cases.", report)
         self.assertIn("| melanoma | 1 | 0 | 0 |", report)
 
     def test_a_second_run_asks_nothing_again(self):
@@ -317,7 +346,6 @@ class DownloadTests(unittest.TestCase):
         (self.data / figures.CAPTIONS).write_text("", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "no figure of it does"):
             figures.download(self.data)
-
 
 class CommandLineTests(unittest.TestCase):
     def test_the_steps_are_count_and_download(self):
