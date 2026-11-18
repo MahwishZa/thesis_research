@@ -178,6 +178,15 @@ class CountTests(unittest.TestCase):
         self.assertIn("The rule is met: the dataset can be built.", (self.data / figures.COUNT_REPORT).read_text(encoding="utf-8"))
 
 
+class ReportTests(unittest.TestCase):
+    def test_a_case_that_cites_no_figure_is_not_counted_as_citing_one(self):
+        row = {"split": "test", "class": "melanoma", "counts": "yes", "reason": "", "lesion_figures": 1, "dermoscopy_figures": 0,
+               "lesion_figures_with_other_parts": 0, "licence": ""}
+        rows = [row | {"lesion_figures_cited_in_question": n} for n in (0, 1, 2, "")]
+        report = "\n".join(figures._report(rows, [], figures.go(rows)))
+        self.assertIn("Cases whose question cites one of these figures by number: 2 of 3 whose question is on this computer", report)
+
+
 class RuleTests(unittest.TestCase):
     def rows(self, per_class):
         return [{"split": "test", "class": label, "counts": "yes"} for label, n in per_class.items() for _ in range(n)] + \

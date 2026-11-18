@@ -249,8 +249,8 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
               "| The caption also names | Figures |", "|---|---|"]
     lines += [f"| {name} | {left[name]} |" for name in [*LEFT_OUT, MAY_BE_ANOTHER]]
     counted = [r for r in rows if r["counts"] == "yes"]
-    cited = [r for r in counted if r["lesion_figures_cited_in_question"] not in ("", "0")]
-    known = [r for r in counted if r["lesion_figures_cited_in_question"] != ""]
+    cited = [r for r in counted if str(r["lesion_figures_cited_in_question"]) not in ("", "0")]  # a number, or "" when unknown
+    known = [r for r in counted if str(r["lesion_figures_cited_in_question"]) != ""]
     licences = Counter(licence_kind(r["licence"]) for r in counted)
     lines += ["", "## The cases that count", "",
               f"- Figures that show the lesion: {sum(int(r['lesion_figures']) for r in counted)} in {len(counted)} cases; cases with more "
