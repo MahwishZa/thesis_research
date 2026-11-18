@@ -41,6 +41,14 @@ fails.
       with the question: a leak into retrieval, to be removed from the knowledge base, never from the questions;
     - its source (PMC-Patients, a PMC full text, a PubMed abstract), year and length.
 It writes data/text/review_flags.csv (committed: no text) and the review section of dataset_report.md.
+
+Decision rule for a new version, fixed with these signals and before the review was first run (2026-11-18):
+    - a question whose confirming result also names another class (not negated) has a doubtful label: it leaves the dataset;
+      every other question stays in its split (nothing is moved or reshuffled);
+    - a knowledge-base passage that shares 12 words with a question leaves the knowledge base (the question stays);
+    - look-alike wording, other classes in the question and the same wrong answer from every run are reported, never a reason
+      to remove a question: a hard or atypical case is a valid question, and removing the questions the models get wrong would
+      make them look better than they are.
 """
 
 from __future__ import annotations
