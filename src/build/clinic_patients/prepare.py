@@ -14,7 +14,8 @@ the download holds, so that the data sheet states facts and not what a web page 
 - build/downloads.csv: the files in downloads/, with their size and SHA-256;
 - the inventory section of dataset_report.md: the counts of photos, lesions and patients, each class with its photos, lesions,
   patients and how the ``biopsed`` column is filled, the photos named in the table without a file and the files not named in it,
-  identical files, lesions with more than one diagnosis or patient, and how many clinical fields are filled, by class.
+  identical files, lesions with more than one diagnosis or patient, how many clinical fields are filled, by class, which fields are
+  empty together (and for which classes), and the size of the photos by class.
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ REPORT_HEAD = ["# Preparation of the PAD-UFES-20 cohort", "",
                "Made by `python -m src.build.clinic_patients.prepare <step>`, one section per step, in the order the steps run. Each step rewrites "
                "only its own section.", ""]
 EXAMPLES = 10  # how many names a report line lists before it says "and N more"
+PATTERNS, LESION_EXAMPLES = 8, 3  # how many sets of empty fields, and how many `lesion_id` examples, the report shows
 
 
 def _sha256(path: Path) -> str:
@@ -240,6 +242,33 @@ def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dic
     for label in sorted({r["diagnostic"] for r in rows}):
         counts = [sum(not is_empty(r[c]) for c in clinical) for r in rows if r["diagnostic"] == label]
         lines.append(f"| {label} | {len(counts)} | {statistics.mean(counts):.1f} | {min(counts)} | {max(counts)} |")
+    classes = sorted({r["diagnostic"] for r in rows})
+    patterns, pattern_classes, pattern_patients = Counter(), defaultdict(Counter), defaultdict(set)
+    for r in rows:
+        empty = tuple(c for c in clinical if is_empty(r[c]))
+        patterns[empty] += 1
+        pattern_classes[empty][r["diagnostic"]] += 1
+        pattern_patients[empty].add(r["patient_id"])
+    lines += ["", "### Which fields are empty together", "",
+              f"The {PATTERNS} most common sets of empty clinical fields. If a set is common in some classes and rare in others, an "
+              "empty record would point to the class.", "",
+              "| Empty fields | Photos | Patients | " + " | ".join(classes) + " |", "|---|---|---|" + "---|" * len(classes)]
+    for empty, n in sorted(patterns.items(), key=lambda x: (-x[1], x[0]))[:PATTERNS]:
+        names = ", ".join(f"`{c}`" for c in empty) if empty else "(none)"
+        lines.append(f"| {names} | {n} | {len(pattern_patients[empty])} | "
+                     + " | ".join(str(pattern_classes[empty][label]) for label in classes) + " |")
+    by_image = {r["img_id"]: r for r in rows}
+    sizes = {e["img_id"]: e for e in images if e["width"] != ""}
+    lines += ["", "### Photo size by class", "",
+              "Photos come from different smartphones, so their sizes differ. If the classes differ here, the size alone could point to "
+              "the class.", "",
+              "| Class | Photos | Width: smallest | median | largest | File size (KB): median |", "|---|---|---|---|---|---|"]
+    for label in classes:
+        mine = [sizes[r["img_id"]] for r in rows if r["diagnostic"] == label and r["img_id"] in sizes]
+        if mine:
+            widths = [e["width"] for e in mine]
+            lines.append(f"| {label} | {len(mine)} | {min(widths)} | {statistics.median(widths):g} | {max(widths)} | "
+                         f"{statistics.median(e['bytes'] for e in mine) / 1024:.0f} |")
     lines += ["", "Each column's values and level (patient, lesion or photo) are in `build/columns.csv`.", "", "## Checks", ""]
     checks = [("Rows naming the same photo twice", problems["repeated_rows"]),
               ("Photos named in the table but not found in raw/", problems["missing"]),
@@ -250,10 +279,21 @@ def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dic
               ("Lesions under more than one patient", problems["two_patients"])]
     for title, items in checks:
         lines.append(f"- {title}: {len(items)}" + (f" ({_names(items)})" if items else ""))
+    pairs = {(r["patient_id"], r["lesion_id"]) for r in rows}
+    lines.append(f"- Distinct patient + lesion pairs: {len(pairs)} (distinct `lesion_id` values: {len(lesions)})")
+    for lesion in problems["two_patients"][:LESION_EXAMPLES]:
+        owners = sorted({r["patient_id"] for r in rows if r["lesion_id"] == lesion})
+        lines.append(f"  - `lesion_id` `{lesion}` is under " + ", ".join(
+            f"`{o}` ({'/'.join(sorted({r['diagnostic'] for r in rows if r['lesion_id'] == lesion and r['patient_id'] == o}))})"
+            for o in owners))
     groups = problems["same_content"]
     lines.append(f"- Groups of photos with identical content: {len(groups)}"
                  + (" (" + "; ".join(" = ".join(f"`{n}`" for n in g) for g in groups[:EXAMPLES])
                     + (f"; and {len(groups) - EXAMPLES} more" if len(groups) > EXAMPLES else "") + ")" if groups else ""))
+    if groups:
+        lines.append(f"  - under one patient: {sum(len({by_image[n]['patient_id'] for n in g}) == 1 for g in groups)} of {len(groups)}; "
+                     f"under one lesion number: {sum(len({by_image[n]['lesion_id'] for n in g}) == 1 for g in groups)} of {len(groups)}; "
+                     f"with the same diagnosis: {sum(len({by_image[n]['diagnostic'] for n in g}) == 1 for g in groups)} of {len(groups)}")
     formats = Counter(e["format"] for e in images if e["format"])
     widths = [e["width"] for e in images if e["width"] != ""]
     heights = [e["height"] for e in images if e["height"] != ""]

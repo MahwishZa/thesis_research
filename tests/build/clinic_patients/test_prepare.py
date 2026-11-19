@@ -4,7 +4,9 @@ data. Patients P1 (two lesions) and P2; lesion L1 has two photos."""
 import csv
 import hashlib
 import io
+import random
 import shutil
+import statistics
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +27,13 @@ ROWS = [
 def png(colour, size=(30, 20)) -> bytes:
     out = io.BytesIO()
     Image.new("RGB", size, colour).save(out, format="PNG")
+    return out.getvalue()
+
+
+def noise(side: int, seed: int) -> bytes:
+    """A picture of random pixels: it does not compress, so its file size grows with its side."""
+    out = io.BytesIO()
+    Image.frombytes("RGB", (side, side), random.Random(seed).randbytes(side * side * 3)).save(out, format="PNG")
     return out.getvalue()
 
 
@@ -134,6 +143,66 @@ class InventoryTests(unittest.TestCase):
         self.assertIn("The 6 columns other than `img_id`, `patient_id`, `lesion_id`, `diagnostic`, `biopsed`.", report)
         self.assertIn("| BCC | 2 | 5.5 | 5 | 6 |", report)  # smoke, age, gender, region, diameter_1, itch: L1b has itch UNK
         self.assertIn("| ACK | 1 | 5.0 | 5 | 5 |", report)  # smoke blank
+
+    def test_the_sets_of_empty_fields_are_listed_with_their_classes(self):
+        # by hand: P1_L1_a has no empty field; P1_L1_b has itch UNK; P1_L2_a has diameter_1 blank; P2_L3_a has smoke blank
+        rows = [list(r) for r in ROWS] + [["P5", "L5", "", "30", "MALE", "ARM", "", "True", "SEK", "extra.png", "False"],
+                                          ["P5", "L5", "", "30", "MALE", "ARM", "", "True", "SEK", "extra2.png", "False"]]
+        self.write_metadata(COLUMNS, rows)
+        for name in ("extra.png", "extra2.png"):
+            (self.raw / "images" / "imgs_part_1" / name).write_bytes(png((7, 7, 7)))
+        prepare.inventory(self.data)
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("| Empty fields | Photos | Patients | ACK | BCC | NEV | SEK |", report)
+        self.assertIn("| (none) | 1 | 1 | 0 | 1 | 0 | 0 |", report)
+        self.assertIn("| `smoke` | 1 | 1 | 1 | 0 | 0 | 0 |", report)
+        self.assertIn("| `itch` | 1 | 1 | 0 | 1 | 0 | 0 |", report)
+        self.assertIn("| `smoke`, `diameter_1` | 2 | 1 | 0 | 0 | 0 | 2 |", report)  # 2 photos of 1 patient; columns in the order of the table
+        patterns = [line for line in report.splitlines() if line.startswith("| (none)") or line.startswith("| `")]
+        self.assertTrue(patterns[0].startswith("| `smoke`, `diameter_1` | 2 |"), "the most common set comes first")
+
+    def test_photo_size_by_class_and_the_checks_on_lesion_numbers_and_identical_photos(self):
+        (self.raw / "images" / "imgs_part_1" / "P2_L3_a.png").write_bytes(png((9, 9, 9), size=(60, 20)))
+        rows = [list(r) for r in ROWS] + [["P3", "L1", "", "40", "MALE", "LEG", "", "", "MEL", "P3_L1_a.png", "True"]]
+        self.write_metadata(COLUMNS, rows)
+        (self.raw / "images" / "imgs_part_1" / "P3_L1_a.png").write_bytes(png((200, 0, 0)))  # the same picture as P1_L1_a
+        prepare.inventory(self.data)
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("| Class | Photos | Width: smallest | median | largest | File size (KB): median |", report)
+        self.assertIn("| ACK | 1 | 60 | 60 | 60 |", report)
+        self.assertIn("| BCC | 2 | 30 | 30 | 30 |", report)
+        self.assertIn("- Distinct patient + lesion pairs: 4 (distinct `lesion_id` values: 3)", report)
+        self.assertIn("  - `lesion_id` `L1` is under `P1` (BCC), `P3` (MEL)", report)
+        self.assertIn("- Groups of photos with identical content: 1 (`P1_L1_a.png` = `P3_L1_a.png`)", report)
+        self.assertIn("  - under one patient: 0 of 1; under one lesion number: 1 of 1; with the same diagnosis: 0 of 1", report)
+
+    def test_the_median_file_size_of_a_class_is_not_its_mean(self):
+        contents = [noise(100, 1), noise(200, 2), noise(300, 3)]
+        rows = [["P%d" % i, "L%d" % i, "False", "50", "MALE", "ARM", "5.0", "True", "NEV", "n%d.png" % i, "False"] for i in range(3)]
+        self.write_metadata(COLUMNS, rows)
+        for i, content in enumerate(contents):
+            (self.raw / "images" / "imgs_part_1" / f"n{i}.png").write_bytes(content)
+        for name in ("P1_L1_a.png", "P1_L1_b.png", "P1_L2_a.png", "P2_L3_a.png"):
+            (self.raw / "images" / "imgs_part_1" / name).unlink(missing_ok=True)
+            (self.raw / "images" / "imgs_part_2" / name).unlink(missing_ok=True)
+        prepare.inventory(self.data)
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        sizes = [len(c) for c in contents]
+        median, mean = f"{statistics.median(sizes) / 1024:.0f}", f"{statistics.mean(sizes) / 1024:.0f}"
+        self.assertNotEqual(median, mean)
+        self.assertIn(f"| NEV | 3 | 100 | 200 | 300 | {median} |", report)
+
+    def test_a_lesion_with_two_diagnoses_under_one_patient_is_not_listed_as_shared_between_patients(self):
+        rows = [list(r) for r in ROWS] + [["P7", "L9", "", "40", "MALE", "LEG", "", "", "NEV", "q1.png", "False"],
+                                          ["P7", "L9", "", "40", "MALE", "LEG", "", "", "SEK", "q2.png", "False"]]
+        self.write_metadata(COLUMNS, rows)
+        for name, colour in (("q1.png", (1, 1, 1)), ("q2.png", (2, 2, 2))):
+            (self.raw / "images" / "imgs_part_1" / name).write_bytes(png(colour))
+        prepare.inventory(self.data)
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("- Lesions with more than one diagnosis: 1 (`L9`)", report)
+        self.assertIn("- Lesions under more than one patient: 0", report)
+        self.assertNotIn("is under", report)
 
     def test_a_byte_order_mark_is_ignored_and_the_run_is_repeatable(self):
         self.write_metadata(COLUMNS, ROWS, bom=True)
