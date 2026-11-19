@@ -166,8 +166,8 @@ class RepositoryTests(unittest.TestCase):
                      "data/knowledge/sources/statpearls/NBK1.html", "data/knowledge/texts/passages.jsonl", "data/anything_else.txt",
                      "data/cases/figures/images/PMC1/f1.jpg", "data/cases/figures/captions.jsonl", "data/text/sources/removed/test/x/1-1.txt",
                      "data/image/build/x.txt", "data/text/build/nested/x.csv",
-                     "data/x.csv", "data/pad/raw/metadata.csv", "data/pad/raw/images/imgs_part_1/PAT_1_1_1.png",
-                     "data/pad/downloads/zr7vgbcyr2-1.zip",
+                     "data/x.csv", "data/clinic_patients/raw/metadata.csv", "data/clinic_patients/raw/images/imgs_part_1/PAT_1_1_1.png",
+                     "data/clinic_patients/downloads/zr7vgbcyr2-1.zip",
                      "results/image/closed_book/m/val_1/report.md", "results/image/closed_book/m/test_1.partial/predictions.jsonl",
                      "src/__pycache__/x.pyc", "results/text/closed_book/m/val_1/report.md",
                      "results/text/closed_book/m/test_1.partial/predictions.jsonl",
@@ -180,8 +180,8 @@ class RepositoryTests(unittest.TestCase):
                      "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/closed_book/m/test_1/report.md",
                      "results/image/closed_book/m/test_1/predictions.jsonl", "configs/models.toml", "prompts/image/closed_book.txt",
                      "results/text/closed_book/m/test_1/report.md", "results/phase1/text/m/test_1/report.md",
-                     "data/pad/dataset_report.md", "data/pad/build/raw_images.csv", "data/pad/build/columns.csv",
-                     "data/pad/build/downloads.csv"):
+                     "data/clinic_patients/dataset_report.md", "data/clinic_patients/build/raw_images.csv", "data/clinic_patients/build/columns.csv",
+                     "data/clinic_patients/build/downloads.csv"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

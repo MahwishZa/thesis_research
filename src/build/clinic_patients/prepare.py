@@ -1,10 +1,10 @@
 """PAD-UFES-20, the clinic cohort of Version 2: smartphone photos of skin lesions, each with the clinical record of the same visit
 (Pacheco et al., Data in Brief, 2020; Mendeley Data, doi 10.17632/zr7vgbcyr2.1). One command per step:
 
-    python -m src.build.pad.prepare inventory
+    python -m src.build.clinic_patients.prepare inventory
 
-The original download stays on this computer: the files as downloaded in data/pad/downloads/ (for example the Mendeley ZIP), and
-their unpacked contents in data/pad/raw/ (metadata.csv and the photos, in whatever folders the download holds).
+The original download stays on this computer: the files as downloaded in data/clinic_patients/downloads/ (for example the Mendeley ZIP), and
+their unpacked contents in data/clinic_patients/raw/ (metadata.csv and the photos, in whatever folders the download holds).
 
 ``inventory`` only reads. It changes no file of the download, asks no service and decides nothing about the dataset. It writes what
 the download holds, so that the data sheet states facts and not what a web page or a memory says:
@@ -32,7 +32,7 @@ from PIL import Image
 from ...common import write_section
 from ...datasets import MEDIA_TYPES
 
-DATA = Path("data/pad")  # this cohort's folder: committed tables and report; downloads/ and raw/ stay on this computer
+DATA = Path("data/clinic_patients")  # this cohort's folder: committed tables and report; downloads/ and raw/ stay on this computer
 RAW, DOWNLOADS = "raw", "downloads"
 REPORT = "dataset_report.md"
 STEPS = ("inventory",)  # the report's sections, in the order the steps run
@@ -44,7 +44,7 @@ IMAGE_COLUMNS = ["img_id", "file", "bytes", "sha256", "format", "width", "height
 COLUMN_COLUMNS = ["column", "filled", "empty", "distinct", "level", "values"]
 DOWNLOAD_COLUMNS = ["file", "bytes", "sha256"]
 REPORT_HEAD = ["# Preparation of the PAD-UFES-20 cohort", "",
-               "Made by `python -m src.build.pad.prepare <step>`, one section per step, in the order the steps run. Each step rewrites "
+               "Made by `python -m src.build.clinic_patients.prepare <step>`, one section per step, in the order the steps run. Each step rewrites "
                "only its own section.", ""]
 EXAMPLES = 10  # how many names a report line lists before it says "and N more"
 
@@ -214,7 +214,7 @@ def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dic
     patients, lesions = {r["patient_id"] for r in rows}, {r["lesion_id"] for r in rows}
     biopsy_values = sorted({r["biopsed"] for r in rows})
     lines = ["# Inventory: what the download holds", "",
-             "Written by `python -m src.build.pad.prepare inventory`, which only reads the download. Nothing here is decided yet.", "",
+             "Written by `python -m src.build.clinic_patients.prepare inventory`, which only reads the download. Nothing here is decided yet.", "",
              f"- `{metadata}`: {len(rows)} rows, {len(columns)} columns (SHA-256 `{metadata_sha[:12]}`)",
              f"- Photos named in the table and found: {len(images)}; lesions: {len(lesions)}; patients: {len(patients)}",
              f"- Downloaded files fingerprinted (`build/downloads.csv`): {len(downloads) or 'none (downloads/ is empty or absent)'}",
@@ -273,9 +273,9 @@ def _lesions_by_patient(rows: list[dict]) -> dict:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m src.build.pad.prepare", description=__doc__.split("\n\n")[0])
+    parser = argparse.ArgumentParser(prog="python -m src.build.clinic_patients.prepare", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
-    sub.add_parser("inventory", help="report what the PAD-UFES-20 download in data/pad/raw holds (nothing is changed)")
+    sub.add_parser("inventory", help="report what the PAD-UFES-20 download in data/clinic_patients/raw holds (nothing is changed)")
     return parser
 
 

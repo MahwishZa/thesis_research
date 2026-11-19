@@ -45,8 +45,8 @@ thesis_research/
 │   ├── image_metadata/  photos with the patient's age, sex and body site (ablation)
 │   └── knowledge/       what open-book runs may retrieve
 ├── results/             one folder per test run: <dataset>/<approach>/<model>/ (phase 1 in phase1/)
-├── docs/                the method (questions, answers, scores) and the results
-├── archive/             Version 1, frozen for reference (commit a1c9209)
+├── docs/                temporary: the Version 2 plan, method and results; removed when the research is final
+├── archive/             temporary: Version 1 (commit a1c9209), frozen for reference; removed when the research is final
 ├── tests/               unit tests
 └── requirements.txt
 ```

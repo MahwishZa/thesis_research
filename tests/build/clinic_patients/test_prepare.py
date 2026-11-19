@@ -1,4 +1,4 @@
-"""The PAD-UFES-20 inventory (src/build/pad/prepare.py) on a tiny invented download laid out like the real one: no network, no real
+"""The PAD-UFES-20 inventory (src/build/clinic_patients/prepare.py) on a tiny invented download laid out like the real one: no network, no real
 data. Patients P1 (two lesions) and P2; lesion L1 has two photos."""
 
 import csv
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.build.pad import prepare
+from src.build.clinic_patients import prepare
 
 COLUMNS = ["patient_id", "lesion_id", "smoke", "age", "gender", "region", "diameter_1", "itch", "diagnostic", "img_id", "biopsed"]
 ROWS = [
@@ -32,7 +32,7 @@ class InventoryTests(unittest.TestCase):
     def setUp(self):
         self.base = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.base)
-        self.data = self.base / "data" / "pad"
+        self.data = self.base / "data" / "clinic_patients"
         self.raw = self.data / "raw"
         (self.raw / "images" / "imgs_part_1").mkdir(parents=True)
         (self.raw / "images" / "imgs_part_2").mkdir(parents=True)

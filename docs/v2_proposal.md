@@ -15,6 +15,16 @@ diseases that reduces hallucination.
 
 ---
 
+**Decisions after approval (2026-11-19).**
+- The cohorts are named by what they hold: `data/clinic_patients/` (PAD-UFES-20) and `data/published_cases/` (the case reports);
+  the names `pad` and `case_reports` used below are replaced by these.
+- The repository layout of section 6 is approved, with these changes: `docs/` and `archive/` are temporary and are removed with
+  `.claude/` when the research is final; a dataset's laptop-only folders are always `downloads/`, `raw/` and `files/`.
+- The clean-up is done in three stages: R1 names and notes; R2 the Version 1 photo datasets leave the working folders (they stay in
+  `archive/v1`); R3 `data/text` and `data/cases` become `data/published_cases/`.
+
+---
+
 ## 1. Findings of the audit
 
 ### 1.1 What Version 1 has, and what it is worth
