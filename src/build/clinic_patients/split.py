@@ -24,11 +24,12 @@ Writes build/split.csv (one row per photo that stays, with its split and its cli
 from __future__ import annotations
 
 import hashlib
+import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from ...common import write_section
-from .table import (BUILD, CLASS_NAMES, DATA, REPORT, REPORT_HEAD, SPLIT, STEPS, clinical_columns, components, names, read_csv,
+from .table import (BUILD, CLASS_NAMES, DATA, NOT_RECORDED, REPORT, REPORT_HEAD, SPLIT, STEPS, clinical_columns, components, names, read_csv,
                     write_csv)
 
 SEED = 20261119  # chosen before the first split was drawn; never changed
@@ -145,4 +146,39 @@ def _report(rows, excluded, group_of, counts, classes, link_count) -> list[str]:
                      f"{len({(r['patient_id'], r['lesion_id']) for r in mine})} |")
     big = sorted(((sum(c.values()), g) for g, c in counts.items()), reverse=True)[:3]
     lines += ["", "Largest split groups (photos): " + ", ".join(f"`{g}` {n}" for n, g in big), ""]
+    return lines + _balance(rows, classes)
+
+
+def _percent(count: int, total: int) -> str:
+    return f"{count / total:.1%}" if total else "-"
+
+
+def _balance(rows: list[dict], classes: list[str], regions: int = 6) -> list[str]:
+    """Do the three splits look alike? Photos per patient, age, biopsy-proven share, the most common body sites, and how many patients
+    each class has in each split (read only: the split is never changed to fit these numbers)."""
+    by_split = {s: [r for r in rows if r["split"] == s] for s in SPLITS}
+    lines = ["## Does each split look like the others?", "",
+             "Read only: these numbers describe the split as drawn; nothing is redrawn to change them (a split is never reshuffled).", "",
+             "| Split | Patients | Patients with one photo | Photos per patient (mean, largest) | Age (median, quartiles) | Biopsy-proven |",
+             "|---|---|---|---|---|---|"]
+    for s, mine in by_split.items():
+        per_patient = list(Counter(r["patient_id"] for r in mine).values())
+        ages = sorted(int(r["age"]) for r in mine if r["age"] != NOT_RECORDED)  # a gap is the views step's to stop
+        quartiles = [round(q) for q in statistics.quantiles(ages, n=4)] if len(ages) > 1 else ages
+        age = (f"{round(statistics.median(ages))} ({', '.join(str(q) for q in quartiles)})" if ages else "-") \
+            + (f", {len(mine) - len(ages)} without age" if len(ages) < len(mine) else "")
+        single = sum(n == 1 for n in per_patient)
+        lines.append(f"| {s} | {len(per_patient)} | {single} ({_percent(single, len(per_patient))}) | "
+                     f"{statistics.mean(per_patient):.2f}, {max(per_patient)} | {age} | {_percent(sum(r['biopsed'] == 'TRUE' for r in mine), len(mine))} |")
+    common = [name for name, _ in Counter(r["region"] for r in rows).most_common(regions)]
+    lines += ["", f"Share of the photos in each split, for the {len(common)} most common body sites:", "",
+              "| Body site | " + " | ".join(SPLITS) + " |", "|---|" + "---|" * len(SPLITS)]
+    for name in common:
+        lines.append(f"| {name.lower()} | " + " | ".join(
+            _percent(sum(r["region"] == name for r in mine), len(mine)) for mine in by_split.values()) + " |")
+    lines += ["", "Patients with at least one photo of the class, by split (a class with few patients has a wide interval in any split):", "",
+              "| Class | " + " | ".join(SPLITS) + " |", "|---|" + "---|" * len(SPLITS)]
+    for label in classes:
+        lines.append(f"| {label} | " + " | ".join(
+            str(len({r["patient_id"] for r in mine if r["label"] == label})) for mine in by_split.values()) + " |")
     return lines

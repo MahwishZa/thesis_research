@@ -52,6 +52,49 @@ class AssignTests(unittest.TestCase):
                 self.assertAlmostEqual(got[name][label] / total[label], share, delta=0.04, msg=(label, name))
 
 
+class BalanceTests(unittest.TestCase):
+    """The "does each split look like the others" tables, on six invented photos worked out by hand."""
+
+    @staticmethod
+    def photo(split_name, patient, label, age, region, biopsed):
+        return {"split": split_name, "patient_id": patient, "label": label, "age": str(age), "region": region, "biopsed": biopsed}
+
+    def rows(self):
+        return [self.photo("train", "A", "x", 40, "FACE", "TRUE")] * 3 + [  # patient A has three photos, G two, B and F one each
+                self.photo("train", "B", "y", 60, "NOSE", "FALSE"), self.photo("train", "F", "y", 55, "NOSE", "FALSE"),
+                self.photo("train", "G", "x", 45, "FACE", "FALSE"), self.photo("train", "G", "x", 45, "FACE", "FALSE"),
+                self.photo("val", "C", "x", 50, "FACE", "TRUE"), self.photo("test", "D", "y", 70, "NOSE", "FALSE")]
+
+    def test_each_table_is_worked_out_by_split_and_matches_the_hand_count(self):
+        text = "\n".join(split._balance(self.rows(), ["x", "y"]))
+        self.assertIn("| train | 4 | 2 (50.0%) | 1.75, 3 | 45 (40, 45, 55) | 42.9% |", text)  # 7 photos, 4 patients; the median of the photos per patient would be 1.5
+        self.assertIn("| val | 1 | 1 (100.0%) | 1.00, 1 | 50 (50) | 100.0% |", text)
+        self.assertIn("| test | 1 | 1 (100.0%) | 1.00, 1 | 70 (70) | 0.0% |", text)
+        self.assertIn("| face | 71.4% | 100.0% | 0.0% |", text)
+        self.assertIn("| nose | 28.6% | 0.0% | 100.0% |", text)
+        self.assertIn("| x | 2 | 1 | 0 |", text)  # a patient is counted once however many photos the class has
+        self.assertIn("| y | 2 | 0 | 1 |", text)
+        self.assertEqual([text.index(f"| {s} |") for s in ("train", "val", "test")], sorted(text.index(f"| {s} |") for s in ("train", "val", "test")))
+
+    def test_a_photo_without_an_age_does_not_stop_the_step_that_comes_before_the_views_step(self):
+        rows = self.rows() + [self.photo("val", "H", "x", "not recorded", "FACE", "TRUE")]
+        text = "\n".join(split._balance(rows, ["x", "y"]))
+        self.assertIn("| val | 2 | 2 (100.0%) | 1.00, 1 | 50 (50), 1 without age | 100.0% |", text)
+        only_gaps = [self.photo(s, "H", "x", "not recorded", "FACE", "TRUE") for s in split.SPLITS]
+        self.assertIn("| val | 1 | 1 (100.0%) | 1.00, 1 | -, 1 without age | 100.0% |", "\n".join(split._balance(only_gaps, ["x"])))
+
+    def test_only_the_most_common_body_sites_are_listed_the_most_common_first(self):
+        rows = self.rows() + [self.photo("train", "E", "x", 55, "BACK", "TRUE")]
+        listed = [line.split("|")[1].strip() for line in split._balance(rows, ["x", "y"], regions=2) if line.startswith("| ") and line.split("|")[1].strip() in ("face", "nose", "back")]
+        self.assertEqual(listed, ["face", "nose"])
+
+    def test_nothing_in_the_tables_changes_the_rows_it_reads(self):
+        rows = self.rows()
+        before = [dict(r) for r in rows]
+        split._balance(rows, ["x", "y"])
+        self.assertEqual(rows, before)
+
+
 class SplitTests(Cohort):
     def prepare(self):
         inventory.inventory(self.data)
@@ -99,6 +142,8 @@ class SplitTests(Cohort):
         self.assertIn("Targets: train 60%, val 10%, test 30%, class by class.", report)
         self.assertIn("- No patient is in two splits (checked).", report)
         self.assertIn(f"- Seed: {split.SEED}", report)
+        self.assertIn("\n### Does each split look like the others?\n", report)  # one level under the step's own heading
+        self.assertIn("| Split | Patients | Patients with one photo |", report)
 
     def test_patients_joined_by_a_near_identical_photo_stay_in_one_split_group(self):
         self.prepare()

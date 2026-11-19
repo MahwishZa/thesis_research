@@ -206,6 +206,38 @@ Written by `python -m src.build.clinic_patients.prepare split`. The questions wi
 
 Largest split groups (photos): `G_PAT_645` 10, `G_PAT_388` 10, `G_PAT_330` 10
 
+### Does each split look like the others?
+
+Read only: these numbers describe the split as drawn; nothing is redrawn to change them (a split is never reshuffled).
+
+| Split | Patients | Patients with one photo | Photos per patient (mean, largest) | Age (median, quartiles) | Biopsy-proven |
+|---|---|---|---|---|---|
+| train | 654 | 276 (42.2%) | 2.09, 10 | 63 (52, 63, 73) | 59.3% |
+| val | 219 | 215 (98.2%) | 1.02, 2 | 60 (50, 60, 70) | 55.2% |
+| test | 498 | 342 (68.7%) | 1.36, 4 | 61 (51, 61, 71) | 56.5% |
+
+Share of the photos in each split, for the 6 most common body sites:
+
+| Body site | train | val | test |
+|---|---|---|---|
+| face | 24.1% | 26.9% | 25.5% |
+| forearm | 17.5% | 17.5% | 15.6% |
+| chest | 12.5% | 10.8% | 12.4% |
+| back | 11.5% | 10.3% | 9.4% |
+| arm | 8.4% | 5.8% | 8.8% |
+| nose | 5.3% | 9.0% | 9.1% |
+
+Patients with at least one photo of the class, by split (a class with few patients has a wide interval in any split):
+
+| Class | train | val | test |
+|---|---|---|---|
+| actinic keratosis | 273 | 72 | 177 |
+| basal cell carcinoma | 259 | 83 | 166 |
+| melanoma | 20 | 5 | 11 |
+| nevus | 96 | 24 | 65 |
+| seborrheic keratosis | 89 | 23 | 64 |
+| squamous cell carcinoma | 71 | 16 | 42 |
+
 <!-- step: images -->
 ## Images: the photos every model receives
 
