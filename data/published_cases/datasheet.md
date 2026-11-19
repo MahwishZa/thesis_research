@@ -180,7 +180,7 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
    - 2 wrong labels, 2.7% (95% interval 0.3–9.4%): a "malignant blue nevus" that spread to the lungs and liver (a melanoma), and a keloid with a nevus-like growth only at one margin
    - 3 mixed lesions, where the class is confirmed but another lesion is part of the same case: a basal cell carcinoma in the wall of a cyst, basal cell carcinomas with leukaemia cells in them, and a pyogenic granuloma together with an injured finger artery. Wrong or mixed: 6.8% (95% interval 2.2–15.1%)
    - 1 question that reports the biopsy findings
-2. **No dermatologist reviewed the labels.** Each label rests on sources that agree: the authors' title, the case text and a test result named in it, and, for 212 cases, PubMed's subject headings, which the US National Library of Medicine gives independently.
+2. **No dermatologist reviewed the labels** (no clinical expert is available to the research, the researcher's statement of 2026-11-19; the thesis says so). Each label rests on sources that agree: the authors' title, the case text and a test result named in it, and, for 212 cases, PubMed's subject headings, which the US National Library of Medicine gives independently.
 3. **Small classes.**
    - **Actinic keratosis** has 2 test cases, so its recall can only be 0%, 50% or 100%, yet it counts one eighth in balanced accuracy. Showing the score without it beside the 8-class score makes clear how much it moves a result.
    - **The other small classes** have 16–20 test cases (vascular lesion, pigmented benign keratosis, dermatofibroma). A single class's recall then has a 95% interval of roughly ±20 percentage points.
