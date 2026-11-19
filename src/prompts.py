@@ -74,7 +74,7 @@ def parse_json_answer(text: str | None, labels: list[str], evidence_ids: set[str
 
     Forgiven: spaces around the answer, a Markdown code block around it, and the case and spacing of a class name or of yes/no.
     Invalid: anything else around the object, a key missing or added, a differential that is not three different classes of the
-    list, a flag that is not yes or no, an empty reason, not one to three claims of the form statement + evidence, and evidence (in the
+    list, a flag that is not yes or no, an empty reason, not one to three claims of the form statement (+ evidence; left out it reads as no passage; reader rule of 2026-11-19), and evidence (in the
     answer or in a claim) that names a passage the run did not retrieve (without retrieval, any evidence). The diagnosis is the first class of the differential.
     """
     if not text or not text.strip():
@@ -112,12 +112,12 @@ def parse_json_answer(text: str | None, labels: list[str], evidence_ids: set[str
     if not isinstance(claims, list) or not 1 <= len(claims) <= MAX_CLAIMS:
         return None, f"claims is not a list of 1 to {MAX_CLAIMS} claims"
     for claim in claims:
-        if not isinstance(claim, dict) or set(claim) != {"statement", "evidence"}:
-            return None, "a claim must have exactly the keys statement and evidence"
+        if not isinstance(claim, dict) or "statement" not in claim or not set(claim) <= {"statement", "evidence"}:
+            return None, "a claim must have the key statement, may have the key evidence, and no other"
         if not isinstance(claim["statement"], str) or not claim["statement"].strip():
             return None, "a claim has no statement"
-        if not isinstance(claim["evidence"], list) or not all(isinstance(e, str) for e in claim["evidence"]):
-            return None, "a claim's evidence is not a list of passage ids"
+        if not isinstance(claim.setdefault("evidence", []), list) or not all(isinstance(e, str) for e in claim["evidence"]):
+            return None, "a claim's evidence is not a list of passage ids"  # a claim without the key cites nothing: it reads as []
         unknown = [e for e in claim["evidence"] if e not in evidence_ids]
         if unknown:
             return None, f"a claim relies on a passage the run did not give: {unknown[0]!r}"

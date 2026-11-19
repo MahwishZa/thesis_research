@@ -25,6 +25,10 @@ Marks: ✔ verified in this audit by running code or reading the file named; ◻
 
 State after the audit: 468 tests pass (8 skipped: they need the laptop's files), lint clean, 34 deliberate breaks of the new code all caught.
 
+### Reader rule change after the first test runs (2026-11-19)
+
+The first closed-book test runs showed that GPT-4o and Llama leave out the empty `evidence` list inside claims (22 of 209 GPT-4o answers; Llama 10 of its first 10, so its run was stopped by the early-stop guard). The reader now accepts that omission as "cites nothing" (method page, section 2). The earlier runs keep their strict results; a `reread` command writes the re-read scores beside them, and both are reported. GPT-4o's balanced accuracy on `published_text` is 50.6% strict and 56.1% re-read; Claude and Gemini are unchanged.
+
 ### Second pass (same day, after the first corrections)
 
 A second read of the whole repository, with a wider lint (bugs, simplifications, unused names) and a search for names left over from earlier versions.

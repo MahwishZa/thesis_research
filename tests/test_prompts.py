@@ -89,9 +89,9 @@ class JsonAnswerTests(unittest.TestCase):
             self.answer(claims=[]): "claims is not a list of 1 to 3 claims",
             self.answer(claims="x"): "claims is not a list of 1 to 3 claims",
             self.answer(claims=[{"statement": "s", "evidence": []}] * 4): "claims is not a list of 1 to 3 claims",
-            self.answer(claims=["s"]): "a claim must have exactly the keys statement and evidence",
-            self.answer(claims=[{"statement": "s"}]): "a claim must have exactly the keys statement and evidence",
-            self.answer(claims=[{"statement": "s", "evidence": [], "x": 1}]): "a claim must have exactly the keys statement and evidence",
+            self.answer(claims=["s"]): "a claim must have the key statement, may have the key evidence, and no other",
+            self.answer(claims=[{"evidence": []}]): "a claim must have the key statement, may have the key evidence, and no other",  # no statement
+            self.answer(claims=[{"statement": "s", "evidence": [], "x": 1}]): "a claim must have the key statement, may have the key evidence, and no other",
             self.answer(claims=[{"statement": " ", "evidence": []}]): "a claim has no statement",
             self.answer(claims=[{"statement": 3, "evidence": []}]): "a claim has no statement",
             self.answer(claims=[{"statement": "s", "evidence": "P1"}]): "a claim's evidence is not a list of passage ids",
@@ -108,6 +108,14 @@ class JsonAnswerTests(unittest.TestCase):
         text = self.answer(evidence=["P1", "P2"])
         self.assertEqual(prompts.parse_json_answer(text, LABELS, {"P1", "P2", "P3"})[0]["evidence"], ["P1", "P2"])
         self.assertEqual(prompts.parse_json_answer(text, LABELS, {"P1"})[1], "evidence names a passage the run did not give: 'P2'")
+
+    def test_a_claim_may_leave_out_its_evidence_list_and_then_cites_nothing(self):
+        text = self.answer(claims=[{"statement": "Irregular border."}, {"statement": "Two colours.", "evidence": []}])
+        read, problem = prompts.parse_json_answer(text, LABELS)
+        self.assertIsNone(problem)
+        self.assertEqual(read["claims"], [{"statement": "Irregular border.", "evidence": []}, {"statement": "Two colours.", "evidence": []}])
+        self.assertEqual(prompts.parse_json_answer(self.answer(claims=[{"statement": "s", "evidence": "P1"}]), LABELS)[1],
+                         "a claim's evidence is not a list of passage ids")  # given, it must still be a list
 
     def test_claims_are_read_with_their_evidence_and_may_cite_only_what_the_run_gave(self):
         text = self.answer(claims=[{"statement": " Irregular border. ", "evidence": ["P1"]}, {"statement": "Two colours.", "evidence": []}], evidence=["P1"])

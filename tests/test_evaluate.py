@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from src import datasets, evaluate
+from src import datasets, evaluate, prompts
 
 from tests.fixtures import FakeModel, RunProject, json_answer, listed
 
@@ -152,6 +152,99 @@ class VerifyAnswersTests(RunProject):
         with self.assertRaisesRegex(ValueError, "not consistent, so nothing is scored: test/a/0.jpg is answered 2 times"):
             evaluate.write_report(self.folder)
         self.assertFalse((self.folder / "report.md").exists())
+
+
+def raw_answer(first: str, *claims) -> str:
+    """The text a model sends back: a differential of two classes (the run has two), a flag, a reason and the given claims."""
+    other = "b" if first == "a" else "a"
+    return json.dumps({"differential": [first, other], "evidence_sufficient": "no", "reason": "r", "claims": list(claims), "evidence": []})
+
+
+class RereadTests(RunProject):
+    """A run of 4 answers: the second one left out its claim's evidence list (invalid under the first reader), the fourth is not JSON."""
+
+    def write(self, name="m", approach=None, status="complete", truth=("a", "a", "b", "b"), first=("a", "a", "b", "b")):
+        folder = write_run(self.base / name / "test_1", list(truth), [None] * 4, ["L1", "L2", "L3", "L4"])
+        raws = [raw_answer(first[0], {"statement": "s", "evidence": []}), raw_answer(first[1], {"statement": "s"}),
+                raw_answer(first[2], {"statement": "s", "evidence": []}), "not json"]
+        rows = []
+        for i, raw in enumerate(raws):
+            parsed, problem = prompts.parse_json_answer(raw, ["a", "b"]) if i != 1 else (None, "a claim must have exactly the keys statement and evidence")
+            rows.append(answered(f"test/{truth[i]}/{i}.jpg", truth[i], "patient_id", f"L{i + 1}", parsed["diagnosis"] if parsed else None)
+                        | {"raw_text": raw, "invalid": problem if not parsed else None})
+        (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        card = json.loads((folder / "run_card.json").read_text(encoding="utf-8"))
+        card["status"] = status
+        if approach:
+            card["config"]["approach"] = approach
+        (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+        return folder
+
+    def test_the_answers_are_read_again_beside_the_originals_which_are_never_touched(self):
+        folder = self.write()
+        before = {f.name: f.read_bytes() for f in folder.iterdir()}
+        path = evaluate.reread(folder)
+        self.assertEqual(path, folder / "report_reread.md")
+        self.assertEqual({name: (folder / name).read_bytes() for name in before}, before)  # nothing that was there is changed
+        self.assertEqual(sorted(f.name for f in folder.iterdir()), sorted([*before, "predictions_reread.jsonl", "metrics_reread.json", "report_reread.md"]))
+        again = evaluate.read_jsonl(folder / "predictions_reread.jsonl")
+        self.assertEqual([p["prediction"] for p in again], ["a", "a", "b", None])  # the second answer is valid now; the fourth never was
+        self.assertEqual(again[1]["claims"], [{"statement": "s", "evidence": []}])
+        self.assertEqual((again[1]["invalid"], again[3]["invalid"]), (None, "not one JSON object"))
+        self.assertEqual(again[1]["raw_text"], evaluate.read_jsonl(folder / "predictions.jsonl")[1]["raw_text"])  # the text itself is kept
+        self.assertEqual(evaluate.verify_answers(json.loads((folder / "run_card.json").read_text(encoding="utf-8")), again, complete=True), [])
+
+    def test_both_scores_exist_and_the_report_says_how_many_answers_changed(self):
+        folder = self.write()
+        evaluate.write_report(folder)
+        evaluate.reread(folder)
+        strict = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["main"]
+        lenient = json.loads((folder / "metrics_reread.json").read_text(encoding="utf-8"))["main"]
+        self.assertEqual((strict["invalid"], lenient["invalid"]), (2, 1))
+        self.assertGreater(lenient["balanced_accuracy"], strict["balanced_accuracy"])
+        text = (folder / "report_reread.md").read_text(encoding="utf-8")
+        self.assertIn("Answers re-read with the current answer reader", text)
+        self.assertIn("1 of 4 answers were read differently from the original run", text)
+        self.assertIn("remain the strict result", text)
+        self.assertNotIn("re-read", (folder / "report.md").read_text(encoding="utf-8"))  # the strict report is the strict report
+
+    def test_a_run_that_is_read_the_same_way_changes_nothing(self):
+        folder = self.write()
+        evaluate.reread(folder)
+        again = evaluate.read_jsonl(folder / "predictions_reread.jsonl")
+        (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in again), encoding="utf-8")
+        evaluate.reread(folder)
+        self.assertIn("0 of 4 answers were read differently", (folder / "report_reread.md").read_text(encoding="utf-8"))
+
+    def test_only_a_finished_closed_book_run_can_be_read_again(self):
+        with self.assertRaisesRegex(ValueError, "only closed-book answers"):
+            evaluate.reread(self.write("rag", approach="standard_rag"))
+        with self.assertRaisesRegex(ValueError, "is not a finished run"):
+            evaluate.reread(self.write("partial", status="running"))
+        with self.assertRaisesRegex(ValueError, "first phase"):
+            evaluate.reread(write_run(self.base / "old" / "test_1", ["a", "b"], ["a", "b"], ["L1", "L2"], first_phase=True))
+
+    def test_a_comparison_can_use_the_re_read_answers_of_both_runs(self):
+        a, b = self.write("a"), self.write("b", first=("a", "a", "a", "a"))
+        with self.assertRaisesRegex(ValueError, "has no predictions_reread.jsonl"):
+            evaluate.compare(a, b, reread=True)
+        strict = evaluate.compare(a, b)
+        evaluate.reread(a)
+        evaluate.reread(b)
+        lenient = evaluate.compare(a, b, reread=True)
+        self.assertEqual((strict["n"], lenient["n"]), (4, 4))
+        self.assertNotEqual((strict["only_a"], strict["only_b"], strict["both_right"]), (lenient["only_a"], lenient["only_b"], lenient["both_right"]))
+
+    def test_the_command_line_has_reread_and_compare_takes_reread(self):
+        folder = self.write()
+        with contextlib.redirect_stdout(io.StringIO()) as shown:
+            evaluate.main(["reread", str(folder)])
+        self.assertIn("report_reread.md", shown.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()) as shown:
+            evaluate.main(["compare", str(folder), str(folder), "--reread"])
+        self.assertIn("4 questions answered by both runs", shown.getvalue())
+        with self.assertRaisesRegex(SystemExit, "ERROR: .*is not a finished run"):
+            evaluate.main(["reread", str(self.write("running", status="running"))])
 
 
 class CompareTests(RunProject):
