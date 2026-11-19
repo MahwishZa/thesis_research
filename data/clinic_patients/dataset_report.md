@@ -8,7 +8,7 @@ Made by `python -m src.build.clinic_patients.prepare <step>`, one section per st
 Written by `python -m src.build.clinic_patients.prepare inventory`, which only reads the download. Nothing here is decided yet.
 
 - `raw/metadata.csv`: 2298 rows, 26 columns (SHA-256 `e5c178211d59`)
-- Photos named in the table and found: 2298; lesions: 1641; patients: 1373
+- Photos named in the table and found: 2298; lesions (patient + `lesion_id`): 1891; patients: 1373
 - Downloaded files fingerprinted (`build/downloads.csv`): none (downloads/ is empty or absent)
 
 ### Classes
@@ -17,16 +17,18 @@ The `diagnostic` column, with the `biopsed` column as written (it is never shown
 
 | Class | Photos | Lesions | Patients | `biopsed` = 'FALSE' | `biopsed` = 'TRUE' |
 |---|---|---|---|---|---|
-| ACK | 730 | 621 | 525 | 552 | 178 |
+| ACK | 730 | 644 | 525 | 552 | 178 |
 | BCC | 845 | 652 | 513 | 0 | 845 |
 | MEL | 52 | 36 | 36 | 0 | 52 |
-| NEV | 244 | 215 | 185 | 184 | 60 |
+| NEV | 244 | 216 | 185 | 184 | 60 |
 | SCC | 192 | 145 | 133 | 0 | 192 |
 | SEK | 235 | 198 | 176 | 220 | 15 |
 
 ### How photos, lesions and patients relate
 
-- Photos per lesion: 1: 1129 lesions, 2: 396 lesions, 3: 95 lesions, 4: 17 lesions, 5: 2 lesions, 6: 1 lesions, 8: 1 lesions
+A lesion is a patient + `lesion_id` pair: the same `lesion_id` is used for lesions of different patients.
+
+- Photos per lesion: 1: 1530 lesions, 2: 324 lesions, 3: 31 lesions, 4: 4 lesions, 5: 1 lesions, 6: 1 lesions
 - Lesions per patient: 1: 1018 patients, 2: 242 patients, 3: 79 patients, 4: 25 patients, 5: 5 patients, 6: 2 patients, 7: 1 patients, 8: 1 patients
 
 ### Clinical fields filled, by class
@@ -79,8 +81,8 @@ Each column's values and level (patient, lesion or photo) are in `build/columns.
 - Photo files in raw/ not named in the table: 0
 - File names found in more than one folder of raw/ (the first path is used): 0
 - Photos that cannot be opened: 0
-- Lesions with more than one diagnosis: 226 (`1003`, `1007`, `1009`, `1031`, `1051`, `1068`, `107`, `1077`, `1079`, `1081` and 216 more)
-- Lesions under more than one patient: 250 (`1003`, `1007`, `1009`, `1031`, `1051`, `1068`, `107`, `1077`, `1079`, `1081` and 240 more)
+- Lesions (patient + `lesion_id`) with more than one diagnosis: 0
+- `lesion_id` values used by more than one patient: 250 (`1003`, `1007`, `1009`, `1031`, `1051`, `1068`, `107`, `1077`, `1079`, `1081` and 240 more)
 - Distinct patient + lesion pairs: 1891 (distinct `lesion_id` values: 1641)
   - `lesion_id` `1003` is under `PAT_1288` (NEV), `PAT_38` (ACK)
   - `lesion_id` `1007` is under `PAT_230` (ACK), `PAT_532` (BCC)

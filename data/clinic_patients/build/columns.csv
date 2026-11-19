@@ -3,9 +3,9 @@ patient_id,2298,0,1373,patient,1373 different values (not listed)
 lesion_id,2298,0,1641,lesion,"numbers: lowest 6, median 1297, highest 4820; gaps: none"
 smoke,1494,804,3,patient,'FALSE'=1292; ''=804; 'TRUE'=202
 drink,1494,804,3,patient,'FALSE'=1126; ''=804; 'TRUE'=368
-background_father,1385,913,14,photo,''=818; 'POMERANIA'=530; 'GERMANY'=466; 'ITALY'=250; 'UNK'=95; 'BRAZIL'=89; 'NETHERLANDS'=19; 'PORTUGAL'=15; 'POLAND'=7; 'BRASIL'=3; 'CZECH'=3; 'AUSTRIA'=1; 'ISRAEL'=1; 'SPAIN'=1
-background_mother,1392,906,12,photo,''=822; 'POMERANIA'=533; 'GERMANY'=482; 'ITALY'=236; 'UNK'=84; 'BRAZIL'=81; 'NETHERLANDS'=20; 'PORTUGAL'=20; 'POLAND'=9; 'NORWAY'=7; 'FRANCE'=2; 'SPAIN'=2
-age,2298,0,84,photo,"numbers: lowest 6, median 62, highest 94; gaps: none"
+background_father,1385,913,14,lesion,''=818; 'POMERANIA'=530; 'GERMANY'=466; 'ITALY'=250; 'UNK'=95; 'BRAZIL'=89; 'NETHERLANDS'=19; 'PORTUGAL'=15; 'POLAND'=7; 'BRASIL'=3; 'CZECH'=3; 'AUSTRIA'=1; 'ISRAEL'=1; 'SPAIN'=1
+background_mother,1392,906,12,lesion,''=822; 'POMERANIA'=533; 'GERMANY'=482; 'ITALY'=236; 'UNK'=84; 'BRAZIL'=81; 'NETHERLANDS'=20; 'PORTUGAL'=20; 'POLAND'=9; 'NORWAY'=7; 'FRANCE'=2; 'SPAIN'=2
+age,2298,0,84,lesion,"numbers: lowest 6, median 62, highest 94; gaps: none"
 pesticide,1494,804,3,patient,'FALSE'=897; ''=804; 'TRUE'=597
 gender,1494,804,3,patient,''=804; 'FEMALE'=753; 'MALE'=741
 skin_cancer_history,1494,804,3,patient,'FALSE'=813; ''=804; 'TRUE'=681
@@ -13,15 +13,15 @@ cancer_history,1494,804,3,patient,''=804; 'TRUE'=779; 'FALSE'=715
 has_piped_water,1494,804,3,patient,'TRUE'=923; ''=804; 'FALSE'=571
 has_sewage_system,1494,804,3,patient,'TRUE'=846; ''=804; 'FALSE'=648
 fitspatrick,1494,804,7,patient,'2'=876; ''=804; '3'=392; '1'=153; '4'=62; '5'=10; '6'=1
-region,2298,0,14,photo,'FACE'=570; 'FOREARM'=392; 'CHEST'=280; 'BACK'=248; 'ARM'=192; 'NOSE'=158; 'HAND'=126; 'NECK'=93; 'EAR'=73; 'THIGH'=73; 'ABDOMEN'=36; 'LIP'=23; 'SCALP'=18; 'FOOT'=16
-diameter_1,1494,804,43,photo,"numbers: lowest 0, median 10, highest 100; gaps: ''=804"
-diameter_2,1494,804,39,photo,"numbers: lowest 0, median 8, highest 70; gaps: ''=804"
-diagnostic,2298,0,6,photo,'BCC'=845; 'ACK'=730; 'NEV'=244; 'SEK'=235; 'SCC'=192; 'MEL'=52
-itch,2292,6,3,photo,'TRUE'=1455; 'FALSE'=837; 'UNK'=6
-grew,1896,402,3,photo,'FALSE'=971; 'TRUE'=925; 'UNK'=402
-hurt,2288,10,3,photo,'FALSE'=1891; 'TRUE'=397; 'UNK'=10
-changed,1902,396,3,photo,'FALSE'=1700; 'UNK'=396; 'TRUE'=202
-bleed,2292,6,3,photo,'FALSE'=1678; 'TRUE'=614; 'UNK'=6
-elevation,2296,2,3,photo,'TRUE'=1433; 'FALSE'=863; 'UNK'=2
+region,2298,0,14,lesion,'FACE'=570; 'FOREARM'=392; 'CHEST'=280; 'BACK'=248; 'ARM'=192; 'NOSE'=158; 'HAND'=126; 'NECK'=93; 'EAR'=73; 'THIGH'=73; 'ABDOMEN'=36; 'LIP'=23; 'SCALP'=18; 'FOOT'=16
+diameter_1,1494,804,43,lesion,"numbers: lowest 0, median 10, highest 100; gaps: ''=804"
+diameter_2,1494,804,39,lesion,"numbers: lowest 0, median 8, highest 70; gaps: ''=804"
+diagnostic,2298,0,6,lesion,'BCC'=845; 'ACK'=730; 'NEV'=244; 'SEK'=235; 'SCC'=192; 'MEL'=52
+itch,2292,6,3,lesion,'TRUE'=1455; 'FALSE'=837; 'UNK'=6
+grew,1896,402,3,lesion,'FALSE'=971; 'TRUE'=925; 'UNK'=402
+hurt,2288,10,3,lesion,'FALSE'=1891; 'TRUE'=397; 'UNK'=10
+changed,1902,396,3,lesion,'FALSE'=1700; 'UNK'=396; 'TRUE'=202
+bleed,2292,6,3,lesion,'FALSE'=1678; 'TRUE'=614; 'UNK'=6
+elevation,2296,2,3,lesion,'TRUE'=1433; 'FALSE'=863; 'UNK'=2
 img_id,2298,0,2298,photo,2298 different values (not listed)
-biopsed,2298,0,2,photo,'TRUE'=1342; 'FALSE'=956
+biopsed,2298,0,2,lesion,'TRUE'=1342; 'FALSE'=956
