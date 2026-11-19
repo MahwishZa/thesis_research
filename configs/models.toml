@@ -2,7 +2,7 @@
 #     python -m src.run run --model <name> --dataset <dataset> --approach closed_book --split test
 # Every model gets the same questions, prompt (prompts/<dataset>/<approach>.txt) and answer reader on a dataset; only its entry
 # differs. The settings are the same on every dataset. Do not edit an entry after a test run of the current answer format has used
-# it: a changed setting is a new entry (another name) and a new run. (The first-phase runs in results/phase1/ asked for a class
+# it: a changed setting is a new entry (another name) and a new run. (The first-phase runs of Version 1, in archive/v1/results/phase1/, asked for a class
 # name alone, with smaller output limits; each run card records the settings it used.) Every image and case is sent to the provider's servers. API keys go in .env (never here).
 #
 # name                 the results folder: results/<dataset>/<approach>/<name>/

@@ -2,19 +2,14 @@
 
     python -m src.evaluate report results/<dataset>/<approach>/<model>/<run-folder>
     python -m src.evaluate compare results/<dataset>/<approach>/<model>/<run-folder> results/<dataset>/<approach>/<model>/<run-folder>
-    python -m src.evaluate summary
 
-A run folder of the first phase is results/phase1/<dataset>/<model>/<run-folder>.
-
-``report`` writes a run's scores from its saved answers: metrics.json and report.md for a run of the current answer format; for a
-run of the first phase, whose answers are single class names, scores.json and scores.md beside the archived files, which are never
-changed. The metrics and their sources are in docs/method.md.
+``report`` writes a run's scores from its saved answers: metrics.json and report.md. It reads the answer format of the code
+(``json-v1``); a run of the first phase of Version 1, whose answers are single class names, is in archive/v1/ with its own scores and
+is not read here. The metrics and their sources are in docs/method.md.
 ``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
 the difference in balanced accuracy and in macro-F1 with paired 95% intervals (both runs resampled together, by the same groups
 as the reports; the main comparison), and McNemar's exact test on the questions one run gets right and the other wrong (a
 supporting test).
-``summary`` rewrites the tables of docs/results.md from every finished test run of the first phase (results/phase1/). The text of
-the document around the tables is written by hand and is left as it is.
 """
 
 from __future__ import annotations
@@ -26,33 +21,19 @@ from collections import Counter
 from pathlib import Path
 
 from .common import read_jsonl, write_json
-from .datasets import DATASETS, MISSING_FACT, SAME_QUESTIONS, TITLES, Dataset, dataset_of
-from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, holm, interval,
-                      mcnemar, summarize, within_groups)
-from .prompts import ANSWER_FORMAT, can_still_become_readable, parse_last_line
+from .datasets import DATASETS, MISSING_FACT, SAME_QUESTIONS, Dataset, dataset_of
+from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, interval, mcnemar,
+                      summarize)
+from .prompts import ANSWER_FORMAT
 
-RESULTS = Path("results")  # results/<dataset>/<approach>/<model>/<run>/; the first phase in results/phase1/
-SUMMARY = Path("docs") / "results.md"
-SUMMARY_START, SUMMARY_END = "<!-- tables: start -->", "<!-- tables: end -->"  # between these, the document is written by "summary"
-MODEL_NAMES = {"claude-sonnet-5-5": "Claude Sonnet 5.5", "gpt-4o": "GPT-4o", "gemini-3.8-flash": "Gemini 3.8 Flash",
-               "llama-4-maverick": "Llama 4 Maverick"}  # the order of the tables; a model not named here follows, under its folder name
-# The photos come from two ISIC collections that hold different classes (data/image/datasheet.md): melanoma and nevus from one,
-# the other six from the other, so a model could tell the two groups apart by the collection alone. Each run on these photos is
-# also scored inside each group.
-COLLECTIONS = {dataset: [("melanoma", "nevus"), ("actinic keratosis", "basal cell carcinoma", "dermatofibroma",
-                                                 "pigmented benign keratosis", "squamous cell carcinoma", "vascular lesion")]
-               for dataset in ("image", "image_metadata")}
+RESULTS = Path("results")  # results/<dataset>/<approach>/<model>/<run>/
 
 
-def current_format(card: dict) -> bool:
-    """True for a run of the current answer format; False for a run of the first phase (single class names)."""
-    return card.get("answer_format") == ANSWER_FORMAT
-
-
-def output_files(card: dict) -> tuple[str, str]:
-    """Where a run's scores go: metrics.json and report.md, or, beside a first-phase run's archived files, scores.json and
-    scores.md."""
-    return ("metrics.json", "report.md") if current_format(card) else ("scores.json", "scores.md")
+def require_current_format(card: dict) -> None:
+    """Stops for a run of another answer format: the first phase of Version 1 (single class names) is archived, with its own scores."""
+    if card.get("answer_format") != ANSWER_FORMAT:
+        raise ValueError(f"this run's answers are in the format {card.get('answer_format', 'class name (first phase)')!r}, not {ANSWER_FORMAT!r}: "
+                         "runs of the first phase are in archive/v1/ with their own scores and are not read by this code")
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -64,15 +45,15 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
     run_dir = Path(run_dir)
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = read_jsonl(run_dir / "predictions.jsonl")
-    labels, kind, current = card["labels"], DATASETS[dataset_of(card)], current_format(card)
+    require_current_format(card)
+    labels, kind = card["labels"], DATASETS[dataset_of(card)]
 
     def scores(rows):
         return summarize([p["label"] for p in rows], [p["prediction"] for p in rows], labels,
                          [p.get(kind.group_column) or p["path"] for p in rows], kind.group,
-                         [p.get("differential") for p in rows] if current else None,
-                         [p.get("evidence_sufficient") for p in rows] if current else None)
+                         [p.get("differential") for p in rows], [p.get("evidence_sufficient") for p in rows])
 
-    metrics = {"answer_format": card.get("answer_format", "class name (first phase)"), "main": scores(preds)}
+    metrics = {"answer_format": card["answer_format"], "main": scores(preds)}
     left_out = [label for label in kind.set_apart if any(p["label"] == label for p in preds)]
     if left_out:  # a class too small to weigh like the others: the scores without it, beside the main score
         metrics["without_small_classes"] = {
@@ -82,20 +63,6 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
     if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
         complete_facts = [p for p in preds if MISSING_FACT not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
-    if dataset_of(card) in COLLECTIONS:
-        metrics["within_collections"] = within_groups([p["label"] for p in preds], [p["prediction"] for p in preds],
-                                                      COLLECTIONS[dataset_of(card)])
-    if not current:
-        # Sensitivity analysis of the first phase: an unreadable answer that ends with a class name alone on its last line (after
-        # some reasoning), read as that class. An answer cut off at the output limit is never read this way.
-        last_line = {p["path"]: parse_last_line(p["raw_text"], labels) for p in preds
-                     if p["prediction"] is None and p["finish_reason"] != "MAX_TOKENS"}
-        last_line = {path: answer for path, answer in last_line.items() if answer}
-        if last_line:
-            reread = [{**p, "prediction": last_line.get(p["path"], p["prediction"])} for p in preds]
-            metrics["last_line_reading"] = {"answers_reread": len(last_line),
-                                            "right_among_them": sum(p["label"] == p["prediction"] for p in reread if p["path"] in last_line),
-                                            "metrics": scores(reread)}
     return card, preds, metrics
 
 
@@ -193,15 +160,11 @@ def write_report(run_dir: str | Path) -> Path:
     run_dir = Path(run_dir)
     card, preds, metrics = score_run(run_dir)
     labels, kind = card["labels"], DATASETS[dataset_of(card)]
-    scores_file, report_file = output_files(card)
-    write_json(run_dir / scores_file, metrics)
+    write_json(run_dir / "metrics.json", metrics)
 
     n_files = card[f"n_{kind.item}s"]
     complete = card["status"] == "complete" and len(preds) == n_files
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
-    if not current_format(card):
-        lines += ["**A run of the first phase: its answers are single class names, so the scores that need a differential or an "
-                  "evidence flag are not available. Written beside the archived report.md and metrics.json, which are unchanged.**", ""]
     if card["split"] == "val":
         lines += ["**Validation run: for tuning the method, not a reported result.**", ""]
     if not complete:
@@ -230,22 +193,6 @@ def write_report(run_dir: str | Path) -> Path:
                   f"A missing fact (\"{MISSING_FACT}\") points to the photo's collection, and so mostly to melanoma or nevus "
                   f"(data/image_metadata/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"]), ""]
-    if "within_collections" in metrics:
-        lines += ["## Inside each photo collection", "",
-                  "Melanoma and nevus come from one ISIC collection, the other six classes from another, so the collection alone "
-                  "could separate the two groups. Inside each group the collection gives nothing away: a score near chance there "
-                  "means the model told the groups apart, not the diseases.", "",
-                  "| Classes | Questions | Balanced accuracy inside the group | Chance | Answers that stay in the group |", "|---|---|---|---|---|"]
-        lines += [f"| {', '.join(g['classes'])} | {g['questions']} | {_pct(g['balanced_accuracy'])} | {_pct(g['chance'])} | "
-                  f"{_pct(g['inside_share'])} |" for g in metrics["within_collections"]]
-        lines.append("")
-    if "last_line_reading" in metrics:
-        part = metrics["last_line_reading"]
-        lines += ["## Sensitivity analysis: the last line of the answer", "",
-                  f"The main score reads an answer only when it is exactly one class name, as the prompt of the first phase asked. "
-                  f"{part['answers_reread']} answers wrote their reasoning first and then a class name alone on the last line; "
-                  f"{part['right_among_them']} of them name the right class. Here they are read as that class: a check on the main "
-                  "score, never a replacement for it.", "", *_brief(part["metrics"]), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
@@ -253,10 +200,7 @@ def write_report(run_dir: str | Path) -> Path:
     finish = Counter(p["finish_reason"] for p in preds)
     other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
     cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
-    if current_format(card):  # a JSON answer cut off is incomplete, so invalid: the limit decided it
-        harmful = sum(p["prediction"] is None for p in cut)
-    else:
-        harmful = sum(can_still_become_readable(p["raw_text"], labels) for p in cut)
+    harmful = sum(p["prediction"] is None for p in cut)  # a JSON answer cut off is incomplete, so invalid: the limit decided it
     invalid = Counter(p.get("invalid") for p in preds if p["prediction"] is None and p.get("invalid"))
     lines += ["## Notes", "",
               f"- How answers ended (finish reason): {', '.join(f'{k}: {v}' for k, v in sorted(finish.items(), key=str))}",
@@ -264,11 +208,8 @@ def write_report(run_dir: str | Path) -> Path:
               *([f"- **{harmful} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "the output limit in the model list (max_tokens) is too low for this model (hidden reasoning can count toward "
                  "it). Results are not valid until it is raised, under a new model entry.**"] if harmful else []),
-              *([f"- {len(cut) - harmful} answers reached the output limit but "
-                 + ("were complete and valid all the same, so the limit did not change their score."
-                    if current_format(card) else
-                    "already differed from every class name, so the limit did not change their score; they count as wrong.")]
-                if len(cut) > harmful else []),
+              *([f"- {len(cut) - harmful} answers reached the output limit but were complete and valid all the same, so the limit did "
+                 "not change their score."] if len(cut) > harmful else []),
               *([f"- **{sum(other.values())} answers did not end normally ("
                  + ", ".join(f"{k}: {v}" for k, v in sorted(other.items(), key=str))
                  + "); an answer without valid text counts as wrong. Check them in predictions.jsonl.**"] if other else []),
@@ -280,7 +221,7 @@ def write_report(run_dir: str | Path) -> Path:
                     if len(revisions) > 1 else "")] if revisions else []),
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", []))]
-    path = run_dir / report_file
+    path = run_dir / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
 
@@ -381,146 +322,6 @@ def comparison_text(c: dict) -> str:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# All finished test runs side by side (python -m src.evaluate summary): the tables of docs/results.md
-
-
-def _p(value: float) -> str:
-    return "< 0.001" if value < 0.001 else f"{value:.3f}"
-
-
-def _one(x: float | None) -> str:
-    return "–" if x is None else f"{100 * x:.1f}"
-
-
-def _range(pair) -> str:
-    return "" if pair is None else f" ({100 * pair[0]:.1f} to {100 * pair[1]:.1f})"
-
-
-def _from_results(folder: Path) -> str:
-    """A run folder's path from the repository's results folder on (results/...), wherever the repository is."""
-    parts = Path(folder).parts
-    return "/".join(parts[len(parts) - 1 - parts[::-1].index(RESULTS.name):])
-
-
-def finished_test_runs(results: Path) -> dict:
-    """(dataset, model) -> (folder, scores) of every finished test run under ``results``; two runs of one pair are an error."""
-    runs = {}
-    for card_path in sorted(Path(results).rglob("run_card.json")):
-        folder = card_path.parent
-        if not folder.name.startswith("test_"):
-            continue
-        card = json.loads(card_path.read_text(encoding="utf-8"))
-        if card["status"] != "complete":
-            continue
-        dataset, model = dataset_of(card), card["name"]
-        if (dataset, model) in runs:
-            raise ValueError(f"two finished test runs of {model} on the {dataset} dataset: {runs[dataset, model][0].name} and {folder.name}")
-        runs[dataset, model] = (folder, score_run(folder)[2])
-    if not runs:
-        raise ValueError(f"no finished test run under {Path(results).as_posix()}")
-    return runs
-
-
-def summary_tables(results: Path = RESULTS / "phase1", link_prefix: str = "../") -> list[str]:
-    """The tables of every finished test run under ``results``, as Markdown lines: the scores per dataset, the recall per class,
-    the scores inside each photo collection, the photos without and with their facts, and model against model (the paired
-    difference in balanced accuracy, and McNemar's exact test with Holm's correction over all the tests of the page)."""
-    runs = finished_test_runs(results)
-    datasets = [d for d in DATASETS if any(key[0] == d for key in runs)]
-    found = {key[1] for key in runs}
-    models = [m for m in MODEL_NAMES if m in found] + sorted(found - set(MODEL_NAMES))
-    name = lambda model: MODEL_NAMES.get(model, model)  # noqa: E731
-    in_dataset = lambda dataset: [m for m in models if (dataset, m) in runs]  # noqa: E731
-
-    tests = []  # every comparison of the page, so that the Holm correction covers all its McNemar tests
-    for model in models:
-        if ("image", model) in runs and ("image_metadata", model) in runs:
-            tests.append(("facts", model, None, compare(runs["image", model][0], runs["image_metadata", model][0])))
-    for dataset in datasets:
-        present = in_dataset(dataset)
-        for i, first in enumerate(present):
-            for second in present[i + 1:]:
-                tests.append((dataset, first, second, compare(runs[dataset, first][0], runs[dataset, second][0])))
-    corrected = holm([c["mcnemar_p"] for *_, c in tests])
-    any_top3 = any(m["main"]["top3_balanced_accuracy"] is not None for _, m in runs.values())
-
-    lines = ["### Scores", "",
-             "Percentages with 95% intervals. Balanced accuracy is the main score. Each model name links to the run's scores: every "
-             "score with its interval, the per-class table and the confusion matrix.", ""]
-    for dataset in datasets:
-        lines += [f"**{TITLES[dataset]}**", "",
-                  "| Model | Balanced Accuracy (95% CI) | Macro-F1 (95% CI) |" + (" Top-3 Balanced Accuracy |" if any_top3 else "")
-                  + " Invalid Answers |", "|---|---|---|" + ("---|" if any_top3 else "") + "---|"]
-        for model in in_dataset(dataset):
-            folder, metrics = runs[dataset, model]
-            m = metrics["main"]
-            scores_md = "report.md" if metrics["answer_format"] == ANSWER_FORMAT else "scores.md"
-            lines.append(f"| [{name(model)}]({link_prefix}{_from_results(folder)}/{scores_md}) | "
-                         f"{_one(m['balanced_accuracy'])}{_range(m['balanced_accuracy_ci95'])} | {_one(m['macro_f1'])}{_range(m['macro_f1_ci95'])} |"
-                         + (f" {_one(m['top3_balanced_accuracy'])} |" if any_top3 else "") + f" {m['invalid']} of {m['n']} |")
-        lines.append("")
-    lines += ["### Recall per class", "",
-              "Percentages: of the questions of a class, the share answered with it. Precision and F1 per class are in each run's scores.", ""]
-    for dataset in datasets:
-        present = in_dataset(dataset)
-        per = {model: runs[dataset, model][1]["main"]["per_class"] for model in present}
-        lines += [f"**{TITLES[dataset]}**", "", "| Class | Test questions | " + " | ".join(name(m) for m in present) + " |",
-                  "|---|---|" + "---|" * len(present)]
-        for label, c in per[present[0]].items():
-            lines.append(f"| {label} | {c['support']} | " + " | ".join(_one(per[m][label]["recall"]) for m in present) + " |")
-        lines.append("")
-    collection_sets = [d for d in datasets if d in COLLECTIONS]
-    if collection_sets:
-        lines += ["### Inside each photo collection", "",
-                  "Balanced accuracy inside each group of classes that comes from one ISIC collection, in percent, and in brackets "
-                  "the share of the group's questions answered with a class of the same group. Chance inside the groups: 50.0 for "
-                  "melanoma and nevus, 16.7 for the six others.", ""]
-        for dataset in collection_sets:
-            lines += [f"**{TITLES[dataset]}**", "", "| Model | Melanoma and nevus | The six other classes |", "|---|---|---|"]
-            for model in in_dataset(dataset):
-                groups = runs[dataset, model][1]["within_collections"]
-                lines.append(f"| {name(model)} | " + " | ".join(f"{_one(g['balanced_accuracy'])} ({_one(g['inside_share'])})" for g in groups) + " |")
-            lines.append("")
-
-    def difference(c):
-        low, high = c["balanced_accuracy_difference_ci95"]
-        return f"{100 * c['balanced_accuracy_difference']:+.1f} ({100 * low:+.1f} to {100 * high:+.1f})"
-
-    facts = [(model, c, q) for (kind, model, _, c), q in zip(tests, corrected) if kind == "facts"]
-    if facts:
-        lines += ["### The same photos without and with the patient's facts", "",
-                  "Balanced accuracy in percent; the difference is image + metadata minus image in percentage points, with a paired "
-                  "95% interval (the main comparison). p: McNemar's exact test; Holm p: the same, corrected for all the tests of this page.", "",
-                  "| Model | Image | Image + metadata | Difference (95% CI) | p | Holm p |", "|---|---|---|---|---|---|"]
-        for model, c, q in facts:
-            lines.append(f"| {name(model)} | {_one(runs['image', model][1]['main']['balanced_accuracy'])} | "
-                         f"{_one(runs['image_metadata', model][1]['main']['balanced_accuracy'])} | {difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} |")
-        lines.append("")
-    lines += ["### Model against model", "",
-              "The difference in balanced accuracy, second model minus first, in percentage points with a paired 95% interval, on the same "
-              "questions: the main comparison. p: McNemar's exact test on right against wrong answers; Holm p: corrected for all the "
-              f"tests of this page ({len(tests)}).", ""]
-    for dataset in datasets:
-        lines += [f"**{TITLES[dataset]}**", "", "| Second minus first | Difference (95% CI) | p | Holm p |", "|---|---|---|---|"]
-        for (kind, first, second, c), q in zip(tests, corrected):
-            if kind == dataset:
-                lines.append(f"| {name(second)} − {name(first)} | {difference(c)} | {_p(c['mcnemar_p'])} | {_p(q)} |")
-        lines.append("")
-    return lines[:-1]
-
-
-def write_summary(path: Path = SUMMARY, results: Path = RESULTS / "phase1") -> Path:
-    """Rewrites the tables of the results document between its two markers and leaves the written text around them as it is."""
-    text = Path(path).read_text(encoding="utf-8")
-    if text.count(SUMMARY_START) != 1 or text.count(SUMMARY_END) != 1 or text.index(SUMMARY_START) > text.index(SUMMARY_END):
-        raise ValueError(f"{Path(path).as_posix()} must hold the lines {SUMMARY_START} and {SUMMARY_END}, once each and in this order")
-    before, after = text[:text.index(SUMMARY_START)], text[text.index(SUMMARY_END) + len(SUMMARY_END):]
-    tables = "\n".join(summary_tables(results, "../" * len(Path(path).parent.parts)))
-    Path(path).write_text(f"{before}{SUMMARY_START}\n\n{tables}\n\n{SUMMARY_END}{after}", encoding="utf-8", newline="\n")
-    return Path(path)
-
-
-# ---------------------------------------------------------------------------------------------------------------------------------
 # The command line
 
 
@@ -532,7 +333,6 @@ def build_parser() -> argparse.ArgumentParser:
     cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (paired intervals, McNemar's test)")
     cmp.add_argument("run_a")
     cmp.add_argument("run_b")
-    sub.add_parser("summary", help="rewrite the tables of docs/results.md from the finished test runs of the first phase")
     return parser
 
 
@@ -541,8 +341,6 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "report":
             print(write_report(args.run_dir))
-        elif args.command == "summary":
-            print(write_summary())
         else:
             print(comparison_text(compare(args.run_a, args.run_b)))
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback

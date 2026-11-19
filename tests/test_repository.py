@@ -9,11 +9,9 @@ import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
 import tomllib
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from src import datasets, evaluate, prompts, run
 
@@ -76,33 +74,9 @@ class RepositoryTests(unittest.TestCase):
             folders = {p.split("/")[0] for p in tracked if "/" in p and not p.startswith(".")}
             self.assertEqual(sorted(folders - listed), [], "the README structure omits a top-level folder")
 
-    def test_the_results_written_in_the_readme_match_the_saved_results(self):
-        """The README gives balanced accuracy with its 95% interval for every finished test run of phase 1, once each."""
-        section = re.search(r"## Results\n(.*?)\n## ", self.readme, re.S).group(1)
-        lines = [line for line in section.splitlines() if line.startswith("|")]
-        header = [cell.strip() for cell in lines[0].strip().strip("|").split("|")]
-        self.assertEqual(header[0], "Model")
-        titles = {title: dataset for dataset, title in datasets.TITLES.items()}
-        columns = [titles[title] for title in header[1:]]
-        names = {name: model for model, name in evaluate.MODEL_NAMES.items()}
-        shown = set()
-        for line in lines[2:]:
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            model = names[cells[0]]
-            for dataset, cell in zip(columns, cells[1:]):
-                with self.subTest((model, dataset)):
-                    (folder,) = [p for p in (ROOT / "results" / "phase1" / dataset / model).glob("test_*") if not p.name.endswith(".partial")]
-                    main = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["main"]
-                    low, high = main["balanced_accuracy_ci95"]
-                    self.assertEqual(cell, f"{100 * main['balanced_accuracy']:.1f} ({100 * low:.1f} to {100 * high:.1f})")
-                    shown.add(folder)
-        finished = {p for p in (ROOT / "results" / "phase1").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")}
-        self.assertEqual(shown, finished, "every finished test run of phase 1 is in the README once")
-
     def test_every_model_of_the_list_can_run_every_dataset_and_approach_with_its_prompt(self):
         with (ROOT / run.MODELS).open("rb") as f:
             names = [entry["name"] for entry in tomllib.load(f)["models"]]
-        self.assertEqual(names, list(evaluate.MODEL_NAMES), "the model list and the names in the tables must agree")
         for model in names:
             for dataset in datasets.DATASETS:
                 for approach in run.APPROACHES:
@@ -179,7 +153,7 @@ class RepositoryTests(unittest.TestCase):
                      "data/cases/dataset.csv", "data/cases/build/figure_checks.csv", "data/cases/datasheet.md", "data/knowledge/library.csv",
                      "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/closed_book/m/test_1/report.md",
                      "results/image/closed_book/m/test_1/predictions.jsonl", "configs/models.toml", "prompts/image/closed_book.txt",
-                     "results/text/closed_book/m/test_1/report.md", "results/phase1/text/m/test_1/report.md",
+                     "results/text/closed_book/m/test_1/report.md",
                      "data/clinic_patients/dataset_report.md", "data/clinic_patients/build/raw_images.csv", "data/clinic_patients/build/columns.csv",
                      "data/clinic_patients/build/downloads.csv"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
@@ -201,8 +175,8 @@ class RepositoryTests(unittest.TestCase):
         rewrite) is not in a fresh clone, so the commit must be an ancestor of the checked-out one, not merely a known object."""
         if subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, capture_output=True, text=True).stdout.strip() == "true":
             self.skipTest("a shallow clone does not hold the whole history")
-        cards = sorted(p for p in (ROOT / "results").rglob("run_card.json") if p.parent.name.startswith("test_"))
-        self.assertTrue(cards)
+        cards = sorted(p for folder in (ROOT / "results", ROOT / "archive" / "v1" / "results") if folder.is_dir()
+                       for p in folder.rglob("run_card.json") if p.parent.name.startswith("test_"))  # the runs of Version 2, and the archived ones of Version 1
         for path in cards:
             card = json.loads(path.read_text(encoding="utf-8"))
             commits = {s["commit"] for s in card["sessions"]} | {card["git"]["commit"]}
@@ -211,40 +185,12 @@ class RepositoryTests(unittest.TestCase):
                     self.assertEqual(subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=ROOT).returncode, 0,
                                      "the commit named in this run card is not in the history")
 
-    def test_the_results_document_holds_the_tables_the_summary_command_writes_and_all_its_links_work(self):
-        text = (ROOT / "docs" / "results.md").read_text(encoding="utf-8")
-        for target in re.findall(r"\]\((?!https?:)([^)#]+)", text):
-            self.assertTrue((ROOT / "docs" / target).exists(), f"docs/results.md links to {target}, which does not exist")
-        start, end = text.index(evaluate.SUMMARY_START) + len(evaluate.SUMMARY_START), text.index(evaluate.SUMMARY_END)
-        self.assertEqual(text[start:end].strip("\n").split("\n"), evaluate.summary_tables(ROOT / "results" / "phase1", "../"),
-                         "docs/results.md is out of date: run python -m src.evaluate summary")
-        runs = [p for p in (ROOT / "results" / "phase1").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
-        for finished in runs:  # every finished run is in the tables, once, with its report linked
-            self.assertEqual(text.count(f"](../{finished.relative_to(ROOT).as_posix()}/scores.md)"), 1, f"{finished} must be linked exactly once")
-            self.assertTrue((finished / "scores.md").is_file() and (finished / "scores.json").is_file(),
-                            f"{finished}: run python -m src.evaluate report on it")
-        for word in ("Balanced accuracy", "Macro-F1", "Holm", "McNemar", "(method.md)"):
-            self.assertIn(word, text)
-
     def test_the_method_page_defines_every_reported_score_with_its_source(self):
         text = (ROOT / "docs" / "method.md").read_text(encoding="utf-8")
         for word in ("Balanced accuracy", "Macro-F1", "Top-3 balanced accuracy", "Invalid-answer rate", "sensitivity", "specificity",
                      "Coverage", "Selective risk", "McNemar", "Holm", "bootstrap", "parse_json_answer",
                      "Brodersen", "Sokolova", "Liu", "Hendrycks", "Geifman", "Wilson", "Efron", "Field"):
             self.assertIn(word, text)
-
-    def test_the_summary_command_rewrites_only_the_tables_between_the_markers(self):
-        with tempfile.TemporaryDirectory() as folder:
-            page = Path(folder) / "docs" / "page.md"
-            page.parent.mkdir()
-            page.write_text(f"before\n{evaluate.SUMMARY_START}\nold\n{evaluate.SUMMARY_END}\nafter\n", encoding="utf-8")
-            with mock.patch.object(evaluate, "summary_tables", return_value=["| a |", "| b |"]):
-                evaluate.write_summary(page, ROOT / "results")
-            self.assertEqual(page.read_text(encoding="utf-8"),
-                             f"before\n{evaluate.SUMMARY_START}\n\n| a |\n| b |\n\n{evaluate.SUMMARY_END}\nafter\n")
-            page.write_text("no markers\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "must hold the lines"):
-                evaluate.write_summary(page, ROOT / "results")
 
     def test_the_readme_uses_unix_line_endings(self):
         self.assertNotIn(b"\r", (ROOT / "README.md").read_bytes(), "Windows line endings (.gitattributes should prevent this)")

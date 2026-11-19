@@ -237,17 +237,3 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
             d[f"{name}_ci95"] = None if not of else wilson(d[k], of) if independent else interval(boot[name])
         out["detection"] = d
     return out
-
-
-def within_groups(y_true: list[str], y_pred: list[str | None], class_groups: list[tuple[str, ...]]) -> list[dict]:
-    """For each group of classes (the classes of one photo collection): the balanced accuracy over its classes and the share of
-    its questions answered with a class of the same group. A model that read only the collection would keep its answers in the
-    group (a high share) and be at chance inside it (1 over the number of classes)."""
-    out = []
-    for group in class_groups:
-        mine = [(t, p) for t, p in zip(y_true, y_pred) if t in group]
-        out.append({"classes": list(group), "questions": len(mine), "chance": 1 / len(group),
-                    "balanced_accuracy": balanced_accuracy([t for t, _ in mine], [p if p in group else None for _, p in mine], list(group))
-                    if mine else None,
-                    "inside_share": _ratio(sum(p in group for _, p in mine), len(mine))})
-    return out

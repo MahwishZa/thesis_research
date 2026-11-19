@@ -1,6 +1,6 @@
 # Method: questions, answers and scores
 
-This page fixes how every run from now on asks its questions, reads the answers and scores them. It was written before any run of this answer format, and it applies to every model and dataset alike. The first-phase runs (`results/phase1/`) used an earlier answer format; section 6 says what changes for them.
+This page fixes how every run from now on asks its questions, reads the answers and scores them. It was written before any run of this answer format, and it applies to every model and dataset alike. The first phase of Version 1 used an earlier answer format; section 6 says where it is.
 
 ## 1. The question
 
@@ -67,9 +67,11 @@ Each is reported beside the main score, never instead of it.
 - **Without actinic keratosis** (text). The text test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
 - **Questions with all facts recorded** (image + metadata). A missing fact points to the photo's collection, so the scores are also given for the questions with every fact recorded.
 
-## 6. The first-phase runs
+## 6. The first phase of Version 1
 
-The first-phase runs (`results/phase1/`) asked for one diagnosis name alone, read with a strict class-name reader. Their archived `report.md` and `metrics.json` are kept unchanged. The current scores of those answers are written beside them in `scores.md` and `scores.json` (`python -m src.evaluate report <run folder>`). Balanced accuracy, macro-F1, the per-class scores, the confusion matrix and the collection analysis are computed as above. Top-3 balanced accuracy and the misdiagnosis-detection scores need a differential and a flag, so they are not available for those runs. Their reports also give a sensitivity analysis that reads a diagnosis name alone on the last line of an otherwise invalid answer.
+The first phase of Version 1 asked for one diagnosis name alone, read with a strict class-name reader. Its 12 runs, their results and
+their interpretation are in `archive/v1/` (`archive/v1/docs/results.md`). The code of this repository reads the answer format of
+section 2 only and refuses a run of the first phase, with a pointer to the archive.
 
 ## References
 

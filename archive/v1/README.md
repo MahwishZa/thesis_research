@@ -12,8 +12,10 @@ This folder is a frozen copy of Version 1 of the research, kept for reference. I
   here either. It is kept as a ZIP on the researcher's laptop, made at the same commit: `v1_a1c9209_local_files.zip` (the `data`
   and `results` folders of the laptop's checkout, made on 2026-11-19), SHA-256
   `0E881B29B1F24F266B070F9DB60DB99F474B8592FF3409382D0BE9296FA85EA5`, in a `thesis_backups` folder outside the repository.
-- **Nothing was moved or deleted.** The originals are still in their usual places (`data/`, `results/`, `docs/`, `configs/`,
-  `prompts/`) until Version 2 replaces them, with the researcher's approval.
+- **Where the originals are.** `results/phase1/` and `docs/results.md` were removed from the working folders on 2026-11-19 (stage R2a
+  of the clean-up), because nothing of Version 2 uses them; they are here, and in Git history. The Version 1 datasets (`data/image`,
+  `data/image_metadata`) and the code that builds them are still in the working folders and are removed in a later stage, once the
+  builders of the datasets that stay no longer read them.
 
 ## What is here
 

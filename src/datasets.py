@@ -72,13 +72,11 @@ DATASETS = {  # the datasets a config can name
 SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
 TITLES = {"image": "Image", "text": "Text", "image_metadata": "Image + metadata", "cases": "Cases: text and photos",
           "case_photos": "Cases: photos only"}  # how tables and reports name the datasets
-ALIASES = {"multimodal": "image_metadata"}  # an earlier name of a dataset, as the run cards of the first phase record it
 
 
 def dataset_of(card: dict) -> str:
-    """The dataset a run card names, under its current name."""
-    name = card["config"]["dataset"]
-    return ALIASES.get(name, name)
+    """The dataset a run card names."""
+    return card["config"]["dataset"]
 
 
 @dataclass(frozen=True)

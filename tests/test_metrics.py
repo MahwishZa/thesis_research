@@ -87,7 +87,7 @@ class MetricTests(unittest.TestCase):
         self.assertEqual((d["valid"], d["wrong"], d["flagged_wrong"], d["covered"], d["covered_wrong"]), (1, 0, 0, 1, 0))
         self.assertAlmostEqual(d["coverage"], 1 / 3)
 
-    def test_answers_of_the_first_phase_have_no_differential_or_flag_scores(self):
+    def test_answers_without_a_differential_or_a_flag_have_no_top3_or_detection_scores(self):
         m = metrics.summarize(METRIC_TRUE, METRIC_PRED, METRIC_LABELS)
         self.assertEqual((m["top3_balanced_accuracy"], m["top3_balanced_accuracy_ci95"], m["detection"]), (None, None, None))
 
@@ -134,14 +134,6 @@ class MetricTests(unittest.TestCase):
         for name in ("sensitivity", "specificity", "coverage", "selective_risk"):
             pair = d[f"{name}_ci95"]
             self.assertTrue(pair is None or 0 <= pair[0] <= pair[1] <= 1, name)
-
-    def test_inside_each_group_of_classes(self):
-        true = ["m", "m", "n", "n", "x", "y"]
-        pred = ["m", "n", "n", "x", "x", None]  # one nevus answered with a class of the other group, one invalid
-        a, b = metrics.within_groups(true, pred, [("m", "n"), ("x", "y")])
-        self.assertEqual((a["questions"], a["chance"], a["inside_share"]), (4, 0.5, 3 / 4))
-        self.assertAlmostEqual(a["balanced_accuracy"], (1 / 2 + 1 / 2) / 2)  # m: 1 of 2; n: 1 of 2 (x counts as wrong)
-        self.assertEqual((b["questions"], b["balanced_accuracy"], b["inside_share"]), (2, 0.5, 0.5))
 
     def test_mcnemar_exact_values_by_hand(self):
         self.assertEqual(metrics.mcnemar(0, 0), 1.0)

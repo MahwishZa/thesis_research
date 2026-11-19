@@ -11,17 +11,9 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 
 ## Results
 
-Phase 1, closed-book (no retrieval): four LLMs answered the test split of three datasets, one run each. Each question has eight possible diagnoses and the model named one (the first answer format; the next runs answer in the JSON format of [docs/method.md](docs/method.md)). The values are balanced accuracy in percent (the mean recall of the eight diagnoses; chance is 12.5), with the 95% interval. Every other score, the runs' scores and the comparisons: [docs/results.md](docs/results.md).
+Version 2 is in progress: the datasets are being prepared (the clinic patients cohort is prepared; no model has been run on it yet), so there are no Version 2 results yet.
 
-| Model | Image | Text | Image + metadata |
-|---|---|---|---|
-| Claude Sonnet 5.5 | 51.2 (45.7 to 56.7) | 55.9 (49.6 to 61.8) | 56.2 (50.6 to 61.7) |
-| GPT-4o | 34.1 (29.6 to 38.7) | 50.8 (45.1 to 56.6) | 41.6 (36.4 to 46.7) |
-| Gemini 3.8 Flash | 49.7 (44.3 to 55.0) | 61.4 (55.8 to 67.0) | 54.4 (48.6 to 59.9) |
-| Llama 4 Maverick | 28.7 (24.4 to 33.1) | 46.8 (40.6 to 52.8) | 34.1 (29.0 to 39.0) |
-
-- **Image:** 320 dermoscopic photos, 40 per diagnosis. **Text:** 221 written cases (version 2 of the text dataset; version 3, used from now on, has 209). **Image + metadata:** the same 320 photos, each with the patient's age, sex and body site.
-- The image and image + metadata runs answer the same photos and can be compared directly; the text cases are other patients.
+Version 1 (commit `a1c9209`) is kept in [archive/v1/](archive/v1/README.md): four LLMs answered three datasets of dermoscopic photos and published case reports without retrieval (closed-book), one run each. Its results and their interpretation are in [archive/v1/docs/results.md](archive/v1/docs/results.md). That archive is temporary and is removed when the research is final.
 
 ## Repository Structure
 
@@ -39,13 +31,13 @@ thesis_research/
 ├── configs/             the models and their settings (models.toml)
 ├── prompts/             one prompt per dataset and approach
 ├── data/                one folder per dataset and the knowledge base: table, report, data sheet, build records
-│   ├── image/           dermoscopic photos
-│   ├── text/            written cases from published case reports
-│   ├── cases/           written cases with the same patient's published photos
-│   ├── image_metadata/  photos with the patient's age, sex and body site (ablation)
-│   └── knowledge/       what open-book runs may retrieve
-├── results/             one folder per test run: <dataset>/<approach>/<model>/ (phase 1 in phase1/)
-├── docs/                temporary: the Version 2 plan, method and results; removed when the research is final
+│   ├── clinic_patients/     PAD-UFES-20: phone photos of skin lesions with each patient's clinic record (Version 2)
+│   ├── text/                written cases from published case reports
+│   ├── cases/               written cases with the same patient's published photos
+│   ├── image/               Version 1: dermoscopic photos (to be removed from here; kept in archive/v1)
+│   ├── image_metadata/      Version 1: photos with age, sex and body site (to be removed from here; kept in archive/v1)
+│   └── knowledge/           what open-book runs may retrieve
+├── docs/                temporary: the Version 2 plan and the method; removed when the research is final
 ├── archive/             temporary: Version 1 (commit a1c9209), frozen for reference; removed when the research is final
 ├── tests/               unit tests
 └── requirements.txt
@@ -57,8 +49,9 @@ thesis_research/
 pip install -r requirements.txt
 ```
 
-Put the API keys in a file named `.env` next to this README (`CLAUDE_API_KEY=...`, `OPENROUTER_API_KEY=...`). A run is one model of `configs/models.toml`, one dataset and one approach:
+Put the API keys in a file named `.env` next to this README (`CLAUDE_API_KEY=...`, `OPENROUTER_API_KEY=...`). A run is one model of `configs/models.toml`, one dataset and one approach; its answers and report are written to `results/<dataset>/<approach>/<model>/<run>/` (the folder appears with the first Version 2 run):
 
 - Check everything a run needs (one tiny request, nothing from the dataset): `python -m src.run check --model claude-sonnet-5-5 --dataset text`
 - Run the test split: `python -m src.run run --model claude-sonnet-5-5 --dataset text --split test`
-- Compare two finished runs on the same questions (nothing is sent or changed): `python -m src.evaluate compare results/phase1/image/claude-sonnet-5-5/test_cf5351f1 results/phase1/image_metadata/claude-sonnet-5-5/test_5db7a077`
+- Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then the two run folders
+- Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`

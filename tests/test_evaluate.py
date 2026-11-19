@@ -1,5 +1,4 @@
-"""Scores of finished runs (src/evaluate.py): the report of a run, first-phase runs scored beside their archived files, and
-comparing two runs on the same questions."""
+"""Scores of finished runs (src/evaluate.py): the report of a run, and comparing two runs on the same questions."""
 
 import contextlib
 import io
@@ -22,10 +21,10 @@ class Nevus(FakeModel):
 
 
 def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str], dataset: str = "image", answers: list | None = None):
-    """A finished run of the first phase (single class names) or, with ``answers`` (differential and flag per question), of the
-    current form."""
+    """A finished run: without ``answers`` the answer format is missing (the first phase of Version 1), with ``answers`` (differential
+    and flag per question) it is the current one."""
     folder.mkdir(parents=True)
-    kind = datasets.DATASETS[datasets.ALIASES.get(dataset, dataset)]
+    kind = datasets.DATASETS[dataset]
     card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": sorted(set(truth)),
             f"n_{kind.item}s": len(truth), f"{kind.item}s_sha256": "same", "name": "m", "run_id": folder.name,
             "model": {"model_id": "m-1"}, "model_versions_returned": ["m-1"], "started_utc": "s", "finished_utc": "f",
@@ -45,23 +44,13 @@ def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str]
 
 
 class ReportTests(RunProject):
-    def test_a_first_phase_run_is_scored_beside_its_archived_files_which_stay_unchanged(self):
+    def test_a_run_of_the_first_phase_is_refused_with_a_pointer_to_the_archive(self):
         folder = write_run(self.base / "phase1" / "test_1", ["a", "a", "b", "b"], ["a", "b", "b", None], ["L1", "L2", "L3", "L4"])
-        (folder / "metrics.json").write_text("archived", encoding="utf-8")
-        (folder / "report.md").write_text("archived", encoding="utf-8")
-        path = evaluate.write_report(folder)
-        self.assertEqual(path.name, "scores.md")
-        self.assertEqual(((folder / "metrics.json").read_text(encoding="utf-8"), (folder / "report.md").read_text(encoding="utf-8")),
-                         ("archived", "archived"))
-        scores = json.loads((folder / "scores.json").read_text(encoding="utf-8"))
-        self.assertEqual((scores["main"]["balanced_accuracy"], scores["main"]["invalid"], scores["main"]["detection"]), (0.5, 1, None))
-        text = path.read_text(encoding="utf-8")
-        for expected in ("A run of the first phase", "| **Balanced accuracy (main score)** | **50.0%** |", "| Macro-F1 |",
-                         "### Per class", "### Confusion matrix"):
-            self.assertIn(expected, text)
-        self.assertNotIn("Top-3", text)
+        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v1'.*archive/v1/"):
+            evaluate.write_report(folder)
+        self.assertEqual(sorted(p.name for p in folder.iterdir()), ["predictions.jsonl", "run_card.json"])  # nothing was written
 
-    def test_a_run_of_the_current_form_reports_top3_detection_and_the_collections(self):
+    def test_a_run_of_the_current_form_reports_top3_and_the_detection_scores(self):
         truth = ["melanoma", "melanoma", "nevus", "nevus"]
         answers = [(["melanoma", "nevus"], "yes"), (["nevus", "melanoma"], "no"), (["nevus", "melanoma"], "yes"), None]
         folder = write_run(self.base / "current" / "test_1", truth, ["melanoma", "nevus", "nevus", None], ["L1", "L2", "L3", "L4"],
@@ -72,11 +61,10 @@ class ReportTests(RunProject):
         self.assertEqual(m["main"]["top3_balanced_accuracy"], 0.75)  # melanoma 2 of 2 in the differential; nevus 1 of 2 (one invalid)
         d = m["main"]["detection"]
         self.assertEqual((d["sensitivity"], d["specificity"], d["coverage"], d["selective_risk"]), (1.0, 1.0, 0.5, 0.0))
-        self.assertEqual(m["within_collections"][0]["classes"], ["melanoma", "nevus"])
         text = path.read_text(encoding="utf-8")
-        for expected in ("| Top-3 balanced accuracy (the true class in the differential) | 75.0% |", "### Misdiagnosis detection",
-                         "## Inside each photo collection", "| melanoma, nevus | 4 | 50.0% | 50.0% | 75.0% |"):
+        for expected in ("| Top-3 balanced accuracy (the true class in the differential) | 75.0% |", "### Misdiagnosis detection"):
             self.assertIn(expected, text)
+        self.assertNotIn("first phase", text)
 
 
 class CompareTests(RunProject):
@@ -132,15 +120,14 @@ class CompareTests(RunProject):
 
     def test_the_image_run_and_the_image_metadata_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
         """The image + metadata questions are the image dataset's photos with their facts: the two runs differ in dataset and in
-        the questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair. A run card of the
-        first phase names the dataset by its earlier name, "multimodal", and is read under the current one."""
+        the questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair."""
         truth = ["a", "a", "b", "b"]
         runs = {}
         for name, dataset, predicted in (("image", "image", ["a", "b", "b", "a"]), ("multi", "image_metadata", ["a", "a", "b", "b"]),
-                                         ("text", "text", ["a", "a", "b", "b"]), ("phase1", "multimodal", ["a", "a", "b", "b"])):
+                                         ("text", "text", ["a", "a", "b", "b"])):
             folder = self.base / f"pair_{name}"
             folder.mkdir()
-            kind = datasets.DATASETS[datasets.ALIASES.get(dataset, dataset)]
+            kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
                     f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
@@ -156,7 +143,6 @@ class CompareTests(RunProject):
             evaluate.compare(runs["image"], runs["text"])
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(runs["multi"], runs["text"])
-        self.assertEqual(evaluate.compare(runs["image"], runs["phase1"])["dataset"], "image and image_metadata")
         rows = [json.loads(x) for x in (runs["multi"] / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
         rows[0]["label"] = "b"  # another photo, or another class for the same photo
         (runs["multi"] / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")

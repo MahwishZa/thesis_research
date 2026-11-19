@@ -18,7 +18,6 @@ from .datasets import DATASETS
 PLACEHOLDER = "{labels}"
 CASE = "{case}"  # in a text prompt: where each case goes
 FACTS = "{facts}"  # in an image + metadata prompt: where the patient's facts go
-LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reader forgives in front of a colon and the class name
 ANSWER_FORMAT = "json-v1"  # the answer format of the runs; a run card without it holds single class names (the first phase)
 ANSWER_KEYS = ("differential", "evidence_sufficient", "reason", "evidence")
 DIFFERENTIAL = 3  # the number of different classes in a differential (all of them when a dataset has fewer)
@@ -65,40 +64,6 @@ def _normalise(text: str) -> str:
     text = re.sub(r"^(final\s+)?(diagnosis|answer)\s*:\s*", "", text.strip())
     text = text.strip(" \t\r\n\"'-.")
     return re.sub(r"\s+", " ", text)
-
-
-def parse_answer(text: str | None, labels: list[str]) -> str | None:
-    """The class the answer names, or None when it is not exactly one class name.
-
-    Only formatting is forgiven (case, spaces, quotes, bold, italic and code marks, a trailing full stop, a leading
-    "Diagnosis:", "Answer:" or "Final answer:"). An answer that adds words or names two classes counts as unreadable, which the
-    metrics score as wrong.
-    """
-    if not text:
-        return None
-    answer = _normalise(text)
-    for label in labels:
-        if answer == _normalise(label):
-            return label
-    return None
-
-
-def parse_last_line(text: str | None, labels: list[str]) -> str | None:
-    """The class named alone on the last line of a longer answer, or None. Used only for the sensitivity analysis of the report:
-    the main score never reads an answer this way, because the prompt asks for the diagnosis name only."""
-    lines = [line for line in (text or "").splitlines() if line.strip()]
-    return parse_answer(lines[-1], labels) if len(lines) > 1 else None
-
-
-def can_still_become_readable(text: str | None, labels: list[str]) -> bool:
-    """For an answer that was cut off at the output limit: could the rest of it have made it a readable answer?
-
-    True when what is there, after the formatting that parse_answer() forgives, is empty or only the beginning of a class name or
-    of a "Diagnosis:"-style lead-in. False when it already differs from every class name (an essay, a second class name): no
-    continuation can then make it exactly one class name, so the cut-off did not change how the answer is scored.
-    """
-    answer = _normalise(text or "")
-    return any(start.startswith(answer) for start in [_normalise(label) for label in labels] + list(LEAD_INS))
 
 
 def parse_json_answer(text: str | None, labels: list[str], evidence_ids: set[str] = frozenset()) -> tuple[dict | None, str | None]:
