@@ -83,7 +83,7 @@ Then:
 |---|---|---|
 | `clinic_patients/` | `inventory`, `clean`, `dedupe`, `split`, `images`, `views`, `shortcuts`, `prepare`, `table` | PAD-UFES-20 in seven numbered steps: what the download holds; the cleaned clinic record; identical and near-identical photos; the split by patient; the standardised photos; the three views (photo, record, photo + record); the shortcut check. `prepare` runs them in order. |
 | `published_cases/` | `text`, `audit`, `photos` | The case reports: survey, cases, abstracts, mesh, build, audit, review, revise (`text`, `audit`); then the photos of the same articles: count, download, check, overlap with the clinic photos, build (`photos`). |
-| `knowledge/` | `library`, `index`, `enrich`, `review` | What open-book runs may retrieve: the library of passages from four public corpora; the index of items (training cases and library passages); the appearance and aspect tables; the researcher's reading of a sample of the appearance passages (`review draw`, then `review score`) before any of them is indexed. |
+| `knowledge/` | `library`, `index`, `enrich` | What open-book runs may retrieve: the library of passages from four public corpora; the index of items (training cases and library passages); the appearance and aspect tables. |
 
 ### Other
 

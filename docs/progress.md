@@ -9,7 +9,7 @@ Version 2 experiment has been run, and the datasets are not frozen.**
 |---|---|---|
 | Clinic patients (PAD-UFES-20) | 2,269 phone photos of skin lesions from 1,371 patients, with each visit's record; 6 diagnoses; split by patient (train 1,368, validation 223, test 678) | prepared; sources checked against the authors' article; photos standardised; three views (photo, record, photo + record) |
 | Published cases | 716 case-report texts in 8 diagnoses (train 429, validation 78, test 209); 324 of them with the patient's photos from the same article | prepared; 0 of 468 pictures also in the clinic data; labels not reviewed by a clinician (stated limitation) |
-| Knowledge base | 5,982 items for open-book runs: 429 training cases and 5,553 passages from public medical sources | built; contains no validation or test item; 108 appearance passages are not yet in the index |
+| Knowledge base | 5,982 items for open-book runs: 429 training cases and 5,553 passages from public medical sources | built; contains no validation or test item; the 108 appearance passages are kept out of the index by decision |
 
 Each folder has a committed table, a report of every preparation step and a data sheet.
 
