@@ -178,7 +178,7 @@ Clusters (the first 10; all are in `build/duplicates.csv`):
 <!-- step: split -->
 ## Split: train, validation and test, by patient
 
-Written by `python -m src.build.clinic_patients.prepare split`. The table of questions is `dataset.csv`; the photos left out, with the reason, are in `build/excluded.csv`.
+Written by `python -m src.build.clinic_patients.prepare split`. The questions with their splits are `build/split.csv` (step `images` adds the photos and writes `dataset.csv`); the photos left out, with the reason, are in `build/excluded.csv`.
 
 - Seed: 20261119 (chosen before the first draw). Targets: train 60%, val 10%, test 30%, class by class.
 - Photos that stay: 2269; left out: 29 (conflicting_labels 26, identical_copy 3)
@@ -189,12 +189,12 @@ Written by `python -m src.build.clinic_patients.prepare split`. The table of que
 
 | Class | train | val | test | Total | train share | val share | test share |
 |---|---|---|---|---|---|---|---|
-| ACK | 434 | 72 | 217 | 723 | 60.0% | 10.0% | 30.0% |
-| BCC | 500 | 83 | 250 | 833 | 60.0% | 10.0% | 30.0% |
-| MEL | 32 | 5 | 15 | 52 | 61.5% | 9.6% | 28.8% |
-| NEV | 146 | 24 | 73 | 243 | 60.1% | 9.9% | 30.0% |
-| SCC | 115 | 16 | 53 | 184 | 62.5% | 8.7% | 28.8% |
-| SEK | 141 | 23 | 70 | 234 | 60.3% | 9.8% | 29.9% |
+| actinic keratosis | 434 | 72 | 217 | 723 | 60.0% | 10.0% | 30.0% |
+| basal cell carcinoma | 500 | 83 | 250 | 833 | 60.0% | 10.0% | 30.0% |
+| melanoma | 32 | 5 | 15 | 52 | 61.5% | 9.6% | 28.8% |
+| nevus | 146 | 24 | 73 | 243 | 60.1% | 9.9% | 30.0% |
+| seborrheic keratosis | 141 | 23 | 70 | 234 | 60.3% | 9.8% | 29.9% |
+| squamous cell carcinoma | 115 | 16 | 53 | 184 | 62.5% | 8.7% | 28.8% |
 
 ### Patients and lesions by split
 
@@ -206,6 +206,143 @@ Written by `python -m src.build.clinic_patients.prepare split`. The table of que
 
 Largest split groups (photos): `G_PAT_645` 10, `G_PAT_388` 10, `G_PAT_330` 10
 
+<!-- step: images -->
+## Images: the photos every model receives
+
+Written by `python -m src.build.clinic_patients.prepare images`. Each photo that stays is made from its original in one fixed way (`files/photos/`, not committed; the originals in `raw/` are never changed). `build/files.csv` lists every photo with what was done and the two measures below; step `views` joins them to the records and writes `dataset.csv`.
+
+### What is done (in this order, and nothing else)
+
+1. Turned upright if the EXIF orientation says so. 2. Converted to RGB if needed (transparent pixels stop the step). 3. Converted to sRGB from the embedded colour profile, if there is one.
+4. Shrunk, whole and with its proportions kept, so that the longest side is at most 1024 pixels; a smaller photo keeps its size. 5. Saved as JPEG (quality 95, full colour resolution, no metadata).
+
+- Photos made: 2269
+- colours converted to sRGB: 2; converted from RGBA to RGB: 1420; saved again only: 476; shrunk: 814
+
+### Size
+
+| | Originals | Saved photos |
+|---|---|---|
+| Longest side (pixels): smallest, median, largest | 147, 778, 3476 | 147, 778, 1024 |
+| File size (KB): median | 933 | 191 |
+| File size (MB): largest | 23.62 | 0.77 |
+| Files over 5 MB | 104 | 0 |
+
+### Does it change the picture? (a bar for every photo; the step stops if one is missed)
+
+| Measure | Bar | Smallest / median / largest |
+|---|---|---|
+| Fidelity: PSNR of the photo before and after saving (dB; above about 35 two pictures look the same) | at least 30 | 39.8 / 45.8 / 62.0 |
+| Same picture: bits by which the saved photo's 256-bit hash differs from its own original's | below the next measure | 0 / 1 / 10 |
+| Bits to the nearest *other* photo's original (different photos are about 128 apart) | more than the line above | 29 / 88 / 105 |
+
+<!-- step: views -->
+## Views: the same questions as photo, record, and photo + record
+
+Written by `python -m src.build.clinic_patients.prepare views`. One question is one photo of one patient's lesion with the record of the same visit. `dataset.csv` lists the photo view and the photo + record view (the record text is its `facts` column); `record.csv` lists the record view; the records are in `files/records/` (not committed).
+
+- Questions: 2269 (train 1368, val 223, test 678). Each is in all three views.
+- Record template `record-v1` (fingerprint `ea9036ddbfe3`); the wording is provisional until the authors' paper confirms what each field means. A gap is written `not recorded`; nothing is filled in.
+
+```
+1. Age in years: <age>
+2. Body site: <region>
+3. The lesion itches: <itch>
+4. The lesion hurts: <hurt>
+5. The lesion has bled: <bleed>
+6. The lesion has an elevation: <elevation>
+```
+
+- Not in any view: `grew`, `changed` (unknown more often for cancers: a hint), and the later questionnaire fields. They stay in `dataset.csv` for a separate secondary analysis.
+
+### Gaps in the record, by class
+
+| Class | Questions | All six recorded | `age` not recorded | `region` not recorded | `itch` not recorded | `hurt` not recorded | `bleed` not recorded | `elevation` not recorded |
+|---|---|---|---|---|---|---|---|---|
+| actinic keratosis | 723 | 720 | 0 | 0 | 2 | 1 | 0 | 0 |
+| basal cell carcinoma | 833 | 826 | 0 | 0 | 0 | 3 | 5 | 0 |
+| melanoma | 52 | 51 | 0 | 0 | 0 | 0 | 0 | 1 |
+| nevus | 243 | 238 | 0 | 0 | 1 | 5 | 1 | 1 |
+| seborrheic keratosis | 234 | 234 | 0 | 0 | 0 | 0 | 0 | 0 |
+| squamous cell carcinoma | 184 | 181 | 0 | 0 | 3 | 1 | 0 | 0 |
+| all | 2269 | 2250 | 0 | 0 | 6 | 10 | 6 | 2 |
+
+### How much a record can say
+
+- Distinct records: 1344 for 2269 questions. Questions whose record is the same as another question's: 1481 (in 556 groups).
+  - with another photo of the same patient: 855 (several photos of one visit share one record);
+  - with a photo of a different patient: 953;
+  - in a group of more than one class: 495 (the record alone cannot tell these apart).
+- Identical records are kept: the record view asks every question, so that it pairs with the other two views. Photos of one patient are never in two splits, and the intervals resample whole patients.
+
+### Examples (the first question of each class in the train split)
+
+**actinic keratosis** (`PAT_1014_85_22.png`)
+
+```
+1. Age in years: 41
+2. Body site: forearm
+3. The lesion itches: yes
+4. The lesion hurts: no
+5. The lesion has bled: no
+6. The lesion has an elevation: no
+```
+
+**basal cell carcinoma** (`PAT_101_1041_651.png`)
+
+```
+1. Age in years: 59
+2. Body site: neck
+3. The lesion itches: yes
+4. The lesion hurts: yes
+5. The lesion has bled: yes
+6. The lesion has an elevation: yes
+```
+
+**melanoma** (`PAT_109_868_113.png`)
+
+```
+1. Age in years: 82
+2. Body site: ear
+3. The lesion itches: no
+4. The lesion hurts: no
+5. The lesion has bled: no
+6. The lesion has an elevation: no
+```
+
+**nevus** (`PAT_100_393_595.png`)
+
+```
+1. Age in years: 14
+2. Body site: face
+3. The lesion itches: no
+4. The lesion hurts: no
+5. The lesion has bled: no
+6. The lesion has an elevation: no
+```
+
+**seborrheic keratosis** (`PAT_1000_31_620.png`)
+
+```
+1. Age in years: 65
+2. Body site: ear
+3. The lesion itches: no
+4. The lesion hurts: no
+5. The lesion has bled: no
+6. The lesion has an elevation: no
+```
+
+**squamous cell carcinoma** (`PAT_108_161_423.png`)
+
+```
+1. Age in years: 68
+2. Body site: forearm
+3. The lesion itches: yes
+4. The lesion hurts: yes
+5. The lesion has bled: yes
+6. The lesion has an elevation: yes
+```
+
 <!-- step: shortcuts -->
 ## Shortcuts: what the gaps and the photo properties alone give away
 
@@ -213,10 +350,11 @@ Written by `python -m src.build.clinic_patients.prepare shortcuts`. A nearest-ne
 
 | Features | 6 classes (chance 16.7%) | Cancer or not (chance 50%) | Recall by class (6 classes) |
 |---|---|---|---|
-| gaps | 21.4% (20.5% to 22.4%) | 63.0% (60.4% to 65.8%) | ACK 0.99; BCC 0.30; MEL 0.00; NEV 0.00; SCC 0.00; SEK 0.00 |
-| image properties | 22.9% (21.2% to 24.5%) | 64.3% (61.5% to 67.1%) | ACK 0.53; BCC 0.65; MEL 0.00; NEV 0.10; SCC 0.02; SEK 0.08 |
-| core record | 38.8% (36.1% to 41.6%) | 72.5% (69.5% to 75.5%) | ACK 0.79; BCC 0.74; MEL 0.00; NEV 0.55; SCC 0.00; SEK 0.25 |
-| full record | 43.3% (40.6% to 46.2%) | 84.5% (81.8% to 87.2%) | ACK 0.80; BCC 0.89; MEL 0.00; NEV 0.47; SCC 0.05; SEK 0.38 |
+| gaps | 21.4% (20.5% to 22.4%) | 62.6% (60.1% to 65.3%) | actinic keratosis 0.99; basal cell carcinoma 0.30; melanoma 0.00; nevus 0.00; seborrheic keratosis 0.00; squamous cell carcinoma 0.00 |
+| photo properties (originals) | 22.9% (21.3% to 24.5%) | 64.3% (61.5% to 67.1%) | actinic keratosis 0.53; basal cell carcinoma 0.65; melanoma 0.00; nevus 0.10; seborrheic keratosis 0.08; squamous cell carcinoma 0.02 |
+| photo properties (standardised) | 19.7% (18.2% to 21.4%) | 55.2% (52.4% to 58.1%) | actinic keratosis 0.49; basal cell carcinoma 0.53; melanoma 0.00; nevus 0.14; seborrheic keratosis 0.01; squamous cell carcinoma 0.02 |
+| core record | 38.2% (35.7% to 40.8%) | 72.2% (69.2% to 75.2%) | actinic keratosis 0.79; basal cell carcinoma 0.74; melanoma 0.00; nevus 0.55; seborrheic keratosis 0.21; squamous cell carcinoma 0.00 |
+| full record | 43.3% (40.4% to 46.4%) | 84.5% (81.8% to 87.2%) | actinic keratosis 0.80; basal cell carcinoma 0.89; melanoma 0.00; nevus 0.47; seborrheic keratosis 0.38; squamous cell carcinoma 0.05 |
 
-- `gaps`: 21 clinical fields, each 1 if empty. `image properties`: width, height, file size, bytes per pixel. `core record`: age, region, itch, hurt, bleed, elevation (what a view would show). `full record`: every clinical field.
-- `gaps` and `image properties` are hints that are not about the lesion: a score well above chance means a model could use them. The records are information: how much the record says about the class, legitimately or not.
+- `gaps`: 21 clinical fields, each 1 if empty. `photo properties`: width, height, file size, bytes per pixel, of the original files and of the standardised files (the ones a model receives). `core record`: age, region, itch, hurt, bleed, elevation (what a view would show). `full record`: every clinical field.
+- `gaps` and `photo properties` are hints that are not about the lesion: a score well above chance means a model could use them. The records are information: how much the record says about the class, legitimately or not.

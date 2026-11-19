@@ -1,9 +1,11 @@
 features,task,balanced_accuracy,ci_low,ci_high,chance,recall_by_class
-gaps,6 classes,0.2144,0.2048,0.2241,0.1667,ACK 0.99; BCC 0.30; MEL 0.00; NEV 0.00; SCC 0.00; SEK 0.00
-gaps,cancer or not,0.6297,0.6041,0.6575,0.5,cancer 0.31; not 0.95
-image properties,6 classes,0.2286,0.2118,0.2453,0.1667,ACK 0.53; BCC 0.65; MEL 0.00; NEV 0.10; SCC 0.02; SEK 0.08
-image properties,cancer or not,0.6427,0.6154,0.6712,0.5,cancer 0.62; not 0.67
-core record,6 classes,0.3884,0.3607,0.416,0.1667,ACK 0.79; BCC 0.74; MEL 0.00; NEV 0.55; SCC 0.00; SEK 0.25
-core record,cancer or not,0.7253,0.6951,0.7548,0.5,cancer 0.69; not 0.76
-full record,6 classes,0.433,0.4056,0.4623,0.1667,ACK 0.80; BCC 0.89; MEL 0.00; NEV 0.47; SCC 0.05; SEK 0.38
+gaps,6 classes,0.2144,0.2048,0.2241,0.1667,actinic keratosis 0.99; basal cell carcinoma 0.30; melanoma 0.00; nevus 0.00; seborrheic keratosis 0.00; squamous cell carcinoma 0.00
+gaps,cancer or not,0.6263,0.6009,0.6529,0.5,cancer 0.30; not 0.95
+photo properties (originals),6 classes,0.2286,0.2127,0.2453,0.1667,actinic keratosis 0.53; basal cell carcinoma 0.65; melanoma 0.00; nevus 0.10; seborrheic keratosis 0.08; squamous cell carcinoma 0.02
+photo properties (originals),cancer or not,0.6427,0.6154,0.6712,0.5,cancer 0.62; not 0.67
+photo properties (standardised),6 classes,0.1974,0.1817,0.2142,0.1667,actinic keratosis 0.49; basal cell carcinoma 0.53; melanoma 0.00; nevus 0.14; seborrheic keratosis 0.01; squamous cell carcinoma 0.02
+photo properties (standardised),cancer or not,0.5521,0.5238,0.5807,0.5,cancer 0.50; not 0.60
+core record,6 classes,0.3821,0.3566,0.408,0.1667,actinic keratosis 0.79; basal cell carcinoma 0.74; melanoma 0.00; nevus 0.55; seborrheic keratosis 0.21; squamous cell carcinoma 0.00
+core record,cancer or not,0.7225,0.6919,0.7517,0.5,cancer 0.69; not 0.76
+full record,6 classes,0.433,0.4039,0.4638,0.1667,actinic keratosis 0.80; basal cell carcinoma 0.89; melanoma 0.00; nevus 0.47; seborrheic keratosis 0.38; squamous cell carcinoma 0.05
 full record,cancer or not,0.8447,0.8177,0.8715,0.5,cancer 0.91; not 0.78
