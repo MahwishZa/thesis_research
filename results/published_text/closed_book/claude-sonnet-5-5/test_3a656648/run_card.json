@@ -1,0 +1,84 @@
+{
+  "name": "claude-sonnet-5-5",
+  "split": "test",
+  "run_id": "test_3a656648",
+  "status": "complete",
+  "fingerprint": "3a65664843f616aa254724f9e9c6ef47d2ae327911843eaeb301df551024fff7",
+  "seed": null,
+  "config_file": "configs/models.toml",
+  "config": {
+    "name": "claude-sonnet-5-5",
+    "dataset": "published_text",
+    "approach": "closed_book",
+    "model": {
+      "provider": "anthropic",
+      "id": "claude-sonnet-5-5",
+      "max_tokens": 512,
+      "thinking": "between_tools",
+      "effort": "low"
+    },
+    "prompt": {
+      "file": "prompts/published_text/closed_book.txt"
+    },
+    "run": {
+      "requests_per_minute": 15,
+      "order_seed": 0
+    },
+    "model_list": "configs/models.toml"
+  },
+  "answer_format": "json-v2",
+  "prompt_file": "prompts/published_text/closed_book.txt",
+  "prompt_sha256": "f1e9dc53d9cf41edd7f296a70f1c275fbb3ca138344002f89102b1fc25745c0f",
+  "prompt": "This is the description of a patient with a skin lesion, from a published case report. It ends before the diagnosis.\nCase: {case}\nThe possible diagnoses are:\n- actinic keratosis\n- basal cell carcinoma\n- dermatofibroma\n- melanoma\n- nevus\n- pigmented benign keratosis\n- squamous cell carcinoma\n- vascular lesion\nAnswer with one JSON object and nothing else, in this form:\n{\"differential\": [\"<most likely diagnosis>\", \"<second>\", \"<third>\"], \"evidence_sufficient\": \"<yes or no>\", \"reason\": \"<why>\", \"claims\": [{\"statement\": \"<one short claim>\", \"evidence\": []}], \"evidence\": []}\n- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.\n- evidence_sufficient: \"yes\" if what you are given is enough to be confident of the first diagnosis, otherwise \"no\".\n- reason: at most three sentences, using only what you are given.\n- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.\n- evidence: leave the list empty; no reference texts are given.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "dermatofibroma",
+    "melanoma",
+    "nevus",
+    "pigmented benign keratosis",
+    "squamous cell carcinoma",
+    "vascular lesion"
+  ],
+  "n_cases": 209,
+  "cases_sha256": "80be06e00be2c4c87b828f97a97b68a11010c45cdf211695d2cf04b94bce8815",
+  "group_column": "pmid",
+  "dataset_table": {
+    "file": "data/published_cases/dataset.csv",
+    "sha256": "23bcfb6fcb02b5465537e8777c6f8aca9af00b6e4738d148705dafa2039114e1"
+  },
+  "git": {
+    "commit": "5d411e5af9f6bdcbb4bb7cecf39e5d6932310ffb",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "anthropic": "2.6.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-19T12:46:57+00:00",
+  "finished_utc": "2026-11-19T13:01:15+00:00",
+  "model": {
+    "provider": "anthropic",
+    "model_id": "claude-sonnet-5-5",
+    "sdk": "anthropic",
+    "sdk_version": "2.6.0",
+    "generation_config": {
+      "max_tokens": 512,
+      "thinking": "between_tools",
+      "effort": "low",
+      "sampling": "provider default (temperature, top_p and top_k are not sent)"
+    }
+  },
+  "model_versions_returned": [
+    "claude-sonnet-5-5"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-19T12:46:57+00:00",
+      "commit": "5d411e5af9f6bdcbb4bb7cecf39e5d6932310ffb",
+      "uncommitted_changes": false,
+      "model_revision": null
+    }
+  ]
+}
