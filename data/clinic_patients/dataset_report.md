@@ -257,15 +257,15 @@ Written by `python -m src.build.clinic_patients.prepare views`. One question is 
 
 ### `unknown` in the record, by class
 
-| Class | Questions | No `unknown` in the record | `age` unknown | `region` unknown |
-|---|---|---|---|---|
-| actinic keratosis | 723 | 723 | 0 | 0 |
-| basal cell carcinoma | 833 | 833 | 0 | 0 |
-| melanoma | 52 | 52 | 0 | 0 |
-| nevus | 243 | 243 | 0 | 0 |
-| seborrheic keratosis | 234 | 234 | 0 | 0 |
-| squamous cell carcinoma | 184 | 184 | 0 | 0 |
-| all | 2269 | 2269 | 0 | 0 |
+| Class | Questions | No `unknown` in the record | `itch` unknown | `hurt` unknown | `bleed` unknown | `elevation` unknown |
+|---|---|---|---|---|---|---|
+| actinic keratosis | 723 | 720 | 2 | 1 | 0 | 0 |
+| basal cell carcinoma | 833 | 826 | 0 | 3 | 5 | 0 |
+| melanoma | 52 | 51 | 0 | 0 | 0 | 1 |
+| nevus | 243 | 238 | 1 | 5 | 1 | 1 |
+| seborrheic keratosis | 234 | 234 | 0 | 0 | 0 | 0 |
+| squamous cell carcinoma | 184 | 181 | 3 | 1 | 0 | 0 |
+| all | 2269 | 2250 | 6 | 10 | 6 | 2 |
 
 ### How much a record can say
 

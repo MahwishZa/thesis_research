@@ -2,6 +2,8 @@
 
 import argparse
 import ast
+import csv
+import hashlib
 import json
 import os
 import re
@@ -92,6 +94,30 @@ class RepositoryTests(unittest.TestCase):
                     labels = datasets.classes(datasets.read_table(table, dataset))
                     self.assertEqual([c for c in kind.set_apart if c not in labels], [], "a class set apart must be a class")
                     self.assertTrue(all(item.group for item in datasets.read_table(table, dataset)), "every file needs its group")
+
+    @unittest.skipUnless((ROOT / "data" / "clinic_patients" / "dataset.csv").is_file(), "the clinic tables are not committed yet")
+    def test_the_committed_clinic_tables_and_report_agree_with_the_code_that_writes_them(self):
+        """What the views step wrote is checked against what the code says it must write: every record text, the record table and the
+        table of unknown answers in the report (a table written by a broken run was once committed)."""
+        from src.build.clinic_patients import views
+        folder = ROOT / "data" / "clinic_patients"
+        with (folder / "dataset.csv").open(encoding="utf-8", newline="") as f:
+            photos = list(csv.DictReader(f))
+        with (folder / "record.csv").open(encoding="utf-8", newline="") as f:
+            records = {r["img_id"]: r for r in csv.DictReader(f)}
+        self.assertEqual(len(photos), len(records))
+        for r in photos:
+            self.assertEqual(r["facts"], views.record_text(r), r["img_id"])  # the record is what the template makes of the cleaned fields
+            record = records[r["img_id"]]
+            self.assertEqual(record["sha256"], hashlib.sha256(r["facts"].encode("utf-8")).hexdigest(), r["img_id"])  # record.csv names it
+            self.assertEqual((record["photo_path"], record["photo_sha256"]), (r["path"], r["sha256"]), r["img_id"])
+            self.assertEqual(record["path"], r["path"].rsplit(".", 1)[0] + ".txt", r["img_id"])
+        report = (folder / "dataset_report.md").read_text(encoding="utf-8")
+        gaps = [sum(r[c] == "not recorded" for r in photos) for c in views.SYMPTOMS]
+        complete = sum(all(r[c] != "not recorded" for c in views.SYMPTOMS) for r in photos)
+        self.assertIn("| Class | Questions | No `unknown` in the record | " + " | ".join(f"`{c}` unknown" for c in views.SYMPTOMS) + " |", report)
+        self.assertIn(f"| all | {len(photos)} | {complete} | " + " | ".join(map(str, gaps)) + " |", report)
+        self.assertIn(f"Record template `{views.TEMPLATE_VERSION}` (fingerprint `{views.FINGERPRINT[:12]}`)", report)
 
     def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
         files = sorted((ROOT / "prompts").rglob("*"))
