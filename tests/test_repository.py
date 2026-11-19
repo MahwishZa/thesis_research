@@ -15,7 +15,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from src import datasets, evaluate, prompts, run
+from src import datasets, evaluate, prompts, run, validate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +31,8 @@ class RepositoryTests(unittest.TestCase):
         os.chdir(ROOT)  # configs name their files relative to the repository folder
         self.addCleanup(os.chdir, previous)
         self.readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        guide = ROOT / "docs" / "code_guide.md"  # temporary: removed with docs/ when the research is final
+        self.guide = guide.read_text(encoding="utf-8") if guide.is_file() else None
 
     def test_every_command_in_the_usage_documentation_is_accepted_by_the_command_line(self):
         for module, name in ((run, "run"), (evaluate, "evaluate")):
@@ -44,22 +46,38 @@ class RepositoryTests(unittest.TestCase):
             for command in commands:
                 self.assertIn(f"python -m src.{name} {command}", module.__doc__, f"the usage documentation omits '{command}'")
 
-    def test_the_commands_written_in_the_readme_are_accepted_by_the_command_line(self):
-        found = re.findall(r"`python -m src\.(run|evaluate) ([^`]+)`", self.readme)
+    def test_the_usage_documentation_of_the_validation_command_is_accepted_by_its_command_line(self):
+        usage = re.findall(r"^\s+python -m src\.validate (.+?)$", validate.__doc__, re.M)
+        self.assertEqual(usage, ["[--files]"])
+        for form in ("", "--files"):
+            validate.build_parser().parse_args(shlex.split(form))
+
+    @unittest.skipUnless((ROOT / "docs" / "code_guide.md").is_file(), "docs/ is removed when the research is final")
+    def test_the_commands_written_in_the_code_guide_are_accepted_by_the_command_line(self):
+        found = re.findall(r"`python -m src\.(run|evaluate|validate)(?: ([^`]+))?`", self.guide)
         self.assertTrue(found)
+        self.assertIn("validate", {name for name, _ in found})
         for name, command in found:
             with self.subTest(command):
-                args = {"run": run, "evaluate": evaluate}[name].build_parser().parse_args(shlex.split(command))
+                args = {"run": run, "evaluate": evaluate, "validate": validate}[name].build_parser().parse_args(shlex.split(command or ""))
                 if name == "run":
                     run.load_config(args.model, args.dataset, args.approach)  # a model of the list, a dataset and an approach
                 for folder in (getattr(args, key, None) for key in ("run_dir", "run_a", "run_b")):
                     if folder:
                         self.assertTrue((ROOT / folder / "run_card.json").is_file(), f"the README names a run that does not exist: {folder}")
 
-    def test_the_readme_has_its_sections_in_order_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
-        self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M),
-                         ["Overview", "Objectives", "Results", "Repository Structure", "How to Run"])
-        block = re.search(r"## Repository Structure\n\n```\n(.*?)\n```", self.readme, re.S).group(1).splitlines()
+    def test_the_readme_has_only_the_overview_and_the_research_update_and_names_files_that_exist(self):
+        self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M), ["Overview", "Research Update"])
+        self.assertIn("No Version 2\nexperiment has been run", self.readme)  # preliminary work is never presented as a result
+        for path in re.findall(r"`((?:docs|archive)/[^`]+)`", self.readme):
+            if path.endswith((".md", "/")):
+                self.assertTrue((ROOT / path).exists(), f"the README names a file that does not exist: {path}")
+
+    @unittest.skipUnless((ROOT / "docs" / "code_guide.md").is_file(), "docs/ is removed when the research is final")
+    def test_the_code_guide_has_its_sections_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
+        self.assertEqual(re.findall(r"^## (.+)$", self.guide, re.M),
+                         ["Repository Structure", "How to Run", "The pipeline, stage by stage", "File by file"])
+        block = re.search(r"## Repository Structure\n\n```\n(.*?)\n```", self.guide, re.S).group(1).splitlines()
         self.assertEqual(block[0], "thesis_research/")
         parents, listed = [], set()
         for line in block[1:]:

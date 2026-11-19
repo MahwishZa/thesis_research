@@ -4,7 +4,7 @@ This page fixes how every run from now on asks its questions, reads the answers 
 
 ## 1. The question
 
-Each question is one item of a dataset's test split: a clinic photo (`clinic_photo`), a clinic patient's record without the photo (`clinic_record`), the photo with the same record (`clinic_photo_record`), a written case that ends before the diagnosis (`text`), or a case with its photos (`cases`, `case_photos`). The three clinic views ask the same questions, so their answers can be paired. The prompt (`prompts/<dataset>/<approach>.txt`) is the same for every model on a dataset. It lists the possible diagnoses (six for the clinic patients, eight for the published cases), and the model must choose among them.
+Each question is one item of a dataset's test split: a clinic photo (`clinic_photo`), a clinic patient's record without the photo (`clinic_record`), the photo with the same record (`clinic_photo_record`), a published case report's text, which ends before the diagnosis (`published_text`), the same text with the photos of the same report (`published_text_photos`), or those photos alone (`published_photos`). The three clinic views ask the same questions, and so do the three views of a published case (the two with photos ask the cases that have photos, some of the text's), so their answers can be paired. The prompt (`prompts/<dataset>/<approach>.txt`) is the same for every model on a dataset. It lists the possible diagnoses (six for the clinic patients, eight for the published cases), and the model must choose among them.
 
 Approaches:
 
@@ -30,7 +30,7 @@ The model answers with one JSON object and nothing else:
 
 ## 3. The scores
 
-Every score is computed by `src/metrics.py` from the saved answers. The classes are weighted equally: the text dataset has unequal numbers of cases per class, and a model can reach a high plain accuracy by naming the most common class.
+Every score is computed by `src/metrics.py` from the saved answers. The classes are weighted equally: the published cases have unequal numbers of cases per class, and a model can reach a high plain accuracy by naming the most common class.
 
 | Score | Definition | Source |
 |---|---|---|
@@ -63,7 +63,7 @@ The intervals are not corrected for the number of comparisons, so on a page of m
 
 Each is reported beside the main score, never instead of it.
 
-- **Without actinic keratosis** (`text`, `cases`). The text test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
+- **Without actinic keratosis** (`published_text`, `published_text_photos`, `published_photos`). The published cases' test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
 - **Questions with a complete record** (`clinic_photo_record`). A record line the patient could not answer reads `unknown`, and the pattern of gaps can point to the class. The scores are also given for the questions with no `unknown` in the record.
 - **Hints that are not the lesion** (clinic patients). The `shortcuts` step of the preparation (`data/clinic_patients/dataset_report.md`) measures how much the empty record fields and the photo's properties alone give away about the class; those numbers are reported beside the results.
 
