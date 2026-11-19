@@ -1,0 +1,89 @@
+# Data sheet: the clinic patients cohort (PAD-UFES-20), draft of 2026-11-19
+
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. **It is a draft: it
+describes the download as received. The splits, the record shown to a model and the three views are not decided or built yet.**
+Every number comes from files that `python -m src.build.clinic_patients.prepare inventory` writes: `dataset_report.md`,
+`build/columns.csv`, `build/raw_images.csv`. The photos and `metadata.csv` stay on the researcher's computer (research folder
+`data/clinic_patients/raw/`); only these small tables are in Git.
+
+Marks: ✔ checked in the researcher's download by the inventory; ◻ not yet checked (stated by the source or a web page only).
+
+## At a glance
+
+| | |
+|---|---|
+| What it is | Smartphone photos of skin lesions, each with the clinical record of the same patient visit (age, body site, symptoms, history) |
+| Photos | 2,298 PNG files, 147 to 3,474 pixels wide (median 779.5), from different phones ✔ |
+| Patients, lesions | 1,373 patients ✔; 1,891 lesions ✔ (a lesion is a patient + `lesion_id` pair: `lesion_id` alone is shared between patients, and its 1,641 distinct values are not the lesion count; the ISIC Archive lists 1,891 lesions for this collection, a search result ◻) |
+| Classes | 6: basal cell carcinoma (BCC) 845, actinic keratosis (ACK) 730, nevus (NEV) 244, seborrheic keratosis (SEK) 235, squamous cell carcinoma (SCC) 192, melanoma (MEL) 52 photos ✔; Bowen's disease is counted as SCC by the authors ◻ |
+| Label source | The authors' `diagnostic` column. All BCC, SCC and MEL photos (1,089) are biopsy-proven ✔; ACK, NEV and SEK are biopsy-proven for 178 of 730, 60 of 244 and 15 of 235 photos ✔, the others by a clinical diagnosis of dermatologists ◻ (1,342 of 2,298, 58.4%, are biopsy-proven ✔) |
+| Source | Kaggle "Skin Cancer(PAD-UFES-20)" (mahdavi1202), a copy of the authors' Mendeley Data upload, version 1, published 2020-07-07 (doi 10.17632/zr7vgbcyr2.1) ◻ not compared byte for byte with Mendeley; its counts equal the paper's ✔ |
+| Licence | CC BY 4.0 (the Kaggle page; credit the authors) ◻ confirm on Mendeley |
+| Citation | Pacheco AGC, Lima GR, Salomão AS, et al. PAD-UFES-20: a skin lesion dataset composed of patient data and clinical images collected from smartphones. *Data in Brief*, October 2020 ◻ (volume and pages not checked). Mendeley Data, V1, doi 10.17632/zr7vgbcyr2.1 |
+| Version of this cohort | none yet (nothing is frozen) |
+
+## 1. Motivation
+
+The Version 1 photo dataset had no clinical record next to its photos, and its text dataset described other patients. PAD-UFES-20
+gives photos and a clinical record of the same visit, from one clinic, so the image, the text and both together can be compared on
+the same patients. See `docs/v2_proposal.md`.
+
+## 2. Composition
+
+**One row of `metadata.csv` is one photo** (`img_id`, `PAT_<patient>_<lesion>_<n>.png`). A patient has 1 to 8 lesions ✔ (1,018 patients have one); photos per lesion
+are counted again in the next inventory run. The table has 26 columns ✔. Meanings below are those of the Kaggle page (written by the uploader); the authors' own
+definitions are not yet checked against their paper ◻, so treat every meaning as provisional.
+
+| Column | Filled / empty ✔ | Values seen ✔ | Meaning (Kaggle page) ◻ |
+|---|---|---|---|
+| `patient_id`, `lesion_id`, `img_id` | all filled | ids | patient, lesion number (not unique across patients), photo |
+| `diagnostic` | 2,298 / 0 | ACK, BCC, MEL, NEV, SCC, SEK | the label |
+| `biopsed` | 2,298 / 0 | TRUE 1,342, FALSE 956 | biopsy done; **never shown to a model** (it points to the label) |
+| `age` | 2,298 / 0 | 6 to 94, median 62 | age at examination |
+| `region` | 2,298 / 0 | 14 body regions (FACE 570, FOREARM 392, CHEST 280, BACK 248, ARM 192, NOSE 158, HAND 126, …) | where the lesion is |
+| `itch`, `bleed`, `hurt`, `elevation` | 2 to 10 unknown (`UNK`) | TRUE / FALSE | the lesion itches, bleeds, hurts, is raised |
+| `grew`, `changed` | 402 and 396 unknown (`UNK`) | TRUE / FALSE | the lesion grew, changed |
+| `gender`, `smoke`, `drink`, `pesticide`, `skin_cancer_history`, `cancer_history`, `has_piped_water`, `has_sewage_system`, `fitspatrick` (1 to 6), `diameter_1`, `diameter_2` | 804 blank each | TRUE / FALSE, FEMALE / MALE, numbers | patient and lesion characteristics; the Kaggle page calls the two history fields "family" history ◻ |
+| `background_father`, `background_mother` | 913 and 906 empty or `UNK` | **countries** (POMERANIA, GERMANY, ITALY, BRAZIL, …; "BRASIL" and "BRAZIL" both occur) | the Kaggle page says "history of diseases": the values are places of origin, not diseases |
+
+How gaps are written: blank for the 804-photo block, `UNK` elsewhere ✔. Diameters run from 0 to 100 (`diameter_1`) and 0 to 70
+(`diameter_2`); their unit is not stated on the Kaggle page ◻ (a diameter of 0 occurs).
+
+## 3. Findings that shape the design ✔
+
+1. **An empty record points to "not a cancer".** 804 photos from 579 patients have all 13 of these fields empty together:
+   `smoke`, `drink`, `background_father`, `background_mother`, `pesticide`, `gender`, `skin_cancer_history`, `cancer_history`,
+   `has_piped_water`, `has_sewage_system`, `fitspatrick`, `diameter_1`, `diameter_2`. By class: ACK 447, NEV 169, SEK 188, **BCC 0,
+   MEL 0, SCC 0**. Another 990 photos have no empty field at all (ACK 242, BCC 542, MEL 34, NEV 32, SCC 110, SEK 30). So a model
+   (or a retrieval or filter) that learns "record empty" gets the cancer / not-cancer split without looking at the lesion. A likely
+   cause is that the questionnaire grew over the years of collection; the paper may say so ◻.
+2. **"Unknown" in `grew` and `changed` leans the other way.** They are unknown together for 345 photos: BCC 243, SCC 67, NEV 23,
+   MEL 6, SEK 5, ACK 1.
+3. **Photo size differs by class.** Median file size: NEV 604 KB, SEK 734 KB, MEL 998 KB, BCC 1,036 KB, ACK 1,050 KB, SCC 1,155 KB;
+   median width 690 (NEV) to 860 (MEL) pixels. A check on image properties alone is needed, as for Version 1.
+4. **`lesion_id` is not unique**: 250 values are used by more than one patient (for example `1003` is a nevus of `PAT_1288` and an
+   actinic keratosis of `PAT_38`). Anything grouped by lesion must group by patient + `lesion_id`; **splits must be by patient**.
+5. **Fifteen groups of photos have identical content**, always under one patient but under different lesion numbers, and in only 3
+   of the 15 groups with the same diagnosis. In the other 12 groups one picture has two different correct labels, so it cannot be a
+   one-answer question as it stands.
+6. **Some classes are small.** Melanoma has 52 photos of 36 patients: a test split will hold about 15, so its recall has a wide
+   interval.
+
+## 4. Not yet decided
+
+The proposal in `docs/v2_proposal.md` and the answer to the findings above are for the researcher to approve before anything is built:
+which fields a model is shown, how the photos of finding 5 are handled, the patient-level split, the three views, and a check of
+how much the record alone and the image properties alone give away.
+
+## 5. Preprocessing and use
+
+Nothing is built yet. Photos are never resized, re-encoded or edited (sent as stored, as in Version 1). No synthetic or rewritten
+clinical text is ever added. Patients may be identifiable only through the source's own ids; the source de-identified them ◻.
+
+## 6. Reproduce
+
+1. Download the dataset (Kaggle copy or Mendeley), put the unpacked `metadata.csv` and the three `imgs_part_*` folders in
+   `data/clinic_patients/raw/` (optionally the ZIP in `data/clinic_patients/downloads/`).
+2. `python -m src.build.clinic_patients.prepare inventory`
+3. The inventory's counts must equal those above; the figures of this sheet come from the `inventory` section of
+   `dataset_report.md` (`metadata.csv` SHA-256 starts `e5c178211d59`).
