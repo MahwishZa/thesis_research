@@ -143,7 +143,7 @@ class PromptTests(unittest.TestCase):
 
     def test_an_example_answer_with_other_keys_than_the_reader_requires_is_found(self):
         for dataset in ("clinic_photo", "clinic_record", "clinic_photo_record", "published_text", "published_text_photos", "published_photos"):
-            self.edit(dataset, '"reason": "<why>", "evidence": []}', '"evidence": [], "reason": "<why>"}')
+            self.edit(dataset, '"reason": "<why>", "claims"', '"claims": [{"statement": "<one short claim>", "evidence": []}], "reason": "<why>", "claims_"')
         problems = validate.prompt_problems()
         self.assertEqual(len(problems), 6)
         self.assertIn("the example answer does not have the keys", problems[0])

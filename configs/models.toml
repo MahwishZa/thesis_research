@@ -20,7 +20,7 @@ order_seed = 0
 [models.settings]
 provider = "anthropic"
 id = "claude-sonnet-5-5"  # the exact model id; Anthropic reports the version it served with every answer
-max_tokens = 512          # the JSON answer (three classes, a flag, up to three sentences) needs about 150; an answer cut off is invalid and reported
+max_tokens = 512          # the JSON answer (three classes, a flag, up to three sentences) needs about 250; an answer cut off is invalid and reported
 thinking = "between_tools"  # no reasoning for a request without tools (Sonnet 5.5 refuses "disabled")
 effort = "low"            # the lowest effort level
 # temperature, top_p and top_k are not sent: the current Claude models reject them, so Anthropic's default sampling is used.
@@ -41,7 +41,7 @@ extra_body = { provider = { order = ["openai"], allow_fallbacks = false } }  # o
 id = "openai/gpt-4o-2024-08-06"  # a dated snapshot; the plain name "gpt-4o" moves. OpenAI has announced that GPT-4o leaves its API in January 2027
 temperature = 0.0  # as in the base paper (greedy decoding)
 seed = 0           # OpenAI treats the seed as best effort: a repeated run can still differ slightly
-max_tokens = 512   # the JSON answer needs about 150 (first phase: 64, for a class name alone); an answer cut off is invalid and reported
+max_tokens = 512   # the JSON answer needs about 250 (first phase: 64, for a class name alone); an answer cut off is invalid and reported
 image_detail = "high"  # a picture is looked at in full detail instead of "auto"; nothing changes when no picture is sent
 
 
@@ -80,4 +80,4 @@ id = "meta-llama/llama-4-maverick"
 pinned = true  # the name has no date and OpenRouter gives no revision: the model is static, and the host and precision are fixed above
 temperature = 0.0
 seed = 0
-max_tokens = 512   # the JSON answer needs about 150; an answer cut off is invalid and reported
+max_tokens = 512   # the JSON answer needs about 250; an answer cut off is invalid and reported

@@ -4,8 +4,9 @@ Record:
 The possible diagnoses are:
 {labels}
 Answer with one JSON object and nothing else, in this form:
-{"differential": ["<most likely diagnosis>", "<second>", "<third>"], "evidence_sufficient": "<yes or no>", "reason": "<why>", "evidence": []}
+{"differential": ["<most likely diagnosis>", "<second>", "<third>"], "evidence_sufficient": "<yes or no>", "reason": "<why>", "claims": [{"statement": "<one short claim>", "evidence": []}], "evidence": []}
 - differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.
 - evidence_sufficient: "yes" if what you are given is enough to be confident of the first diagnosis, otherwise "no".
 - reason: at most three sentences, using only what you are given.
+- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.
 - evidence: leave the list empty; no reference texts are given.

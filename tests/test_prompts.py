@@ -52,14 +52,14 @@ class JsonAnswerTests(unittest.TestCase):
 
     def answer(self, **change):
         content = {"differential": ["melanoma", "nevus", "vascular lesion"], "evidence_sufficient": "no",
-                   "reason": "Irregular border.", "evidence": []} | change
+                   "reason": "Irregular border.", "claims": [{"statement": "The border is irregular.", "evidence": []}], "evidence": []} | change
         return json.dumps(content)
 
     def test_a_valid_answer_gives_the_diagnosis_the_differential_and_the_flag(self):
         read, problem = prompts.parse_json_answer(self.answer(), LABELS)
         self.assertIsNone(problem)
         self.assertEqual(read, {"diagnosis": "melanoma", "differential": ["melanoma", "nevus", "vascular lesion"],
-                                "evidence_sufficient": "no", "reason": "Irregular border.", "evidence": []})
+                                "evidence_sufficient": "no", "reason": "Irregular border.", "claims": [{"statement": "The border is irregular.", "evidence": []}], "evidence": []})
 
     def test_only_spaces_a_code_block_and_the_case_of_names_are_forgiven(self):
         loose = self.answer(differential=[" Melanoma", "NEVUS", "vascular  lesion"], evidence_sufficient=" Yes ")
@@ -86,6 +86,17 @@ class JsonAnswerTests(unittest.TestCase):
             self.answer(evidence_sufficient="maybe"): "evidence_sufficient is not yes or no",
             self.answer(evidence_sufficient=True): "evidence_sufficient is not yes or no",
             self.answer(reason="  "): "no reason given", self.answer(reason=None): "no reason given",
+            self.answer(claims=[]): "claims is not a list of 1 to 3 claims",
+            self.answer(claims="x"): "claims is not a list of 1 to 3 claims",
+            self.answer(claims=[{"statement": "s", "evidence": []}] * 4): "claims is not a list of 1 to 3 claims",
+            self.answer(claims=["s"]): "a claim must have exactly the keys statement and evidence",
+            self.answer(claims=[{"statement": "s"}]): "a claim must have exactly the keys statement and evidence",
+            self.answer(claims=[{"statement": "s", "evidence": [], "x": 1}]): "a claim must have exactly the keys statement and evidence",
+            self.answer(claims=[{"statement": " ", "evidence": []}]): "a claim has no statement",
+            self.answer(claims=[{"statement": 3, "evidence": []}]): "a claim has no statement",
+            self.answer(claims=[{"statement": "s", "evidence": "P1"}]): "a claim's evidence is not a list of passage ids",
+            self.answer(claims=[{"statement": "s", "evidence": [1]}]): "a claim's evidence is not a list of passage ids",
+            self.answer(claims=[{"statement": "s", "evidence": ["P1"]}]): "a claim relies on a passage the run did not give: 'P1'",
             self.answer(evidence="P1"): "evidence is not a list of passage ids",
             self.answer(evidence=["P1"]): "evidence names a passage the run did not give: 'P1'",
         }
@@ -97,6 +108,13 @@ class JsonAnswerTests(unittest.TestCase):
         text = self.answer(evidence=["P1", "P2"])
         self.assertEqual(prompts.parse_json_answer(text, LABELS, {"P1", "P2", "P3"})[0]["evidence"], ["P1", "P2"])
         self.assertEqual(prompts.parse_json_answer(text, LABELS, {"P1"})[1], "evidence names a passage the run did not give: 'P2'")
+
+    def test_claims_are_read_with_their_evidence_and_may_cite_only_what_the_run_gave(self):
+        text = self.answer(claims=[{"statement": " Irregular border. ", "evidence": ["P1"]}, {"statement": "Two colours.", "evidence": []}], evidence=["P1"])
+        read = prompts.parse_json_answer(text, LABELS, {"P1"})[0]
+        self.assertEqual(read["claims"], [{"statement": "Irregular border.", "evidence": ["P1"]}, {"statement": "Two colours.", "evidence": []}])
+        self.assertEqual(prompts.parse_json_answer(text, LABELS)[1], "a claim relies on a passage the run did not give: 'P1'")
+        self.assertEqual(prompts.ANSWER_FORMAT, "json-v2")
 
     def test_with_fewer_than_three_classes_the_differential_holds_them_all(self):
         read, problem = prompts.parse_json_answer(self.answer(differential=["nevus", "melanoma"]), ["melanoma", "nevus"])

@@ -16,12 +16,13 @@ Approaches:
 The model answers with one JSON object and nothing else:
 
 ```
-{"differential": ["<most likely>", "<second>", "<third>"], "evidence_sufficient": "yes" or "no", "reason": "<at most three sentences>", "evidence": [<passage ids>]}
+{"differential": ["<most likely>", "<second>", "<third>"], "evidence_sufficient": "yes" or "no", "reason": "<at most three sentences>", "claims": [{"statement": "<a short claim>", "evidence": [<passage ids>]}], "evidence": [<passage ids>]}
 ```
 
 - **differential:** three different diagnoses from the list, the most likely first. The first one is the model's diagnosis.
 - **evidence_sufficient:** "yes" if what the model was given is enough to be confident of its diagnosis, otherwise "no". This is how a model can say it does not know, without leaving the question unanswered.
 - **reason:** a short justification. It is saved but not scored.
+- **claims** (answer format `json-v2`, approved 2026-11-19): one to three short statements that support the first diagnosis, each with the ids of the passages it relies on. Closed-book, every claim's evidence is empty. The claims are what a later evidence-grounding score checks (is each claim supported by the passage it cites); the score is not defined yet, and the field is only read, saved and checked for valid ids.
 - **evidence:** the ids of the passages the reason relies on. Closed-book, it must be empty.
 
 **Reading (strict).** The reader (`parse_json_answer` in `src/prompts.py`) forgives only spaces around the object, a Markdown code block around it, and the case and spacing of a diagnosis name or of yes/no. Everything else makes the answer **invalid**: text before or after the object, a missing or added key, a differential that is not three different diagnoses of the list, a flag that is not yes or no, an empty reason, and evidence that names a passage the run did not give (closed-book: any evidence). An answer cut off at the output limit is invalid; the report says how many were cut off, and if any were, the results are not valid until the limit is raised under a new model entry.

@@ -106,7 +106,7 @@ def json_answer(first: str, labels: list[str], flag: str = "yes") -> str:
     """An answer of the required form: ``first`` as the diagnosis, then the other listed classes, as many as the format asks."""
     others = [label for label in labels if label != first]
     return json.dumps({"differential": [first, *others][:min(3, len(labels))], "evidence_sufficient": flag,
-                       "reason": "A stand-in answer.", "evidence": []})
+                       "reason": "A stand-in answer.", "claims": [{"statement": "A stand-in claim.", "evidence": []}], "evidence": []})
 
 
 class FakeModel:

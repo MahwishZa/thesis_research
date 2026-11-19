@@ -24,7 +24,7 @@ def answered(path: str, label: str, group_column: str, group: str, prediction: s
     """One saved answer of the current format: the diagnosis alone, "yes", no evidence; None is an invalid answer."""
     return {"path": path, "label": label, group_column: group, "prediction": prediction, "differential": None if prediction is None else [prediction],
             "evidence_sufficient": None if prediction is None else "yes", "reason": None if prediction is None else "r",
-            "evidence": None if prediction is None else [], "invalid": "not asked" if prediction is None else None, "raw_text": prediction,
+            "claims": None if prediction is None else [{"statement": "c", "evidence": []}], "evidence": None if prediction is None else [], "invalid": "not asked" if prediction is None else None, "raw_text": prediction,
             "finish_reason": "STOP", "model_version": "m-1"}
 
 
@@ -40,7 +40,7 @@ def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str]
             "prompt_file": "p.txt", "prompt_sha256": "0" * 64, "dataset_table": {"file": "t.csv", "sha256": "0" * 64},
             "git": {"commit": "c" * 40}, "sessions": []}
     if not first_phase:
-        card["answer_format"] = "json-v1"
+        card["answer_format"] = "json-v2"
     (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
     rows = []
     for i, (t, p, g) in enumerate(zip(truth, predicted, groups)):
@@ -54,7 +54,7 @@ class ReportTests(RunProject):
     def test_a_run_of_the_first_phase_is_refused_with_a_pointer_to_the_archive(self):
         folder = write_run(self.base / "phase1" / "test_1", ["a", "a", "b", "b"], ["a", "b", "b", None], ["L1", "L2", "L3", "L4"],
                            first_phase=True)
-        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v1'.*archive/v1/"):
+        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v2'.*archive/v1/"):
             evaluate.write_report(folder)
         self.assertEqual(sorted(p.name for p in folder.iterdir()), ["predictions.jsonl", "run_card.json"])  # nothing was written
 
@@ -98,6 +98,8 @@ class VerifyAnswersTests(RunProject):
     def test_an_answer_that_is_missing_a_field_is_named(self):
         rows = [{k: v for k, v in row.items() if k != "evidence"} if i == 1 else row for i, row in enumerate(self.rows)]
         self.assertEqual(self.problems(rows), ["answer 2: no field evidence"])
+        no_claims = [{k: v for k, v in row.items() if k != "claims"} if i == 0 else row for i, row in enumerate(self.rows)]
+        self.assertEqual(self.problems(no_claims), ["answer 1: no field claims"])
         self.assertEqual(self.problems([{k: v for k, v in self.rows[0].items() if k != "patient_id"}], complete=False),
                          ["answer 1: no field patient_id"])
 
@@ -120,8 +122,14 @@ class VerifyAnswersTests(RunProject):
 
     def test_a_closed_book_answer_holds_no_evidence(self):
         self.assertIn("a closed-book answer must hold no evidence", self.problems(self.damaged(0, evidence=["K:1"]))[0])
+        self.assertIn("a closed-book claim must rely on no passage", self.problems(self.damaged(0, claims=[{"statement": "c", "evidence": ["K:1"]}]))[0])
         self.card["config"]["approach"] = "standard_rag"  # a retrieval approach may cite what it was given
-        self.assertEqual(self.problems(self.damaged(0, evidence=["K:1"])), [])
+        self.assertEqual(self.problems(self.damaged(0, evidence=["K:1"], claims=[{"statement": "c", "evidence": ["K:1"]}])), [])
+
+    def test_a_valid_answer_holds_at_least_one_claim_and_an_invalid_one_none(self):
+        self.assertIn("a valid answer must hold at least one claim", self.problems(self.damaged(0, claims=[]))[0])
+        self.assertIn("a valid answer must hold at least one claim", self.problems(self.damaged(0, claims=None))[0])
+        self.assertIn("an invalid answer must hold its reason", self.problems(self.damaged(3, claims=[{"statement": "c", "evidence": []}]))[0])
 
     def test_an_invalid_answer_holds_its_reason_and_nothing_else_and_a_valid_one_no_reason(self):
         self.assertIn("an invalid answer must hold its reason", self.problems(self.damaged(3, invalid=None))[0])
@@ -136,7 +144,7 @@ class VerifyAnswersTests(RunProject):
         with self.assertRaisesRegex(ValueError, "not consistent, so nothing is scored: test/a/0.jpg is answered 2 times"):
             evaluate.compare(self.folder, other)
         old = write_run(self.base / "r3" / "test_1", ["a", "a", "b", "b"], ["a", "a", "b", "b"], ["L1", "L2", "L3", "L4"], first_phase=True)
-        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v1'"):
+        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v2'"):
             evaluate.compare(self.folder, old)
 
     def test_scoring_and_comparing_stop_at_a_damaged_file_before_any_score(self):
@@ -208,7 +216,7 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v1"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
             rows = [answered(f"test/{t}/{i}.jpg", t, kind.group_column, f"L{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
@@ -239,7 +247,7 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v1"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
             rows = [answered(f"test/{t}/P{i}_1_a.{ending}", t, kind.group_column, f"P{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")

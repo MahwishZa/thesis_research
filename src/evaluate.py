@@ -4,7 +4,7 @@
     python -m src.evaluate compare results/<dataset>/<approach>/<model>/<run-folder> results/<dataset>/<approach>/<model>/<run-folder>
 
 ``report`` writes a run's scores from its saved answers: metrics.json and report.md. It reads the answer format of the code
-(``json-v1``); a run of the first phase of Version 1, whose answers are single class names, is in archive/v1/ with its own scores and
+(``json-v2``); a run of the first phase of Version 1, whose answers are single class names, is in archive/v1/ with its own scores and
 is not read here. The metrics and their sources are in docs/method.md.
 ``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
 the difference in balanced accuracy and in macro-F1 with paired 95% intervals (both runs resampled together, by the same groups
@@ -36,7 +36,7 @@ def require_current_format(card: dict) -> None:
                          "runs of the first phase are in archive/v1/ with their own scores and are not read by this code")
 
 
-ANSWER_FIELDS = ("path", "label", "prediction", "differential", "evidence_sufficient", "reason", "evidence", "invalid", "raw_text",
+ANSWER_FIELDS = ("path", "label", "prediction", "differential", "evidence_sufficient", "reason", "claims", "evidence", "invalid", "raw_text",
                  "finish_reason", "model_version")  # what every saved answer must hold (src/run.py writes them)
 
 
@@ -58,7 +58,7 @@ def verify_answers(card: dict, preds: list[dict], complete: bool = False) -> lis
         if p["label"] not in labels:
             problems.append(f"{where}: the true class {p['label']!r} is not a class of the run")
         if p["prediction"] is None:
-            if not p["invalid"] or any(p[k] is not None for k in ("differential", "evidence_sufficient", "reason", "evidence")):
+            if not p["invalid"] or any(p[k] is not None for k in ("differential", "evidence_sufficient", "reason", "claims", "evidence")):
                 problems.append(f"{where}: an invalid answer must hold its reason and no differential, flag, reason or evidence")
             continue
         if p["invalid"] is not None:
@@ -71,6 +71,10 @@ def verify_answers(card: dict, preds: list[dict], complete: bool = False) -> lis
             problems.append(f"{where}: the flag {p['evidence_sufficient']!r} is not yes or no")
         if card.get("config", {}).get("approach", "closed_book") == "closed_book" and p["evidence"] != []:
             problems.append(f"{where}: a closed-book answer must hold no evidence")
+        if not isinstance(p["claims"], list) or not p["claims"]:
+            problems.append(f"{where}: a valid answer must hold at least one claim")
+        elif card.get("config", {}).get("approach", "closed_book") == "closed_book" and any(c.get("evidence") != [] for c in p["claims"]):
+            problems.append(f"{where}: a closed-book claim must rely on no passage")
     paths = Counter(p["path"] for p in preds if "path" in p)
     problems += [f"{path} is answered {n} times" for path, n in sorted(paths.items()) if n > 1]
     if complete and len(paths) != card[f"n_{kind.item}s"]:
