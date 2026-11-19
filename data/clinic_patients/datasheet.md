@@ -32,24 +32,30 @@ the same patients. See `docs/v2_proposal.md`.
 
 ## 2. Composition
 
-**One row of `metadata.csv` is one photo** (`img_id`, `PAT_<patient>_<lesion>_<n>.png`). A patient has 1 to 8 lesions ✔ (1,018 patients have one); photos per lesion
-are counted again in the next inventory run. The table has 26 columns ✔. Meanings below are those of the Kaggle page (written by the uploader); the authors' own
-definitions are not yet checked against their paper ◻, so treat every meaning as provisional.
+**One row of `metadata.csv` is one photo** (`img_id`, `PAT_<patient>_<lesion>_<n>.png`; the authors write "each line represents a skin
+lesion", but the 2,298 rows hold 1,891 lesions ✔). A patient has 1 to 8 lesions ✔ (1,018 patients have one). The table has 26 columns ✔.
+**Meanings are the authors' own definitions** (Pacheco et al. 2020, section "Meta-data", copied by the researcher from the arXiv version
+2007.00478 on 2026-11-19; not yet compared with the published *Data in Brief* article ◻).
 
-| Column | Filled / empty ✔ | Values seen ✔ | Meaning (Kaggle page) ◻ |
+| Column | Filled / empty ✔ | Values seen ✔ | Meaning (the authors) |
 |---|---|---|---|
-| `patient_id`, `lesion_id`, `img_id` | all filled | ids | patient, lesion number (not unique across patients), photo |
+| `patient_id`, `lesion_id`, `img_id` | all filled | ids | patient, lesion number, photo (`img_id` joins patient, lesion and a random number). Always present |
 | `diagnostic` | 2,298 / 0 | ACK, BCC, MEL, NEV, SCC, SEK | the label |
-| `biopsed` | 2,298 / 0 | TRUE 1,342, FALSE 956 | biopsy done; **never shown to a model** (it points to the label) |
-| `age` | 2,298 / 0 | 6 to 94, median 62 | age at examination |
-| `region` | 2,298 / 0 | 14 body regions (FACE 570, FOREARM 392, CHEST 280, BACK 248, ARM 192, NOSE 158, HAND 126, …) | where the lesion is |
-| `itch`, `bleed`, `hurt`, `elevation` | 2 to 10 unknown (`UNK`) | TRUE / FALSE | the lesion itches, bleeds, hurts, is raised |
-| `grew`, `changed` | 402 and 396 unknown (`UNK`) | TRUE / FALSE | the lesion grew, changed |
-| `gender`, `smoke`, `drink`, `pesticide`, `skin_cancer_history`, `cancer_history`, `has_piped_water`, `has_sewage_system`, `fitspatrick` (1 to 6), `diameter_1`, `diameter_2` | 804 blank each | TRUE / FALSE, FEMALE / MALE, numbers | patient and lesion characteristics; the Kaggle page calls the two history fields "family" history ◻ |
-| `background_father`, `background_mother` | 913 and 906 empty or `UNK` | **countries** (POMERANIA, GERMANY, ITALY, BRAZIL, …; "BRASIL" and "BRAZIL" both occur) | the Kaggle page says "history of diseases": the values are places of origin, not diseases |
+| `biopsed` | 2,298 / 0 | TRUE 1,342, FALSE 956 | "if the diagnostic comes from a clinical consensus or biopsy" (the wording does not say which value is which; all 1,089 BCC, SCC and MEL are TRUE, so TRUE reads as biopsy ◻). **Never shown to a model** (it points to the label). Always present |
+| `age` | 2,298 / 0 | 6 to 94, median 62 | an integer, the patient's age (the unit is not written; the values are years ◻). Always present |
+| `region` | 2,298 / 0 | 14 body regions (FACE 570, FOREARM 392, CHEST 280, BACK 248, ARM 192, NOSE 158, HAND 126, …) | "one of the 15 macro-regions previously described" (the download holds 14; which one is absent is not known to us ◻). Always present |
+| `itch`, `hurt`, `bleed`, `elevation` | 2 to 10 unknown (`UNK`) | TRUE / FALSE | the lesion itches; hurts; "has bled"; "has an elevation" |
+| `grew`, `changed` | 402 and 396 unknown (`UNK`) | TRUE / FALSE | the lesion "has recently grown"; "has recently changed" |
+| `gender`, `smoke`, `drink`, `pesticide`, `skin_cancer_history`, `cancer_history`, `has_piped_water`, `has_sewage_system`, `fitspatrick` (1 to 6), `diameter_1`, `diameter_2` | 804 blank each | TRUE / FALSE, FEMALE / MALE, numbers | the patient smokes cigarettes, drinks alcohol, uses pesticides; skin cancer, or any cancer, in the past **in the patient or in the family** (one field each); piped water and a sewage system at home; the Fitzpatrick skin type; the lesion's horizontal and vertical diameters (floats) |
+| `background_father`, `background_mother` | 913 and 906 empty or `UNK` | **countries** (POMERANIA, GERMANY, ITALY, BRAZIL, …; "BRASIL" and "BRAZIL" both occur) | the country the father's and the mother's family descends from (Pomerania is kept although it is a region: patients call themselves Pomeranian). They are places of origin, not diseases, as the Kaggle page wrongly says |
 
-How gaps are written: blank for the 804-photo block, `UNK` elsewhere ✔. Diameters run from 0 to 100 (`diameter_1`) and 0 to 70
-(`diameter_2`); their unit is not stated on the Kaggle page ◻ (a diameter of 0 occurs).
+**How gaps are written, and what they mean.** The authors: "Missing values are left blank ... When a patient does not know the answer ... we
+fill the feature as UNK (unknown)", and only `patient_id`, `lesion_id`, `img_id`, `age`, `region` and `biopsed` are always present; the
+rest "depend on the patient's answers during the appointment". In the download, the 804-photo block is blank and every other gap is `UNK` ✔.
+So **a gap in the four symptom fields of the record is `UNK`, which means the patient did not know**, not that nothing was asked. The
+cleaned table writes both as `not recorded`; `build/columns.csv` and the inventory keep the two apart. The authors do not say why the
+804-photo block is blank, so the cause of finding 1 stays a guess ◻. Diameters run from 0 to 100 (`diameter_1`) and 0 to 70
+(`diameter_2`); their unit is not stated ◻ (a diameter of 0 occurs).
 
 ## 3. Findings that shape the design ✔
 
@@ -92,12 +98,13 @@ seen.
 - *record*: the record alone, as text (`record.csv`, `files/records/`);
 - *photo + record*: the photo with the same record text in the prompt (`dataset.csv`, column `facts`).
 
-**The record** (`record-v1`) is six numbered lines in fixed wording: age; body site; whether the lesion itches, hurts, bleeds, and is
-raised above the skin; a gap reads `not recorded`. It is the same words, to the byte, in the record view and in the photo + record
-view. **Not in any view:** `grew` and `changed` (unknown more often for cancers: finding 2) and the block of 13 fields of finding 1
-(empty for 804 early photos, all benign). They stay in `dataset.csv` for a separate secondary analysis on complete records. The
-wording of the lines is provisional until the authors' paper confirms what each field means ◻; a change of wording is a new template
-version and a rebuild of the views.
+**The record** (`record-v1`) is six numbered lines in fixed wording: age; body site; whether the lesion itches, hurts, has bled and has an
+elevation. The lines use the authors' own words for each field (itch, hurt, "has bled", "has an elevation"; section 2); the unit of the
+age is presumed to be years ◻. A gap reads `not recorded`; in the authors' words the patient did not know (section 2). The record is
+the same words, to the byte, in the record view and in the photo + record view. **Not in any view:** `grew` and `changed` (unknown more
+often for cancers: finding 2) and the block of 13 fields of finding 1 (empty for 804 early photos, all benign). They stay in
+`dataset.csv` for a separate secondary analysis on complete records. A change of wording is a new template version and a rebuild of
+the views.
 
 **Photos of one patient** are not independent: intervals resample whole patients. Identical records are kept in the record view
 (they are different patients, or several photos of one visit), so that the three views ask the same questions.

@@ -7,8 +7,9 @@ shown, so that the same question can be asked three times and the answers paired
 - **photo + record**: the photo, with the same record text in the prompt.
 
 **The record** is six fields in fixed wording, one numbered line each (``TEMPLATE``, version ``record-v1``): age, body site, and whether
-the lesion itches, hurts, bleeds and is raised above the skin. A field with no entry reads ``not recorded``; nothing is guessed or
-filled in. The record is the same words in the record view and in the photo + record view, to the byte.
+the lesion itches, hurts, has bled and has an elevation (the authors' own words for these fields, Pacheco et al. 2020). A field with no
+entry reads ``not recorded``; nothing is guessed or filled in. The record is the same words in the record view and in the photo +
+record view, to the byte.
 
 **What the record does not show:** whether the lesion grew or changed (more often unknown for cancers than for benign lesions: a
 hint, see step ``shortcuts``) and the block of fields added later to the questionnaire (gender, smoking, drinking, pesticides,
@@ -50,7 +51,7 @@ class Field:
 
 FIELDS = (Field("age", "Age in years", "age"), Field("region", "Body site", "site"),
           Field("itch", "The lesion itches", "yes_no"), Field("hurt", "The lesion hurts", "yes_no"),
-          Field("bleed", "The lesion bleeds", "yes_no"), Field("elevation", "The lesion is raised above the skin", "yes_no"))
+          Field("bleed", "The lesion has bled", "yes_no"), Field("elevation", "The lesion has an elevation", "yes_no"))
 CORE = tuple(f.column for f in FIELDS)  # the fields of the record
 LEFT_OUT = ("grew", "changed")  # not in any view: unknown more often for cancers (step shortcuts)
 YES_NO = {"TRUE": "yes", "FALSE": "no"}

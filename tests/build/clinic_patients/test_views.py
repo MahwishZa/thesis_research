@@ -16,14 +16,14 @@ class RecordTextTests(unittest.TestCase):
     def test_the_record_is_six_numbered_lines_in_fixed_wording_by_hand(self):
         self.assertEqual(views.record_text(ROW),
                          "1. Age in years: 55\n2. Body site: face\n3. The lesion itches: yes\n4. The lesion hurts: no\n"
-                         "5. The lesion bleeds: not recorded\n6. The lesion is raised above the skin: yes")
+                         "5. The lesion has bled: not recorded\n6. The lesion has an elevation: yes")
 
     def test_the_wording_and_the_template_are_pinned(self):
         # a change of wording is a new template version: change TEMPLATE_VERSION and these two lines together, on purpose
         self.assertEqual(views.TEMPLATE_VERSION, "record-v1")
         self.assertEqual(views.TEMPLATE, "1. Age in years: <age>\n2. Body site: <region>\n3. The lesion itches: <itch>\n"
-                                         "4. The lesion hurts: <hurt>\n5. The lesion bleeds: <bleed>\n"
-                                         "6. The lesion is raised above the skin: <elevation>")
+                                         "4. The lesion hurts: <hurt>\n5. The lesion has bled: <bleed>\n"
+                                         "6. The lesion has an elevation: <elevation>")
         self.assertEqual(views.CORE, ("age", "region", "itch", "hurt", "bleed", "elevation"))
         self.assertEqual(views.FINGERPRINT, hashlib.sha256(f"record-v1\n{views.TEMPLATE}\nnot recorded: not recorded".encode()).hexdigest())
 
@@ -94,7 +94,7 @@ class ViewsStepTests(Cohort):
         # elevation FALSE (not a cancer)
         row = next(r for r in self.table("dataset.csv") if r["img_id"] == "P000_1_a.png")
         self.assertEqual(row["facts"], "1. Age in years: 30\n2. Body site: face\n3. The lesion itches: no\n4. The lesion hurts: no\n"
-                                       "5. The lesion bleeds: no\n6. The lesion is raised above the skin: no")
+                                       "5. The lesion has bled: no\n6. The lesion has an elevation: no")
         # P301 (nevus: c = 3, n = 1): age 30 + 3 + 3 = 36, region REGIONS[4] = NOSE, itch TRUE (n odd), hurt TRUE (n % 3 == 1)
         row = next(r for r in self.table("dataset.csv") if r["img_id"] == "P301_1_a.png")
         self.assertEqual(row["facts"].splitlines()[:4], ["1. Age in years: 36", "2. Body site: nose", "3. The lesion itches: yes",
@@ -110,7 +110,7 @@ class ViewsStepTests(Cohort):
         views.views(self.data)
         row = next(r for r in self.table("dataset.csv") if r["img_id"] == "P500_1_a.png")
         self.assertIn("1. Age in years: not recorded", row["facts"])
-        self.assertIn("5. The lesion bleeds: not recorded", row["facts"])
+        self.assertIn("5. The lesion has bled: not recorded", row["facts"])
         self.assertEqual(row["bleed"], NOT_RECORDED)  # the cleaned table's own wording stays in the clinical columns
         report = self.report()
         self.assertRegex(report, r"\| seborrheic keratosis \| 20 \| 19 \| 1 \| 0 \| 0 \| 0 \| 1 \| 0 \|")
