@@ -1,16 +1,17 @@
-"""The free count of the text dataset's figures (src/build/cases/prepare.py), on invented data: no network, no real data."""
+"""The free count of the text dataset's figures (src/build/published_cases/photos.py), on invented data: no network, no real data."""
 
 import csv
 import hashlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 from xml.sax.saxutils import escape
 
-from src.build.cases import prepare as figures
+from src.build.published_cases import photos as figures
 
 COLUMNS = ["split", "label", "path", "sha256", "patient_uid", "pmid", "source", "pubmed", "year", "age", "sex", "words"]
 
@@ -361,6 +362,16 @@ class CommandLineTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "^ERROR: data/published_cases/dataset.csv not found$"):
                 figures.main(["count"])
 
+
+class CommandLineTests(unittest.TestCase):
+    def test_every_command_in_the_usage_documentation_is_accepted_and_names_this_module(self):
+        usage = re.findall(r"^\s+python -m src\.build\.published_cases\.photos (\w+)", figures.__doc__, re.M)
+        self.assertEqual(usage, ["count", "download", "check", "build"])
+        for step in usage:
+            self.assertEqual(figures.build_parser().parse_args([step]).step, step)
+        with self.assertRaises(SystemExit):
+            figures.build_parser().parse_args(["other"])
+        self.assertEqual(figures.build_parser().prog, "python -m src.build.published_cases.photos")
 
 if __name__ == "__main__":
     unittest.main()

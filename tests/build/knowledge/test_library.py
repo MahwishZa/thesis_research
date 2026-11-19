@@ -15,9 +15,9 @@ from unittest import mock
 from xml.sax.saxutils import escape
 
 from src.build.knowledge import library
-from src.build.text import prepare
+from src.build.published_cases import text as prepare
 
-from tests.build.text.test_prepare import BuildData
+from tests.build.published_cases.test_text import BuildData
 
 HEADINGS = {("melanoma", "melanoma"): "Melanoma", ("nevus", "nevus"): "Nevus, Pigmented",
             ("basal cell carcinoma", "basal cell carcinoma"): "Carcinoma, Basal Cell"}  # term_check.csv: the survey's headings
@@ -283,7 +283,7 @@ class LibraryTests(BuildData):
         with self.assertRaisesRegex(ValueError, "statpearls_NBK430685.tar.gz has changed since it was downloaded"):
             library.library(self.data, self.knowledge, classes=self.CLASSES)
         (self.data / "dataset.csv").unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "dataset.csv not found: run python -m src.build.text.prepare build first"):
+        with self.assertRaisesRegex(FileNotFoundError, "dataset.csv not found: run python -m src.build.published_cases.text build first"):
             library.library(self.data, self.knowledge, classes=self.CLASSES)
 
     def test_passages_are_whole_paragraphs_of_one_section_within_the_word_limit(self):

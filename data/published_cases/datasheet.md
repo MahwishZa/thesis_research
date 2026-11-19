@@ -17,11 +17,11 @@ its own sections and numbering below; "the text dataset" and "the case dataset" 
 | `files/text/` | the question texts, `<split>/<class>/<case>.txt` (research use only) | no |
 | `files/figures/images/` | the pictures of the cases, byte for byte, one folder per article | no |
 
-The steps are run by `python -m src.build.text.prepare`, `python -m src.build.text.audit` and `python -m src.build.cases.prepare`.
+The steps are run by `python -m src.build.published_cases.text`, `python -m src.build.published_cases.audit` and `python -m src.build.published_cases.photos`.
 
 ## Part A. The text of the cases (text dataset, version 3)
 
-This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/build/text/prepare.py`, `src/build/text/audit.py`) writes:
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/build/published_cases/text.py`, `src/build/published_cases/audit.py`) writes:
 - `dataset_report.md`: the full report of every step
 - `dataset.csv`: one row per case
 - `build/case_candidates.csv`, `build/abstract_candidates.csv`, `build/article_mesh.csv` and `build/term_check.csv`: what each step found
@@ -51,7 +51,7 @@ The error rate in section 5 comes from reading questions together with the text 
 - closed-book: the model sees only the case
 - open-book: retrieval-augmented generation following RAG² (Sohn et al., 2025), with the knowledge base (`data/knowledge/`) as the texts to retrieve from
 
-The classes are those of the Version 1 image dataset (the eight of ISIC 2019), kept so that the Version 1 results can be read next to these. They are a list in `src/build/text/prepare.py` (`CLASSES`); the clinic patients cohort (PAD-UFES-20) has six classes of its own.
+The classes are those of the Version 1 image dataset (the eight of ISIC 2019), kept so that the Version 1 results can be read next to these. They are a list in `src/build/published_cases/text.py` (`CLASSES`); the clinic patients cohort (PAD-UFES-20) has six classes of its own.
 
 **Requirement.** The dataset had to be built entirely from public text sources, by a method that identifies, extracts, organises and maps the information systematically, with no manual role for the researcher in extraction, classification, mapping or construction. Every step is therefore one command, and every decision is a rule in the code or in `build/class_terms.csv` that applies to all cases alike.
 
@@ -222,7 +222,7 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 **Versions.** Any change to a case, label or split makes a new version, with new fingerprints and an entry here.
 - **Version 1** (2026-11-13): 1,049 cases. A reading of 102 questions put its wrong labels at about 13% (95% interval roughly 6–25%): lesions not on the skin, cases that only looked like the class, articles about another diagnosis, and questions that were not one patient's case. It was withdrawn.
 - **Version 2** (2026-11-14): 745 cases, made by the rules of section 4. It was frozen (commit `5539bb4`). The closed-book runs of the first phase (`results/phase1/text/`) were made on it.
-- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.text.prepare revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/published_cases/downloads/removed/`. Version 3 is in commit `00e9711` and later.
+- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.published_cases.text revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/published_cases/downloads/removed/`. Version 3 is in commit `00e9711` and later.
 
 **Checks.** The build checks that every question is part of its case text word for word, that no question names its class, and that no article is in two splits. The audit then checks every question again with code of its own:
 - against its fingerprint and its source
@@ -233,7 +233,7 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 
 All 17 checks passed on all 745 questions of version 2, and again on all 716 questions of version 3 (2026-11-18).
 
-**Review (2026-11-18).** `python -m src.build.text.audit review` looked at every question of version 2 for five signals, with rules fixed before it was first run (`build/review_flags.csv`, one row per question):
+**Review (2026-11-18).** `python -m src.build.published_cases.audit review` looked at every question of version 2 for five signals, with rules fixed before it was first run (`build/review_flags.csv`, one row per question):
 
 | Signal | Test | Validation | Train | What it decided |
 |---|---|---|---|---|
@@ -260,7 +260,7 @@ These cases stay in the dataset: changing a single case by hand would break the 
 
 **Rebuild**
 1. Set up Python 3.11 or newer with the packages in `requirements.txt`.
-2. Run, in order: `python -m src.build.text.prepare survey`, `cases`, `abstracts`, `mesh`, `build`, then `python -m src.build.text.audit`, `python -m src.build.text.audit review` (it reads the knowledge base and the closed-book runs) and `python -m src.build.text.prepare revise`. The steps download their sources themselves.
+2. Run, in order: `python -m src.build.published_cases.text survey`, `cases`, `abstracts`, `mesh`, `build`, then `python -m src.build.published_cases.audit`, `python -m src.build.published_cases.audit review` (it reads the knowledge base and the closed-book runs) and `python -m src.build.published_cases.text revise`. The steps download their sources themselves.
 
 Because PubMed changes (section 5), a rebuild reproduces the method, not version 3. Its texts come back only from the backup: version 2's files, of which `revise` takes out the 29.
 
@@ -287,7 +287,7 @@ Every question file has its own SHA-256 in `dataset.csv`; the audit checks the q
 ## Part B. The photos of the cases (case dataset, version 2)
 
 This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come
-from the files `python -m src.build.cases.prepare` writes: `dataset_report.md` (one section per step: `count`, `download`, `check`,
+from the files `python -m src.build.published_cases.photos` writes: `dataset_report.md` (one section per step: `count`, `download`, `check`,
 `build`), the build records in `build/` (`figure_count.csv`, `figure_files.csv`, `figure_checks.csv`) and the questions in
 `photos.csv`. This is the thesis's multimodal dataset: a written case with the same patient's photos.
 
@@ -352,7 +352,7 @@ better, and invents less, when it sees the photos with the written case, and how
 
 ### 6. Maintenance
 
-- **Rebuild:** with the text dataset prepared, run in order `python -m src.build.cases.prepare count`, `download`, `check`, `build`.
+- **Rebuild:** with the text dataset prepared, run in order `python -m src.build.published_cases.photos count`, `download`, `check`, `build`.
   `count` and `download` need the internet; `check` needs the packages in `requirements.txt` and downloads its two models once.
 - **Fingerprints:** every question's text and every photo has its SHA-256 in `photos.csv`; every run checks the files against them.
   `photos.csv` itself: SHA-256 `cee3aa4b2699140bd59862c89d0fcd44fb959c84e45cb4bac1248ac642ac509f`.

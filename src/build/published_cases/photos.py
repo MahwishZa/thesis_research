@@ -3,10 +3,10 @@ report's figures show its own patient, so such a figure and the case text are on
 a free count of the cases whose article's open full text in PubMed Central has a figure whose caption shows the patient's skin
 lesion as a clinical or a dermoscopic photo, then the download, the check and the build.
 
-    python -m src.build.cases.prepare count     (needs the internet; downloads PubMed records and PMC full texts, no image)
-    python -m src.build.cases.prepare download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
-    python -m src.build.cases.prepare check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
-    python -m src.build.cases.prepare build     (the case dataset's table, data/published_cases/photos.csv, from the committed tables)
+    python -m src.build.published_cases.photos count     (needs the internet; downloads PubMed records and PMC full texts, no image)
+    python -m src.build.published_cases.photos download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
+    python -m src.build.published_cases.photos check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
+    python -m src.build.published_cases.photos build     (the case dataset's table, data/published_cases/photos.csv, from the committed tables)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/published_cases/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
@@ -68,7 +68,7 @@ from xml.etree import ElementTree
 from PIL import Image, ImageOps
 
 from ...common import fetch, read_rows, write_rows, write_section
-from ..text import prepare as textprep
+from . import text as textprep
 
 TEXT = textprep.DATA  # the text dataset: its table of cases and its class names
 _write_csv = write_rows
@@ -293,8 +293,8 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
     day = datetime.now(timezone.utc).date().isoformat()
     classes = sorted({r["class"] for r in rows})
     lines = ["# Figures of the text dataset's cases: a free count", "",
-             f"Written by `python -m src.build.cases.prepare count` on {day}. Only the captions were read: no image was downloaded or "
-             "looked at. The rules are in `src/build/cases/prepare.py`. A case counts when its article's full text is open in PubMed "
+             f"Written by `python -m src.build.published_cases.photos count` on {day}. Only the captions were read: no image was downloaded or "
+             "looked at. The rules are in `src/build/published_cases/photos.py`. A case counts when its article's full text is open in PubMed "
              "Central, the article holds no other case of the text dataset, and at least one figure's caption shows the lesion (it names "
              "dermoscopy, a clinical photo or a lesion) and names no microscope or stain, scan, state after treatment or at follow-up, "
              "removed specimen, drawing or chart, and no numbered case or several patients.", "",
@@ -428,7 +428,7 @@ def download(data: Path = DATA, show=None) -> dict:
     say = show or (lambda message: None)
     cases = [r for r in _read_csv(data / COUNT_TABLE) if r["counts"] == "yes"]
     if not (data / CAPTIONS).is_file():
-        raise FileNotFoundError(f"{(data / CAPTIONS).as_posix()} not found: run python -m src.build.cases.prepare count first")
+        raise FileNotFoundError(f"{(data / CAPTIONS).as_posix()} not found: run python -m src.build.published_cases.photos count first")
     with (data / CAPTIONS).open(encoding="utf-8") as f:
         captions = [json.loads(line) for line in f if line.strip()]
     chosen = {}
@@ -440,7 +440,7 @@ def download(data: Path = DATA, show=None) -> dict:
         figures = chosen.get(case["patient_uid"], [])
         if not figures:
             raise ValueError(f"{case['patient_uid']} counts in {COUNT_TABLE} but no figure of it does in {CAPTIONS.as_posix()}: run "
-                             "python -m src.build.cases.prepare count again")
+                             "python -m src.build.published_cases.photos count again")
         folder = data / FILES / IMAGES / _safe(case["pmcid"])
         done = folder / "record.json"
         if done.is_file():
@@ -494,7 +494,7 @@ def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
     saved = [r for r in rows if r["status"] == SAVED]
     with_picture = {r["patient_uid"] for r in saved}
     lines = ["# Pictures of the figures that count", "",
-             f"Written by `python -m src.build.cases.prepare download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
+             f"Written by `python -m src.build.published_cases.photos download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
              "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/published_cases/files/figures/images/`). "
              "Nothing in them was changed, and no person looked at them.", "",
              "| Class | Test: cases with a picture | Validation | Train |", "|---|---|---|---|"]
@@ -605,7 +605,7 @@ def check(data: Path = DATA, text: Path = TEXT, classify=None, read=None, show=N
         content = path.read_bytes()
         if hashlib.sha256(content).hexdigest() != picture["sha256"]:
             raise ValueError(f"{path.as_posix()} is not the picture {FILES_TABLE} lists (its fingerprint differs): run python -m "
-                             "src.build.cases.prepare download again")
+                             "src.build.published_cases.photos download again")
         known = cache.get(picture["sha256"])
         if not known or known.get("model") != list(IMAGE_MODEL) or known.get("kinds") != list(KINDS):
             if classify is None:
@@ -691,7 +691,7 @@ def _same(a: dict, b: dict) -> bool:
 def _checks_report(rows, cases, kept, decision, versions) -> list[str]:
     classes = sorted({c["class"] for c in cases})
     lines = ["# Checks of the pictures, each by itself", "",
-             f"Written by `python -m src.build.cases.prepare check` on {datetime.now(timezone.utc).date().isoformat()}. No person looked at "
+             f"Written by `python -m src.build.published_cases.photos check` on {datetime.now(timezone.utc).date().isoformat()}. No person looked at "
              f"the pictures. Image model: open_clip {IMAGE_MODEL[0]} ({IMAGE_MODEL[1]}), asked which of these a picture is: "
              + "; ".join(f"{k} (\"{v}\")" for k, v in KINDS.items()) + ". Writing: EasyOCR (English). Versions of the models' answers "
              "made in this run: " + (", ".join(f"{k} {v}" for k, v in sorted(versions.items())) or "none (all answers were kept from an "
@@ -758,7 +758,7 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
 
 def _cases_report(rows: list[dict], left_out: list[str]) -> list[str]:
     lines = ["# The case dataset", "",
-             "Written by `python -m src.build.cases.prepare build`. One question per case of the text dataset whose own article shows "
+             "Written by `python -m src.build.published_cases.photos build`. One question per case of the text dataset whose own article shows "
              "the lesion in pictures that passed every check (the check section): the frozen text question, word for word, and the "
              "pictures, byte for byte, in the order of their figures. No caption is shown. The splits are the text dataset's.", "",
              "| Class | Test | Validation | Train |", "|---|---|---|---|"]
@@ -775,7 +775,7 @@ def _cases_report(rows: list[dict], left_out: list[str]) -> list[str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m src.build.cases.prepare", description=__doc__.split("\n")[0])
+    parser = argparse.ArgumentParser(prog="python -m src.build.published_cases.photos", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")

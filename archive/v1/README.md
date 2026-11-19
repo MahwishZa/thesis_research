@@ -17,7 +17,7 @@ This folder is a frozen copy of Version 1 of the research, kept for reference. I
   `src/build/image_metadata`), their tests and their prompts on the same day (stage R2b), because nothing of Version 2 uses them. The
   tables, reports and data sheets are here; the code, the tests and the prompts are in Git history (`git checkout a1c9209`).
   The text and case datasets and the knowledge base stayed; they no longer read the photo datasets (the eight classes are a list in
-  `src/build/text/prepare.py`; the knowledge index no longer lists photos and its `cards` step is gone; the case builder keeps its
+  `src/build/published_cases/text.py`; the knowledge index no longer lists photos and its `cards` step is gone; the case builder keeps its
   rule for "the same picture", moved without change, and no longer compares with the ISIC photos, where it had found no match).
 
 ## What is here

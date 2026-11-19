@@ -42,7 +42,7 @@ from pathlib import Path
 
 from ...common import read_rows, write_rows, write_section
 from . import library as textlib
-from ..text import prepare as textprep
+from ..published_cases import text as textprep
 from .library import KNOWLEDGE, REPORT, REPORT_HEAD, STEPS
 
 TEXT = textprep.DATA  # the text dataset: its tables, and on this computer its downloads

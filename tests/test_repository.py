@@ -119,6 +119,20 @@ class RepositoryTests(unittest.TestCase):
         self.assertIn(f"| all | {len(photos)} | {complete} | " + " | ".join(map(str, gaps)) + " |", report)
         self.assertIn(f"Record template `{views.TEMPLATE_VERSION}` (fingerprint `{views.FINGERPRINT[:12]}`)", report)
 
+    def test_every_committed_report_has_the_head_and_the_sections_its_code_names_in_the_order_of_its_steps(self):
+        from src.build.clinic_patients import table
+        from src.build.knowledge import library
+        from src.build.published_cases import text
+        for path, head, steps in (("data/clinic_patients/dataset_report.md", table.REPORT_HEAD, table.STEPS),
+                                  ("data/published_cases/dataset_report.md", text.REPORT_HEAD, text.STEPS),
+                                  ("data/knowledge/dataset_report.md", library.REPORT_HEAD, library.STEPS)):
+            with self.subTest(path):
+                report = (ROOT / path).read_text(encoding="utf-8")
+                self.assertTrue(report.startswith("\n".join(head) + "\n"), "the head differs from the one the code writes")
+                found = re.findall(r"^<!-- step: (\w+) -->$", report, re.M)
+                self.assertEqual(found, [step for step in steps if step in found], "a section is not a step of the code, or out of order")
+                self.assertEqual(len(found), len(set(found)))
+
     def test_every_prompt_file_is_a_template_with_one_label_placeholder_and_a_final_line_break(self):
         files = sorted((ROOT / "prompts").rglob("*"))
         self.assertEqual(sorted(p for p in files if p.is_file()), sorted(ROOT / run.prompt_file(d, a) for d in datasets.DATASETS for a in run.APPROACHES),

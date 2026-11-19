@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from src.build.knowledge import index
-from src.build.text.prepare import CLASSES
+from src.build.published_cases.text import CLASSES
 
 
 def write_table(path: Path, rows: list[dict]) -> None:

@@ -1,15 +1,17 @@
-"""The independent check of the text dataset (src/build/text/audit.py) and the revision it leads to (src/build/text/prepare.py,
+"""The independent check of the text dataset (src/build/published_cases/audit.py) and the revision it leads to (src/build/published_cases/text.py,
 step revise), on a dataset built from the build's made-up cases."""
 
 import contextlib
 import io
 import json
 import re
+import unittest
 from unittest import mock
 
-from src.build.text import audit, prepare
+from src.build.published_cases import audit
+from src.build.published_cases import text as prepare
 
-from .test_prepare import BCC_TEXT, BuildData
+from .test_text import BCC_TEXT, BuildData
 
 REVIEW = audit.review
 
@@ -411,7 +413,7 @@ class ReviseTests(ReviewData):
         with self.assertRaisesRegex(ValueError, "2008-1 is in test/melanoma in dataset.csv but in train/melanoma"):
             prepare.revise(self.data)
         (self.data / audit.REVIEW_FLAGS).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.build.text.audit review first"):
+        with self.assertRaisesRegex(FileNotFoundError, "run python -m src.build.published_cases.audit review first"):
             prepare.revise(self.data)
         self.assertEqual(self._table(), self.before)  # nothing written
         self.assertTrue((self.data / prepare.TEXT_FILES / self.path).is_file())
@@ -423,3 +425,11 @@ class ReviseTests(ReviewData):
             prepare.main(["revise"])
         self.assertIn("Version 3: 8 questions, each in its split; taken out by the rule: 1 (from the table now: 1; files moved now: 1",
                       shown.getvalue())
+
+
+class CommandNameTests(unittest.TestCase):
+    def test_the_documented_commands_name_this_module_and_the_usage_message_too(self):
+        self.assertIn("python -m src.build.published_cases.audit ", audit.__doc__)
+        self.assertIn("python -m src.build.published_cases.audit review", audit.__doc__)
+        with self.assertRaisesRegex(SystemExit, r"usage: python -m src\.build\.published_cases\.audit \[review\]"):
+            audit.main(["other"])

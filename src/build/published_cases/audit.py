@@ -1,7 +1,7 @@
 """Independent check of the text dataset, run where its texts are (they are not in Git):
 
-    python -m src.build.text.audit            the checks every question must pass (a failure stops)
-    python -m src.build.text.audit review     signals of a doubtful label or of leakage, for deciding on a new version (no failure)
+    python -m src.build.published_cases.audit            the checks every question must pass (a failure stops)
+    python -m src.build.published_cases.audit review     signals of a doubtful label or of leakage, for deciding on a new version (no failure)
 
 It reads dataset.csv, the question files in data/published_cases/files/text/ and the downloaded sources, and checks, with code of its own (not
 the build's), that every question:
@@ -64,7 +64,7 @@ from pathlib import Path
 from ...common import write_section
 from ...datasets import SYSTEM_FILES, TABLE_NAME
 from ..knowledge.library import FOLDER as KNOWLEDGE_TEXTS, KNOWLEDGE
-from .prepare import (ABSTRACTS, DOWNLOADS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
+from .text import (ABSTRACTS, DOWNLOADS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
                       SKIN_WORDS, STEPS, SURFACE, TERMS, TEXT_FILES, _json_list)
 
 MIN_WORDS = 25
@@ -359,7 +359,7 @@ def _review_summary(rows: list[dict], runs: list[Path]) -> list[str]:
     def count(rows_, key, value=None):
         return sum(1 for r in rows_ if (r[key] == value if value is not None else bool(r[key])))
     lines = ["# Review: signals of a doubtful label or of leakage", "",
-             "Written by `python -m src.build.text.audit review`, with rules fixed before it was first run (see `src/build/text/audit.py`). "
+             "Written by `python -m src.build.published_cases.audit review`, with rules fixed before it was first run (see `src/build/published_cases/audit.py`). "
              "It changes nothing: it gives the evidence for deciding on a new version. One row per question in `build/review_flags.csv`. "
              f"Closed-book test runs read: {len(runs)}.", "",
              "| Signal | Test | Validation | Train | All |", "|---|---|---|---|---|"]
@@ -505,7 +505,7 @@ def _summary(rows, failures) -> list[str]:
               "no test result after the question names its class",
               "question the same as another", DUPLICATE]
     lines = ["# Audit: an independent check of the questions", "",
-             "Written by `python -m src.build.text.audit`, on the computer that holds the texts, with code of its own (not the "
+             "Written by `python -m src.build.published_cases.audit`, on the computer that holds the texts, with code of its own (not the "
              "build's): every question file is checked against its fingerprint and its source, and for the class's names, short "
              "forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the "
              "skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis)."
@@ -529,7 +529,7 @@ def main(argv: list[str] | None = None) -> None:
               "Commit both.")
         return
     if argv:
-        raise SystemExit("usage: python -m src.build.text.audit [review]")
+        raise SystemExit("usage: python -m src.build.published_cases.audit [review]")
     try:
         done = audit(show=print)
     except (ValueError, FileNotFoundError) as exc:

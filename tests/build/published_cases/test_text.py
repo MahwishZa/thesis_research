@@ -1,4 +1,4 @@
-"""The text dataset's preparation (src/build/text/prepare.py), with a local stand-in for NCBI's E-utilities (MeSH records and PubMed
+"""The text dataset's preparation (src/build/published_cases/text.py), with a local stand-in for NCBI's E-utilities (MeSH records and PubMed
 counts), so no test reaches the internet."""
 
 import contextlib
@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest import mock
 from xml.etree import ElementTree
 
-from src.build.text import prepare
+from src.build.published_cases import text as prepare
 
 ROOT = Path(__file__).resolve().parents[3]
 CLASSES = ["melanoma", "nevus"]
@@ -260,7 +260,7 @@ class HuggingFaceServer(unittest.TestCase):
         base = f"http://127.0.0.1:{self.server.server_port}"
         for patcher in (mock.patch.object(prepare, "HF_API", base + "/api/datasets/{repo}"),
                         mock.patch.object(prepare, "HF_FILE", base + "/datasets/{repo}/resolve/{commit}/{file}"),
-                        mock.patch("src.common.time.sleep"), mock.patch("src.build.text.prepare.time.sleep")):
+                        mock.patch("src.common.time.sleep"), mock.patch("src.build.published_cases.text.time.sleep")):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.folder = self.data / prepare.DOWNLOADS / "pmc_patients"
@@ -760,7 +760,7 @@ class MeshTests(MeshServer):
     def test_names_not_checked_by_the_survey_a_refusal_or_an_answer_that_does_not_fit_stop_the_step(self):
         (self.data / prepare.TERMS).write_text(TERMS + "nevus,Spitz nevus,yes,ISIC,\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "does not list the names of build/class_terms.csv as they are now: run python -m "
-                                                "src.build.text.prepare survey again"):
+                                                "src.build.published_cases.text survey again"):
             prepare.mesh(self.data, classes=CLASSES)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
         for mode, message in (("refused", "PubMed did not take the article numbers: Too many UIDs"),
@@ -770,11 +770,11 @@ class MeshTests(MeshServer):
                 prepare.mesh(self.data, classes=CLASSES)
             self.assertFalse((self.data / prepare.MESH_TABLE).exists())
         (self.data / prepare.ABSTRACT_CANDIDATES).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "abstract_candidates.csv not found: run python -m src.build.text.prepare abstracts "
+        with self.assertRaisesRegex(FileNotFoundError, "abstract_candidates.csv not found: run python -m src.build.published_cases.text abstracts "
                                                        "first"):
             prepare.mesh(self.data, classes=CLASSES)
         (self.data / prepare.CANDIDATES).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "case_candidates.csv not found: run python -m src.build.text.prepare cases first"):
+        with self.assertRaisesRegex(FileNotFoundError, "case_candidates.csv not found: run python -m src.build.published_cases.text cases first"):
             prepare.mesh(self.data, classes=CLASSES)
 
     def test_the_command_line_prints_the_confirmed_articles_per_class(self):
@@ -995,17 +995,17 @@ class BuildTests(BuildData):
     def test_a_missing_step_stops_the_build_and_names_the_command_to_run(self):
         self._mesh({"2001": ("yes", "")})
         with self.assertRaisesRegex(ValueError, "article_mesh.csv lacks 14 candidate article.s., for example 2002: run python -m "
-                                                "src.build.text.prepare mesh again"):
+                                                "src.build.published_cases.text mesh again"):
             prepare.build(self.data, classes=self.CLASSES)
         (self.data / prepare.MESH_TABLE).unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "article_mesh.csv not found: run python -m src.build.text.prepare mesh first"):
+        with self.assertRaisesRegex(FileNotFoundError, "article_mesh.csv not found: run python -m src.build.published_cases.text mesh first"):
             prepare.build(self.data, classes=self.CLASSES)
         self._mesh(BUILD_MESH)
         (self.data / "downloads" / "pubmed" / "abstracts.jsonl").unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "abstracts.jsonl not found: run python -m src.build.text.prepare abstracts first"):
+        with self.assertRaisesRegex(FileNotFoundError, "abstracts.jsonl not found: run python -m src.build.published_cases.text abstracts first"):
             prepare.build(self.data, classes=self.CLASSES)
         (self.folder / "PMC-Patients-V2.json").unlink()
-        with self.assertRaisesRegex(FileNotFoundError, "PMC-Patients-V2.json not found: run python -m src.build.text.prepare cases first"):
+        with self.assertRaisesRegex(FileNotFoundError, "PMC-Patients-V2.json not found: run python -m src.build.published_cases.text cases first"):
             prepare.build(self.data, classes=self.CLASSES)
         self.assertFalse((self.data / "dataset.csv").exists())
 
@@ -1334,7 +1334,7 @@ class TermsTests(unittest.TestCase):
             self.assertEqual(sorted({r["label"] for r in csv.DictReader(f)}), classes)
 
     def test_every_command_in_the_usage_documentation_is_accepted(self):
-        usage = re.findall(r"^\s+python -m src\.build\.text\.prepare (.+?)$", prepare.__doc__, re.M)
+        usage = re.findall(r"^\s+python -m src\.build\.published_cases\.text (.+?)$", prepare.__doc__, re.M)
         self.assertGreaterEqual(len(usage), 1)
         for line in usage:
             prepare.build_parser().parse_args(shlex.split(line))

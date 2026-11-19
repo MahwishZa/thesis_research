@@ -44,7 +44,7 @@ from xml.etree import ElementTree
 
 from ...common import fetch, write_section
 from ...datasets import TABLE_NAME
-from ..text.prepare import (ABSTRACT_CANDIDATES, CLASSES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
+from ..published_cases.text import (ABSTRACT_CANDIDATES, CLASSES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
                       HUMANS, NOT_SKIN, SKIN, TEXT_FILES, _checked_headings, _efetch,
                       _found, _licence, _matcher, _named, _pmc_articles, _read_csv, _search, _sentence_starts, _sha256, _stream,
                       _subject, _tokens, _write_csv)
@@ -139,13 +139,13 @@ def _question_runs(data: Path) -> set[tuple[str, ...]]:
     """Every run of SHARED_RUN words (plain, lower case) in the dataset's questions."""
     table, folder = data / TABLE_NAME, data / TEXT_FILES
     if not table.is_file():
-        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.build.text.prepare build first")
+        raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.build.published_cases.text build first")
     runs = set()
     with table.open(encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
             path = folder / row["path"]
             if not path.is_file():
-                raise FileNotFoundError(f"{path.as_posix()} not found: run python -m src.build.text.prepare build first")
+                raise FileNotFoundError(f"{path.as_posix()} not found: run python -m src.build.published_cases.text build first")
             runs |= _runs(path.read_text(encoding="utf-8"))
     return runs
 

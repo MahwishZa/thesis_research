@@ -27,9 +27,9 @@ class DatasetKindTests(unittest.TestCase):
         self.assertEqual((datasets.TABLE, datasets.IMAGES), datasets.dataset_paths("clinic_photo"))
 
     def test_the_loader_and_the_builders_agree_on_where_the_tables_and_files_are(self):
-        from src.build.cases import prepare as figures
+        from src.build.published_cases import photos as figures
         from src.build.clinic_patients import table, views
-        from src.build.text import prepare
+        from src.build.published_cases import text as prepare
         self.assertEqual(datasets.dataset_paths("published_text"), (prepare.DATA / "dataset.csv", prepare.DATA / prepare.TEXT_FILES))
         for name in ("published_text_photos", "published_photos"):
             self.assertEqual(datasets.dataset_paths(name), (figures.DATA / figures.CASES_TABLE, prepare.DATA / prepare.TEXT_FILES))

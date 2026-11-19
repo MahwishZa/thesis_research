@@ -27,7 +27,7 @@ from collections import Counter
 from pathlib import Path
 
 from ...common import write_section
-from ..text.prepare import CLASSES, DATA as TEXT
+from ..published_cases.text import CLASSES, DATA as TEXT
 from .library import KNOWLEDGE, REPORT, REPORT_HEAD, STEPS
 
 INDEX_TABLE, DISEASES_TABLE = "index.csv", "diseases.csv"

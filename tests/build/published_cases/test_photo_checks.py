@@ -1,4 +1,4 @@
-"""The check of the saved pictures (src/build/cases/prepare.py, step "check"), with the image model and the reader replaced."""
+"""The check of the saved pictures (src/build/published_cases/photos.py, step "check"), with the image model and the reader replaced."""
 
 import csv
 import hashlib
@@ -12,7 +12,7 @@ from unittest import mock
 
 from PIL import Image
 
-from src.build.cases import prepare as figures
+from src.build.published_cases import photos as figures
 
 
 def noise(seed: int, size=(300, 200)) -> bytes:
