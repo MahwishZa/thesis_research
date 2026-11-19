@@ -6,6 +6,7 @@ lesion as a clinical or a dermoscopic photo, then the download, the check and th
     python -m src.build.published_cases.photos count     (needs the internet; downloads PubMed records and PMC full texts, no image)
     python -m src.build.published_cases.photos download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
     python -m src.build.published_cases.photos check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
+    python -m src.build.published_cases.photos overlap   (compares every kept picture with the clinic patients' photos; needs their originals)
     python -m src.build.published_cases.photos build     (the case dataset's table, data/published_cases/photos.csv, from the committed tables)
 
 Only captions are read: no image is downloaded or looked at. For each case of data/published_cases/dataset.csv, PubMed gives the article's PMC
@@ -39,6 +40,12 @@ again to the cases that keep one. The table data/published_cases/build/figure_ch
 counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
 are kept in data/published_cases/downloads/figures/checks.jsonl (not in Git), so a second run does not ask them again.
 
+``overlap`` compares every picture that passed the check with every original photo of the clinic patients dataset (PAD-UFES-20,
+data/clinic_patients/raw/, checked against build/raw_images.csv), by the same rule as between cases (``SAME``). The two datasets are
+asked of the same models and may share precedents, so a picture in both would be a leak between them. It finds the same picture at
+another size or compression; a crop, or a picture with something added, is not found. It writes build/figure_overlap.csv (one row for
+every match, none if there is none) and the overlap section of dataset_report.md; ``build`` leaves out the pictures listed in it.
+
 ``build`` writes the case dataset: one question per case that keeps a picture, in data/published_cases/photos.csv. A question is the
 text dataset's frozen question (path and fingerprint as in data/published_cases/dataset.csv, same split and class) and the case's kept
 pictures, in the order of their figures. A case with kept pictures that the text dataset no longer holds (taken out by a later
@@ -68,6 +75,7 @@ from xml.etree import ElementTree
 from PIL import Image, ImageOps
 
 from ...common import fetch, read_rows, write_rows, write_section
+from ..clinic_patients import table as clinic_table
 from . import text as textprep
 
 TEXT = textprep.DATA  # the text dataset: its table of cases and its class names
@@ -93,6 +101,10 @@ FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "pi
 PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
 SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not open access in PMC", "the article is retracted",
                                                    "no picture file for the figure among the article's files", "the picture cannot be opened")
+OVERLAP_TABLE = "build/figure_overlap.csv"
+OVERLAP_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "clinic_img_id", "shape_difference_pct",
+                   "hash_distance", "mean_difference"]
+CLINIC = clinic_table.DATA  # the clinic patients dataset: its originals are in CLINIC / clinic_table.RAW, listed in CLINIC / build / raw_images.csv
 CHECKS_TABLE = "build/figure_checks.csv"
 CHECK_CACHE = Path("downloads") / "figures" / "checks.jsonl"  # in DATA, not in Git: the models' answers, by picture fingerprint
 MIN_SIDE = 128  # pixels on the shorter side; fixed before any picture was seen
@@ -721,6 +733,69 @@ def _checks_report(rows, cases, kept, decision, versions) -> list[str]:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# Step "overlap": is a kept picture also a photo of the clinic patients dataset?
+
+
+def overlap(data: Path = DATA, clinic: Path = CLINIC, show=None) -> dict:
+    """The overlap step (see the module's description): build/figure_overlap.csv and the overlap section of the report."""
+    data, clinic = Path(data), Path(clinic)
+    say = show or (lambda message: None)
+    kept = [r for r in _read_csv(data / CHECKS_TABLE) if r["kept"] == "yes"]
+    mine = []
+    for r in kept:
+        path = data / FILES / r["file"]
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != r["sha256"]:
+            raise ValueError(f"{path.as_posix()} is not the picture {CHECKS_TABLE} lists (its fingerprint differs): run python -m "
+                             "src.build.published_cases.photos download again")
+        mine.append(_signature(content))
+    originals = read_rows(clinic / clinic_table.BUILD / "raw_images.csv",
+                          "run python -m src.build.clinic_patients.prepare inventory first, with the originals in " + (clinic / clinic_table.RAW).as_posix())
+    pairs = []
+    for number, entry in enumerate(originals, start=1):
+        path = clinic / clinic_table.RAW / entry["file"]
+        if not path.is_file():
+            raise FileNotFoundError(f"{path.as_posix()} not found: the original PAD-UFES-20 photos must be in {(clinic / clinic_table.RAW).as_posix()}")
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != entry["sha256"]:
+            raise ValueError(f"{path.as_posix()} is not the photo {(clinic / clinic_table.BUILD / 'raw_images.csv').as_posix()} lists "
+                             "(its fingerprint differs): the original download must stay as downloaded")
+        theirs = _signature(content)
+        for picture, signature in zip(kept, mine):
+            if _same(signature, theirs):
+                pairs.append({**{k: picture[k] for k in ("patient_uid", "split", "class", "pmcid", "figure", "file", "sha256")},
+                              "clinic_img_id": entry["img_id"], **_compare(signature, theirs)})
+        if number % 200 == 0:
+            say(f"{number} of {len(originals)} photos compared")
+    pairs.sort(key=lambda r: (r["patient_uid"], r["figure"], r["file"], r["clinic_img_id"]))
+    _write_csv(data / OVERLAP_TABLE, OVERLAP_COLUMNS, pairs)
+    report = data / REPORT
+    write_section(report, REPORT_HEAD, STEPS, "photos_overlap", _overlap_report(len(kept), len(originals), pairs))
+    return {"pairs": pairs, "pictures": len(kept), "photos": len(originals), "table": (data / OVERLAP_TABLE).as_posix(),
+            "report": report.as_posix()}
+
+
+def _overlap_report(pictures: int, photos: int, pairs: list[dict]) -> list[str]:
+    cases = sorted({p["patient_uid"] for p in pairs})
+    lines = ["# Overlap with the clinic patients dataset", "",
+             "Written by `python -m src.build.published_cases.photos overlap`. Every picture that passed the check is compared with every "
+             "original photo of the clinic patients dataset (PAD-UFES-20) by the rule for \"the same picture\" (`SAME`: the shape within "
+             f"{SAME['shape_difference_pct']:g}%, the 64-bit hash within {SAME['hash_distance']} bits and the mean colour difference of "
+             f"32 x 32 versions at most {SAME['mean_difference']:g}). No person looked at the pictures.", "",
+             f"- Pictures compared: {pictures}; clinic photos compared with each: {photos}.",
+             f"- Pictures that are the same as a clinic photo: {len(pairs)}" + (f", of {len(cases)} cases ({', '.join(cases)})" if cases else "")
+             + ". " + ("`build` leaves them out." if pairs else "No picture is left out."), ""]
+    if pairs:
+        lines += ["| Case | Picture | Clinic photo | Shape difference (%) | Hash distance | Mean difference |", "|---|---|---|---|---|---|"]
+        lines += [f"| {p['patient_uid']} | `{p['file']}` | `{p['clinic_img_id']}` | {p['shape_difference_pct']} | {p['hash_distance']} | "
+                  f"{p['mean_difference']} |" for p in pairs[:50]]
+        lines.append("")
+    lines += ["The rule finds the same picture at another size or compression. It does not find a crop, a picture with something added "
+              "(an arrow, a scale bar) or a different photo of the same lesion, so a match is a leak and no match is not a proof of none.", ""]
+    return lines
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # Step "build": the case dataset's table
 
 
@@ -730,6 +805,11 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
     text dataset's table."""
     data, text = Path(data), Path(text)
     kept = [r for r in _read_csv(data / CHECKS_TABLE) if r["kept"] == "yes"]
+    if not (data / OVERLAP_TABLE).is_file():
+        raise FileNotFoundError(f"{(data / OVERLAP_TABLE).as_posix()} not found: run python -m src.build.published_cases.photos overlap first")
+    shared = {(r["patient_uid"], r["figure"], r["file"]) for r in _read_csv(data / OVERLAP_TABLE)}
+    in_both = [r for r in kept if (r["patient_uid"], r["figure"], r["file"]) in shared]
+    kept = [r for r in kept if (r["patient_uid"], r["figure"], r["file"]) not in shared]
     labels = {(r["patient_uid"], r["figure"]): r["label"] for r in _read_csv(data / FILES_TABLE)}
     questions = {r["patient_uid"]: r for r in _read_csv(text / "dataset.csv")}
     by_case = {}
@@ -752,11 +832,11 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
     rows.sort(key=lambda r: r["path"])
     _write_csv(data / CASES_TABLE, CASES_COLUMNS, rows)
     report = data / REPORT
-    write_section(report, REPORT_HEAD, STEPS, "photos_build", _cases_report(rows, left_out))
+    write_section(report, REPORT_HEAD, STEPS, "photos_build", _cases_report(rows, left_out, in_both))
     return {"rows": rows, "table": (data / CASES_TABLE).as_posix(), "report": report.as_posix()}
 
 
-def _cases_report(rows: list[dict], left_out: list[str]) -> list[str]:
+def _cases_report(rows: list[dict], left_out: list[str], in_both: list[dict]) -> list[str]:
     lines = ["# The case dataset", "",
              "Written by `python -m src.build.published_cases.photos build`. One question per case of the text dataset whose own article shows "
              "the lesion in pictures that passed every check (the check section): the frozen text question, word for word, and the "
@@ -770,7 +850,9 @@ def _cases_report(rows: list[dict], left_out: list[str]) -> list[str]:
     lines += ["", f"Questions: {len(rows)}; pictures: {sum(int(r['n_pictures']) for r in rows)}. Pictures per question: "
               + ", ".join(f"{k}: {many[k]}" for k in sorted(many)) + ".",
               f"Cases with kept pictures that the text dataset no longer holds (left out by its review): {len(left_out)}"
-              + (f" ({', '.join(sorted(left_out))})" if left_out else "") + ".", ""]
+              + (f" ({', '.join(sorted(left_out))})" if left_out else "") + ".",
+              f"Pictures left out because they are also a photo of the clinic patients dataset (the overlap section): {len(in_both)}"
+              + (f", of {len({r['patient_uid'] for r in in_both})} cases" if in_both else "") + ".", ""]
     return lines
 
 
@@ -780,6 +862,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")
     sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
+    sub.add_parser("overlap", help="compare every kept picture with the photos of the clinic patients dataset (needs their originals)")
     sub.add_parser("build", help="write the case dataset's table, data/published_cases/photos.csv, from the committed tables")
     return parser
 
@@ -797,6 +880,11 @@ def main(argv: list[str] | None = None) -> None:
             d = done["decision"]
             print(f"{sum(r['kept'] == 'yes' for r in done['rows'])} of {len(done['rows'])} pictures kept; {d['test_cases']} test cases keep "
                   f"one; classes with at least {GO_PER_CLASS}: {len(d['classes_with_enough'])}. Rule {'met' if d['build'] else 'not met'}. "
+                  f"Written: {done['table']} and {done['report']}. Commit both.")
+            return
+        if args.step == "overlap":
+            done = overlap(show=print)
+            print(f"{done['pictures']} pictures compared with {done['photos']} clinic photos: {len(done['pairs'])} are the same picture. "
                   f"Written: {done['table']} and {done['report']}. Commit both.")
             return
         if args.step == "download":

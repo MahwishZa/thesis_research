@@ -287,8 +287,9 @@ Every question file has its own SHA-256 in `dataset.csv`; the audit checks the q
 ## Part B. The photos of the cases (case dataset, version 2)
 
 This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come
-from the files `python -m src.build.published_cases.photos` writes: `dataset_report.md` (one section per step: `count`, `download`, `check`,
-`build`), the build records in `build/` (`figure_count.csv`, `figure_files.csv`, `figure_checks.csv`) and the questions in
+from the files `python -m src.build.published_cases.photos` writes: `dataset_report.md` (one section per step: `photos_count`, `photos_download`, `photos_check`,
+`photos_overlap`, `photos_build`), the build records in `build/` (`figure_count.csv`, `figure_files.csv`, `figure_checks.csv`,
+`figure_overlap.csv`) and the questions in
 `photos.csv`. This is the thesis's multimodal dataset: a written case with the same patient's photos.
 
 ### At a glance
@@ -301,7 +302,7 @@ from the files `python -m src.build.published_cases.photos` writes: `dataset_rep
 | Text | the text dataset's frozen question of the case, word for word (the case description up to the diagnosis) |
 | Photos | 451, 1 to 8 per question (231 questions have one); published with the case, byte for byte; mostly clinical photos, some dermoscopy |
 | Link between photo and text | the same patient: both come from the same case report, which holds no other case of the dataset |
-| Asked as | text and photos (dataset `cases`), photos only (`case_photos`); the text only is the text dataset, on the same cases |
+| Asked as | text and photos (dataset `published_text_photos`), photos only (`published_photos`); the text only is `published_text`, on the same cases |
 | Captions | never shown (they often name the diagnosis) |
 
 ### 1. Motivation
@@ -327,7 +328,8 @@ better, and invents less, when it sees the photos with the written case, and how
 | count | read the captions of each case's article in PubMed Central; a figure counts when its caption shows the lesion (a clinical or dermoscopic photo, or a lesion) and names no microscope or stain, scan, state after treatment, removed specimen, chart, or another patient; an article with another case of the dataset is left out | 107 test cases (rule fixed before the count: at least 80, and 6 classes with at least 8) |
 | download | the counted figures' pictures from PMC Article Datasets (NCBI's cloud copy of PubMed Central's open-access articles), each checked against PMC's MD5 checksum; not open access or retracted: nothing | 492 pictures for 339 of 347 cases |
 | check | each picture by itself: at least 128 pixels; no writing that names a diagnosis (EasyOCR); seen as a clinical or dermoscopy photo by an image model (open_clip ViT-B-32); not the same picture as another case's (on 2026-11-18 it was also compared with the photos of the Version 1 image dataset, with no match; that comparison left the code on 2026-11-19 with the dataset) | 468 kept; 24 not a skin photo, 1 names a diagnosis |
-| build | one question per case with a kept picture that the text dataset still holds | 324 questions (11 cases left out with the text dataset's version 3) |
+| overlap | each kept picture compared with the 2,298 original photos of the clinic patients dataset (PAD-UFES-20), by the rule that is used between cases; a match would be a picture in both datasets and is left out by `build` | ◻ not run yet: the result goes here and in `build/figure_overlap.csv` (it needs the PAD-UFES-20 originals on the researcher's computer) |
+| build | one question per case with a kept picture (not one that `overlap` found in the clinic patients dataset) that the text dataset still holds | 324 questions (11 cases left out with the text dataset's version 3) |
 
 ### 4. Uses and limits
 

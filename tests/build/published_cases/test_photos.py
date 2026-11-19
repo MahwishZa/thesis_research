@@ -366,7 +366,7 @@ class CommandLineTests(unittest.TestCase):
 class UsageDocumentationTests(unittest.TestCase):
     def test_every_command_in_the_usage_documentation_is_accepted_and_names_this_module(self):
         usage = re.findall(r"^\s+python -m src\.build\.published_cases\.photos (\w+)", figures.__doc__, re.M)
-        self.assertEqual(usage, ["count", "download", "check", "build"])
+        self.assertEqual(usage, ["count", "download", "check", "overlap", "build"])
         for step in usage:
             self.assertEqual(figures.build_parser().parse_args([step]).step, step)
         with self.assertRaises(SystemExit):

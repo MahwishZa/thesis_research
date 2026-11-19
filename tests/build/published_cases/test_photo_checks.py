@@ -1,5 +1,6 @@
 """The check of the saved pictures (src/build/published_cases/photos.py, step "check"), with the image model and the reader replaced."""
 
+import contextlib
 import csv
 import hashlib
 import io
@@ -206,7 +207,7 @@ class CheckTests(unittest.TestCase):
         self.assertEqual((figures.DATA, figures.REPORT, figures.REPORT_HEAD), (figures.textprep.DATA, figures.textprep.REPORT, figures.textprep.REPORT_HEAD))
         self.assertEqual(figures.DATA.as_posix(), "data/published_cases")
         self.assertIs(figures.STEPS, figures.textprep.STEPS)
-        self.assertEqual(figures.STEPS[-4:], ("photos_count", "photos_download", "photos_check", "photos_build"))
+        self.assertEqual(figures.STEPS[-5:], ("photos_count", "photos_download", "photos_check", "photos_overlap", "photos_build"))
         self.assertEqual((figures.FILES, figures.IMAGES, figures.CAPTIONS, figures.CHECK_CACHE, figures.CASES_TABLE),
                          (Path("files"), Path("figures/images"), Path("downloads/figures/captions.jsonl"),
                           Path("downloads/figures/checks.jsonl"), "photos.csv"))
@@ -219,10 +220,6 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(figures.MIN_SIDE, 128)
         self.assertEqual(figures.SKIN_KINDS, ("clinical photo", "dermoscopy"))
         self.assertEqual(list(figures.KINDS), ["clinical photo", "dermoscopy", "microscopy", "scan", "drawing"])
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class BuildTests(unittest.TestCase):
@@ -249,6 +246,7 @@ class BuildTests(unittest.TestCase):
                           {"split": "val", "label": "nevus", "path": "val/nevus/c3.txt", "sha256": "3" * 64, "patient_uid": "c3", "pmid": "13"},
                           {"split": "test", "label": "nevus", "path": "test/nevus/c4.txt", "sha256": "4" * 64, "patient_uid": "c4", "pmid": "14"}]
         write_csv(self.text / "dataset.csv", ["split", "label", "path", "sha256", "patient_uid", "pmid"], self.questions)
+        write_csv(self.data / figures.OVERLAP_TABLE, figures.OVERLAP_COLUMNS, [])  # the overlap step found nothing
 
     def test_one_question_per_case_that_keeps_a_picture_with_its_pictures_in_figure_order(self):
         done = figures.build(self.data, self.text)
@@ -262,6 +260,7 @@ class BuildTests(unittest.TestCase):
         self.assertIn("<!-- step: photos_build -->", report)
         self.assertNotIn("<!-- step: build -->", report)
         self.assertIn("Questions: 2; pictures: 3. Pictures per question: 1: 1, 2: 1.", report)
+        self.assertIn("Pictures left out because they are also a photo of the clinic patients dataset (the overlap section): 0.", report)
         with (self.data / figures.CASES_TABLE).open(encoding="utf-8", newline="") as f:
             self.assertEqual(next(csv.reader(f)), figures.CASES_COLUMNS)
 
@@ -279,3 +278,142 @@ class BuildTests(unittest.TestCase):
         report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         self.assertIn("Cases with kept pictures that the text dataset no longer holds (left out by its review): 1 (c1).", report)
         self.assertNotIn("c1", (self.data / figures.CASES_TABLE).read_text(encoding="utf-8"))
+
+    def test_a_picture_that_is_also_a_clinic_photo_is_left_out_and_a_case_with_none_left_is_dropped(self):
+        shared = [{"patient_uid": "c1", "figure": "f2", "file": "figures/images/P1/f2-b.jpg"},
+                  {"patient_uid": "c2", "figure": "F1", "file": "figures/images/P2/F1-d.jpg"}]
+        write_csv(self.data / figures.OVERLAP_TABLE, figures.OVERLAP_COLUMNS, shared)
+        done = figures.build(self.data, self.text)
+        self.assertEqual([(r["patient_uid"], r["pictures"], r["n_pictures"]) for r in done["rows"]],
+                         [("c1", f"figures/images/P1/f10-a.jpg|{'a' * 64}", 1)])  # c2 had only the picture that is a clinic photo
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
+        self.assertIn("Pictures left out because they are also a photo of the clinic patients dataset (the overlap section): 2, of 2 cases.", report)
+        self.assertIn("Questions: 1; pictures: 1.", report)
+
+    def test_a_listed_picture_of_a_picture_that_was_not_kept_changes_nothing_and_a_missing_overlap_table_stops_the_build(self):
+        write_csv(self.data / figures.OVERLAP_TABLE, figures.OVERLAP_COLUMNS,
+                  [{"patient_uid": "c3", "figure": "F1", "file": "figures/images/P3/F1-e.jpg"}])  # c3's picture was not kept anyway
+        self.assertEqual(len(figures.build(self.data, self.text)["rows"]), 2)
+        (self.data / figures.CASES_TABLE).unlink()
+        (self.data / figures.OVERLAP_TABLE).unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "figure_overlap.csv not found: run python -m src.build.published_cases.photos overlap first"):
+            figures.build(self.data, self.text)
+        self.assertFalse((self.data / figures.CASES_TABLE).exists())
+
+
+def clinic_photo(seed: int, background=(200, 150, 140)) -> bytes:
+    out = io.BytesIO()
+    lesion(seed, background).save(out, "PNG")
+    return out.getvalue()
+
+
+class OverlapTests(unittest.TestCase):
+    """The comparison of the kept pictures with the clinic patients' photos (step "overlap"), on invented pictures and photos."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        base = Path(tmp.name)
+        self.data, self.clinic = base / "published_cases", base / "clinic_patients"
+        self.photos = {"PAT_A.png": clinic_photo(1), "PAT_B.png": clinic_photo(5, (100, 200, 100)), "PAT_C.png": clinic_photo(8), "PAT_D.png": clinic_photo(9, (50, 50, 200))}
+        entries = []
+        for name, content in self.photos.items():
+            path = self.clinic / "raw" / "imgs" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+            entries.append({"img_id": name, "file": f"imgs/{name}", "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(),
+                            "format": "PNG", "width": 200, "height": 150})
+        write_csv(self.clinic / "build" / "raw_images.csv", ["img_id", "file", "bytes", "sha256", "format", "width", "height"], entries)
+        pictures = [("c1", "f1", saved(lesion(1), quality=60, size=(100, 75)), "yes"),  # PAT_A again, smaller and more compressed
+                    ("c2", "f1", saved(lesion(3, background=(150, 170, 210))), "yes"),  # another lesion
+                    ("c3", "f1", saved(lesion(1), quality=60, size=(100, 75)), "no"),  # PAT_A again, but it did not pass the check
+                    ("c4", "f1", self.photos["PAT_B.png"], "yes")]  # PAT_B itself
+        rows = []
+        for uid, figure, content, kept in pictures:
+            file = f"figures/images/{uid}/{figure}.png"
+            (self.data / "files" / file).parent.mkdir(parents=True, exist_ok=True)
+            (self.data / "files" / file).write_bytes(content)
+            rows.append({"patient_uid": uid, "split": "test", "class": "melanoma", "pmcid": f"PMC{uid}", "figure": figure, "file": file,
+                         "sha256": hashlib.sha256(content).hexdigest(), "kept": kept})
+        self.rows = rows
+        write_csv(self.data / figures.CHECKS_TABLE, figures.CHECK_COLUMNS, rows)
+
+    def table(self):
+        with (self.data / figures.OVERLAP_TABLE).open(encoding="utf-8", newline="") as f:
+            return list(csv.DictReader(f))
+
+    def test_the_same_picture_at_another_size_or_the_same_file_is_found_and_a_different_picture_is_not(self):
+        done = figures.overlap(self.data, self.clinic)
+        self.assertEqual([(p["patient_uid"], p["clinic_img_id"]) for p in done["pairs"]], [("c1", "PAT_A.png"), ("c4", "PAT_B.png")])
+        rows = {r["patient_uid"]: r for r in self.table()}
+        self.assertEqual(list(rows["c1"]), figures.OVERLAP_COLUMNS)
+        self.assertEqual((rows["c4"]["hash_distance"], rows["c4"]["mean_difference"], rows["c4"]["shape_difference_pct"]), ("0", "0.0", "0.0"))
+        self.assertLessEqual(float(rows["c1"]["mean_difference"]), figures.SAME["mean_difference"])
+        self.assertEqual((rows["c1"]["file"], rows["c1"]["figure"], rows["c1"]["pmcid"]), ("figures/images/c1/f1.png", "f1", "PMCc1"))
+
+    def test_only_the_pictures_that_passed_the_check_are_compared(self):
+        done = figures.overlap(self.data, self.clinic)
+        self.assertEqual((done["pictures"], done["photos"]), (3, 4))  # c1, c2 and c4; the four photos of the clinic patients
+        self.assertNotIn("c3", {p["patient_uid"] for p in done["pairs"]})  # it is PAT_A again, but it was left out by the check already
+
+    def test_the_report_says_what_was_compared_and_what_it_does_not_find(self):
+        figures.overlap(self.data, self.clinic)
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
+        for expected in ("<!-- step: photos_overlap -->", "- Pictures compared: 3; clinic photos compared with each: 4.",
+                         "- Pictures that are the same as a clinic photo: 2, of 2 cases (c1, c4). `build` leaves them out.",
+                         "| c1 | `figures/images/c1/f1.png` | `PAT_A.png` |", "| c4 | `figures/images/c4/f1.png` | `PAT_B.png` | 0.0 | 0 | 0.0 |",
+                         "the shape within 2%, the 64-bit hash within 16 bits", "does not find a crop"):
+            self.assertIn(expected, report)
+
+    def test_with_no_match_the_table_has_a_header_only_and_nothing_is_left_out(self):
+        for name in ("PAT_A.png", "PAT_B.png"):
+            content = clinic_photo(40 if name == "PAT_A.png" else 41, (30, 60, 200))  # other photos: nothing of the pictures matches
+            (self.clinic / "raw" / "imgs" / name).write_bytes(content)
+            table = self.clinic / "build" / "raw_images.csv"
+            text = table.read_text(encoding="utf-8").replace(hashlib.sha256(self.photos[name]).hexdigest(), hashlib.sha256(content).hexdigest())
+            table.write_text(text, encoding="utf-8")
+        done = figures.overlap(self.data, self.clinic)
+        self.assertEqual(done["pairs"], [])
+        self.assertEqual((self.data / figures.OVERLAP_TABLE).read_text(encoding="utf-8"), ",".join(figures.OVERLAP_COLUMNS) + "\n")
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
+        self.assertIn("- Pictures that are the same as a clinic photo: 0. No picture is left out.", report)
+        self.assertNotIn("| Case | Picture |", report)
+
+    def test_a_changed_or_missing_picture_or_photo_and_a_missing_table_stop_the_step_with_the_file_named(self):
+        picture = self.data / "files" / "figures" / "images" / "c2" / "f1.png"
+        original = picture.read_bytes()
+        picture.write_bytes(original + b"\0")
+        with self.assertRaisesRegex(ValueError, "c2/f1.png is not the picture build/figure_checks.csv lists"):
+            figures.overlap(self.data, self.clinic)
+        picture.write_bytes(original)
+        photo = self.clinic / "raw" / "imgs" / "PAT_C.png"
+        photo.write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "PAT_C.png is not the photo .*raw_images.csv lists"):
+            figures.overlap(self.data, self.clinic)
+        photo.unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "PAT_C.png not found: the original PAD-UFES-20 photos must be in"):
+            figures.overlap(self.data, self.clinic)
+        (self.clinic / "build" / "raw_images.csv").unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "raw_images.csv not found: run python -m src.build.clinic_patients.prepare inventory first"):
+            figures.overlap(self.data, self.clinic)
+        self.assertFalse((self.data / figures.OVERLAP_TABLE).exists())  # nothing is written when the step stops
+
+    def test_a_second_run_gives_the_same_files(self):
+        figures.overlap(self.data, self.clinic)
+        first = [(self.data / n).read_bytes() for n in (figures.OVERLAP_TABLE, figures.REPORT)]
+        figures.overlap(self.data, self.clinic)
+        self.assertEqual([(self.data / n).read_bytes() for n in (figures.OVERLAP_TABLE, figures.REPORT)], first)
+
+    def test_the_command_line_says_the_counts_and_turns_a_problem_into_a_message(self):
+        done = {"pairs": [1, 2], "pictures": 468, "photos": 2298, "table": "t.csv", "report": "r.md"}
+        with mock.patch.object(figures, "overlap", return_value=done), contextlib.redirect_stdout(io.StringIO()) as shown:
+            figures.main(["overlap"])
+        self.assertEqual(shown.getvalue(), "468 pictures compared with 2298 clinic photos: 2 are the same picture. Written: t.csv and r.md. Commit both.\n")
+        with mock.patch.object(figures, "overlap", side_effect=FileNotFoundError("x not found")):
+            with self.assertRaisesRegex(SystemExit, "^ERROR: x not found$"):
+                figures.main(["overlap"])
+        self.assertEqual(figures.build_parser().parse_args(["overlap"]).step, "overlap")
+
+
+if __name__ == "__main__":
+    unittest.main()

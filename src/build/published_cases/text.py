@@ -112,17 +112,17 @@ TERMS = "build/class_terms.csv"  # written by people
 CHECK = "build/term_check.csv"
 REPORT = "dataset_report.md"
 STEPS = ("survey", "cases", "abstracts", "mesh", "build", "audit", "review", "revise",
-         "photos_count", "photos_download", "photos_check", "photos_build")  # the report's sections, in the order they run;
+         "photos_count", "photos_download", "photos_check", "photos_overlap", "photos_build")  # the report's sections, in the order they run;
 # audit and review are commands of src/build/published_cases/audit.py; revise applies the review's rule (version 3); the last four are the steps
-# count, download, check and build of src/build/published_cases/photos.py, which write the photos of the same cases into the same report
+# count, download, check, overlap and build of src/build/published_cases/photos.py, which write the photos of the same cases into the same report
 REVIEW_FLAGS = "build/review_flags.csv"  # written by the review (python -m src.build.published_cases.audit review)
 REVIEW_COLUMNS = ["patient_uid", "split", "label", "source", "year", "words", "result_names_other_class", "lookalike_wording",
                   "other_classes_in_question", "same_wrong_answer", "knowledge_passages_sharing_12_words"]
 REMOVED = "removed"  # data/published_cases/downloads/removed/: the question files a revision took out of the dataset (not in Git)
 REPORT_HEAD = ["# Preparation of the published cases: their text and their photos", "",
                "Written by `python -m src.build.published_cases.text` (the text of the cases: the steps survey, cases, abstracts, mesh, build, audit, "
-               "review and revise) and by `python -m src.build.published_cases.photos` (the photos of the same cases: the steps count, download, check "
-               "and build, whose sections are named photos_count, photos_download, photos_check and photos_build here), one section per "
+               "review and revise) and by `python -m src.build.published_cases.photos` (the photos of the same cases: the steps count, download, check, "
+               "overlap and build, whose sections are named photos_count, photos_download, photos_check, photos_overlap and photos_build here), one section per "
                "step in the order the steps run; each step rewrites only its own section. `build/class_terms.csv` is written by people: the "
                "names doctors use for each of the eight classes, and whether each name counts for that class. The build records are in "
                "`build/`; the downloads, the question files, the captions, the pictures and the models' answers stay on this computer in "
