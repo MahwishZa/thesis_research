@@ -553,7 +553,7 @@ class TextDatasetTests(TextProject):
             return run.run("fake", self.dataset, *args, results=self.results, **kwargs)
 
     def test_the_cases_load_with_their_article_as_their_group_and_only_text_files_are_accepted(self):
-        items = datasets.load_dataset(*datasets.dataset_paths("text"), "text")
+        items = datasets.load_dataset(*datasets.dataset_paths("published_text"), "published_text")
         self.assertEqual((len(items), datasets.classes(items)), (16, ["actinic keratosis", "melanoma", "nevus"]))
         self.assertEqual(sorted(i.group for i in items if i.split == "test" and i.label == "melanoma"), ["203", "203", "204"])
         with self.assertRaisesRegex(ValueError, "is not a JPEG or PNG file"):
@@ -561,10 +561,10 @@ class TextDatasetTests(TextProject):
         with self.table.open("a", encoding="utf-8") as f:
             f.write(f"train,nevus,train/nevus/photo.jpg,{'0' * 64},x,9,PMC-Patients\n")
         with self.assertRaisesRegex(ValueError, "is not a .txt file"):
-            datasets.read_table(self.table, "text")
+            datasets.read_table(self.table, "published_text")
 
     def test_a_case_is_sent_exactly_as_stored_and_an_unreadable_one_stops_the_run(self):
-        item = next(i for i in datasets.load_dataset(*datasets.dataset_paths("text"), "text") if i.split == "test")
+        item = next(i for i in datasets.load_dataset(*datasets.dataset_paths("published_text"), "published_text") if i.split == "test")
         text, sent = datasets.read_case(item, self.case_dir)
         self.assertEqual(text, self.texts[item.path])
         self.assertEqual((sent["sha256"], sent["words"]), (item.sha256, len(self.texts[item.path].split())))
@@ -589,7 +589,7 @@ class TextDatasetTests(TextProject):
             self.assertNotIn("photo_sent", pred)
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual((card["labels"], card["n_cases"], card["group_column"], card["prompt"]), (labels, 8, "pmid", prompt))
-        self.assertEqual(card["cases_sha256"], datasets.items_hash([i for i in datasets.load_dataset(*datasets.dataset_paths("text"), "text")
+        self.assertEqual(card["cases_sha256"], datasets.items_hash([i for i in datasets.load_dataset(*datasets.dataset_paths("published_text"), "published_text")
                                                                     if i.split == "test"]))
 
     def test_nothing_of_a_case_is_written_into_the_run_folder_that_goes_into_git(self):
@@ -679,7 +679,7 @@ class MultimodalTests(MultimodalProject):
 
     def test_a_photo_record_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
         for template, dataset in (("Pick:\n{labels}", "clinic_photo_record"), ("Patient: {facts}\n{labels}", "clinic_photo"),
-                                  ("Case: {case}\nPatient: {facts}\n{labels}", "text")):
+                                  ("Case: {case}\nPatient: {facts}\n{labels}", "published_text")):
             with self.subTest(dataset):
                 self.prompt.write_text(template, encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "{facts}"):

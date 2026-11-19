@@ -132,34 +132,34 @@ class RepositoryTests(unittest.TestCase):
         def ignored(path):
             return subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT).returncode == 0
 
-        for path in (".env", ".env.txt", ".env.local", "data/image/raw/Train/melanoma/x.jpg", "data/image/downloads/isic/ISIC_0000001.json",
-                     "data/image/downloads/isic_pictures/ISIC_0000001.jpg", "data/image/dataset/test/nevus/x.jpg",
-                     "data/image/dataset/x.csv", "data/text/sources/pmc_patients/PMC-Patients-V2.json",
-                     "data/text/sources/pmc_patients/download.json", "data/text/sources/x.csv", "data/text/dataset/test/melanoma/1-1.txt",
-                     "data/text/sources/pubmed/abstracts.jsonl", "data/text/sources/audit_sample.txt",
+        for path in (".env", ".env.txt", ".env.local", "data/published_cases/downloads/pmc_patients/PMC-Patients-V2.json",
+                     "data/published_cases/downloads/pmc_patients/download.json", "data/published_cases/downloads/x.csv",
+                     "data/published_cases/files/text/test/melanoma/1-1.txt", "data/published_cases/downloads/pubmed/abstracts.jsonl",
+                     "data/published_cases/downloads/audit_sample.txt", "data/published_cases/downloads/removed/test/x/1-1.txt",
+                     "data/published_cases/files/figures/images/PMC1/f1.jpg", "data/published_cases/downloads/figures/captions.jsonl",
+                     "data/published_cases/downloads/figures/checks.jsonl", "data/published_cases/build/nested/x.csv",
                      "data/knowledge/sources/statpearls/NBK1.html", "data/knowledge/texts/passages.jsonl", "data/anything_else.txt",
-                     "data/cases/figures/images/PMC1/f1.jpg", "data/cases/figures/captions.jsonl", "data/text/sources/removed/test/x/1-1.txt",
-                     "data/image/build/x.txt", "data/text/build/nested/x.csv",
                      "data/x.csv", "data/clinic_patients/raw/metadata.csv", "data/clinic_patients/raw/images/imgs_part_1/PAT_1_1_1.png",
                      "data/clinic_patients/downloads/zr7vgbcyr2-1.zip", "data/clinic_patients/files/photos/train/nevus/PAT_1_1_1.jpg",
-                     "data/clinic_patients/files/records/train/nevus/PAT_1_1_1.txt",
-                     "results/image/closed_book/m/val_1/report.md", "results/image/closed_book/m/test_1.partial/predictions.jsonl",
-                     "src/__pycache__/x.pyc", "results/text/closed_book/m/val_1/report.md",
-                     "results/text/closed_book/m/test_1.partial/predictions.jsonl",
-                     "src/build/image/__pycache__/x.pyc", ".venv/x", ".coverage"):
+                     "data/clinic_patients/files/records/train/nevus/PAT_1_1_1.txt", "data/clinic_patients/build/nested/x.csv",
+                     "results/clinic_photo/closed_book/m/val_1/report.md", "results/clinic_photo/closed_book/m/test_1.partial/predictions.jsonl",
+                     "src/__pycache__/x.pyc", "results/published_text/closed_book/m/val_1/report.md",
+                     "results/published_text/closed_book/m/test_1.partial/predictions.jsonl",
+                     "src/build/clinic_patients/__pycache__/x.pyc", ".venv/x", ".coverage"):
             self.assertTrue(ignored(path), f"{path} must be ignored by Git")
-        for path in ("README.md", "data/image/dataset.csv", "data/image/build/raw_photos.csv", "data/image/dataset_report.md",
-                     "data/image/datasheet.md", "data/text/dataset.csv", "data/text/build/case_candidates.csv", "data/text/build/article_mesh.csv",
-                     "data/text/build/abstract_candidates.csv", "data/text/build/review_flags.csv", "data/image_metadata/dataset.csv",
-                     "data/cases/dataset.csv", "data/cases/build/figure_checks.csv", "data/cases/datasheet.md", "data/knowledge/library.csv",
-                     "data/knowledge/index.csv", "data/knowledge/dataset_report.md", "results/image/closed_book/m/test_1/report.md",
-                     "results/image/closed_book/m/test_1/predictions.jsonl", "configs/models.toml", "prompts/image/closed_book.txt",
-                     "results/text/closed_book/m/test_1/report.md",
+        for path in ("README.md", "data/published_cases/dataset.csv", "data/published_cases/photos.csv", "data/published_cases/dataset_report.md",
+                     "data/published_cases/datasheet.md", "data/published_cases/build/case_candidates.csv",
+                     "data/published_cases/build/article_mesh.csv", "data/published_cases/build/abstract_candidates.csv",
+                     "data/published_cases/build/review_flags.csv", "data/published_cases/build/figure_checks.csv",
+                     "data/knowledge/library.csv", "data/knowledge/index.csv", "data/knowledge/dataset_report.md",
+                     "results/clinic_photo/closed_book/m/test_1/report.md", "results/clinic_photo/closed_book/m/test_1/predictions.jsonl",
+                     "configs/models.toml", "prompts/clinic_photo/closed_book.txt", "results/published_text/closed_book/m/test_1/report.md",
                      "data/clinic_patients/dataset_report.md", "data/clinic_patients/build/raw_images.csv", "data/clinic_patients/build/columns.csv",
                      "data/clinic_patients/build/downloads.csv", "data/clinic_patients/dataset.csv", "data/clinic_patients/record.csv",
                      "data/clinic_patients/build/files.csv", "data/clinic_patients/datasheet.md",
                      "prompts/clinic_photo/closed_book.txt", "prompts/clinic_record/closed_book.txt",
-                     "prompts/clinic_photo_record/closed_book.txt"):
+                     "prompts/clinic_photo_record/closed_book.txt", "prompts/published_text/closed_book.txt",
+                     "prompts/published_text_photos/closed_book.txt", "prompts/published_photos/closed_book.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

@@ -1,11 +1,11 @@
 """Runs: one model answers one split of one dataset, every answer saved as it arrives.
 
-    python -m src.run check --model claude-sonnet-5-5 --dataset text [--approach closed_book] [--try-id <id>]
-    python -m src.run run --model claude-sonnet-5-5 --dataset text [--approach closed_book] --split val [--limit 5]
-    python -m src.run run --model claude-sonnet-5-5 --dataset text [--approach closed_book] --split test
+    python -m src.run check --model claude-sonnet-5-5 --dataset published_text [--approach closed_book] [--try-id <id>]
+    python -m src.run run --model claude-sonnet-5-5 --dataset published_text [--approach closed_book] --split val [--limit 5]
+    python -m src.run run --model claude-sonnet-5-5 --dataset published_text [--approach closed_book] --split test
 
 A run is one model of the model list (configs/models.toml: each model's provider, id, settings and request pace), one dataset
-(clinic_photo, clinic_record, clinic_photo_record, text, cases or case_photos) and one approach (closed_book: the model alone). The prompt is
+(clinic_photo, clinic_record, clinic_photo_record, published_text, published_text_photos or published_photos) and one approach (closed_book: the model alone). The prompt is
 prompts/<dataset>/<approach>.txt, the same for every model.
 
 ``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked

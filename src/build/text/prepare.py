@@ -12,7 +12,7 @@
 The audit checks every question with code of its own; the review looks for signals of a doubtful label or a leak, by rules fixed
 before its first run; revise makes version 3 by taking out the questions the review's rule names. The reference library for retrieval is built from these tables by python -m src.build.knowledge.library (data/knowledge/).
 
-Every step writes into a few committed files in data/text/ and rewrites only its own part of them:
+Every step writes into a few committed files in data/published_cases/ and rewrites only its own part of them:
     build/term_check.csv           every name in class_terms.csv, checked against MeSH and counted in PubMed
     build/case_candidates.csv      the patients whose article title names a class: candidates for the cases, with marks
     build/abstract_candidates.csv  the same for PubMed's case-report abstracts of articles not in PMC-Patients
@@ -20,7 +20,7 @@ Every step writes into a few committed files in data/text/ and rewrites only its
     build/review_flags.csv         the review's signals, one row per question of the version it reviewed
     dataset.csv                    the text dataset: one row per case (split, class, question file, fingerprint, source numbers)
     dataset_report.md              one section per step: its counts, its tables and what it does not do
-The question texts themselves are written into data/text/dataset/ (not committed: their licences allow research use only).
+The question texts themselves are written into data/published_cases/files/text/ (not committed: their licences allow research use only).
 One committed file is written by people, not by code: build/class_terms.csv (the names doctors use for each of the image
 dataset's classes, and whether each name counts for that class). Its classes must be exactly the eight of ``CLASSES``.
 
@@ -33,7 +33,7 @@ headings of the names that count for the class, to plan the dataset's sizes. It 
 so the counts are dated.
 
 ``cases`` downloads PMC-Patients (Zhao et al., Scientific Data 2023; licence CC BY-NC-SA 4.0), real patient descriptions from
-published case reports in PubMed Central, once into data/text/sources/ (not committed): the version current at the first attempt,
+published case reports in PubMed Central, once into data/published_cases/downloads/ (not committed): the version current at the first attempt,
 continued where it stopped, and checked against its fingerprint on every later run. It reads the patients one at a time and lists
 every patient whose article title names one of the classes, by the names that count in class_terms.csv (a longer name wins over a
 shorter one inside it, and word order inside a name does not matter), with marks where a person should look: a title naming two
@@ -49,7 +49,7 @@ text names the class. No case text is written into the repository, and nothing i
 case reports PubMed has not indexed with subject headings), leaves out the articles PMC-Patients already gave, downloads the title and abstract of the others and applies the rules of ``cases`` to them, using the abstract's case part
 (its sections labelled as the case or the patient, or else the whole abstract). For a candidate article (its title passes the
 rules) with an open full text in PubMed Central, of any year, the full text's case sections are used instead of the abstract.
-The texts stay in data/text/sources/.
+The texts stay in data/published_cases/downloads/.
 
 ``mesh`` asks PubMed, for every candidate article, whether it has subject headings (MeSH) at all (PubMed indexes the
 articles of MEDLINE journals; many case-report journals are not among them) and, if so, which classes its headings name (one of
@@ -103,24 +103,30 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from ...common import USER_AGENT, fetch, write_section
-from ...datasets import FILES, TABLE_NAME
+from ...datasets import TABLE_NAME
 
-DATA = Path("data/text")
+DATA = Path("data/published_cases")  # the published cases: the text of the cases (this module) and their photos (src/build/cases)
 CLASSES = ("actinic keratosis", "basal cell carcinoma", "dermatofibroma", "melanoma", "nevus", "pigmented benign keratosis",
            "squamous cell carcinoma", "vascular lesion")  # the eight classes of the dataset, as the Version 1 image dataset named them
 TERMS = "build/class_terms.csv"  # written by people
 CHECK = "build/term_check.csv"
 REPORT = "dataset_report.md"
-STEPS = ("survey", "cases", "abstracts", "mesh", "build", "audit", "review", "revise")  # the report's sections, in the order they run;
-# audit and review are commands of src/build/text/audit.py; revise applies the review's rule (version 3)
+STEPS = ("survey", "cases", "abstracts", "mesh", "build", "audit", "review", "revise",
+         "photos_count", "photos_download", "photos_check", "photos_build")  # the report's sections, in the order they run;
+# audit and review are commands of src/build/text/audit.py; revise applies the review's rule (version 3); the last four are the steps
+# count, download, check and build of src/build/cases/prepare.py, which write the photos of the same cases into the same report
 REVIEW_FLAGS = "build/review_flags.csv"  # written by the review (python -m src.build.text.audit review)
 REVIEW_COLUMNS = ["patient_uid", "split", "label", "source", "year", "words", "result_names_other_class", "lookalike_wording",
                   "other_classes_in_question", "same_wrong_answer", "knowledge_passages_sharing_12_words"]
-REMOVED = "removed"  # data/text/sources/removed/: the question files a revision took out of the dataset (not in Git)
-REPORT_HEAD = ["# Preparation of the text dataset", "",
-               "Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only "
-               "its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the eight "
-               "classes, and whether each name counts for that class.", ""]
+REMOVED = "removed"  # data/published_cases/downloads/removed/: the question files a revision took out of the dataset (not in Git)
+REPORT_HEAD = ["# Preparation of the published cases: their text and their photos", "",
+               "Written by `python -m src.build.text.prepare` (the text of the cases: the steps survey, cases, abstracts, mesh, build, audit, "
+               "review and revise) and by `python -m src.build.cases.prepare` (the photos of the same cases: the steps count, download, check "
+               "and build, whose sections are named photos_count, photos_download, photos_check and photos_build here), one section per "
+               "step in the order the steps run; each step rewrites only its own section. `build/class_terms.csv` is written by people: the "
+               "names doctors use for each of the eight classes, and whether each name counts for that class. The build records are in "
+               "`build/`; the downloads, the question files, the captions, the pictures and the models' answers stay on this computer in "
+               "`downloads/` and `files/`.", ""]
 TERM_COLUMNS = ["class", "term", "counts", "source", "note"]
 CHECK_COLUMNS = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
@@ -137,7 +143,8 @@ COUNTS = {  # what is counted per class; each query is the class's headings AND 
 IRREGULAR = {"nevi": "nevus", "lentigines": "lentigo"}  # plurals the simple rules miss (after the spelling is made American)
 SPELLING = (("naev", "nev"), ("haem", "hem"), ("oedem", "edem"), ("seborrhoe", "seborrhe"), ("tumour", "tumor"),
             ("oesophag", "esophag"))
-SOURCES = "sources"  # data/text/sources/: downloads kept exactly as received (not committed)
+DOWNLOADS = "downloads"  # data/published_cases/downloads/: everything downloaded, kept exactly as received (not committed)
+TEXT_FILES = Path("files") / "text"  # data/published_cases/files/text/: the question texts, <split>/<class>/<case>.txt (not committed)
 CANDIDATES = "build/case_candidates.csv"
 CANDIDATE_COLUMNS = ["patient_uid", "pmid", "year", "class", "classes_named", "marks", "title", "age", "sex", "words", "text_full_names",
                      "text_short_forms"]
@@ -195,7 +202,7 @@ SHORT_FORMS = {  # common short forms of a class in case texts; counted in the c
     "actinic keratosis": ("AK",), "basal cell carcinoma": ("BCC",), "pigmented benign keratosis": ("SK",),
     "squamous cell carcinoma": ("SCC", "cSCC")}
 ABSTRACT_CANDIDATES = "build/abstract_candidates.csv"
-ABSTRACTS = "pubmed"  # data/text/sources/pubmed/abstracts.jsonl: the downloaded titles and abstracts (not committed)
+ABSTRACTS = "pubmed"  # data/published_cases/downloads/pubmed/abstracts.jsonl: the downloaded titles and abstracts (not committed)
 HUMANS = "NOT (animals[MeSH Terms] NOT humans[MeSH Terms])"  # PubMed's standard filter: leaves out articles about animals only
 ABSTRACT_QUERY = f'{SKIN} AND "case reports"[Publication Type] AND english[Language] {HUMANS}'  # with each class's headings
 UNINDEXED_QUERY = ('("case reports"[Publication Type] OR "case report"[Title/Abstract]) NOT medline[sb] AND english[Language]')
@@ -812,8 +819,8 @@ def cases(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     data = Path(data)
     classes = classes if classes is not None else list(CLASSES)
     judge = _judge(read_terms(data / TERMS, classes), classes)
-    meta = _download_pmc_patients(data / SOURCES / "pmc_patients", show)
-    path = data / SOURCES / "pmc_patients" / PMC_PATIENTS["file"]
+    meta = _download_pmc_patients(data / DOWNLOADS / "pmc_patients", show)
+    path = data / DOWNLOADS / "pmc_patients" / PMC_PATIENTS["file"]
     rows, read, only_other, keys = [], 0, 0, set()
     for record in _json_list(path):
         read += 1
@@ -1020,7 +1027,7 @@ def _case_part(sections: list) -> str:
 
 
 def _abstract_records(data: Path) -> list[dict]:
-    path = data / SOURCES / ABSTRACTS / "abstracts.jsonl"
+    path = data / DOWNLOADS / ABSTRACTS / "abstracts.jsonl"
     if not path.is_file():
         raise FileNotFoundError(f"{path.as_posix()} not found: run python -m src.build.text.prepare abstracts first")
     with path.open(encoding="utf-8") as f:
@@ -1029,7 +1036,7 @@ def _abstract_records(data: Path) -> list[dict]:
 
 def abstracts(data: str | Path = DATA, classes: list[str] | None = None, show=None) -> dict:
     """Finds every class's case reports in PubMed (the class's headings as a main subject, on the skin, in English), leaves out
-    the articles PMC-Patients already gave, downloads the others' titles and abstracts into data/text/sources/pubmed/ (not
+    the articles PMC-Patients already gave, downloads the others' titles and abstracts into data/published_cases/downloads/pubmed/ (not
     committed), and for the candidate articles (their title passes) with an open full text in PMC the case sections of it;
     applies the candidate rules of ``cases`` to each article's case text (the full text's case sections, else the abstract's
     case part); writes abstract_candidates.csv and the abstracts section of dataset_report.md."""
@@ -1069,7 +1076,7 @@ def abstracts(data: str | Path = DATA, classes: list[str] | None = None, show=No
     for record in records:
         case = cases.get(record["pmcid"].removeprefix("PMC"), {}) if record["pmcid"] else {}
         record["fulltext"], record["licence"] = case.get("fulltext", ""), case.get("licence", "")
-    folder = data / SOURCES / ABSTRACTS
+    folder = data / DOWNLOADS / ABSTRACTS
     folder.mkdir(parents=True, exist_ok=True)
     partial = folder / "abstracts.jsonl.partial"
     partial.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records), encoding="utf-8", newline="\n")
@@ -1116,7 +1123,7 @@ def _abstracts_summary(found, by_title, listed, records, rows, only_other, empty
              "or else the whole abstract) is judged by the rules of `cases`; for a candidate article (its title passes the "
              "rules) with an open full text in PubMed Central, of any year, the case sections of the full text (titled as the case, "
              "such as \"Case presentation\"; figures and tables left out) are used instead of the abstract. The texts stay in "
-             "`data/text/sources/pubmed/`; `build/abstract_candidates.csv` holds only each article's numbers, year, title, length and "
+             "`data/published_cases/downloads/pubmed/`; `build/abstract_candidates.csv` holds only each article's numbers, year, title, length and "
              "marks.", "",
              f"- Asked on {day}: {len(found)} case reports found; already given by PMC-Patients (left out): {len(set(found) & listed)}; "
              f"downloaded: {len(records)} (not returned by PubMed: {len(new) - len(records)}); without an abstract: {empty}",
@@ -1424,7 +1431,7 @@ def _split(rows: list[dict]) -> None:
 def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) -> dict:
     """Makes the text dataset from the earlier steps' tables and the downloaded case texts, with no person in the loop: labels
     where the sources agree, questions cut before the diagnosis, checks, and splits by article. Writes dataset.csv, the question
-    texts into data/text/dataset/ (not committed) and the build section of dataset_report.md."""
+    texts into data/published_cases/files/text/ (not committed) and the build section of dataset_report.md."""
     data = Path(data)
     classes = classes if classes is not None else list(CLASSES)
     terms = read_terms(data / TERMS, classes)
@@ -1436,7 +1443,7 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     if missing:
         raise ValueError(f"{MESH_TABLE} lacks {len(missing)} candidate article(s), for example {missing[0]}: run python -m "
                          "src.build.text.prepare mesh again")
-    folder = data / SOURCES / "pmc_patients"
+    folder = data / DOWNLOADS / "pmc_patients"
     meta = _checked_source(folder)
     if meta is None:
         raise FileNotFoundError(f"{(folder / PMC_PATIENTS['file']).as_posix()} not found: run python -m src.build.text.prepare cases first")
@@ -1523,7 +1530,7 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     _split(rows)
     order, split_order = {label: n for n, label in enumerate(classes)}, {"test": 0, "val": 1, "train": 2}
     rows.sort(key=lambda r: (split_order[r["split"]], order[r["label"]], _uid_key(r["patient_uid"])))
-    partial, target = data / f"{FILES}.partial", data / FILES
+    partial, target = data / TEXT_FILES.with_name(TEXT_FILES.name + ".partial"), data / TEXT_FILES
     if partial.exists():
         shutil.rmtree(partial)
     for row in rows:
@@ -1550,7 +1557,7 @@ def _build_summary(meta, funnel, rows, classes, leaks, duplicates) -> list[str]:
              "Written by `python -m src.build.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a "
              "real patient description from a published case report: a patient of PMC-Patients, the case sections of an open "
              "full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task: name the class. `dataset.csv` lists the "
-             "cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them "
+             "cases; the question texts are in `data/published_cases/files/text/` (not in Git: research use only), and `build` writes them "
              "again, the same, from the downloaded files.", "",
              "## Rules", "",
              "- Label: a case gets class X when the article title names X and no other class, with no mark (`cases`, "
@@ -1633,7 +1640,7 @@ def revise(data: str | Path = DATA, show=None) -> dict:
     """Version 3 of the dataset: takes out every question whose confirming test result also names another class (the review's
     column result_names_other_class), the rule fixed before the review was first run (src/build/text/audit.py). Every other
     question keeps its row, file and split. The review (build/review_flags.csv) is of version 2 and stays as it is: it is the
-    evidence for the revision. The files taken out are moved to data/text/sources/removed/ (not deleted), found by the build's
+    evidence for the revision. The files taken out are moved to data/published_cases/downloads/removed/ (not deleted), found by the build's
     rule for a question's path (<split>/<class>/<patient_uid>.txt), so a computer whose table is already version 3 (from Git)
     moves its files the same way. A question of the table the review has no row for stops the step. Running it again changes
     nothing: the table and the report are the same."""
@@ -1655,10 +1662,10 @@ def revise(data: str | Path = DATA, show=None) -> dict:
     removed = [r for r in reviewed if r["result_names_other_class"]]
     out = {r["patient_uid"] for r in removed}
     kept = [r for r in rows if r["patient_uid"] not in out]
-    moved_to, moved = data / SOURCES / REMOVED, []
+    moved_to, moved = data / DOWNLOADS / REMOVED, []
     for flag in removed:
         path = f"{flag['split']}/{flag['label']}/{flag['patient_uid']}.txt"
-        source, target = data / FILES / path, moved_to / path
+        source, target = data / TEXT_FILES / path, moved_to / path
         if source.is_file():
             target.parent.mkdir(parents=True, exist_ok=True)
             os.replace(source, target)
@@ -1721,7 +1728,7 @@ def main(argv: list[str] | None = None) -> None:
             for label in done["classes"]:
                 mine = [r for r in rows if label in r["classes_named"].split("; ")]
                 print(f"  {label}: {len(mine)} candidates, {sum(not r['marks'] for r in mine)} without marks")
-            print(f"Written: {done['table']} and {done['summary']}. The case texts stay in data/text/sources/. Commit both files.")
+            print(f"Written: {done['table']} and {done['summary']}. The case texts stay in data/published_cases/downloads/. Commit both files.")
         elif args.command == "abstracts":
             done = abstracts(show=print)
             rows = done["rows"]
@@ -1730,7 +1737,7 @@ def main(argv: list[str] | None = None) -> None:
             for label in done["classes"]:
                 mine = [r for r in rows if r["class"] == label]
                 print(f"  {label}: {len(mine)} candidates, {sum(not r['marks'] for r in mine)} without marks")
-            print(f"Written: {done['table']} and {done['summary']}. The abstracts stay in data/text/sources/. Commit both files.")
+            print(f"Written: {done['table']} and {done['summary']}. The abstracts stay in data/published_cases/downloads/. Commit both files.")
         elif args.command == "mesh":
             done = mesh(show=print)
             for label in done["classes"]:

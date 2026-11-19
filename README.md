@@ -32,8 +32,7 @@ thesis_research/
 ├── prompts/             one prompt per dataset and approach
 ├── data/                one folder per dataset and the knowledge base: table, report, data sheet, build records
 │   ├── clinic_patients/     PAD-UFES-20: phone photos of skin lesions with each patient's clinic record (Version 2)
-│   ├── text/                written cases from published case reports
-│   ├── cases/               written cases with the same patient's published photos
+│   ├── published_cases/     case reports: each patient's written case, and the same patient's photos from the article (Version 2)
 │   └── knowledge/           what open-book runs may retrieve
 ├── docs/                temporary: the Version 2 plan and the method; removed when the research is final
 ├── archive/             temporary: Version 1 (commit a1c9209), frozen for reference; removed when the research is final
@@ -49,7 +48,7 @@ pip install -r requirements.txt
 
 Put the API keys in a file named `.env` next to this README (`CLAUDE_API_KEY=...`, `OPENROUTER_API_KEY=...`). A run is one model of `configs/models.toml`, one dataset and one approach; its answers and report are written to `results/<dataset>/<approach>/<model>/<run>/` (the folder appears with the first Version 2 run):
 
-- Check everything a run needs (one tiny request, nothing from the dataset): `python -m src.run check --model claude-sonnet-5-5 --dataset text`
-- Run the test split: `python -m src.run run --model claude-sonnet-5-5 --dataset text --split test`
+- Check everything a run needs (one tiny request, nothing from the dataset): `python -m src.run check --model claude-sonnet-5-5 --dataset published_text`
+- Run the test split: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`
 - Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then the two run folders
 - Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`

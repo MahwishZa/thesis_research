@@ -1,4 +1,25 @@
-# Data sheet: the skin-lesion text dataset (version 3)
+# Data sheet: the published cases (`data/published_cases/`)
+
+The published cases are real patients described in published case reports. Two datasets are built from them, and they sit in one folder:
+**the text of the cases** (Part A: the text dataset, version 3, `dataset.csv`) and **their photos** (Part B: the case dataset, version 2,
+`photos.csv`), taken from each case's own article for the cases whose figures show the lesion. Models are asked in three views: the text
+alone (`published_text`), the text with the photos (`published_text_photos`) and the photos alone (`published_photos`). Each part keeps
+its own sections and numbering below; "the text dataset" and "the case dataset" inside them mean Part A and Part B.
+
+| In `data/published_cases/` | What | In Git |
+|---|---|---|
+| `dataset.csv` | Part A: one row per case (version 3) | yes |
+| `photos.csv` | Part B: one row per case that keeps a picture, with its pictures | yes |
+| `dataset_report.md` | one section per step: Part A `survey` to `revise`, Part B `photos_count` to `photos_build` | yes |
+| `build/` | the build records of both parts | yes |
+| `datasheet.md` | this data sheet | yes |
+| `downloads/` | what was downloaded, as received (PMC-Patients, PubMed abstracts), the question files a revision took out, the audit sample, the captions and the models' answers | no (this computer) |
+| `files/text/` | the question texts, `<split>/<class>/<case>.txt` (research use only) | no |
+| `files/figures/images/` | the pictures of the cases, byte for byte, one folder per article | no |
+
+The steps are run by `python -m src.build.text.prepare`, `python -m src.build.text.audit` and `python -m src.build.cases.prepare`.
+
+## Part A. The text of the cases (text dataset, version 3)
 
 This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come from the files the preparation code (`src/build/text/prepare.py`, `src/build/text/audit.py`) writes:
 - `dataset_report.md`: the full report of every step
@@ -8,9 +29,9 @@ This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is wr
 
 The texts that open-book runs may retrieve (the reference library and the other knowledge) are described in the knowledge base's own data sheet, `data/knowledge/datasheet.md`.
 
-The error rate in section 5 comes from reading questions together with the text that follows each one in its source: the sample the audit writes into `sources/audit_sample.txt`. That reading is recorded in section 7.
+The error rate in section 5 comes from reading questions together with the text that follows each one in its source: the sample the audit writes into `downloads/audit_sample.txt`. That reading is recorded in section 7.
 
-## At a glance
+### At a glance
 
 | | |
 |---|---|
@@ -24,7 +45,7 @@ The error rate in section 5 comes from reading questions together with the text 
 | Built from | PMC-Patients V2 (Zhao et al., 2023), PubMed, PubMed Central and MeSH (asked through NCBI's E-utilities on 2026-11-13 and 2026-11-14) |
 | Version | 3, made on 2026-11-18: version 2 without the 29 questions whose confirming test result also names another class (section 7). Version 2 (745 cases) was frozen on 2026-11-14 (commit `5539bb4`); version 1 (1,049 cases) was withdrawn |
 
-## 1. Motivation
+### 1. Motivation
 
 **Purpose.** The dataset was prepared for the text phase of an MS thesis on diagnosing skin lesions with large language models (LLMs). The models are tested in two ways:
 - closed-book: the model sees only the case
@@ -36,7 +57,7 @@ The classes are those of the Version 1 image dataset (the eight of ISIC 2019), k
 
 **Who.** Prepared by Mahwish Zafar for her MS thesis.
 
-## 2. Composition
+### 2. Composition
 
 **Instances.** Each case is the description of one patient in one published case report: who the patient is, the history and what the lesion looks like. The question stops before the sentence that gives the diagnosis away. Case reports are published without the patient's name; the dataset adds nothing about any person.
 
@@ -63,7 +84,7 @@ The classes are those of the Version 1 image dataset (the eight of ISIC 2019), k
   - whether PubMed's subject headings agree with the class or PubMed has not indexed the article (`pubmed`)
   - the publication year, the patient's age and sex where the source gives them, and the number of words
 - **`build/case_candidates.csv` and `build/abstract_candidates.csv`:** each candidate's article title and the marks the candidate steps gave it
-- **Not in Git:** the question texts themselves (`data/text/dataset/`), the downloaded sources (`data/text/sources/`) and the question files version 3 took out (`data/text/sources/removed/`)
+- **Not in Git:** the question texts themselves (`data/published_cases/files/text/`), the downloaded sources (`data/published_cases/downloads/`) and the question files version 3 took out (`data/published_cases/downloads/removed/`)
 
 **Several cases from one article.** 14 articles give two or more cases (31 cases in all). Every article is whole in one split.
 
@@ -71,12 +92,12 @@ The classes are those of the Version 1 image dataset (the eight of ISIC 2019), k
 
 **Licences of the texts**
 - PMC-Patients: CC BY-NC-SA 4.0
-- PubMed Central full texts: each article's own licence, kept with its text in `data/text/sources/pubmed/`
+- PubMed Central full texts: each article's own licence, kept with its text in `data/published_cases/downloads/pubmed/`
 - PubMed abstracts: the publisher's copyright
 
 The texts are therefore used for research only and are not in Git.
 
-## 3. Collection
+### 3. Collection
 
 - **PMC-Patients.** `PMC-Patients-V2.json` from the Hugging Face repository `zhengyun21/PMC-Patients`, version `28d8836518f86d4f1e6358ea8ec09977023e5766`, downloaded on 2026-11-12. It holds 250,294 patient descriptions taken from case reports in PubMed Central whose licence allows reuse. SHA-256 `7bf27ed02dbadd5501f9c89b1d31d8c07d3559cd9b30c6f0b1a84734125ed593`.
 - **PubMed case reports.** Asked on 2026-11-13 through NCBI's E-utilities: each class's case reports on the skin, by its MeSH headings, and the case reports PubMed has not indexed, by the class's names in their title. 27,820 records not already in PMC-Patients were downloaded. For the 1,382 candidate articles with a PubMed Central number, the open full text was asked for; 771 gave case sections, which are used instead of the abstract.
@@ -84,7 +105,7 @@ The texts are therefore used for research only and are not in Git.
 - **The names of the classes.** `build/class_terms.csv` lists 121 names doctors use, and whether each counts for its class. They come from the ISIC records of the Version 1 image dataset, the HAM10000 group definitions (Tschandl et al., 2018), and names proposed and then checked by the survey against MeSH and PubMed. One name was added after reading cases: acral pseudolymphomatous angiokeratoma (APACHE) counts for no class, because its case reports find a pseudolymphoma, not an angiokeratoma.
 - **Nothing new.** No text was written or changed by the researcher, and no person was contacted.
 
-## 4. Preparation
+### 4. Preparation
 
 Each step is one command. Its full numbers, the queries and the word lists are in the matching section of `dataset_report.md`.
 
@@ -145,7 +166,7 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 
 **Not done:** no case was chosen, corrected or rewritten by a person, no dermatologist checked the labels, and no text was translated or summarised.
 
-## 5. Uses
+### 5. Uses
 
 **Intended uses**
 - **Test split:** the reported result, run once per model and setting.
@@ -182,10 +203,10 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 - estimates of how common a disease is: case reports favour rare and unusual cases
 - conclusions about skin types, which are not recorded
 
-## 6. Distribution
+### 6. Distribution
 
 **What is shared and what isn't**
-- **Not redistributed:** the question texts (`data/text/dataset`) and the downloaded sources (`data/text/sources`) stay on the researcher's computer and are not in Git.
+- **Not redistributed:** the question texts (`data/published_cases/files/text`) and the downloaded sources (`data/published_cases/downloads`) stay on the researcher's computer and are not in Git.
 - **In the repository:** the tables, the report, this data sheet and the code: article numbers, fingerprints, years and lengths, but no case text.
 
 **Licences and credit**
@@ -196,12 +217,12 @@ They left out 53 cases. About 44 of them were problems and about 9 were good cas
 - PMC-Patients (Zhao et al., 2023)
 - PubMed and PubMed Central (US National Library of Medicine)
 
-## 7. Maintenance and checking
+### 7. Maintenance and checking
 
 **Versions.** Any change to a case, label or split makes a new version, with new fingerprints and an entry here.
 - **Version 1** (2026-11-13): 1,049 cases. A reading of 102 questions put its wrong labels at about 13% (95% interval roughly 6–25%): lesions not on the skin, cases that only looked like the class, articles about another diagnosis, and questions that were not one patient's case. It was withdrawn.
 - **Version 2** (2026-11-14): 745 cases, made by the rules of section 4. It was frozen (commit `5539bb4`). The closed-book runs of the first phase (`results/phase1/text/`) were made on it.
-- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.text.prepare revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/text/sources/removed/`. Version 3 is in commit `00e9711` and later.
+- **Version 3** (2026-11-18): 716 cases (test 209, validation 78, train 429). An independent review of version 2 (below) found 29 questions whose confirming test result also names another class, not negated ("a basal cell carcinoma colliding with a melanoma"): a doubtful label. By the rule fixed before the review was first run, `python -m src.build.text.prepare revise` took them out (12 test, 2 validation, 15 train); every other question kept its row, file and split, and nothing was reshuffled. The list is in the revise section of `dataset_report.md`; their files are kept in `data/published_cases/downloads/removed/`. Version 3 is in commit `00e9711` and later.
 
 **Checks.** The build checks that every question is part of its case text word for word, that no question names its class, and that no article is in two splits. The audit then checks every question again with code of its own:
 - against its fingerprint and its source
@@ -252,12 +273,97 @@ Because PubMed changes (section 5), a rebuild reproduces the method, not version
 
 Every question file has its own SHA-256 in `dataset.csv`; the audit checks the questions against them.
 
-**Backup.** Keep a ZIP of `data/text/dataset` and `data/text/sources` outside this computer.
+**Backup.** Keep a ZIP of `data/published_cases/files/text` and `data/published_cases/downloads` outside this computer.
 
-## References
+### References
 
 - Gebru, T., Morgenstern, J., Vecchione, B., Vaughan, J. W., Wallach, H., Daumé III, H., and Crawford, K. (2021). Datasheets for datasets. *Communications of the ACM*, 64(12), 86–92.
 - Sohn, J., et al. (2025). Rationale-guided retrieval augmented generation for medical question answering. In *Proceedings of NAACL 2025*, 12739–12753.
 - Tschandl, P., Rosendahl, C., and Kittler, H. (2018). The HAM10000 dataset, a large collection of multi-source dermatoscopic images of common pigmented skin lesions. *Scientific Data*, 5, 180161.
 - Zhao, Z., Jin, Q., Chen, F., Peng, T., and Yu, S. (2023). A large-scale dataset of patient summaries for retrieval-based clinical decision support systems. *Scientific Data*, 10, 909.
 - PubMed and PubMed Central, US National Library of Medicine, accessed through NCBI's E-utilities: https://www.ncbi.nlm.nih.gov/books/NBK25501/
+
+
+## Part B. The photos of the cases (case dataset, version 2)
+
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. Its numbers come
+from the files `python -m src.build.cases.prepare` writes: `dataset_report.md` (one section per step: `count`, `download`, `check`,
+`build`), the build records in `build/` (`figure_count.csv`, `figure_files.csv`, `figure_checks.csv`) and the questions in
+`photos.csv`. This is the thesis's multimodal dataset: a written case with the same patient's photos.
+
+### At a glance
+
+| | |
+|---|---|
+| Questions | 324: every case of the text dataset (version 3) whose own published article shows the lesion in at least one photo that passed every check |
+| Test, validation, train | 100, 38, 186 (the text dataset's splits, unchanged; no article is in two splits) |
+| Classes | the 8 of the other datasets; actinic keratosis has 1 test case and is reported apart (as in the text dataset) |
+| Text | the text dataset's frozen question of the case, word for word (the case description up to the diagnosis) |
+| Photos | 451, 1 to 8 per question (231 questions have one); published with the case, byte for byte; mostly clinical photos, some dermoscopy |
+| Link between photo and text | the same patient: both come from the same case report, which holds no other case of the dataset |
+| Asked as | text and photos (dataset `cases`), photos only (`case_photos`); the text only is the text dataset, on the same cases |
+| Captions | never shown (they often name the diagnosis) |
+
+### 1. Motivation
+
+The Version 1 image datasets (ISIC photos, removed from the working folders on 2026-11-19) showed a photo with no clinical description,
+because the ISIC Archive keeps no text about a patient, and no authentic source links an ISIC photo to a written case. This dataset
+gives what they could not: a real patient's
+written case together with that patient's own photos, both from the published case report. It answers whether a model diagnoses
+better, and invents less, when it sees the photos with the written case, and how the photos alone compare, on the same patients.
+
+### 2. Composition
+
+- **Questions:** one per case. Its text is the text dataset's question (same file and fingerprint); its photos are listed in
+  `photos.csv` as `file|sha256`, in the order of their figures.
+- **Labels:** the text dataset's labels, unchanged (see its data sheet: automatic, checked against PubMed's headings and a test
+  result in the case that names no other class; about 3–7% wrong or mixed in a reading of 74 questions of its version 2).
+- **What is not here:** no synthetic or rewritten text, no generated or edited photo, no pairing across sources, no caption.
+
+### 3. Collection
+
+| Step | What it did | Result |
+|---|---|---|
+| count | read the captions of each case's article in PubMed Central; a figure counts when its caption shows the lesion (a clinical or dermoscopic photo, or a lesion) and names no microscope or stain, scan, state after treatment, removed specimen, chart, or another patient; an article with another case of the dataset is left out | 107 test cases (rule fixed before the count: at least 80, and 6 classes with at least 8) |
+| download | the counted figures' pictures from PMC Article Datasets (NCBI's cloud copy of PubMed Central's open-access articles), each checked against PMC's MD5 checksum; not open access or retracted: nothing | 492 pictures for 339 of 347 cases |
+| check | each picture by itself: at least 128 pixels; no writing that names a diagnosis (EasyOCR); seen as a clinical or dermoscopy photo by an image model (open_clip ViT-B-32); not the same picture as another case's (on 2026-11-18 it was also compared with the photos of the Version 1 image dataset, with no match; that comparison left the code on 2026-11-19 with the dataset) | 468 kept; 24 not a skin photo, 1 names a diagnosis |
+| build | one question per case with a kept picture that the text dataset still holds | 324 questions (11 cases left out with the text dataset's version 3) |
+
+### 4. Uses and limits
+
+- **Same patients across modalities:** the text-only, photos-only and text-and-photos answers are paired question by question
+  (`python -m src.evaluate compare` pairs a text run with a case run on the shared cases).
+- **Small test set:** 100 cases; a 95% interval on accuracy is about ±10 points, so only large differences are clear.
+- **Actinic keratosis:** 1 test case; scores are also reported without it.
+- **Picture type:** the captions and the image model agree poorly on whether a picture is a dermoscopy image (Cohen's kappa 0.27),
+  so the photos are described only as published clinical and dermoscopic photographs, and picture type is not analysed.
+- **Published cases:** often unusual presentations, photographed and cropped for publication, sometimes with arrows or panel letters
+  (83 of the 492 checked pictures carry some writing; none of the kept ones names a diagnosis).
+- **Models may have read the articles:** the text dataset's data sheet gives the publication years; results on cases published after
+  a model's training cutoff show how much memory matters.
+- **No person checked the photos.** The checks are automatic; their counts are in the check section of `dataset_report.md`.
+
+### 5. Distribution
+
+- In Git: `photos.csv`, `dataset_report.md`, the build records in `build/` and this data sheet. The captions and photos stay on this
+  computer (`data/published_cases/files/figures/` and `data/published_cases/downloads/figures/`).
+- Licences: each photo under its article's licence (recorded per picture in `build/figure_files.csv`: mostly CC BY and CC BY-NC); used for
+  research only and not redistributed.
+
+### 6. Maintenance
+
+- **Rebuild:** with the text dataset prepared, run in order `python -m src.build.cases.prepare count`, `download`, `check`, `build`.
+  `count` and `download` need the internet; `check` needs the packages in `requirements.txt` and downloads its two models once.
+- **Fingerprints:** every question's text and every photo has its SHA-256 in `photos.csv`; every run checks the files against them.
+  `photos.csv` itself: SHA-256 `cee3aa4b2699140bd59862c89d0fcd44fb959c84e45cb4bac1248ac642ac509f`.
+- **Versions:** a change to a question, photo or split makes a new version, with an entry here.
+  - Version 1 (2026-11-18): 335 questions (104 test), built on version 2 of the text dataset.
+  - Version 2 (2026-11-18): 324 questions (100 test). The text dataset's version 3 took out 29 questions whose confirming test
+    result also names another class; 11 of them had kept pictures, so the build leaves them out too (listed in the build section
+    of `dataset_report.md`). Every other question, photo and split is unchanged, byte for byte.
+
+### References
+
+- Gebru, T., Morgenstern, J., Vecchione, B., Vaughan, J. W., Wallach, H., Daumé III, H., and Crawford, K. (2021). Datasheets for
+  datasets. *Communications of the ACM*, 64(12), 86–92.
+- Cohen, J. (1960). A coefficient of agreement for nominal scales. *Educational and Psychological Measurement*, 20(1), 37–46.

@@ -4,7 +4,7 @@ and the library:
     python -m src.build.knowledge.index
 
 It writes, from committed tables only (and, for the licence of each case taken from a PMC full text, the text dataset's download
-in data/text/sources/pubmed/abstracts.jsonl):
+in data/published_cases/downloads/pubmed/abstracts.jsonl):
 - data/knowledge/index.csv: the training cases of the text dataset and the passages of the library. No validation or test item of
   any dataset is in it. An item is linked to a question only by its disease (``link`` = disease).
 - data/knowledge/diseases.csv: one row per class: the names and MeSH headings of the text dataset, and how many cases and passages
@@ -34,7 +34,7 @@ INDEX_TABLE, DISEASES_TABLE = "index.csv", "diseases.csv"
 INDEX_COLUMNS = ["item_id", "kind", "diseases", "link", "path", "sha256", "source", "licence"]
 DISEASE_COLUMNS = ["class", "text_terms", "mesh_headings", "cases_train", "cases_val", "cases_test", "passages"]
 CASE_LICENCES = {"PMC-Patients": "CC BY-NC-SA 4.0 (PMC-Patients)", "PubMed abstract": "publisher's copyright (abstract in PubMed)"}
-FULL_TEXTS = Path("sources") / "pubmed" / "abstracts.jsonl"  # in the text dataset's folder (on this computer): each full text's licence
+FULL_TEXTS = Path("downloads") / "pubmed" / "abstracts.jsonl"  # in the text dataset's folder (on this computer): each full text's licence
 NO_LICENCE = "(no licence given by PMC)"
 SPLITS = ("train", "val", "test")
 
@@ -71,7 +71,7 @@ def full_text_licences(text: Path) -> dict:
 def held_out_items(items: list[dict], cases: list[dict]) -> list[str]:
     """The ids of the index items that are a validation or test case of the text dataset (there must be none)."""
     held_out = {c["path"] for c in cases if c["split"] != "train"}
-    return [k["item_id"] for k in items if k["path"].split("/dataset/", 1)[-1] in held_out]
+    return [k["item_id"] for k in items if k["path"].split("/files/text/", 1)[-1] in held_out]
 
 
 def index(text: Path = TEXT, data: Path = KNOWLEDGE) -> dict:
@@ -87,7 +87,7 @@ def index(text: Path = TEXT, data: Path = KNOWLEDGE) -> dict:
     for c in sorted(cases, key=lambda c: c["path"]):
         if c["split"] == "train":
             items.append({"item_id": f"case:{c['patient_uid']}", "kind": "case", "diseases": c["label"], "link": "disease",
-                          "path": f"data/text/dataset/{c['path']}", "sha256": c["sha256"], "source": f"PMID {c['pmid']}",
+                          "path": f"data/published_cases/files/text/{c['path']}", "sha256": c["sha256"], "source": f"PMID {c['pmid']}",
                           "licence": CASE_LICENCES.get(c["source"]) or licences.get(c["pmid"]) or NO_LICENCE})
     for p in passages:
         items.append({"item_id": f"passage:{p['passage_id']}", "kind": "passage", "diseases": p["topics"], "link": "disease",

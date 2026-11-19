@@ -3,7 +3,7 @@
     python -m src.build.text.audit            the checks every question must pass (a failure stops)
     python -m src.build.text.audit review     signals of a doubtful label or of leakage, for deciding on a new version (no failure)
 
-It reads dataset.csv, the question files in data/text/dataset/ and the downloaded sources, and checks, with code of its own (not
+It reads dataset.csv, the question files in data/published_cases/files/text/ and the downloaded sources, and checks, with code of its own (not
 the build's), that every question:
     - has its file, matching its fingerprint, and no file is left over;
     - stands word for word in its source (the PMC-Patients patient, or the PubMed record's abstract or full text);
@@ -24,7 +24,7 @@ the build's), that every question:
       least 10% of the shorter one's runs of 12 words; questions of one article are kept together in one split anyway). Smaller
       overlaps, such as a common phrase, are only listed on the screen.
 It writes the result into the audit section of dataset_report.md, and 10 questions per class (a fixed random choice), each with
-the text that follows it in its source (where its label can be checked), into data/text/sources/audit_sample.txt (not committed)
+the text that follows it in its source (where its label can be checked), into data/published_cases/downloads/audit_sample.txt (not committed)
 for anyone who wants to read real questions. It exits with an error when a check
 fails.
 
@@ -40,7 +40,7 @@ fails.
     - the passages of the knowledge base (data/knowledge/texts/passages.jsonl and appearance.jsonl) that share a run of 12 words
       with the question: a leak into retrieval, to be removed from the knowledge base, never from the questions;
     - its source (PMC-Patients, a PMC full text, a PubMed abstract), year and length.
-It writes data/text/build/review_flags.csv (committed: no text) and the review section of dataset_report.md.
+It writes data/published_cases/build/review_flags.csv (committed: no text) and the review section of dataset_report.md.
 
 Decision rule for a new version, fixed with these signals and before the review was first run (2026-11-18):
     - a question whose confirming result also names another class (not negated) has a doubtful label: it leaves the dataset;
@@ -62,10 +62,10 @@ from collections import defaultdict
 from pathlib import Path
 
 from ...common import write_section
-from ...datasets import FILES, SYSTEM_FILES, TABLE_NAME
+from ...datasets import SYSTEM_FILES, TABLE_NAME
 from ..knowledge.library import FOLDER as KNOWLEDGE_TEXTS, KNOWLEDGE
-from .prepare import (ABSTRACTS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
-                      SKIN_WORDS, SOURCES, STEPS, SURFACE, TERMS, _json_list)
+from .prepare import (ABSTRACTS, DOWNLOADS, REVIEW_COLUMNS, REVIEW_FLAGS, DATA, FEATURES, INSIDE, PMC_PATIENTS, RELATIVES, REPORT, REPORT_HEAD, SCANS, SEEN, SHORT_FORMS,
+                      SKIN_WORDS, STEPS, SURFACE, TERMS, TEXT_FILES, _json_list)
 
 MIN_WORDS = 25
 VAGUE = {"mole"}  # too vague to be a diagnosis (class_terms.csv): it does not reveal the class
@@ -176,7 +176,7 @@ def audit(data: str | Path = DATA, show=None) -> dict:
     confirms = {label: _name_pattern(counting[label]) for label in counting}  # a result confirms the class by these names
     short = {label: re.compile(r"\b(?:" + "|".join(re.escape(f) for f in forms) + r")s?\b", re.I)
              for label, forms in SHORT_FORMS.items()}
-    folder = data / FILES
+    folder = data / TEXT_FILES
     texts, failures = {}, defaultdict(list)
     for row in rows:
         path = folder / row["path"]
@@ -236,7 +236,7 @@ def audit(data: str | Path = DATA, show=None) -> dict:
     _write_sample(data, rows, texts, sources)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "audit", _summary(rows, failures))
     return {"rows": rows, "failures": dict(failures), "pairs": pairs, "summary": (data / REPORT).as_posix(),
-            "sample": (data / SOURCES / SAMPLE).as_posix()}
+            "sample": (data / DOWNLOADS / SAMPLE).as_posix()}
 
 
 def review(data: str | Path = DATA, results: str | Path = "results", knowledge: str | Path = KNOWLEDGE, show=None) -> dict:
@@ -255,7 +255,7 @@ def review(data: str | Path = DATA, results: str | Path = "results", knowledge: 
              for label, forms in SHORT_FORMS.items()}
     texts = {}
     for row in rows:
-        path = data / FILES / row["path"]
+        path = data / TEXT_FILES / row["path"]
         if not path.is_file():
             raise FileNotFoundError(f"{path.as_posix()} not found: the review reads every question (run it where the texts are)")
         content = path.read_bytes()
@@ -459,10 +459,10 @@ def _sources(data: Path, rows: list[dict], show=None) -> dict[str, list[str]]:
     if wanted:
         if show:
             show("reading PMC-Patients for the source texts")
-        for record in _json_list(data / SOURCES / "pmc_patients" / PMC_PATIENTS["file"]):
+        for record in _json_list(data / DOWNLOADS / "pmc_patients" / PMC_PATIENTS["file"]):
             if isinstance(record, dict) and record.get("patient_uid") in wanted:
                 found[record["patient_uid"]].append(str(record["patient"]).strip())
-    path = data / SOURCES / ABSTRACTS / "abstracts.jsonl"
+    path = data / DOWNLOADS / ABSTRACTS / "abstracts.jsonl"
     if path.is_file():
         with path.open(encoding="utf-8") as f:
             for line in f:
@@ -490,8 +490,8 @@ def _write_sample(data: Path, rows: list[dict], texts: dict[str, str], sources: 
             after = source[source.index(question) + len(question):].strip()[:SAMPLE_AFTER] if source else "(not in its source)"
             lines += [f"== {label} | {row['patient_uid']} | {row['source']} | {row['split']}", question,
                       "-- after it in its source:", after, ""]
-    (data / SOURCES).mkdir(parents=True, exist_ok=True)
-    (data / SOURCES / SAMPLE).write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    (data / DOWNLOADS).mkdir(parents=True, exist_ok=True)
+    (data / DOWNLOADS / SAMPLE).write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
 
 def _summary(rows, failures) -> list[str]:
@@ -510,7 +510,7 @@ def _summary(rows, failures) -> list[str]:
              "forms (also those its source defines) and test results it must not contain, for one patient and a lesion on the "
              "skin it must describe, and for a test result after it in its source that names its class (a confirmed diagnosis)."
              f" {SAMPLE_PER_CLASS} questions per class, each with the text after it in its source, are written into "
-             "`data/text/sources/audit_sample.txt` for reading (not committed).", "",
+             "`data/published_cases/downloads/audit_sample.txt` for reading (not committed).", "",
              f"- Questions checked: {len(rows)}", "", "| Check | Failed | Examples |", "|---|---|---|"]
     for check in checks:
         found = failures.get(check, [])

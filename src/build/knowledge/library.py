@@ -43,13 +43,14 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from ...common import fetch, write_section
-from ...datasets import FILES, TABLE_NAME
+from ...datasets import TABLE_NAME
 from ..text.prepare import (ABSTRACT_CANDIDATES, CLASSES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
-                      HUMANS, NOT_SKIN, SKIN, SOURCES, _checked_headings, _efetch,
+                      HUMANS, NOT_SKIN, SKIN, TEXT_FILES, _checked_headings, _efetch,
                       _found, _licence, _matcher, _named, _pmc_articles, _read_csv, _search, _sentence_starts, _sha256, _stream,
                       _subject, _tokens, _write_csv)
 
 KNOWLEDGE = Path("data/knowledge")  # the knowledge base: its committed tables and report; texts/ and sources/ on this computer
+SOURCES = "sources"  # data/knowledge/sources/: the StatPearls archive, as downloaded (not committed)
 REPORT = "dataset_report.md"
 STEPS = ("library", "index", "appearance", "aspects")  # the report's sections, in the order the steps run
 REPORT_HEAD = ["# The knowledge base", "",
@@ -136,7 +137,7 @@ def library(data: str | Path = DATA, knowledge: str | Path = KNOWLEDGE, classes:
 
 def _question_runs(data: Path) -> set[tuple[str, ...]]:
     """Every run of SHARED_RUN words (plain, lower case) in the dataset's questions."""
-    table, folder = data / TABLE_NAME, data / FILES
+    table, folder = data / TABLE_NAME, data / TEXT_FILES
     if not table.is_file():
         raise FileNotFoundError(f"{table.as_posix()} not found: run python -m src.build.text.prepare build first")
     runs = set()
@@ -425,7 +426,7 @@ def _summary(day, classes, headings, reviews, guidelines, full, documents, rows,
              f"open full texts of those reviews in PubMed Central (per class the newest {FULLTEXTS_PER_CLASS} that PMC gives in "
              f"full); PubMed's clinical practice guidelines about each class (the newest {GUIDELINES_PER_CLASS} per class, as open "
              "full text where PMC gives it, else as abstract); and the chapters of StatPearls (NCBI's Bookshelf) whose title or "
-             "summary (its \"Continuing Education Activity\") names a class by a name that counts in `data/text/build/class_terms.csv` and whose title names no other site and no "
+             "summary (its \"Continuing Education Activity\") names a class by a name that counts in `data/published_cases/build/class_terms.csv` and whose title names no other site and no "
              f"animal. Every text is cut word for word into passages of whole paragraphs of at most {PASSAGE_WORDS} words. "
              "`library.csv` lists the passages (source, licence, fingerprint); their texts are in `data/knowledge/texts/` (not in "
              "Git).", "",

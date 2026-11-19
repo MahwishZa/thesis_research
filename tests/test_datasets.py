@@ -19,18 +19,39 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DatasetKindTests(unittest.TestCase):
     def test_the_kinds_the_code_knows_are_the_clinic_views_and_the_published_cases(self):
-        self.assertEqual(sorted(datasets.DATASETS), ["case_photos", "cases", "clinic_photo", "clinic_photo_record", "clinic_record", "text"])
+        self.assertEqual(sorted(datasets.DATASETS), ["clinic_photo", "clinic_photo_record", "clinic_record", "published_photos", "published_text", "published_text_photos"])
         self.assertNotIn("image", datasets.DATASETS)  # the Version 1 photo datasets are in archive/v1
         self.assertNotIn("image_metadata", datasets.DATASETS)
         self.assertEqual(datasets.dataset_paths("clinic_photo"), (Path("data/clinic_patients/dataset.csv"), Path("data/clinic_patients/files/photos")))
         self.assertEqual(datasets.dataset_paths("clinic_record"), (Path("data/clinic_patients/record.csv"), Path("data/clinic_patients/files/records")))
         self.assertEqual((datasets.TABLE, datasets.IMAGES), datasets.dataset_paths("clinic_photo"))
 
+    def test_the_loader_and_the_builders_agree_on_where_the_tables_and_files_are(self):
+        from src.build.cases import prepare as figures
+        from src.build.clinic_patients import table, views
+        from src.build.text import prepare
+        self.assertEqual(datasets.dataset_paths("published_text"), (prepare.DATA / "dataset.csv", prepare.DATA / prepare.TEXT_FILES))
+        for name in ("published_text_photos", "published_photos"):
+            self.assertEqual(datasets.dataset_paths(name), (figures.DATA / figures.CASES_TABLE, prepare.DATA / prepare.TEXT_FILES))
+            self.assertEqual(datasets.pictures_root(name), figures.DATA / figures.FILES)  # the tables name a picture from files/
+        for name in ("clinic_photo", "clinic_photo_record"):
+            self.assertEqual(datasets.dataset_paths(name), (table.DATA / table.DATASET, table.DATA / table.PHOTOS))
+        self.assertEqual(datasets.dataset_paths("clinic_record"), (table.DATA / views.RECORD, table.DATA / table.RECORDS))
+
+    def test_a_dataset_must_say_its_folder_and_its_files(self):
+        for change in ({"folder": ""}, {"files": ""}):
+            with self.subTest(change), self.assertRaisesRegex(ValueError, "must say its folder and its folder of files"):
+                datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why",
+                                 **({"folder": "f", "files": "f/files"} | change))
+        for name, kind in datasets.DATASETS.items():  # the folders the code names are the folders of the repository
+            self.assertTrue(kind.folder and kind.files.startswith(kind.folder + "/files"), name)
+
     def test_a_dataset_with_a_facts_column_must_say_how_a_missing_fact_reads(self):
         with self.assertRaisesRegex(ValueError, "must say how a missing fact reads"):
-            datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why", facts_column="facts")
+            datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why", facts_column="facts",
+                             folder="f", files="f/files")
         kind = datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why",
-                                facts_column="facts", missing_fact="unknown")
+                                facts_column="facts", missing_fact="unknown", folder="f", files="f/files")
         self.assertEqual(kind.missing_fact, "unknown")
         self.assertEqual(datasets.DATASETS["clinic_photo_record"].missing_fact, "unknown")
         self.assertEqual(datasets.DATASETS["clinic_photo"].missing_fact, "")  # no facts column, nothing to say

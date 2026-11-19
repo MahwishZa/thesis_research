@@ -21,7 +21,7 @@ class AuditTests(BuildData):
         self.rows = {r["patient_uid"]: r for r in self._table()}
 
     def _file(self, uid):
-        return self.data / "dataset" / self.rows[uid]["path"]
+        return self.data / prepare.TEXT_FILES / self.rows[uid]["path"]
 
     def test_a_built_dataset_passes_every_check_and_two_questions_per_class_are_written_to_read(self):
         done = audit.audit(self.data)
@@ -32,7 +32,7 @@ class AuditTests(BuildData):
         for expected in ("## Audit: an independent check of the questions", "- Questions checked: 9",
                          "| question not word for word in its source | 0 |  |", "All checks passed."):
             self.assertIn(expected, report)
-        sample = (self.data / "sources" / "audit_sample.txt").read_text(encoding="utf-8")
+        sample = (self.data / "downloads" / "audit_sample.txt").read_text(encoding="utf-8")
         heads = [line for line in sample.split("\n") if line.startswith("== ")]
         self.assertEqual(len(heads), 9)  # every question: this dataset has 1 or 2 per class
         self.assertIn("== actinic keratosis | pubmed-2101 | PubMed abstract | test", heads)
@@ -50,8 +50,8 @@ class AuditTests(BuildData):
         self._file("pubmed-2102").write_text("A 25-year-old woman had a small brown macule on her forearm", encoding="utf-8")
         self._file("2003-1").write_text(self._file("2003-1").read_text(encoding="utf-8") + " An SCC was suspected.",
                                         encoding="utf-8")  # the class's short form
-        (self.data / "dataset" / "test" / "nevus" / "extra.txt").write_text("left over", encoding="utf-8")
-        (self.data / "dataset" / "test" / "nevus" / "Thumbs.db").write_bytes(b"\0")  # written by Windows Explorer: ignored
+        (self.data / prepare.TEXT_FILES / "test" / "nevus" / "extra.txt").write_text("left over", encoding="utf-8")
+        (self.data / prepare.TEXT_FILES / "test" / "nevus" / "Thumbs.db").write_bytes(b"\0")  # written by Windows Explorer: ignored
         done = audit.audit(self.data)
         self.assertEqual({check: ids for check, ids in done["failures"].items() if ids}, {
             "question file missing": ["2010-1"],
@@ -67,7 +67,7 @@ class AuditTests(BuildData):
         self.assertIn("Some checks failed", (self.data / prepare.REPORT).read_text(encoding="utf-8"))
 
     def test_a_short_form_the_source_defines_for_the_class_is_found_in_a_question(self):
-        path = self.data / "sources" / "pubmed" / "abstracts.jsonl"
+        path = self.data / "downloads" / "pubmed" / "abstracts.jsonl"
         records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         case = records[0]["sections"][1][1]  # pubmed-2101: its background defines a short form, its case part uses it
         records[0]["sections"] = [["BACKGROUND", "Actinic keratosis of the hand (AKT) is common."],
@@ -154,7 +154,7 @@ class AuditTests(BuildData):
             "came back in May. A biopsy was taken. Histology confirmed an nBCC."), encoding="utf-8")
         self._file("2001-1").write_text(self._file("2001-1").read_text(encoding="utf-8").replace(
             "9 mm shiny papule", "9 mm shiny nBCC papule"), encoding="utf-8")  # and its question uses nBCC
-        path = self.data / "sources" / "pubmed" / "abstracts.jsonl"
+        path = self.data / "downloads" / "pubmed" / "abstracts.jsonl"
         records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         records[0]["sections"][1][1] = "Case 2. " + records[0]["sections"][1][1].replace(  # pubmed-2101: a heading at its start,
             "Histology showed an actinic keratosis.", "Histology showed HPV.")  # and a result naming only a virus
@@ -173,7 +173,7 @@ class AuditTests(BuildData):
                                         "developed a white ring; case 2, her brother, had a similar papule on his arm.", encoding="utf-8")
         self._file("2010-1").write_text("A 75-year-old retired sailor had a red, scaly mass in the esophagus for a year that was 8 mm "
                                         "across and bled when he swallowed. He had no history of skin disease.", encoding="utf-8")
-        path = self.data / "sources" / "pubmed" / "abstracts.jsonl"
+        path = self.data / "downloads" / "pubmed" / "abstracts.jsonl"
         records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         case = records[0]["sections"][1][1]  # pubmed-2101: its question stays in it, its result no longer names the class
         records[0]["sections"][1][1] = case.replace("Histology showed an actinic keratosis.", "It was frozen. It healed. AK was likely.")
@@ -263,7 +263,7 @@ class ReviewData(BuildData):
         super().setUp()
         prepare.build(self.data, classes=self.CLASSES)
         self.rows = {r["patient_uid"]: r for r in self._table()}
-        self.texts = {uid: (self.data / "dataset" / r["path"]).read_text(encoding="utf-8") for uid, r in self.rows.items()}
+        self.texts = {uid: (self.data / prepare.TEXT_FILES / r["path"]).read_text(encoding="utf-8") for uid, r in self.rows.items()}
         self.knowledge = self.data.parent / "knowledge"
         library = self.knowledge / "texts"
         library.mkdir(parents=True)
@@ -340,7 +340,7 @@ class ReviewTests(ReviewData):
         with self.assertRaisesRegex(FileNotFoundError, "appearance.jsonl not found"):
             audit.review(self.data, self.results, self.knowledge)
         (self.knowledge / "texts" / "appearance.jsonl").write_text("", encoding="utf-8")
-        (self.data / "dataset" / self.rows["2001-1"]["path"]).write_text("changed", encoding="utf-8")
+        (self.data / prepare.TEXT_FILES / self.rows["2001-1"]["path"]).write_text("changed", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "differs from its fingerprint"):
             audit.review(self.data, self.results, self.knowledge)
 
@@ -369,12 +369,12 @@ class ReviseTests(ReviewData):
         self.path = self.rows["2001-1"]["path"]
 
     def test_only_the_flagged_question_is_taken_out_and_its_file_moved_not_deleted(self):
-        content = (self.data / "dataset" / self.path).read_bytes()
+        content = (self.data / prepare.TEXT_FILES / self.path).read_bytes()
         done = prepare.revise(self.data)
         self.assertEqual([r["patient_uid"] for r in done["removed"]], ["2001-1"])
         self.assertEqual(self._table(), [r for r in self.before if r["patient_uid"] != "2001-1"])  # every other row as it was
-        self.assertFalse((self.data / "dataset" / self.path).exists())
-        self.assertEqual((self.data / prepare.SOURCES / prepare.REMOVED / self.path).read_bytes(), content)
+        self.assertFalse((self.data / prepare.TEXT_FILES / self.path).exists())
+        self.assertEqual((self.data / prepare.DOWNLOADS / prepare.REMOVED / self.path).read_bytes(), content)
         self.assertEqual((done["taken_out_now"], done["moved"]), (1, [self.path]))
         report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
         for expected in ("## Revision: version 3", "- Questions in version 2 (reviewed): 9; taken out: 1; version 3: 8",
@@ -392,8 +392,8 @@ class ReviseTests(ReviewData):
 
     def test_a_table_already_at_version_3_moves_the_files_the_same_way(self):
         prepare.revise(self.data)
-        moved = self.data / prepare.SOURCES / prepare.REMOVED / self.path
-        (self.data / "dataset" / self.path).write_bytes(moved.read_bytes())  # a computer with the new table and the old files
+        moved = self.data / prepare.DOWNLOADS / prepare.REMOVED / self.path
+        (self.data / prepare.TEXT_FILES / self.path).write_bytes(moved.read_bytes())  # a computer with the new table and the old files
         moved.unlink()
         table = (self.data / "dataset.csv").read_bytes()
         done = prepare.revise(self.data)
@@ -414,7 +414,7 @@ class ReviseTests(ReviewData):
         with self.assertRaisesRegex(FileNotFoundError, "run python -m src.build.text.audit review first"):
             prepare.revise(self.data)
         self.assertEqual(self._table(), self.before)  # nothing written
-        self.assertTrue((self.data / "dataset" / self.path).is_file())
+        self.assertTrue((self.data / prepare.TEXT_FILES / self.path).is_file())
 
     def test_the_command_line(self):
         real = prepare.revise

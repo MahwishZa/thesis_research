@@ -124,7 +124,7 @@ class CompareTests(RunProject):
         truth = ["a", "a", "b", "b"]
         runs = {}
         for name, dataset, predicted in (("image", "clinic_photo", ["a", "b", "b", "a"]), ("multi", "clinic_photo_record", ["a", "a", "b", "b"]),
-                                         ("text", "text", ["a", "a", "b", "b"])):
+                                         ("text", "published_text", ["a", "a", "b", "b"])):
             folder = self.base / f"pair_{name}"
             folder.mkdir()
             kind = datasets.DATASETS[dataset]

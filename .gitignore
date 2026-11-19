@@ -6,10 +6,9 @@ venv/
 .coverage
 htmlcov/
 
-# One folder per dataset in data/ (clinic_patients, text, cases) and the knowledge base (data/knowledge/). Only the tables and
+# One folder per dataset in data/ (clinic_patients, published_cases) and the knowledge base (data/knowledge/). Only the tables and
 # reports directly in a folder, and the build records in its build/ folder, are committed; originals, downloads and prepared files
-# stay on this computer (clinic_patients: downloads/, raw/, files/; text: sources/, dataset/; cases: figures/; knowledge: texts/,
-# sources/).
+# stay on this computer (a dataset's downloads/, raw/ and files/; the knowledge base's texts/ and sources/).
 /data/**
 !/data/*/
 !/data/*/*.csv

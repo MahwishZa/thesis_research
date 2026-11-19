@@ -196,13 +196,13 @@ class TextProject(unittest.TestCase):
     """A prepared text dataset (16 cases: 5 training, 3 validation, 8 test from 7 articles), its table, a prompt with the case
     placeholder and the model list, in a folder laid out like the repository; each test runs inside it."""
 
-    dataset = "text"
+    dataset = "published_text"
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.case_dir, self.table = self.base / "data" / "text" / "dataset", self.base / "data" / "text" / "dataset.csv"
+        self.case_dir, self.table = self.base / "data" / "published_cases" / "files" / "text", self.base / "data" / "published_cases" / "dataset.csv"
         self.texts, rows, number = {}, [], 0
         for (split, label), articles in TEXT_CASES.items():
             (self.case_dir / split / label).mkdir(parents=True)

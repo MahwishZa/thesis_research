@@ -22,6 +22,9 @@ diseases that reduces hallucination.
   `.claude/` when the research is final; a dataset's laptop-only folders are always `downloads/`, `raw/` and `files/`.
 - The clean-up is done in three stages: R1 names and notes; R2 the Version 1 photo datasets leave the working folders (they stay in
   `archive/v1`); R3 `data/text` and `data/cases` become `data/published_cases/`.
+  Done on 2026-11-19: R1 and R2a (names, notes, Version 1 results); R2b (the Version 1 photo datasets, their builders, tests and
+  prompts); R3 (`data/text` and `data/cases` joined into `data/published_cases/`: `dataset.csv` is the text of the cases, `photos.csv`
+  their photos; the datasets are `published_text`, `published_text_photos` and `published_photos`).
 
 ---
 

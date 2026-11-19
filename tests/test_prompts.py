@@ -31,14 +31,14 @@ class PromptTests(unittest.TestCase):
     def test_a_text_prompt_has_the_case_placeholder_once_and_an_image_prompt_has_none(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "p.txt"
-            for template, dataset in (("Pick:\n{labels}", "text"), ("{case}\n{case}\n{labels}", "text"),
+            for template, dataset in (("Pick:\n{labels}", "published_text"), ("{case}\n{case}\n{labels}", "published_text"),
                                       ("Case: {case}\n{labels}", "clinic_photo")):
                 with self.subTest(template):
                     path.write_text(template, encoding="utf-8")
                     with self.assertRaisesRegex(ValueError, "{case}"):
                         prompts.load_template(path, dataset)
             path.write_text("Case: {case}\nPick one:\n{labels}\n", encoding="utf-8")
-            prompt = prompts.build_prompt(prompts.load_template(path, "text"), LABELS)
+            prompt = prompts.build_prompt(prompts.load_template(path, "published_text"), LABELS)
         case = "A man of 70 had a {labels} lesion – “café”.\nIt grew."  # put in as it is, even text that looks like a placeholder
         self.assertEqual(prompts.fill(prompt, prompts.CASE, case), f"Case: {case}\nPick one:\n- melanoma\n- nevus\n- vascular lesion")
         self.assertEqual(prompts.fill("Case: {case}\nPick", prompts.CASE, " a papule \n"), "Case:  a papule \n\nPick")  # nothing trimmed

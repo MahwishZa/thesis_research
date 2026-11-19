@@ -80,7 +80,7 @@ class TagTests(unittest.TestCase):
 
 
 class TextFolder(unittest.TestCase):
-    """data/knowledge/ with library.csv and the passages' texts (texts/passages.jsonl), and data/text/ beside it."""
+    """data/knowledge/ with library.csv and the passages' texts (texts/passages.jsonl), and data/published_cases/ beside it."""
 
     PASSAGES = [("pmc-PMC1-1", "pmc", "PMC1", "Treatment / Management", TREATMENT, "melanoma"),
                 ("pmc-PMC1-2", "pmc", "PMC1", "Dermoscopy", DERMOSCOPY, "melanoma"),
@@ -91,7 +91,7 @@ class TextFolder(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.text, self.data = self.base / "data" / "text", self.base / "data" / "knowledge"
+        self.text, self.data = self.base / "data" / "published_cases", self.base / "data" / "knowledge"
         (self.data / "texts").mkdir(parents=True)
         rows, texts = [], []
         for pid, corpus, source, section, body, topics in self.PASSAGES:

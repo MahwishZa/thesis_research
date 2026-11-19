@@ -12,7 +12,7 @@ data/knowledge/appearance.csv (committed); the texts are in data/knowledge/texts
 
 For three classes the first search found almost nothing (0, 0 and 1 reviews: dermatofibroma, pigmented benign keratosis and vascular
 lesion, left short of the target by the first run on 2026-11-17), so they get a wider search: the reviews indexed with the class's
-headings as a main subject OR naming one of the class's names (data/text/build/class_terms.csv, the ones that count) in the title or
+headings as a main subject OR naming one of the class's names (data/published_cases/build/class_terms.csv, the ones that count) in the title or
 abstract, without the dermoscopy and morphology words. A review that names a condition class_terms.csv says does not count (and not only inside a name
 that counts) is left out. Nothing else changes, and the target of 30 passages from 8 documents is not lowered.
 

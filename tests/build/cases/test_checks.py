@@ -123,19 +123,20 @@ class CheckTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.data, self.text = base / "cases", base / "text"
+        self.data = self.text = base / "published_cases"
         files, captions, self.kinds, self.writing = [], [], {}, {}
         for uid, split, label, fig, seed, size, kind, writing in self.PICTURES:
             content = noise(seed, size)
             path = Path("figures") / "images" / uid / f"{fig}.png"
-            (self.data / path).parent.mkdir(parents=True, exist_ok=True)
-            (self.data / path).write_bytes(content)
+            (self.data / figures.FILES / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.data / figures.FILES / path).write_bytes(content)
             files.append({"patient_uid": uid, "split": split, "class": label, "pmcid": f"PMC{uid}", "figure": fig, "file": path.as_posix(),
                           "sha256": hashlib.sha256(content).hexdigest(), "width": size[0], "height": size[1], "status": figures.SAVED})
             captions.append({"patient_uid": uid, "figure": fig, "dermoscopy": kind == "dermoscopy", "clinical": kind != "dermoscopy"})
-            self.kinds[(self.data / path).as_posix()], self.writing[(self.data / path).as_posix()] = kind, writing
+            self.kinds[(self.data / figures.FILES / path).as_posix()], self.writing[(self.data / figures.FILES / path).as_posix()] = kind, writing
         files.append({**files[0], "figure": "f9", "file": "", "sha256": "", "status": figures.NOT_OPEN})  # not saved: not checked
         write_csv(self.data / figures.FILES_TABLE, figures.FILE_COLUMNS, files)
+        (self.data / figures.CAPTIONS).parent.mkdir(parents=True, exist_ok=True)
         (self.data / figures.CAPTIONS).write_text("".join(json.dumps(c) + "\n" for c in captions), encoding="utf-8")
         cases = [{"patient_uid": u, "split": s, "class": c, "counts": "yes"} for u, s, c, *_ in self.PICTURES]
         cases = list({c["patient_uid"]: c for c in cases}.values()) + [{"patient_uid": "c9", "split": "test", "class": "nevus", "counts": "no"}]
@@ -191,15 +192,28 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(again, first)
 
     def test_a_changed_picture_stops_the_check(self):
-        (self.data / "figures" / "images" / "c1" / "f1.png").write_bytes(noise(99))
+        (self.data / "files" / "figures" / "images" / "c1" / "f1.png").write_bytes(noise(99))
         with self.assertRaisesRegex(ValueError, "fingerprint differs"):
             self.run_check()
 
     def test_the_names_a_picture_may_not_write_are_the_class_terms_and_the_eight_classes(self):
         # "dermatofibroma" is one of the eight classes but not in class_terms.csv here (only "melanoma" and "spider nevus" are listed)
-        self.writing[(self.data / "figures" / "images" / "c4" / "f1.png").as_posix()] = ["Dermatofibroma"]
+        self.writing[(self.data / "files" / "figures" / "images" / "c4" / "f1.png").as_posix()] = ["Dermatofibroma"]
         found = {(r["patient_uid"], r["figure"]): (r["diagnosis_words"], r["reason"]) for r in self.run_check()["rows"]}
         self.assertEqual(found[("c4", "f1")], ("dermatofibroma", "writing in the picture names a diagnosis; the image model sees no photo of the skin"))
+
+    def test_the_folders_and_the_report_of_the_published_cases_are_shared_with_the_text_builder(self):
+        self.assertEqual((figures.DATA, figures.REPORT, figures.REPORT_HEAD), (figures.textprep.DATA, figures.textprep.REPORT, figures.textprep.REPORT_HEAD))
+        self.assertEqual(figures.DATA.as_posix(), "data/published_cases")
+        self.assertIs(figures.STEPS, figures.textprep.STEPS)
+        self.assertEqual(figures.STEPS[-4:], ("photos_count", "photos_download", "photos_check", "photos_build"))
+        self.assertEqual((figures.FILES, figures.IMAGES, figures.CAPTIONS, figures.CHECK_CACHE, figures.CASES_TABLE),
+                         (Path("files"), Path("figures/images"), Path("downloads/figures/captions.jsonl"),
+                          Path("downloads/figures/checks.jsonl"), "photos.csv"))
+        self.run_check(GO_TEST_CASES=1, GO_CLASSES=1, GO_PER_CLASS=1)
+        report = (self.data / figures.REPORT).read_text(encoding="utf-8")
+        self.assertIn("<!-- step: photos_check -->", report)
+        self.assertNotIn("<!-- step: check -->", report)
 
     def test_the_least_size_and_the_kinds_are_fixed(self):
         self.assertEqual(figures.MIN_SIDE, 128)
@@ -216,7 +230,7 @@ class BuildTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.data, self.text = base / "cases", base / "text"
+        self.data = self.text = base / "published_cases"
         checks = [{"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f10", "file": "figures/images/P1/f10-a.jpg",
                    "sha256": "a" * 64, "kept": "yes"},
                   {"patient_uid": "c1", "split": "test", "class": "melanoma", "figure": "f2", "file": "figures/images/P1/f2-b.jpg",
@@ -245,6 +259,8 @@ class BuildTests(unittest.TestCase):
              "pictures": f"figures/images/P2/F1-d.jpg|{'d' * 64}", "n_pictures": 1}])
         report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         self.assertIn("| all | 1 | 0 | 1 |", report)
+        self.assertIn("<!-- step: photos_build -->", report)
+        self.assertNotIn("<!-- step: build -->", report)
         self.assertIn("Questions: 2; pictures: 3. Pictures per question: 1: 1, 2: 1.", report)
         with (self.data / figures.CASES_TABLE).open(encoding="utf-8", newline="") as f:
             self.assertEqual(next(csv.reader(f)), figures.CASES_COLUMNS)

@@ -23,14 +23,14 @@ def write_table(path: Path, rows: list[dict]) -> None:
 
 
 class Project(unittest.TestCase):
-    """data/text/ with dataset.csv, build/class_terms.csv, build/term_check.csv and the download with each full text's licence, and
+    """data/published_cases/ with dataset.csv, build/class_terms.csv, build/term_check.csv and the download with each full text's licence, and
     data/knowledge/library.csv, as the text dataset and the library leave them; each test runs inside it."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.text, self.knowledge = self.base / "data" / "text", self.base / "data" / "knowledge"
+        self.text, self.knowledge = self.base / "data" / "published_cases", self.base / "data" / "knowledge"
         write_table(self.text / "dataset.csv", [
             {"split": split, "label": label, "path": f"{split}/{label}/{uid}.txt", "sha256": uid[-1] * 64, "patient_uid": uid, "pmid": pmid,
              "source": source}
@@ -51,8 +51,8 @@ class Project(unittest.TestCase):
             {"passage_id": "pmc-1-1", "source": "PMCID PMC1", "licence": "https://creativecommons.org/licenses/by/4.0/",
              "topics": "melanoma; nevus", "sha256": "a" * 64},
             {"passage_id": "book-2-1", "source": "StatPearls NBK2", "licence": "", "topics": "basal cell carcinoma", "sha256": "b" * 64}])
-        (self.text / "sources" / "pubmed").mkdir(parents=True)  # what the text dataset downloaded, with each full text's licence
-        (self.text / "sources" / "pubmed" / "abstracts.jsonl").write_text(
+        (self.text / "downloads" / "pubmed").mkdir(parents=True)  # what the text dataset downloaded, with each full text's licence
+        (self.text / "downloads" / "pubmed" / "abstracts.jsonl").write_text(
             "".join(json.dumps(r) + "\n" for r in ({"pmid": "16", "pmcid": "PMC16", "licence": "https://creativecommons.org/licenses/by/4.0/"},
                                                   {"pmid": "14", "pmcid": "PMC14", "licence": ""})), encoding="utf-8")
         previous = os.getcwd()
@@ -78,7 +78,7 @@ class IndexTests(Project):
         self.assertNotIn("image", {k["kind"] for k in items})  # the photos of Version 1 are no longer indexed
         case = next(k for k in items if k["item_id"] == "case:pubmed-11")
         self.assertEqual((case["path"], case["source"], case["licence"]),
-                         ("data/text/dataset/train/melanoma/pubmed-11.txt", "PMID 11", "publisher's copyright (abstract in PubMed)"))
+                         ("data/published_cases/files/text/train/melanoma/pubmed-11.txt", "PMID 11", "publisher's copyright (abstract in PubMed)"))
         self.assertEqual(next(k for k in items if k["item_id"] == "case:pubmed-16")["licence"],
                          "https://creativecommons.org/licenses/by/4.0/")  # the full text's own licence, as PMC gives it
         self.assertEqual(next(k for k in items if k["item_id"] == "case:13-1")["licence"], "CC BY-NC-SA 4.0 (PMC-Patients)")
@@ -118,7 +118,7 @@ class IndexTests(Project):
         with self.assertRaisesRegex(ValueError, "not among the eight of the dataset: lentigo"):
             index.index()
         path.write_text(text, encoding="utf-8")
-        (self.text / "sources" / "pubmed" / "abstracts.jsonl").unlink()
+        (self.text / "downloads" / "pubmed" / "abstracts.jsonl").unlink()
         with self.assertRaisesRegex(FileNotFoundError, "holds the licence of each case taken from a PMC full text"):
             index.index()
 
@@ -138,8 +138,8 @@ class IndexTests(Project):
         self.assertIn("<!-- step: index -->", report.read_text(encoding="utf-8"))
 
     def test_a_held_out_case_among_the_items_is_found_and_stops_the_step(self):
-        items = [{"item_id": "case:a", "path": "data/text/dataset/train/nevus/a.txt"}, {"item_id": "case:b", "path": "data/text/dataset/val/nevus/b.txt"},
-                 {"item_id": "case:c", "path": "data/text/dataset/test/nevus/c.txt"}, {"item_id": "passage:p", "path": "data/knowledge/texts/passages.jsonl#p"}]
+        items = [{"item_id": "case:a", "path": "data/published_cases/files/text/train/nevus/a.txt"}, {"item_id": "case:b", "path": "data/published_cases/files/text/val/nevus/b.txt"},
+                 {"item_id": "case:c", "path": "data/published_cases/files/text/test/nevus/c.txt"}, {"item_id": "passage:p", "path": "data/knowledge/texts/passages.jsonl#p"}]
         cases = [{"split": "train", "path": "train/nevus/a.txt"}, {"split": "val", "path": "val/nevus/b.txt"}, {"split": "test", "path": "test/nevus/c.txt"}]
         self.assertEqual(index.held_out_items(items, cases), ["case:b", "case:c"])
         self.assertEqual(index.held_out_items(items[:1] + items[3:], cases), [])

@@ -14,8 +14,8 @@ from PIL import Image
 
 
 
-DATA = Path("data")  # one folder per dataset (clinic_patients, text, cases), and the knowledge base (data/knowledge/)
-TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
+DATA = Path("data")  # one folder per dataset (clinic_patients, published_cases), and the knowledge base (data/knowledge/)
+TABLE_NAME = "dataset.csv"  # in a dataset's folder: the table of the prepared dataset (a dataset with other views has more tables)
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
 COLUMNS = ("split", "label", "path", "sha256")  # required in the table; other columns are kept there but not needed here
 MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}  # the image files a dataset can hold
@@ -42,8 +42,8 @@ class Dataset:
     set_apart: tuple[str, ...] = ()  # classes with so few files that the report also gives the scores without them
     facts_column: str = ""  # the table's column with each file's patient facts, put into the prompt at {facts}
     table: str = TABLE_NAME  # its table, in data/<folder>/
-    files: str = ""  # its folder of files, inside data/ (default: <dataset>/dataset)
-    folder: str = ""  # its folder in data/, which holds its table (default: the dataset's name)
+    files: str = ""  # its folder of files, inside data/ (for example clinic_patients/files/photos)
+    folder: str = ""  # its folder in data/, which holds its table (for example clinic_patients)
     pictures_column: str = ""  # the table's column with each question's pictures ("file|sha256;file|sha256"), sent next to the prompt
     pictures_root: str = ""  # the folder in data/ the pictures' paths start from
     subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
@@ -51,23 +51,27 @@ class Dataset:
     missing_fact: str = ""  # with a facts column: how a missing fact reads there (the questions without one are scored again beside the main score)
 
     def __post_init__(self):
+        if not self.folder or not self.files:
+            raise ValueError("a dataset must say its folder and its folder of files")
         if self.facts_column and not self.missing_fact:
             raise ValueError("a dataset with a facts column must say how a missing fact reads (missing_fact)")
 
 
 DATASETS = {  # the datasets a config can name
-    "text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
-                    "Patients described in one article are not independent",
-                    set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
-    # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/cases/dataset.csv), asked
-    # with the case text and the photos ("cases") or with the photos only ("case_photos"); the text only is the text dataset.
-    "cases": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article", "Patients described in one article are not independent",
-                     set_apart=("actinic keratosis",), files="text/dataset", folder="cases",
-                     pictures_column="pictures", pictures_root="cases", subset=True),
-    "case_photos": Dataset(TEXT_TYPES, "a .txt file", False, "pmid", "case", "article",
-                           "Patients described in one article are not independent", set_apart=("actinic keratosis",),
-                           files="text/dataset", folder="cases", pictures_column="pictures",
-                           pictures_root="cases", subset=True),
+    # The published cases (data/published_cases/): the text of a patient described in a case report (dataset.csv), the same patient's photos
+    # from the report's own article (photos.csv, the cases whose article shows the lesion), and the three views of them: the text alone, the
+    # text with the photos and the photos alone. The photos' questions are some of the text's: a text run is compared with them on those only.
+    "published_text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
+                              "Patients described in one article are not independent", set_apart=("actinic keratosis",),
+                              folder="published_cases", files="published_cases/files/text"),  # 2 test cases: limitation 3 of its data sheet
+    "published_text_photos": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
+                                     "Patients described in one article are not independent", set_apart=("actinic keratosis",),
+                                     table="photos.csv", folder="published_cases", files="published_cases/files/text",
+                                     pictures_column="pictures", pictures_root="published_cases/files", subset=True),
+    "published_photos": Dataset(TEXT_TYPES, "a .txt file", False, "pmid", "case", "article",
+                                "Patients described in one article are not independent", set_apart=("actinic keratosis",),
+                                table="photos.csv", folder="published_cases", files="published_cases/files/text",
+                                pictures_column="pictures", pictures_root="published_cases/files", subset=True),
     # The clinic patients cohort (PAD-UFES-20; data/clinic_patients/): the same questions in three views, so that the answers pair.
     # One question is one photo of one patient's lesion with the record of the same visit; its tables are written by step views.
     "clinic_photo": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient",
@@ -79,9 +83,10 @@ DATASETS = {  # the datasets a config can name
                                    "Photos of one patient are not independent", facts_column="facts", folder="clinic_patients",
                                    files="clinic_patients/files/photos", missing_fact="unknown"),
 }
-SAME_QUESTIONS = ({"text", "cases", "case_photos"}, {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
-TITLES = {"text": "Text", "cases": "Cases: text and photos",
-          "case_photos": "Cases: photos only", "clinic_photo": "Clinic patients: photo", "clinic_record": "Clinic patients: record",
+SAME_QUESTIONS = ({"published_text", "published_text_photos", "published_photos"},
+                  {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
+TITLES = {"published_text": "Published cases: text", "published_text_photos": "Published cases: text and photos",
+          "published_photos": "Published cases: photos only", "clinic_photo": "Clinic patients: photo", "clinic_record": "Clinic patients: record",
           "clinic_photo_record": "Clinic patients: photo + record"}  # how tables and reports name the datasets
 
 
@@ -102,10 +107,10 @@ class Item:
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
-    """The table and the folder of files of one prepared dataset: data/<folder>/dataset.csv and data/<dataset>/dataset/, or the
-    table and folder DATASETS names (the clinic patients datasets: data/clinic_patients/dataset.csv and files/photos/)."""
+    """The table and the folder of files of one prepared dataset, as DATASETS names them (the clinic photo dataset:
+    data/clinic_patients/dataset.csv and data/clinic_patients/files/photos/)."""
     kind = DATASETS[dataset]
-    return DATA / (kind.folder or dataset) / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
+    return DATA / kind.folder / kind.table, DATA / kind.files
 
 
 TABLE, IMAGES = dataset_paths("clinic_photo")  # the defaults below

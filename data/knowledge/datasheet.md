@@ -114,7 +114,7 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 **Versions.** Any change to a passage or an item makes a new version, with new fingerprints and an entry here.
 - **2026-11-14:** the library and the index.
 - **2026-11-17:** the appearance corpus, the aspects and the cards (added; nothing earlier changed).
-- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/`; the index has its own step (it was written by the image + metadata build, byte for byte the same); the index's case items follow version 3 of the text dataset (444 → 429; 7,736 → 7,721 items). The image + metadata audit passed all its checks on the rebuilt index.
+- **2026-11-18:** moved into this folder from `data/text/` and `data/multimodal/` (folders that no longer exist under these names); the index has its own step (it was written by the image + metadata build, byte for byte the same); the index's case items follow version 3 of the text dataset (444 → 429; 7,736 → 7,721 items). The image + metadata audit passed all its checks on the rebuilt index.
 - **2026-11-19:** the Version 1 photo datasets were removed from the working folders (stage R2b of the clean-up; they are in `archive/v1/` and Git history). The index no longer lists photos (7,721 → 5,982 items; its case and passage rows are byte for byte as before), `diseases.csv` lost its photo columns, and the `cards` step and `image_cards.csv` were removed.
 
 **Checks.** The library step checks the StatPearls archive against its fingerprint on every run. The enrich steps stop on any broken rule (a passage table and its texts that differ), and the index step stops on any validation or test case.
@@ -128,7 +128,7 @@ Open-book runs answer a question with retrieved evidence. RAG² (Sohn et al., 20
 | `library.csv` | `ca8d6969379c08a2f837d47cf9359ab40d116001cfe7219ca7568a82becf710b` |
 | `appearance.csv` | `6dc290e4b6a044c400cf757c299c55663b4673622db59f17d58fcbaeee70b3e5` |
 | `passage_aspects.csv` | `dca44093d9a1755980e935d3664da84f5485c1b8dbbfbdf6dec6de288141785b` |
-| `index.csv` | `44167584eeea690ef4e3ff35cfc2327355023c6299b95bf88d1c10b82382c9c7` |
+| `index.csv` | `b87957db7788780cbf5d6860bab9de61ab4b934b97fb54b2ccf1a16d4b1985d8` |
 | `diseases.csv` | `4ce0b015f3cceb505b949afc37b7de16943de17b2251d9706a45f95b924fdc6f` |
 
 Every passage has its own SHA-256 in its table; the steps check the texts against them.

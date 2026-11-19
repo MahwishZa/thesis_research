@@ -6,9 +6,9 @@ lesion as a clinical or a dermoscopic photo, then the download, the check and th
     python -m src.build.cases.prepare count     (needs the internet; downloads PubMed records and PMC full texts, no image)
     python -m src.build.cases.prepare download  (needs the internet; the pictures of the figures that count, from PMC's open-access files)
     python -m src.build.cases.prepare check     (checks every saved picture by itself; needs PyTorch, open_clip and EasyOCR)
-    python -m src.build.cases.prepare build     (the case dataset's table, data/cases/dataset.csv, from the committed tables)
+    python -m src.build.cases.prepare build     (the case dataset's table, data/published_cases/photos.csv, from the committed tables)
 
-Only captions are read: no image is downloaded or looked at. For each case of data/text/dataset.csv, PubMed gives the article's PMC
+Only captions are read: no image is downloaded or looked at. For each case of data/published_cases/dataset.csv, PubMed gives the article's PMC
 number, PMC gives the open full text (the same source the text dataset used), and each figure of it is judged by its caption with
 fixed word lists (below):
 - it shows the lesion when the caption names dermoscopy or a clinical photo, or names a lesion (a nodule, a plaque and so on);
@@ -25,29 +25,29 @@ at least 6 of the 8 classes with at least 8 such test cases each.
 the cloud (the AWS Open Data bucket pmc-oa-opendata; PMC's former open-access web service no longer answers). An article that is not
 open access, or that is marked retracted, gives no picture. Otherwise the article's latest version, its XML (which names each
 figure's picture files) and only the pictures of the figures that count are downloaded; each file is checked against the MD5
-checksum PMC publishes for it, and the pictures are kept byte for byte in data/cases/figures/images/ (not in Git). Each picture
-is opened once to check that it is a readable picture. The table data/cases/build/figure_files.csv lists every picture with its
+checksum PMC publishes for it, and the pictures are kept byte for byte in data/published_cases/files/figures/images/ (not in Git). Each picture
+is opened once to check that it is a readable picture. The table data/published_cases/build/figure_files.csv lists every picture with its
 fingerprint; the download section of dataset_report.md gives the counts. The download can be stopped and run again: an article
 already done is not asked again.
 
 ``check`` checks every saved picture by itself, with no person looking: it must be at least MIN_SIDE pixels on its shorter side;
-no writing in it (read by EasyOCR) may name a diagnosis (any name in data/text/build/class_terms.csv, or a class's short form); an image
+no writing in it (read by EasyOCR) may name a diagnosis (any name in data/published_cases/build/class_terms.csv, or a class's short form); an image
 model (open_clip, asked which of KINDS the picture is) must see a clinical photo or a dermoscopy image, so a caption that missed a
 panel of histology or a scan is caught; and it may not be the same picture as one of another case (the rule for "the same picture"
 is ``SAME``, below). A case keeps the pictures that pass; the rule for building the dataset is applied
-again to the cases that keep one. The table data/cases/build/figure_checks.csv gives every picture's results; the check section of dataset_report.md the
+again to the cases that keep one. The table data/published_cases/build/figure_checks.csv gives every picture's results; the check section of dataset_report.md the
 counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
-are kept in data/cases/figures/checks.jsonl (not in Git), so a second run does not ask them again.
+are kept in data/published_cases/downloads/figures/checks.jsonl (not in Git), so a second run does not ask them again.
 
-``build`` writes the case dataset: one question per case that keeps a picture, in data/cases/dataset.csv. A question is the
-text dataset's frozen question (path and fingerprint as in data/text/dataset.csv, same split and class) and the case's kept
+``build`` writes the case dataset: one question per case that keeps a picture, in data/published_cases/photos.csv. A question is the
+text dataset's frozen question (path and fingerprint as in data/published_cases/dataset.csv, same split and class) and the case's kept
 pictures, in the order of their figures. A case with kept pictures that the text dataset no longer holds (taken out by a later
 version) gets no question and is listed in the report. The evaluation asks a question with the text and the pictures (dataset
-"cases") or with the pictures only ("case_photos"); the text only is the text dataset itself. No caption is shown. The build
+"published_text_photos") or with the pictures only ("published_photos"); the text only is the text dataset itself ("published_text"). No caption is shown. The build
 section of dataset_report.md gives the counts.
 
-``count`` writes data/cases/build/figure_count.csv (one row per case, no caption text), the count section of dataset_report.md
-(the counts and the rule) and data/cases/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
+``count`` writes data/published_cases/build/figure_count.csv (one row per case, no caption text), the count section of dataset_report.md
+(the counts and the rule) and data/published_cases/downloads/figures/captions.jsonl (every figure's caption and judgement, on this computer only, as the captions are
 under their publishers' licences).
 """
 
@@ -78,26 +78,23 @@ def _read_csv(path: Path) -> list[dict]:
     return read_rows(path, "the text dataset and the earlier steps of this dataset must be prepared first")
 
 
-DATA = Path("data/cases")  # the case dataset: dataset.csv, dataset_report.md, datasheet.md and build/; figures/ on this computer
-REPORT = "dataset_report.md"
-STEPS = ("count", "download", "check", "build")  # the report's sections, in the order the steps run
-REPORT_HEAD = ["# Preparation of the case dataset", "",
-               "Written by `python -m src.build.cases.prepare`, one section per step in the order the steps run; each step "
-               "rewrites only its own section. The build records are in `build/`; the captions, pictures and the models' answers "
-               "stay on this computer in `figures/`.", ""]
+DATA = textprep.DATA  # the published cases: photos.csv, build/ and the report here; the pictures and the downloads on this computer
+REPORT, REPORT_HEAD = textprep.REPORT, textprep.REPORT_HEAD  # one report for the text and the photos of the cases
+STEPS = textprep.STEPS  # its sections; the four of this module are named photos_count, photos_download, photos_check and photos_build
 COUNT_TABLE = "build/figure_count.csv"
-CAPTIONS = Path("figures") / "captions.jsonl"  # in data/cases/, not in Git
+FILES = Path("files")  # in DATA, not in Git: the pictures, as figures/images/<article>/<file>; the tables name them from here
+CAPTIONS = Path("downloads") / "figures" / "captions.jsonl"  # in DATA, not in Git
 CLOUD = "https://pmc-oa-opendata.s3.amazonaws.com/"  # PMC Article Datasets: NCBI's copy of PMC's open-access articles (AWS Open Data)
 CLOUD_BUCKET = "s3://pmc-oa-opendata/"
 FILES_TABLE = "build/figure_files.csv"
-IMAGES = Path("figures") / "images"  # in data/cases/, not in Git: one folder per article
+IMAGES = Path("figures") / "images"  # in DATA / FILES, not in Git: one folder per article
 FILE_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "label", "picture", "file", "sha256", "width", "height", "licence",
                 "status"]
 PICTURE_TYPES = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff")  # in this order of preference when a figure has several
 SAVED, NOT_OPEN, RETRACTED, NO_FILE, UNREADABLE = ("saved", "not open access in PMC", "the article is retracted",
                                                    "no picture file for the figure among the article's files", "the picture cannot be opened")
 CHECKS_TABLE = "build/figure_checks.csv"
-CHECK_CACHE = Path("figures") / "checks.jsonl"  # in data/cases/, not in Git: the models' answers, by picture fingerprint
+CHECK_CACHE = Path("downloads") / "figures" / "checks.jsonl"  # in DATA, not in Git: the models' answers, by picture fingerprint
 MIN_SIDE = 128  # pixels on the shorter side; fixed before any picture was seen
 IMAGE_MODEL = ("ViT-B-32", "laion2b_s34b_b79k")  # open_clip's model and weights
 KINDS = {  # what the image model chooses from; fixed before any picture was seen
@@ -111,7 +108,7 @@ CHECK_REASONS = ("smaller than the least size", "writing in the picture names a 
                  "the same picture is in another case", "the same picture twice in this case")
 CHECK_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "width", "height", "caption_type", "model_kind",
                  "model_score", "writing", "diagnosis_words", "kept", "reason"]
-CASES_TABLE = "dataset.csv"
+CASES_TABLE = "photos.csv"
 CASES_COLUMNS = ["split", "label", "path", "sha256", "pmid", "patient_uid", "pictures", "n_pictures"]
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
 # The most each may be for "same picture" (moved without change from the Version 1 image builder, commit a1c9209). The mean colour
@@ -207,7 +204,7 @@ def _cited(question: str | None) -> set[int] | None:
 
 
 def _question(text: Path, row: dict) -> str | None:
-    path = text / "dataset" / row["path"]
+    path = text / textprep.TEXT_FILES / row["path"]
     if not path.is_file():
         return None
     content = path.read_bytes()
@@ -268,7 +265,7 @@ def count(text: Path = TEXT, data: Path = DATA, show=None) -> dict:
     os.replace(partial, local)
     decision = go(rows)
     report = data / REPORT
-    write_section(report, REPORT_HEAD, STEPS, "count", _report(rows, captions, decision))
+    write_section(report, REPORT_HEAD, STEPS, "photos_count", _report(rows, captions, decision))
     return {"rows": rows, "captions": len(captions), "decision": decision, "table": (data / COUNT_TABLE).as_posix(),
             "report": report.as_posix(), "local": local.as_posix()}
 
@@ -341,7 +338,7 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
               "- No image was looked at. A caption can be wrong or incomplete; the build step checks the images themselves (what kind of "
               "picture each is, writing in the picture, the same picture twice).",
               "- A figure that counts may still show more than the lesion (an arrow, a ruler, a second panel the caption does not name).",
-              "- The captions stay on this computer (`data/cases/figures/captions.jsonl`), under their publishers' licences.", ""]
+              "- The captions stay on this computer (`data/published_cases/downloads/figures/captions.jsonl`), under their publishers' licences.", ""]
     return lines
 
 
@@ -444,7 +441,7 @@ def download(data: Path = DATA, show=None) -> dict:
         if not figures:
             raise ValueError(f"{case['patient_uid']} counts in {COUNT_TABLE} but no figure of it does in {CAPTIONS.as_posix()}: run "
                              "python -m src.build.cases.prepare count again")
-        folder = data / IMAGES / _safe(case["pmcid"])
+        folder = data / FILES / IMAGES / _safe(case["pmcid"])
         done = folder / "record.json"
         if done.is_file():
             rows += json.loads(done.read_text(encoding="utf-8"))
@@ -480,7 +477,7 @@ def download(data: Path = DATA, show=None) -> dict:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.with_name(path.name + ".partial").write_bytes(content)
                 os.replace(path.with_name(path.name + ".partial"), path)
-                mine.append({**entry, "file": path.relative_to(data).as_posix(), "sha256": hashlib.sha256(content).hexdigest(),
+                mine.append({**entry, "file": path.relative_to(data / FILES).as_posix(), "sha256": hashlib.sha256(content).hexdigest(),
                              "width": width, "height": height, "status": SAVED})
         folder.mkdir(parents=True, exist_ok=True)
         done.write_text(json.dumps(mine, ensure_ascii=False), encoding="utf-8")
@@ -489,7 +486,7 @@ def download(data: Path = DATA, show=None) -> dict:
     rows.sort(key=lambda r: (r["split"], r["class"], r["patient_uid"], r["figure"], r["picture"]))
     _write_csv(data / FILES_TABLE, FILE_COLUMNS, rows)
     report = data / REPORT
-    write_section(report, REPORT_HEAD, STEPS, "download", _files_report(rows, cases))
+    write_section(report, REPORT_HEAD, STEPS, "photos_download", _files_report(rows, cases))
     return {"rows": rows, "table": (data / FILES_TABLE).as_posix(), "report": report.as_posix()}
 
 
@@ -498,7 +495,7 @@ def _files_report(rows: list[dict], cases: list[dict]) -> list[str]:
     with_picture = {r["patient_uid"] for r in saved}
     lines = ["# Pictures of the figures that count", "",
              f"Written by `python -m src.build.cases.prepare download` on {datetime.now(timezone.utc).date().isoformat()}. The pictures "
-             "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/cases/figures/images/`). "
+             "come from PMC Article Datasets (NCBI's cloud copy of PMC's open-access articles), byte for byte, each checked against PMC's MD5 checksum, and stay on this computer (`data/published_cases/files/figures/images/`). "
              "Nothing in them was changed, and no person looked at them.", "",
              "| Class | Test: cases with a picture | Validation | Train |", "|---|---|---|---|"]
     for label in sorted({c["class"] for c in cases}) + ["all"]:
@@ -604,7 +601,7 @@ def check(data: Path = DATA, text: Path = TEXT, classify=None, read=None, show=N
     versions = {}
     signatures, rows = [], []
     for number, picture in enumerate(pictures, start=1):
-        path = data / picture["file"]
+        path = data / FILES / picture["file"]
         content = path.read_bytes()
         if hashlib.sha256(content).hexdigest() != picture["sha256"]:
             raise ValueError(f"{path.as_posix()} is not the picture {FILES_TABLE} lists (its fingerprint differs): run python -m "
@@ -659,7 +656,7 @@ def check(data: Path = DATA, text: Path = TEXT, classify=None, read=None, show=N
     kept = {r["patient_uid"] for r in rows if r["kept"] == "yes"}
     decision = go([{**c, "counts": "yes" if c["patient_uid"] in kept else "no"} for c in cases])
     report = data / REPORT
-    write_section(report, REPORT_HEAD, STEPS, "check", _checks_report(rows, cases, kept, decision, versions))
+    write_section(report, REPORT_HEAD, STEPS, "photos_check", _checks_report(rows, cases, kept, decision, versions))
     return {"rows": rows, "decision": decision, "table": (data / CHECKS_TABLE).as_posix(), "report": report.as_posix()}
 
 
@@ -755,7 +752,7 @@ def build(data: Path = DATA, text: Path = TEXT) -> dict:
     rows.sort(key=lambda r: r["path"])
     _write_csv(data / CASES_TABLE, CASES_COLUMNS, rows)
     report = data / REPORT
-    write_section(report, REPORT_HEAD, STEPS, "build", _cases_report(rows, left_out))
+    write_section(report, REPORT_HEAD, STEPS, "photos_build", _cases_report(rows, left_out))
     return {"rows": rows, "table": (data / CASES_TABLE).as_posix(), "report": report.as_posix()}
 
 
@@ -783,7 +780,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("count", help="count the cases whose article shows the lesion in a figure, by the captions (needs the internet)")
     sub.add_parser("download", help="download the pictures of the figures that count, from PMC's cloud copy of open-access articles (needs the internet)")
     sub.add_parser("check", help="check every saved picture by itself (size, writing, image model, the same picture twice)")
-    sub.add_parser("build", help="write the case dataset's table, data/cases/dataset.csv, from the committed tables")
+    sub.add_parser("build", help="write the case dataset's table, data/published_cases/photos.csv, from the committed tables")
     return parser
 
 
@@ -806,7 +803,7 @@ def main(argv: list[str] | None = None) -> None:
             done = download(show=print)
             saved = [r for r in done["rows"] if r["status"] == SAVED]
             print(f"{len(saved)} pictures saved for {len({r['patient_uid'] for r in saved})} cases. Written: {done['table']} and "
-                  f"{done['report']}; the pictures stay in data/cases/figures/images/ (not in Git). Commit {done['table']} and "
+                  f"{done['report']}; the pictures stay in data/published_cases/files/figures/images/ (not in Git). Commit {done['table']} and "
                   f"{done['report']}.")
             return
         done = count(show=print)

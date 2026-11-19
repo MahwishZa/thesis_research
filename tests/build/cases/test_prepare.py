@@ -103,14 +103,14 @@ class CountTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.text, self.data = base / "data" / "text", base / "data" / "cases"
+        self.text = self.data = base / "data" / "published_cases"  # one folder for the text and the photos of the cases
         rows = []
         for uid, split, label, pmid, question in self.CASES:
             path = f"{split}/{label}/{uid}.txt"
             body = (question or "missing").encode("utf-8")
             if question is not None:
-                (self.text / "dataset" / split / label).mkdir(parents=True, exist_ok=True)
-                (self.text / "dataset" / path).write_bytes(body)
+                (self.text / figures.textprep.TEXT_FILES / split / label).mkdir(parents=True, exist_ok=True)
+                (self.text / figures.textprep.TEXT_FILES / path).write_bytes(body)
             rows.append(dict(zip(COLUMNS, [split, label, path, hashlib.sha256(body).hexdigest(), uid, pmid, "PMC-Patients", "", "2020",
                                            "", "", "10"])))
         with (self.text / "dataset.csv").open("w", encoding="utf-8", newline="") as f:
@@ -167,7 +167,7 @@ class CountTests(unittest.TestCase):
             self.assertIn(expected, report)
 
     def test_a_question_that_is_not_the_frozen_one_stops_the_count(self):
-        (self.text / "dataset" / "test" / "melanoma" / "c1.txt").write_text("changed", encoding="utf-8")
+        (self.text / figures.textprep.TEXT_FILES / "test" / "melanoma" / "c1.txt").write_text("changed", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "fingerprint differs"):
             figures.count(self.text, self.data)
 
@@ -177,6 +177,7 @@ class CountTests(unittest.TestCase):
             done = figures.count(self.text, self.data)
         self.assertEqual(done["decision"], {"test_cases": 1, "per_class": {"melanoma": 1}, "classes_with_enough": ["melanoma"], "build": True})
         self.assertIn("The rule is met: the dataset can be built.", (self.data / figures.REPORT).read_text(encoding="utf-8"))
+        self.assertIn("<!-- step: photos_count -->", (self.data / figures.REPORT).read_text(encoding="utf-8"))
 
 
 class ReportTests(unittest.TestCase):
@@ -292,7 +293,7 @@ class DownloadTests(unittest.TestCase):
         lines = [caption("c1", "PMC1", "f1"), caption("c1", "PMC1", "f2", left=["scan"]), caption("c1", "PMC1", "f3", lesion=False),
                  caption("c1", "PMC1", "f5"), caption("c2", "PMC2", "f1"), caption("c3", "PMC3", "f1"), caption("c4", "PMC4", "f1"),
                  caption("c5", "PMC5", "f1")]
-        (self.data / "figures").mkdir()
+        (self.data / figures.CAPTIONS).parent.mkdir(parents=True)
         (self.data / figures.CAPTIONS).write_text("".join(json.dumps(c) + "\n" for c in lines), encoding="utf-8")
         files = {"PMC1.2/fig1.jpg": png(), "PMC1.2/fig2.jpg": png(), "PMC1.2/fig3.jpg": png(), "PMC1.2/fig5.png": png()[:-30]}
         xml = article_xml({f"f{i}": (f"Figure {i}", [f"fig{i}"]) for i in (1, 2, 3, 5)})
@@ -326,13 +327,13 @@ class DownloadTests(unittest.TestCase):
         first = rows[("c1", "f1")]
         self.assertEqual((first["status"], first["width"], first["height"], first["licence"], first["file"], first["picture"]),
                          (figures.SAVED, 4, 3, "CC BY", "figures/images/PMC1/f1-fig1.jpg", "fig1.jpg"))
-        self.assertEqual((self.data / first["file"]).read_bytes(), png())
+        self.assertEqual((self.data / figures.FILES / first["file"]).read_bytes(), png())
         self.assertEqual(first["sha256"], hashlib.sha256(png()).hexdigest())
         self.assertEqual(rows[("c1", "f5")]["status"], figures.UNREADABLE)
         self.assertEqual(rows[("c2", "f1")]["status"], figures.NOT_OPEN)
         self.assertEqual(rows[("c3", "f1")]["status"], figures.RETRACTED)
         self.assertEqual(rows[("c4", "f1")]["status"], figures.NOT_OPEN)  # not in the bucket at all
-        self.assertEqual(sorted(p.name for p in (self.data / "figures" / "images" / "PMC1").iterdir()), ["f1-fig1.jpg", "record.json"])
+        self.assertEqual(sorted(p.name for p in (self.data / "files" / "figures" / "images" / "PMC1").iterdir()), ["f1-fig1.jpg", "record.json"])
         report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         self.assertIn("Pictures saved: 1 for 1 of 4 cases.", report)
         self.assertIn("| melanoma | 1 | 0 | 0 |", report)
@@ -356,8 +357,8 @@ class CommandLineTests(unittest.TestCase):
             figures.build_parser().parse_args(["train"])
 
     def test_an_error_is_one_line(self):
-        with mock.patch.object(figures, "count", side_effect=FileNotFoundError("data/text/dataset.csv not found")):
-            with self.assertRaisesRegex(SystemExit, "^ERROR: data/text/dataset.csv not found$"):
+        with mock.patch.object(figures, "count", side_effect=FileNotFoundError("data/published_cases/dataset.csv not found")):
+            with self.assertRaisesRegex(SystemExit, "^ERROR: data/published_cases/dataset.csv not found$"):
                 figures.main(["count"])
 
 

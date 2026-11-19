@@ -45,7 +45,7 @@ class EutilsServer(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.data = Path(tmp.name) / "data" / "text"
+        self.data = Path(tmp.name) / "data" / "published_cases"
         (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
         self.queries, self.mode = [], "normal"
@@ -132,7 +132,7 @@ class SurveyTests(EutilsServer):
     def test_the_report_lists_the_names_not_in_mesh_and_dates_the_counts(self):
         prepare.survey(self.data, classes=CLASSES)
         text = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        for expected in ("# Preparation of the text dataset", "<!-- step: survey -->", "## Survey: the names checked in MeSH",
+        for expected in ("# Preparation of the published cases: their text and their photos", "<!-- step: survey -->", "## Survey: the names checked in MeSH",
                          "- Names: 6; a MeSH heading: 2; an entry term of a heading (another name MeSH lists for it): 3; not in MeSH: 1 "
                          "(used in PubMed titles or summaries: 0; in none: 1)",
                          "| melanoma | made-up name | yes | 0 | proposed: to be confirmed in MeSH |",
@@ -210,9 +210,9 @@ class HuggingFaceServer(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.data = Path(tmp.name) / "data" / "text"
+        self.data = Path(tmp.name) / "data" / "published_cases"
         (self.data / "build").mkdir(parents=True)
-        (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "text" / prepare.TERMS).read_bytes())
+        (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "published_cases" / prepare.TERMS).read_bytes())
         self.requests, self.mode, self.content, self.version = [], "normal", CONTENT, COMMIT
         test = self
 
@@ -263,7 +263,7 @@ class HuggingFaceServer(unittest.TestCase):
                         mock.patch("src.common.time.sleep"), mock.patch("src.build.text.prepare.time.sleep")):
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.folder = self.data / prepare.SOURCES / "pmc_patients"
+        self.folder = self.data / prepare.DOWNLOADS / "pmc_patients"
 
     def _rows(self):
         with (self.data / prepare.CANDIDATES).open(encoding="utf-8", newline="") as f:
@@ -505,9 +505,9 @@ class AbstractsTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.data = Path(tmp.name) / "data" / "text"
+        self.data = Path(tmp.name) / "data" / "published_cases"
         (self.data / "build").mkdir(parents=True)
-        (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "text" / prepare.TERMS).read_bytes())
+        (self.data / prepare.TERMS).write_bytes((ROOT / "data" / "published_cases" / prepare.TERMS).read_bytes())
         headings = {"actinic keratosis": "Keratosis, Actinic", "seborrheic keratosis": "Keratosis, Seborrheic"}
         terms = prepare.read_terms(self.data / prepare.TERMS, self.CLASSES)
         prepare._write_csv(self.data / prepare.CHECK, prepare.CHECK_COLUMNS, [
@@ -618,7 +618,7 @@ class AbstractsTests(unittest.TestCase):
         self.assertEqual(years["Seborrheic"], ["1800:3000"])  # 3 articles: one search
         self.assertEqual(years["Actinic"][:2], ["1800:3000", "1800:2400"])  # 5 articles, more than 3: asked for in parts by year
         self.assertTrue({"2008:2016", "2017:2025"} <= set(years["Actinic"]))
-        stored = [json.loads(line) for line in (self.data / "sources" / "pubmed" / "abstracts.jsonl").read_text(encoding="utf-8").splitlines()]
+        stored = [json.loads(line) for line in (self.data / "downloads" / "pubmed" / "abstracts.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual([r["pmid"] for r in stored], ["3001", "3002", "3003", "3004", "3005", "3008", "3009", "3010", "3011", "3012"])
         self.assertEqual((stored[6]["fulltext"], stored[6]["licence"]), (FULL_CASE, "https://creativecommons.org/licenses/by/4.0/"))
         self.assertEqual(prepare._record_case(stored[6]), (FULL_CASE, "PMC full text"))  # no figure, introduction or consent
@@ -673,7 +673,7 @@ class MeshServer(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.data = Path(tmp.name) / "data" / "text"
+        self.data = Path(tmp.name) / "data" / "published_cases"
         (self.data / "build").mkdir(parents=True)
         (self.data / prepare.TERMS).write_text(TERMS, encoding="utf-8")
         prepare._write_csv(self.data / prepare.CHECK, prepare.CHECK_COLUMNS, [
@@ -909,8 +909,8 @@ class BuildData(HuggingFaceServer):
         prepare._write_csv(self.data / prepare.ABSTRACT_CANDIDATES, prepare.CANDIDATE_COLUMNS, [
             {"patient_uid": "pubmed-2101", "pmid": "2101", "year": "2016", **row, "age": "", "sex": "", "words": 50},
             {"patient_uid": "pubmed-2102", "pmid": "2102", "year": "2025", **nevus, "age": "", "sex": "", "words": 47}])
-        (self.data / "sources" / "pubmed").mkdir(parents=True)
-        (self.data / "sources" / "pubmed" / "abstracts.jsonl").write_text("".join(json.dumps(r) + "\n" for r in (
+        (self.data / "downloads" / "pubmed").mkdir(parents=True)
+        (self.data / "downloads" / "pubmed" / "abstracts.jsonl").write_text("".join(json.dumps(r) + "\n" for r in (
             {"pmid": "2101", "pmcid": "", "year": "2016", "title": title, "fulltext": "", "licence": "",
              "sections": [["BACKGROUND", "Actinic keratosis is common."], ["CASE PRESENTATION", AK_ABSTRACT]]},
             {"pmid": "2102", "pmcid": "PMC2102", "year": "2025", "title": "Compound nevus of the forearm", "fulltext": NEVUS_FULL,
@@ -937,7 +937,7 @@ class BuildTests(BuildData):
             ("test", "nevus", "2013-1"), ("test", "squamous cell carcinoma", "2003-1"), ("train", "actinic keratosis", "2010-1"),
             ("train", "nevus", "pubmed-2102"),
             ("train", "vascular lesion", "2006-1"), ("train", "vascular lesion", "2006-2")])  # one article of 2: fits no target
-        files = {r["patient_uid"]: (self.data / "dataset" / r["path"]).read_bytes() for r in rows}
+        files = {r["patient_uid"]: (self.data / prepare.TEXT_FILES / r["path"]).read_bytes() for r in rows}
         self.assertEqual(files["2001-1"].decode("utf-8"), BCC_TEXT.split(" A biopsy")[0])  # the figure's "Fig. 1" ends no sentence
         self.assertTrue(files["2008-1"].decode("utf-8").endswith("after he scratched it."))
         self.assertIn("a history of basal cell carcinoma", files["2008-1"].decode("utf-8"))  # another class's name stays
@@ -978,7 +978,7 @@ class BuildTests(BuildData):
         with mock.patch.object(prepare, "TEST_PER_CLASS", 1), mock.patch.object(prepare, "VAL_PER_CLASS", 1):
             prepare.build(self.data, classes=self.CLASSES)
             first = (self.data / "dataset.csv").read_bytes()
-            stale = self.data / "dataset" / "test" / "nevus" / "old.txt"
+            stale = self.data / prepare.TEXT_FILES / "test" / "nevus" / "old.txt"
             stale.parent.mkdir(parents=True, exist_ok=True)
             stale.write_text("left from an earlier run", encoding="utf-8")
             prepare.build(self.data, classes=self.CLASSES)
@@ -987,7 +987,7 @@ class BuildTests(BuildData):
         rows = self._table()
         self.assertEqual({r["patient_uid"]: r["split"] for r in rows if r["label"] == "vascular lesion"},
                          {"2006-1": "train", "2006-2": "train"})  # two cases of one article fit neither cap of 1
-        self.assertEqual(sorted(p.relative_to(self.data / "dataset").as_posix() for p in (self.data / "dataset").rglob("*.txt")),
+        self.assertEqual(sorted(p.relative_to(self.data / prepare.TEXT_FILES).as_posix() for p in (self.data / prepare.TEXT_FILES).rglob("*.txt")),
                          sorted(r["path"] for r in rows))
         for split in ("test", "val"):
             self.assertLessEqual(max(Counter(r["label"] for r in rows if r["split"] == split).values(), default=0), 1)
@@ -1001,7 +1001,7 @@ class BuildTests(BuildData):
         with self.assertRaisesRegex(FileNotFoundError, "article_mesh.csv not found: run python -m src.build.text.prepare mesh first"):
             prepare.build(self.data, classes=self.CLASSES)
         self._mesh(BUILD_MESH)
-        (self.data / "sources" / "pubmed" / "abstracts.jsonl").unlink()
+        (self.data / "downloads" / "pubmed" / "abstracts.jsonl").unlink()
         with self.assertRaisesRegex(FileNotFoundError, "abstracts.jsonl not found: run python -m src.build.text.prepare abstracts first"):
             prepare.build(self.data, classes=self.CLASSES)
         (self.folder / "PMC-Patients-V2.json").unlink()
@@ -1039,7 +1039,7 @@ class BuildTests(BuildData):
         rows = prepare._read_csv(self.data / prepare.ABSTRACT_CANDIDATES, prepare.CANDIDATE_COLUMNS, "abstracts")
         prepare._write_csv(self.data / prepare.ABSTRACT_CANDIDATES, prepare.CANDIDATE_COLUMNS, rows + [
             {"patient_uid": f"pubmed-{pmid}", "pmid": pmid, "year": "2024", **row, "age": "", "sex": "", "words": 50}])
-        with (self.data / "sources" / "pubmed" / "abstracts.jsonl").open("a", encoding="utf-8") as f:
+        with (self.data / "downloads" / "pubmed" / "abstracts.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps({"pmid": pmid, "pmcid": "", "year": "2024", "title": title, "fulltext": "", "licence": "",
                                 "sections": sections}) + "\n")
         table = {r["pmid"]: (r["indexed"], r["classes"]) for r in prepare._read_csv(self.data / prepare.MESH_TABLE,
@@ -1048,7 +1048,7 @@ class BuildTests(BuildData):
 
     def _question_of(self, uid):
         row = next((r for r in self._table() if r["patient_uid"] == uid), None)
-        return None if row is None else (self.data / "dataset" / row["path"]).read_text(encoding="utf-8")
+        return None if row is None else (self.data / prepare.TEXT_FILES / row["path"]).read_text(encoding="utf-8")
 
     def test_a_short_form_the_abstract_defines_outside_its_case_part_ends_the_question(self):
         self._add_abstract("2103", "Eruptive pyogenic granuloma on burned skin",
@@ -1127,7 +1127,7 @@ class BuildTests(BuildData):
             self.assertIn(expected, report)
 
     def test_a_result_confirms_in_its_own_sentence_or_the_next_and_only_by_a_name_that_counts(self):
-        terms = prepare.read_terms(ROOT / "data" / "text" / prepare.TERMS, CasesTests.CLASSES)
+        terms = prepare.read_terms(ROOT / "data" / "published_cases" / prepare.TERMS, CasesTests.CLASSES)
         names = prepare._says(prepare._namer(terms, "squamous cell carcinoma"))
         for rest, confirmed in {" A biopsy was taken. Histology showed a squamous cell carcinoma.": True,
                                 " Histology confirmed an SCC.": True,  # the class's short form
@@ -1222,7 +1222,7 @@ class QuestionTests(unittest.TestCase):
     """Where a question starts and ends, with the committed names."""
 
     def setUp(self):
-        terms = prepare.read_terms(ROOT / "data" / "text" / prepare.TERMS, CasesTests.CLASSES)
+        terms = prepare.read_terms(ROOT / "data" / "published_cases" / prepare.TERMS, CasesTests.CLASSES)
         self.reveals = {label: prepare._revealer(terms, label) for label in CasesTests.CLASSES}
 
     def test_a_background_that_names_the_class_is_left_out_and_the_question_starts_at_the_patient(self):
@@ -1322,15 +1322,15 @@ class TermsTests(unittest.TestCase):
             self.assertEqual(prepare._words(a), prepare._words(b), (a, b))
         self.assertNotEqual(prepare._words("lentigo maligna"), prepare._words("lentigo"))
 
-    @unittest.skipUnless((ROOT / "data" / "text" / prepare.TERMS).is_file() and (ROOT / "data" / "text" / "dataset.csv").is_file(),
+    @unittest.skipUnless((ROOT / "data" / "published_cases" / prepare.TERMS).is_file() and (ROOT / "data" / "published_cases" / "dataset.csv").is_file(),
                          "the committed lists are not there")
     def test_the_committed_list_fits_the_eight_classes_and_the_committed_dataset_uses_only_them(self):
         classes = list(prepare.CLASSES)
         self.assertEqual(classes, sorted(classes))
         self.assertEqual(len(set(classes)), 8)
-        rows = prepare.read_terms(ROOT / "data" / "text" / prepare.TERMS, classes)
+        rows = prepare.read_terms(ROOT / "data" / "published_cases" / prepare.TERMS, classes)
         self.assertEqual(sorted({r["class"] for r in rows}), classes)
-        with (ROOT / "data" / "text" / "dataset.csv").open(encoding="utf-8", newline="") as f:
+        with (ROOT / "data" / "published_cases" / "dataset.csv").open(encoding="utf-8", newline="") as f:
             self.assertEqual(sorted({r["label"] for r in csv.DictReader(f)}), classes)
 
     def test_every_command_in_the_usage_documentation_is_accepted(self):
