@@ -69,8 +69,8 @@ class ParseTests(unittest.TestCase):
                          ("f1", "Figure 1", 1, "Clinical photo of a nodule.", 1))
 
     def test_a_figure_s_number_comes_from_its_label_else_its_place(self):
-        content = ('<pmc-articleset><article><front><article-meta><article-id pub-id-type="pmc">9</article-id></article-meta></front>'
-                   '<body><fig id="a"><label>Fig. 3</label></fig><fig id="b"/></body></article></pmc-articleset>').encode()
+        content = (b'<pmc-articleset><article><front><article-meta><article-id pub-id-type="pmc">9</article-id></article-meta></front>'
+                   b'<body><fig id="a"><label>Fig. 3</label></fig><fig id="b"/></body></article></pmc-articleset>')
         found = figures.parse_figures(content)["9"]["figures"]
         self.assertEqual([(f["figure"], f["number"], f["caption"], f["pictures"]) for f in found], [("a", 3, "", 0), ("b", 2, "", 0)])
         self.assertEqual(figures.parse_figures(content)["9"]["licence"], "")
@@ -233,9 +233,9 @@ def article_xml(figs: dict) -> bytes:
 
 class CloudTests(unittest.TestCase):
     def test_the_versions_of_an_article(self):
-        listing = ('<?xml version="1.0"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Prefix>PMC12.</Prefix>'
-                   '<CommonPrefixes><Prefix>PMC12.1/</Prefix></CommonPrefixes><CommonPrefixes><Prefix>PMC12.10/</Prefix></CommonPrefixes>'
-                   '<CommonPrefixes><Prefix>PMC12.2/</Prefix></CommonPrefixes></ListBucketResult>').encode()
+        listing = (b'<?xml version="1.0"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Prefix>PMC12.</Prefix>'
+                   b'<CommonPrefixes><Prefix>PMC12.1/</Prefix></CommonPrefixes><CommonPrefixes><Prefix>PMC12.10/</Prefix></CommonPrefixes>'
+                   b'<CommonPrefixes><Prefix>PMC12.2/</Prefix></CommonPrefixes></ListBucketResult>')
         self.assertEqual(figures.parse_versions(listing), [1, 2, 10])  # the latest is 10, not 2
         with mock.patch.object(figures, "fetch", return_value=[1, 2, 10]):
             self.assertEqual(figures._latest("PMC12"), "PMC12.10/")

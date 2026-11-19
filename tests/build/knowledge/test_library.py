@@ -238,7 +238,7 @@ class LibraryTests(BuildData):
         self.assertEqual(dict(done["dropped"]), {"shares a run of words with a question": 1, "the same as an earlier passage": 1})
         searches = [entry for entry in self.ncbi if entry[0] == "esearch"]
         self.assertEqual(len(searches), 6)  # reviews and guidelines for the 3 classes with headings
-        for _, term, sort, retmax in searches:
+        for _, term, sort, _retmax in searches:
             self.assertIn('NOT "case reports"[Publication Type]', term)
             self.assertIn(prepare.HUMANS, term)
             self.assertEqual(sort, "pub_date")

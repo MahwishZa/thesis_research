@@ -118,7 +118,7 @@ def _any_of(words) -> re.Pattern:
     """Any of the words or phrases in a plain text (_plain), each also in the plural: with "s" or "es", or "ies" for a final
     "y" ("extremities")."""
     forms = []
-    for word in map(lambda w: _plain(w).strip(), words):
+    for word in (_plain(w).strip() for w in words):
         forms.append(re.escape(word[:-1]) + "(?:y|ies)" if word.endswith("y") else re.escape(word) + "(?:s|es)?")
     return re.compile(r" (?:" + "|".join(forms) + r") ")
 
@@ -417,7 +417,7 @@ def _shared_runs(rows: list[dict], texts: dict[str, str]) -> list[tuple[dict, di
             for run in set(runs[row["patient_uid"]]):
                 owners[run].append(row)
     pairs = {}
-    for run, owned in owners.items():
+    for owned in owners.values():
         for n, a in enumerate(owned):
             for b in owned[n + 1:]:
                 if a["pmid"] != b["pmid"]:

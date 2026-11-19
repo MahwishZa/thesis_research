@@ -158,7 +158,7 @@ class InventoryTests(unittest.TestCase):
         self.assertIn("| `smoke` | 1 | 1 | 1 | 0 | 0 | 0 |", report)
         self.assertIn("| `itch` | 1 | 1 | 0 | 1 | 0 | 0 |", report)
         self.assertIn("| `smoke`, `diameter_1` | 2 | 1 | 0 | 0 | 0 | 2 |", report)  # 2 photos of 1 patient; columns in the order of the table
-        patterns = [line for line in report.splitlines() if line.startswith("| (none)") or line.startswith("| `")]
+        patterns = [line for line in report.splitlines() if line.startswith(("| (none)", "| `"))]
         self.assertTrue(patterns[0].startswith("| `smoke`, `diameter_1` | 2 |"), "the most common set comes first")
 
     def test_photo_size_by_class_and_the_checks_on_lesion_numbers_and_identical_photos(self):

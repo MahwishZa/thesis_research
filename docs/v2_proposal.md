@@ -1,6 +1,8 @@
 # Version 2: audit, design and roadmap (proposal, 2026-11-19)
 
-**Status: a proposal for approval. Nothing in it has been built, run, moved or deleted.** Every step that changes the repository,
+**Status after 2026-11-19: partly superseded.** Approved since: the folder and dataset names, the layout (without `docs/` and `archive/` in the final version), answer format `json-v2` (the `claims` field, not the confidence number or the findings list of section 4.1), the name "confident misdiagnosis" for the old "hallucination" score, and the exclusion of the appearance passages from the index. Not approved or not built: the four approaches (only closed-book exists), the evidence-grounding metrics of section 5.2, the experiments E1 to E6 and the ablations. The current state is in `docs/progress.md` and `docs/audit.md`.
+
+**Original status: a proposal for approval. Nothing in it has been built, run, moved or deleted.** Every step that changes the repository,
 downloads data or spends money waits for the researcher's approval, one stage at a time (section 8).
 
 Marks used below:

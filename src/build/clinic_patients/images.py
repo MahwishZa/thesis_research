@@ -62,9 +62,9 @@ def prepare_image(content: bytes) -> tuple[bytes, float, list[str], tuple[int, i
     with Image.open(io.BytesIO(content)) as original:
         original.load()
         raw_size = original.size
-        if original.mode in ("RGBA", "LA", "PA") or "transparency" in original.info:
-            if original.convert("RGBA").getchannel("A").getextrema()[0] < 255:
-                raise ValueError("it has transparent pixels")
+        if (original.mode in ("RGBA", "LA", "PA") or "transparency" in original.info) \
+                and original.convert("RGBA").getchannel("A").getextrema()[0] < 255:
+            raise ValueError("it has transparent pixels")
         image = ImageOps.exif_transpose(original)
         if original.getexif().get(ORIENTATION, 1) != 1:
             changes.append("turned upright as its EXIF orientation tag says")

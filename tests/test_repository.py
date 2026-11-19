@@ -76,7 +76,7 @@ class RepositoryTests(unittest.TestCase):
     @unittest.skipUnless((ROOT / "docs" / "code_guide.md").is_file(), "docs/ is removed when the research is final")
     def test_the_code_guide_has_its_sections_and_its_structure_lists_real_paths_and_every_top_level_folder(self):
         self.assertEqual(re.findall(r"^## (.+)$", self.guide, re.M),
-                         ["Repository Structure", "How to Run", "The pipeline, stage by stage", "File by file"])
+                         ["Repository Structure", "How to Run", "Words used in the builders and data sheets", "The pipeline, stage by stage", "File by file"])
         block = re.search(r"## Repository Structure\n\n```\n(.*?)\n```", self.guide, re.S).group(1).splitlines()
         self.assertEqual(block[0], "thesis_research/")
         parents, listed = [], set()

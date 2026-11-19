@@ -1419,7 +1419,7 @@ def _split(rows: list[dict]) -> None:
         articles[row["pmid"]].append(row)
     caps = {label: _targets(n) for label, n in Counter(row["label"] for row in rows).items()}
     filled = {"test": Counter(), "val": Counter()}
-    for pmid in sorted(articles, key=lambda p: hashlib.sha256(f"{SPLIT_SEED}:{p}".encode("utf-8")).hexdigest()):
+    for pmid in sorted(articles, key=lambda p: hashlib.sha256(f"{SPLIT_SEED}:{p}".encode()).hexdigest()):
         need = Counter(row["label"] for row in articles[pmid])
         split = next((s for s in ("test", "val") if all(filled[s][c] + n <= caps[c][s] for c, n in need.items())), "train")
         if split != "train":

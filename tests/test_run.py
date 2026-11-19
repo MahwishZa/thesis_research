@@ -355,7 +355,7 @@ class RunTests(RunProject):
         with self.assertRaises(SystemExit):
             self._run(FakeModel(fatal_from=3), "val", run_id="v4")
         partial = self.model_dir / "v4.partial" / "predictions.jsonl"
-        partial.write_bytes(partial.read_bytes() + '{"path": "x", "raw_text": "café"}'.encode("utf-8")[:-3])
+        partial.write_bytes(partial.read_bytes() + '{"path": "x", "raw_text": "café"}'.encode()[:-3])
         self.assertEqual(len(common.read_jsonl(partial)), 2)  # the cut-off line is ignored, nothing crashes
         evaluate.write_report(partial.parent)
         self.assertEqual(len(self._preds(self._run(FakeModel(), "val", run_id="v4"))), 4)

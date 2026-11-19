@@ -49,6 +49,13 @@ Then:
 - Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then the two run folders
 - Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`
 
+## Words used in the builders and data sheets
+
+The builders and the data sheets of the published cases were written before the datasets got their present names and still use the older
+words. They mean: **the text dataset** = `published_text` (`data/published_cases/dataset.csv`); **the case dataset** or **the photos of the
+cases** = the photo views `published_text_photos` and `published_photos` (`data/published_cases/photos.csv`); **the image dataset** and
+**Version 1** = the archived first version in `archive/v1/`; **the clinic patients cohort** = `clinic_patients`.
+
 ## The pipeline, stage by stage
 
 | Stage | What happens | Where | Checked by |

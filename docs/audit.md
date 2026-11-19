@@ -25,6 +25,20 @@ Marks: ✔ verified in this audit by running code or reading the file named; ◻
 
 State after the audit: 468 tests pass (8 skipped: they need the laptop's files), lint clean, 34 deliberate breaks of the new code all caught.
 
+### Second pass (same day, after the first corrections)
+
+A second read of the whole repository, with a wider lint (bugs, simplifications, unused names) and a search for names left over from earlier versions.
+
+| Found | Action |
+|---|---|
+| 14 warnings "loop variable not bound" in the builders | each checked by hand: every function is defined and called inside the same loop turn, so none is a fault; left as it is |
+| Two unused loop variables, one nested `if`, one `map` with a lambda, four redundant `encode` arguments, one `startswith` twice | simplified; behaviour unchanged, all tests pass |
+| `src/__init__.py` did not name `validate.py` | named |
+| The builders and data sheets call the published-case datasets "the text dataset" and "the case dataset", the code `published_text` and so on | a short list of the words and what they mean added to `docs/code_guide.md`; no mass rename, since the data sheets are part of the dataset and are not to be changed now |
+| `docs/v2_proposal.md` still read as a plan to approve | a status note at its top says what was approved since and what is not built |
+| `holm` (src) and `COMMANDS` (enrich) are used only by tests | `holm` is part of the approved method and stays (problem table above); `COMMANDS` is harmless documentation |
+| Nothing found: unused imports, dead functions, duplicate files, leftover Version 1 code, inconsistent counts between the README, the progress page, this page and the tables | – |
+
 ## 2. Does the data support the research objective?
 
 **Objective:** evidence-based diagnostic question answering on skin diseases, with a multimodal, rationale-guided retrieval that reduces
