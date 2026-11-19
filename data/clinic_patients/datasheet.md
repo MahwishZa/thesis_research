@@ -8,7 +8,7 @@ Every number below comes from files that `python -m src.build.clinic_patients.pr
 `build/columns.csv`, `build/raw_images.csv`. The photos and `metadata.csv` stay on the researcher's computer (research folder
 `data/clinic_patients/raw/`); only the small tables are in Git.
 
-Marks: ✔ checked in the researcher's download by the inventory; ◻ not yet checked (stated by the source or a web page only).
+Marks: ✔ checked in the researcher's download by the inventory, or stated in the authors' paper (arXiv 2007.00478v2, 9 July 2020, read on 2026-11-19) and agreeing with the download; ◻ not yet checked (a web page only, or not stated by the authors).
 
 ## At a glance
 
@@ -16,9 +16,9 @@ Marks: ✔ checked in the researcher's download by the inventory; ◻ not yet ch
 |---|---|
 | What it is | Smartphone photos of skin lesions, each with the clinical record of the same patient visit (age, body site, symptoms, history) |
 | Photos | 2,298 PNG files, 147 to 3,474 pixels wide (median 779.5), from different phones ✔ |
-| Patients, lesions | 1,373 patients ✔; 1,891 lesions ✔ (a lesion is a patient + `lesion_id` pair: `lesion_id` alone is shared between patients, and its 1,641 distinct values are not the lesion count; the ISIC Archive lists 1,891 lesions for this collection, a search result ◻) |
-| Classes | 6: basal cell carcinoma (BCC) 845, actinic keratosis (ACK) 730, nevus (NEV) 244, seborrheic keratosis (SEK) 235, squamous cell carcinoma (SCC) 192, melanoma (MEL) 52 photos ✔; Bowen's disease is counted as SCC by the authors ◻ |
-| Label source | The authors' `diagnostic` column. All BCC, SCC and MEL photos (1,089) are biopsy-proven ✔; ACK, NEV and SEK are biopsy-proven for 178 of 730, 60 of 244 and 15 of 235 photos ✔, the others by a clinical diagnosis of dermatologists ◻ (1,342 of 2,298, 58.4%, are biopsy-proven ✔) |
+| Patients, lesions | 1,373 patients ✔; 1,891 lesions ✔ (a lesion is a patient + `lesion_id` pair: `lesion_id` alone is shared between patients, and its 1,641 distinct values are not the lesion count. The paper reports "1,641 skin lesions": that is the number of distinct `lesion_id` values ✔, so the authors counted the numbers, not the patient + lesion pairs; this dataset counts pairs. The ISIC Archive lists 1,891 lesions for this collection, a search result ◻) |
+| Classes | 6: basal cell carcinoma (BCC) 845, actinic keratosis (ACK) 730, nevus (NEV) 244, seborrheic keratosis (SEK) 235, squamous cell carcinoma (SCC) 192, melanoma (MEL) 52 photos ✔; Bowen's disease is counted as SCC by the authors ("SCC in situ"; paper, section Data selection) ✔ |
+| Label source | The authors' `diagnostic` column. All BCC, SCC and MEL photos (1,089) are biopsy-proven ✔; ACK, NEV and SEK are biopsy-proven for 178 of 730, 60 of 244 and 15 of 235 photos ✔, the others by the consensus of the dermatologists at the appointment (paper: for these benign lesions a biopsy "is not necessary") ✔. 1,342 of 2,298, 58.4%, are biopsy-proven ✔, and the paper's Table 1 gives the same percentages: ACK 24.4%, NEV 24.6%, SEK 6.4%, total 58.4% ✔ |
 | Source | Kaggle "Skin Cancer(PAD-UFES-20)" (mahdavi1202), a copy of the authors' Mendeley Data upload, version 1, published 2020-07-07 (doi 10.17632/zr7vgbcyr2.1) ◻ not compared byte for byte with Mendeley; its counts equal the paper's ✔ |
 | Licence | CC BY 4.0 (the Kaggle page; credit the authors) ◻ confirm on Mendeley |
 | Citation | Pacheco AGC, Lima GR, Salomão AS, et al. PAD-UFES-20: a skin lesion dataset composed of patient data and clinical images collected from smartphones. *Data in Brief*, October 2020 ◻ (volume and pages not checked). Mendeley Data, V1, doi 10.17632/zr7vgbcyr2.1 |
@@ -41,9 +41,9 @@ lesion", but the 2,298 rows hold 1,891 lesions ✔). A patient has 1 to 8 lesion
 |---|---|---|---|
 | `patient_id`, `lesion_id`, `img_id` | all filled | ids | patient, lesion number, photo (`img_id` joins patient, lesion and a random number). Always present |
 | `diagnostic` | 2,298 / 0 | ACK, BCC, MEL, NEV, SCC, SEK | the label |
-| `biopsed` | 2,298 / 0 | TRUE 1,342, FALSE 956 | "if the diagnostic comes from a clinical consensus or biopsy" (the wording does not say which value is which; all 1,089 BCC, SCC and MEL are TRUE, so TRUE reads as biopsy ◻). **Never shown to a model** (it points to the label). Always present |
-| `age` | 2,298 / 0 | 6 to 94, median 62 | an integer, the patient's age (the unit is not written; the values are years ◻). Always present |
-| `region` | 2,298 / 0 | 14 body regions (FACE 570, FOREARM 392, CHEST 280, BACK 248, ARM 192, NOSE 158, HAND 126, …) | "one of the 15 macro-regions previously described" (the download holds 14; which one is absent is not known to us ◻). Always present |
+| `biopsed` | 2,298 / 0 | TRUE 1,342, FALSE 956 | "if the diagnostic comes from a clinical consensus or biopsy" (the wording does not say which value is which, but TRUE is biopsy ✔: 1,342 TRUE is 58.4% of 2,298, the paper's share of biopsy-proven lesions, and all 1,089 BCC, SCC and MEL are TRUE). **Never shown to a model** (it points to the label). Always present |
+| `age` | 2,298 / 0 | 6 to 94, median 62 | an integer, the patient's age (the unit is not written; the paper speaks of an "average age approximately 60 years old", and the median here is 62, so the values are years ✔). Always present |
+| `region` | 2,298 / 0 | 14 body regions (FACE 570, FOREARM 392, CHEST 280, BACK 248, ARM 192, NOSE 158, HAND 126, …) | "one of the 15 macro-regions previously described" (the paper lists the 15: face, scalp, nose, lips, ears, neck, chest, abdomen, back, arm, forearm, hand, thigh, shin, foot; the download holds 14, and **SHIN** is the one absent ✔: no photo of the shin is in the data). Always present |
 | `itch`, `hurt`, `bleed`, `elevation` | 2 to 10 unknown (`UNK`) | TRUE / FALSE | the lesion itches; hurts; "has bled"; "has an elevation" |
 | `grew`, `changed` | 402 and 396 unknown (`UNK`) | TRUE / FALSE | the lesion "has recently grown"; "has recently changed" |
 | `gender`, `smoke`, `drink`, `pesticide`, `skin_cancer_history`, `cancer_history`, `has_piped_water`, `has_sewage_system`, `fitspatrick` (1 to 6), `diameter_1`, `diameter_2` | 804 blank each | TRUE / FALSE, FEMALE / MALE, numbers | the patient smokes cigarettes, drinks alcohol, uses pesticides; skin cancer, or any cancer, in the past **in the patient or in the family** (one field each); piped water and a sewage system at home; the Fitzpatrick skin type; the lesion's horizontal and vertical diameters (floats) |
@@ -54,8 +54,8 @@ fill the feature as UNK (unknown)", and only `patient_id`, `lesion_id`, `img_id`
 rest "depend on the patient's answers during the appointment". In the download, the 804-photo block is blank and every other gap is `UNK` ✔.
 So **a gap in the four symptom fields of the record is `UNK`, which means the patient did not know**, not that nothing was asked. The
 cleaned table writes both as `not recorded`; `build/columns.csv` and the inventory keep the two apart. The authors do not say why the
-804-photo block is blank, so the cause of finding 1 stays a guess ◻. Diameters run from 0 to 100 (`diameter_1`) and 0 to 70
-(`diameter_2`); their unit is not stated ◻ (a diameter of 0 occurs).
+804-photo block is blank, so the cause of finding 1 stays a guess ◻ (the paper does not mention it either; it says only that the features "depend on the patient's answers"). Diameters run from 0 to 100 (`diameter_1`) and 0 to 70
+(`diameter_2`); their unit is not stated, in the paper either ◻ (a diameter of 0 occurs).
 
 ## 3. Findings that shape the design ✔
 
@@ -64,7 +64,7 @@ cleaned table writes both as `not recorded`; `build/columns.csv` and the invento
    `has_piped_water`, `has_sewage_system`, `fitspatrick`, `diameter_1`, `diameter_2`. By class: ACK 447, NEV 169, SEK 188, **BCC 0,
    MEL 0, SCC 0**. Another 990 photos have no empty field at all (ACK 242, BCC 542, MEL 34, NEV 32, SCC 110, SEK 30). So a model
    (or a retrieval or filter) that learns "record empty" gets the cancer / not-cancer split without looking at the lesion. A likely
-   cause is that the questionnaire grew over the years of collection; the paper may say so ◻.
+   cause is that the questionnaire grew over the years of collection; the paper does not say so (checked 2026-11-19), so this stays a guess ◻.
 2. **"Unknown" in `grew` and `changed` leans the other way.** They are unknown together for 345 photos: BCC 243, SCC 67, NEV 23,
    MEL 6, SEK 5, ACK 1.
 3. **Photo size differs by class.** Median file size: NEV 604 KB, SEK 734 KB, MEL 998 KB, BCC 1,036 KB, ACK 1,050 KB, SCC 1,155 KB;
@@ -99,8 +99,8 @@ seen.
 - *photo + record*: the photo with the same record text in the prompt (`dataset.csv`, column `facts`).
 
 **The record** (`record-v1`) is six numbered lines in fixed wording: age; body site; whether the lesion itches, hurts, has bled and has an
-elevation. The lines use the authors' own words for each field (itch, hurt, "has bled", "has an elevation"; section 2); the unit of the
-age is presumed to be years ◻. A gap in a symptom line reads `unknown`: in the authors' words the patient did not know the answer
+elevation. The lines use the authors' own words for each field (itch, hurt, "has bled", "has an elevation"; section 2); the age is
+in years ✔ (section 2). A gap in a symptom line reads `unknown`: in the authors' words the patient did not know the answer
 (section 2). Age and body site are always present; a gap in either would stop the step. The record is the same words, to the byte, in
 the record view and in the photo + record view. **Not in any view:** `grew` and `changed` (unknown more
 often for cancers: finding 2) and the block of 13 fields of finding 1 (empty for 804 early photos, all benign). They stay in
@@ -148,7 +148,7 @@ All numbers are in `dataset_report.md` and the tables of `build/`; each step pas
 
 Photos are standardised once, by the `images` step above, and every model in every view receives those files and no others; the
 originals are never changed. No synthetic or rewritten clinical text is ever added: a record is only the recorded values in fixed
-words. Patients may be identifiable only through the source's own ids; the source de-identified them ◻.
+words. Patients may be identifiable only through the source's own ids. The authors state that the programme was approved by the university ethics committee (no. 500002/478) and by Plataforma Brasil (no. 4.007.097), that all data is collected under patient consent, that "the patient's privacy is completely preserved", and that photos in which a patient may be identified (by a tattoo, for example) were deleted ✔ (paper, "Declaration of consent" and "Data collection").
 
 ## 6. Reproduce
 

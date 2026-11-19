@@ -15,8 +15,8 @@ and in the photo + record view, to the byte.
 **What the record does not show:** whether the lesion grew or changed (more often unknown for cancers than for benign lesions: a
 hint, see step ``shortcuts``) and the block of fields added later to the questionnaire (gender, smoking, drinking, pesticides,
 histories, water, sewage, skin type, diameters, the parents' origin: empty for 804 early photos, all benign). They stay in dataset.csv
-for a separate secondary analysis and are not in any view. The wording of the lines is provisional until the authors' paper confirms
-what each field means; a change of wording is a new template version and a rebuild of the views.
+for a separate secondary analysis and are not in any view. The wording follows the authors' own definitions (checked against their paper
+on 2026-11-19); a change of wording is a new template version and a rebuild of the views.
 
 A field a line cannot print (an age that is not a whole number from 0 to 120, a value outside yes, no and a gap, a gap in the age or the
 body site) stops the step: a decision for the researcher, not for the code.
