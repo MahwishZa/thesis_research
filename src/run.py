@@ -48,7 +48,7 @@ from .datasets import (DATASETS, SPLITS, classes, dataset_paths, items_hash, loa
                        read_picture)
 from .evaluate import RESULTS, write_report
 from .models import FatalError, QuotaExhausted, TransientError, load, load_env
-from .prompts import CASE, FACTS, build_prompt, fill, load_template, parse_answer
+from .prompts import ANSWER_FORMAT, CASE, FACTS, build_prompt, fill, load_template, parse_json_answer
 
 
 RUN_SPLITS = ("val", "test")  # the splits a model answers; the training split is only ever looked up, never answered
@@ -331,7 +331,7 @@ def _run_once(job: dict, run_id: str) -> Path:
         out.mkdir(parents=True, exist_ok=True)
         card = {"name": config["name"], "split": job["split"], "run_id": run_id, "status": "running", "fingerprint": fingerprint,
                 "seed": settings.get("seed"), "config_file": config["model_list"], "config": config,
-                "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
+                "answer_format": ANSWER_FORMAT, "prompt_file": config["prompt"]["file"], "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
                 "prompt": prompt_text, "labels": labels, f"n_{kind.item}s": len(items), f"{kind.item}s_sha256": items_hash(items),
                 "group_column": kind.group_column,
                 "dataset_table": {"file": job["table"].as_posix(), "sha256": job["table_sha256"]}, "git": job["git"],
@@ -392,8 +392,13 @@ def _run_once(job: dict, run_id: str) -> Path:
                     images = [(image, mime)]
                     text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
                 answer, attempt = _ask(model, images, text, throttle, say)
-                parsed = parse_answer(answer["text"], labels)
-                line = {"path": item.path, "label": item.label, kind.group_column: item.group, "prediction": parsed,
+                parsed, problem = parse_json_answer(answer["text"], labels)  # closed-book: no passage was given, so no evidence
+                line = {"path": item.path, "label": item.label, kind.group_column: item.group,
+                        "prediction": parsed["diagnosis"] if parsed else None,
+                        "differential": parsed["differential"] if parsed else None,
+                        "evidence_sufficient": parsed["evidence_sufficient"] if parsed else None,
+                        "reason": parsed["reason"] if parsed else None, "evidence": parsed["evidence"] if parsed else None,
+                        "invalid": problem,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
                         "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
                         f"{kind.item}_sent": sent, **({"facts": item.facts} if kind.facts_column else {}),
@@ -401,7 +406,8 @@ def _run_once(job: dict, run_id: str) -> Path:
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()
                 answered += 1
-                say(f"[{i}/{len(items)}] {item.label} -> {parsed if parsed else 'UNREADABLE: ' + repr(answer['text'])}")
+                say(f"[{i}/{len(items)}] {item.label} -> " + (f"{parsed['diagnosis']} (evidence sufficient: {parsed['evidence_sufficient']})"
+                                                              if parsed else f"INVALID ({problem}): {answer['text']!r}"))
     except (TransientError, QuotaExhausted, FatalError) as exc:
         nothing_to_continue = answered == 0 and created
         if nothing_to_continue:

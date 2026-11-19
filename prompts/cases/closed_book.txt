@@ -1,5 +1,10 @@
 This is the description of a patient with a skin lesion, from a published case report, with the photographs of the lesion published in the same report. The description ends before the diagnosis.
 Case: {case}
-Classify the lesion as exactly one of the following diagnoses:
+The possible diagnoses are:
 {labels}
-Answer with the diagnosis name only, exactly as written in the list above. Do not write a sentence. Do not explain.
+Answer with one JSON object and nothing else, in this form:
+{"differential": ["<most likely diagnosis>", "<second>", "<third>"], "evidence_sufficient": "<yes or no>", "reason": "<why>", "evidence": []}
+- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.
+- evidence_sufficient: "yes" if what you are given is enough to be confident of the first diagnosis, otherwise "no".
+- reason: at most three sentences, using only what you are given.
+- evidence: leave the list empty; no reference texts are given.

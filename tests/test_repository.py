@@ -217,15 +217,18 @@ class RepositoryTests(unittest.TestCase):
                          "docs/results.md is out of date: run python -m src.evaluate summary")
         runs = [p for p in (ROOT / "results" / "phase1").glob("*/*/test_*") if p.is_dir() and not p.name.endswith(".partial")]
         for finished in runs:  # every finished run is in the tables, once, with its report linked
-            self.assertEqual(text.count(f"](../{finished.relative_to(ROOT).as_posix()}/report.md)"), 1, f"{finished} must be linked exactly once")
-        for word in ("ROC", "Holm", "Specificity", "Malignancy sensitivity"):
+            self.assertEqual(text.count(f"](../{finished.relative_to(ROOT).as_posix()}/scores.md)"), 1, f"{finished} must be linked exactly once")
+            self.assertTrue((finished / "scores.md").is_file() and (finished / "scores.json").is_file(),
+                            f"{finished}: run python -m src.evaluate report on it")
+        for word in ("Balanced accuracy", "Macro-F1", "Holm", "McNemar", "(method.md)"):
             self.assertIn(word, text)
 
-    def test_the_holm_correction_by_hand(self):
-        # four tests: 0.01 x 4 = 0.04; 0.03 x 3 = 0.09; 0.04 x 2 = 0.08, raised to the 0.09 before it; 0.5 x 1
-        self.assertEqual(evaluate.holm([0.01, 0.04, 0.03, 0.5]), [0.04, 0.09, 0.09, 0.5])
-        self.assertEqual(evaluate.holm([0.6, 0.9]), [1.0, 1.0])  # never above 1
-        self.assertEqual((evaluate.holm([]), evaluate.holm([0.2])), ([], [0.2]))
+    def test_the_method_page_defines_every_reported_score_with_its_source(self):
+        text = (ROOT / "docs" / "method.md").read_text(encoding="utf-8")
+        for word in ("Balanced accuracy", "Macro-F1", "Top-3 balanced accuracy", "Invalid-answer rate", "sensitivity", "specificity",
+                     "Coverage", "Selective risk", "McNemar", "Holm", "bootstrap", "parse_json_answer",
+                     "Brodersen", "Sokolova", "Liu", "Hendrycks", "Geifman", "Wilson", "Efron", "Field"):
+            self.assertIn(word, text)
 
     def test_the_summary_command_rewrites_only_the_tables_between_the_markers(self):
         with tempfile.TemporaryDirectory() as folder:

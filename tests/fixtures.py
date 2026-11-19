@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -96,8 +97,20 @@ class Project(unittest.TestCase):
 # Runs
 
 
+def listed(prompt: str) -> list[str]:
+    """The answer options a prompt lists, one per line after "- "."""
+    return re.findall(r"^- (.+)$", prompt, re.M)
+
+
+def json_answer(first: str, labels: list[str], flag: str = "yes") -> str:
+    """An answer of the required form: ``first`` as the diagnosis, then the other listed classes, as many as the format asks."""
+    others = [label for label in labels if label != first]
+    return json.dumps({"differential": [first, *others][:min(3, len(labels))], "evidence_sufficient": flag,
+                       "reason": "A stand-in answer.", "evidence": []})
+
+
 class FakeModel:
-    """Says "melanoma" for every image. Calls are counted, including retries.
+    """Says "melanoma" for every image, as an answer of the required form. Calls are counted, including retries.
 
     ``fail_on``: call numbers that fail once with a transient error; ``fail_from``: every call from this number on fails
     transiently; ``fatal_from``: every call from this number on fails with an error that retrying cannot fix;
@@ -118,8 +131,8 @@ class FakeModel:
             raise models.FatalError("Provider refused the request (HTTP 404 NOT_FOUND): gone", 404)
         if self.calls in self.fail_on or (self.fail_from and self.calls >= self.fail_from):
             raise models.TransientError("rate limited")
-        return {"text": "Melanoma.", "finish_reason": "STOP", "model_version": "fake-1-001", "response_id": str(self.calls),
-                "usage": {}}
+        return {"text": json_answer("melanoma", listed(prompt)), "finish_reason": "STOP", "model_version": "fake-1-001",
+                "response_id": str(self.calls), "usage": {}}
 
 
 class UnpinnedModel(FakeModel):

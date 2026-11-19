@@ -11,7 +11,7 @@ Existing medical RAG methods retrieve text passages by their similarity to a tex
 
 ## Results
 
-Phase 1, closed-book (no retrieval): four LLMs answered the test split of three datasets, one run each. Each question has eight possible diagnoses and the model names one. The values are balanced accuracy in percent (the mean recall of the eight diagnoses; chance is 12.5), with the 95% interval. Every other score, the runs' reports and the comparisons: [docs/results.md](docs/results.md).
+Phase 1, closed-book (no retrieval): four LLMs answered the test split of three datasets, one run each. Each question has eight possible diagnoses and the model named one (the first answer format; the next runs answer in the JSON format of [docs/method.md](docs/method.md)). The values are balanced accuracy in percent (the mean recall of the eight diagnoses; chance is 12.5), with the 95% interval. Every other score, the runs' scores and the comparisons: [docs/results.md](docs/results.md).
 
 | Model | Image | Text | Image + metadata |
 |---|---|---|---|
@@ -45,7 +45,7 @@ thesis_research/
 │   ├── image_metadata/  photos with the patient's age, sex and body site (ablation)
 │   └── knowledge/       what open-book runs may retrieve
 ├── results/             one folder per test run: <dataset>/<approach>/<model>/ (phase 1 in phase1/)
-├── docs/                results and interpretation
+├── docs/                the method (questions, answers, scores) and the results
 ├── tests/               unit tests
 └── requirements.txt
 ```

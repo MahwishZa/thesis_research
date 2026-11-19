@@ -1,69 +1,40 @@
-"""The metrics: every score is computed from the saved answers, so it can be recomputed at any time without asking a
-model again. Pure functions, no files."""
+"""The metrics: every score is computed from the saved answers, so it can be recomputed at any time without asking a model again.
+Pure functions, no files. The definitions and their sources are in docs/method.md.
+
+An answer gives a diagnosis (the first of its differential), the differential itself (three different classes, the most likely
+first) and whether the model judged the evidence sufficient ("yes" or "no"). An invalid answer (None: not the required form) has
+none of these; it counts as wrong in every score and is counted apart. Answers of the first phase give only a diagnosis.
+
+    balanced accuracy          the mean over the classes of the share of each class's questions answered with it (the macro
+                               recall; Brodersen et al., 2010). The main score: every class counts the same, whatever its number
+                               of questions.
+    macro-F1                   the mean over the classes of F1 = 2 TP / (2 TP + FP + FN) (Sokolova and Lapalme, 2009). It also
+                               counts the answers that name a class wrongly (false positives), which balanced accuracy ignores.
+    per class                  precision TP / (TP + FP) and recall TP / (TP + FN); a class never answered has no precision and
+                               counts as 0 in the macro mean; a class with no question is left out of every mean.
+    top-3 balanced accuracy    as balanced accuracy, with an answer right when the true class is anywhere in its differential
+                               (top-k accuracy, as in Liu et al., 2020, averaged per class).
+    misdiagnosis detection     the positive case is a wrong diagnosis (Hendrycks and Gimpel, 2017): sensitivity is the share of
+                               the wrong diagnoses the model marked "evidence not sufficient"; specificity is the share of the
+                               right diagnoses it did not mark. Over the valid answers only.
+    coverage, selective risk   coverage is the share of all questions answered validly with "evidence sufficient"; selective
+                               risk is the share of wrong diagnoses among them (Geifman and El-Yaniv, 2017).
+    invalid-answer rate        the share of the questions whose answer is not of the required form.
+
+The 95% intervals: photos of one lesion, like patients of one article, are not independent, so when the answers carry their
+group, every interval comes from a bootstrap that resamples whole groups within each true class (2,000 resamples, a fixed seed).
+When every answer is its own group, a share of counts gets the Wilson score interval and the averages over classes the bootstrap.
+ROC curves and AUC are absent: they need a score per class for every question, and the models give a choice, not scores.
+"""
 
 from __future__ import annotations
 
 import math
 import random
 
-
-
-# ==============================================================================================================================
-# Metrics
-#
-# Metrics for a model that answers each file (an image or a text case) with one class name, or with nothing readable.
-#
-# Everything is computed from the saved answers (predictions.jsonl), so the metrics can be recomputed at any time without asking
-# the model again. An unreadable answer (None) is a wrong answer. In the confusion matrix it gets its own column (UNREADABLE),
-# so it lowers recall and every score derived from it, and it is never silently dropped.
-#
-# For class k (TP = true class k and answered k, FP = other class answered k, FN = true class k and answered otherwise):
-#     precision = TP / (TP + FP)         undefined (None) when class k was never answered
-#     recall    = TP / (TP + FN)         undefined (None) when no image has true class k
-#     F1        = 2 TP / (2 TP + FP + FN)
-# Averages over classes: macro (every class counts the same) and weighted (by the number of true files). Only classes that have at
-# least one true file enter an average; a class that was never answered gets precision 0 in the macro precision. Balanced accuracy
-# is the macro recall, and the main score: every class counts the same, whatever its number of test files (the measure of the ISIC
-# 2018 lesion-diagnosis challenge). With one answer per file, micro-averaged precision, recall and F1 all equal accuracy, so they
-# are not reported. MCC (Matthews correlation coefficient) and Cohen's kappa are the two usual chance-corrected scores for more
-# than two classes. Precision and F1 depend on how common each class is in the test set; recall and balanced accuracy do not.
-#
-# The 95% intervals: photos of one lesion, like patients of one article, are not independent, so when the files carry their group
-# (``groups``), every interval comes from a bootstrap that resamples whole groups within each true class. Without group
-# information each file is its own group; accuracy and the recall of each class then get the Wilson score interval.
-#
-# A class with very few files in a split (actinic keratosis in the text dataset: 2 test cases) weighs as much as any other class
-# in balanced accuracy, yet its recall can take only a few values. The report then also gives the scores without its files,
-# beside the main score (DATASETS names such classes).
-#
-# Hallucination: an answer is right (it names the true class), a hallucination (it names a class the ground truth does not
-# support: a wrong diagnosis, stated as the answer), or no valid answer (a refusal, a sentence, two classes, a cut-off: it names no
-# diagnosis, so it is no hallucination, and is counted apart). Right + hallucination + no valid answer = every question. The
-# hallucination rate is the share of the questions answered with a wrong diagnosis; the class-balanced rate is the mean of the
-# shares of the classes (the same weighting as balanced accuracy, and the same as the plain rate when every class has the same
-# number of questions). The models are forced to choose a class, so a model cannot avoid hallucinating by saying it is unsure.
-#
-# Clinical risk: of the cancers (MALIGNANT), the share answered as a benign class (missed malignancy, the most harmful error a
-# diagnosis can make); of the benign lesions (BENIGN), the share answered as a cancer (over-call). Actinic keratosis is
-# precancerous and is in neither group as a true class. Both shares are of ALL the files of the group: a cancer answered as
-# actinic keratosis, or not readable, is no miss but stays in the total (so a model cannot lower its rate by not answering).
-#
-# Specificity of a class: of the files that are not that class, the share not answered as it (an unreadable answer is not an
-# answer of the class). With eight classes most files are negatives of any one class, so specificity is high by construction and is
-# read beside recall, never alone. Malignancy sensitivity: of the cancers, the share answered as any cancer (the right cancer or
-# another one); it is not 1 minus the missed malignancy, because a cancer answered as actinic keratosis or not readably is neither
-# detected nor missed. Benign specificity: of the benign lesions, the share answered as any benign class.
-#
-# ROC curves and AUC are deliberately absent: they need a score per class for every image, and a model that answers with one class
-# name gives none. Malignancy sensitivity with benign specificity is the one point of such a curve these answers give.
-# ==============================================================================================================================
-
-
-UNREADABLE = "(unreadable)"
+INVALID = "(invalid)"  # the confusion matrix's column of the answers that are not of the required form
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 0
-MALIGNANT = ("melanoma", "basal cell carcinoma", "squamous cell carcinoma")  # cancers
-BENIGN = ("nevus", "pigmented benign keratosis", "dermatofibroma", "vascular lesion")  # actinic keratosis: precancerous, in neither
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -81,7 +52,7 @@ def _ratio(a: float, b: float) -> float | None:
 
 
 def confusion_matrix(y_true: list[str], y_pred: list[str | None], labels: list[str]) -> list[list[int]]:
-    """Rows: the true class (in the order of ``labels``). Columns: the answer, in the same order, then one column for unreadable."""
+    """Rows: the true class (in the order of ``labels``). Columns: the answer, in the same order, then one column for invalid."""
     index = {label: i for i, label in enumerate(labels)}
     if len(index) != len(labels):
         raise ValueError("the class list contains a name twice")
@@ -90,73 +61,56 @@ def confusion_matrix(y_true: list[str], y_pred: list[str | None], labels: list[s
         if true not in index:
             raise ValueError(f"true label {true!r} is not one of the classes")
         if answer is not None and answer not in index:
-            raise ValueError(f"answer {answer!r} is not one of the classes (an unreadable answer must be None)")
+            raise ValueError(f"answer {answer!r} is not one of the classes (an invalid answer must be None)")
         matrix[index[true]][len(labels) if answer is None else index[answer]] += 1
     return matrix
 
 
+def _mean(values: list[float | None], present: list[int]) -> float | None:
+    """The mean over the classes that occur; a value that is undefined (a class never answered) counts as 0."""
+    if not present:
+        return None
+    return math.fsum(0.0 if values[i] is None else values[i] for i in present) / len(present)  # exactly rounded on every Python
+
+
 def _scores(matrix: list[list[int]]) -> dict:
-    """Every score that is computed from a confusion matrix (rows: true class; last column: unreadable)."""
+    """The scores computed from a confusion matrix (rows: true class; last column: invalid)."""
     k = len(matrix)
-    n = sum(map(sum, matrix))
     support = [sum(row) for row in matrix]
-    answered = [sum(matrix[i][j] for i in range(k)) for j in range(k + 1)]  # how often each answer was given; the last is unreadable
+    answered = [sum(matrix[i][j] for i in range(k)) for j in range(k + 1)]  # how often each answer was given; the last is invalid
     tp = [matrix[i][i] for i in range(k)]
     precision = [_ratio(tp[i], answered[i]) for i in range(k)]
     recall = [_ratio(tp[i], support[i]) for i in range(k)]
     f1 = [_ratio(2 * tp[i], 2 * tp[i] + (answered[i] - tp[i]) + (support[i] - tp[i])) for i in range(k)]
-    specificity = [_ratio((n - support[i]) - (answered[i] - tp[i]), n - support[i]) for i in range(k)]  # true negatives / negatives
-    present = [i for i in range(k) if support[i]]  # only these enter an average
-    out = {"n": n, "support": support, "answered": answered, "tp": tp, "precision": precision, "recall": recall, "f1": f1,
-           "specificity": specificity, "present": present}
-
-    def mean(values, weights=None):
-        if not present:
-            return None
-        values = [0.0 if values[i] is None else values[i] for i in present]  # a class never answered: precision 0
-        weights = [1] * len(present) if weights is None else [weights[i] for i in present]
-        return math.fsum(v * w for v, w in zip(values, weights)) / sum(weights)  # an exactly rounded sum: the same on every Python version
-
-    out["macro"] = {"precision": mean(precision), "recall": mean(recall), "f1": mean(f1),
-                    "specificity": None if None in [specificity[i] for i in present] else mean(specificity)}
-    out["weighted"] = {"precision": mean(precision, support), "recall": mean(recall, support), "f1": mean(f1, support)}
-    correct = sum(tp)
-    if n:
-        expected = sum(answered[j] * (support[j] if j < k else 0) for j in range(k + 1))  # unreadable is never a true class
-        spread_answers = n * n - sum(a * a for a in answered)
-        spread_truth = n * n - sum(s * s for s in support)
-        out["mcc"] = _ratio(correct * n - expected, math.sqrt(spread_answers * spread_truth))
-        out["kappa"] = _ratio(correct / n - expected / (n * n), 1 - expected / (n * n))
-    else:
-        out["mcc"] = out["kappa"] = None
-    return out
-
-
-def _hallucination(matrix: list[list[int]]) -> dict:
-    """The share of the questions answered with a wrong diagnosis (plain, and the mean over the classes that occur), and the
-    questions with no valid answer. ``matrix`` has the true class in its rows and, in its last column, the unreadable answers."""
-    k = len(matrix)
-    support = [sum(row) for row in matrix]
-    wrong = [support[i] - matrix[i][i] - matrix[i][k] for i in range(k)]
     present = [i for i in range(k) if support[i]]
-    n = sum(support)
-    return {"rate": _ratio(sum(wrong), n), "wrong": sum(wrong), "n": n,
-            "balanced_rate": _ratio(math.fsum(wrong[i] / support[i] for i in present), len(present)),
-            "no_valid_answer": sum(row[k] for row in matrix), "no_valid_answer_rate": _ratio(sum(row[k] for row in matrix), n)}
+    return {"n": sum(support), "support": support, "answered": answered, "tp": tp, "precision": precision, "recall": recall,
+            "f1": f1, "present": present, "balanced_accuracy": _mean(recall, present),
+            "macro": {"precision": _mean(precision, present), "recall": _mean(recall, present), "f1": _mean(f1, present)}}
 
 
-def _risk(y_true, y_pred) -> dict:
-    """Missed malignancy (cancers answered as a benign class), over-calls (benign lesions answered as a cancer), malignancy
-    sensitivity (cancers answered as any cancer) and benign specificity (benign lesions answered as any benign class), as counts
-    and shares; a share is None when no answer has a true class in its group."""
-    cancers = [answer for true, answer in zip(y_true, y_pred) if true in MALIGNANT]
-    benign = [answer for true, answer in zip(y_true, y_pred) if true in BENIGN]
-    missed, overcalled = sum(a in BENIGN for a in cancers), sum(a in MALIGNANT for a in benign)
-    detected, cleared = sum(a in MALIGNANT for a in cancers), sum(a in BENIGN for a in benign)
-    return {"missed_malignancy": _ratio(missed, len(cancers)), "missed": missed, "cancers": len(cancers),
-            "overcall": _ratio(overcalled, len(benign)), "overcalled": overcalled, "benign": len(benign),
-            "malignancy_sensitivity": _ratio(detected, len(cancers)), "detected": detected,
-            "benign_specificity": _ratio(cleared, len(benign)), "cleared": cleared}
+def balanced_accuracy(y_true: list[str], y_pred: list[str | None], labels: list[str]) -> float | None:
+    """The mean over the classes that occur of the share of each class's questions answered with it."""
+    return _scores(confusion_matrix(y_true, y_pred, labels))["balanced_accuracy"]
+
+
+def top_k_balanced_accuracy(y_true: list[str], differentials: list[list[str] | None], labels: list[str]) -> float | None:
+    """As balanced accuracy, with an answer right when the true class is anywhere in its differential (None: invalid, wrong)."""
+    hits = [true if differential and true in differential else None for true, differential in zip(y_true, differentials, strict=True)]
+    return balanced_accuracy(y_true, hits, labels)
+
+
+def _detection(y_true, y_pred, flags) -> dict:
+    """Misdiagnosis detection and selective prediction from the valid answers' diagnoses and flags ("yes": evidence sufficient)."""
+    valid = [(t == p, f) for t, p, f in zip(y_true, y_pred, flags) if p is not None and f in ("yes", "no")]
+    wrong = [f for right, f in valid if not right]
+    right = [f for right, f in valid if right]
+    covered = [ok for ok, f in valid if f == "yes"]
+    return {"valid": len(valid), "wrong": len(wrong), "flagged_wrong": sum(f == "no" for f in wrong),
+            "sensitivity": _ratio(sum(f == "no" for f in wrong), len(wrong)),
+            "right": len(right), "unflagged_right": sum(f == "yes" for f in right),
+            "specificity": _ratio(sum(f == "yes" for f in right), len(right)),
+            "covered": len(covered), "coverage": _ratio(len(covered), len(y_true)),
+            "covered_wrong": sum(not ok for ok in covered), "selective_risk": _ratio(sum(not ok for ok in covered), len(covered))}
 
 
 def _percentile(sorted_values: list[float], q: float) -> float:
@@ -167,7 +121,7 @@ def _percentile(sorted_values: list[float], q: float) -> float:
 
 
 def _units(y_true, labels, groups) -> dict:
-    """For each true class that occurs, its groups, each as the list of the positions of its files."""
+    """For each true class that occurs, its groups, each as the list of the positions of its answers."""
     by_class = {}
     for label in labels:
         units = {}
@@ -181,10 +135,18 @@ def _units(y_true, labels, groups) -> dict:
 
 def _resamples(by_class: dict, resamples: int, seed: int):
     """Seeded resamples: whole groups drawn with replacement inside each class, so every resample keeps each class's number of
-    groups. Yields the positions of each resample's files (random() is stable across Python versions)."""
+    groups. Yields the positions of each resample's answers (random() is stable across Python versions)."""
     rng = random.Random(seed)
     for _ in range(resamples):
         yield [i for units in by_class.values() for _ in units for i in units[int(rng.random() * len(units))]]
+
+
+def interval(series: list[float | None]) -> tuple[float, float] | None:
+    """The 95% percentile interval of bootstrap values; None when a value is undefined in some resample."""
+    if not series or None in series:
+        return None
+    series = sorted(series)
+    return (_percentile(series, 0.025), _percentile(series, 0.975))
 
 
 def mcnemar(only_a: int, only_b: int) -> float:
@@ -197,95 +159,95 @@ def mcnemar(only_a: int, only_b: int) -> float:
     return min(1.0, 2 * tail)
 
 
-def _bootstrap(y_true, y_pred, labels, groups, resamples: int, seed: int) -> dict:
-    """95% percentile intervals of every score that gets one.
+def holm(p_values: list[float]) -> list[float]:
+    """Holm's step-down correction for several tests: the smallest p-value is multiplied by the number of tests, the next by one
+    less, and so on; no adjusted value may be smaller than the one before it or larger than 1. Returned in the order given."""
+    order = sorted(range(len(p_values)), key=lambda i: p_values[i])
+    adjusted, running = [0.0] * len(p_values), 0.0
+    for rank, i in enumerate(order):
+        running = max(running, min(1.0, (len(p_values) - rank) * p_values[i]))
+        adjusted[i] = running
+    return adjusted
 
-    Whole groups are resampled with replacement inside each true class (``groups`` names each file's group: the lesion an image
-    shows, or the article a case comes from), so every resample keeps the number of groups of each class, and the files of one
-    group are drawn together. The generator is seeded: the same answers always give the same interval.
-    """
+
+def _bootstrap(y_true, y_pred, labels, groups, differentials, flags) -> dict:
+    """The bootstrap values of every score that gets an interval. Whole groups are resampled with replacement inside each true
+    class, so every resample keeps the number of groups of each class, and the answers of one group are drawn together."""
     by_class = _units(y_true, labels, groups)
-    names = ["accuracy", "balanced_accuracy", "macro_f1", "missed_malignancy", "overcall", "hallucination", "hallucination_balanced",
-             "macro_precision", "macro_specificity", "malignancy_sensitivity", "benign_specificity"]
-    if not by_class:
-        return {name: None for name in names} | {"recall": {}, "specificity": {}}
-    values = {name: [] for name in names}
+    values = {name: [] for name in ("balanced_accuracy", "macro_f1", "top3_balanced_accuracy", "sensitivity", "specificity",
+                                    "coverage", "selective_risk")}
     recall = {label: [] for label in by_class}
-    specificity = {label: [] for label in labels}
-    for sample in _resamples(by_class, resamples, seed):
-        true, pred = [y_true[i] for i in sample], [y_pred[i] for i in sample]
-        matrix = confusion_matrix(true, pred, labels)
-        scores, hallucination = _scores(matrix), _hallucination(matrix)
-        values["hallucination"].append(hallucination["rate"])
-        values["hallucination_balanced"].append(hallucination["balanced_rate"])
-        values["accuracy"].append(sum(scores["tp"]) / scores["n"])
-        values["balanced_accuracy"].append(scores["macro"]["recall"])
-        values["macro_f1"].append(scores["macro"]["f1"])
-        values["macro_precision"].append(scores["macro"]["precision"])
-        values["macro_specificity"].append(scores["macro"]["specificity"])
-        risk = _risk(true, pred)
-        for name in ("missed_malignancy", "overcall", "malignancy_sensitivity", "benign_specificity"):
-            values[name].append(risk[name])
+    if not by_class:
+        return values | {"recall": recall}
+    for sample in _resamples(by_class, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED):
+        true = [y_true[i] for i in sample]
+        s = _scores(confusion_matrix(true, [y_pred[i] for i in sample], labels))
+        values["balanced_accuracy"].append(s["balanced_accuracy"])
+        values["macro_f1"].append(s["macro"]["f1"])
+        if differentials is not None:
+            values["top3_balanced_accuracy"].append(top_k_balanced_accuracy(true, [differentials[i] for i in sample], labels))
+        if flags is not None:
+            d = _detection(true, [y_pred[i] for i in sample], [flags[i] for i in sample])
+            for name in ("sensitivity", "specificity", "coverage", "selective_risk"):
+                values[name].append(d[name])
         for label in by_class:
-            recall[label].append(scores["recall"][labels.index(label)])
-        for i, label in enumerate(labels):
-            specificity[label].append(scores["specificity"][i])
-
-    def interval(series):  # every resample holds every class, so a score is defined in all resamples or in none
-        if None in series:
-            return None
-        series = sorted(series)
-        return (_percentile(series, 0.025), _percentile(series, 0.975))
-
-    return {name: interval(series) for name, series in values.items()} | {
-        "recall": {k: interval(v) for k, v in recall.items()}, "specificity": {k: interval(v) for k, v in specificity.items()}}
+            recall[label].append(s["recall"][labels.index(label)])
+    return values | {"recall": recall}
 
 
-def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], groups: list[str] | None = None,
-              group_name: str = "lesion") -> dict:
-    """All metrics of one run.
+def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], groups: list | None = None,
+              group_name: str = "lesion", differentials: list | None = None, flags: list | None = None) -> dict:
+    """Every score of one run (see the module's description).
 
-    ``labels`` is the full class list (the answer options); a class that no file has as its true class appears in
-    ``classes_absent`` and is left out of the averages. ``groups`` names the group of each file, ``group_name`` what a group is
-    (the files of one group are resampled together for the intervals). With no answers at all, every score is None (and accuracy
-    0.0).
+    ``labels`` is the full class list (the answer options); a class that no question has as its true class appears in
+    ``classes_absent`` and is left out of the averages. ``groups`` names each answer's group, ``group_name`` what a group is.
+    ``differentials`` (each answer's three classes, None when invalid) and ``flags`` ("yes", "no", or None when invalid) are
+    given for answers of the current form; without them the scores that need them are None.
     """
-    matrix = confusion_matrix(y_true, y_pred, labels)
-    s = _scores(matrix)
-    n = s["n"]
-    correct = sum(s["tp"])
     if groups is not None and len(groups) != len(y_true):
         raise ValueError("there must be one group per answer")
     groups = list(groups) if groups is not None else list(range(len(y_true)))
-    independent = len(set(groups)) == len(groups)  # every file its own group: Wilson intervals for accuracy and recall
-    interval = _bootstrap(y_true, y_pred, labels, groups, BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)
-    hallucination = _hallucination(matrix)
-    hallucination["rate_ci95"] = wilson(hallucination["wrong"], n) if independent and n else interval["hallucination"]
-    hallucination["balanced_rate_ci95"] = interval["hallucination_balanced"]
-    hallucination["no_valid_answer_rate"] = _ratio(hallucination["no_valid_answer"], n)
-    risk = _risk(y_true, y_pred)
-    for share, count, of in (("missed_malignancy", "missed", "cancers"), ("overcall", "overcalled", "benign"),
-                             ("malignancy_sensitivity", "detected", "cancers"), ("benign_specificity", "cleared", "benign")):
-        risk[f"{share}_ci95"] = None if not risk[of] else wilson(risk[count], risk[of]) if independent else interval[share]
+    independent = len(set(groups)) == len(groups)  # every answer its own group: Wilson intervals for the shares
+    matrix = confusion_matrix(y_true, y_pred, labels)
+    s = _scores(matrix)
+    n = s["n"]
+    boot = _bootstrap(y_true, y_pred, labels, groups, differentials, flags)
     per_class = {}
     for i, label in enumerate(labels):
         per_class[label] = {"support": s["support"][i], "answered": s["answered"][i], "tp": s["tp"][i],
-                            "fp": s["answered"][i] - s["tp"][i], "fn": s["support"][i] - s["tp"][i],
                             "precision": s["precision"][i], "recall": s["recall"][i], "f1": s["f1"][i],
                             "recall_ci95": None if not s["support"][i] else
-                            wilson(s["tp"][i], s["support"][i]) if independent else interval["recall"][label],
-                            "tn": (n - s["support"][i]) - (s["answered"][i] - s["tp"][i]), "specificity": s["specificity"][i],
-                            "specificity_ci95": None if s["specificity"][i] is None else
-                            wilson((n - s["support"][i]) - (s["answered"][i] - s["tp"][i]), n - s["support"][i]) if independent
-                            else interval["specificity"][label]}
-    return {"n": n, "correct": correct, "unreadable": s["answered"][-1], "groups": len(set(groups)), "group_name": group_name,
-            "interval_method": "Wilson for accuracy and recall, bootstrap for the rest" if independent else f"bootstrap over {group_name}s",
-            "balanced_accuracy": s["macro"]["recall"], "balanced_accuracy_ci95": interval["balanced_accuracy"],
-            "accuracy": correct / n if n else 0.0, "accuracy_ci95": wilson(correct, n) if independent else interval["accuracy"],
-            "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]],
-            "macro": {**s["macro"], "f1_ci95": interval["macro_f1"], "precision_ci95": interval["macro_precision"],
-                      "specificity_ci95": interval["macro_specificity"]},
-            "weighted": s["weighted"],
-            "mcc": s["mcc"], "kappa": s["kappa"], "risk": risk, "hallucination": hallucination,
-            "per_class": per_class,
-            "confusion_matrix": {"rows": list(labels), "columns": [*labels, UNREADABLE], "counts": matrix}}
+                            wilson(s["tp"][i], s["support"][i]) if independent else interval(boot["recall"][label])}
+    out = {"n": n, "correct": sum(s["tp"]), "invalid": s["answered"][-1], "invalid_rate": _ratio(s["answered"][-1], n),
+           "groups": len(set(groups)), "group_name": group_name,
+           "interval_method": "bootstrap, and Wilson for shares of counts" if independent else f"bootstrap over {group_name}s",
+           "balanced_accuracy": s["balanced_accuracy"], "balanced_accuracy_ci95": interval(boot["balanced_accuracy"]),
+           "macro_f1": s["macro"]["f1"], "macro_f1_ci95": interval(boot["macro_f1"]), "macro_precision": s["macro"]["precision"],
+           "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]], "per_class": per_class,
+           "confusion_matrix": {"rows": list(labels), "columns": [*labels, INVALID], "counts": matrix},
+           "top3_balanced_accuracy": None, "top3_balanced_accuracy_ci95": None, "detection": None}
+    if differentials is not None:
+        out["top3_balanced_accuracy"] = top_k_balanced_accuracy(y_true, differentials, labels)
+        out["top3_balanced_accuracy_ci95"] = interval(boot["top3_balanced_accuracy"])
+    if flags is not None:
+        d = _detection(y_true, y_pred, flags)
+        for name, k, total in (("sensitivity", "flagged_wrong", "wrong"), ("specificity", "unflagged_right", "right"),
+                               ("coverage", "covered", None), ("selective_risk", "covered_wrong", "covered")):
+            of = n if total is None else d[total]
+            d[f"{name}_ci95"] = None if not of else wilson(d[k], of) if independent else interval(boot[name])
+        out["detection"] = d
+    return out
+
+
+def within_groups(y_true: list[str], y_pred: list[str | None], class_groups: list[tuple[str, ...]]) -> list[dict]:
+    """For each group of classes (the classes of one photo collection): the balanced accuracy over its classes and the share of
+    its questions answered with a class of the same group. A model that read only the collection would keep its answers in the
+    group (a high share) and be at chance inside it (1 over the number of classes)."""
+    out = []
+    for group in class_groups:
+        mine = [(t, p) for t, p in zip(y_true, y_pred) if t in group]
+        out.append({"classes": list(group), "questions": len(mine), "chance": 1 / len(group),
+                    "balanced_accuracy": balanced_accuracy([t for t, _ in mine], [p if p in group else None for _, p in mine], list(group))
+                    if mine else None,
+                    "inside_share": _ratio(sum(p in group for _, p in mine), len(mine))})
+    return out

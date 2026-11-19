@@ -1,8 +1,14 @@
 """The prompt and the answer reader: the same for every model, so differences in results come from the models, not from how
-their answers were read."""
+their answers were read.
+
+Answer format (since the protocol of 2026-11-19, docs/method.md): one JSON object and nothing else,
+    {"differential": [three different classes, the most likely first], "evidence_sufficient": "yes" or "no",
+     "reason": "<why, in at most three sentences>", "evidence": [ids of the retrieved passages used; empty without retrieval]}
+read by parse_json_answer. The answers of the first phase were a single class name, read by parse_answer."""
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -13,6 +19,10 @@ PLACEHOLDER = "{labels}"
 CASE = "{case}"  # in a text prompt: where each case goes
 FACTS = "{facts}"  # in an image + metadata prompt: where the patient's facts go
 LEAD_INS = ("diagnosis", "answer", "final answer")  # the words the answer reader forgives in front of a colon and the class name
+ANSWER_FORMAT = "json-v1"  # the answer format of the runs; a run card without it holds single class names (the first phase)
+ANSWER_KEYS = ("differential", "evidence_sufficient", "reason", "evidence")
+DIFFERENTIAL = 3  # the number of different classes in a differential (all of them when a dataset has fewer)
+FENCE = re.compile(r"\A```(?:json)?\s*\n(.*)\n\s*```\Z", re.S | re.I)  # a Markdown code block around the whole answer
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -89,3 +99,52 @@ def can_still_become_readable(text: str | None, labels: list[str]) -> bool:
     """
     answer = _normalise(text or "")
     return any(start.startswith(answer) for start in [_normalise(label) for label in labels] + list(LEAD_INS))
+
+
+def parse_json_answer(text: str | None, labels: list[str], evidence_ids: set[str] = frozenset()) -> tuple[dict | None, str | None]:
+    """The answer of the JSON form, read strictly: (the answer, None), or (None, why it is invalid).
+
+    Forgiven: spaces around the answer, a Markdown code block around it, and the case and spacing of a class name or of yes/no.
+    Invalid: anything else around the object, a key missing or added, a differential that is not three different classes of the
+    list, a flag that is not yes or no, an empty reason, and evidence that names a passage the run did not retrieve (without
+    retrieval, any evidence). The diagnosis is the first class of the differential.
+    """
+    if not text or not text.strip():
+        return None, "empty answer"
+    body = text.strip()
+    fenced = FENCE.match(body)
+    if fenced:
+        body = fenced.group(1).strip()
+    try:
+        answer = json.loads(body)
+    except json.JSONDecodeError:
+        return None, "not one JSON object"
+    if not isinstance(answer, dict):
+        return None, "not one JSON object"
+    if set(answer) != set(ANSWER_KEYS):
+        missing, extra = sorted(set(ANSWER_KEYS) - set(answer)), sorted(set(answer) - set(ANSWER_KEYS))
+        return None, "; ".join([*(f"missing key {k}" for k in missing), *(f"key not asked for: {k}" for k in extra)])
+    by_name = {_normalise(label): label for label in labels}
+    size = min(DIFFERENTIAL, len(labels))
+    differential = answer["differential"]
+    if not isinstance(differential, list) or len(differential) != size or not all(isinstance(d, str) for d in differential):
+        return None, f"the differential is not a list of {size} class names"
+    named = [by_name.get(re.sub(r"\s+", " ", d.strip().lower())) for d in differential]
+    if None in named:
+        return None, f"not a class of the list: {differential[named.index(None)]!r}"
+    if len(set(named)) != size:
+        return None, "the differential names a class twice"
+    flag = answer["evidence_sufficient"]
+    if not isinstance(flag, str) or flag.strip().lower() not in ("yes", "no"):
+        return None, "evidence_sufficient is not yes or no"
+    reason = answer["reason"]
+    if not isinstance(reason, str) or not reason.strip():
+        return None, "no reason given"
+    evidence = answer["evidence"]
+    if not isinstance(evidence, list) or not all(isinstance(e, str) for e in evidence):
+        return None, "evidence is not a list of passage ids"
+    unknown = [e for e in evidence if e not in evidence_ids]
+    if unknown:
+        return None, f"evidence names a passage the run did not give: {unknown[0]!r}"
+    return {"diagnosis": named[0], "differential": named, "evidence_sufficient": flag.strip().lower(), "reason": reason.strip(),
+            "evidence": evidence}, None

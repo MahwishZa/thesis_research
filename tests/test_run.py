@@ -21,6 +21,10 @@ from tests.fixtures import FakeModel, MultimodalProject, ProbeModel, Project, Re
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def write_lines(path, rows):
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+
+
 class RunTests(RunProject):
     def test_test_run_writes_predictions_metrics_and_report(self):
         out = self._run(FakeModel(fail_on=[2]), "test", run_id="t1")
@@ -40,23 +44,28 @@ class RunTests(RunProject):
         self.assertEqual(card["dataset_table"]["sha256"], hashlib.sha256(self.table.read_bytes()).hexdigest())
         self.assertEqual({p["lesion_group"] for p in preds}, {"lesion-melanoma", "lesion-nevus"})
         self.assertEqual((metrics["main"]["groups"], metrics["main"]["interval_method"]), (2, "bootstrap over lesions"))
-        self.assertEqual(list(metrics), ["main"])  # no class of the image dataset is set apart
+        self.assertEqual(list(metrics), ["answer_format", "main", "within_collections"])  # no class of the image dataset is set apart
+        self.assertEqual((metrics["answer_format"], card["answer_format"]), (prompts.ANSWER_FORMAT, prompts.ANSWER_FORMAT))
+        self.assertEqual(preds[0]["differential"], ["melanoma", "nevus"])  # two classes: a differential of two
+        self.assertEqual((preds[0]["evidence_sufficient"], preds[0]["evidence"], preds[0]["invalid"]), ("yes", [], None))
+        self.assertEqual(metrics["main"]["top3_balanced_accuracy"], 1.0)
+        detection = metrics["main"]["detection"]  # the stand-in always says "yes": no wrong answer is marked
+        self.assertEqual((detection["sensitivity"], detection["specificity"], detection["coverage"], detection["selective_risk"]),
+                         (0.0, 1.0, 1.0, 0.5))
         text = (out / "report.md").read_text(encoding="utf-8")
-        for expected in ("| **Balanced accuracy (main score: the mean recall of the classes)** | **50.0%** |",
-                         "| Accuracy | 50.0% (2/4) |",
-                         "(bootstrap over lesions)", "Macro-F1 (classes with images: 2)", "Matthews correlation", "Cohen's kappa",
-                         "### Per class", "Recall (95% interval: bootstrap over lesions)", "### Confusion matrix",
-                         "Every class has the same number of test images (2), so plain accuracy equals balanced accuracy.",
-                         "(2 lesions for 4 images)",
-                         "it is not a clinical figure", "No ROC curve or AUC", "sent exactly as stored",
-                         "| **Hallucination rate (a wrong diagnosis named; mean over the classes)** | **50.0%** |",
-                         "| Hallucination rate, all questions | 50.0% (2/4) |",
-                         "a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 0 |",
-                         "Right answers, hallucinations and answers with no valid answer",
-                         "| Missed malignancy: cancers answered as benign | 0.0% (0/2) |",
-                         "| Over-calls: benign lesions answered as cancer | 100.0% (2/2) |"):
+        for expected in ("| **Balanced accuracy (main score)** | **50.0%** |", "(bootstrap over lesions)", "| Macro-F1 |",
+                         "| Top-3 balanced accuracy (the true class in the differential) | 100.0% |",
+                         "| Invalid answers (counted as wrong) | 0.0% (0/4) |",
+                         "### Misdiagnosis detection and selective prediction",
+                         "| Sensitivity: wrong diagnoses marked \"not sufficient\" | 0.0% (0/2) |",
+                         "| Specificity: right diagnoses not marked | 100.0% (2/2) |",
+                         "| Coverage: questions answered with \"sufficient\" | 100.0% (4/4) |",
+                         "| Selective risk: wrong among them | 50.0% (2/4) |",
+                         "### Per class", "### Confusion matrix", "(2 lesions for 4 images)", "sent exactly as stored",
+                         "## Inside each photo collection", "docs/method.md", f"answer format `{prompts.ANSWER_FORMAT}`"):
             self.assertIn(expected, text)
-        self.assertLess(text.index("Balanced accuracy (main score"), text.index("| Accuracy |"))  # the main score comes first
+        for gone in ("| Accuracy |", "Hallucination", "Matthews", "kappa", "malignancy", "first phase"):
+            self.assertNotIn(gone, text)
         self.assertNotIn("## Without", text)
         self.assertNotIn("Abstention rate", text)  # a forced-choice run has no abstention to report
         again = FakeModel()  # the same command again: nothing is sent, nothing is overwritten
@@ -162,7 +171,19 @@ class RunTests(RunProject):
         self._run(FakeModel(quota_from=1), "val", run_id="v2")  # quota used up before the first answer: nothing is left behind
         self.assertEqual([p.name for p in self.model_dir.iterdir()], ["v1"])
 
-    def test_an_answer_with_reasoning_and_a_class_on_its_last_line_is_unreadable_but_counted_in_the_sensitivity_analysis(self):
+    def _as_first_phase(self, out):
+        """Turns a run into one of the first phase (answers read as single class names) and scores it as such."""
+        card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
+        card.pop("answer_format")
+        common.write_json(out / "run_card.json", card)
+        preds = self._preds(out)
+        for p in preds:
+            p["prediction"] = prompts.parse_answer(p["raw_text"], card["labels"])
+        write_lines(out / "predictions.jsonl", preds)
+        evaluate.write_report(out)
+        return preds, json.loads((out / "scores.json").read_text(encoding="utf-8")), (out / "scores.md").read_text(encoding="utf-8")
+
+    def test_a_first_phase_answer_with_reasoning_and_a_class_on_its_last_line_is_counted_in_the_sensitivity_analysis(self):
         class Wordy(FakeModel):
             texts = ["Hard to say.\n\nnevus", "It is not listed.\nMelanoma.", "Reasoning that was cut off\nnevus", "I think\nnevus or melanoma"]
 
@@ -172,28 +193,28 @@ class RunTests(RunProject):
                 return out | {"text": text, "finish_reason": "MAX_TOKENS" if text.endswith("off\nnevus") else "STOP"}
 
         out = self._run(Wordy(), "test", run_id="w1")
-        preds = self._preds(out)
+        self.assertNotIn("last_line_reading", json.loads((out / "metrics.json").read_text(encoding="utf-8")))  # not JSON: invalid
+        self.assertEqual({p["invalid"] is not None for p in self._preds(out)}, {True})
+        preds, metrics, report = self._as_first_phase(out)
         self.assertEqual([p["prediction"] for p in preds], [None, None, None, None])  # the main reading is strict
-        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual(metrics["main"]["correct"], 0)
         part = metrics["last_line_reading"]
         self.assertEqual(part["answers_reread"], 2)  # the two with a lone class name last; two-class and one-line answers stay unreadable
         self.assertEqual(part["metrics"]["n"], 4)
         self.assertEqual(part["right_among_them"], sum(1 for p, a in zip(preds, ["nevus", "melanoma"]) if p["label"] == a))
-        report = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("## Sensitivity analysis: the last line of the answer", report)
         self.assertIn("2 answers wrote their reasoning first", report)
-        self.assertIn("Here they are read as that class.", report)
+        self.assertIn("A run of the first phase", report)
+        self.assertEqual(metrics["main"]["detection"], None)
 
-        class Single(Wordy):
-            texts = ["Hard to say.\n\nnevus", "Maybe nevus or melanoma", "x y", "I think\nnevus or melanoma"]
-
-        single = (self._run(Single(), "val", run_id="w3") / "report.md").read_text(encoding="utf-8")
-        self.assertIn("1 answer wrote its reasoning first", single)
-        self.assertRegex(single, r"; [01] of them names? the right class\. Here it is read as that class\.")
-        again = self._run(FakeModel(), "val", run_id="w2")  # a clean run has no such section
-        self.assertNotIn("last_line_reading", json.loads((again / "metrics.json").read_text(encoding="utf-8")))
-        self.assertNotIn("Sensitivity analysis", (again / "report.md").read_text(encoding="utf-8"))
+        clean = self._run(FakeModel(), "val", run_id="w2")
+        clean_preds = self._preds(clean)
+        for p in clean_preds:  # a first-phase answer that is one class name alone
+            p["raw_text"] = "melanoma"
+        write_lines(clean / "predictions.jsonl", clean_preds)
+        _, metrics, report = self._as_first_phase(clean)  # a clean run has no such section
+        self.assertNotIn("last_line_reading", metrics)
+        self.assertNotIn("Sensitivity analysis", report)
         self.assertEqual([prompts.parse_last_line(x, ["nevus", "melanoma"]) for x in ("a\nnevus", "nevus", "a\nb nevus", "", None, "a\n\n**Melanoma.**\n", "a\nnevus\n\n  \n")],
                          ["nevus", None, None, None, None, "melanoma", "nevus"])
 
@@ -438,30 +459,29 @@ class RunTests(RunProject):
         with self.assertRaisesRegex(ValueError, "1 missing, 1 not in the table"):
             self._run(FakeModel(), "test", run_id="t1")
 
-    def test_answers_cut_off_at_the_output_limit_are_flagged_in_the_report(self):
+    def test_answers_cut_off_at_the_output_limit_make_the_results_invalid(self):
         class Truncated(FakeModel):
             def predict(self, *args):
-                return super().predict(*args) | {"text": "mela", "finish_reason": "MAX_TOKENS"}
+                return super().predict(*args) | {"text": '{"differential": ["mela', "finish_reason": "MAX_TOKENS"}
 
         self._run(Truncated(), "test", run_id="t1")
         text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
         self.assertIn("4 answers were cut off at the output limit", text)
-        self.assertIn("No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 4 |", text)
+        self.assertIn("Results are not valid until it is raised", text)
+        self.assertIn("| Invalid answers (counted as wrong) | 100.0% (4/4) |", text)
         self.assertNotIn("cut off", (self._run(FakeModel(), "val", run_id="v1") / "report.md").read_text(encoding="utf-8"))
 
-    def test_essays_cut_off_at_the_limit_do_not_make_the_results_invalid(self):
-        class Essay(FakeModel):
+    def test_a_complete_answer_that_reached_the_limit_does_not_make_the_results_invalid(self):
+        class Exact(FakeModel):
             def predict(self, *args):
-                text = "Based on the image, the most likely diagnosis is **melanoma**. Here is why:"
-                return super().predict(*args) | {"text": text, "finish_reason": "MAX_TOKENS"}
+                return super().predict(*args) | {"finish_reason": "MAX_TOKENS"}
 
-        self._run(Essay(), "test", run_id="t1")
+        self._run(Exact(), "test", run_id="t1")
         text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
         self.assertNotIn("Results are not valid", text)
-        self.assertIn("4 answers reached the output limit but already differed from every class name", text)
-        self.assertIn("No valid answer (a refusal, a sentence, two classes, a cut-off: counted as wrong, but no hallucination) | 4 |", text)
+        self.assertIn("4 answers reached the output limit but were complete and valid all the same", text)
 
-    def test_only_the_cut_off_answers_that_could_have_become_readable_make_the_results_invalid(self):
+    def test_in_the_first_phase_only_the_cut_off_answers_that_could_have_become_readable_make_the_results_invalid(self):
         asked = []
 
         class Mixed(FakeModel):
@@ -470,8 +490,7 @@ class RunTests(RunProject):
                 text = "mela" if len(asked) == 1 else "Based on the image, the most likely diagnosis is melanoma."
                 return super().predict(*args) | {"text": text, "finish_reason": "MAX_TOKENS"}
 
-        self._run(Mixed(), "test", run_id="t1")
-        text = (self.model_dir / "t1" / "report.md").read_text(encoding="utf-8")
+        *_, text = self._as_first_phase(self._run(Mixed(), "test", run_id="t1"))
         self.assertIn("1 answers were cut off at the output limit", text)
         self.assertIn("Results are not valid until it is raised", text)
         self.assertIn("3 answers reached the output limit but already differed from every class name", text)
@@ -655,18 +674,17 @@ class TextDatasetTests(TextProject):
         self.assertAlmostEqual(main["balanced_accuracy"], 1 / 3)  # recall 0, 1, 0
         self.assertEqual((apart["left_out"], apart["metrics"]["n"], apart["metrics"]["classes_absent"]),
                          (["actinic keratosis"], 6, ["actinic keratosis"]))
-        self.assertEqual((apart["metrics"]["balanced_accuracy"], apart["metrics"]["accuracy"]), (0.5, 0.5))  # recall 1, 0
+        self.assertEqual((apart["metrics"]["balanced_accuracy"], apart["metrics"]["correct"]), (0.5, 3))  # recall 1, 0
         self.assertEqual([(f["label"], f["prediction"]) for f in apart["files"]], [("actinic keratosis", "melanoma")] * 2)
         text = (out / "report.md").read_text(encoding="utf-8")
-        for expected in ("| **Balanced accuracy (main score: the mean recall of the classes)** | **33.3%** |",
-                         "| Accuracy | 37.5% (3/8) |", "(bootstrap over articles)", "Macro-F1 (classes with cases: 3)",
+        for expected in ("| **Balanced accuracy (main score)** | **33.3%** |", "(bootstrap over articles)", "| Macro-F1 |",
                          "Patients described in one article are not independent: the intervals resample whole articles (7 articles "
                          "for 8 cases).", "cases: 8 (hash", "each put into the prompt word for word",
                          "## Without actinic keratosis",
                          "The class actinic keratosis has only 2 cases in this split, so its recall can only be 0%, 50% or 100%, yet "
                          "it weighs as much as any other class in the balanced accuracy above (one class in 3).",
                          "never instead of it", "answering actinic keratosis for another case still counts as wrong",
-                         "| Balanced accuracy (2 classes) | 50.0% |", "| Accuracy | 50.0% (3/6) |",
+                         "| **Balanced accuracy (main score)** | **50.0%** |",
                          "| `test/actinic keratosis/201-9.txt` | actinic keratosis | melanoma |",
                          "| `test/actinic keratosis/202-10.txt` | actinic keratosis | melanoma |"):
             self.assertIn(expected, text)
@@ -680,7 +698,7 @@ class TextDatasetTests(TextProject):
         kept = [r for r in rows if r["label"] != "actinic keratosis"]
         (out / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in kept), encoding="utf-8")
         evaluate.write_report(out)
-        self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["main"])
+        self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["answer_format", "main"])
         self.assertNotIn("## Without", (out / "report.md").read_text(encoding="utf-8"))
 
     def test_the_check_asks_the_model_without_an_image_and_counts_cases(self):
