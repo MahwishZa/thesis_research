@@ -1,0 +1,12 @@
+img_id,patient_id,column,old,new,action,reason
+PAT_54_83_405.png,PAT_54,background_father,BRASIL,BRAZIL,normalised,spelling variant unified
+PAT_74_112_729.png,PAT_74,background_father,BRASIL,BRAZIL,normalised,spelling variant unified
+PAT_65_101_847.png,PAT_65,background_father,BRASIL,BRAZIL,normalised,spelling variant unified
+PAT_631_1227_585.png,PAT_631,diameter_1,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_631_1227_585.png,PAT_631,diameter_2,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_751_1497_215.png,PAT_751,diameter_1,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_751_1497_215.png,PAT_751,diameter_2,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_562_1110_360.png,PAT_562,diameter_1,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_562_1110_360.png,PAT_562,diameter_2,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_767_1501_691.png,PAT_767,diameter_1,0,0,flagged,diameter is 0: implausible for a lesion
+PAT_767_1501_691.png,PAT_767,diameter_2,0,0,flagged,diameter is 0: implausible for a lesion

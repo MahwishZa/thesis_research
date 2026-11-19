@@ -1,0 +1,17 @@
+img_a,img_b,bits,same_patient,same_lesion,label_a,label_b,same_cluster
+PAT_202_307_424.png,PAT_202_308_721.png,0,yes,no,BCC,ACK,yes
+PAT_302_650_477.png,PAT_302_651_529.png,0,yes,no,SCC,BCC,yes
+PAT_311_666_191.png,PAT_311_667_416.png,0,yes,no,SCC,BCC,yes
+PAT_380_1540_959.png,PAT_380_773_362.png,0,yes,no,SCC,BCC,yes
+PAT_38_1002_34.png,PAT_38_1003_68.png,0,yes,no,BCC,ACK,yes
+PAT_38_1002_668.png,PAT_38_1003_226.png,0,yes,no,BCC,ACK,yes
+PAT_419_2767_323.png,PAT_419_833_148.png,0,yes,no,ACK,SCC,yes
+PAT_528_3072_615.png,PAT_528_993_589.png,0,yes,no,ACK,ACK,yes
+PAT_56_86_479.png,PAT_56_88_274.png,0,yes,no,SCC,BCC,yes
+PAT_570_1084_637.png,PAT_570_1085_344.png,0,yes,no,SCC,BCC,yes
+PAT_570_1084_939.png,PAT_570_1085_429.png,0,yes,no,SCC,BCC,yes
+PAT_691_1311_2.png,PAT_691_3994_671.png,0,yes,no,BCC,ACK,yes
+PAT_691_1311_890.png,PAT_691_3994_791.png,0,yes,no,BCC,ACK,yes
+PAT_701_1321_156.png,PAT_701_4056_457.png,0,yes,no,SEK,SEK,yes
+PAT_759_1433_914.png,PAT_759_1538_566.png,0,yes,no,NEV,BCC,yes
+PAT_834_1572_430.png,PAT_834_1574_276.png,0,yes,no,SCC,SCC,yes
