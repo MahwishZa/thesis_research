@@ -35,30 +35,31 @@ Every score is computed by `src/metrics.py` from the saved answers. The classes 
 
 | Score | Definition | Source |
 |---|---|---|
-| **Balanced accuracy (main score)** | The mean recall over the classes present in the test split. Recall of a class: of its questions, the share whose diagnosis is that class. Chance is 1 over the number of classes (1 / 6 = 16.7% for the clinic patients, 1 / 8 = 12.5% for the published cases). | Brodersen et al. 2010 |
+| **Balanced accuracy (main score)** | The mean recall over the classes present in the test split (the macro-averaged recall). Recall of a class: of its questions, the share whose diagnosis is that class. Chance is 1 over the number of classes (1 / 6 = 16.7% for the clinic patients, 1 / 8 = 12.5% for the published cases). | Brodersen et al. 2010 (defined there for two classes; with more classes it is the macro-averaged recall, see Sokolova & Lapalme 2009) |
 | **Macro-F1** (second score) | The mean F1 over the classes present. F1 of a class: the harmonic mean of its precision and recall. A class never given has no precision and counts as 0. | Sokolova & Lapalme 2009 |
 | Per-class recall, precision and F1; confusion matrix | In each run's report. The confusion matrix has one more column for invalid answers. | Sokolova & Lapalme 2009 |
-| **Top-3 balanced accuracy** | The mean over the classes of the share of questions whose true class is anywhere in the differential. It shows whether the right diagnosis was considered at all. | Liu et al. 2020 (top-3 accuracy of a skin-disease differential) |
-| **Invalid-answer rate** | The share of questions with an invalid answer. | – |
-| **Misdiagnosis detection: sensitivity** | Over the valid answers. The positive case is a wrong diagnosis. Of the wrong diagnoses, the share the model marked with "evidence_sufficient": "no". | Hendrycks & Gimpel 2017 (detecting misclassified examples) |
-| **Misdiagnosis detection: specificity** | Of the right diagnoses, the share the model did not mark. | Hendrycks & Gimpel 2017 |
-| **Coverage** | Of all questions, the share answered with "yes". An invalid answer is not covered. | Geifman & El-Yaniv 2017 |
-| **Confident misdiagnosis (selective risk)** | Of the covered questions, the share with a wrong diagnosis: the error rate when the model's own "yes" is trusted. | Geifman & El-Yaniv 2017 |
+| **Macro-averaged top-3 accuracy** | The mean over the classes of the share of questions whose true class is anywhere in the differential. It shows whether the right diagnosis was considered at all. Chance is 3 over the number of classes (50% and 37.5%). | Liu et al. 2020 report top-1 and top-3 accuracy of a skin-disease differential; the averaging over classes is this thesis's, as for balanced accuracy |
+| **Invalid-answer rate** | The share of questions with an invalid answer. A validity report, not a performance metric. | – |
+| **Coverage** | Selective classification: the model answers a question by marking its evidence "sufficient" ("yes") and abstains by marking it "not sufficient". Coverage is the share of all questions answered. An invalid answer is not covered. | Geifman & El-Yaniv 2017 |
+| **Selective risk** (confident misdiagnosis) | Of the answered questions, the share with a wrong diagnosis: the error rate when the model's own "yes" is trusted. | Geifman & El-Yaniv 2017 |
 
-Plain accuracy is not reported: it adds nothing to balanced accuracy where the classes are equal in size, and it misleads where they are not. A ROC curve and its AUC are not reported: they need a score for every class on every question, and the answers give a ranked list of three, not scores. The evidence flag gives one operating point (the sensitivity and specificity above), not a curve.
+Plain accuracy is not reported: it adds nothing to balanced accuracy where the classes are equal in size, and it misleads where they are not. A ROC curve and its AUC are not reported: they need a score for every class on every question, and the answers give a ranked list of three, not scores. The evidence flag gives one operating point (coverage and selective risk), not a risk-coverage curve.
 
-**Confident misdiagnosis** (named so on 2026-11-19; earlier "hallucination"). A confident misdiagnosis is a wrong diagnosis marked "yes". Its share among the covered questions is the selective risk. A method reduces it if it lowers the selective risk without lowering the balanced accuracy, or if it raises the misdiagnosis detection sensitivity at a similar specificity. It is one part of the hallucination the research studies: it does not measure unsupported claims in the reason, which need an evidence-grounding score (not defined yet).
+**Selective risk, called confident misdiagnosis** (named so on 2026-11-19; earlier "hallucination"). A confident misdiagnosis is a wrong diagnosis marked "yes". Its share among the answered questions is the selective risk, the standard term, which is the one to use in tables. A method reduces it if it lowers the selective risk without lowering the balanced accuracy.
+
+**Hallucination, in the literature's terms.** Huang et al. (2023, preprint) distinguish *factuality hallucination* (content that contradicts verifiable facts; here, a wrong diagnosis, measured by the balanced accuracy and its complement) from *faithfulness hallucination* (content that departs from the context it was given; here, a claim its cited passage does not support). Ji et al. (2023) is the earlier survey. Selective risk is neither: it is the calibration of the model's own "sufficient" flag. Faithfulness needs a judge of whether a cited passage supports a claim; none is defined or built yet (the standard references are ALCE, Gao et al. 2023, and RAGAS, Es et al. 2024), so no unsupported-claim result can be reported.
 
 ## 4. Intervals and comparisons
 
-**95% intervals.** A percentile bootstrap (Efron & Tibshirani 1993) with 2,000 resamples and a fixed seed (0). Each resample draws whole groups with replacement inside each class, so every class keeps its number of groups. The group is the patient (clinic views: several photos of one patient are not independent), the article (text: several patients of one article are not independent) or the case (cases); resampling whole groups follows Field & Welsh 2007. When every question is its own group, a share (one class's recall, coverage) gets a Wilson interval instead (Wilson 1927).
+**95% intervals.** A percentile bootstrap (Efron & Tibshirani 1993) with 2,000 resamples and a fixed seed (0). Each resample draws whole groups with replacement inside each class, so every class keeps its number of groups. The group is the patient (clinic views: several photos of one patient are not independent), the article (text: several patients of one article are not independent) or the case (cases). Resampling whole groups is the cluster bootstrap (Field & Welsh 2007); drawing them within each class, so that every class keeps its number of groups, is a design choice of this thesis (a stratified cluster bootstrap), made because the main score is a mean over classes. When every question is its own group, a share (one class's recall, coverage) gets a Wilson interval instead (Wilson 1927; recommended for small samples by Brown, Cai & DasGupta 2001).
 
 **Comparing two runs on the same questions** (two models, or one model with and without a method):
 
 - **Main comparison:** the difference in balanced accuracy, with a paired 95% interval: both runs are resampled together, with the same groups, 2,000 times. A difference whose interval excludes 0 is called beyond chance. The difference in macro-F1 is given the same way.
-- **Supporting test:** McNemar's exact test on the questions exactly one of the two runs answers right (McNemar 1947). Where a page holds several tests, each p-value is also given after the Holm correction for their number (Holm 1979).
+- **Supporting test:** McNemar's exact test on the questions exactly one of the two runs answers right (McNemar 1947). It is the test Dietterich (1998) recommends for a learning algorithm that can be run only once, as here (one test run per model, dataset and approach).
+- **Several comparisons:** Holm's correction (Holm 1979) is implemented (`metrics.holm`) for the p-values of the comparisons a page reports together. No report uses it yet; it will be used for the pre-registered main comparisons once there are several.
 
-The intervals are not corrected for the number of comparisons, so on a page of many comparisons one interval can exclude 0 by chance. Where the interval excludes 0 but the Holm-corrected p-value is above 0.05, the results page says so and does not call the difference established.
+The intervals are not corrected for the number of comparisons, so on a page of many comparisons one interval can exclude 0 by chance.
 
 ## 5. Analyses beside the main score
 
@@ -77,11 +78,16 @@ section 2 only and refuses a run of the first phase, with a pointer to the archi
 ## References
 
 - Brodersen KH, Ong CS, Stephan KE, Buhmann JM. The balanced accuracy and its posterior distribution. *20th International Conference on Pattern Recognition (ICPR)*, 2010.
+- Brown LD, Cai TT, DasGupta A. Interval estimation for a binomial proportion. *Statistical Science* 16(2), 2001.
+- Dietterich TG. Approximate statistical tests for comparing supervised classification learning algorithms. *Neural Computation* 10(7), 1998.
 - Efron B, Tibshirani RJ. *An Introduction to the Bootstrap.* Chapman & Hall, 1993.
+- Es S, James J, Espinosa-Anke L, Schockaert S. RAGAS: automated evaluation of retrieval augmented generation. *EACL (system demonstrations)*, 2024.
 - Field CA, Welsh AH. Bootstrapping clustered data. *Journal of the Royal Statistical Society, Series B* 69(3), 2007.
+- Gao T, Yen H, Yu J, Chen D. Enabling large language models to generate text with citations. *EMNLP*, 2023.
 - Geifman Y, El-Yaniv R. Selective classification for deep neural networks. *Advances in Neural Information Processing Systems (NeurIPS)*, 2017.
-- Hendrycks D, Gimpel K. A baseline for detecting misclassified and out-of-distribution examples in neural networks. *International Conference on Learning Representations (ICLR)*, 2017.
 - Holm S. A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics* 6(2), 1979.
+- Huang L, Yu W, Ma W, et al. A survey on hallucination in large language models: principles, taxonomy, challenges, and open questions. arXiv:2311.05232, 2023 (preprint; the journal version was not checked).
+- Ji Z, Lee N, Frieske R, et al. Survey of hallucination in natural language generation. *ACM Computing Surveys* 55(12), 2023.
 - Liu Y, Jain A, Eng C, et al. A deep learning system for differential diagnosis of skin diseases. *Nature Medicine* 26, 2020.
 - McNemar Q. Note on the sampling error of the difference between correlated proportions or percentages. *Psychometrika* 12(2), 1947.
 - Sokolova M, Lapalme G. A systematic analysis of performance measures for classification tasks. *Information Processing & Management* 45(4), 2009.

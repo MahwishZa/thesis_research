@@ -113,23 +113,25 @@ recomputation of section 1 problem 10.
 
 | Metric | Definition | Implemented | Correct? | Relevance and remarks |
 |---|---|---|---|---|
-| Balanced accuracy (main) | mean recall over the classes present | ✔ | ✔ | right main score for unequal classes; chance 1/6 or 1/8 |
+| Balanced accuracy (main) | mean recall over the classes present: the macro-averaged recall | ✔ | ✔ | Brodersen et al. 2010 define it for two classes; with more it is the macro-averaged recall (Sokolova & Lapalme 2009). Chance 1/6 or 1/8 |
 | Macro-F1 | mean of 2TP/(2TP+FP+FN) over the classes present | ✔ | ✔ | a class never answered counts 0; a class with no true question is left out even if answered (stated) |
 | Per-class recall, precision, F1; confusion matrix | as usual, plus an invalid column | ✔ | ✔ | |
-| Top-3 balanced accuracy | the true class is in the differential | ✔ | ✔ | chance is 3/6 = 50% (clinic) and 3/8 = 37.5% (published): report it with the score ◻ |
+| Macro-averaged top-3 accuracy | the true class is in the differential, averaged over the classes | ✔ | ✔ | Liu et al. 2020 report plain top-3 accuracy; the averaging is ours and is named so. Chance 3/6 = 50% (clinic) and 3/8 = 37.5% (published) |
 | Invalid-answer rate | share not of the required form | ✔ | ✔ | an invalid answer counts as wrong everywhere |
-| Misdiagnosis detection: sensitivity, specificity | wrong diagnoses marked "evidence_sufficient: no"; right ones not marked | ✔ | ✔ | the flag is the model's own word: closed-book it is self-confidence, since no evidence is given, and it will mean something else once evidence is given (D4) |
-| Coverage, selective risk | share answered "yes"; share wrong among them | ✔ | ✔ | one operating point; a curve needs a confidence number, which the approved format does not ask for |
-| **Hallucination** (as approved: a wrong diagnosis marked "yes") | selective risk | ✔ | ✔ as defined | it measures **overconfident diagnostic error**, not unsupported claims. It cannot tell a wrong guess from an invented fact. (D3) |
+| ~~Misdiagnosis detection: sensitivity, specificity~~ | **removed 2026-11-19** | – | – | the cited source (Hendrycks & Gimpel 2017) uses AUROC and AUPR on a continuous score, not a binary flag, and the two numbers overlap with coverage and selective risk |
+| Coverage, selective risk | selective classification (Geifman & El-Yaniv 2017): the flag "sufficient" answers, "not sufficient" abstains | ✔ | ✔ | one operating point; a risk-coverage curve needs a confidence number, which the approved format does not ask for. The flag is the model's own word: closed-book it is self-confidence, and it will mean something else once evidence is given (D4) |
+| Confident misdiagnosis | = selective risk (the standard term is selective risk) | ✔ | ✔ as defined | not hallucination in the literature's sense: Huang et al. (preprint) separate factuality hallucination (a wrong diagnosis: the balanced accuracy) from faithfulness hallucination (a claim its cited passage does not support: not measured yet) (D3) |
 | **Evidence grounding** (citation precision and recall, support of claims, patient-fact check, faithfulness) | proposed only | ✗ | – | not approved, needs a format that makes claims checkable (D2) |
 | **Retrieval** (Recall@k, nDCG, MRR) | proposed only | ✗ | – | needs a retriever and silver relevance (disease topics) |
-| Evidence-induced errors | proposed only | ✗ | – | needs paired closed-book and open-book runs: `compare` already pairs them |
-| 95% intervals | percentile bootstrap, 2,000 resamples, seed 0, whole groups within each class; Wilson when every question is its own group | ✔ | ✔ | a patient with lesions of two classes is split into two units, one per class (small effect, not stated before) |
+| Evidence-induced change | not a standard name; would be a paired right/wrong transition analysis with McNemar | ✗ | – | `compare` already pairs closed-book and open-book runs |
+| 95% intervals | stratified cluster bootstrap (Field & Welsh 2007; the stratification by class is a design choice), 2,000 resamples, seed 0; Wilson when every question is its own group | ✔ | ✔ | a patient with lesions of two classes is split into two units, one per class (small effect, not stated before) |
 | Paired difference and McNemar | difference in balanced accuracy and macro-F1 with a paired interval; exact McNemar as support | ✔ | ✔ | refuses different splits, answer options, answer formats and unequal question sets |
-| Holm correction | smallest p times the number of tests, and so on | function and tests only | ✔ | **not used by any report**: the method promises it "where a page holds several tests", and no such page exists yet |
+| Holm correction | smallest p times the number of tests, and so on | function and tests only | ✔ | not used by any report: it is for the pre-registered main comparisons once there are several (method page) |
 | Scores without actinic keratosis | beside the main score | ✔ | ✔ | published views only |
 | Complete-record score | questions with no `unknown` in the record | ✔ for `clinic_photo_record` only | ✔ | **not for `clinic_record`**, whose predictions do not carry the record; the same hint (gaps point to the class) applies there (D5) |
 | Accuracy, ROC, AUC | – | not computed | – | rightly absent (the answers give a choice, not scores), as the method says |
+
+**Metric review (2026-11-19, against publisher and arXiv pages).** Kept because they are established: balanced accuracy and macro-F1 (macro averaging), top-3 accuracy, coverage and selective risk, Wilson, McNemar (Dietterich 1998 recommends it for a model run once), Holm, cluster bootstrap. Removed: the flag's sensitivity and specificity. Renamed: macro-averaged top-3 accuracy; "selective risk" is the term in tables, "confident misdiagnosis" only a gloss. Not adopted, as invented or non-standard: citation coverage, fabricated-citation rate (a validity rule, already enforced by the answer reader), claims contradicted by the record, class precision@k. Still proposals, none built: retrieval metrics (Recall@k, MRR, nDCG@k, Precision@k; BEIR uses human relevance, ours would be topical), citation recall and precision (ALCE), faithfulness (RAGAS; AIS is a human protocol), a paired transition analysis of the retrieval effect. Sources not re-checked in this session: the RAGAS venue (EACL 2024, from a listing), ALCE's exact precision definition, the journal version of Huang et al.
 
 **Diagnostic error, unsupported claim and hallucination** are three different things. Today only the first (balanced accuracy and its
 complement) and an overconfident form of it (selective risk) are measured. An unsupported claim (a statement the evidence given does not support) is

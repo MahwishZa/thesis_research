@@ -142,22 +142,21 @@ def _main_rows(m: dict) -> list[str]:
     return ["| Score | Value | 95% interval |", "|---|---|---|",
             f"| **Balanced accuracy (main score)** | **{_pct(m['balanced_accuracy'])}** | {_ci(m['balanced_accuracy_ci95'])} ({method}) |",
             f"| Macro-F1 | {_pct(m['macro_f1'])} | {_ci(m['macro_f1_ci95'])} ({method}) |",
-            *([f"| Top-3 balanced accuracy (the true class in the differential) | {_pct(m['top3_balanced_accuracy'])} | "
+            *([f"| Macro-averaged top-3 accuracy (the true class in the differential) | {_pct(m['top3_balanced_accuracy'])} | "
                f"{_ci(m['top3_balanced_accuracy_ci95'])} ({method}) |"] if m["top3_balanced_accuracy"] is not None else []),
             f"| Invalid answers (counted as wrong) | {_pct(m['invalid_rate'])} ({_count(m['invalid'], m['n'])}) | |"]
 
 
-def _detection_rows(m: dict) -> list[str]:
-    d = m["detection"]
+def _selective_rows(m: dict) -> list[str]:
+    d = m["selective"]
     if d is None:
         return []
-    return ["### Misdiagnosis detection and selective prediction", "",
-            f"Over the {d['valid']} valid answers. The positive case is a wrong diagnosis; the model marks it by answering "
-            "\"evidence_sufficient\": \"no\".", "", "| Score | Value | 95% interval |", "|---|---|---|",
-            f"| Sensitivity: wrong diagnoses marked \"not sufficient\" | {_pct(d['sensitivity'])} ({_count(d['flagged_wrong'], d['wrong'])}) | {_ci(d['sensitivity_ci95'])} |",
-            f"| Specificity: right diagnoses not marked | {_pct(d['specificity'])} ({_count(d['unflagged_right'], d['right'])}) | {_ci(d['specificity_ci95'])} |",
+    return ["### Selective prediction", "",
+            f"Over the {d['valid']} valid answers. The model answers a question by marking its evidence \"sufficient\" and abstains by "
+            "marking it \"not sufficient\" (selective classification, Geifman & El-Yaniv 2017).", "",
+            "| Score | Value | 95% interval |", "|---|---|---|",
             f"| Coverage: questions answered with \"sufficient\" | {_pct(d['coverage'])} ({_count(d['covered'], m['n'])}) | {_ci(d['coverage_ci95'])} |",
-            f"| Confident misdiagnosis (selective risk): wrong among them | {_pct(d['selective_risk'])} ({_count(d['covered_wrong'], d['covered'])}) | {_ci(d['selective_risk_ci95'])} |", ""]
+            f"| Selective risk (confident misdiagnosis): wrong among them | {_pct(d['selective_risk'])} ({_count(d['covered_wrong'], d['covered'])}) | {_ci(d['selective_risk_ci95'])} |", ""]
 
 
 def _class_rows(m: dict, kind: Dataset) -> list[str]:
@@ -176,7 +175,7 @@ def _class_rows(m: dict, kind: Dataset) -> list[str]:
 
 def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
     absent = m["classes_absent"]
-    return [f"## {title}", "", *_main_rows(m), "", *_detection_rows(m), *_class_rows(m, kind),
+    return [f"## {title}", "", *_main_rows(m), "", *_selective_rows(m), *_class_rows(m, kind),
             f"- {kind.why_grouped}: the intervals resample whole {kind.group}s ({m['groups']} {kind.group}s for {m['n']} {kind.item}s)."
             if m["interval_method"].startswith("bootstrap over") else
             f"- No two {kind.item}s share one {kind.group}, so every {kind.item} counts as independent.",

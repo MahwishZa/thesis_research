@@ -63,13 +63,9 @@ class MetricTests(unittest.TestCase):
                 self.assertAlmostEqual(s["top3_balanced_accuracy"], sum(top3) / len(top3))
                 self.assertEqual(s["invalid"], sum(a is None for a in answers))
                 valid = [(true[i], answers[i]) for i in range(n) if answers[i] is not None]
-                wrong = [a for t, a in valid if a[0][0] != t]
-                right = [a for t, a in valid if a[0][0] == t]
                 covered = [(t, a) for t, a in valid if a[1] == "yes"]
-                d = s["detection"]
-                self.assertEqual((d["wrong"], d["right"], d["covered"]), (len(wrong), len(right), len(covered)))
-                self.assertEqual(d["sensitivity"], sum(a[1] == "no" for a in wrong) / len(wrong) if wrong else None)
-                self.assertEqual(d["specificity"], sum(a[1] == "yes" for a in right) / len(right) if right else None)
+                d = s["selective"]
+                self.assertEqual((d["valid"], d["covered"]), (len(valid), len(covered)))
                 self.assertEqual(d["coverage"], len(covered) / n)
                 self.assertEqual(d["selective_risk"], sum(a[0][0] != t for t, a in covered) / len(covered) if covered else None)
 
@@ -110,31 +106,28 @@ class MetricTests(unittest.TestCase):
         self.assertEqual((gaps["per_class"]["a"]["recall"], gaps["per_class"]["a"]["precision"]), (0.5, 1.0))
         self.assertEqual(gaps["invalid"], 1)
 
-    def test_top3_detection_and_selective_scores_by_hand(self):
+    def test_top3_and_selective_scores_by_hand(self):
         m = json_summary()
         # top-3: class a: the true class in 2 of its 3 differentials (the invalid answer is a miss); class b: in 2 of 3
         self.assertAlmostEqual(m["top3_balanced_accuracy"], (2 / 3 + 2 / 3) / 2)
-        d = m["detection"]
-        # the 5 valid answers: right 2 (a yes, b no), wrong 3 (no, yes, no)
-        self.assertEqual((d["valid"], d["wrong"], d["flagged_wrong"], d["right"], d["unflagged_right"]), (5, 3, 2, 2, 1))
-        self.assertAlmostEqual(d["sensitivity"], 2 / 3)
-        self.assertAlmostEqual(d["specificity"], 1 / 2)
+        d = m["selective"]
+        self.assertEqual(d["valid"], 5)  # the 5 valid answers: right 2 (a yes, b no), wrong 3 (no, yes, no)
         # coverage: answers with "yes" (2) of all 6 questions; selective risk: of those 2, 1 is wrong
         self.assertEqual((d["covered"], d["covered_wrong"]), (2, 1))
         self.assertAlmostEqual(d["coverage"], 2 / 6)
         self.assertAlmostEqual(d["selective_risk"], 1 / 2)
-        self.assertEqual((d["sensitivity_ci95"], d["coverage_ci95"]), (metrics.wilson(2, 3), metrics.wilson(2, 6)))
+        self.assertEqual((d["selective_risk_ci95"], d["coverage_ci95"]), (metrics.wilson(1, 2), metrics.wilson(2, 6)))
 
-    def test_an_invalid_answer_is_never_counted_as_detected_or_covered_even_with_a_flag(self):
+    def test_an_invalid_answer_is_never_counted_as_covered_even_with_a_flag(self):
         m = metrics.summarize(["a", "a", "b"], [None, None, "b"], ["a", "b"], differentials=[None, None, ["b", "a"]],
                               flags=["no", "yes", "yes"])
-        d = m["detection"]
-        self.assertEqual((d["valid"], d["wrong"], d["flagged_wrong"], d["covered"], d["covered_wrong"]), (1, 0, 0, 1, 0))
+        d = m["selective"]
+        self.assertEqual((d["valid"], d["covered"], d["covered_wrong"]), (1, 1, 0))
         self.assertAlmostEqual(d["coverage"], 1 / 3)
 
-    def test_answers_without_a_differential_or_a_flag_have_no_top3_or_detection_scores(self):
+    def test_answers_without_a_differential_or_a_flag_have_no_top3_or_selective_scores(self):
         m = metrics.summarize(METRIC_TRUE, METRIC_PRED, METRIC_LABELS)
-        self.assertEqual((m["top3_balanced_accuracy"], m["top3_balanced_accuracy_ci95"], m["detection"]), (None, None, None))
+        self.assertEqual((m["top3_balanced_accuracy"], m["top3_balanced_accuracy_ci95"], m["selective"]), (None, None, None))
 
     def test_invalid_input_is_refused_instead_of_scored(self):
         for true, pred, labels in ((["a"], ["a", "a"], ["a"]), (["z"], ["a"], ["a", "b"]), (["a"], ["z"], ["a", "b"]),
@@ -148,7 +141,7 @@ class MetricTests(unittest.TestCase):
         m = metrics.summarize([], [], ["a", "b"], differentials=[], flags=[])
         self.assertEqual((m["n"], m["invalid"], m["invalid_rate"], m["classes_absent"]), (0, 0, None, ["a", "b"]))
         for value in (m["balanced_accuracy"], m["balanced_accuracy_ci95"], m["macro_f1"], m["top3_balanced_accuracy"],
-                      m["detection"]["sensitivity"], m["detection"]["coverage"]):
+                      m["selective"]["selective_risk"], m["selective"]["coverage"]):
             self.assertIsNone(value)
 
     def test_the_bootstrap_is_reproducible_and_collapses_when_all_is_right(self):
@@ -174,9 +167,9 @@ class MetricTests(unittest.TestCase):
         self.assertGreater(width(grouped["per_class"]["a"]["recall_ci95"]), width(alone["per_class"]["a"]["recall_ci95"]))
         self.assertTrue(grouped["interval_method"].startswith("bootstrap over"))
 
-    def test_grouped_answers_get_bootstrap_intervals_for_the_detection_scores(self):
-        d = json_summary(groups=["L1", "L1", "L2", "L3", "L3", "L4"])["detection"]
-        for name in ("sensitivity", "specificity", "coverage", "selective_risk"):
+    def test_grouped_answers_get_bootstrap_intervals_for_the_selective_scores(self):
+        d = json_summary(groups=["L1", "L1", "L2", "L3", "L3", "L4"])["selective"]
+        for name in ("coverage", "selective_risk"):
             pair = d[f"{name}_ci95"]
             self.assertTrue(pair is None or 0 <= pair[0] <= pair[1] <= 1, name)
 

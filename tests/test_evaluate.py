@@ -58,7 +58,7 @@ class ReportTests(RunProject):
             evaluate.write_report(folder)
         self.assertEqual(sorted(p.name for p in folder.iterdir()), ["predictions.jsonl", "run_card.json"])  # nothing was written
 
-    def test_a_run_of_the_current_form_reports_top3_and_the_detection_scores(self):
+    def test_a_run_of_the_current_form_reports_top3_and_the_selective_scores(self):
         truth = ["melanoma", "melanoma", "nevus", "nevus"]
         answers = [(["melanoma", "nevus"], "yes"), (["nevus", "melanoma"], "no"), (["nevus", "melanoma"], "yes"), None]
         folder = write_run(self.base / "current" / "test_1", truth, ["melanoma", "nevus", "nevus", None], ["L1", "L2", "L3", "L4"],
@@ -67,10 +67,10 @@ class ReportTests(RunProject):
         self.assertEqual(path.name, "report.md")
         m = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual(m["main"]["top3_balanced_accuracy"], 0.75)  # melanoma 2 of 2 in the differential; nevus 1 of 2 (one invalid)
-        d = m["main"]["detection"]
-        self.assertEqual((d["sensitivity"], d["specificity"], d["coverage"], d["selective_risk"]), (1.0, 1.0, 0.5, 0.0))
+        d = m["main"]["selective"]
+        self.assertEqual((d["coverage"], d["selective_risk"]), (0.5, 0.0))
         text = path.read_text(encoding="utf-8")
-        for expected in ("| Top-3 balanced accuracy (the true class in the differential) | 75.0% |", "### Misdiagnosis detection"):
+        for expected in ("| Macro-averaged top-3 accuracy (the true class in the differential) | 75.0% |", "### Selective prediction"):
             self.assertIn(expected, text)
         self.assertNotIn("first phase", text)
 

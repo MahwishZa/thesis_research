@@ -79,7 +79,7 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | `prompts.py` | The prompt template (placeholders checked) and `parse_json_answer`, the strict answer reader: the same for every model, so differences come from the models. |
 | `models.py` | One adapter per API: Anthropic and OpenAI-style (GPT-4o, Gemini and Llama through OpenRouter). Each answers one prompt with or without images in the same form; failures are a transient, a quota or a fatal error. No local open-weight adapter exists yet. |
 | `run.py` | `check` (everything a run needs, one tiny request) and `run` (one model, one dataset, one approach, the validation or test split): seeded order, saved as it arrives, resumable, run card with the Git commit and package versions, one test run per model, dataset and approach. |
-| `metrics.py` | Pure functions: balanced accuracy, macro-F1, top-3, misdiagnosis detection, coverage, selective risk, bootstrap and Wilson intervals, McNemar, Holm. |
+| `metrics.py` | Pure functions: balanced accuracy, macro-F1, macro-averaged top-3 accuracy, coverage, selective risk, bootstrap and Wilson intervals, McNemar, Holm. |
 | `evaluate.py` | `verify_answers` (is a saved answer file consistent), `report` (a run's scores and report) and `compare` (two runs, paired). |
 | `validate.py` | The no-cost checks (`python -m src.validate`): tables, leaks, alignment of the views, prompts, model list, knowledge index. |
 | `common.py` | Helpers shared by the builders and the runs: polite download, report sections, tables, crash-safe JSON-lines. |

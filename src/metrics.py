@@ -5,24 +5,27 @@ An answer gives a diagnosis (the first of its differential), the differential it
 first) and whether the model judged the evidence sufficient ("yes" or "no"). An invalid answer (None: not the required form) has
 none of these; it counts as wrong in every score and is counted apart. Answers of the first phase give only a diagnosis.
 
-    balanced accuracy          the mean over the classes of the share of each class's questions answered with it (the macro
-                               recall; Brodersen et al., 2010). The main score: every class counts the same, whatever its number
-                               of questions.
+    balanced accuracy          the mean over the classes of the share of each class's questions answered with it: the macro-
+                               averaged recall, which is the balanced accuracy of Brodersen et al. (2010, defined there for two
+                               classes) extended to many; every class counts the same (macro averaging, Sokolova and Lapalme,
+                               2009). The main score.
     macro-F1                   the mean over the classes of F1 = 2 TP / (2 TP + FP + FN) (Sokolova and Lapalme, 2009). It also
                                counts the answers that name a class wrongly (false positives), which balanced accuracy ignores.
     per class                  precision TP / (TP + FP) and recall TP / (TP + FN); a class never answered has no precision and
                                counts as 0 in the macro mean; a class with no question is left out of every mean.
-    top-3 balanced accuracy    as balanced accuracy, with an answer right when the true class is anywhere in its differential
-                               (top-k accuracy, as in Liu et al., 2020, averaged per class).
-    misdiagnosis detection     the positive case is a wrong diagnosis (Hendrycks and Gimpel, 2017): sensitivity is the share of
-                               the wrong diagnoses the model marked "evidence not sufficient"; specificity is the share of the
-                               right diagnoses it did not mark. Over the valid answers only.
-    coverage, selective risk   coverage is the share of all questions answered validly with "evidence sufficient"; selective
-                               risk is the share of wrong diagnoses among them (Geifman and El-Yaniv, 2017).
+    macro-averaged top-3       as balanced accuracy, with an answer right when the true class is anywhere in its differential
+    accuracy                   (top-k accuracy, as reported by Liu et al., 2020, averaged over the classes). The key stays
+                               ``top3_balanced_accuracy``.
+    coverage, selective risk   selective classification (Geifman and El-Yaniv, 2017): the model answers a question by marking its
+                               evidence "sufficient" and abstains by marking it "not sufficient". Coverage is the share of all
+                               questions answered validly with "sufficient"; selective risk is the share of wrong diagnoses among
+                               those questions (called confident misdiagnosis in the thesis).
     invalid-answer rate        the share of the questions whose answer is not of the required form.
 
 The 95% intervals: photos of one lesion, like patients of one article, are not independent, so when the answers carry their
-group, every interval comes from a bootstrap that resamples whole groups within each true class (2,000 resamples, a fixed seed).
+group, every interval comes from a cluster bootstrap (Field and Welsh, 2007) that resamples whole groups within each true class, so
+that each class keeps its number of groups (a stratified cluster bootstrap: the stratification is a design choice of this thesis;
+2,000 resamples, a fixed seed).
 When every answer is its own group, a share of counts gets the Wilson score interval and the averages over classes the bootstrap.
 ROC curves and AUC are absent: they need a score per class for every question, and the models give a choice, not scores.
 """
@@ -99,17 +102,11 @@ def top_k_balanced_accuracy(y_true: list[str], differentials: list[list[str] | N
     return balanced_accuracy(y_true, hits, labels)
 
 
-def _detection(y_true, y_pred, flags) -> dict:
-    """Misdiagnosis detection and selective prediction from the valid answers' diagnoses and flags ("yes": evidence sufficient)."""
+def _selective(y_true, y_pred, flags) -> dict:
+    """Selective prediction from the valid answers' diagnoses and flags ("yes": the model answers, "no": it abstains)."""
     valid = [(t == p, f) for t, p, f in zip(y_true, y_pred, flags, strict=True) if p is not None and f in ("yes", "no")]
-    wrong = [f for right, f in valid if not right]
-    right = [f for right, f in valid if right]
     covered = [ok for ok, f in valid if f == "yes"]
-    return {"valid": len(valid), "wrong": len(wrong), "flagged_wrong": sum(f == "no" for f in wrong),
-            "sensitivity": _ratio(sum(f == "no" for f in wrong), len(wrong)),
-            "right": len(right), "unflagged_right": sum(f == "yes" for f in right),
-            "specificity": _ratio(sum(f == "yes" for f in right), len(right)),
-            "covered": len(covered), "coverage": _ratio(len(covered), len(y_true)),
+    return {"valid": len(valid), "covered": len(covered), "coverage": _ratio(len(covered), len(y_true)),
             "covered_wrong": sum(not ok for ok in covered), "selective_risk": _ratio(sum(not ok for ok in covered), len(covered))}
 
 
@@ -174,8 +171,8 @@ def _bootstrap(y_true, y_pred, labels, groups, differentials, flags) -> dict:
     """The bootstrap values of every score that gets an interval. Whole groups are resampled with replacement inside each true
     class, so every resample keeps the number of groups of each class, and the answers of one group are drawn together."""
     by_class = _units(y_true, labels, groups)
-    values = {name: [] for name in ("balanced_accuracy", "macro_f1", "top3_balanced_accuracy", "sensitivity", "specificity",
-                                    "coverage", "selective_risk")}
+    values = {name: [] for name in ("balanced_accuracy", "macro_f1", "top3_balanced_accuracy", "coverage",
+                                    "selective_risk")}
     recall = {label: [] for label in by_class}
     if not by_class:
         return values | {"recall": recall}
@@ -187,8 +184,8 @@ def _bootstrap(y_true, y_pred, labels, groups, differentials, flags) -> dict:
         if differentials is not None:
             values["top3_balanced_accuracy"].append(top_k_balanced_accuracy(true, [differentials[i] for i in sample], labels))
         if flags is not None:
-            d = _detection(true, [y_pred[i] for i in sample], [flags[i] for i in sample])
-            for name in ("sensitivity", "specificity", "coverage", "selective_risk"):
+            d = _selective(true, [y_pred[i] for i in sample], [flags[i] for i in sample])
+            for name in ("coverage", "selective_risk"):
                 values[name].append(d[name])
         for label in by_class:
             recall[label].append(s["recall"][labels.index(label)])
@@ -225,15 +222,14 @@ def summarize(y_true: list[str], y_pred: list[str | None], labels: list[str], gr
            "macro_f1": s["macro"]["f1"], "macro_f1_ci95": interval(boot["macro_f1"]), "macro_precision": s["macro"]["precision"],
            "classes_absent": [label for i, label in enumerate(labels) if not s["support"][i]], "per_class": per_class,
            "confusion_matrix": {"rows": list(labels), "columns": [*labels, INVALID], "counts": matrix},
-           "top3_balanced_accuracy": None, "top3_balanced_accuracy_ci95": None, "detection": None}
+           "top3_balanced_accuracy": None, "top3_balanced_accuracy_ci95": None, "selective": None}
     if differentials is not None:
         out["top3_balanced_accuracy"] = top_k_balanced_accuracy(y_true, differentials, labels)
         out["top3_balanced_accuracy_ci95"] = interval(boot["top3_balanced_accuracy"])
     if flags is not None:
-        d = _detection(y_true, y_pred, flags)
-        for name, k, total in (("sensitivity", "flagged_wrong", "wrong"), ("specificity", "unflagged_right", "right"),
-                               ("coverage", "covered", None), ("selective_risk", "covered_wrong", "covered")):
+        d = _selective(y_true, y_pred, flags)
+        for name, k, total in (("coverage", "covered", None), ("selective_risk", "covered_wrong", "covered")):
             of = n if total is None else d[total]
             d[f"{name}_ci95"] = None if not of else wilson(d[k], of) if independent else interval(boot[name])
-        out["detection"] = d
+        out["selective"] = d
     return out

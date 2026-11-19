@@ -45,18 +45,15 @@ class RunTests(RunProject):
         self.assertEqual(preds[0]["differential"], ["melanoma", "nevus"])  # two classes: a differential of two
         self.assertEqual((preds[0]["evidence_sufficient"], preds[0]["evidence"], preds[0]["invalid"]), ("yes", [], None))
         self.assertEqual(metrics["main"]["top3_balanced_accuracy"], 1.0)
-        detection = metrics["main"]["detection"]  # the stand-in always says "yes": no wrong answer is marked
-        self.assertEqual((detection["sensitivity"], detection["specificity"], detection["coverage"], detection["selective_risk"]),
-                         (0.0, 1.0, 1.0, 0.5))
+        selective = metrics["main"]["selective"]  # the stand-in always says "yes": it answers every question
+        self.assertEqual((selective["coverage"], selective["selective_risk"]), (1.0, 0.5))
         text = (out / "report.md").read_text(encoding="utf-8")
         for expected in ("| **Balanced accuracy (main score)** | **50.0%** |", "(bootstrap over patients)", "| Macro-F1 |",
-                         "| Top-3 balanced accuracy (the true class in the differential) | 100.0% |",
+                         "| Macro-averaged top-3 accuracy (the true class in the differential) | 100.0% |",
                          "| Invalid answers (counted as wrong) | 0.0% (0/4) |",
-                         "### Misdiagnosis detection and selective prediction",
-                         "| Sensitivity: wrong diagnoses marked \"not sufficient\" | 0.0% (0/2) |",
-                         "| Specificity: right diagnoses not marked | 100.0% (2/2) |",
+                         "### Selective prediction",
                          "| Coverage: questions answered with \"sufficient\" | 100.0% (4/4) |",
-                         "| Confident misdiagnosis (selective risk): wrong among them | 50.0% (2/4) |",
+                         "| Selective risk (confident misdiagnosis): wrong among them | 50.0% (2/4) |",
                          "### Per class", "### Confusion matrix", "(2 patients for 4 photos)", "sent exactly as stored",
                          "docs/method.md", f"answer format `{prompts.ANSWER_FORMAT}`"):
             self.assertIn(expected, text)

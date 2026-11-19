@@ -249,9 +249,9 @@ class RepositoryTests(unittest.TestCase):
 
     def test_the_method_page_defines_every_reported_score_with_its_source(self):
         text = (ROOT / "docs" / "method.md").read_text(encoding="utf-8")
-        for word in ("Balanced accuracy", "Macro-F1", "Top-3 balanced accuracy", "Invalid-answer rate", "sensitivity", "specificity",
-                     "Coverage", "Confident misdiagnosis", "selective risk", "McNemar", "Holm", "bootstrap", "parse_json_answer",
-                     "Brodersen", "Sokolova", "Liu", "Hendrycks", "Geifman", "Wilson", "Efron", "Field"):
+        for word in ("Balanced accuracy", "Macro-F1", "Macro-averaged top-3 accuracy", "Invalid-answer rate",
+                     "Coverage", "Selective risk", "confident misdiagnosis", "McNemar", "Holm", "bootstrap", "parse_json_answer",
+                     "Brodersen", "Sokolova", "Liu", "Geifman", "Wilson", "Brown", "Dietterich", "Efron", "Field", "Huang"):
             self.assertIn(word, text)
 
     def test_the_readme_uses_unix_line_endings(self):
