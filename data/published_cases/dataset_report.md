@@ -477,6 +477,16 @@ Of 468 pictures the model sees as a skin photo, the caption and the model agree 
 
 Pictures with any writing (labels, arrows' letters, scale bars): 83; with the name of a diagnosis: 1.
 
+<!-- step: photos_overlap -->
+## Overlap with the clinic patients dataset
+
+Written by `python -m src.build.published_cases.photos overlap`. Every picture that passed the check is compared with every original photo of the clinic patients dataset (PAD-UFES-20) by the rule for "the same picture" (`SAME`: the shape within 2%, the 64-bit hash within 16 bits and the mean colour difference of 32 x 32 versions at most 5). No person looked at the pictures.
+
+- Pictures compared: 468; clinic photos compared with each: 2298.
+- Pictures that are the same as a clinic photo: 0. No picture is left out.
+
+The rule finds the same picture at another size or compression. It does not find a crop, a picture with something added (an arrow, a scale bar) or a different photo of the same lesion, so a match is a leak and no match is not a proof of none.
+
 <!-- step: photos_build -->
 ## The case dataset
 
@@ -496,3 +506,4 @@ Written by `python -m src.build.published_cases.photos build`. One question per 
 
 Questions: 324; pictures: 451. Pictures per question: 1: 231, 2: 70, 3: 18, 4: 2, 5: 2, 8: 1.
 Cases with kept pictures that the text dataset no longer holds (left out by its review): 11 (10056737-4, 11035014-1, 4777905-1, 5690489-2, 6452477-1, pubmed-24396723, pubmed-24520521, pubmed-35872878, pubmed-39165299, pubmed-40250188, pubmed-42245639).
+Pictures left out because they are also a photo of the clinic patients dataset (the overlap section): 0.
