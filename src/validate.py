@@ -209,7 +209,7 @@ def validate(files: bool = False, say=print) -> bool:
         for i, first in enumerate(names):
             for second in names[i + 1:]:
                 line("OK", f"Alignment {first} / {second}", pair_problems(first, loaded[first], second, loaded[second]),
-                     "same questions (a view of the cases that have photos: some of them), splits, classes, groups and answer options")
+                     "same questions, groups and answer options (the photo views of the published cases ask some of its cases)")
     if {"clinic_photo", "clinic_photo_record"} <= set(loaded):
         line("OK", "Alignment clinic_photo / clinic_photo_record: the photo", same_content_problems(
             "clinic_photo", loaded["clinic_photo"], "clinic_photo_record", loaded["clinic_photo_record"], "photo"), "the same photo, byte for byte")
