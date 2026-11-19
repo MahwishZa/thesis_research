@@ -9,7 +9,9 @@ This folder is a frozen copy of Version 1 of the research, kept for reference. I
 - **The code of Version 1** is not copied. It is in the Git history: `git checkout a1c9209` shows the whole repository as it was,
   code included.
 - **What Git never held** (the photos, the case texts with research-only licences, the raw downloads, the validation runs) is not
-  here either. It is kept as a ZIP on the researcher's laptop, made at the same commit.
+  here either. It is kept as a ZIP on the researcher's laptop, made at the same commit: `v1_a1c9209_local_files.zip` (the `data`
+  and `results` folders of the laptop's checkout, made on 2026-11-19), SHA-256
+  `0E881B29B1F24F266B070F9DB60DB99F474B8592FF3409382D0BE9296FA85EA5`, in a `thesis_backups` folder outside the repository.
 - **Nothing was moved or deleted.** The originals are still in their usual places (`data/`, `results/`, `docs/`, `configs/`,
   `prompts/`) until Version 2 replaces them, with the researcher's approval.
 
