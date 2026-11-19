@@ -44,9 +44,9 @@ from pathlib import Path
 from PIL import Image
 
 from .common import read_jsonl, repair_jsonl, write_json
-from .datasets import (DATASETS, SPLITS, classes, dataset_paths, items_hash, load_dataset, pictures_root, read_case, read_image, 
+from .datasets import (DATASETS, SPLITS, classes, dataset_paths, items_hash, load_dataset, pictures_root, read_case, read_image,
                        read_picture)
-from .evaluate import RESULTS, write_report
+from .evaluate import RESULTS, verify_answers, write_report
 from .models import FatalError, QuotaExhausted, TransientError, load, load_env
 from .prompts import ANSWER_FORMAT, CASE, FACTS, build_prompt, fill, load_template, parse_json_answer
 
@@ -56,6 +56,7 @@ NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 MODELS = Path("configs") / "models.toml"  # the models and their settings, one entry each
 PROMPTS = Path("prompts")  # prompts/<dataset>/<approach>.txt
 APPROACHES = ("closed_book",)  # how a question is answered: closed_book = the model alone, with no retrieval
+EARLY_CHECK = 10  # after this many answers: if every one is invalid, the run stops (a prompt, an output limit or a model setting is wrong)
 MAX_ATTEMPTS = 8  # waits of 10, 20, 40, 80, 120, 120, 120 seconds between them: about 8.5 minutes in all
 PROBE_ATTEMPTS = 3
 PROBE_PROMPT = "Reply with the single word: ok."
@@ -406,6 +407,10 @@ def _run_once(job: dict, run_id: str) -> Path:
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()
                 answered += 1
+                if answered == EARLY_CHECK < len(items) and all(p["invalid"] for p in read_jsonl(pred_path)):
+                    raise FatalError(f"the first {EARLY_CHECK} answers are all invalid (the last: {problem}). Look at raw_text in "
+                                     f"{pred_path} and fix the prompt, the output limit (max_tokens) or the model's settings; if this is "
+                                     "expected, run the same command again to go on.")
                 say(f"[{i}/{len(items)}] {item.label} -> " + (f"{parsed['diagnosis']} (evidence sufficient: {parsed['evidence_sufficient']})"
                                                               if parsed else f"INVALID ({problem}): {answer['text']!r}"))
     except (TransientError, QuotaExhausted, FatalError) as exc:
@@ -427,6 +432,9 @@ def _run_once(job: dict, run_id: str) -> Path:
             + "; nothing needs to be committed until it finishes.")
         return out
 
+    problems = verify_answers(card, read_jsonl(pred_path), complete=True)  # before the folder is called finished
+    if problems:
+        raise SystemExit(f"the saved answers of {out} are not consistent, so the run is not marked finished: {'; '.join(problems[:3])}")
     card["status"], card["finished_utc"] = "complete", _now()
     card["model_versions_returned"] = sorted({p["model_version"] for p in read_jsonl(pred_path) if p["model_version"]})
     write_json(card_path, card)

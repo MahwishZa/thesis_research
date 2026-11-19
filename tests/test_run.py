@@ -73,8 +73,9 @@ class RunTests(RunProject):
         """With the real Git check (no stand-in): the results folder of the first test run is new and uncommitted, and the second
         test run, of another model, must still start; a changed or new file outside results/ must still stop it."""
         self.clean.stop()  # RunTests.setUp replaced _git with a clean stand-in: use the real one here
-        git = lambda *args: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=self.base,
-                                           capture_output=True, check=True)
+        def git(*args):
+            return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=self.base, capture_output=True, check=True)
+
         git("init", "-q")
         (self.base / ".gitignore").write_text("*.partial/\nresults/**/val_*/\n", encoding="utf-8")
         git("add", "-A")
@@ -144,6 +145,40 @@ class RunTests(RunProject):
         stops = json.loads((out / "run_card.json").read_text(encoding="utf-8"))["interruptions"]  # the stop stays on record
         self.assertEqual([(s["answered"], s["kind"]) for s in stops], [(2, "TransientError")])
         self.assertIn("Interruptions before the run finished: 1", (out / "report.md").read_text(encoding="utf-8"))
+
+    def test_a_run_whose_first_answers_are_all_invalid_stops_early_keeps_them_and_can_go_on(self):
+        class NotJson(FakeModel):
+            def predict(self, images, prompt):
+                return super().predict(images, prompt) | {"text": "I cannot say."}
+
+        with mock.patch("src.run.EARLY_CHECK", 2):
+            with self.assertRaisesRegex(SystemExit, "the first 2 answers are all invalid .*not one JSON object.*run the same command again"):
+                self._run(NotJson(), "val", run_id="v1")
+            partial = self.model_dir / "v1.partial"
+            self.assertEqual(len(self._preds(partial)), 2)  # what was asked is kept, nothing more is asked
+            interruption = json.loads((partial / "run_card.json").read_text(encoding="utf-8"))["interruptions"]
+            self.assertEqual([(i["answered"], i["kind"]) for i in interruption], [(2, "FatalError")])
+            again = NotJson()
+            out = self._run(again, "val", run_id="v1")  # the researcher decided to go on: the check is not made a second time
+        self.assertEqual((again.calls, len(self._preds(out))), (2, 4))
+
+    def test_one_valid_answer_among_the_first_ones_does_not_stop_the_run(self):
+        class FirstInvalid(FakeModel):
+            def predict(self, images, prompt):
+                answer = super().predict(images, prompt)
+                return answer | {"text": "no"} if self.calls == 1 else answer
+
+        with mock.patch("src.run.EARLY_CHECK", 2):
+            out = self._run(FirstInvalid(), "val", run_id="v1")
+        self.assertEqual(len(self._preds(out)), 4)
+
+    def test_a_run_whose_answer_file_is_inconsistent_is_not_marked_finished(self):
+        with mock.patch("src.run.verify_answers", return_value=["test/a/1.jpg is answered 2 times"]):
+            with self.assertRaisesRegex(SystemExit, "not consistent, so the run is not marked finished: test/a/1.jpg is answered 2 times"):
+                self._run(FakeModel(), "val", run_id="v1")
+        self.assertTrue((self.model_dir / "v1.partial").is_dir())
+        self.assertFalse((self.model_dir / "v1").exists())
+        self.assertEqual(json.loads((self.model_dir / "v1.partial" / "run_card.json").read_text(encoding="utf-8"))["status"], "running")
 
     def test_a_run_that_answered_nothing_leaves_no_folder(self):
         with mock.patch("src.run.MAX_ATTEMPTS", 2):
@@ -633,6 +668,9 @@ class TextDatasetTests(TextProject):
         rows = [json.loads(x) for x in (out / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
         kept = [r for r in rows if r["label"] != "actinic keratosis"]
         (out / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in kept), encoding="utf-8")
+        card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
+        card["n_cases"] = len(kept)  # the run is rewritten as one that never had those cases
+        (out / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
         evaluate.write_report(out)
         self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["answer_format", "main"])
         self.assertNotIn("## Without", (out / "report.md").read_text(encoding="utf-8"))

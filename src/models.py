@@ -8,19 +8,17 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-
-
 # ==============================================================================================================================
 # Model adapters
 #
-# The LLM adapters: one class per API, each answering one prompt, with or without one image, in the same form.
+# The LLM adapters: one class per API, each answering one prompt, with or without images, in the same form.
 #
 #     anthropic          Claude through the Anthropic API
 #     openai_compatible  GPT-4o, Gemini and Llama at OpenRouter, and any host that speaks the same chat API (for example OpenAI
 #                        or Hugging Face)
 #
-# Every adapter has ``describe()`` (what is asked: provider, model id, settings) and ``predict(image, mime_type, prompt)``; for a
-# text case, image and mime_type are None and only the prompt is sent (the case is inside it). The
+# Every adapter has ``describe()`` (what is asked: provider, model id, settings) and ``predict(images, prompt)``, where ``images`` is
+# a list of (bytes, media type) pairs, empty for a text case (the case is inside the prompt). The
 # answer is a dict with ``text`` (or None), ``finish_reason`` ("STOP" for a normal end, "MAX_TOKENS" when the answer was cut off at
 # the output limit; any other value passes through), ``model_version`` (as the API reports it), ``response_id`` and ``usage``
 # (token counts). A failure raises TransientError (worth retrying), QuotaExhausted (credit or a per-day quota is used up) or

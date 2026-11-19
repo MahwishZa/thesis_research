@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 from .common import read_jsonl, write_json
-from .datasets import DATASETS, SAME_QUESTIONS, Dataset, dataset_of
+from .datasets import DATASETS, SAME_QUESTIONS, Dataset, dataset_of, question_of
 from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, interval, mcnemar,
                       summarize)
 from .prompts import ANSWER_FORMAT
@@ -36,6 +36,55 @@ def require_current_format(card: dict) -> None:
                          "runs of the first phase are in archive/v1/ with their own scores and are not read by this code")
 
 
+ANSWER_FIELDS = ("path", "label", "prediction", "differential", "evidence_sufficient", "reason", "evidence", "invalid", "raw_text",
+                 "finish_reason", "model_version")  # what every saved answer must hold (src/run.py writes them)
+
+
+def verify_answers(card: dict, preds: list[dict], complete: bool = False) -> list[str]:
+    """What is wrong with a run's saved answers, as a list of messages (empty: nothing). Checked before anything is scored or saved as
+    finished, so a damaged or inconsistent answer file cannot give a plausible-looking score: every field is present; every question is
+    answered at most once (a second answer would count twice); every true class and every diagnosis is a class of the run; a valid
+    answer is consistent (the diagnosis is the first of its differential, the flag is yes or no, no evidence without retrieval) and an
+    invalid one holds its reason and nothing else; with ``complete``, every question of the run is answered."""
+    kind = DATASETS[dataset_of(card)]
+    labels, problems = set(card["labels"]), []
+    fields = (*ANSWER_FIELDS, kind.group_column)
+    for number, p in enumerate(preds, start=1):
+        absent = [f for f in fields if f not in p]
+        if absent:
+            problems.append(f"answer {number}: no field {', '.join(absent)}")
+            continue
+        where = f"answer {number} ({p['path']})"
+        if p["label"] not in labels:
+            problems.append(f"{where}: the true class {p['label']!r} is not a class of the run")
+        if p["prediction"] is None:
+            if not p["invalid"] or any(p[k] is not None for k in ("differential", "evidence_sufficient", "reason", "evidence")):
+                problems.append(f"{where}: an invalid answer must hold its reason and no differential, flag, reason or evidence")
+            continue
+        if p["invalid"] is not None:
+            problems.append(f"{where}: a valid answer must not hold an invalid reason")
+        if not isinstance(p["differential"], list) or not p["differential"] or p["differential"][0] != p["prediction"]:
+            problems.append(f"{where}: the diagnosis is not the first of the differential")
+        elif not set(p["differential"]) <= labels or len(set(p["differential"])) != len(p["differential"]):
+            problems.append(f"{where}: the differential is not different classes of the run")
+        if p["evidence_sufficient"] not in ("yes", "no"):
+            problems.append(f"{where}: the flag {p['evidence_sufficient']!r} is not yes or no")
+        if card.get("config", {}).get("approach", "closed_book") == "closed_book" and p["evidence"] != []:
+            problems.append(f"{where}: a closed-book answer must hold no evidence")
+    paths = Counter(p["path"] for p in preds if "path" in p)
+    problems += [f"{path} is answered {n} times" for path, n in sorted(paths.items()) if n > 1]
+    if complete and len(paths) != card[f"n_{kind.item}s"]:
+        problems.append(f"{len(paths)} questions answered, {card[f'n_{kind.item}s']} expected")
+    return problems
+
+
+def _verified(card: dict, preds: list[dict], complete: bool = False) -> None:
+    problems = verify_answers(card, preds, complete)
+    if problems:
+        shown = "; ".join(problems[:3]) + (f"; and {len(problems) - 3} more" if len(problems) > 3 else "")
+        raise ValueError(f"the saved answers of this run are not consistent, so nothing is scored: {shown}")
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------
 # The scores of one run
 
@@ -46,6 +95,7 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
     preds = read_jsonl(run_dir / "predictions.jsonl")
     require_current_format(card)
+    _verified(card, preds, complete=card["status"] == "complete")
     labels, kind = card["labels"], DATASETS[dataset_of(card)]
 
     def scores(rows):
@@ -131,10 +181,6 @@ def _scoring(title: str, m: dict, kind: Dataset) -> list[str]:
             "- The definitions and their sources are in docs/method.md.", ""]
 
 
-def _brief(m: dict) -> list[str]:
-    return _main_rows(m)
-
-
 def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
     """The report lines of the scores without the classes too small to weigh like the others, and those classes' files."""
     m, left_out, files = set_apart["metrics"], set_apart["left_out"], set_apart["files"]
@@ -149,7 +195,7 @@ def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
     lines += ["", f"The scores below leave out the {items} of {' and '.join(left_out)}, to show how much "
               f"{'they move' if len(left_out) > 1 else 'it moves'} the result. They are shown beside the main score, never "
               f"instead of it. The answer options stay the same {n_labels} classes, so answering {' or '.join(left_out)} for another "
-              f"{kind.item} still counts as wrong.", "", *_brief(m), "",
+              f"{kind.item} still counts as wrong.", "", *_main_rows(m), "",
               f"The {items} left out, and the answers:", "", f"| {kind.item.capitalize()} | True class | Answer |", "|---|---|---|"]
     lines += [f"| `{f['path']}` | {f['label']} | {f['prediction'] or INVALID} |" for f in files]
     return lines + [""]
@@ -192,7 +238,7 @@ def write_report(run_dir: str | Path) -> Path:
         lines += ["## Questions with all facts recorded", "",
                   f"A missing fact (\"{kind.missing_fact}\") can itself point to the class: which facts are missing is not the same for every "
                   f"class (see the data sheet of the dataset). These scores count only the {part['questions']} of {len(preds)} "
-                  "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"]), ""]
+                  "questions with every fact recorded, beside the main score, never instead of it.", "", *_main_rows(part["metrics"]), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
@@ -236,13 +282,9 @@ def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
     kind = DATASETS[dataset_of(card)]
     if card["status"] != "complete" or len(preds) != card[f"n_{kind.item}s"]:
         raise ValueError(f"{run_dir.as_posix()} is not a finished run: only finished runs are compared")
+    require_current_format(card)
+    _verified(card, preds, complete=True)
     return card, preds
-
-
-def _question(path: str) -> str:
-    """What identifies a question across datasets: its path without the file ending (a clinic photo, its record and the two together
-    are <split>/<class>/<img_id>.jpg or .txt)."""
-    return path.rsplit(".", 1)[0]
 
 
 def compare(run_a: str | Path, run_b: str | Path) -> dict:
@@ -267,17 +309,17 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
         if a != b:
             raise ValueError(f"the two runs differ in their {what}, so they cannot be compared question by question")
     if part:
-        shared = {_question(p["path"]) for p in preds_a} & {_question(p["path"]) for p in preds_b}
-        smaller = min(({_question(p["path"]) for p in preds_a}, {_question(p["path"]) for p in preds_b}), key=len)
+        shared = {question_of(p["path"]) for p in preds_a} & {question_of(p["path"]) for p in preds_b}
+        smaller = min(({question_of(p["path"]) for p in preds_a}, {question_of(p["path"]) for p in preds_b}), key=len)
         if shared != smaller:
             raise ValueError("the cases of one run are not all among the other run's cases")
-        preds_a, preds_b = [p for p in preds_a if _question(p["path"]) in shared], [p for p in preds_b if _question(p["path"]) in shared]
-    if paired and {(_question(p["path"]), p["label"]) for p in preds_a} != {(_question(p["path"]), p["label"]) for p in preds_b}:
+        preds_a, preds_b = [p for p in preds_a if question_of(p["path"]) in shared], [p for p in preds_b if question_of(p["path"]) in shared]
+    if paired and {(question_of(p["path"]), p["label"]) for p in preds_a} != {(question_of(p["path"]), p["label"]) for p in preds_b}:
         raise ValueError(f"the two runs did not answer the same {'cases' if part else 'photos'} with the same classes")
-    by_question = {_question(p["path"]): p for p in preds_b}
-    if set(by_question) != {_question(p["path"]) for p in preds_a} or len(by_question) != len(preds_b):
+    by_question = {question_of(p["path"]): p for p in preds_b}
+    if set(by_question) != {question_of(p["path"]) for p in preds_a} or len(by_question) != len(preds_b):
         raise ValueError("the two runs did not answer the same questions")
-    pairs = [(p, by_question[_question(p["path"])]) for p in sorted(preds_a, key=lambda p: p["path"])]
+    pairs = [(p, by_question[question_of(p["path"])]) for p in sorted(preds_a, key=lambda p: p["path"])]
     labels = card_a["labels"]
     y_true = [a["label"] for a, _ in pairs]
     pred_a, pred_b = [a["prediction"] for a, _ in pairs], [b["prediction"] for _, b in pairs]

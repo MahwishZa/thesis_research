@@ -20,9 +20,18 @@ class Nevus(FakeModel):
         return super().predict(images, prompt) | {"text": json_answer("nevus", listed(prompt), "no")}
 
 
-def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str], dataset: str = "clinic_photo", answers: list | None = None):
-    """A finished run: without ``answers`` the answer format is missing (the first phase of Version 1), with ``answers`` (differential
-    and flag per question) it is the current one."""
+def answered(path: str, label: str, group_column: str, group: str, prediction: str | None) -> dict:
+    """One saved answer of the current format: the diagnosis alone, "yes", no evidence; None is an invalid answer."""
+    return {"path": path, "label": label, group_column: group, "prediction": prediction, "differential": None if prediction is None else [prediction],
+            "evidence_sufficient": None if prediction is None else "yes", "reason": None if prediction is None else "r",
+            "evidence": None if prediction is None else [], "invalid": "not asked" if prediction is None else None, "raw_text": prediction,
+            "finish_reason": "STOP", "model_version": "m-1"}
+
+
+def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str], dataset: str = "clinic_photo", answers: list | None = None,
+              first_phase: bool = False):
+    """A finished run of the current answer format. ``answers`` (differential and flag per question) say more than the diagnosis; without
+    them each valid answer is its diagnosis, "yes" and nothing else. ``first_phase``: the answer format of Version 1 is missing."""
     folder.mkdir(parents=True)
     kind = datasets.DATASETS[dataset]
     card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": sorted(set(truth)),
@@ -30,22 +39,21 @@ def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str]
             "model": {"model_id": "m-1"}, "model_versions_returned": ["m-1"], "started_utc": "s", "finished_utc": "f",
             "prompt_file": "p.txt", "prompt_sha256": "0" * 64, "dataset_table": {"file": "t.csv", "sha256": "0" * 64},
             "git": {"commit": "c" * 40}, "sessions": []}
-    if answers is not None:
+    if not first_phase:
         card["answer_format"] = "json-v1"
     (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
     rows = []
     for i, (t, p, g) in enumerate(zip(truth, predicted, groups)):
-        row = {"path": f"test/{t}/{i}.jpg", "label": t, kind.group_column: g, "prediction": p, "raw_text": p, "finish_reason": "STOP"}
-        if answers is not None:
-            row |= {"differential": answers[i][0], "evidence_sufficient": answers[i][1]}
-        rows.append(row)
+        differential, flag = answers[i] if answers is not None else (None if p is None else [p], None if p is None else "yes")
+        rows.append(answered(f"test/{t}/{i}.jpg", t, kind.group_column, g, p) | {"differential": differential, "evidence_sufficient": flag})
     (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     return folder
 
 
 class ReportTests(RunProject):
     def test_a_run_of_the_first_phase_is_refused_with_a_pointer_to_the_archive(self):
-        folder = write_run(self.base / "phase1" / "test_1", ["a", "a", "b", "b"], ["a", "b", "b", None], ["L1", "L2", "L3", "L4"])
+        folder = write_run(self.base / "phase1" / "test_1", ["a", "a", "b", "b"], ["a", "b", "b", None], ["L1", "L2", "L3", "L4"],
+                           first_phase=True)
         with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v1'.*archive/v1/"):
             evaluate.write_report(folder)
         self.assertEqual(sorted(p.name for p in folder.iterdir()), ["predictions.jsonl", "run_card.json"])  # nothing was written
@@ -65,6 +73,77 @@ class ReportTests(RunProject):
         for expected in ("| Top-3 balanced accuracy (the true class in the differential) | 75.0% |", "### Misdiagnosis detection"):
             self.assertIn(expected, text)
         self.assertNotIn("first phase", text)
+
+
+class VerifyAnswersTests(RunProject):
+    """verify_answers on a run of 4 answers (3 valid, 1 invalid) that is damaged one way at a time."""
+
+    def setUp(self):
+        super().setUp()
+        self.folder = write_run(self.base / "r" / "test_1", ["a", "a", "b", "b"], ["a", "b", "b", None], ["L1", "L2", "L3", "L4"],
+                                answers=[(["a", "b"], "yes"), (["b", "a"], "no"), (["b"], "yes"), (None, None)])
+        self.card = json.loads((self.folder / "run_card.json").read_text(encoding="utf-8"))
+        self.rows = evaluate.read_jsonl(self.folder / "predictions.jsonl")
+
+    def problems(self, rows=None, complete=True):
+        return evaluate.verify_answers(self.card, self.rows if rows is None else rows, complete)
+
+    def damaged(self, number, **changes):
+        return [row | changes if i == number else row for i, row in enumerate(self.rows)]
+
+    def test_a_consistent_run_has_no_problem_and_is_scored(self):
+        self.assertEqual(self.problems(), [])
+        self.assertEqual(evaluate.score_run(self.folder)[2]["main"]["n"], 4)
+
+    def test_an_answer_that_is_missing_a_field_is_named(self):
+        rows = [{k: v for k, v in row.items() if k != "evidence"} if i == 1 else row for i, row in enumerate(self.rows)]
+        self.assertEqual(self.problems(rows), ["answer 2: no field evidence"])
+        self.assertEqual(self.problems([{k: v for k, v in self.rows[0].items() if k != "patient_id"}], complete=False),
+                         ["answer 1: no field patient_id"])
+
+    def test_a_question_answered_twice_would_count_twice_and_is_refused(self):
+        self.assertEqual(self.problems(self.rows + [self.rows[0]], complete=False), ["test/a/0.jpg is answered 2 times"])
+
+    def test_a_complete_run_must_answer_every_question_an_unfinished_one_may_not(self):
+        self.assertEqual(self.problems(self.rows[:3]), ["3 questions answered, 4 expected"])
+        self.assertEqual(self.problems(self.rows[:3], complete=False), [])
+
+    def test_classes_outside_the_run_are_refused(self):
+        self.assertIn("the true class 'z' is not a class of the run", self.problems(self.damaged(0, label="z"))[0])
+        self.assertIn("the differential is not different classes of the run", self.problems(self.damaged(0, differential=["a", "z"]))[0])
+        self.assertIn("the differential is not different classes of the run", self.problems(self.damaged(1, differential=["b", "a", "a"]))[0])
+
+    def test_the_diagnosis_must_be_the_first_of_the_differential_and_the_flag_yes_or_no(self):
+        self.assertIn("not the first of the differential", self.problems(self.damaged(0, prediction="b"))[0])
+        self.assertIn("not the first of the differential", self.problems(self.damaged(0, differential=[]))[0])
+        self.assertIn("the flag 'maybe' is not yes or no", self.problems(self.damaged(0, evidence_sufficient="maybe"))[0])
+
+    def test_a_closed_book_answer_holds_no_evidence(self):
+        self.assertIn("a closed-book answer must hold no evidence", self.problems(self.damaged(0, evidence=["K:1"]))[0])
+        self.card["config"]["approach"] = "standard_rag"  # a retrieval approach may cite what it was given
+        self.assertEqual(self.problems(self.damaged(0, evidence=["K:1"])), [])
+
+    def test_an_invalid_answer_holds_its_reason_and_nothing_else_and_a_valid_one_no_reason(self):
+        self.assertIn("an invalid answer must hold its reason", self.problems(self.damaged(3, invalid=None))[0])
+        self.assertIn("an invalid answer must hold its reason", self.problems(self.damaged(3, differential=["a"]))[0])
+        self.assertIn("a valid answer must not hold an invalid reason", self.problems(self.damaged(0, invalid="x"))[0])
+
+    def test_a_comparison_refuses_a_damaged_run_and_a_run_of_the_first_phase(self):
+        other = write_run(self.base / "r2" / "test_1", ["a", "a", "b", "b"], ["a", "a", "b", "b"], ["L1", "L2", "L3", "L4"])
+        self.assertEqual(evaluate.compare(self.folder, other)["n"], 4)
+        (other / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in evaluate.read_jsonl(other / "predictions.jsonl")[:3]
+                                                          + [evaluate.read_jsonl(other / "predictions.jsonl")[0]]), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "not consistent, so nothing is scored: test/a/0.jpg is answered 2 times"):
+            evaluate.compare(self.folder, other)
+        old = write_run(self.base / "r3" / "test_1", ["a", "a", "b", "b"], ["a", "a", "b", "b"], ["L1", "L2", "L3", "L4"], first_phase=True)
+        with self.assertRaisesRegex(ValueError, "'class name \\(first phase\\)', not 'json-v1'"):
+            evaluate.compare(self.folder, old)
+
+    def test_scoring_and_comparing_stop_at_a_damaged_file_before_any_score(self):
+        (self.folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in self.rows + [self.rows[0]]), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "not consistent, so nothing is scored: test/a/0.jpg is answered 2 times"):
+            evaluate.write_report(self.folder)
+        self.assertFalse((self.folder / "report.md").exists())
 
 
 class CompareTests(RunProject):
@@ -129,10 +208,9 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v1"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
-            rows = [{"path": f"test/{t}/{i}.jpg", "label": t, kind.group_column: f"L{i}", "prediction": p}
-                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            rows = [answered(f"test/{t}/{i}.jpg", t, kind.group_column, f"L{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
             runs[name] = folder
         c = evaluate.compare(runs["image"], runs["multi"])
@@ -161,10 +239,9 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v1"}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
-            rows = [{"path": f"test/{t}/P{i}_1_a.{ending}", "label": t, kind.group_column: f"P{i}", "prediction": p}
-                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            rows = [answered(f"test/{t}/P{i}_1_a.{ending}", t, kind.group_column, f"P{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
             runs[name] = folder
         c = evaluate.compare(runs["photo"], runs["record"])  # the record fixes two photos the photo got wrong

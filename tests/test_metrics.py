@@ -28,6 +28,51 @@ def json_summary(groups=None):
 
 
 class MetricTests(unittest.TestCase):
+    def test_every_score_agrees_with_a_naive_computation_on_random_answers(self):
+        """The scores of 60 random runs (a seeded generator, some answers invalid, some classes rare) against definitions written out
+        the long way, one question at a time, with no shared code."""
+        import random
+        rng = random.Random(7)
+        labels = ["a", "b", "c", "d", "e"]
+        for trial in range(60):
+            n = rng.randint(1, 40)
+            true = [rng.choice(labels[:rng.randint(1, 5)]) for _ in range(n)]
+            answers = []
+            for t in true:
+                if rng.random() < 0.15:
+                    answers.append(None)
+                else:
+                    first = t if rng.random() < 0.5 else rng.choice(labels)
+                    rest = rng.sample([c for c in labels if c != first], 2)
+                    answers.append(([first, *rest], rng.choice(["yes", "no"])))
+            pred = [a[0][0] if a else None for a in answers]
+            s = metrics.summarize(true, pred, labels, None, "question", [a[0] if a else None for a in answers],
+                                  [a[1] if a else None for a in answers])
+            present = sorted({t for t in true})
+            recall, f1, top3 = [], [], []
+            for c in present:
+                mine = [i for i in range(n) if true[i] == c]
+                tp = sum(pred[i] == c for i in mine)
+                fp = sum(pred[i] == c and true[i] != c for i in range(n))
+                recall.append(tp / len(mine))
+                f1.append(2 * tp / (2 * tp + fp + (len(mine) - tp)) if (2 * tp + fp + len(mine) - tp) else 0.0)
+                top3.append(sum(answers[i] is not None and c in answers[i][0] for i in mine) / len(mine))
+            with self.subTest(trial=trial):
+                self.assertAlmostEqual(s["balanced_accuracy"], sum(recall) / len(recall))
+                self.assertAlmostEqual(s["macro_f1"], sum(f1) / len(f1))
+                self.assertAlmostEqual(s["top3_balanced_accuracy"], sum(top3) / len(top3))
+                self.assertEqual(s["invalid"], sum(a is None for a in answers))
+                valid = [(true[i], answers[i]) for i in range(n) if answers[i] is not None]
+                wrong = [a for t, a in valid if a[0][0] != t]
+                right = [a for t, a in valid if a[0][0] == t]
+                covered = [(t, a) for t, a in valid if a[1] == "yes"]
+                d = s["detection"]
+                self.assertEqual((d["wrong"], d["right"], d["covered"]), (len(wrong), len(right), len(covered)))
+                self.assertEqual(d["sensitivity"], sum(a[1] == "no" for a in wrong) / len(wrong) if wrong else None)
+                self.assertEqual(d["specificity"], sum(a[1] == "yes" for a in right) / len(right) if right else None)
+                self.assertEqual(d["coverage"], len(covered) / n)
+                self.assertEqual(d["selective_risk"], sum(a[0][0] != t for t, a in covered) / len(covered) if covered else None)
+
     def test_wilson_known_value(self):
         low, high = metrics.wilson(8, 10)
         self.assertAlmostEqual(low, 0.4902, places=3)

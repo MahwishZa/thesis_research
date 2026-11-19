@@ -12,8 +12,6 @@ from pathlib import Path
 
 from PIL import Image
 
-
-
 DATA = Path("data")  # one folder per dataset (clinic_patients, published_cases), and the knowledge base (data/knowledge/)
 TABLE_NAME = "dataset.csv"  # in a dataset's folder: the table of the prepared dataset (a dataset with other views has more tables)
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
@@ -85,9 +83,12 @@ DATASETS = {  # the datasets a config can name
 }
 SAME_QUESTIONS = ({"published_text", "published_text_photos", "published_photos"},
                   {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
-TITLES = {"published_text": "Published cases: text", "published_text_photos": "Published cases: text and photos",
-          "published_photos": "Published cases: photos only", "clinic_photo": "Clinic patients: photo", "clinic_record": "Clinic patients: record",
-          "clinic_photo_record": "Clinic patients: photo + record"}  # how tables and reports name the datasets
+
+
+def question_of(path: str) -> str:
+    """What identifies a question across datasets: its path without the file ending (a clinic photo, its record and the two together
+    are <split>/<class>/<img_id>.jpg or .txt; a published case and its photos share the case's .txt path)."""
+    return path.rsplit(".", 1)[0]
 
 
 def dataset_of(card: dict) -> str:

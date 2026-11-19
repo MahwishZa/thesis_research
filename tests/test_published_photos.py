@@ -145,6 +145,8 @@ class CaseDatasetTests(CaseProject):
         card = json.loads((other / "run_card.json").read_text(encoding="utf-8"))
         card["config"]["dataset"], card["n_photos"] = "clinic_photo_record", card["n_cases"]  # photos of other patients: nothing pairs
         (other / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+        rows = [json.loads(x) | {"patient_id": json.loads(x)["pmid"]} for x in (other / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        (other / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")  # a run of that dataset has its group column
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(text_run, other)
 

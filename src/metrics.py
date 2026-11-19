@@ -101,7 +101,7 @@ def top_k_balanced_accuracy(y_true: list[str], differentials: list[list[str] | N
 
 def _detection(y_true, y_pred, flags) -> dict:
     """Misdiagnosis detection and selective prediction from the valid answers' diagnoses and flags ("yes": evidence sufficient)."""
-    valid = [(t == p, f) for t, p, f in zip(y_true, y_pred, flags) if p is not None and f in ("yes", "no")]
+    valid = [(t == p, f) for t, p, f in zip(y_true, y_pred, flags, strict=True) if p is not None and f in ("yes", "no")]
     wrong = [f for right, f in valid if not right]
     right = [f for right, f in valid if right]
     covered = [ok for ok, f in valid if f == "yes"]
