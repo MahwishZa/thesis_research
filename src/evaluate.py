@@ -153,7 +153,7 @@ def _detection_rows(m: dict) -> list[str]:
             f"| Sensitivity: wrong diagnoses marked \"not sufficient\" | {_pct(d['sensitivity'])} ({_count(d['flagged_wrong'], d['wrong'])}) | {_ci(d['sensitivity_ci95'])} |",
             f"| Specificity: right diagnoses not marked | {_pct(d['specificity'])} ({_count(d['unflagged_right'], d['right'])}) | {_ci(d['specificity_ci95'])} |",
             f"| Coverage: questions answered with \"sufficient\" | {_pct(d['coverage'])} ({_count(d['covered'], m['n'])}) | {_ci(d['coverage_ci95'])} |",
-            f"| Selective risk: wrong among them | {_pct(d['selective_risk'])} ({_count(d['covered_wrong'], d['covered'])}) | {_ci(d['selective_risk_ci95'])} |", ""]
+            f"| Confident misdiagnosis (selective risk): wrong among them | {_pct(d['selective_risk'])} ({_count(d['covered_wrong'], d['covered'])}) | {_ci(d['selective_risk_ci95'])} |", ""]
 
 
 def _class_rows(m: dict, kind: Dataset) -> list[str]:

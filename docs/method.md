@@ -42,11 +42,11 @@ Every score is computed by `src/metrics.py` from the saved answers. The classes 
 | **Misdiagnosis detection: sensitivity** | Over the valid answers. The positive case is a wrong diagnosis. Of the wrong diagnoses, the share the model marked with "evidence_sufficient": "no". | Hendrycks & Gimpel 2017 (detecting misclassified examples) |
 | **Misdiagnosis detection: specificity** | Of the right diagnoses, the share the model did not mark. | Hendrycks & Gimpel 2017 |
 | **Coverage** | Of all questions, the share answered with "yes". An invalid answer is not covered. | Geifman & El-Yaniv 2017 |
-| **Selective risk** | Of the covered questions, the share with a wrong diagnosis: the error rate when the model's own "yes" is trusted. | Geifman & El-Yaniv 2017 |
+| **Confident misdiagnosis (selective risk)** | Of the covered questions, the share with a wrong diagnosis: the error rate when the model's own "yes" is trusted. | Geifman & El-Yaniv 2017 |
 
 Plain accuracy is not reported: it adds nothing to balanced accuracy where the classes are equal in size, and it misleads where they are not. A ROC curve and its AUC are not reported: they need a score for every class on every question, and the answers give a ranked list of three, not scores. The evidence flag gives one operating point (the sensitivity and specificity above), not a curve.
 
-**Hallucination.** In this thesis a hallucination is a confident wrong diagnosis: a wrong diagnosis marked "yes". Its share among the covered questions is the selective risk. A method reduces hallucination if it lowers the selective risk without lowering the balanced accuracy, or if it raises the misdiagnosis detection sensitivity at a similar specificity.
+**Confident misdiagnosis** (named so on 2026-11-19; earlier "hallucination"). A confident misdiagnosis is a wrong diagnosis marked "yes". Its share among the covered questions is the selective risk. A method reduces it if it lowers the selective risk without lowering the balanced accuracy, or if it raises the misdiagnosis detection sensitivity at a similar specificity. It is one part of the hallucination the research studies: it does not measure unsupported claims in the reason, which need an evidence-grounding score (not defined yet).
 
 ## 4. Intervals and comparisons
 

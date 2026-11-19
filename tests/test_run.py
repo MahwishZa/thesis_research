@@ -56,7 +56,7 @@ class RunTests(RunProject):
                          "| Sensitivity: wrong diagnoses marked \"not sufficient\" | 0.0% (0/2) |",
                          "| Specificity: right diagnoses not marked | 100.0% (2/2) |",
                          "| Coverage: questions answered with \"sufficient\" | 100.0% (4/4) |",
-                         "| Selective risk: wrong among them | 50.0% (2/4) |",
+                         "| Confident misdiagnosis (selective risk): wrong among them | 50.0% (2/4) |",
                          "### Per class", "### Confusion matrix", "(2 patients for 4 photos)", "sent exactly as stored",
                          "docs/method.md", f"answer format `{prompts.ANSWER_FORMAT}`"):
             self.assertIn(expected, text)

@@ -250,7 +250,7 @@ class RepositoryTests(unittest.TestCase):
     def test_the_method_page_defines_every_reported_score_with_its_source(self):
         text = (ROOT / "docs" / "method.md").read_text(encoding="utf-8")
         for word in ("Balanced accuracy", "Macro-F1", "Top-3 balanced accuracy", "Invalid-answer rate", "sensitivity", "specificity",
-                     "Coverage", "Selective risk", "McNemar", "Holm", "bootstrap", "parse_json_answer",
+                     "Coverage", "Confident misdiagnosis", "selective risk", "McNemar", "Holm", "bootstrap", "parse_json_answer",
                      "Brodersen", "Sokolova", "Liu", "Hendrycks", "Geifman", "Wilson", "Efron", "Field"):
             self.assertIn(word, text)
 
