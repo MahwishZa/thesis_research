@@ -42,6 +42,34 @@ The 21 columns other than `img_id`, `patient_id`, `lesion_id`, `diagnostic`, `bi
 | SCC | 192 | 20.1 | 16 | 21 |
 | SEK | 235 | 10.4 | 8 | 21 |
 
+#### Which fields are empty together
+
+The 8 most common sets of empty clinical fields. If a set is common in some classes and rare in others, an empty record would point to the class.
+
+| Empty fields | Photos | Patients | ACK | BCC | MEL | NEV | SCC | SEK |
+|---|---|---|---|---|---|---|---|---|
+| (none) | 990 | 492 | 242 | 542 | 34 | 32 | 110 | 30 |
+| `smoke`, `drink`, `background_father`, `background_mother`, `pesticide`, `gender`, `skin_cancer_history`, `cancer_history`, `has_piped_water`, `has_sewage_system`, `fitspatrick`, `diameter_1`, `diameter_2` | 804 | 579 | 447 | 0 | 0 | 169 | 0 | 188 |
+| `grew`, `changed` | 345 | 274 | 1 | 243 | 6 | 23 | 67 | 5 |
+| `background_father`, `background_mother` | 52 | 28 | 10 | 17 | 5 | 4 | 7 | 9 |
+| `background_father`, `background_mother`, `grew`, `changed` | 26 | 19 | 0 | 11 | 0 | 8 | 4 | 3 |
+| `background_father` | 25 | 13 | 14 | 10 | 0 | 1 | 0 | 0 |
+| `background_mother` | 22 | 8 | 10 | 10 | 0 | 2 | 0 | 0 |
+| `grew` | 7 | 6 | 3 | 0 | 4 | 0 | 0 | 0 |
+
+#### Photo size by class
+
+Photos come from different smartphones, so their sizes differ. If the classes differ here, the size alone could point to the class.
+
+| Class | Photos | Width: smallest | median | largest | File size (KB): median |
+|---|---|---|---|---|---|
+| ACK | 730 | 189 | 855 | 3120 | 1050 |
+| BCC | 845 | 167 | 772 | 2661 | 1036 |
+| MEL | 52 | 236 | 860 | 3096 | 998 |
+| NEV | 244 | 147 | 690 | 3474 | 604 |
+| SCC | 192 | 167 | 815.5 | 2364 | 1155 |
+| SEK | 235 | 172 | 757 | 2534 | 734 |
+
 Each column's values and level (patient, lesion or photo) are in `build/columns.csv`.
 
 ### Checks
@@ -53,7 +81,12 @@ Each column's values and level (patient, lesion or photo) are in `build/columns.
 - Photos that cannot be opened: 0
 - Lesions with more than one diagnosis: 226 (`1003`, `1007`, `1009`, `1031`, `1051`, `1068`, `107`, `1077`, `1079`, `1081` and 216 more)
 - Lesions under more than one patient: 250 (`1003`, `1007`, `1009`, `1031`, `1051`, `1068`, `107`, `1077`, `1079`, `1081` and 240 more)
+- Distinct patient + lesion pairs: 1891 (distinct `lesion_id` values: 1641)
+  - `lesion_id` `1003` is under `PAT_1288` (NEV), `PAT_38` (ACK)
+  - `lesion_id` `1007` is under `PAT_230` (ACK), `PAT_532` (BCC)
+  - `lesion_id` `1009` is under `PAT_230` (ACK), `PAT_534` (BCC)
 - Groups of photos with identical content: 15 (`PAT_202_307_424.png` = `PAT_202_308_721.png`; `PAT_302_650_477.png` = `PAT_302_651_529.png`; `PAT_311_666_191.png` = `PAT_311_667_416.png`; `PAT_38_1002_34.png` = `PAT_38_1003_68.png`; `PAT_38_1002_668.png` = `PAT_38_1003_226.png`; `PAT_419_2767_323.png` = `PAT_419_833_148.png`; `PAT_528_3072_615.png` = `PAT_528_993_589.png`; `PAT_56_86_479.png` = `PAT_56_88_274.png`; `PAT_570_1084_637.png` = `PAT_570_1085_344.png`; `PAT_570_1084_939.png` = `PAT_570_1085_429.png`; and 5 more)
+  - under one patient: 15 of 15; under one lesion number: 0 of 15; with the same diagnosis: 3 of 15
 
 ### Photos
 
