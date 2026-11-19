@@ -8,7 +8,7 @@ from unittest import mock
 
 import numpy as np
 
-from src.build.clinic_patients import clean, dedupe, inventory, shortcuts, split
+from src.build.clinic_patients import clean, dedupe, images, inventory, shortcuts, split
 from tests.build.clinic_patients.project import Cohort
 
 NR = shortcuts.NOT_RECORDED
@@ -74,6 +74,7 @@ class ShortcutStepTests(Cohort):
         clean.clean(self.data)
         dedupe.dedupe(self.data)
         split.split(self.data)
+        images.images(self.data)
 
     def result(self, features, task):
         return next(r for r in self.table("shortcuts.csv") if r["features"] == features and r["task"] == task)
@@ -83,13 +84,15 @@ class ShortcutStepTests(Cohort):
         done = shortcuts.shortcuts(self.data)
         rows = self.table("shortcuts.csv")
         self.assertEqual([(r["features"], r["task"]) for r in rows],
-                         [(f, t) for f in ("gaps", "image properties", "core record", "full record") for t in ("6 classes", "cancer or not")])
+                         [(f, t) for f in ("gaps", "photo properties (originals)", "photo properties (standardised)", "core record", "full record")
+                          for t in ("6 classes", "cancer or not")])
         self.assertEqual({(r["task"], r["chance"]) for r in rows}, {("6 classes", "0.1667"), ("cancer or not", "0.5")})
         # in this cohort the cancers never have the block of empty fields and the early benign records always do
         self.assertGreater(float(self.result("gaps", "cancer or not")["balanced_accuracy"]), 0.7)
-        self.assertLess(float(self.result("image properties", "cancer or not")["balanced_accuracy"]), 0.7)  # 40 x 40 noise: nothing to find
-        self.assertGreater(float(self.result("gaps", "cancer or not")["balanced_accuracy"]),
-                           float(self.result("image properties", "cancer or not")["balanced_accuracy"]))
+        for name in ("photo properties (originals)", "photo properties (standardised)"):
+            self.assertLess(float(self.result(name, "cancer or not")["balanced_accuracy"]), 0.7, name)  # 40 x 40 noise: nothing to find
+            self.assertGreater(float(self.result("gaps", "cancer or not")["balanced_accuracy"]),
+                               float(self.result(name, "cancer or not")["balanced_accuracy"]), name)
         for r in rows:
             self.assertTrue(float(r["ci_low"]) <= float(r["balanced_accuracy"]) <= float(r["ci_high"]), r)
         self.assertIn("train split only", done["summary"])
@@ -97,51 +100,53 @@ class ShortcutStepTests(Cohort):
         self.assertIn("| Features | 6 classes (chance 16.7%) | Cancer or not (chance 50%) | Recall by class (6 classes) |", report)
         self.assertIn("The validation and test splits are not used.", report)
 
+    def rewrite(self, name, change):
+        """build/<name> with ``change(row)`` applied to every row."""
+        with (self.data / "build" / name).open(encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f))
+        for r in rows:
+            change(r)
+        out = io.StringIO()
+        writer = csv.DictWriter(out, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        (self.data / "build" / name).write_text(out.getvalue(), encoding="utf-8")
+
     def test_only_the_train_split_is_used(self):
         self.prepare()
         shortcuts.shortcuts(self.data)
         first = (self.data / "build" / "shortcuts.csv").read_bytes()
-        with (self.data / "build" / "raw_images.csv").open(encoding="utf-8", newline="") as f:
-            images = list(csv.DictReader(f))
         elsewhere = {r["img_id"] for r in self.table("dataset.csv") if r["split"] != "train"}
-        for r in images:
+
+        def absurd(r):
             if r["img_id"] in elsewhere:
                 r["bytes"], r["width"], r["height"] = "999999999", "5", "5"  # absurd values for photos of validation and test
-        out = io.StringIO()
-        writer = csv.DictWriter(out, fieldnames=list(images[0]), lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(images)
-        (self.data / "build" / "raw_images.csv").write_text(out.getvalue(), encoding="utf-8")
+        self.rewrite("raw_images.csv", absurd)
+        self.rewrite("files.csv", absurd)
         shortcuts.shortcuts(self.data)
         self.assertEqual((self.data / "build" / "shortcuts.csv").read_bytes(), first)
 
-    def test_a_hint_planted_in_the_train_photos_is_found_and_one_planted_elsewhere_is_not(self):
+    def test_a_hint_planted_in_the_train_photos_is_found_in_the_table_it_was_planted_in_only(self):
         self.prepare()
         shortcuts.shortcuts(self.data)
-        plain = float(self.result("image properties", "6 classes")["balanced_accuracy"])
+        plain = float(self.result("photo properties (standardised)", "6 classes")["balanced_accuracy"])
         rows = {r["img_id"]: r for r in self.table("dataset.csv")}
-        with (self.data / "build" / "raw_images.csv").open(encoding="utf-8", newline="") as f:
-            images = list(csv.DictReader(f))
+        order = sorted({r["label"] for r in rows.values()})
 
-        def plant(where):
-            for r in images:
-                row = rows.get(r["img_id"])
-                if row and (row["split"] == "train") == where:
-                    r["bytes"] = str(1000 * (1 + sorted(set(x["label"] for x in rows.values())).index(row["label"])))  # file size = the class
-            out = io.StringIO()
-            writer = csv.DictWriter(out, fieldnames=list(images[0]), lineterminator="\n")
-            writer.writeheader()
-            writer.writerows(images)
-            (self.data / "build" / "raw_images.csv").write_text(out.getvalue(), encoding="utf-8")
-            shortcuts.shortcuts(self.data)
-            return float(self.result("image properties", "6 classes")["balanced_accuracy"])
+        def plant(r):
+            row = rows.get(r["img_id"])
+            if row and row["split"] == "train":
+                r["bytes"] = str(1000 * (1 + order.index(row["label"])))  # file size = the class
+        self.rewrite("files.csv", plant)
         with mock.patch.object(shortcuts, "K", 3):  # about 10 photos per class in this small cohort: fewer neighbours than K = 15
-            found = plant(True)
+            shortcuts.shortcuts(self.data)
+        found = float(self.result("photo properties (standardised)", "6 classes")["balanced_accuracy"])
         self.assertGreater(found, 0.95)  # the hint is in the photos that are used, so it is found
         self.assertGreater(found, plain + 0.4)
+        self.assertLess(float(self.result("photo properties (originals)", "6 classes")["balanced_accuracy"]), 0.5)  # and not in the other table
 
-    def test_the_split_must_have_been_made_first(self):
-        with self.assertRaisesRegex(FileNotFoundError, "run the split step first"):
+    def test_the_photos_must_have_been_made_first(self):
+        with self.assertRaisesRegex(FileNotFoundError, "run the images step first"):
             shortcuts.shortcuts(self.data)
 
     def test_the_run_is_repeatable(self):

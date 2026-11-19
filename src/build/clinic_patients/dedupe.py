@@ -51,9 +51,11 @@ def dhash(path: Path) -> np.ndarray:
     return np.packbits((pixels[:, 1:] > pixels[:, :-1]).flatten())
 
 
-def distances(hashes: np.ndarray, first: int, last: int) -> np.ndarray:
-    """The distances in bits of photos ``first`` to ``last - 1`` to all photos: an array of shape (last - first, number of photos)."""
-    return POPCOUNT[hashes[first:last, None, :] ^ hashes[None, :, :]].sum(axis=2, dtype=np.int32)
+def distances(hashes: np.ndarray, first: int, last: int, others: np.ndarray | None = None) -> np.ndarray:
+    """The distances in bits of photos ``first`` to ``last - 1`` to all photos of ``others`` (default: ``hashes`` itself): an array of
+    shape (last - first, number of photos of ``others``)."""
+    others = hashes if others is None else others
+    return POPCOUNT[hashes[first:last, None, :] ^ others[None, :, :]].sum(axis=2, dtype=np.int32)
 
 
 def dedupe(data: Path = DATA) -> dict:

@@ -9,12 +9,15 @@ from pathlib import Path
 
 DATA = Path("data/clinic_patients")  # this cohort's folder: committed tables and report; downloads/, raw/ and files/ stay on this computer
 RAW, DOWNLOADS, BUILD = "raw", "downloads", "build"  # inside DATA: the unpacked download, the files as downloaded, the records of the steps
-REPORT, DATASET = "dataset_report.md", "dataset.csv"
-STEPS = ("inventory", "clean", "dedupe", "split", "shortcuts")  # the report's sections, in the order the steps run
+REPORT, DATASET, SPLIT = "dataset_report.md", "dataset.csv", "split.csv"  # SPLIT is in build/: the questions before their photos are made
+FILES = "files"  # inside DATA: the photos as every model receives them (laptop only)
+STEPS = ("inventory", "clean", "dedupe", "split", "images", "shortcuts")  # the report's sections, in the order the steps run
 REQUIRED = ("img_id", "patient_id", "lesion_id", "diagnostic", "biopsed")  # the columns every step depends on
 NOT_CLINICAL = set(REQUIRED)  # identifiers, the label and the biopsy column: not part of the clinical record
 EMPTY = {"", "NAN", "NA", "N/A", "NONE", "NULL", "UNK", "UNKNOWN"}  # how a gap may be written (compared in capitals); reported as found
 NOT_RECORDED = "not recorded"  # how a gap is written in the cleaned table
+QUESTION_COLUMNS = ("split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed", "raw_path",
+                    "raw_sha256")  # the columns of dataset.csv that are not the clinical record
 EXAMPLES = 10  # how many names a report line lists before it says "and N more"
 REPORT_HEAD = ["# Preparation of the PAD-UFES-20 cohort", "",
                "Made by `python -m src.build.clinic_patients.prepare <step>`, one section per step, in the order the steps run. Each step rewrites "

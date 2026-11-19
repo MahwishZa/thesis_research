@@ -1,5 +1,5 @@
-"""Step ``split`` of the clinic patients cohort: train, validation and test splits **by patient**, and the table of questions
-(dataset.csv). Photos dropped by step ``dedupe`` are left out; nothing else is.
+"""Step ``split`` of the clinic patients cohort: train, validation and test splits **by patient**. Photos dropped by step ``dedupe`` are
+left out; nothing else is.
 
 Rules (fixed before the numbers were seen):
 - **A patient is never in two splits.** A lesion number alone does not identify a lesion (the same one is used for different patients),
@@ -14,8 +14,8 @@ Rules (fixed before the numbers were seen):
 
 The split is drawn once; after the cohort is frozen it is never redrawn. ``SEED`` was chosen before the first draw.
 
-Writes dataset.csv (one row per photo that stays), build/excluded.csv (every photo left out and why) and the split section of
-dataset_report.md.
+Writes build/split.csv (one row per photo that stays, with its split and its clinical record; the photos themselves are made by step
+``images``, which writes dataset.csv), build/excluded.csv (every photo left out and why) and the split section of dataset_report.md.
 """
 
 from __future__ import annotations
@@ -25,12 +25,12 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from ...common import write_section
-from .table import (BUILD, DATA, DATASET, REPORT, REPORT_HEAD, STEPS, clinical_columns, components, names, read_csv, write_csv)
+from .table import (BUILD, DATA, REPORT, REPORT_HEAD, SPLIT, STEPS, clinical_columns, components, names, read_csv, write_csv)
 
 SEED = 20261119  # chosen before the first split was drawn; never changed
 FRACTIONS = (("train", 0.6), ("val", 0.1), ("test", 0.3))
 SPLITS = tuple(name for name, _ in FRACTIONS)
-FIRST_COLUMNS = ["split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed"]
+FIRST_COLUMNS = ["split", "label", "img_id", "patient_id", "lesion_id", "split_group", "biopsed"]
 EXCLUDED_COLUMNS = ["img_id", "patient_id", "lesion_id", "label", "reason"]
 
 
@@ -68,12 +68,11 @@ def patients_in_two_splits(rows: list[dict]) -> list[str]:
 
 
 def split(data: Path = DATA) -> dict:
-    """Writes dataset.csv, build/excluded.csv and the split section of the report (see the module's description)."""
+    """Writes build/split.csv, build/excluded.csv and the split section of the report (see the module's description)."""
     data = Path(data)
     cleaned = read_csv(data / BUILD / "cleaned.csv", "run the clean step first")
     decisions = {r["img_id"]: r for r in read_csv(data / BUILD / "duplicates.csv", "run the dedupe step first")}
     pairs = read_csv(data / BUILD / "near_pairs.csv", "run the dedupe step first")
-    images = {r["img_id"]: r for r in read_csv(data / BUILD / "raw_images.csv", "run the inventory step first")}
     columns = list(cleaned[0])
     by_id = {r["img_id"]: r for r in cleaned}
 
@@ -101,14 +100,13 @@ def split(data: Path = DATA) -> dict:
     clinical = [c for c in clinical_columns(columns)]
     rows = []
     for r in sorted(kept, key=lambda r: (SPLITS.index(where[group_of[r["patient_id"]]]), r["diagnostic"], r["img_id"])):
-        rows.append({"split": where[group_of[r["patient_id"]]], "label": r["diagnostic"], "path": images[r["img_id"]]["file"],
-                     "sha256": images[r["img_id"]]["sha256"], "img_id": r["img_id"], "patient_id": r["patient_id"],
-                     "lesion_id": r["lesion_id"], "split_group": group_of[r["patient_id"]], "biopsed": r["biopsed"],
-                     **{c: r[c] for c in clinical}})
+        rows.append({"split": where[group_of[r["patient_id"]]], "label": r["diagnostic"], "img_id": r["img_id"],
+                     "patient_id": r["patient_id"], "lesion_id": r["lesion_id"], "split_group": group_of[r["patient_id"]],
+                     "biopsed": r["biopsed"], **{c: r[c] for c in clinical}})
     wrong = patients_in_two_splits(rows)
     if wrong:  # cannot happen by construction; a guard against a later change
         raise ValueError("patients in more than one split: " + names(wrong))
-    write_csv(data / DATASET, FIRST_COLUMNS + clinical, rows)
+    write_csv(data / BUILD / SPLIT, FIRST_COLUMNS + clinical, rows)
     write_csv(data / BUILD / "excluded.csv", EXCLUDED_COLUMNS, excluded)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "split", _report(rows, excluded, group_of, counts, classes, len(links)))
     sizes = Counter(row["split"] for row in rows)
@@ -120,8 +118,8 @@ def split(data: Path = DATA) -> dict:
 def _report(rows, excluded, group_of, counts, classes, link_count) -> list[str]:
     total = Counter(r["label"] for r in rows)
     lines = ["# Split: train, validation and test, by patient", "",
-             "Written by `python -m src.build.clinic_patients.prepare split`. The table of questions is `dataset.csv`; the photos left "
-             "out, with the reason, are in `build/excluded.csv`.", "",
+             "Written by `python -m src.build.clinic_patients.prepare split`. The questions with their splits are `build/split.csv` "
+             "(step `images` adds the photos and writes `dataset.csv`); the photos left out, with the reason, are in `build/excluded.csv`.", "",
              f"- Seed: {SEED} (chosen before the first draw). Targets: " + ", ".join(f"{n} {s:.0%}" for n, s in FRACTIONS) + ", class by class.",
              f"- Photos that stay: {len(rows)}; left out: {len(excluded)} ("
              + (", ".join(f"{k} {v}" for k, v in sorted(Counter(e['reason'] for e in excluded).items())) or "none") + ")",

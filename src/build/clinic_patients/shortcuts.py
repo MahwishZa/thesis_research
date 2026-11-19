@@ -11,7 +11,8 @@ splits are never looked at here), in ``FOLDS`` folds that never divide a split g
 testing part at once. Scores are balanced accuracy over the six classes (chance 1/6) and over cancer against not cancer
 (BCC, SCC, MEL against ACK, NEV, SEK; chance 1/2), with a 95% interval from resampling whole split groups.
 
-Feature sets: ``gaps`` (is each clinical field empty?), ``image properties`` (width, height, file size, bytes per pixel),
+Feature sets: ``gaps`` (is each clinical field empty?), ``photo properties`` (width, height, file size, bytes per pixel), of the original
+files and of the standardised files (step ``images``; those are what a model receives, so the second is the one that matters),
 ``core record`` (age, body site, itch, hurt, bleed, elevation: what a view would show), ``full record`` (every clinical field, gaps
 as a value). The last two are information, not hints: they measure how informative the record is.
 
@@ -28,7 +29,7 @@ import numpy as np
 from ... import metrics
 from ...common import write_section
 from .split import SEED
-from .table import BUILD, DATA, DATASET, NOT_RECORDED, REPORT, REPORT_HEAD, STEPS, read_csv, write_csv
+from .table import BUILD, DATA, DATASET, NOT_RECORDED, QUESTION_COLUMNS, REPORT, REPORT_HEAD, STEPS, read_csv, write_csv
 
 FOLDS, K = 5, 15
 CANCER = ("BCC", "MEL", "SCC")
@@ -104,18 +105,19 @@ def cross_validate(x: np.ndarray, y: list[str], groups: list[str], classes: list
 def shortcuts(data: Path = DATA) -> dict:
     """Writes build/shortcuts.csv and the shortcuts section of the report (see the module's description)."""
     data = Path(data)
-    table = [r for r in read_csv(data / DATASET, "run the split step first") if r["split"] == "train"]
-    images = {r["img_id"]: r for r in read_csv(data / BUILD / "raw_images.csv", "run the inventory step first")}
+    table = [r for r in read_csv(data / DATASET, "run the images step first") if r["split"] == "train"]
+    originals = {r["img_id"]: r for r in read_csv(data / BUILD / "raw_images.csv", "run the inventory step first")}
+    made = {r["img_id"]: r for r in read_csv(data / BUILD / "files.csv", "run the images step first")}
     if not table:
         raise ValueError("the train split is empty")
-    clinical = [c for c in table[0] if c not in ("split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group",
-                                                  "biopsed")]
+    clinical = [c for c in table[0] if c not in QUESTION_COLUMNS]
     classes = sorted({r["label"] for r in table})
     y, groups = [r["label"] for r in table], [r["split_group"] for r in table]
-    properties = np.array([photo_properties(images[r["img_id"]]) for r in table])
+    original = np.array([photo_properties(originals[r["img_id"]]) for r in table])
+    standardised = np.array([photo_properties(made[r["img_id"]]) for r in table])
     core = [c for c in CORE if c in clinical]
-    sets = {"gaps": gaps(table, clinical), "image properties": properties, "core record": encode(table, core),
-            "full record": encode(table, clinical)}
+    sets = {"gaps": gaps(table, clinical), "photo properties (originals)": original, "photo properties (standardised)": standardised,
+            "core record": encode(table, core), "full record": encode(table, clinical)}
     results = []
     for name, x in sets.items():
         for task, labels, order in (("6 classes", y, classes), ("cancer or not", ["cancer" if v in CANCER else "not" for v in y],
@@ -153,8 +155,8 @@ def _report(results: list[dict], photos: int, patients: int, groups: int, fields
                 return f"{r['balanced_accuracy']:.1%}"
             return f"{r['balanced_accuracy']:.1%} ({r['ci_low']:.1%} to {r['ci_high']:.1%})"
         lines.append(f"| {name} | {cell(six)} | {cell(two)} | {six['recall_by_class']} |")
-    lines += ["", f"- `gaps`: {fields} clinical fields, each 1 if empty. `image properties`: width, height, file size, bytes per pixel. "
+    lines += ["", f"- `gaps`: {fields} clinical fields, each 1 if empty. `photo properties`: width, height, file size, bytes per pixel, of the original files and of the standardised files (the ones a model receives). "
               "`core record`: " + ", ".join(CORE) + " (what a view would show). `full record`: every clinical field.",
-              "- `gaps` and `image properties` are hints that are not about the lesion: a score well above chance means a model could "
+              "- `gaps` and `photo properties` are hints that are not about the lesion: a score well above chance means a model could "
               "use them. The records are information: how much the record says about the class, legitimately or not.", ""]
     return lines

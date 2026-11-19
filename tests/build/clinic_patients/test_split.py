@@ -60,25 +60,24 @@ class SplitTests(Cohort):
     def test_the_table_of_questions_holds_every_kept_photo_with_its_split_label_file_and_record(self):
         self.prepare()
         done = split.split(self.data)
-        rows = self.table("dataset.csv")
+        rows = self.table("split.csv")
         self.assertEqual((len(rows), done["photos"], done["excluded"]), (121, 121, 4))
-        self.assertEqual(list(rows[0])[:9], ["split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed"])
-        self.assertEqual(list(rows[0])[9:], ["smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew"])
+        self.assertEqual(list(rows[0])[:7], ["split", "label", "img_id", "patient_id", "lesion_id", "split_group", "biopsed"])
+        self.assertEqual(list(rows[0])[7:], ["smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew"])
         by_id = {r["img_id"]: r for r in rows}
         self.assertEqual(len(by_id), 121)
         for left_out in ("P900_1_b.png", "P901_1_a.png", "P901_2_a.png", "P902_1_a.png"):
             self.assertNotIn(left_out, by_id)
         first = by_id["P000_1_a.png"]
-        raw = {r["img_id"]: r for r in self.table("raw_images.csv")}["P000_1_a.png"]
-        self.assertEqual((first["label"], first["path"], first["sha256"], first["biopsed"], first["gender"]),
-                         ("ACK", "images/part_1/P000_1_a.png", raw["sha256"], "FALSE", "not recorded"))  # an early benign record
+        self.assertEqual((first["label"], first["biopsed"], first["gender"]), ("ACK", "FALSE", "not recorded"))  # an early benign record
+        self.assertFalse((self.data / "dataset.csv").exists())  # the final table is made by step images
         self.assertEqual({r["reason"] for r in self.table("excluded.csv")}, {"identical_copy", "conflicting_labels", "unreadable"})
         self.assertEqual(sorted(Counter(r["split"] for r in rows)), ["test", "train", "val"])
 
     def test_no_patient_is_in_two_splits_and_every_class_is_in_every_split_near_the_targets(self):
         self.prepare()
         split.split(self.data)
-        rows = self.table("dataset.csv")
+        rows = self.table("split.csv")
         splits_of = {}
         for r in rows:
             splits_of.setdefault(r["patient_id"], set()).add(r["split"])
@@ -106,7 +105,7 @@ class SplitTests(Cohort):
         writer.writerows([*pairs, extra, ghost])
         (self.data / "build" / "near_pairs.csv").write_text(out.getvalue(), encoding="utf-8")
         split.split(self.data)
-        rows = self.table("dataset.csv")
+        rows = self.table("split.csv")
         group = {r["patient_id"]: (r["split"], r["split_group"]) for r in rows}
         self.assertEqual(group["P000"], group["P100"])
         self.assertEqual(group["P000"][1], "G_P000")
@@ -122,7 +121,7 @@ class SplitTests(Cohort):
         self.prepare()
         with self.assertRaisesRegex(ValueError, "a class has no photo in a split: MEL in val, MEL in test"):
             split.split(self.data)
-        self.assertFalse((self.data / "dataset.csv").exists())
+        self.assertFalse((self.data / "build" / "split.csv").exists())
 
     def test_the_check_that_no_patient_is_in_two_splits_is_made_by_the_step(self):
         from unittest import mock
@@ -138,9 +137,9 @@ class SplitTests(Cohort):
     def test_the_split_is_reproducible_to_the_byte(self):
         self.prepare()
         split.split(self.data)
-        first = (self.data / "dataset.csv").read_bytes(), (self.data / "build" / "excluded.csv").read_bytes()
+        first = (self.data / "build" / "split.csv").read_bytes(), (self.data / "build" / "excluded.csv").read_bytes()
         split.split(self.data)
-        self.assertEqual((self.data / "dataset.csv").read_bytes(), first[0])
+        self.assertEqual((self.data / "build" / "split.csv").read_bytes(), first[0])
         self.assertEqual((self.data / "build" / "excluded.csv").read_bytes(), first[1])
 
 
