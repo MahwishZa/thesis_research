@@ -9,7 +9,7 @@ The learner is a nearest-neighbour vote (``K`` neighbours, features standardised
 bound on what a better learner could find, not a model of any LLM. It is tried on **the train split only** (the validation and test
 splits are never looked at here), in ``FOLDS`` folds that never divide a split group, so no patient is in a fold's training and
 testing part at once. Scores are balanced accuracy over the six classes (chance 1/6) and over cancer against not cancer
-(BCC, SCC, MEL against ACK, NEV, SEK; chance 1/2), with a 95% interval from resampling whole split groups.
+(basal cell carcinoma, squamous cell carcinoma and melanoma against actinic keratosis, nevus and seborrheic keratosis; chance 1/2), with a 95% interval from resampling whole split groups.
 
 Feature sets: ``gaps`` (is each clinical field empty?), ``photo properties`` (width, height, file size, bytes per pixel), of the original
 files and of the standardised files (step ``images``; those are what a model receives, so the second is the one that matters),
@@ -29,11 +29,11 @@ import numpy as np
 from ... import metrics
 from ...common import write_section
 from .split import SEED
-from .table import BUILD, DATA, DATASET, NOT_RECORDED, QUESTION_COLUMNS, REPORT, REPORT_HEAD, STEPS, read_csv, write_csv
+from .table import BUILD, CLASS_NAMES, DATA, DATASET, NOT_RECORDED, QUESTION_COLUMNS, REPORT, REPORT_HEAD, STEPS, read_csv, write_csv
+from .views import CORE
 
 FOLDS, K = 5, 15
-CANCER = ("BCC", "MEL", "SCC")
-CORE = ("age", "region", "itch", "hurt", "bleed", "elevation")
+CANCER = tuple(CLASS_NAMES[code] for code in ("BCC", "MEL", "SCC"))  # basal cell carcinoma, melanoma, squamous cell carcinoma
 RESULT_COLUMNS = ["features", "task", "balanced_accuracy", "ci_low", "ci_high", "chance", "recall_by_class"]
 
 
@@ -105,7 +105,7 @@ def cross_validate(x: np.ndarray, y: list[str], groups: list[str], classes: list
 def shortcuts(data: Path = DATA) -> dict:
     """Writes build/shortcuts.csv and the shortcuts section of the report (see the module's description)."""
     data = Path(data)
-    table = [r for r in read_csv(data / DATASET, "run the images step first") if r["split"] == "train"]
+    table = [r for r in read_csv(data / DATASET, "run the views step first") if r["split"] == "train"]
     originals = {r["img_id"]: r for r in read_csv(data / BUILD / "raw_images.csv", "run the inventory step first")}
     made = {r["img_id"]: r for r in read_csv(data / BUILD / "files.csv", "run the images step first")}
     if not table:

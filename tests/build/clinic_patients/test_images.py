@@ -108,7 +108,7 @@ class ImagesStepTests(Cohort):
         files = self.table("files.csv")
         self.assertEqual(len(files), 121)
         for r in files[:5]:
-            saved = (self.data / "files" / r["path"]).read_bytes()
+            saved = (self.data / "files" / "photos" / r["path"]).read_bytes()
             self.assertEqual(r["sha256"], images.hashlib.sha256(saved).hexdigest())
             self.assertEqual((r["changes"], int(r["bytes"])), ("saved again only", len(saved)))
             self.assertGreaterEqual(float(r["psnr_db"]), 35.0)
@@ -117,24 +117,20 @@ class ImagesStepTests(Cohort):
         by_id = {r["img_id"]: r for r in files}
         originals = {i: dedupe.dhash(self.raw / r["raw_path"]) for i, r in by_id.items()}
         for r in files[:5]:
-            saved = dedupe.dhash(self.data / "files" / r["path"])
+            saved = dedupe.dhash(self.data / "files" / "photos" / r["path"])
             self.assertEqual(int(r["hash_bits"]), bits(saved, originals[r["img_id"]]))
             self.assertEqual(int(r["nearest_other_bits"]), min(bits(saved, h) for i, h in originals.items() if i != r["img_id"]))
         raw = {r["img_id"]: r for r in self.table("raw_images.csv")}
-        rows = self.table("dataset.csv")
-        self.assertEqual(len(rows), 121)
-        self.assertEqual(list(rows[0])[:11], ["split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed",
-                                              "raw_path", "raw_sha256"])
-        self.assertEqual(list(rows[0])[11:], ["smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew"])
-        first = rows[0]
-        self.assertEqual(first["path"], f"{first['split']}/{first['label']}/{first['img_id'][:-4]}.jpg")
-        self.assertEqual((first["raw_path"], first["raw_sha256"]), (raw[first["img_id"]]["file"], raw[first["img_id"]]["sha256"]))
         questions = {r["img_id"]: r for r in self.table("split.csv")}
-        for r in rows:  # the record, the split and the label are exactly those of step split
-            q = questions[r["img_id"]]
-            self.assertEqual({k: v for k, v in r.items() if k in q}, q)
-        self.assertEqual(sorted(p.relative_to(self.data / "files").as_posix() for p in (self.data / "files").rglob("*.jpg")),
-                         sorted(r["path"] for r in rows))
+        self.assertEqual(sorted(by_id), sorted(questions))  # one photo for every question, and for no other
+        first = files[0]
+        self.assertEqual(first["path"], f"{questions[first['img_id']]['split']}/{questions[first['img_id']]['label']}/"
+                                        f"{first['img_id'][:-4]}.jpg")
+        self.assertEqual((first["raw_path"], first["raw_sha256"]), (raw[first["img_id"]]["file"], raw[first["img_id"]]["sha256"]))
+        photos = self.data / "files" / "photos"
+        self.assertEqual(sorted(p.relative_to(photos).as_posix() for p in photos.rglob("*.jpg")), sorted(r["path"] for r in files))
+        self.assertEqual([p.name for p in (self.data / "files").iterdir()], ["photos"])  # the records are made by step views, elsewhere
+        self.assertFalse((self.data / "dataset.csv").exists())  # the table of questions is made by step views
 
     def test_the_originals_are_never_changed(self):
         self.prepare()
@@ -177,13 +173,18 @@ class ImagesStepTests(Cohort):
             images.images(self.data)
             row = next(r for r in self.table("files.csv") if r["img_id"] == "P000_1_a.png")
             self.assertEqual((row["raw_width"], row["width"], row["changes"]), ("60", "50", "shrunk from 60x60 to 50x50"))
-            (self.data / "files" / "train" / "ACK").mkdir(parents=True, exist_ok=True)
-            (self.data / "files" / "train" / "ACK" / "stray.jpg").write_bytes(b"x")
-            (self.data / "files" / "empty" / "folder").mkdir(parents=True)
+            (self.data / "files" / "photos" / "train" / "actinic keratosis").mkdir(parents=True, exist_ok=True)
+            (self.data / "files" / "photos" / "train" / "actinic keratosis" / "stray.jpg").write_bytes(b"x")
+            (self.data / "files" / "photos" / "empty" / "folder").mkdir(parents=True)
+            (self.data / "files" / "records").mkdir(parents=True)  # another step's folder is not touched
+            (self.data / "files" / "records" / "keep.txt").write_bytes(b"x")
+            (self.data / "files" / "photos" / "notes.txt").write_bytes(b"x")  # only photos are removed, never another kind of file
             done = images.images(self.data)
         self.assertEqual((done["written"], done["removed"]), (0, 1))
-        self.assertFalse((self.data / "files" / "train" / "ACK" / "stray.jpg").exists())
-        self.assertFalse((self.data / "files" / "empty").exists())
+        self.assertFalse((self.data / "files" / "photos" / "train" / "actinic keratosis" / "stray.jpg").exists())
+        self.assertFalse((self.data / "files" / "photos" / "empty").exists())
+        self.assertTrue((self.data / "files" / "records" / "keep.txt").exists())
+        self.assertTrue((self.data / "files" / "photos" / "notes.txt").exists())
         report = self.report()
         self.assertEqual(images.MAX_SIDE, 1024)  # the value the data sheet states and the models' photos are made with
         for expected in ("- Photos made: 121", "- saved again only: 120; shrunk: 1",
@@ -198,9 +199,9 @@ class ImagesStepTests(Cohort):
     def test_the_run_is_repeatable_to_the_byte(self):
         self.prepare()
         images.images(self.data)
-        first = (self.data / "dataset.csv").read_bytes(), (self.data / "build" / "files.csv").read_bytes()
+        first = (self.data / "build" / "files.csv").read_bytes()
         images.images(self.data)
-        self.assertEqual(((self.data / "dataset.csv").read_bytes(), (self.data / "build" / "files.csv").read_bytes()), first)
+        self.assertEqual((self.data / "build" / "files.csv").read_bytes(), first)
 
 
 if __name__ == "__main__":

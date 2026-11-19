@@ -8,7 +8,7 @@ from unittest import mock
 
 import numpy as np
 
-from src.build.clinic_patients import clean, dedupe, images, inventory, shortcuts, split
+from src.build.clinic_patients import clean, dedupe, images, inventory, shortcuts, split, views
 from tests.build.clinic_patients.project import Cohort
 
 NR = shortcuts.NOT_RECORDED
@@ -75,6 +75,7 @@ class ShortcutStepTests(Cohort):
         dedupe.dedupe(self.data)
         split.split(self.data)
         images.images(self.data)
+        views.views(self.data)
 
     def result(self, features, task):
         return next(r for r in self.table("shortcuts.csv") if r["features"] == features and r["task"] == task)
@@ -145,8 +146,8 @@ class ShortcutStepTests(Cohort):
         self.assertGreater(found, plain + 0.4)
         self.assertLess(float(self.result("photo properties (originals)", "6 classes")["balanced_accuracy"]), 0.5)  # and not in the other table
 
-    def test_the_photos_must_have_been_made_first(self):
-        with self.assertRaisesRegex(FileNotFoundError, "run the images step first"):
+    def test_the_views_must_have_been_made_first(self):
+        with self.assertRaisesRegex(FileNotFoundError, "run the views step first"):
             shortcuts.shortcuts(self.data)
 
     def test_the_run_is_repeatable(self):

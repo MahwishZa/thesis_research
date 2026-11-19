@@ -10,14 +10,17 @@ from pathlib import Path
 DATA = Path("data/clinic_patients")  # this cohort's folder: committed tables and report; downloads/, raw/ and files/ stay on this computer
 RAW, DOWNLOADS, BUILD = "raw", "downloads", "build"  # inside DATA: the unpacked download, the files as downloaded, the records of the steps
 REPORT, DATASET, SPLIT = "dataset_report.md", "dataset.csv", "split.csv"  # SPLIT is in build/: the questions before their photos are made
-FILES = "files"  # inside DATA: the photos as every model receives them (laptop only)
-STEPS = ("inventory", "clean", "dedupe", "split", "images", "shortcuts")  # the report's sections, in the order the steps run
+FILES = "files"  # inside DATA (laptop only): what every model receives, in two folders
+PHOTOS, RECORDS = f"{FILES}/photos", f"{FILES}/records"  # the standardised photos (step images) and the printed records (step views)
+CLASS_NAMES = {"ACK": "actinic keratosis", "BCC": "basal cell carcinoma", "MEL": "melanoma", "NEV": "nevus",
+               "SCC": "squamous cell carcinoma", "SEK": "seborrheic keratosis"}  # the authors' codes and the names used from step split on
+STEPS = ("inventory", "clean", "dedupe", "split", "images", "views", "shortcuts")  # the report's sections, in the order the steps run
 REQUIRED = ("img_id", "patient_id", "lesion_id", "diagnostic", "biopsed")  # the columns every step depends on
 NOT_CLINICAL = set(REQUIRED)  # identifiers, the label and the biopsy column: not part of the clinical record
 EMPTY = {"", "NAN", "NA", "N/A", "NONE", "NULL", "UNK", "UNKNOWN"}  # how a gap may be written (compared in capitals); reported as found
 NOT_RECORDED = "not recorded"  # how a gap is written in the cleaned table
 QUESTION_COLUMNS = ("split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed", "raw_path",
-                    "raw_sha256")  # the columns of dataset.csv that are not the clinical record
+                    "raw_sha256", "facts")  # the columns of dataset.csv that are not the clinical record
 EXAMPLES = 10  # how many names a report line lists before it says "and N more"
 REPORT_HEAD = ["# Preparation of the PAD-UFES-20 cohort", "",
                "Made by `python -m src.build.clinic_patients.prepare <step>`, one section per step, in the order the steps run. Each step rewrites "
@@ -46,6 +49,20 @@ def read_csv(path: Path, missing: str) -> list[dict]:
         raise FileNotFoundError(f"{path.as_posix()} not found: {missing}")
     with path.open(encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def remove_stale(root: Path, wanted: set[str], suffix: str) -> int:
+    """Deletes the files of ``root`` that end in ``suffix`` and are not in ``wanted`` (paths below ``root``, with forward slashes), then
+    every empty folder below it, so that nothing is left for a run to find that the tables do not list. Returns how many files went."""
+    if not root.is_dir():
+        return 0
+    stale = sorted(f for f in root.rglob(f"*{suffix}") if f.relative_to(root).as_posix() not in wanted)
+    for file in stale:
+        file.unlink()
+    for folder in sorted((d for d in root.rglob("*") if d.is_dir()), key=lambda d: len(d.parts), reverse=True):
+        if not any(folder.iterdir()):
+            folder.rmdir()
+    return len(stale)
 
 
 def names(items, n: int = EXAMPLES) -> str:

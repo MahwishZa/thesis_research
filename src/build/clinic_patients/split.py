@@ -1,6 +1,9 @@
 """Step ``split`` of the clinic patients cohort: train, validation and test splits **by patient**. Photos dropped by step ``dedupe`` are
 left out; nothing else is.
 
+From this step on a class is written by its name (``CLASS_NAMES``: ACK is "actinic keratosis" and so on), because a class is also the
+name of a folder and the answer option the models read.
+
 Rules (fixed before the numbers were seen):
 - **A patient is never in two splits.** A lesion number alone does not identify a lesion (the same one is used for different patients),
   so lesions are not used to group anything.
@@ -25,7 +28,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from ...common import write_section
-from .table import (BUILD, DATA, REPORT, REPORT_HEAD, SPLIT, STEPS, clinical_columns, components, names, read_csv, write_csv)
+from .table import (BUILD, CLASS_NAMES, DATA, REPORT, REPORT_HEAD, SPLIT, STEPS, clinical_columns, components, names, read_csv,
+                    write_csv)
 
 SEED = 20261119  # chosen before the first split was drawn; never changed
 FRACTIONS = (("train", 0.6), ("val", 0.1), ("test", 0.3))
@@ -76,8 +80,10 @@ def split(data: Path = DATA) -> dict:
     columns = list(cleaned[0])
     by_id = {r["img_id"]: r for r in cleaned}
 
-    kept = [r for r in cleaned if decisions.get(r["img_id"], {}).get("decision") != "drop"]
-    excluded = [{"img_id": i, "patient_id": by_id[i]["patient_id"], "lesion_id": by_id[i]["lesion_id"], "label": by_id[i]["diagnostic"],
+    kept = [{**r, "diagnostic": CLASS_NAMES[r["diagnostic"]]} for r in cleaned
+            if decisions.get(r["img_id"], {}).get("decision") != "drop"]
+    excluded = [{"img_id": i, "patient_id": by_id[i]["patient_id"], "lesion_id": by_id[i]["lesion_id"],
+                 "label": CLASS_NAMES[by_id[i]["diagnostic"]],
                  "reason": d["reason"]} for i, d in sorted(decisions.items()) if d["decision"] == "drop"]
     patients = sorted({r["patient_id"] for r in kept})
     present = set(patients)

@@ -141,7 +141,8 @@ class RepositoryTests(unittest.TestCase):
                      "data/cases/figures/images/PMC1/f1.jpg", "data/cases/figures/captions.jsonl", "data/text/sources/removed/test/x/1-1.txt",
                      "data/image/build/x.txt", "data/text/build/nested/x.csv",
                      "data/x.csv", "data/clinic_patients/raw/metadata.csv", "data/clinic_patients/raw/images/imgs_part_1/PAT_1_1_1.png",
-                     "data/clinic_patients/downloads/zr7vgbcyr2-1.zip",
+                     "data/clinic_patients/downloads/zr7vgbcyr2-1.zip", "data/clinic_patients/files/photos/train/nevus/PAT_1_1_1.jpg",
+                     "data/clinic_patients/files/records/train/nevus/PAT_1_1_1.txt",
                      "results/image/closed_book/m/val_1/report.md", "results/image/closed_book/m/test_1.partial/predictions.jsonl",
                      "src/__pycache__/x.pyc", "results/text/closed_book/m/val_1/report.md",
                      "results/text/closed_book/m/test_1.partial/predictions.jsonl",
@@ -155,7 +156,10 @@ class RepositoryTests(unittest.TestCase):
                      "results/image/closed_book/m/test_1/predictions.jsonl", "configs/models.toml", "prompts/image/closed_book.txt",
                      "results/text/closed_book/m/test_1/report.md",
                      "data/clinic_patients/dataset_report.md", "data/clinic_patients/build/raw_images.csv", "data/clinic_patients/build/columns.csv",
-                     "data/clinic_patients/build/downloads.csv"):
+                     "data/clinic_patients/build/downloads.csv", "data/clinic_patients/dataset.csv", "data/clinic_patients/record.csv",
+                     "data/clinic_patients/build/files.csv", "data/clinic_patients/datasheet.md",
+                     "prompts/clinic_photo/closed_book.txt", "prompts/clinic_record/closed_book.txt",
+                     "prompts/clinic_photo_record/closed_book.txt"):
             self.assertFalse(ignored(path), f"{path} must not be ignored by Git")
 
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "needs a Git checkout")

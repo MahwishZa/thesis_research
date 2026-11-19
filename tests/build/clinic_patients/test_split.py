@@ -7,6 +7,7 @@ import unittest
 from collections import Counter
 
 from src.build.clinic_patients import clean, dedupe, inventory, split
+from src.build.clinic_patients.table import CLASS_NAMES
 from tests.build.clinic_patients.project import CLASSES, Cohort
 
 
@@ -63,15 +64,21 @@ class SplitTests(Cohort):
         rows = self.table("split.csv")
         self.assertEqual((len(rows), done["photos"], done["excluded"]), (121, 121, 4))
         self.assertEqual(list(rows[0])[:7], ["split", "label", "img_id", "patient_id", "lesion_id", "split_group", "biopsed"])
-        self.assertEqual(list(rows[0])[7:], ["smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew"])
+        self.assertEqual(list(rows[0])[7:], ["smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew", "hurt", "bleed",
+                                          "elevation"])
         by_id = {r["img_id"]: r for r in rows}
         self.assertEqual(len(by_id), 121)
         for left_out in ("P900_1_b.png", "P901_1_a.png", "P901_2_a.png", "P902_1_a.png"):
             self.assertNotIn(left_out, by_id)
         first = by_id["P000_1_a.png"]
-        self.assertEqual((first["label"], first["biopsed"], first["gender"]), ("ACK", "FALSE", "not recorded"))  # an early benign record
-        self.assertFalse((self.data / "dataset.csv").exists())  # the final table is made by step images
-        self.assertEqual({r["reason"] for r in self.table("excluded.csv")}, {"identical_copy", "conflicting_labels", "unreadable"})
+        self.assertEqual((first["label"], first["biopsed"], first["gender"]), ("actinic keratosis", "FALSE", "not recorded"))  # an early benign record
+        self.assertFalse((self.data / "dataset.csv").exists())  # the final table is made by step views
+        excluded = self.table("excluded.csv")
+        self.assertEqual({r["reason"] for r in excluded}, {"identical_copy", "conflicting_labels", "unreadable"})
+        self.assertEqual({r["img_id"]: r["label"] for r in excluded},  # a class is written by its name here too, never by its code
+                         {"P900_1_b.png": "basal cell carcinoma", "P901_1_a.png": "nevus", "P901_2_a.png": "actinic keratosis",
+                          "P902_1_a.png": "seborrheic keratosis"})
+        self.assertEqual({r["label"] for r in rows}, set(CLASS_NAMES.values()))
         self.assertEqual(sorted(Counter(r["split"] for r in rows)), ["test", "train", "val"])
 
     def test_no_patient_is_in_two_splits_and_every_class_is_in_every_split_near_the_targets(self):
@@ -82,7 +89,7 @@ class SplitTests(Cohort):
         for r in rows:
             splits_of.setdefault(r["patient_id"], set()).add(r["split"])
         self.assertEqual({len(v) for v in splits_of.values()}, {1})
-        for label in CLASSES:
+        for label in (CLASS_NAMES[code] for code in CLASSES):
             counts = Counter(r["split"] for r in rows if r["label"] == label)
             self.assertTrue(all(counts[s] > 0 for s in split.SPLITS), (label, counts))
             total = sum(counts.values())
@@ -119,7 +126,7 @@ class SplitTests(Cohort):
             p.unlink()
         self.write()
         self.prepare()
-        with self.assertRaisesRegex(ValueError, "a class has no photo in a split: MEL in val, MEL in test"):
+        with self.assertRaisesRegex(ValueError, "a class has no photo in a split: melanoma in val, melanoma in test"):
             split.split(self.data)
         self.assertFalse((self.data / "build" / "split.csv").exists())
 

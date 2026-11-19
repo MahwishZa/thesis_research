@@ -48,6 +48,7 @@ class Dataset:
     pictures_column: str = ""  # the table's column with each question's pictures ("file|sha256;file|sha256"), sent next to the prompt
     pictures_root: str = ""  # the folder in data/ the pictures' paths start from
     subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
+    unique_content: bool = True  # False: two questions may have the same content (a patient record is the same words for two patients)
 
 
 DATASETS = {  # the datasets a config can name
@@ -68,10 +69,22 @@ DATASETS = {  # the datasets a config can name
                            "Patients described in one article are not independent", set_apart=("actinic keratosis",),
                            files="text/dataset", folder="cases", pictures_column="pictures",
                            pictures_root="cases", subset=True),
+    # The clinic patients cohort (PAD-UFES-20; data/clinic_patients/): the same questions in three views, so that the answers pair.
+    # One question is one photo of one patient's lesion with the record of the same visit; its tables are written by step views.
+    "clinic_photo": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient",
+                            "Photos of one patient are not independent", folder="clinic_patients", files="clinic_patients/files/photos"),
+    "clinic_record": Dataset(TEXT_TYPES, "a .txt file", True, "patient_id", "record", "patient",
+                             "Photos and records of one patient are not independent", table="record.csv", folder="clinic_patients",
+                             files="clinic_patients/files/records", unique_content=False),
+    "clinic_photo_record": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient",
+                                   "Photos of one patient are not independent", facts_column="facts", folder="clinic_patients",
+                                   files="clinic_patients/files/photos"),
 }
-SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"})  # datasets whose questions can be paired: same photos, or same cases
+SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"},
+                  {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
 TITLES = {"image": "Image", "text": "Text", "image_metadata": "Image + metadata", "cases": "Cases: text and photos",
-          "case_photos": "Cases: photos only"}  # how tables and reports name the datasets
+          "case_photos": "Cases: photos only", "clinic_photo": "Clinic patients: photo", "clinic_record": "Clinic patients: record",
+          "clinic_photo_record": "Clinic patients: photo + record"}  # how tables and reports name the datasets
 
 
 def dataset_of(card: dict) -> str:
@@ -139,8 +152,8 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
                 raise ValueError(f"{where}: picture {picture!r} must be a JPEG or PNG file inside the pictures' folder")
             if not SHA256.fullmatch(sha):
                 raise ValueError(f"{where}: the sha256 of picture {picture} must be 64 lowercase hexadecimal characters")
-        for key, what in ((item.path, "path"), (item.sha256, kind.item), *((p, "picture") for p, _ in item.pictures),
-                          *((s, "picture") for _, s in item.pictures)):
+        for key, what in ((item.path, "path"), *([(item.sha256, kind.item)] if kind.unique_content else []),
+                          *((p, "picture") for p, _ in item.pictures), *((s, "picture") for _, s in item.pictures)):
             if key in first_line:  # a second copy of one file could sit in two splits: a leak between them
                 raise ValueError(f"{where}: the same {what} is also on line {first_line[key]}")
             first_line[key] = line

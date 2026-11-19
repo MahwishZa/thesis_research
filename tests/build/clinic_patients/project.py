@@ -18,8 +18,8 @@ from pathlib import Path
 
 from PIL import Image
 
-COLUMNS = ["patient_id", "lesion_id", "smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew",
-           "diagnostic", "img_id", "biopsed"]
+COLUMNS = ["patient_id", "lesion_id", "smoke", "background_father", "age", "gender", "region", "diameter_1", "itch", "grew", "hurt",
+           "bleed", "elevation", "diagnostic", "img_id", "biopsed"]
 CLASSES = ("ACK", "BCC", "MEL", "NEV", "SCC", "SEK")
 CANCER = ("BCC", "MEL", "SCC")
 REGIONS = ("FACE", "ARM", "BACK", "CHEST", "NOSE")
@@ -51,6 +51,7 @@ class Cohort(unittest.TestCase):
                         "smoke": "" if early else "FALSE", "background_father": "" if early else "ITALY",
                         "gender": "" if early else ("MALE" if n % 2 else "FEMALE"), "diameter_1": "" if early else str(5 + n),
                         "age": str(30 + 3 * n + c), "region": REGIONS[(c + n) % len(REGIONS)], "itch": "TRUE" if n % 2 else "FALSE",
+                        "hurt": "TRUE" if n % 3 == 1 else "FALSE", "elevation": "TRUE" if label in CANCER else "FALSE",
                         "grew": "UNK" if label in CANCER and n % 3 == 0 else "FALSE", "biopsed": "TRUE" if label in CANCER else "FALSE"})
         same = noise_png(9000)  # P900: the same picture twice, one lesion, one diagnosis
         self.add("P900", "1", "BCC", "P900_1_a.png", same, {"age": "60", "region": "FACE", "biopsed": "TRUE"})
@@ -65,7 +66,8 @@ class Cohort(unittest.TestCase):
     def add(self, patient, lesion, label, img, content, fields=None):
         row = {c: "" for c in COLUMNS} | {"patient_id": patient, "lesion_id": lesion, "diagnostic": label, "img_id": img,
                                            "gender": "FEMALE", "smoke": "FALSE", "background_father": "ITALY", "diameter_1": "8",
-                                           "itch": "FALSE", "grew": "FALSE", "biopsed": "FALSE"} | (fields or {})
+                                           "itch": "FALSE", "grew": "FALSE", "hurt": "FALSE", "bleed": "FALSE", "elevation": "FALSE",
+                                           "biopsed": "FALSE"} | (fields or {})
         self.rows.append(row)
         self.photos[img] = content
 
@@ -80,7 +82,7 @@ class Cohort(unittest.TestCase):
             (self.raw / "images" / "part_1" / img).write_bytes(content)
 
     def table(self, name):
-        path = self.data / name if name == "dataset.csv" else self.data / "build" / name
+        path = self.data / name if name in ("dataset.csv", "record.csv") else self.data / "build" / name
         with path.open(encoding="utf-8", newline="") as f:
             return list(csv.DictReader(f))
 

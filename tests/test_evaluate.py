@@ -150,5 +150,39 @@ class CompareTests(RunProject):
             evaluate.compare(runs["image"], runs["multi"])
 
 
+    def test_the_three_clinic_views_are_compared_by_question_although_their_files_end_differently(self):
+        """A clinic photo, its record and the two together are one question: <split>/<class>/<img_id> with .jpg or .txt."""
+        truth = ["a", "a", "b", "b"]
+        runs = {}
+        for name, dataset, predicted, ending in (("photo", "clinic_photo", ["a", "b", "b", "a"], "jpg"),
+                                                 ("record", "clinic_record", ["a", "a", "b", "b"], "txt"),
+                                                 ("both", "clinic_photo_record", ["a", "a", "b", "a"], "jpg")):
+            folder = self.base / f"clinic_{name}"
+            folder.mkdir()
+            kind = datasets.DATASETS[dataset]
+            card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}"}
+            (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
+            rows = [{"path": f"test/{t}/P{i}_1_a.{ending}", "label": t, kind.group_column: f"P{i}", "prediction": p}
+                    for i, (t, p) in enumerate(zip(truth, predicted))]
+            (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+            runs[name] = folder
+        c = evaluate.compare(runs["photo"], runs["record"])  # the record fixes two photos the photo got wrong
+        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("clinic_photo and clinic_record", 4, 0, 2))
+        self.assertEqual(c["groups"], "patients")
+        c = evaluate.compare(runs["record"], runs["both"])
+        self.assertEqual((c["n"], c["only_a"], c["only_b"]), (4, 1, 0))
+        self.assertEqual(evaluate.compare(runs["both"], runs["photo"])["only_b"], 0)
+        rows = [json.loads(x) for x in (runs["record"] / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        rows[0]["path"] = "test/a/P9_1_a.txt"  # another question
+        (runs["record"] / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "same photos with the same classes"):
+            evaluate.compare(runs["photo"], runs["record"])
+        rows[0]["path"], rows[0]["label"] = "test/a/P0_1_a.txt", "b"  # the same question, another class
+        (runs["record"] / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "same photos with the same classes"):
+            evaluate.compare(runs["photo"], runs["record"])
+
+
 if __name__ == "__main__":
     unittest.main()

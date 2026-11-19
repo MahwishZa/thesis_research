@@ -1,10 +1,12 @@
 # Data sheet: the clinic patients cohort (PAD-UFES-20), draft of 2026-11-19
 
-This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. **It is a draft: it
-describes the download as received. The splits, the record shown to a model and the three views are not decided or built yet.**
-Every number comes from files that `python -m src.build.clinic_patients.prepare inventory` writes: `dataset_report.md`,
+This data sheet follows *Datasheets for Datasets* (Gebru et al., 2021). It is written by hand and changes nothing. **It is a draft.
+Sections 1 to 3 describe the download as received (numbers from the `inventory` step). Section 4 states the rules the preparation
+steps follow, decided on 2026-11-19; the figures they produce (the splits, the photo standardisation, the records) are in
+`dataset_report.md` after the first full run on the researcher's computer, and are copied here only then.**
+Every number below comes from files that `python -m src.build.clinic_patients.prepare` writes: `dataset_report.md`,
 `build/columns.csv`, `build/raw_images.csv`. The photos and `metadata.csv` stay on the researcher's computer (research folder
-`data/clinic_patients/raw/`); only these small tables are in Git.
+`data/clinic_patients/raw/`); only the small tables are in Git.
 
 Marks: ✔ checked in the researcher's download by the inventory; ◻ not yet checked (stated by the source or a web page only).
 
@@ -69,21 +71,47 @@ How gaps are written: blank for the 804-photo block, `UNK` elsewhere ✔. Diamet
 6. **Some classes are small.** Melanoma has 52 photos of 36 patients: a test split will hold about 15, so its recall has a wide
    interval.
 
-## 4. Not yet decided
+## 4. The preparation steps and the rules they follow
 
-The proposal in `docs/v2_proposal.md` and the answer to the findings above are for the researcher to approve before anything is built:
-which fields a model is shown, how the photos of finding 5 are handled, the patient-level split, the three views, and a check of
-how much the record alone and the image properties alone give away.
+One command per step (`python -m src.build.clinic_patients.prepare <step>` or `all`); each writes its decisions to tables in
+`build/` and its own section of `dataset_report.md`, and **changes no original file**. The rules were fixed before the numbers were
+seen.
+
+| Step | What it does |
+|---|---|
+| `inventory` | Counts what the download holds (above). Changes nothing. |
+| `clean` | Writes a gap as `not recorded` (no gap is filled in, no row left out); unifies case, spaces and the one spelling variant (`BRASIL`); **stops** at a value outside the known vocabulary; **flags** (keeps) implausible values and disagreements inside a patient or lesion. |
+| `dedupe` | Finds identical and near-identical photos with a 256-bit difference hash. One picture with one label: the smallest `img_id` stays. One picture with conflicting labels: all are dropped (finding 5). Patients with a near-identical photo are kept together in the next step. |
+| `split` | Train 60%, validation 10%, test 30%, **by patient** and class by class (a patient is never in two splits; patients joined by a near-identical photo are one group). Seed 20261119, chosen before the first draw. Classes are written by name from here on. |
+| `images` | Every photo that stays is made in one fixed way: upright by its EXIF tag, RGB, sRGB colours, longest side at most 1,024 pixels (never enlarged), JPEG quality 95 without metadata. Bars checked for every photo (the step stops otherwise): fidelity at least 30 dB PSNR, the photo's own original is the nearest of all originals by picture hash, no file over 4 MB. Reason: 108 originals are over 5 MB, and every model shrinks a large photo in its own way. |
+| `views` | Writes the record text of every question and the tables of the three views (below). |
+| `shortcuts` | How much the gaps and the photo properties alone give away, with a nearest-neighbour vote on the train split only, so that a hint that is not the lesion is reported next to the results. |
+
+**The three views of the same questions.** One question is one photo of one patient's lesion with the record of the same visit.
+- *photo*: the standardised photo alone (`dataset.csv`, `files/photos/`);
+- *record*: the record alone, as text (`record.csv`, `files/records/`);
+- *photo + record*: the photo with the same record text in the prompt (`dataset.csv`, column `facts`).
+
+**The record** (`record-v1`) is six numbered lines in fixed wording: age; body site; whether the lesion itches, hurts, bleeds, and is
+raised above the skin; a gap reads `not recorded`. It is the same words, to the byte, in the record view and in the photo + record
+view. **Not in any view:** `grew` and `changed` (unknown more often for cancers: finding 2) and the block of 13 fields of finding 1
+(empty for 804 early photos, all benign). They stay in `dataset.csv` for a separate secondary analysis on complete records. The
+wording of the lines is provisional until the authors' paper confirms what each field means ◻; a change of wording is a new template
+version and a rebuild of the views.
+
+**Photos of one patient** are not independent: intervals resample whole patients. Identical records are kept in the record view
+(they are different patients, or several photos of one visit), so that the three views ask the same questions.
 
 ## 5. Preprocessing and use
 
-Nothing is built yet. Photos are never resized, re-encoded or edited (sent as stored, as in Version 1). No synthetic or rewritten
-clinical text is ever added. Patients may be identifiable only through the source's own ids; the source de-identified them ◻.
+Photos are standardised once, by the `images` step above, and every model in every view receives those files and no others; the
+originals are never changed. No synthetic or rewritten clinical text is ever added: a record is only the recorded values in fixed
+words. Patients may be identifiable only through the source's own ids; the source de-identified them ◻.
 
 ## 6. Reproduce
 
 1. Download the dataset (Kaggle copy or Mendeley), put the unpacked `metadata.csv` and the three `imgs_part_*` folders in
    `data/clinic_patients/raw/` (optionally the ZIP in `data/clinic_patients/downloads/`).
-2. `python -m src.build.clinic_patients.prepare inventory`
-3. The inventory's counts must equal those above; the figures of this sheet come from the `inventory` section of
-   `dataset_report.md` (`metadata.csv` SHA-256 starts `e5c178211d59`).
+2. `python -m src.build.clinic_patients.prepare all` (or one step at a time, in the order of section 4).
+3. The inventory's counts must equal those above; the figures of sections 1 to 3 come from the `inventory` section of
+   `dataset_report.md` (`metadata.csv` SHA-256 starts `e5c178211d59`). A second run changes no file.

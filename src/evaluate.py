@@ -190,8 +190,8 @@ def write_report(run_dir: str | Path) -> Path:
     if "all_facts_recorded" in metrics:
         part = metrics["all_facts_recorded"]
         lines += ["## Questions with all facts recorded", "",
-                  f"A missing fact (\"{MISSING_FACT}\") points to the photo's collection, and so mostly to melanoma or nevus "
-                  f"(data/image_metadata/datasheet.md, limitation 1). These scores count only the {part['questions']} of {len(preds)} "
+                  f"A missing fact (\"{MISSING_FACT}\") can itself point to the class: which facts are missing is not the same for every "
+                  f"class (see the data sheet of the dataset). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"]), ""]
 
     sessions = card.get("sessions", [])
@@ -239,37 +239,45 @@ def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
     return card, preds
 
 
+def _question(path: str) -> str:
+    """What identifies a question across datasets: its path without the file ending (a clinic photo, its record and the two together
+    are <split>/<class>/<img_id>.jpg or .txt)."""
+    return path.rsplit(".", 1)[0]
+
+
 def compare(run_a: str | Path, run_b: str | Path) -> dict:
     """How run B differs from run A on the same questions: the differences (B minus A) in balanced accuracy and macro-F1, with
     paired 95% intervals (the main comparison), and McNemar's exact test on right against wrong answers (a supporting test)."""
     (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
     dataset, dataset_b = dataset_of(card_a), dataset_of(card_b)
-    kind = DATASETS[dataset]
-    # The one pair of different datasets with the same photos: without and with their patients' facts. Then the questions differ
-    # by the facts, so the photos and their classes are compared instead of the questions' fingerprint. The case datasets ask some
-    # of the text dataset's cases with their photos: a text run is compared on those cases only.
-    same_photos = {dataset, dataset_b} == SAME_QUESTIONS[0]
-    same_cases = dataset != dataset_b and {dataset, dataset_b} <= SAME_QUESTIONS[1]
-    if dataset != dataset_b and not (same_photos or same_cases):
+    kind, kind_b = DATASETS[dataset], DATASETS[dataset_b]
+    # Two different datasets whose questions can be paired (SAME_QUESTIONS: a photo without and with its patient's facts; a clinic photo,
+    # its record, and both) are compared question by question: the questions differ in what is shown, so the photos (or cases) and
+    # their classes are compared instead of the questions' fingerprint. A question is known by its path without the file ending (a
+    # photo and its record differ in the ending only). A case dataset asks some of the text dataset's cases: a text run is compared on
+    # those cases only.
+    paired = dataset != dataset_b and any({dataset, dataset_b} <= group for group in SAME_QUESTIONS)
+    if dataset != dataset_b and not paired:
         raise ValueError("the two runs differ in their dataset, so they cannot be compared question by question")
+    part = paired and (kind.subset or kind_b.subset)
     checks = [("split", card_a["split"], card_b["split"]), ("answer options", card_a["labels"], card_b["labels"])]
-    if not (same_photos or same_cases):
+    if not paired:
         checks.append(("questions", card_a[f"{kind.item}s_sha256"], card_b[f"{kind.item}s_sha256"]))
     for what, a, b in checks:
         if a != b:
             raise ValueError(f"the two runs differ in their {what}, so they cannot be compared question by question")
-    if same_cases:
-        shared = {p["path"] for p in preds_a} & {p["path"] for p in preds_b}
-        smaller = min(({p["path"] for p in preds_a}, {p["path"] for p in preds_b}), key=len)
+    if part:
+        shared = {_question(p["path"]) for p in preds_a} & {_question(p["path"]) for p in preds_b}
+        smaller = min(({_question(p["path"]) for p in preds_a}, {_question(p["path"]) for p in preds_b}), key=len)
         if shared != smaller:
             raise ValueError("the cases of one run are not all among the other run's cases")
-        preds_a, preds_b = [p for p in preds_a if p["path"] in shared], [p for p in preds_b if p["path"] in shared]
-    if (same_photos or same_cases) and {(p["path"], p["label"]) for p in preds_a} != {(p["path"], p["label"]) for p in preds_b}:
-        raise ValueError(f"the two runs did not answer the same {'photos' if same_photos else 'cases'} with the same classes")
-    by_path = {p["path"]: p for p in preds_b}
-    if set(by_path) != {p["path"] for p in preds_a} or len(by_path) != len(preds_b):
+        preds_a, preds_b = [p for p in preds_a if _question(p["path"]) in shared], [p for p in preds_b if _question(p["path"]) in shared]
+    if paired and {(_question(p["path"]), p["label"]) for p in preds_a} != {(_question(p["path"]), p["label"]) for p in preds_b}:
+        raise ValueError(f"the two runs did not answer the same {'cases' if part else 'photos'} with the same classes")
+    by_question = {_question(p["path"]): p for p in preds_b}
+    if set(by_question) != {_question(p["path"]) for p in preds_a} or len(by_question) != len(preds_b):
         raise ValueError("the two runs did not answer the same questions")
-    pairs = [(p, by_path[p["path"]]) for p in sorted(preds_a, key=lambda p: p["path"])]
+    pairs = [(p, by_question[_question(p["path"])]) for p in sorted(preds_a, key=lambda p: p["path"])]
     labels = card_a["labels"]
     y_true = [a["label"] for a, _ in pairs]
     pred_a, pred_b = [a["prediction"] for a, _ in pairs], [b["prediction"] for _, b in pairs]

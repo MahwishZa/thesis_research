@@ -1,5 +1,5 @@
-"""Step ``images`` of the clinic patients cohort: every photo that stays, made in one fixed way, and the final table of questions
-(dataset.csv). The original photos in raw/ are never changed.
+"""Step ``images`` of the clinic patients cohort: every photo that stays, made in one fixed way. The original photos in raw/ are never
+changed.
 
 Why: the photos are phone pictures of very different sizes (147 to 3,476 pixels; 108 files are over 5 MB and the largest is 23.6 MB). A
 model API may refuse a file that large, and every model shrinks a large photo in its own way, so "the same photo" would not be the
@@ -10,7 +10,7 @@ What is done to a photo, in this order, and nothing else (nothing is cut, added 
 2. converted to RGB if it is not (a photo with transparent pixels stops the step);
 3. converted to sRGB from its embedded colour profile, if it has one;
 4. shrunk, whole and with its proportions kept, so that its longest side is at most ``MAX_SIDE`` pixels (a smaller photo keeps its size);
-5. saved as JPEG with one setting for all (quality 95, full colour resolution) and no metadata, as files/<split>/<class>/<img_id>.jpg.
+5. saved as JPEG with one setting for all (quality 95, full colour resolution) and no metadata, as files/photos/<split>/<class>/<img_id>.jpg.
 
 The step proves that this changes the picture as little as it can, for every photo (it stops if a bar is not met; the bars were fixed
 before the numbers were seen):
@@ -20,9 +20,9 @@ before the numbers were seen):
   original than to that of any other photo's original: a saved photo is never mistaken for another photo;
 - **size:** no saved file larger than ``MAX_FILE_BYTES``, below the limits of the model providers.
 
-Writes files/ (not committed), build/files.csv (every photo: original and saved file, size, fingerprints, what was done, the two
-measures), dataset.csv (build/split.csv with the saved photos: ``path`` and ``sha256`` are the saved file; ``raw_path`` and
-``raw_sha256`` the original) and the images section of dataset_report.md.
+Writes files/photos/ (not committed), build/files.csv (every photo: original and saved file, size, fingerprints, what was done, the two
+measures) and the images section of dataset_report.md. The table of questions (dataset.csv) is written by step ``views``, which joins
+these photos to each patient's record.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from PIL import Image, ImageCms, ImageOps
 
 from ...common import write_section
 from .dedupe import CHUNK, distances, dhash
-from .table import (BUILD, DATA, DATASET, FILES, RAW, REPORT, REPORT_HEAD, SPLIT, STEPS, names, read_csv, sha256, write_csv)
+from .table import BUILD, DATA, PHOTOS, RAW, REPORT, REPORT_HEAD, SPLIT, STEPS, names, read_csv, remove_stale, sha256, write_csv
 
 MAX_SIDE = 1024  # the longest side of a saved photo, in pixels
 JPEG = {"quality": 95, "subsampling": 0}  # one setting for every photo: high quality, full colour resolution (4:4:4), no metadata
@@ -92,12 +92,12 @@ def prepare_image(content: bytes) -> tuple[bytes, float, list[str], tuple[int, i
 
 
 def images(data: Path = DATA) -> dict:
-    """Makes the photos, files/, build/files.csv, dataset.csv and the images section of the report (see the module's description)."""
+    """Makes the photos, files/photos/, build/files.csv and the images section of the report (see the module's description)."""
     data = Path(data)
     questions = read_csv(data / BUILD / SPLIT, "run the split step first")
     raw = {r["img_id"]: r for r in read_csv(data / BUILD / "raw_images.csv", "run the inventory step first")}
     hashes = {r["img_id"]: bytes.fromhex(r["dhash"]) for r in read_csv(data / BUILD / "photo_hashes.csv", "run the dedupe step first")}
-    root = data / FILES
+    root = data / PHOTOS
     rows, written, saved_hashes = [], 0, []
     for q in questions:
         entry = raw[q["img_id"]]
@@ -134,24 +134,12 @@ def images(data: Path = DATA) -> dict:
             block[r, i] = 10 ** 6  # the photo's own original is not "another" photo
             rows[i]["nearest_other_bits"] = int(block[r].min()) if len(rows) > 1 else 256
     _check(rows)
-    listed = {row["path"] for row in rows}
-    stale = sorted(f for f in root.rglob("*.jpg") if f.relative_to(root).as_posix() not in listed) if root.is_dir() else []
-    for file in stale:  # a photo that is no longer in a split: never left for a run to find
-        file.unlink()
-    for folder in sorted((d for d in root.rglob("*") if d.is_dir()), key=lambda d: len(d.parts), reverse=True) if root.is_dir() else []:
-        if not any(folder.iterdir()):
-            folder.rmdir()
-    by_id = {r["img_id"]: r for r in rows}
-    final = [{**{k: v for k, v in q.items()}, "path": by_id[q["img_id"]]["path"], "sha256": by_id[q["img_id"]]["sha256"],
-              "raw_path": by_id[q["img_id"]]["raw_path"], "raw_sha256": by_id[q["img_id"]]["raw_sha256"]} for q in questions]
-    first = ["split", "label", "path", "sha256", "img_id", "patient_id", "lesion_id", "split_group", "biopsed", "raw_path", "raw_sha256"]
-    rest = [c for c in questions[0] if c not in first]
+    removed = remove_stale(root, {row["path"] for row in rows}, ".jpg")  # a photo that is no longer in a split: never left for a run to find
     write_csv(data / BUILD / "files.csv", FILE_COLUMNS, rows)
-    write_csv(data / DATASET, first + rest, final)
     write_section(data / REPORT, REPORT_HEAD, STEPS, "images", _report(rows))
-    return {"summary": f"{len(rows)} photos made ({written} written, {len(stale)} removed); fidelity at least {min(r['psnr_db'] for r in rows):.1f} dB, "
+    return {"summary": f"{len(rows)} photos made ({written} written, {removed} removed); fidelity at least {min(r['psnr_db'] for r in rows):.1f} dB, "
                        f"own original always the nearest (own at most {max(r['hash_bits'] for r in rows)} bits, others at least {min(r['nearest_other_bits'] for r in rows)}); largest file "
-                       f"{max(r['bytes'] for r in rows) / 1e6:.2f} MB", "photos": len(rows), "written": written, "removed": len(stale)}
+                       f"{max(r['bytes'] for r in rows) / 1e6:.2f} MB", "photos": len(rows), "written": written, "removed": removed}
 
 
 def _hash_of(content: bytes) -> np.ndarray:
@@ -185,8 +173,8 @@ def _report(rows: list[dict]) -> list[str]:
     others = [r["nearest_other_bits"] for r in rows]
     lines = ["# Images: the photos every model receives", "",
              "Written by `python -m src.build.clinic_patients.prepare images`. Each photo that stays is made from its original in one fixed way "
-             "(`files/`, not committed; the originals in `raw/` are never changed). `build/files.csv` lists every photo with what was done "
-             "and the two measures below; `dataset.csv` is the final table of questions.", "",
+             "(`files/photos/`, not committed; the originals in `raw/` are never changed). `build/files.csv` lists every photo with what was done "
+             "and the two measures below; step `views` joins them to the records and writes `dataset.csv`.", "",
              "## What is done (in this order, and nothing else)", "",
              "1. Turned upright if the EXIF orientation says so. 2. Converted to RGB if needed (transparent pixels stop the step). "
              "3. Converted to sRGB from the embedded colour profile, if there is one.",
