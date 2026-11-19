@@ -127,8 +127,8 @@ class InventoryTests(unittest.TestCase):
                      "- Photo files in raw/ not named in the table: 1 (`stray.png`)",
                      "- File names found in more than one folder of raw/ (the first path is used): 1 (`P2_L3_a.png`)",
                      "- Photos that cannot be opened: 1 (`P1_L2_a.png`)",
-                     "- Lesions with more than one diagnosis: 1 (`L1`)",
-                     "- Lesions under more than one patient: 1 (`L1`)"):
+                     "- Lesions (patient + `lesion_id`) with more than one diagnosis: 0",
+                     "- `lesion_id` values used by more than one patient: 1 (`L1`)"):
             self.assertIn(line, report)
 
     def test_a_pair_of_identical_photos_is_reported(self):
@@ -200,9 +200,34 @@ class InventoryTests(unittest.TestCase):
             (self.raw / "images" / "imgs_part_1" / name).write_bytes(png(colour))
         prepare.inventory(self.data)
         report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
-        self.assertIn("- Lesions with more than one diagnosis: 1 (`L9`)", report)
-        self.assertIn("- Lesions under more than one patient: 0", report)
+        self.assertIn("- Lesions (patient + `lesion_id`) with more than one diagnosis: 1 (`P7/L9`)", report)
+        self.assertIn("- `lesion_id` values used by more than one patient: 0", report)
         self.assertNotIn("is under", report)
+
+    def test_a_lesion_is_a_patient_and_a_lesion_id_together(self):
+        # lesion_id L1 is used by two patients: P1 and P3 have each a lesion L1, and P1 has another lesion L2 elsewhere on the body
+        rows = [["P1", "L1", "False", "55", "FEMALE", "FACE", "8.0", "True", "BCC", "P1_L1_a.png", "True"],
+                ["P1", "L1", "False", "55", "FEMALE", "FACE", "9.0", "True", "BCC", "P1_L1_b.png", "True"],
+                ["P1", "L2", "False", "55", "FEMALE", "BACK", "5.0", "True", "BCC", "P1_L2_a.png", "True"],
+                ["P3", "L1", "False", "40", "MALE", "LEG", "5.0", "True", "NEV", "P3_L1_a.png", "False"],
+                ["P4", "L1", "False", "61", "MALE", "NOSE", "7.0", "True", "BCC", "P4_L1_a.png", "True"]]
+        self.write_metadata(COLUMNS, rows)
+        (self.raw / "images" / "imgs_part_1" / "P3_L1_a.png").write_bytes(png((4, 4, 4)))
+        (self.raw / "images" / "imgs_part_1" / "P4_L1_a.png").write_bytes(png((6, 6, 6)))
+        for part in ("imgs_part_1", "imgs_part_2"):
+            (self.raw / "images" / part / "P2_L3_a.png").unlink(missing_ok=True)
+        done = prepare.inventory(self.data)
+        self.assertEqual((done["lesions"], done["lesion_ids"], done["patients"]), (4, 2, 3))
+        report = (self.data / prepare.REPORT).read_text(encoding="utf-8")
+        self.assertIn("lesions (patient + `lesion_id`): 4; patients: 3", report)
+        self.assertIn("| BCC | 4 | 3 | 2 |", report)
+        self.assertIn("| NEV | 1 | 1 | 1 |", report)
+        self.assertIn("- Photos per lesion: 1: 3 lesions, 2: 1 lesions", report)
+        self.assertIn("- Distinct patient + lesion pairs: 4 (distinct `lesion_id` values: 2)", report)
+        columns = {r["column"]: r for r in self.table("columns.csv")}
+        self.assertEqual(columns["region"]["level"], "lesion")  # fixed within each lesion; lesion_id alone would say 'photo'
+        self.assertEqual(columns["gender"]["level"], "patient")
+        self.assertEqual(columns["diameter_1"]["level"], "photo")
 
     def test_a_byte_order_mark_is_ignored_and_the_run_is_repeatable(self):
         self.write_metadata(COLUMNS, ROWS, bom=True)

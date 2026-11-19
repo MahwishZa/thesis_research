@@ -12,7 +12,7 @@ the download holds, so that the data sheet states facts and not what a web page 
 - build/columns.csv: every column of metadata.csv, how often it is filled, its values with their counts (or, for a column of
   numbers, the lowest, median and highest), and whether its value stays the same for all photos of one patient or of one lesion;
 - build/downloads.csv: the files in downloads/, with their size and SHA-256;
-- the inventory section of dataset_report.md: the counts of photos, lesions and patients, each class with its photos, lesions,
+- the inventory section of dataset_report.md: the counts of photos, lesions (a lesion is a patient + lesion_id pair) and patients, each class with its photos, lesions,
   patients and how the ``biopsed`` column is filled, the photos named in the table without a file and the files not named in it,
   identical files, lesions with more than one diagnosis or patient, how many clinical fields are filled, by class, which fields are
   empty together (and for which classes), and the size of the photos by class.
@@ -108,13 +108,19 @@ def read_metadata(path: Path) -> tuple[list[str], list[dict]]:
     return columns, rows
 
 
+def lesion_key(row: dict) -> tuple[str, str]:
+    """What identifies a lesion: the patient and the lesion_id together. The same lesion_id is used for lesions of different patients."""
+    return row["patient_id"], row["lesion_id"]
+
+
 def column_level(rows: list[dict], column: str) -> str:
     """Where a column's value is fixed: 'patient' (the same for all photos of a patient), 'lesion' (the same for all photos of a
-    lesion, not of a patient), or 'photo' (it differs between photos of one lesion). Gaps count as values."""
+    lesion, not of a patient), or 'photo' (it differs between photos of one lesion). A lesion is a patient + lesion_id pair: a
+    lesion_id alone is not unique (see lesion_key). Gaps count as values."""
     by_patient, by_lesion = defaultdict(set), defaultdict(set)
     for row in rows:
         by_patient[row["patient_id"]].add(row[column])
-        by_lesion[row["lesion_id"]].add(row[column])
+        by_lesion[lesion_key(row)].add(row[column])
     if all(len(v) == 1 for v in by_patient.values()):
         return "patient"
     if all(len(v) == 1 for v in by_lesion.values()):
@@ -182,12 +188,12 @@ def inventory(data: Path = DATA) -> dict:
 
     summaries = [summarize_column(rows, c) for c in columns]
     clinical = [c for c in columns if c not in NOT_CLINICAL]
-    lesions = defaultdict(lambda: {"diagnoses": set(), "patients": set()})
+    diagnoses, owners = defaultdict(set), defaultdict(set)
     for row in rows:
-        lesions[row["lesion_id"]]["diagnoses"].add(row["diagnostic"])
-        lesions[row["lesion_id"]]["patients"].add(row["patient_id"])
-    two_diagnoses = sorted(k for k, v in lesions.items() if len(v["diagnoses"]) > 1)
-    two_patients = sorted(k for k, v in lesions.items() if len(v["patients"]) > 1)
+        diagnoses[lesion_key(row)].add(row["diagnostic"])
+        owners[row["lesion_id"]].add(row["patient_id"])
+    two_diagnoses = sorted(f"{patient}/{lesion}" for (patient, lesion), v in diagnoses.items() if len(v) > 1)
+    two_patients = sorted(k for k, v in owners.items() if len(v) > 1)
 
     _write_csv(data / "build" / "raw_images.csv", IMAGE_COLUMNS, images)
     _write_csv(data / "build" / "columns.csv", COLUMN_COLUMNS, summaries)
@@ -197,7 +203,7 @@ def inventory(data: Path = DATA) -> dict:
                      "unreadable": unreadable, "same_content": same_content, "two_diagnoses": two_diagnoses,
                      "two_patients": two_patients})
     write_section(data / REPORT, REPORT_HEAD, STEPS, "inventory", lines)
-    return {"rows": len(rows), "photos": len(images), "lesions": len({r["lesion_id"] for r in rows}),
+    return {"rows": len(rows), "photos": len(images), "lesions": len({lesion_key(r) for r in rows}), "lesion_ids": len({r["lesion_id"] for r in rows}),
             "patients": len({r["patient_id"] for r in rows}), "classes": Counter(r["diagnostic"] for r in rows),
             "missing": len(missing), "unnamed": len(unnamed), "columns": len(columns),
             "written": [(data / "build" / f).as_posix() for f in ("raw_images.csv", "columns.csv", "downloads.csv")]
@@ -213,12 +219,12 @@ def _groups(items, key):
 
 def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dict], clinical: list[str], images: list[dict],
             downloads: list[dict], problems: dict) -> list[str]:
-    patients, lesions = {r["patient_id"] for r in rows}, {r["lesion_id"] for r in rows}
+    patients, lesions = {r["patient_id"] for r in rows}, {lesion_key(r) for r in rows}
     biopsy_values = sorted({r["biopsed"] for r in rows})
     lines = ["# Inventory: what the download holds", "",
              "Written by `python -m src.build.clinic_patients.prepare inventory`, which only reads the download. Nothing here is decided yet.", "",
              f"- `{metadata}`: {len(rows)} rows, {len(columns)} columns (SHA-256 `{metadata_sha[:12]}`)",
-             f"- Photos named in the table and found: {len(images)}; lesions: {len(lesions)}; patients: {len(patients)}",
+             f"- Photos named in the table and found: {len(images)}; lesions (patient + `lesion_id`): {len(lesions)}; patients: {len(patients)}",
              f"- Downloaded files fingerprinted (`build/downloads.csv`): {len(downloads) or 'none (downloads/ is empty or absent)'}",
              "", "## Classes", "",
              "The `diagnostic` column, with the `biopsed` column as written (it is never shown to a model: it points to the label).", "",
@@ -227,11 +233,12 @@ def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dic
     for label in sorted({r["diagnostic"] for r in rows}):
         mine = [r for r in rows if r["diagnostic"] == label]
         biopsy = Counter(r["biopsed"] for r in mine)
-        lines.append(f"| {label} | {len(mine)} | {len({r['lesion_id'] for r in mine})} | {len({r['patient_id'] for r in mine})} | "
+        lines.append(f"| {label} | {len(mine)} | {len({lesion_key(r) for r in mine})} | {len({r['patient_id'] for r in mine})} | "
                      + " | ".join(str(biopsy[v]) for v in biopsy_values) + " |")
-    per_lesion = Counter(Counter(r["lesion_id"] for r in rows).values())
+    per_lesion = Counter(Counter(lesion_key(r) for r in rows).values())
     per_patient = Counter(len(v) for v in _lesions_by_patient(rows).values())
     lines += ["", "## How photos, lesions and patients relate", "",
+              "A lesion is a patient + `lesion_id` pair: the same `lesion_id` is used for lesions of different patients.", "",
               "- Photos per lesion: " + ", ".join(f"{k}: {v} lesions" for k, v in sorted(per_lesion.items())),
               "- Lesions per patient: " + ", ".join(f"{k}: {v} patients" for k, v in sorted(per_patient.items())), "",
               "## Clinical fields filled, by class", "",
@@ -275,12 +282,11 @@ def _report(metadata: str, metadata_sha: str, columns: list[str], rows: list[dic
               ("Photo files in raw/ not named in the table", problems["unnamed"]),
               ("File names found in more than one folder of raw/ (the first path is used)", problems["twice_on_disk"]),
               ("Photos that cannot be opened", problems["unreadable"]),
-              ("Lesions with more than one diagnosis", problems["two_diagnoses"]),
-              ("Lesions under more than one patient", problems["two_patients"])]
+              ("Lesions (patient + `lesion_id`) with more than one diagnosis", problems["two_diagnoses"]),
+              ("`lesion_id` values used by more than one patient", problems["two_patients"])]
     for title, items in checks:
         lines.append(f"- {title}: {len(items)}" + (f" ({_names(items)})" if items else ""))
-    pairs = {(r["patient_id"], r["lesion_id"]) for r in rows}
-    lines.append(f"- Distinct patient + lesion pairs: {len(pairs)} (distinct `lesion_id` values: {len(lesions)})")
+    lines.append(f"- Distinct patient + lesion pairs: {len(lesions)} (distinct `lesion_id` values: {len({r['lesion_id'] for r in rows})})")
     for lesion in problems["two_patients"][:LESION_EXAMPLES]:
         owners = sorted({r["patient_id"] for r in rows if r["lesion_id"] == lesion})
         lines.append(f"  - `lesion_id` `{lesion}` is under " + ", ".join(
