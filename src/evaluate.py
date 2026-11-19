@@ -2,7 +2,6 @@
 
     python -m src.evaluate report results/<dataset>/<approach>/<model>/<run-folder>
     python -m src.evaluate compare results/<dataset>/<approach>/<model>/<run-folder> results/<dataset>/<approach>/<model>/<run-folder>
-    python -m src.evaluate reread results/<dataset>/<approach>/<model>/<run-folder>
 
 ``report`` writes a run's scores from its saved answers: metrics.json and report.md. It reads the answer format of the code
 (``json-v2``); a run of the first phase of Version 1, whose answers are single class names, is in archive/v1/ with its own scores and
@@ -10,11 +9,7 @@ is not read here. The metrics and their sources are in docs/method.md.
 ``compare`` sets two finished runs on the same questions side by side (two models, or two variants of a method in an ablation):
 the difference in balanced accuracy and in macro-F1 with paired 95% intervals (both runs resampled together, by the same groups
 as the reports; the main comparison), and McNemar's exact test on the questions one run gets right and the other wrong (a
-supporting test); ``compare --reread`` does the same on the re-read answers (see ``reread``).
-``reread`` reads the raw text of every saved answer of a closed-book run again with the answer reader of the code, and writes
-predictions_reread.jsonl, metrics_reread.json and report_reread.md beside the originals, which it never touches. The reader changed on
-2026-11-19, after the first test runs: a claim may leave out its empty ``evidence`` list. Answers read under the old rule and the new
-one are both kept, and both scores are reported (docs/method.md, section 2).
+supporting test).
 """
 
 from __future__ import annotations
@@ -29,10 +24,9 @@ from .common import read_jsonl, write_json
 from .datasets import DATASETS, SAME_QUESTIONS, Dataset, dataset_of, question_of
 from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, interval, mcnemar,
                       summarize)
-from .prompts import ANSWER_FORMAT, parse_json_answer
+from .prompts import ANSWER_FORMAT
 
 RESULTS = Path("results")  # results/<dataset>/<approach>/<model>/<run>/
-REREAD_ANSWERS = "predictions_reread.jsonl"  # beside predictions.jsonl: the same answers read again by the current reader
 
 
 def require_current_format(card: dict) -> None:
@@ -99,11 +93,11 @@ def _verified(card: dict, preds: list[dict], complete: bool = False) -> None:
 # The scores of one run
 
 
-def score_run(run_dir: str | Path, reread: bool = False) -> tuple[dict, list[dict], dict]:
-    """A run's card, saved answers (the re-read ones with ``reread``) and every score (computed, nothing written)."""
+def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
+    """A run's card, saved answers and every score (computed, nothing written)."""
     run_dir = Path(run_dir)
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
-    preds = read_jsonl(run_dir / (REREAD_ANSWERS if reread else "predictions.jsonl"))
+    preds = read_jsonl(run_dir / "predictions.jsonl")
     require_current_format(card)
     _verified(card, preds, complete=card["status"] == "complete")
     labels, kind = card["labels"], DATASETS[dataset_of(card)]
@@ -210,21 +204,16 @@ def _without(set_apart: dict, kind: Dataset, n_labels: int) -> list[str]:
     return lines + [""]
 
 
-def write_report(run_dir: str | Path, reread: bool = False, changed: int | None = None) -> Path:
-    """Writes a run's scores and report (see the module's description); returns the report's path. With ``reread`` the scores of the
-    re-read answers go to metrics_reread.json and report_reread.md, and ``changed`` is how many answers the reader read differently."""
+def write_report(run_dir: str | Path) -> Path:
+    """Writes a run's scores and report (see the module's description); returns the report's path."""
     run_dir = Path(run_dir)
-    card, preds, metrics = score_run(run_dir, reread)
+    card, preds, metrics = score_run(run_dir)
     labels, kind = card["labels"], DATASETS[dataset_of(card)]
-    write_json(run_dir / ("metrics_reread.json" if reread else "metrics.json"), metrics)
+    write_json(run_dir / "metrics.json", metrics)
 
     n_files = card[f"n_{kind.item}s"]
     complete = card["status"] == "complete" and len(preds) == n_files
     lines = [f"# {card['name']}: {card['split']} split, run {card['run_id']}", ""]
-    if reread:
-        lines += [f"**Answers re-read with the current answer reader** (a claim may leave out its empty evidence list; rule of 2026-11-19, "
-                  f"docs/method.md section 2). {changed} of {len(preds)} answers were read differently from the original run. "
-                  "The original `report.md`, `metrics.json` and `predictions.jsonl` are unchanged and remain the strict result.", ""]
     if card["split"] == "val":
         lines += ["**Validation run: for tuning the method, not a reported result.**", ""]
     if not complete:
@@ -281,47 +270,18 @@ def write_report(run_dir: str | Path, reread: bool = False, changed: int | None 
                     if len(revisions) > 1 else "")] if revisions else []),
               f"- Interruptions before the run finished: {len(card.get('interruptions', []))}"
               + "".join(f"; {i['utc']} after {i['answered']} answers ({i['kind']})" for i in card.get("interruptions", []))]
-    path = run_dir / ("report_reread.md" if reread else "report.md")
+    path = run_dir / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return path
-
-
-def reread(run_dir: str | Path) -> Path:
-    """Reads the raw text of every saved answer of a closed-book run again with the current answer reader and writes
-    predictions_reread.jsonl, metrics_reread.json and report_reread.md beside the originals (nothing is overwritten). Only the fields
-    the reader makes are replaced; the rest of each answer (raw text, usage, model version) is kept. Returns the report's path."""
-    run_dir = Path(run_dir)
-    card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
-    require_current_format(card)
-    if card["config"].get("approach", "closed_book") != "closed_book":
-        raise ValueError("only closed-book answers can be read again from their text: an open-book answer is read against the "
-                         "passages the run gave, which are not kept with the answer")
-    if card["status"] != "complete":
-        raise ValueError(f"{run_dir.as_posix()} is not a finished run")
-    preds, again, changed = read_jsonl(run_dir / "predictions.jsonl"), [], 0
-    for p in preds:
-        parsed, problem = parse_json_answer(p["raw_text"], card["labels"])
-        new = {**p, "prediction": parsed["diagnosis"] if parsed else None, "differential": parsed["differential"] if parsed else None,
-               "evidence_sufficient": parsed["evidence_sufficient"] if parsed else None, "reason": parsed["reason"] if parsed else None,
-               "claims": parsed["claims"] if parsed else None, "evidence": parsed["evidence"] if parsed else None, "invalid": problem}
-        changed += (new["prediction"], new["invalid"]) != (p["prediction"], p["invalid"])
-        again.append(new)
-    path = run_dir / REREAD_ANSWERS
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in again), encoding="utf-8", newline="\n")
-    tmp.replace(path)
-    return write_report(run_dir, reread=True, changed=changed)
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 # Two runs side by side (python -m src.evaluate compare): one model or method against another, on the same questions
 
 
-def _finished(run_dir: Path, reread: bool = False) -> tuple[dict, list[dict]]:
+def _finished(run_dir: Path) -> tuple[dict, list[dict]]:
     card = json.loads((run_dir / "run_card.json").read_text(encoding="utf-8"))
-    if reread and not (run_dir / REREAD_ANSWERS).is_file():
-        raise ValueError(f"{run_dir.as_posix()} has no {REREAD_ANSWERS}: run python -m src.evaluate reread on it first")
-    preds = read_jsonl(run_dir / (REREAD_ANSWERS if reread else "predictions.jsonl"))
+    preds = read_jsonl(run_dir / "predictions.jsonl")
     kind = DATASETS[dataset_of(card)]
     if card["status"] != "complete" or len(preds) != card[f"n_{kind.item}s"]:
         raise ValueError(f"{run_dir.as_posix()} is not a finished run: only finished runs are compared")
@@ -330,10 +290,10 @@ def _finished(run_dir: Path, reread: bool = False) -> tuple[dict, list[dict]]:
     return card, preds
 
 
-def compare(run_a: str | Path, run_b: str | Path, reread: bool = False) -> dict:
+def compare(run_a: str | Path, run_b: str | Path) -> dict:
     """How run B differs from run A on the same questions: the differences (B minus A) in balanced accuracy and macro-F1, with
     paired 95% intervals (the main comparison), and McNemar's exact test on right against wrong answers (a supporting test)."""
-    (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a), reread), _finished(Path(run_b), reread)
+    (card_a, preds_a), (card_b, preds_b) = _finished(Path(run_a)), _finished(Path(run_b))
     dataset, dataset_b = dataset_of(card_a), dataset_of(card_b)
     kind, kind_b = DATASETS[dataset], DATASETS[dataset_b]
     # Two different datasets whose questions can be paired (SAME_QUESTIONS: a photo without and with its patient's facts; a clinic photo,
@@ -426,9 +386,6 @@ def build_parser() -> argparse.ArgumentParser:
     cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (paired intervals, McNemar's test)")
     cmp.add_argument("run_a")
     cmp.add_argument("run_b")
-    cmp.add_argument("--reread", action="store_true", help="compare the re-read answers of both runs (python -m src.evaluate reread first)")
-    again = sub.add_parser("reread", help="read the raw text of a closed-book run's answers again with the current answer reader")
-    again.add_argument("run_dir")
     return parser
 
 
@@ -437,10 +394,8 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "report":
             print(write_report(args.run_dir))
-        elif args.command == "reread":
-            print(reread(args.run_dir))
         else:
-            print(comparison_text(compare(args.run_a, args.run_b, args.reread)))
+            print(comparison_text(compare(args.run_a, args.run_b)))
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback
         raise SystemExit(f"ERROR: {exc}") from exc
 

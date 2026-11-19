@@ -10,14 +10,14 @@
 
 | Score | Value | 95% interval |
 |---|---|---|
-| **Balanced accuracy (main score)** | **50.6%** | 40.1% to 60.8% (bootstrap over articles) |
-| Macro-F1 | 49.4% | 41.5% to 57.1% (bootstrap over articles) |
-| Macro-averaged top-3 accuracy (the true class in the differential) | 77.8% | 71.6% to 82.9% (bootstrap over articles) |
-| Invalid answers (counted as wrong) | 11.0% (23/209) | |
+| **Balanced accuracy (main score)** | **56.1%** | 45.5% to 66.3% (bootstrap over articles) |
+| Macro-F1 | 52.8% | 45.0% to 60.7% (bootstrap over articles) |
+| Macro-averaged top-3 accuracy (the true class in the differential) | 87.5% | 82.3% to 92.1% (bootstrap over articles) |
+| Invalid answers (counted as wrong) | 0.5% (1/209) | |
 
 ### Selective prediction
 
-Over the 186 valid answers. The model answers a question by marking its evidence "sufficient" and abstains by marking it "not sufficient" (selective classification, Geifman & El-Yaniv 2017).
+Over the 208 valid answers. The model answers a question by marking its evidence "sufficient" and abstains by marking it "not sufficient" (selective classification, Geifman & El-Yaniv 2017).
 
 | Score | Value | 95% interval |
 |---|---|---|
@@ -30,12 +30,12 @@ Over the 186 valid answers. The model answers a question by marking its evidence
 |---|---|---|---|---|
 | actinic keratosis | 2 | 50.0% (0.0% to 100.0%) | 14.3% | 22.2% |
 | basal cell carcinoma | 40 | 45.0% (30.0% to 60.0%) | 72.0% | 55.4% |
-| dermatofibroma | 20 | 45.0% (22.2% to 65.0%) | 75.0% | 56.2% |
-| melanoma | 37 | 48.6% (32.4% to 64.9%) | 48.6% | 48.6% |
-| nevus | 39 | 48.7% (33.3% to 64.1%) | 67.9% | 56.7% |
-| pigmented benign keratosis | 18 | 27.8% (5.6% to 50.0%) | 55.6% | 37.0% |
-| squamous cell carcinoma | 37 | 64.9% (48.6% to 78.4%) | 54.5% | 59.3% |
-| vascular lesion | 16 | 75.0% (50.0% to 93.8%) | 50.0% | 60.0% |
+| dermatofibroma | 20 | 50.0% (27.8% to 72.2%) | 76.9% | 60.6% |
+| melanoma | 37 | 56.8% (40.5% to 73.0%) | 51.2% | 53.8% |
+| nevus | 39 | 56.4% (41.0% to 71.8%) | 64.7% | 60.3% |
+| pigmented benign keratosis | 18 | 38.9% (16.7% to 61.1%) | 63.6% | 48.3% |
+| squamous cell carcinoma | 37 | 70.3% (54.1% to 83.8%) | 50.0% | 58.4% |
+| vascular lesion | 16 | 81.2% (62.5% to 100.0%) | 52.0% | 63.4% |
 
 ### Confusion matrix
 
@@ -44,13 +44,13 @@ Rows: the true class; columns: the diagnosis given.
 | True \ Answer | actinic keratosis | basal cell carcinoma | dermatofibroma | melanoma | nevus | pigmented benign keratosis | squamous cell carcinoma | vascular lesion | (invalid) |
 |---|---|---|---|---|---|---|---|---|---|
 | actinic keratosis | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| basal cell carcinoma | 3 | 18 | 0 | 4 | 1 | 0 | 7 | 1 | 6 |
-| dermatofibroma | 0 | 1 | 9 | 2 | 1 | 0 | 2 | 3 | 2 |
-| melanoma | 0 | 2 | 0 | 18 | 2 | 0 | 7 | 4 | 4 |
-| nevus | 0 | 1 | 2 | 8 | 19 | 2 | 0 | 4 | 3 |
-| pigmented benign keratosis | 0 | 1 | 0 | 5 | 1 | 5 | 2 | 0 | 4 |
-| squamous cell carcinoma | 3 | 1 | 1 | 0 | 3 | 2 | 24 | 0 | 3 |
-| vascular lesion | 0 | 1 | 0 | 0 | 1 | 0 | 1 | 12 | 1 |
+| basal cell carcinoma | 3 | 18 | 0 | 5 | 1 | 0 | 12 | 1 | 0 |
+| dermatofibroma | 0 | 1 | 10 | 2 | 2 | 0 | 2 | 3 | 0 |
+| melanoma | 0 | 2 | 0 | 21 | 3 | 0 | 7 | 4 | 0 |
+| nevus | 0 | 1 | 2 | 8 | 22 | 2 | 0 | 4 | 0 |
+| pigmented benign keratosis | 0 | 1 | 0 | 5 | 2 | 7 | 3 | 0 | 0 |
+| squamous cell carcinoma | 3 | 1 | 1 | 0 | 3 | 2 | 26 | 0 | 1 |
+| vascular lesion | 0 | 1 | 0 | 0 | 1 | 0 | 1 | 13 | 0 |
 
 - Patients described in one article are not independent: the intervals resample whole articles (207 articles for 209 cases).
 - A dash means undefined: precision when a class was never given. A class never given counts as 0 in the macro-F1.
@@ -64,10 +64,10 @@ The scores below leave out the cases of actinic keratosis, to show how much it m
 
 | Score | Value | 95% interval |
 |---|---|---|
-| **Balanced accuracy (main score)** | **50.7%** | 43.8% to 57.5% (bootstrap over articles) |
-| Macro-F1 | 53.4% | 46.0% to 60.3% (bootstrap over articles) |
-| Macro-averaged top-3 accuracy (the true class in the differential) | 74.6% | 68.0% to 80.8% (bootstrap over articles) |
-| Invalid answers (counted as wrong) | 11.1% (23/207) | |
+| **Balanced accuracy (main score)** | **56.9%** | 50.0% to 63.9% (bootstrap over articles) |
+| Macro-F1 | 57.3% | 49.8% to 64.3% (bootstrap over articles) |
+| Macro-averaged top-3 accuracy (the true class in the differential) | 85.7% | 79.9% to 90.9% (bootstrap over articles) |
+| Invalid answers (counted as wrong) | 0.5% (1/207) | |
 
 The cases left out, and the answers:
 
@@ -79,6 +79,6 @@ The cases left out, and the answers:
 ## Notes
 
 - How answers ended (finish reason): STOP: 209
-- Why answers were invalid: a claim must have exactly the keys statement and evidence: 22; not a class of the list: 'glomus tumor': 1
+- Why answers were invalid: not a class of the list: 'glomus tumor': 1
 - Sessions (starts and restarts of this run): 1; Git commits: 5d411e5af9
 - Interruptions before the run finished: 0

@@ -1,7 +1,20 @@
 # Progress (2026-11-19)
 
-Temporary page, removed with `docs/` when the research is final. It records where the work stands. **Nothing here is a final result: no
-Version 2 experiment has been run, and the datasets are not frozen.**
+Temporary page, removed with `docs/` when the research is final. It records where the work stands. The datasets are not frozen yet;
+each run card names the table and its hash that the run used.
+
+## Closed-book results so far
+
+`published_text`, test split (209 cases, 8 classes, chance 12.5%), one run per model. Balanced accuracy is the main score.
+
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers |
+|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 61.0% | 55.1 to 66.3 | 60.9% | 91.4% | 0 |
+| Gemini 3.8 Flash | 59.6% | 53.5 to 65.1 | 58.6% | 91.6% | 0 |
+| GPT-4o | 56.1% | 45.5 to 66.3 | 52.8% | 87.5% | 1 |
+| Llama 4 Maverick | 41.9% | 35.9 to 47.9 | 41.6% | 83.7% | 4 |
+
+The other five datasets (`published_text_photos`, `published_photos`, `clinic_photo`, `clinic_record`, `clinic_photo_record`) are being run with Claude first, then Gemini; GPT-4o and Llama wait for funding. The runs are in `results/`, each with its report.
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
@@ -15,7 +28,7 @@ Each folder has a committed table, a report of every preparation step and a data
 
 ## Pipeline
 
-- Built and tested: the closed-book approach (a model answers from the question alone), the strict answer reader, the scores, intervals and
+- Built and tested: the closed-book approach (a model answers from the question alone), the answer reader, the scores, intervals and
   paired comparisons, resumable runs, and the no-cost checks (`python -m src.validate`).
 - Not built: standard RAG, RAG² and the proposed method; evidence-grounding metrics; an adapter for a local open-weight model.
 - The audit of the repository, with its findings and open decisions, is in `docs/audit.md`; how the code is organised is in

@@ -1,5 +1,7 @@
 # Version 1 (archived)
 
+> **Version 1 is obsolete.** It is kept here only for reference and will be removed as soon as the research is finalized.
+
 This folder is a frozen copy of Version 1 of the research, kept for reference. It does not bind Version 2 (see
 `docs/v2_proposal.md`).
 

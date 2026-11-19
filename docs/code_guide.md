@@ -59,7 +59,7 @@ For one model and one dataset (the examples use `claude-sonnet-5-5` and `publish
 3. Optional, to look at the answers first: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split val --limit 5`. A validation run stays on the laptop (Git ignores it) and is never a result. Read `raw_text` in its `predictions.jsonl` for answers marked invalid. A run also stops by itself if its first 10 answers are all invalid.
 4. `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`: the result. It needs a clean Git state (the run card names the code) and a pinned model, and it runs once per model, dataset and approach. If it stops (quota, network), the same command continues it. At the end it checks its own answer file and writes `report.md` and `metrics.json`.
 5. Commit the finished folder `results/<dataset>/closed_book/<model>/test_<id>/` (`run_card.json`, `predictions.jsonl`, `metrics.json`, `report.md`, `run.log`). A folder ending in `.partial` is unfinished and is ignored by Git.
-6. Since the reader rule of 2026-11-19 (a claim may leave out its empty `evidence` list), read each finished closed-book run again with python -m src.evaluate reread, then the run folder: it writes `report_reread.md` and `metrics_reread.json` beside the originals. Report both. Compare two finished runs on the same questions with python -m src.evaluate compare, then the two run folders (add --reread to compare the re-read answers). The three clinic views pair with each other, and so do the three views of the published cases (on the cases that have photos).
+6. Compare two finished runs on the same questions with python -m src.evaluate compare, then the two run folders. The three clinic views pair with each other, and so do the three views of the published cases (on the cases that have photos).
 
 Cost control: a run sends one request per question (`requests_per_minute` in the model list paces it). Check one model on one dataset with `--limit` before a full test run, and read the token counts in `predictions.jsonl` (`usage`) to estimate the rest.
 
@@ -78,7 +78,7 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | 2. Dataset reading | the committed table is read and every file is hashed against it, byte for byte | `datasets.load_dataset` | a run stops on any difference |
 | 3. Prompt | one template per dataset and approach; the class names are put in; a case or a record goes in word for word | `prompts.py`, `prompts/` | `validate` (same answer block everywhere); a run's card stores the prompt |
 | 4. Model call | one adapter per API; retries, pace, a pinned model version | `models.py`, `run.py` | `run check`; a test run needs a pinned model and a clean Git state |
-| 5. Answer reading | strict: one JSON object, the exact keys, three different classes of the list | `prompts.parse_json_answer` | an invalid answer counts as wrong and is counted apart; the first 10 all invalid stop the run |
+| 5. Answer reading | one JSON object, the exact keys, three different classes of the list | `prompts.parse_json_answer` | an invalid answer counts as wrong and is counted apart; the first 10 all invalid stop the run |
 | 6. Saving | each answer is appended as it arrives; a stopped run resumes | `run.py`, `common.py` | `evaluate.verify_answers` before a run is called finished |
 | 7. Scoring | every score is computed from the saved answers only | `metrics.py`, `evaluate.py` | verified answers only; scores checked against a naive computation in the tests |
 | 8. Comparison | two runs on the same questions, paired intervals | `evaluate.compare` | same split, same answer options, same questions (or the shared subset), current answer format |
@@ -90,11 +90,11 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | File | Responsibility |
 |---|---|
 | `datasets.py` | The six datasets (`DATASETS`): what differs between them (text or image, its group, its facts, its pictures). Reads a table and checks it is one consistent dataset (`read_table`); checks that every file on disk is the one the table lists (`load_dataset`); the answer options (`classes`: the classes of the training split); `question_of`, the id that pairs the views of one question; the hash of a set of questions. |
-| `prompts.py` | The prompt template (placeholders checked) and `parse_json_answer`, the strict answer reader: the same for every model, so differences come from the models. |
+| `prompts.py` | The prompt template (placeholders checked) and `parse_json_answer`, the answer reader: the same for every model, so differences come from the models. |
 | `models.py` | One adapter per API: Anthropic and OpenAI-style (GPT-4o, Gemini and Llama through OpenRouter). Each answers one prompt with or without images in the same form; failures are a transient, a quota or a fatal error. No local open-weight adapter exists yet. |
 | `run.py` | `check` (everything a run needs, one tiny request) and `run` (one model, one dataset, one approach, the validation or test split): seeded order, saved as it arrives, resumable, run card with the Git commit and package versions, one test run per model, dataset and approach. |
 | `metrics.py` | Pure functions: balanced accuracy, macro-F1, macro-averaged top-3 accuracy, coverage, selective risk, precision@k and nDCG@k (for the open-book runs), bootstrap and Wilson intervals, McNemar, Holm. |
-| `evaluate.py` | `verify_answers` (is a saved answer file consistent), `report` (a run's scores and report), `reread` (read a closed-book run's raw answers again with the current reader, beside the originals) and `compare` (two runs, paired; `--reread` for the re-read answers). |
+| `evaluate.py` | `verify_answers` (is a saved answer file consistent), `report` (a run's scores and report) and `compare` (two runs, paired). |
 | `validate.py` | The no-cost checks (`python -m src.validate`): tables, leaks, alignment of the views, prompts, model list, knowledge index. |
 | `common.py` | Helpers shared by the builders and the runs: polite download, report sections, tables, crash-safe JSON-lines. |
 

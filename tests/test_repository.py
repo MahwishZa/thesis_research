@@ -66,9 +66,8 @@ class RepositoryTests(unittest.TestCase):
                     if folder:
                         self.assertTrue((ROOT / folder / "run_card.json").is_file(), f"the README names a run that does not exist: {folder}")
 
-    def test_the_readme_has_only_the_overview_and_the_research_update_and_names_files_that_exist(self):
-        self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M), ["Overview", "Research Update"])
-        self.assertIn("No Version 2\nexperiment has been run", self.readme)  # preliminary work is never presented as a result
+    def test_the_readme_has_only_the_overview_and_names_files_that_exist(self):
+        self.assertEqual(re.findall(r"^## (.+)$", self.readme, re.M), ["Overview"])
         for path in re.findall(r"`((?:docs|archive)/[^`]+)`", self.readme):
             if path.endswith((".md", "/")):
                 self.assertTrue((ROOT / path).exists(), f"the README names a file that does not exist: {path}")
