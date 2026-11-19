@@ -54,7 +54,8 @@ class DatasetKindTests(unittest.TestCase):
                                 facts_column="facts", missing_fact="unknown", folder="f", files="f/files")
         self.assertEqual(kind.missing_fact, "unknown")
         self.assertEqual(datasets.DATASETS["clinic_photo_record"].missing_fact, "unknown")
-        self.assertEqual(datasets.DATASETS["clinic_photo"].missing_fact, "")  # no facts column, nothing to say
+        self.assertEqual(datasets.DATASETS["clinic_record"].missing_fact, "unknown")  # its record is the file, and says it the same way
+        self.assertEqual(datasets.DATASETS["clinic_photo"].missing_fact, "")  # a photo alone has no record, nothing to say
 
 
 class DatasetTests(Project):

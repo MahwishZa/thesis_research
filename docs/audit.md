@@ -23,7 +23,7 @@ Marks: ✔ verified in this audit by running code or reading the file named; ◻
 | 10 | The metrics had hand-worked tests only. | `tests/test_metrics.py` ✔ | Added a test that recomputes every score the long way, question by question, on 60 random runs; all agree. |
 | 11 | The 108 passages about how lesions look (`data/knowledge/appearance.csv`) are **not in the retrieval index** (`index.csv` holds the 429 training cases and the 5,553 library passages). | `index.py` indexes cases and library only; none of the 108 ids is in `index.csv` ✔ | Not changed (D6). |
 
-State after the audit: 468 tests pass (8 skipped: they need the laptop's files), lint clean, 34 deliberate breaks of the new code all caught.
+State after the audit: 479 tests pass (8 skipped: they need the laptop's files), lint clean, 34 deliberate breaks of the new code all caught.
 
 ## 2. Does the data support the research objective?
 
@@ -133,7 +133,7 @@ Run these in order. None sends anything to a model.
 |---|---|
 | `python -m src.validate` | tables consistent; no patient or article in two splits; every view asks the same questions; same photo, same record, same pictures across views; the prompts end with one identical answer block whose example the reader accepts; every model entry complete on every dataset and approach; no validation or test case in the knowledge index |
 | `python -m src.validate --files` (laptop) | the same, and every photo and text on the computer is byte for byte the one its table lists |
-| `python -m unittest discover tests` | 468 tests: the builders, the reader, the metrics (also against a naive computation), run, resume, refusal and report logic, repository consistency |
+| `python -m unittest discover tests` | 479 tests: the builders, the reader, the metrics (also against a naive computation), run, resume, refusal and report logic, repository consistency |
 | `ruff check --select F,E4,E7,E9 src tests` | no unused import or name, no syntax problem |
 | `python -m src.run check --model <name> --dataset <dataset>` | one tiny request (a fraction of a cent) that shows a wrong key, an unavailable model or a cut-off answer before a run |
 
@@ -150,8 +150,8 @@ options, formats and questions.
 | D2 | Does the thesis measure evidence grounding, and with which metrics? **The answer format is now decided (json-v2, 2026-11-19: the current format plus 1 to 3 `claims`, each with the passages it relies on); the metrics are not.** | "evidence-based" and "reduces unsupported claims" need it; the approved method has none | decide the answer format first (`json-v2` in the proposal asks for findings and claims); then the metrics follow. No metric should be added before that |
 | D3 | The word "hallucination" for a confident wrong diagnosis. | an examiner may object that it is overconfidence, not hallucination | **Done (2026-11-19, your decision):** the score is called "confident misdiagnosis" in the method and the reports; "unsupported claim" is kept for the grounding metric |
 | D4 | What "evidence_sufficient" means closed-book against open-book. | the same field is self-confidence in one and a judgement of the retrieved evidence in the other | state both in the method; compare detection scores only inside one approach, and use selective risk across approaches |
-| D5 | The "complete record" score for the record view. | the combined view has it, the record view does not | add it (it needs the record text in the saved answers, or a join on the question) |
-| D6 | Put the 108 appearance passages into the index? | they describe how lesions look, which is what an image question retrieves | yes, before any open-book run; it changes `index.csv` and its fingerprint, so it is yours to approve |
+| D5 | The "complete record" score for the record view. | the combined view had it, the record view did not | **Done (2026-11-19):** the record view saves the record text with each answer and gets the same score |
+| D6 | Put the 108 appearance passages into the index? | they describe how lesions look, which is what an image question retrieves | **Only after your reading:** `python -m src.build.knowledge.review draw` writes 30 of them to read; `review score` writes the report. Bar fixed beforehand: at least 90% pass both questions. If met, adding them is your decision; it changes `index.csv` and its fingerprint |
 | D7 | Should the split be redrawn? | validation holds 98% single-photo patients | no: class, age and site are balanced and a redraw would break the rule against reshuffling (section 2) |
 | D8 | Is the clinic record an acceptable "text only" setting? | it is six structured fields, not narrative text | keep both text settings (record and published cases) and say plainly what each tests |
 | D9 | The analysis of cases from before and after a model's training date. | memory of the source can raise closed-book scores and hide the gain from retrieval | write it when results exist ("if necessary" in your words) |

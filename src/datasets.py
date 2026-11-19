@@ -46,7 +46,7 @@ class Dataset:
     pictures_root: str = ""  # the folder in data/ the pictures' paths start from
     subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
     unique_content: bool = True  # False: two questions may have the same content (a patient record is the same words for two patients)
-    missing_fact: str = ""  # with a facts column: how a missing fact reads there (the questions without one are scored again beside the main score)
+    missing_fact: str = ""  # how a missing fact reads in what the model is shown (the questions without one are scored again beside the main score); required with a facts column; a text dataset that is a record sets it too
 
     def __post_init__(self):
         if not self.folder or not self.files:
@@ -76,7 +76,7 @@ DATASETS = {  # the datasets a config can name
                             "Photos of one patient are not independent", folder="clinic_patients", files="clinic_patients/files/photos"),
     "clinic_record": Dataset(TEXT_TYPES, "a .txt file", True, "patient_id", "record", "patient",
                              "Photos and records of one patient are not independent", table="record.csv", folder="clinic_patients",
-                             files="clinic_patients/files/records", unique_content=False),
+                             files="clinic_patients/files/records", unique_content=False, missing_fact="unknown"),
     "clinic_photo_record": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient",
                                    "Photos of one patient are not independent", facts_column="facts", folder="clinic_patients",
                                    files="clinic_patients/files/photos", missing_fact="unknown"),

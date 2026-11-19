@@ -114,7 +114,7 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
             "left_out": left_out, "metrics": scores([p for p in preds if p["label"] not in left_out]),
             "files": [{"path": p["path"], "label": p["label"], "prediction": p["prediction"]}
                       for p in sorted(preds, key=lambda p: p["path"]) if p["label"] in left_out]}
-    if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
+    if kind.missing_fact:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
         complete_facts = [p for p in preds if kind.missing_fact not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
     return card, preds, metrics

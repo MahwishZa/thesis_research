@@ -137,6 +137,14 @@ class ClinicViews(Cohort):
         report = (folder / "report.md").read_text(encoding="utf-8")
         self.assertIn("A missing fact (\"unknown\") can itself point to the class", report)
         self.assertIn(f"count only the {self.n_test() - 2} of {self.n_test()} questions with every fact recorded", report)
+        folder, _ = self.ask("clinic_record")  # the record view has the same score: the record is what it shows
+        metrics = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual((metrics["main"]["n"], metrics["all_facts_recorded"]["questions"]), (self.n_test(), self.n_test() - 2))
+        saved = [json.loads(x) for x in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertTrue(all(p["facts"].startswith("1. Age in years:") for p in saved))  # the record, as the model was shown it
+        self.assertEqual(sum("unknown" in p["facts"] for p in saved), 2)
+        folder, _ = self.ask("clinic_photo")
+        self.assertNotIn("all_facts_recorded", json.loads((folder / "metrics.json").read_text(encoding="utf-8")))  # a photo alone has no record
 
     def test_a_changed_record_file_or_photo_is_found_before_anything_is_sent(self):
         record = next((self.data / "files" / "records").rglob("*.txt"))

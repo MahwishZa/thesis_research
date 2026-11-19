@@ -375,7 +375,7 @@ def _run_once(job: dict, run_id: str) -> Path:
     try:
         with pred_path.open("a", encoding="utf-8", newline="\n") as f:
             for i, item in enumerate(todo, start=len(done) + 1):
-                images = []
+                images, case = [], None
                 if kind.pictures_column:  # a case question: its pictures, and with the case text only when the prompt holds it
                     shown = [read_picture(path, pictures_root(config["dataset"])) for path, _ in item.pictures]
                     images = [(content, mime) for content, mime, _ in shown]
@@ -403,7 +403,7 @@ def _run_once(job: dict, run_id: str) -> Path:
                         "invalid": problem,
                         "raw_text": answer["text"], "finish_reason": answer["finish_reason"], "model_version": answer["model_version"],
                         "response_id": answer["response_id"], "usage": answer["usage"], "attempts": attempt,
-                        f"{kind.item}_sent": sent, **({"facts": item.facts} if kind.facts_column else {}),
+                        f"{kind.item}_sent": sent, **({"facts": item.facts if kind.facts_column else case} if kind.missing_fact else {}),  # the record, to score the complete ones again
                         "answered_utc": _now()}
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 f.flush()

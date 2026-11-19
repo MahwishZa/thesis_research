@@ -208,8 +208,10 @@ def validate(files: bool = False, say=print) -> bool:
         names = [d for d in DATASETS if d in group and d in loaded]
         for i, first in enumerate(names):
             for second in names[i + 1:]:
+                some = DATASETS[first].subset != DATASETS[second].subset
                 line("OK", f"Alignment {first} / {second}", pair_problems(first, loaded[first], second, loaded[second]),
-                     "same questions, groups and answer options (the photo views of the published cases ask some of its cases)")
+                     "the cases of the photo view are some of the text's; same groups and answer options" if some
+                     else "same questions, groups and answer options")
     if {"clinic_photo", "clinic_photo_record"} <= set(loaded):
         line("OK", "Alignment clinic_photo / clinic_photo_record: the photo", same_content_problems(
             "clinic_photo", loaded["clinic_photo"], "clinic_photo_record", loaded["clinic_photo_record"], "photo"), "the same photo, byte for byte")
