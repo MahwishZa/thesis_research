@@ -16,7 +16,7 @@ class RecordTextTests(unittest.TestCase):
     def test_the_record_is_six_numbered_lines_in_fixed_wording_by_hand(self):
         self.assertEqual(views.record_text(ROW),
                          "1. Age in years: 55\n2. Body site: face\n3. The lesion itches: yes\n4. The lesion hurts: no\n"
-                         "5. The lesion has bled: not recorded\n6. The lesion has an elevation: yes")
+                         "5. The lesion has bled: unknown\n6. The lesion has an elevation: yes")
 
     def test_the_wording_and_the_template_are_pinned(self):
         # a change of wording is a new template version: change TEMPLATE_VERSION and these two lines together, on purpose
@@ -31,11 +31,17 @@ class RecordTextTests(unittest.TestCase):
         self.assertEqual(views.value_of(views.FIELDS[0], {**ROW, "age": "07"}), "7")  # a whole number, written plainly
         self.assertEqual(views.value_of(views.FIELDS[0], {**ROW, "age": "0"}), "0")
         self.assertEqual(views.value_of(views.FIELDS[0], {**ROW, "age": "120"}), "120")
-        self.assertEqual(views.value_of(views.FIELDS[0], {**ROW, "age": NOT_RECORDED}), NOT_RECORDED)
         self.assertEqual(views.value_of(views.FIELDS[1], {**ROW, "region": "FOREARM"}), "forearm")
         self.assertEqual(views.value_of(views.FIELDS[2], {**ROW, "itch": "FALSE"}), "no")
         self.assertEqual(views.value_of(views.FIELDS[2], {**ROW, "itch": "TRUE"}), "yes")
-        self.assertEqual(views.value_of(views.FIELDS[3], {**ROW, "hurt": NOT_RECORDED}), NOT_RECORDED)
+        self.assertEqual(views.value_of(views.FIELDS[3], {**ROW, "hurt": NOT_RECORDED}), "unknown")  # the patient did not know (UNK)
+        self.assertEqual(views.UNKNOWN, "unknown")
+        self.assertEqual(views.SYMPTOMS, ("itch", "hurt", "bleed", "elevation"))  # the only fields that can be a gap
+
+    def test_a_gap_in_the_age_or_the_body_site_stops_the_step_because_the_authors_say_they_are_always_present(self):
+        for column, field in (("age", views.FIELDS[0]), ("region", views.FIELDS[1])):
+            with self.assertRaisesRegex(ValueError, f"x.png: {column} is not recorded, but the authors say it is always present"):
+                views.value_of(field, {**ROW, column: NOT_RECORDED})
 
     def test_a_value_a_line_cannot_print_stops_with_the_photo_named(self):
         for age in ("121", "-3", "5.5", "abc", "", "\u00b2"):  # the last is a superscript two: a "digit" that is not a number
@@ -101,19 +107,28 @@ class ViewsStepTests(Cohort):
                                                          "4. The lesion hurts: yes"])
         self.assertEqual(row["label"], "nevus")
 
-    def test_a_gap_in_a_shown_field_is_written_not_recorded_and_counted(self):
+    def test_a_gap_in_a_symptom_line_is_written_unknown_and_counted(self):
         for row in self.rows:
-            if row["patient_id"] == "P500" and row["img_id"] == "P500_1_a.png":
-                row["bleed"], row["age"] = "UNK", ""
+            if row["img_id"] == "P500_1_a.png":
+                row["bleed"] = "UNK"
         self.write()
         self.prepare()
         views.views(self.data)
         row = next(r for r in self.table("dataset.csv") if r["img_id"] == "P500_1_a.png")
-        self.assertIn("1. Age in years: not recorded", row["facts"])
-        self.assertIn("5. The lesion has bled: not recorded", row["facts"])
+        self.assertIn("5. The lesion has bled: unknown", row["facts"])
+        self.assertNotIn("not recorded", row["facts"])
         self.assertEqual(row["bleed"], NOT_RECORDED)  # the cleaned table's own wording stays in the clinical columns
         report = self.report()
-        self.assertRegex(report, r"\| seborrheic keratosis \| 20 \| 19 \| 1 \| 0 \| 0 \| 0 \| 1 \| 0 \|")
+        self.assertIn("| Class | Questions | No `unknown` in the record | `itch` unknown | `hurt` unknown | `bleed` unknown | `elevation` unknown |", report)
+        self.assertIn("| seborrheic keratosis | 20 | 19 | 0 | 0 | 1 | 0 |", report)
+
+    def test_a_gap_in_the_age_stops_the_step_before_anything_is_written(self):
+        self.rows[0]["age"] = ""
+        self.write()
+        self.prepare()
+        with self.assertRaisesRegex(ValueError, "P000_1_a.png: age is not recorded, but the authors say it is always present"):
+            views.views(self.data)
+        self.assertFalse((self.data / "files" / "records").exists())
 
     def test_a_value_a_line_cannot_print_stops_the_step_before_anything_is_written(self):
         self.rows[0]["age"] = "200"
@@ -187,8 +202,9 @@ class ViewsStepTests(Cohort):
         report = self.report()
         self.assertIn(f"Record template `record-v1` (fingerprint `{views.FINGERPRINT[:12]}`)", report)
         self.assertIn("- Questions: 121 (train ", report)
-        self.assertIn("| Class | Questions | All six recorded | `age` not recorded |", report)
-        self.assertIn("| all | 121 | 121 | 0 | 0 | 0 | 0 | 0 | 0 |", report)
+        self.assertIn("| Class | Questions | No `unknown` in the record | `itch` unknown |", report)
+        self.assertIn("| all | 121 | 121 | 0 | 0 | 0 | 0 |", report)
+        self.assertIn("A gap in a symptom line is written `unknown`: the patient did not know the answer.", report)
         self.assertIn("- Not in any view: `grew`, `changed`", report)
         for name in CLASS_NAMES.values():
             self.assertIn(f"**{name}** (`", report)

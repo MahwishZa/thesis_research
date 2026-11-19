@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 from .common import read_jsonl, write_json
-from .datasets import DATASETS, MISSING_FACT, SAME_QUESTIONS, Dataset, dataset_of
+from .datasets import DATASETS, SAME_QUESTIONS, Dataset, dataset_of
 from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, interval, mcnemar,
                       summarize)
 from .prompts import ANSWER_FORMAT
@@ -61,7 +61,7 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
             "files": [{"path": p["path"], "label": p["label"], "prediction": p["prediction"]}
                       for p in sorted(preds, key=lambda p: p["path"]) if p["label"] in left_out]}
     if kind.facts_column:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
-        complete_facts = [p for p in preds if MISSING_FACT not in p["facts"]]
+        complete_facts = [p for p in preds if kind.missing_fact not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
     return card, preds, metrics
 
@@ -190,7 +190,7 @@ def write_report(run_dir: str | Path) -> Path:
     if "all_facts_recorded" in metrics:
         part = metrics["all_facts_recorded"]
         lines += ["## Questions with all facts recorded", "",
-                  f"A missing fact (\"{MISSING_FACT}\") can itself point to the class: which facts are missing is not the same for every "
+                  f"A missing fact (\"{kind.missing_fact}\") can itself point to the class: which facts are missing is not the same for every "
                   f"class (see the data sheet of the dataset). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_brief(part["metrics"]), ""]
 

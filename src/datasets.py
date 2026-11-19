@@ -49,6 +49,7 @@ class Dataset:
     pictures_root: str = ""  # the folder in data/ the pictures' paths start from
     subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
     unique_content: bool = True  # False: two questions may have the same content (a patient record is the same words for two patients)
+    missing_fact: str = MISSING_FACT  # how a missing fact reads in the facts: the questions without it are scored again beside the main score
 
 
 DATASETS = {  # the datasets a config can name
@@ -78,7 +79,7 @@ DATASETS = {  # the datasets a config can name
                              files="clinic_patients/files/records", unique_content=False),
     "clinic_photo_record": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient",
                                    "Photos of one patient are not independent", facts_column="facts", folder="clinic_patients",
-                                   files="clinic_patients/files/photos"),
+                                   files="clinic_patients/files/photos", missing_fact="unknown"),
 }
 SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"},
                   {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
@@ -144,7 +145,7 @@ def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
         if not SHA256.fullmatch(item.sha256):
             raise ValueError(f"{where}: sha256 must be 64 lowercase hexadecimal characters")
         if kind.facts_column and not item.facts:
-            raise ValueError(f"{where}: the {kind.facts_column} column is empty (a missing fact is written \"{MISSING_FACT}\")")
+            raise ValueError(f"{where}: the {kind.facts_column} column is empty (a missing fact is written \"{kind.missing_fact}\")")
         if kind.pictures_column and not item.pictures:
             raise ValueError(f"{where}: the {kind.pictures_column} column lists no picture")
         for picture, sha in item.pictures:

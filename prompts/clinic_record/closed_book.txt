@@ -1,4 +1,4 @@
-This is the clinic record of a patient with a skin lesion. There is no photograph. "not recorded" means the record has no entry for that item.
+This is the clinic record of a patient with a skin lesion. There is no photograph. "unknown" means the patient did not know the answer.
 Record:
 {case}
 The possible diagnoses are:

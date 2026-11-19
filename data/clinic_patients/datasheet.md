@@ -100,14 +100,49 @@ seen.
 
 **The record** (`record-v1`) is six numbered lines in fixed wording: age; body site; whether the lesion itches, hurts, has bled and has an
 elevation. The lines use the authors' own words for each field (itch, hurt, "has bled", "has an elevation"; section 2); the unit of the
-age is presumed to be years ◻. A gap reads `not recorded`; in the authors' words the patient did not know (section 2). The record is
-the same words, to the byte, in the record view and in the photo + record view. **Not in any view:** `grew` and `changed` (unknown more
+age is presumed to be years ◻. A gap in a symptom line reads `unknown`: in the authors' words the patient did not know the answer
+(section 2). Age and body site are always present; a gap in either would stop the step. The record is the same words, to the byte, in
+the record view and in the photo + record view. **Not in any view:** `grew` and `changed` (unknown more
 often for cancers: finding 2) and the block of 13 fields of finding 1 (empty for 804 early photos, all benign). They stay in
 `dataset.csv` for a separate secondary analysis on complete records. A change of wording is a new template version and a rebuild of
 the views.
 
 **Photos of one patient** are not independent: intervals resample whole patients. Identical records are kept in the record view
 (they are different patients, or several photos of one visit), so that the three views ask the same questions.
+
+### What the first full run found (2026-11-19, on the researcher's computer) ✔
+
+All numbers are in `dataset_report.md` and the tables of `build/`; each step passed its own checks.
+
+- **clean:** 11,485 gaps written `not recorded`, 3 values normalised, 8 flags kept as recorded.
+- **dedupe:** 16 clusters of the same picture (32 photos). 13 clusters carry two diagnoses (26 photos dropped), 3 carry one (one photo of
+  each stays, 3 dropped): **29 photos dropped, 2,269 stay.** Nearest-neighbour distances show a clean gap: 32 photos at 0 bits, none at 1
+  to 16, the next at 17 bits. No two patients have a photo within 16 bits.
+- **split** (seed 20261119): train 1,368 photos of 654 patients, validation 223 of 219, test 678 of 498. Class shares are within 60% / 10%
+  / 30% by at most 2 points for every class except squamous cell carcinoma (62.5 / 8.7 / 28.8) and melanoma (61.5 / 9.6 / 28.8; 32, 5 and
+  15 photos). No patient is in two splits. The patients with many photos went to train (2.1 photos per patient against 1.0 in
+  validation and 1.4 in test), so validation and test are mostly single-photo patients.
+- **images:** 2,269 photos made. The 104 originals over 5 MB (largest 23.6 MB) became files of at most 0.77 MB; 814 photos were shrunk
+  to 1,024 pixels (the median longest side, 778, is unchanged), 1,420 PNG files with an opaque alpha channel were converted to RGB and 2
+  from a colour profile to sRGB. Fidelity 39.8 / 45.8 / 62.0 dB (smallest / median / largest, bar 30). Every saved photo is nearest to its
+  own original: 0 to 10 bits away (median 1), the nearest other photo's original at least 29 bits (median 88).
+- **views:** 2,269 questions, each in all three views. 19 have an `unknown` in the record (itch 6, hurt 10, bleed 6, elevation 2; 24
+  cells); age and body site are always there. The records are 1,344 distinct texts; 1,481 questions share their record with another
+  question, 495 of them in a group of more than one class, so the record alone cannot tell those apart.
+- **shortcuts** (nearest-neighbour vote, train split only, balanced accuracy with a 95% interval over whole patients):
+
+| Features | 6 classes (chance 16.7%) | Cancer or not (chance 50%) |
+|---|---|---|
+| empty fields (`gaps`) | 21.4% (20.5 to 22.4) | 62.6% (60.1 to 65.3) |
+| photo properties, originals | 22.9% (21.3 to 24.5) | 64.3% (61.5 to 67.1) |
+| photo properties, standardised photos | 19.7% (18.2 to 21.4) | 55.2% (52.4 to 58.1) |
+| the six lines of the record | 38.2% (35.7 to 40.8) | 72.2% (69.2 to 75.2) |
+| the full record (21 fields) | 43.3% (40.4 to 46.4) | 84.5% (81.8 to 87.2) |
+
+  Standardising the photos removed about two thirds of what the photo properties gave away about cancer (64.3% to 55.2%) but not all of
+  it: the interval still excludes 50%, so a small hint about the photo's origin remains and is reported beside the results. The empty
+  fields still give 62.6%, which is why the 13-field block is not in any view. The six record lines carry real information (72.2% for
+  cancer or not, with no photo), so the record view is a competitor, not a blank control.
 
 ## 5. Preprocessing and use
 

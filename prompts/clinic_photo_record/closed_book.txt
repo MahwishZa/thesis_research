@@ -1,4 +1,4 @@
-This is a photograph of a patient's skin lesion, taken with a smartphone at a dermatology clinic. The patient's clinic record follows; "not recorded" means the record has no entry for that item.
+This is a photograph of a patient's skin lesion, taken with a smartphone at a dermatology clinic. The patient's clinic record follows; "unknown" means the patient did not know the answer.
 Record:
 {facts}
 The possible diagnoses are:

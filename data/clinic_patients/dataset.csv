@@ -2288,7 +2288,7 @@ train,actinic keratosis,train/actinic keratosis/PAT_846_4421_153.jpg,cba4de4493f
 train,actinic keratosis,train/actinic keratosis/PAT_849_1613_824.jpg,0f78dee58cdc7c40c3e798c01b94a9864c7d85bfaf6fb6f241b4f8cbbbca0cf5,PAT_849_1613_824.png,PAT_849,1613,G_PAT_849,TRUE,imgs_part_2/imgs_part_2/PAT_849_1613_824.png,0320c441f85d1405ee0a09d7d907149f527ac8bdc1640e114e882e9ed6f1199a,"1. Age in years: 63
 2. Body site: back
 3. The lesion itches: no
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,BRAZIL,GERMANY,63,TRUE,MALE,FALSE,TRUE,TRUE,TRUE,2,BACK,4,4,FALSE,FALSE,not recorded,FALSE,FALSE,TRUE
 train,actinic keratosis,train/actinic keratosis/PAT_851_1623_506.jpg,5fd0a246f54c3746c8c0a05e78846b3b4e08145792a2de26686b8dd6ff7212f2,PAT_851_1623_506.png,PAT_851,1623,G_PAT_851,TRUE,imgs_part_2/imgs_part_2/PAT_851_1623_506.png,2ab25905bc419069aba0414b48532fdcc8ddd80647848b303eecc921ce215eed,"1. Age in years: 77
@@ -3423,7 +3423,7 @@ train,basal cell carcinoma,train/basal cell carcinoma/PAT_323_686_356.jpg,4075c0
 2. Body site: hand
 3. The lesion itches: yes
 4. The lesion hurts: no
-5. The lesion has bled: not recorded
+5. The lesion has bled: unknown
 6. The lesion has an elevation: no",TRUE,TRUE,POMERANIA,POMERANIA,73,FALSE,MALE,TRUE,FALSE,FALSE,FALSE,2,HAND,25,18,TRUE,not recorded,FALSE,not recorded,not recorded,FALSE
 train,basal cell carcinoma,train/basal cell carcinoma/PAT_324_1464_266.jpg,4397c45a4afa6f13dd74d635ec573e8d0d7358b011e41d646bfacd2e0819bb02,PAT_324_1464_266.png,PAT_324,1464,G_PAT_324,TRUE,imgs_part_1/imgs_part_1/PAT_324_1464_266.png,ec503f065fa1f8ef68a83ccb0f88a54215bdd64a0a48629e4ff019c7f827b2bd,"1. Age in years: 46
 2. Body site: forearm
@@ -4005,7 +4005,7 @@ train,basal cell carcinoma,train/basal cell carcinoma/PAT_499_945_878.jpg,b23a59
 2. Body site: arm
 3. The lesion itches: yes
 4. The lesion hurts: no
-5. The lesion has bled: not recorded
+5. The lesion has bled: unknown
 6. The lesion has an elevation: yes",FALSE,FALSE,GERMANY,GERMANY,74,TRUE,MALE,FALSE,FALSE,TRUE,TRUE,2,ARM,12,10,TRUE,not recorded,FALSE,not recorded,not recorded,TRUE
 train,basal cell carcinoma,train/basal cell carcinoma/PAT_503_950_368.jpg,d1cdecae2ae336dd865071b1c5b3cd595d1530a68e2eafa017dfd2091aa757f3,PAT_503_950_368.png,PAT_503,950,G_PAT_503,TRUE,imgs_part_1/imgs_part_1/PAT_503_950_368.png,ef72c815e956a2e43a555122b07d931bbeab7138651cfbb834d9505424c3757a,"1. Age in years: 88
 2. Body site: face
@@ -5558,7 +5558,7 @@ train,basal cell carcinoma,train/basal cell carcinoma/PAT_96_150_743.jpg,715de5c
 train,basal cell carcinoma,train/basal cell carcinoma/PAT_974_1841_693.jpg,80fa17d5e47d2d82b4ce21a56ad94b4ac8a3c1eb838b0d62773d6e8372059180,PAT_974_1841_693.png,PAT_974,1841,G_PAT_974,TRUE,imgs_part_2/imgs_part_2/PAT_974_1841_693.png,e98f142613bfba92fc13b0e84cddb0e62f50271a8be11013d1c728fcaded7d46,"1. Age in years: 61
 2. Body site: hand
 3. The lesion itches: yes
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,61,TRUE,FEMALE,FALSE,FALSE,FALSE,TRUE,3,HAND,4,3,TRUE,not recorded,not recorded,not recorded,FALSE,TRUE
 train,basal cell carcinoma,train/basal cell carcinoma/PAT_976_1837_503.jpg,3aad001e62157651cc5b21b4424898290eb4994bc6c52e76b580f3f75b42d92c,PAT_976_1837_503.png,PAT_976,1837,G_PAT_976,TRUE,imgs_part_2/imgs_part_2/PAT_976_1837_503.png,92b860a3c3d1eb4d8ff8e2fc7b786052a823f9d50db006ce7eae6d5351c17b1d,"1. Age in years: 85
@@ -5698,7 +5698,7 @@ train,melanoma,train/melanoma/PAT_433_852_20.jpg,63dc61eee31d53527e458136c2d26da
 3. The lesion itches: no
 4. The lesion hurts: no
 5. The lesion has bled: no
-6. The lesion has an elevation: not recorded",FALSE,TRUE,GERMANY,GERMANY,30,FALSE,MALE,FALSE,TRUE,FALSE,FALSE,2,NECK,20,20,FALSE,not recorded,FALSE,not recorded,FALSE,not recorded
+6. The lesion has an elevation: unknown",FALSE,TRUE,GERMANY,GERMANY,30,FALSE,MALE,FALSE,TRUE,FALSE,FALSE,2,NECK,20,20,FALSE,not recorded,FALSE,not recorded,FALSE,not recorded
 train,melanoma,train/melanoma/PAT_45_66_822.jpg,3e80a66117209f1751a071f9278e1971025ca895fe71837a8a483cf5f872deed,PAT_45_66_822.png,PAT_45,66,G_PAT_45,TRUE,imgs_part_1/imgs_part_1/PAT_45_66_822.png,6c9d0c714cd9effd186acbcc1f064dab717edfa8e0ad7478e9eeb00a718a1849,"1. Age in years: 73
 2. Body site: chest
 3. The lesion itches: no
@@ -6482,19 +6482,19 @@ train,nevus,train/nevus/PAT_465_901_627.jpg,42abb2de27c84207c2b43a2771eb04adc7ca
 train,nevus,train/nevus/PAT_471_909_344.jpg,36ddc3f6e774210f4268a4c49a8f4de4af9359522ac2706ba6d07b382b346607,PAT_471_909_344.png,PAT_471,909,G_PAT_471,TRUE,imgs_part_1/imgs_part_1/PAT_471_909_344.png,f42c51b878ae0eb8093fa41ae14c5c0df3384e8d7d7181b1072654246eb97364,"1. Age in years: 13
 2. Body site: thigh
 3. The lesion itches: no
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,13,FALSE,FEMALE,FALSE,FALSE,FALSE,FALSE,2,THIGH,89,27,FALSE,not recorded,not recorded,not recorded,FALSE,TRUE
 train,nevus,train/nevus/PAT_471_909_353.jpg,c503651bda0041f8b5fa8130cb27c65bc62a6a44bbff3f9f3b1ebeb4f69d52cd,PAT_471_909_353.png,PAT_471,909,G_PAT_471,TRUE,imgs_part_1/imgs_part_1/PAT_471_909_353.png,7a98831ad3c834ac6ed37005887d17bcec590d7ed3d7c8a5b6dc286ae9377261,"1. Age in years: 13
 2. Body site: thigh
 3. The lesion itches: no
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,13,FALSE,FEMALE,FALSE,FALSE,FALSE,FALSE,2,THIGH,89,27,FALSE,not recorded,not recorded,not recorded,FALSE,TRUE
 train,nevus,train/nevus/PAT_471_909_394.jpg,480f4f3127194e9f13cb4c0514a8dd191162475d9ef949f5813c9b40e0ec92c0,PAT_471_909_394.png,PAT_471,909,G_PAT_471,TRUE,imgs_part_1/imgs_part_1/PAT_471_909_394.png,2d77493e913d80c8677e779d5e06e5d314235559a38cb2675689024269d06c17,"1. Age in years: 13
 2. Body site: thigh
 3. The lesion itches: no
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,13,FALSE,FEMALE,FALSE,FALSE,FALSE,FALSE,2,THIGH,89,27,FALSE,not recorded,not recorded,not recorded,FALSE,TRUE
 train,nevus,train/nevus/PAT_522_3168_747.jpg,8f49031f813cd2856ce14e93f3f7d0e526f0779b812b6f463885b7dea3d64da1,PAT_522_3168_747.png,PAT_522,3168,G_PAT_522,FALSE,imgs_part_1/imgs_part_1/PAT_522_3168_747.png,bc903f13219617036b7ae8e566a50c3417e372ed3556762851c478fb7373f734,"1. Age in years: 53
@@ -7657,7 +7657,7 @@ train,squamous cell carcinoma,train/squamous cell carcinoma/PAT_321_682_236.jpg,
 6. The lesion has an elevation: yes",FALSE,FALSE,GERMANY,GERMANY,85,FALSE,FEMALE,FALSE,TRUE,FALSE,FALSE,2,FACE,7,7,TRUE,FALSE,TRUE,FALSE,FALSE,TRUE
 train,squamous cell carcinoma,train/squamous cell carcinoma/PAT_323_687_169.jpg,b7b8479eaf82524fe02453cfe6bc042bbdeddbf3ba356685ee43cc049d096ef9,PAT_323_687_169.png,PAT_323,687,G_PAT_323,TRUE,imgs_part_1/imgs_part_1/PAT_323_687_169.png,5291687132e3ba10bc485df74c0934c9da67cdd4082b7cf89642dbf16fc8d778,"1. Age in years: 73
 2. Body site: back
-3. The lesion itches: not recorded
+3. The lesion itches: unknown
 4. The lesion hurts: no
 5. The lesion has bled: no
 6. The lesion has an elevation: no",TRUE,TRUE,POMERANIA,POMERANIA,73,FALSE,MALE,TRUE,FALSE,FALSE,FALSE,2,BACK,23,18,not recorded,not recorded,FALSE,not recorded,FALSE,FALSE
@@ -8167,7 +8167,7 @@ train,squamous cell carcinoma,train/squamous cell carcinoma/PAT_935_1786_482.jpg
 6. The lesion has an elevation: no",FALSE,FALSE,POMERANIA,POMERANIA,61,TRUE,FEMALE,TRUE,TRUE,FALSE,TRUE,2,EAR,9,6,FALSE,not recorded,FALSE,not recorded,FALSE,FALSE
 train,squamous cell carcinoma,train/squamous cell carcinoma/PAT_93_142_269.jpg,c8570df0c634b2d5e86577e4be06e030b556f94cf046f36d2f30a63b01e8d2bb,PAT_93_142_269.png,PAT_93,142,G_PAT_93,TRUE,imgs_part_1/imgs_part_1/PAT_93_142_269.png,ad613e2977de522a0f091571f0f964c01626ba2896bf8aa66c334d153fc0bc99,"1. Age in years: 90
 2. Body site: forearm
-3. The lesion itches: not recorded
+3. The lesion itches: unknown
 4. The lesion hurts: yes
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,TRUE,not recorded,not recorded,90,FALSE,MALE,FALSE,FALSE,TRUE,TRUE,4,FOREARM,8,6,not recorded,not recorded,TRUE,not recorded,FALSE,TRUE
@@ -8709,7 +8709,7 @@ val,basal cell carcinoma,val/basal cell carcinoma/PAT_187_287_482.jpg,cc2e432050
 2. Body site: face
 3. The lesion itches: no
 4. The lesion hurts: no
-5. The lesion has bled: not recorded
+5. The lesion has bled: unknown
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,58,FALSE,MALE,FALSE,FALSE,TRUE,TRUE,2,FACE,8,5,FALSE,not recorded,FALSE,not recorded,not recorded,TRUE
 val,basal cell carcinoma,val/basal cell carcinoma/PAT_190_291_366.jpg,e7a68fd679dee03b0fff37e82a29aebf438c68448a9e78e0ea229d162954f2e5,PAT_190_291_366.png,PAT_190,291,G_PAT_190,TRUE,imgs_part_1/imgs_part_1/PAT_190_291_366.png,8bc7db967e4cbe7e71e9479e45e82552d8550a6dc2c4a306424b3af990be9f81,"1. Age in years: 61
 2. Body site: forearm
@@ -10525,7 +10525,7 @@ test,actinic keratosis,test/actinic keratosis/PAT_246_377_159.jpg,3bbe1d2eddf393
 6. The lesion has an elevation: no",FALSE,TRUE,POMERANIA,POMERANIA,33,TRUE,MALE,TRUE,TRUE,TRUE,TRUE,2,ARM,11,10,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
 test,actinic keratosis,test/actinic keratosis/PAT_26_37_865.jpg,fff83e2e3d5f8c9f906d1516c14da40597ba60bf74ec56eaf6e0663f6d7709f8,PAT_26_37_865.png,PAT_26,37,G_PAT_26,TRUE,imgs_part_1/imgs_part_1/PAT_26_37_865.png,09b56208abf77d0191fa8fdf9aef65158f5b8889fecfdfd94ba5d6df52fc19ab,"1. Age in years: 47
 2. Body site: chest
-3. The lesion itches: not recorded
+3. The lesion itches: unknown
 4. The lesion hurts: no
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,TRUE,GERMANY,GERMANY,47,FALSE,FEMALE,FALSE,TRUE,FALSE,FALSE,2,CHEST,7,5,not recorded,not recorded,FALSE,not recorded,FALSE,TRUE
@@ -10537,7 +10537,7 @@ test,actinic keratosis,test/actinic keratosis/PAT_279_430_356.jpg,40b5bfee99a2b8
 6. The lesion has an elevation: yes",FALSE,TRUE,POMERANIA,POMERANIA,51,TRUE,MALE,FALSE,TRUE,FALSE,FALSE,2,FOREARM,17,15,TRUE,TRUE,FALSE,FALSE,TRUE,TRUE
 test,actinic keratosis,test/actinic keratosis/PAT_27_38_240.jpg,fbe941a5d44a3613119e9ce6b184f55856bff15f013a703fa74baf9f7babaf58,PAT_27_38_240.png,PAT_27,38,G_PAT_27,TRUE,imgs_part_1/imgs_part_1/PAT_27_38_240.png,2eb255b969506aeb89f04596f5e5e31a40445d275f71eba9cd85134954ff5fc5,"1. Age in years: 70
 2. Body site: hand
-3. The lesion itches: not recorded
+3. The lesion itches: unknown
 4. The lesion hurts: no
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,ITALY,ITALY,70,FALSE,FEMALE,TRUE,TRUE,TRUE,TRUE,2,HAND,15,13,not recorded,not recorded,FALSE,FALSE,FALSE,TRUE
@@ -11667,7 +11667,7 @@ test,basal cell carcinoma,test/basal cell carcinoma/PAT_494_939_518.jpg,507755c2
 2. Body site: nose
 3. The lesion itches: yes
 4. The lesion hurts: no
-5. The lesion has bled: not recorded
+5. The lesion has bled: unknown
 6. The lesion has an elevation: no",FALSE,FALSE,POMERANIA,POMERANIA,53,FALSE,FEMALE,FALSE,TRUE,TRUE,TRUE,2,NOSE,6,4,TRUE,not recorded,FALSE,not recorded,not recorded,FALSE
 test,basal cell carcinoma,test/basal cell carcinoma/PAT_505_951_710.jpg,a7776a5951444844cfad16c703f175b807702aec43da1fa1c7c0d332e15da215,PAT_505_951_710.png,PAT_505,951,G_PAT_505,TRUE,imgs_part_1/imgs_part_1/PAT_505_951_710.png,58c5094e7e44289b1ada0f7cec2bae59d154af505e22453cb1b758c4bd005289,"1. Age in years: 71
 2. Body site: nose
@@ -12278,13 +12278,13 @@ test,basal cell carcinoma,test/basal cell carcinoma/PAT_959_1813_1000.jpg,03d45b
 test,basal cell carcinoma,test/basal cell carcinoma/PAT_964_1821_83.jpg,e94d154c9efca838d7fc65edd276de204c4909f3b28cbf4762d68adaf6dfc3ba,PAT_964_1821_83.png,PAT_964,1821,G_PAT_964,TRUE,imgs_part_2/imgs_part_2/PAT_964_1821_83.png,1ee91081c7c81d3c17bc8d5e8bc40e4ae512d10ddf6d28aa16f29aeb86993de4,"1. Age in years: 49
 2. Body site: face
 3. The lesion itches: yes
-4. The lesion hurts: not recorded
-5. The lesion has bled: not recorded
+4. The lesion hurts: unknown
+5. The lesion has bled: unknown
 6. The lesion has an elevation: yes",FALSE,TRUE,GERMANY,PORTUGAL,49,FALSE,MALE,FALSE,TRUE,FALSE,FALSE,2,FACE,10,6,TRUE,not recorded,not recorded,not recorded,not recorded,TRUE
 test,basal cell carcinoma,test/basal cell carcinoma/PAT_970_1833_270.jpg,ef824cf794d0e13ee2b2fead8ab6a83710f8da722b897c6ae7bb321406767bfc,PAT_970_1833_270.png,PAT_970,1833,G_PAT_970,TRUE,imgs_part_2/imgs_part_2/PAT_970_1833_270.png,1e3991791a155bff8b323990ee73e84a01a46f6d549958663bfe72403021410b,"1. Age in years: 44
 2. Body site: nose
 3. The lesion itches: yes
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: no",FALSE,TRUE,POMERANIA,POMERANIA,44,TRUE,FEMALE,FALSE,FALSE,TRUE,TRUE,2,NOSE,10,8,TRUE,not recorded,not recorded,not recorded,FALSE,FALSE
 test,basal cell carcinoma,test/basal cell carcinoma/PAT_981_1848_486.jpg,98ac920be8503cac60b31fcc60983903509ba6f4d8c90242260286595a84ebac,PAT_981_1848_486.png,PAT_981,1848,G_PAT_981,TRUE,imgs_part_2/imgs_part_2/PAT_981_1848_486.png,cd0fd2ceb5b6eb6f9259ec00f6ee44976a2f4caeacb48928eb8fa890a4f7dab6,"1. Age in years: 67
@@ -12812,7 +12812,7 @@ test,nevus,test/nevus/PAT_2162_4820_913.jpg,75b8a44d3fdd10e48ee50f8865ed4e500b1a
 test,nevus,test/nevus/PAT_220_1343_489.jpg,e43fd2dd7adeaaa49c128732eb8717a315ed8c9ea43526fcf926296587cf44fc,PAT_220_1343_489.png,PAT_220,1343,G_PAT_220,TRUE,imgs_part_1/imgs_part_1/PAT_220_1343_489.png,7994e29ef84f474326207c0f1205eac231531597b3ce8122b5ccf06625e21ac1,"1. Age in years: 68
 2. Body site: lip
 3. The lesion itches: no
-4. The lesion hurts: not recorded
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: no",FALSE,FALSE,GERMANY,GERMANY,68,FALSE,FEMALE,TRUE,FALSE,TRUE,TRUE,2,LIP,30,10,FALSE,not recorded,not recorded,not recorded,FALSE,FALSE
 test,nevus,test/nevus/PAT_297_4307_924.jpg,3edef7822ffe3f5ced94518632967bd6ab2669c59962baeaa552d15d01077519,PAT_297_4307_924.png,PAT_297,4307,G_PAT_297,FALSE,imgs_part_1/imgs_part_1/PAT_297_4307_924.png,21d8dc5f64213da49852a22fec93c7bcbc62eb588cc7e9d4ef358b947e235b4f,"1. Age in years: 62
@@ -12865,10 +12865,10 @@ test,nevus,test/nevus/PAT_791_1487_906.jpg,884e01d0c7c60e859c7646fbdc13d167607a5
 6. The lesion has an elevation: no",FALSE,FALSE,GERMANY,GERMANY,27,FALSE,FEMALE,FALSE,TRUE,TRUE,TRUE,3,ABDOMEN,5,4,FALSE,not recorded,FALSE,not recorded,FALSE,FALSE
 test,nevus,test/nevus/PAT_890_1694_29.jpg,6bd9043dff679a9e8b80d1eea4cc736d56d1bd0ea0021d275055f82e48c68499,PAT_890_1694_29.png,PAT_890,1694,G_PAT_890,TRUE,imgs_part_2/imgs_part_2/PAT_890_1694_29.png,cf40925e08f66a0871f2b3e8191e9e4eb3b9198de0673fc6fb204c0574397089,"1. Age in years: 55
 2. Body site: arm
-3. The lesion itches: not recorded
-4. The lesion hurts: not recorded
-5. The lesion has bled: not recorded
-6. The lesion has an elevation: not recorded",FALSE,TRUE,GERMANY,ITALY,55,TRUE,FEMALE,TRUE,TRUE,FALSE,FALSE,2,ARM,6,4,not recorded,not recorded,not recorded,not recorded,not recorded,not recorded
+3. The lesion itches: unknown
+4. The lesion hurts: unknown
+5. The lesion has bled: unknown
+6. The lesion has an elevation: unknown",FALSE,TRUE,GERMANY,ITALY,55,TRUE,FEMALE,TRUE,TRUE,FALSE,FALSE,2,ARM,6,4,not recorded,not recorded,not recorded,not recorded,not recorded,not recorded
 test,nevus,test/nevus/PAT_900_1711_622.jpg,c970ceddf9b986e99e9a4ed1e1a9efe121177acacc7b0b4b2e19decfd7ff6826,PAT_900_1711_622.png,PAT_900,1711,G_PAT_900,TRUE,imgs_part_2/imgs_part_2/PAT_900_1711_622.png,83f164c2db0594376159b8ffb91b23ec0ccd4249d4930bb4e541812fd217f83c,"1. Age in years: 39
 2. Body site: foot
 3. The lesion itches: no
@@ -13459,8 +13459,8 @@ test,squamous cell carcinoma,test/squamous cell carcinoma/PAT_591_1126_21.jpg,48
 6. The lesion has an elevation: yes",FALSE,FALSE,POMERANIA,POMERANIA,79,TRUE,FEMALE,TRUE,TRUE,TRUE,FALSE,3,FOREARM,11,9,TRUE,not recorded,FALSE,not recorded,FALSE,TRUE
 test,squamous cell carcinoma,test/squamous cell carcinoma/PAT_612_1163_833.jpg,201ef436650e0087c574b446483ec2bdfda47d8edc9409026a1b4678d5f7d929,PAT_612_1163_833.png,PAT_612,1163,G_PAT_612,TRUE,imgs_part_2/imgs_part_2/PAT_612_1163_833.png,a165df658df73ad69df9bd04409cc8852db5dca33d9f20b817aa7f04da6b7037,"1. Age in years: 90
 2. Body site: arm
-3. The lesion itches: not recorded
-4. The lesion hurts: not recorded
+3. The lesion itches: unknown
+4. The lesion hurts: unknown
 5. The lesion has bled: no
 6. The lesion has an elevation: yes",FALSE,FALSE,ITALY,ITALY,90,FALSE,FEMALE,FALSE,TRUE,TRUE,TRUE,1,ARM,19,15,not recorded,not recorded,not recorded,not recorded,FALSE,TRUE
 test,squamous cell carcinoma,test/squamous cell carcinoma/PAT_630_1196_710.jpg,13062777773828f39217cc06a3b9b479e61f2146a2e76ff171e07d7ccfbbe823,PAT_630_1196_710.png,PAT_630,1196,G_PAT_630,TRUE,imgs_part_2/imgs_part_2/PAT_630_1196_710.png,3be8ee1d8df18eef62708b8b80c83ab57bfc0373c86681e90523cca2de750f00,"1. Age in years: 63

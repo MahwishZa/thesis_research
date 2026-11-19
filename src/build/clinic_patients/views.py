@@ -8,8 +8,9 @@ shown, so that the same question can be asked three times and the answers paired
 
 **The record** is six fields in fixed wording, one numbered line each (``TEMPLATE``, version ``record-v1``): age, body site, and whether
 the lesion itches, hurts, has bled and has an elevation (the authors' own words for these fields, Pacheco et al. 2020). A field with no
-entry reads ``not recorded``; nothing is guessed or filled in. The record is the same words in the record view and in the photo +
-record view, to the byte.
+entry reads ``unknown``: in the authors' words the patient did not know the answer (``UNK``). Nothing is guessed or filled in. Age and body
+site are always present according to the authors; a gap in one of them stops the step. The record is the same words in the record view
+and in the photo + record view, to the byte.
 
 **What the record does not show:** whether the lesion grew or changed (more often unknown for cancers than for benign lesions: a
 hint, see step ``shortcuts``) and the block of fields added later to the questionnaire (gender, smoking, drinking, pesticides,
@@ -17,8 +18,8 @@ histories, water, sewage, skin type, diameters, the parents' origin: empty for 8
 for a separate secondary analysis and are not in any view. The wording of the lines is provisional until the authors' paper confirms
 what each field means; a change of wording is a new template version and a rebuild of the views.
 
-A field a line cannot print (an age that is not a whole number from 0 to 120, a value outside yes, no and a gap) stops the step: a
-decision for the researcher, not for the code.
+A field a line cannot print (an age that is not a whole number from 0 to 120, a value outside yes, no and a gap, a gap in the age or the
+body site) stops the step: a decision for the researcher, not for the code.
 
 Writes files/records/<split>/<class>/<img_id>.txt (not committed; one record per question, no trailing newline), dataset.csv (the
 photo view: build/split.csv with the photo's ``path`` and ``sha256``, the original's ``raw_path`` and ``raw_sha256``, and the record
@@ -39,6 +40,7 @@ from .table import (BUILD, DATA, DATASET, NOT_RECORDED, QUESTION_COLUMNS, RECORD
                     remove_stale, write_csv)
 
 RECORD = "record.csv"  # in DATA: the record view's table
+UNKNOWN = "unknown"  # how a gap reads in a symptom line: the patient did not know the answer (the authors' UNK)
 TEMPLATE_VERSION = "record-v1"
 
 
@@ -53,6 +55,7 @@ FIELDS = (Field("age", "Age in years", "age"), Field("region", "Body site", "sit
           Field("itch", "The lesion itches", "yes_no"), Field("hurt", "The lesion hurts", "yes_no"),
           Field("bleed", "The lesion has bled", "yes_no"), Field("elevation", "The lesion has an elevation", "yes_no"))
 CORE = tuple(f.column for f in FIELDS)  # the fields of the record
+SYMPTOMS = tuple(f.column for f in FIELDS if f.kind == "yes_no")  # the only fields that can be a gap
 LEFT_OUT = ("grew", "changed")  # not in any view: unknown more often for cancers (step shortcuts)
 YES_NO = {"TRUE": "yes", "FALSE": "no"}
 TEMPLATE = "\n".join(f"{number}. {f.line}: <{f.column}>" for number, f in enumerate(FIELDS, start=1))  # the record with its blanks
@@ -68,7 +71,9 @@ def value_of(field: Field, row: dict) -> str:
     """How one field of a question's cleaned record is written in the record. Raises ValueError for a value the line cannot print."""
     value = row[field.column]
     if value == NOT_RECORDED:
-        return NOT_RECORDED
+        if field.kind != "yes_no":
+            raise ValueError(f"{row['img_id']}: {field.column} is not recorded, but the authors say it is always present")
+        return UNKNOWN
     if field.kind == "age":
         if not (value.isascii() and value.isdigit()) or not AGE_RANGE[0] <= int(value) <= AGE_RANGE[1]:
             raise ValueError(f"{row['img_id']}: {field.column} = {value!r} is not a whole number from {AGE_RANGE[0]} to {AGE_RANGE[1]}")
@@ -141,18 +146,19 @@ def _report(rows: list[dict]) -> list[str]:
              "record of the same visit. `dataset.csv` lists the photo view and the photo + record view (the record text is its `facts` "
              "column); `record.csv` lists the record view; the records are in `files/records/` (not committed).", "",
              f"- Questions: {len(rows)} ({', '.join(f'{s} {sum(r['split'] == s for r in rows)}' for s in SPLITS)}). Each is in all three views.",
-             f"- Record template `{TEMPLATE_VERSION}` (fingerprint `{FINGERPRINT[:12]}`); the wording is provisional until the authors' paper "
-             "confirms what each field means. A gap is written `not recorded`; nothing is filled in.", "",
+             f"- Record template `{TEMPLATE_VERSION}` (fingerprint `{FINGERPRINT[:12]}`); the lines use the authors' own words for each field "
+             f"(Pacheco et al. 2020). A gap in a symptom line is written `{UNKNOWN}`: the patient did not know the answer. Age and body site "
+             "are always present (a gap would stop the step). Nothing is filled in.", "",
              "```", TEMPLATE, "```", "",
              f"- Not in any view: {', '.join(f'`{c}`' for c in LEFT_OUT)} (unknown more often for cancers: a hint), and the later "
              "questionnaire fields. They stay in `dataset.csv` for a separate secondary analysis.", "",
-             "## Gaps in the record, by class", "",
-             "| Class | Questions | All six recorded | " + " | ".join(f"`{c}` not recorded" for c in CORE) + " |",
-             "|---|---|---|" + "---|" * len(CORE)]
+             f"## `{UNKNOWN}` in the record, by class", "",
+             f"| Class | Questions | No `{UNKNOWN}` in the record | " + " | ".join(f"`{c}` {UNKNOWN}" for c in SYMPTOMS) + " |",
+             "|---|---|---|" + "---|" * len(SYMPTOMS)]
     for label in [*classes, None]:
         mine = [r for r in rows if label is None or r["label"] == label]
-        full = sum(all(r[c] != NOT_RECORDED for c in CORE) for r in mine)
-        lines.append(f"| {label or 'all'} | {len(mine)} | {full} | " + " | ".join(str(sum(r[c] == NOT_RECORDED for r in mine)) for c in CORE) + " |")
+        full = sum(all(r[c] != NOT_RECORDED for c in SYMPTOMS) for r in mine)
+        lines.append(f"| {label or 'all'} | {len(mine)} | {full} | " + " | ".join(str(sum(r[c] == NOT_RECORDED for r in mine)) for c in SYMPTOMS) + " |")
     same = _identical(rows)
     within = sum(any(o is not r and o["patient_id"] == r["patient_id"] for o in g) for g in same for r in g)
     across = sum(any(o["patient_id"] != r["patient_id"] for o in g) for g in same for r in g)

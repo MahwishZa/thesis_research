@@ -124,6 +124,20 @@ class ClinicViews(Cohort):
         self.assertIn("## Questions with all facts recorded", report)
         self.assertIn("(bootstrap over patients)", report)
 
+    def test_the_scores_on_complete_records_leave_out_the_questions_with_an_unknown(self):
+        test_ids = [r["img_id"] for r in self.table("split.csv") if r["split"] == "test"]
+        for row in self.rows:
+            if row["img_id"] in test_ids[:2]:
+                row["itch"], row["hurt"] = "UNK", "UNK"  # two questions, each with two gaps
+        self.write()
+        prepare.main(["all"])
+        folder, _ = self.ask("clinic_photo_record")
+        metrics = json.loads((folder / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual((metrics["main"]["n"], metrics["all_facts_recorded"]["questions"]), (self.n_test(), self.n_test() - 2))
+        report = (folder / "report.md").read_text(encoding="utf-8")
+        self.assertIn("A missing fact (\"unknown\") can itself point to the class", report)
+        self.assertIn(f"count only the {self.n_test() - 2} of {self.n_test()} questions with every fact recorded", report)
+
     def test_a_changed_record_file_or_photo_is_found_before_anything_is_sent(self):
         record = next((self.data / "files" / "records").rglob("*.txt"))
         record.write_bytes(record.read_bytes() + b" ")

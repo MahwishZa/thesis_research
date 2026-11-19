@@ -242,7 +242,7 @@ Written by `python -m src.build.clinic_patients.prepare images`. Each photo that
 Written by `python -m src.build.clinic_patients.prepare views`. One question is one photo of one patient's lesion with the record of the same visit. `dataset.csv` lists the photo view and the photo + record view (the record text is its `facts` column); `record.csv` lists the record view; the records are in `files/records/` (not committed).
 
 - Questions: 2269 (train 1368, val 223, test 678). Each is in all three views.
-- Record template `record-v1` (fingerprint `ea9036ddbfe3`); the wording is provisional until the authors' paper confirms what each field means. A gap is written `not recorded`; nothing is filled in.
+- Record template `record-v1` (fingerprint `ea9036ddbfe3`); the lines use the authors' own words for each field (Pacheco et al. 2020). A gap in a symptom line is written `unknown`: the patient did not know the answer. Age and body site are always present (a gap would stop the step). Nothing is filled in.
 
 ```
 1. Age in years: <age>
@@ -255,17 +255,17 @@ Written by `python -m src.build.clinic_patients.prepare views`. One question is 
 
 - Not in any view: `grew`, `changed` (unknown more often for cancers: a hint), and the later questionnaire fields. They stay in `dataset.csv` for a separate secondary analysis.
 
-### Gaps in the record, by class
+### `unknown` in the record, by class
 
-| Class | Questions | All six recorded | `age` not recorded | `region` not recorded | `itch` not recorded | `hurt` not recorded | `bleed` not recorded | `elevation` not recorded |
-|---|---|---|---|---|---|---|---|---|
-| actinic keratosis | 723 | 720 | 0 | 0 | 2 | 1 | 0 | 0 |
-| basal cell carcinoma | 833 | 826 | 0 | 0 | 0 | 3 | 5 | 0 |
-| melanoma | 52 | 51 | 0 | 0 | 0 | 0 | 0 | 1 |
-| nevus | 243 | 238 | 0 | 0 | 1 | 5 | 1 | 1 |
-| seborrheic keratosis | 234 | 234 | 0 | 0 | 0 | 0 | 0 | 0 |
-| squamous cell carcinoma | 184 | 181 | 0 | 0 | 3 | 1 | 0 | 0 |
-| all | 2269 | 2250 | 0 | 0 | 6 | 10 | 6 | 2 |
+| Class | Questions | No `unknown` in the record | `age` unknown | `region` unknown |
+|---|---|---|---|---|
+| actinic keratosis | 723 | 723 | 0 | 0 |
+| basal cell carcinoma | 833 | 833 | 0 | 0 |
+| melanoma | 52 | 52 | 0 | 0 |
+| nevus | 243 | 243 | 0 | 0 |
+| seborrheic keratosis | 234 | 234 | 0 | 0 |
+| squamous cell carcinoma | 184 | 184 | 0 | 0 |
+| all | 2269 | 2269 | 0 | 0 |
 
 ### How much a record can say
 
