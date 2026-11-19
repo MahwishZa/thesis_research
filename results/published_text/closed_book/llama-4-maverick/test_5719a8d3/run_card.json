@@ -1,0 +1,104 @@
+{
+  "name": "llama-4-maverick",
+  "split": "test",
+  "run_id": "test_5719a8d3",
+  "status": "complete",
+  "fingerprint": "5719a8d318e859c55c9b639b654f217bb1d538758512124a4dd30ac760c35f44",
+  "seed": 0,
+  "config_file": "configs/models.toml",
+  "config": {
+    "name": "llama-4-maverick",
+    "dataset": "published_text",
+    "approach": "closed_book",
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "extra_body": {
+        "provider": {
+          "order": [
+            "parasail/fp8"
+          ],
+          "allow_fallbacks": false
+        }
+      },
+      "id": "meta-llama/llama-4-maverick",
+      "pinned": true,
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 512
+    },
+    "prompt": {
+      "file": "prompts/published_text/closed_book.txt"
+    },
+    "run": {
+      "requests_per_minute": 20,
+      "order_seed": 0
+    },
+    "model_list": "configs/models.toml"
+  },
+  "answer_format": "json-v2",
+  "prompt_file": "prompts/published_text/closed_book.txt",
+  "prompt_sha256": "f1e9dc53d9cf41edd7f296a70f1c275fbb3ca138344002f89102b1fc25745c0f",
+  "prompt": "This is the description of a patient with a skin lesion, from a published case report. It ends before the diagnosis.\nCase: {case}\nThe possible diagnoses are:\n- actinic keratosis\n- basal cell carcinoma\n- dermatofibroma\n- melanoma\n- nevus\n- pigmented benign keratosis\n- squamous cell carcinoma\n- vascular lesion\nAnswer with one JSON object and nothing else, in this form:\n{\"differential\": [\"<most likely diagnosis>\", \"<second>\", \"<third>\"], \"evidence_sufficient\": \"<yes or no>\", \"reason\": \"<why>\", \"claims\": [{\"statement\": \"<one short claim>\", \"evidence\": []}], \"evidence\": []}\n- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.\n- evidence_sufficient: \"yes\" if what you are given is enough to be confident of the first diagnosis, otherwise \"no\".\n- reason: at most three sentences, using only what you are given.\n- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.\n- evidence: leave the list empty; no reference texts are given.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "dermatofibroma",
+    "melanoma",
+    "nevus",
+    "pigmented benign keratosis",
+    "squamous cell carcinoma",
+    "vascular lesion"
+  ],
+  "n_cases": 209,
+  "cases_sha256": "80be06e00be2c4c87b828f97a97b68a11010c45cdf211695d2cf04b94bce8815",
+  "group_column": "pmid",
+  "dataset_table": {
+    "file": "data/published_cases/dataset.csv",
+    "sha256": "23bcfb6fcb02b5465537e8777c6f8aca9af00b6e4738d148705dafa2039114e1"
+  },
+  "git": {
+    "commit": "e3d5510c6a6443865a06d9b9b64ad6d7b461489d",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "openai": "3.49.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-19T17:15:22+00:00",
+  "finished_utc": "2026-11-19T17:28:38+00:00",
+  "model": {
+    "provider": "openai_compatible",
+    "model_id": "meta-llama/llama-4-maverick",
+    "base_url": "https://openrouter.ai/api/v1/",
+    "sdk": "openai",
+    "sdk_version": "3.49.0",
+    "generation_config": {
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 512,
+      "image_detail": null,
+      "extra_body": {
+        "provider": {
+          "order": [
+            "parasail/fp8"
+          ],
+          "allow_fallbacks": false
+        }
+      }
+    }
+  },
+  "model_versions_returned": [
+    "meta-llama/llama-4-maverick@Parasail"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-19T17:15:22+00:00",
+      "commit": "e3d5510c6a6443865a06d9b9b64ad6d7b461489d",
+      "uncommitted_changes": false,
+      "model_revision": null
+    }
+  ]
+}
