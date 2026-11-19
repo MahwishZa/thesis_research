@@ -1,0 +1,746 @@
+patient_uid,split,class,pmid,pmcid,licence,figures,lesion_figures,dermoscopy_figures,lesion_figures_with_other_parts,lesion_figures_cited_in_question,counts,reason
+3842183-1,test,actinic keratosis,24294287,PMC3842183,http://creativecommons.org/licenses/by/3.0,2,1,0,0,0,yes,
+pubmed-41181771,test,actinic keratosis,41181771,PMC12578603,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+10937045-1,test,basal cell carcinoma,38481562,PMC10937045,https://creativecommons.org/licenses/by-nc/4.0/,3,2,0,1,0,yes,
+2000862-1,test,basal cell carcinoma,17718899,PMC2000862,http://creativecommons.org/licenses/by/2.0,8,0,0,0,0,no,no figure whose caption shows the lesion alone
+2840884-1,test,basal cell carcinoma,20300339,PMC2840884,http://creativecommons.org/licenses/by/2.0/,2,1,0,0,0,yes,
+3162279-1,test,basal cell carcinoma,21909220,PMC3162279,http://creativecommons.org/licenses/by-nc/3.0,2,1,0,1,0,yes,
+3199405-1,test,basal cell carcinoma,22028555,PMC3199405,http://creativecommons.org/licenses/by-nc/3.0,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+3229065-1,test,basal cell carcinoma,22148050,PMC3229065,http://creativecommons.org/licenses/by-nc/3.0,3,2,0,1,0,yes,
+4830157-1,test,basal cell carcinoma,27127748,PMC4830157,http://creativecommons.org/licenses/by-nc-sa/3.0,5,1,0,1,0,yes,
+5856425-1,test,basal cell carcinoma,29560294,PMC5856425,http://creativecommons.org/licenses/by/3.0/,4,1,0,2,0,yes,
+6186888-1,test,basal cell carcinoma,30349720,PMC6186888,https://creativecommons.org/licenses/by/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+7234329-1,test,basal cell carcinoma,32477557,PMC7234329,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+7370554-1,test,basal cell carcinoma,32733678,PMC7370554,https://creativecommons.org/licenses/by-nc/4.0/,3,2,0,0,0,yes,
+7716756-1,test,basal cell carcinoma,33304635,PMC7716756,https://creativecommons.org/licenses/by-nc-sa/4.0/,8,3,0,0,0,yes,
+8404427-1,test,basal cell carcinoma,34497703,PMC8404427,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9128874-1,test,basal cell carcinoma,32189006,PMC9128874,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-10940116,test,basal cell carcinoma,10940116,,,0,0,0,0,0,no,no PMC number
+pubmed-12921259,test,basal cell carcinoma,12921259,,,0,0,0,0,0,no,no PMC number
+pubmed-12941101,test,basal cell carcinoma,12941101,,,0,0,0,0,0,no,no PMC number
+pubmed-15246946,test,basal cell carcinoma,15246946,,,0,0,0,0,0,no,no PMC number
+pubmed-16043918,test,basal cell carcinoma,16043918,,,0,0,0,0,0,no,no PMC number
+pubmed-18577044,test,basal cell carcinoma,18577044,,,0,0,0,0,0,no,no PMC number
+pubmed-19178496,test,basal cell carcinoma,19178496,,,0,0,0,0,0,no,no PMC number
+pubmed-20736874,test,basal cell carcinoma,20736874,,,0,0,0,0,0,no,no PMC number
+pubmed-22740815,test,basal cell carcinoma,22740815,PMC3383308,http://creativecommons.org/licenses/by-nc-nd/3.0/,5,1,0,1,1,yes,
+pubmed-23626541,test,basal cell carcinoma,23626541,PMC3617891,http://creativecommons.org/licenses/by-nc-nd/3.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-27222877,test,basal cell carcinoma,27222877,PMC4864231,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,1,0,yes,
+pubmed-28029677,test,basal cell carcinoma,28029677,,,0,0,0,0,0,no,no PMC number
+pubmed-29199268,test,basal cell carcinoma,29199268,PMC5726147,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,0,1,yes,
+pubmed-30003127,test,basal cell carcinoma,30003127,PMC6039756,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-33102034,test,basal cell carcinoma,33102034,PMC7573964,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,1,yes,
+pubmed-36212898,test,basal cell carcinoma,36212898,PMC9535120,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,1,1,yes,
+pubmed-38921053,test,basal cell carcinoma,38921053,PMC11202933,https://creativecommons.org/licenses/by/4.0/,3,1,1,0,1,yes,
+pubmed-39584850,test,basal cell carcinoma,39584850,PMC11587047,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-39923440,test,basal cell carcinoma,39923440,PMC11849646,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,2,0,1,1,yes,
+pubmed-40109824,test,basal cell carcinoma,40109824,PMC11920770,https://creativecommons.org/licenses/by/4.0/,10,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40851718,test,basal cell carcinoma,40851718,PMC12370323,https://creativecommons.org/licenses/by/4.0/,5,1,1,4,1,yes,
+pubmed-40988834,test,basal cell carcinoma,40988834,PMC12452207,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,1,yes,
+pubmed-41347193,test,basal cell carcinoma,41347193,PMC12673312,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,1,1,yes,
+pubmed-41859605,test,basal cell carcinoma,41859605,PMC12995841,https://creativecommons.org/licenses/by/4.0/,8,1,0,2,0,yes,
+pubmed-43016841,test,basal cell carcinoma,43016841,PMC13751557,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,1,1,yes,
+pubmed-9557792,test,basal cell carcinoma,9557792,,,0,0,0,0,0,no,no PMC number
+3229075-1,test,dermatofibroma,22148060,PMC3229075,http://creativecommons.org/licenses/by-nc/3.0,3,1,0,1,0,yes,
+3667312-1,test,dermatofibroma,23723500,PMC3667312,http://creativecommons.org/licenses/by-nc-sa/3.0,6,5,4,1,0,yes,
+3859268-1,test,dermatofibroma,24371537,PMC3859268,https://creativecommons.org/licenses/by/3.0/,3,2,0,0,0,yes,
+3875973-1,test,dermatofibroma,24346882,PMC3875973,http://creativecommons.org/licenses/by-nc/3.0/,5,2,0,0,0,yes,
+5418985-1,test,dermatofibroma,28529424,PMC5418985,http://creativecommons.org/licenses/by-nc-sa/3.0,6,1,0,0,0,yes,
+5894553-1,test,dermatofibroma,29609438,PMC5894553,https://creativecommons.org/licenses/by-nc/4.0/,4,1,0,2,0,yes,
+6452477-1,test,dermatofibroma,30997061,PMC6452477,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,0,yes,
+6792423-1,test,dermatofibroma,31616280,PMC6792423,http://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+8395948-1,test,dermatofibroma,34449581,PMC8395948,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+8906261-1,test,dermatofibroma,35283608,PMC8906261,https://creativecommons.org/licenses/by-nc-sa/4.0/,3,1,1,1,0,yes,
+9616610-1,test,dermatofibroma,36321023,PMC9616610,https://creativecommons.org/licenses/by/3.0/,4,2,0,2,0,no,the article holds another case of the dataset
+9616610-2,test,dermatofibroma,36321023,PMC9616610,https://creativecommons.org/licenses/by/3.0/,4,2,0,2,0,no,the article holds another case of the dataset
+9616610-3,test,dermatofibroma,36321023,PMC9616610,https://creativecommons.org/licenses/by/3.0/,4,2,0,2,0,no,the article holds another case of the dataset
+pubmed-10885409,test,dermatofibroma,10885409,,,0,0,0,0,0,no,no PMC number
+pubmed-16503899,test,dermatofibroma,16503899,,,0,0,0,0,0,no,no PMC number
+pubmed-22059953,test,dermatofibroma,22059953,,,0,0,0,0,0,no,no PMC number
+pubmed-27661268,test,dermatofibroma,27661268,,,0,0,0,0,0,no,no PMC number
+pubmed-35385853,test,dermatofibroma,35385853,,,0,0,0,0,0,no,no PMC number
+pubmed-39036613,test,dermatofibroma,39036613,PMC11254531,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,1,yes,
+pubmed-39431259,test,dermatofibroma,39431259,PMC11484587,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,1,yes,
+pubmed-41280943,test,dermatofibroma,41280943,PMC12635618,https://creativecommons.org/licenses/by/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+10220981-1,test,melanoma,37241207,PMC10220981,https://creativecommons.org/licenses/by/4.0/,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+10716727-1,test,melanoma,38094552,PMC10716727,https://creativecommons.org/licenses/by/4.0/,7,1,0,0,0,yes,
+10789164-1,test,melanoma,38189222,PMC10789164,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+11035014-1,test,melanoma,38650592,PMC11035014,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,0,yes,
+11143801-1,test,melanoma,38828380,PMC11143801,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+3229085-1,test,melanoma,22148070,PMC3229085,http://creativecommons.org/licenses/by-nc/3.0,4,1,0,2,0,yes,
+3750895-1,test,melanoma,23739714,PMC3750895,http://creativecommons.org/licenses/by-nc/3.0/,4,2,1,1,0,yes,
+4650989-1,test,melanoma,26594172,PMC4650989,http://creativecommons.org/licenses/by-nc/4.0/,3,1,1,1,0,yes,
+6467182-1,test,melanoma,31019646,PMC6467182,http://creativecommons.org/licenses/by/2.0/,4,1,0,1,0,yes,
+6684299-1,test,melanoma,31410340,PMC6684299,http://creativecommons.org/licenses/by/3.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+7319790-1,test,melanoma,32642306,PMC7319790,https://creativecommons.org/licenses/by/4.0/,3,2,1,1,0,yes,
+7875657-1,test,melanoma,33614203,PMC7875657,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+8648433-1,test,melanoma,35024235,PMC8648433,https://creativecommons.org/licenses/by/4.0/,2,1,1,1,0,yes,
+8720861-1,test,melanoma,35002272,PMC8720861,https://creativecommons.org/licenses/by-nc/3.0/,1,1,0,0,0,yes,
+8801450-1,test,melanoma,35111668,PMC8801450,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+9073300-1,test,melanoma,35090790,PMC9073300,https://creativecommons.org/licenses/by/4.0/,4,4,1,0,0,yes,
+9355838-1,test,melanoma,35936139,PMC9355838,https://creativecommons.org/licenses/by/3.0/,3,1,0,0,0,yes,
+9464570-1,test,melanoma,36159120,PMC9464570,https://creativecommons.org/licenses/by-nc/4.0/,2,1,1,0,0,yes,
+9681240-1,test,melanoma,36534581,PMC9681240,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-17966182,test,melanoma,17966182,,,0,0,0,0,0,no,no PMC number
+pubmed-18709293,test,melanoma,18709293,,,0,0,0,0,0,no,no PMC number
+pubmed-21251441,test,melanoma,21251441,,,0,0,0,0,0,no,no PMC number
+pubmed-22605002,test,melanoma,22605002,PMC3351633,,0,0,0,0,0,no,no open full text in PMC
+pubmed-25546496,test,melanoma,25546496,,,0,0,0,0,0,no,no PMC number
+pubmed-27051719,test,melanoma,27051719,PMC4808698,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,1,yes,
+pubmed-27149137,test,melanoma,27149137,,,0,0,0,0,0,no,no PMC number
+pubmed-28507284,test,melanoma,28507284,PMC5441273,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-29483985,test,melanoma,29483985,PMC5816319,http://creativecommons.org/licenses/CC BY-NC/4.0,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-30559881,test,melanoma,30559881,PMC6290406,http://creativecommons.org/licenses/CC BY-NC/4.0,3,1,0,2,1,yes,
+pubmed-31930427,test,melanoma,31930427,PMC9128926,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-37715977,test,melanoma,37715977,,,0,0,0,0,0,no,no PMC number
+pubmed-38666479,test,melanoma,38666479,PMC12879971,,4,2,0,2,1,yes,
+pubmed-40487251,test,melanoma,40487251,PMC12142013,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40861587,test,melanoma,40861587,PMC12373519,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,1,yes,
+pubmed-40933992,test,melanoma,40933992,PMC12417167,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-41220461,test,melanoma,41220461,PMC12597652,https://creativecommons.org/licenses/by/4.0/,5,2,1,3,1,yes,
+pubmed-41307004,test,melanoma,41307004,PMC12646083,https://creativecommons.org/licenses/by/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-41578510,test,melanoma,41578510,PMC12851788,https://creativecommons.org/licenses/by/4.0/,5,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-42181459,test,melanoma,42181459,PMC13192299,https://creativecommons.org/licenses/by/4.0/,7,2,0,1,1,yes,
+pubmed-42571504,test,melanoma,42571504,PMC13452408,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+10837041-1,test,nevus,38314193,PMC10837041,https://creativecommons.org/licenses/by/4.0/,3,1,0,2,0,yes,
+3081491-1,test,nevus,21572688,PMC3081491,http://creativecommons.org/licenses/by/2.0/,9,3,0,6,0,yes,
+3752487-1,test,nevus,23984245,PMC3752487,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,1,0,yes,
+3843908-1,test,nevus,24348378,PMC3843908,http://creativecommons.org/licenses/by-nc/3.0/,3,2,1,0,0,yes,
+3881944-1,test,nevus,24396441,PMC3881944,http://creativecommons.org/licenses/by/3.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+3975198-1,test,nevus,24707253,PMC3975198,http://creativecommons.org/licenses/by-nc/3.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+4318062-1,test,nevus,25657396,PMC4318062,http://creativecommons.org/licenses/by-nc-sa/3.0,10,1,0,4,0,yes,
+5087230-1,test,nevus,27828645,PMC5087230,http://creativecommons.org/licenses/by-nc/4.0/,6,3,1,1,0,yes,
+6259301-1,test,nevus,30598914,PMC6259301,http://creativecommons.org/licenses/by-nc-sa/4.0,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+7058877-1,test,nevus,31899063,PMC7058877,http://creativecommons.org/licenses/by/4.0/,4,2,1,0,0,yes,
+7190562-1,test,nevus,32363103,PMC7190562,https://creativecommons.org/licenses/by/4.0/,2,2,1,0,0,yes,
+7253887-1,test,nevus,32265056,PMC7253887,http://creativecommons.org/licenses/by/4.0/,5,0,0,3,0,no,no figure whose caption shows the lesion alone
+9679269-1,test,nevus,36425659,PMC9679269,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+9681224-1,test,nevus,36534514,PMC9681224,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9681422-1,test,nevus,36534564,PMC9681422,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9950964-1,test,nevus,36843646,PMC9950964,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-10773703,test,nevus,10773703,,,0,0,0,0,0,no,no PMC number
+pubmed-10824486,test,nevus,10824486,,,0,0,0,0,0,no,no PMC number
+pubmed-12544098,test,nevus,12544098,,,0,0,0,0,0,no,no PMC number
+pubmed-17034379,test,nevus,17034379,,,0,0,0,0,0,no,no PMC number
+pubmed-18401177,test,nevus,18401177,,,0,0,0,0,0,no,no PMC number
+pubmed-19362750,test,nevus,19362750,,,0,0,0,0,0,no,no PMC number
+pubmed-19397572,test,nevus,19397572,,,0,0,0,0,0,no,no PMC number
+pubmed-19434323,test,nevus,19434323,,,0,0,0,0,0,no,no PMC number
+pubmed-19817763,test,nevus,19817763,,,0,0,0,0,0,no,no PMC number
+pubmed-20424415,test,nevus,20424415,,,0,0,0,0,0,no,no PMC number
+pubmed-22515581,test,nevus,22515581,,,0,0,0,0,0,no,no PMC number
+pubmed-28317165,test,nevus,28317165,,,0,0,0,0,0,no,no PMC number
+pubmed-28954104,test,nevus,28954104,PMC5595602,http://creativecommons.org/licenses/by-nc-nd/4.0/,5,2,1,1,0,yes,
+pubmed-29210482,test,nevus,29210482,PMC5768454,,7,4,0,3,2,yes,
+pubmed-30484543,test,nevus,30484543,PMC6256221,http://creativecommons.org/licenses/by-nc-nd/4.0/,4,2,1,1,2,yes,
+pubmed-33813872,test,nevus,33813872,,,0,0,0,0,0,no,no PMC number
+pubmed-34231495,test,nevus,34231495,,,0,0,0,0,0,no,no PMC number
+pubmed-35079400,test,nevus,35079400,PMC8766608,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,2,1,0,2,yes,
+pubmed-40253790,test,nevus,40253790,PMC12033938,https://creativecommons.org/licenses/by-nc-nd/4.0/,8,1,0,1,1,yes,
+pubmed-40755471,test,nevus,40755471,PMC12310350,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,2,0,yes,
+pubmed-41249608,test,nevus,41249608,PMC12628369,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-42465576,test,nevus,42465576,PMC13372629,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+pubmed-7608388,test,nevus,7608388,,,0,0,0,0,0,no,no PMC number
+pubmed-9542669,test,nevus,9542669,,,0,0,0,0,0,no,no PMC number
+10037649-1,test,pigmented benign keratosis,36961058,PMC10037649,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10113801-1,test,pigmented benign keratosis,37090399,PMC10113801,https://creativecommons.org/licenses/by/3.0/,4,1,0,0,0,yes,
+10350662-1,test,pigmented benign keratosis,37465245,PMC10350662,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,0,yes,
+3673377-1,test,pigmented benign keratosis,23741670,PMC3673377,http://creativecommons.org/licenses/by-nc-sa/3.0,5,1,0,1,0,yes,
+3758711-1,test,pigmented benign keratosis,24014974,PMC3758711,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+4196312-1,test,pigmented benign keratosis,25328324,PMC4196312,http://creativecommons.org/licenses/by-nc-sa/3.0,9,1,0,0,0,yes,
+4219898-1,test,pigmented benign keratosis,25405133,PMC4219898,http://creativecommons.org/licenses/by-nc/3.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+4314887-1,test,pigmented benign keratosis,25657917,PMC4314887,http://creativecommons.org/licenses/by-nc-sa/3.0,3,2,0,0,0,yes,
+4555906-1,test,pigmented benign keratosis,26392661,PMC4555906,http://creativecommons.org/licenses/by-nc-sa/3.0,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+6085941-1,test,pigmented benign keratosis,30148273,PMC6085941,http://creativecommons.org/licenses/by-nc-sa/3.0,8,1,0,0,0,yes,
+7588146-1,test,pigmented benign keratosis,33150031,PMC7588146,https://creativecommons.org/licenses/by/4.0/,1,1,1,0,0,yes,
+pubmed-16640546,test,pigmented benign keratosis,16640546,,,0,0,0,0,0,no,no PMC number
+pubmed-18187992,test,pigmented benign keratosis,18187992,,,0,0,0,0,0,no,no PMC number
+pubmed-23785597,test,pigmented benign keratosis,23785597,PMC3663343,,5,0,0,5,0,no,no figure whose caption shows the lesion alone
+pubmed-31762920,test,pigmented benign keratosis,31762920,PMC6859035,http://creativecommons.org/licenses/by/2.0/,3,1,0,1,1,yes,
+pubmed-33425131,test,pigmented benign keratosis,33425131,PMC7757303,https://creativecommons.org/licenses/by/4.0,3,1,1,1,1,yes,
+pubmed-38244653,test,pigmented benign keratosis,38244653,,,0,0,0,0,0,no,no PMC number
+pubmed-38901381,test,pigmented benign keratosis,38901381,PMC11245946,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-40250188,test,pigmented benign keratosis,40250188,PMC12242582,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,2,0,0,1,yes,
+pubmed-41328095,test,pigmented benign keratosis,41328095,PMC12664931,https://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-41399596,test,pigmented benign keratosis,41399596,PMC12702391,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,1,yes,
+pubmed-41552040,test,pigmented benign keratosis,41552040,PMC12807534,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10411990-1,test,squamous cell carcinoma,37564053,PMC10411990,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10934125-1,test,squamous cell carcinoma,38481923,PMC10934125,https://creativecommons.org/licenses/by/4.0/,7,1,0,3,0,yes,
+10936134-1,test,squamous cell carcinoma,20512280,PMC10936134,https://creativecommons.org/licenses/by/4.0/,0,0,0,0,0,no,no figure
+11017714-1,test,squamous cell carcinoma,38623368,PMC11017714,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,1,0,yes,
+1253716-1,test,squamous cell carcinoma,15626654,PMC1253716,http://creativecommons.org/publicdomain/mark/1.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+3764943-1,test,squamous cell carcinoma,24019773,PMC3764943,http://creativecommons.org/licenses/by-nc/3.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+3968566-1,test,squamous cell carcinoma,24695441,PMC3968566,http://creativecommons.org/licenses/by-nc-sa/3.0,1,1,0,0,0,yes,
+4155968-1,test,squamous cell carcinoma,25184929,PMC4155968,http://creativecommons.org/licenses/by-nc/3.0/,5,2,1,0,0,yes,
+4292202-1,test,squamous cell carcinoma,25598622,PMC4292202,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,0,0,yes,
+4560320-2,test,squamous cell carcinoma,26351427,PMC4560320,http://creativecommons.org/licenses/by-nc/3.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+4857268-1,test,squamous cell carcinoma,27489627,PMC4857268,http://creativecommons.org/licenses/by-nc/3.0/,8,2,0,0,0,yes,
+5193197-1,test,squamous cell carcinoma,28099608,PMC5193197,http://creativecommons.org/licenses/by/4.0/,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+5518577-1,test,squamous cell carcinoma,28761842,PMC5518577,http://creativecommons.org/licenses/by-nc-sa/3.0,4,1,0,2,0,yes,
+6537059-1,test,squamous cell carcinoma,31205707,PMC6537059,http://www.creativecommons.org/licenses/by-nc/4.0/,3,1,0,0,0,yes,
+7416828-1,test,squamous cell carcinoma,32793363,PMC7416828,http://creativecommons.org/licenses/by-nc/4.0/,3,1,0,0,0,yes,
+7933721-1,test,squamous cell carcinoma,33663145,PMC7933721,https://creativecommons.org/licenses/by-nc/4.0/,6,0,0,1,0,no,no figure whose caption shows the lesion alone
+8404429-1,test,squamous cell carcinoma,34497696,PMC8404429,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+9848785-1,test,squamous cell carcinoma,36684806,PMC9848785,https://creativecommons.org/licenses/by/4.0/,3,2,0,1,0,yes,
+pubmed-16519572,test,squamous cell carcinoma,16519572,,,0,0,0,0,0,no,no PMC number
+pubmed-16919034,test,squamous cell carcinoma,16919034,,,0,0,0,0,0,no,no PMC number
+pubmed-18713604,test,squamous cell carcinoma,18713604,,,0,0,0,0,0,no,no PMC number
+pubmed-19104745,test,squamous cell carcinoma,19104745,,,0,0,0,0,0,no,no PMC number
+pubmed-20523786,test,squamous cell carcinoma,20523786,PMC2861209,,0,0,0,0,0,no,no open full text in PMC
+pubmed-24396723,test,squamous cell carcinoma,24396723,PMC3881086,,5,1,1,2,0,yes,
+pubmed-26990329,test,squamous cell carcinoma,26990329,,,0,0,0,0,0,no,no PMC number
+pubmed-27752471,test,squamous cell carcinoma,27752471,PMC5066193,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-32754459,test,squamous cell carcinoma,32754459,PMC7368577,,0,0,0,0,0,no,no open full text in PMC
+pubmed-33461827,test,squamous cell carcinoma,33461827,,,0,0,0,0,0,no,no PMC number
+pubmed-38688838,test,squamous cell carcinoma,38688838,,,0,0,0,0,0,no,no PMC number
+pubmed-40458238,test,squamous cell carcinoma,40458238,PMC12129104,https://creativecommons.org/licenses/by-nc/4.0/,4,2,0,0,0,yes,
+pubmed-40551927,test,squamous cell carcinoma,40551927,PMC12183534,https://creativecommons.org/licenses/by/4.0/,5,2,0,2,1,yes,
+pubmed-40717701,test,squamous cell carcinoma,40717701,PMC12291539,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+pubmed-41049935,test,squamous cell carcinoma,41049935,PMC12489518,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-41137313,test,squamous cell carcinoma,41137313,PMC12558222,https://creativecommons.org/licenses/by/4.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+pubmed-41185838,test,squamous cell carcinoma,41185838,PMC12579590,https://creativecommons.org/licenses/by/4.0/,4,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-41404076,test,squamous cell carcinoma,41404076,PMC12704341,https://creativecommons.org/licenses/by-nc/3.0/,4,2,0,0,1,yes,
+pubmed-42137705,test,squamous cell carcinoma,42137705,PMC13170403,https://creativecommons.org/licenses/by/4.0/,13,1,0,1,1,yes,
+pubmed-42271509,test,squamous cell carcinoma,42271509,PMC13479417,https://creativecommons.org/licenses/by-nc-nd/4.0/,8,2,0,4,0,yes,
+pubmed-42369117,test,squamous cell carcinoma,42369117,PMC13293813,https://creativecommons.org/licenses/by/4.0/,10,1,0,7,1,yes,
+pubmed-507871,test,squamous cell carcinoma,507871,,,0,0,0,0,0,no,no PMC number
+10491431-1,test,vascular lesion,37692697,PMC10491431,https://creativecommons.org/licenses/by/3.0/,11,2,0,9,0,yes,
+10984198-1,test,vascular lesion,38562554,PMC10984198,https://creativecommons.org/licenses/by-nc/3.0/,3,1,0,0,0,yes,
+2329656-1,test,vascular lesion,18377654,PMC2329656,https://creativecommons.org/licenses/by/2.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+3199403-1,test,vascular lesion,22028553,PMC3199403,http://creativecommons.org/licenses/by-nc/3.0,3,1,0,1,0,yes,
+4228644-1,test,vascular lesion,25396132,PMC4228644,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,0,0,yes,
+4290170-1,test,vascular lesion,25593797,PMC4290170,http://creativecommons.org/licenses/by-nc-sa/3.0,8,1,0,0,0,yes,
+6913950-1,test,vascular lesion,31890366,PMC6913950,http://creativecommons.org/licenses/by/3.0/,3,2,0,0,0,yes,
+7861056-1,test,vascular lesion,33564515,PMC7861056,http://creativecommons.org/licenses/by/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+8025953-1,test,vascular lesion,33842296,PMC8025953,http://creativecommons.org/licenses/by-nc-sa/4.0,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+8208728-1,test,vascular lesion,34150410,PMC8208728,https://creativecommons.org/licenses/by/3.0/,3,1,0,0,0,yes,
+8896988-1,test,vascular lesion,35291545,PMC8896988,https://creativecommons.org/licenses/by/3.0/,5,0,0,1,0,no,no figure whose caption shows the lesion alone
+9542042-1,test,vascular lesion,36225490,PMC9542042,https://creativecommons.org/licenses/by/3.0/,4,1,0,1,0,yes,
+pubmed-39345277,test,vascular lesion,39345277,PMC11437241,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-39539924,test,vascular lesion,39539924,PMC11558024,https://creativecommons.org/licenses/by/4.0/,6,1,0,3,1,yes,
+pubmed-40606809,test,vascular lesion,40606809,PMC12212800,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,2,1,yes,
+pubmed-40787061,test,vascular lesion,40787061,PMC12329546,https://creativecommons.org/licenses/by/4.0/,3,1,0,0,1,yes,
+9661553-1,train,actinic keratosis,36388634,PMC9661553,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,1,0,yes,
+10041369-1,train,basal cell carcinoma,36992670,PMC10041369,https://creativecommons.org/licenses/by/4.0/,5,2,0,1,0,yes,
+10123599-1,train,basal cell carcinoma,37092530,PMC10123599,https://creativecommons.org/licenses/by/4.0/,5,0,0,3,0,no,no figure whose caption shows the lesion alone
+10312345-1,train,basal cell carcinoma,37398930,PMC10312345,https://creativecommons.org/licenses/by-nc/3.0/,4,2,1,2,0,yes,
+10563025-1,train,basal cell carcinoma,37822986,PMC10563025,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10599457-1,train,basal cell carcinoma,37885494,PMC10599457,https://creativecommons.org/licenses/by/3.0/,3,2,1,0,0,yes,
+10680464-1,train,basal cell carcinoma,37982728,PMC10680464,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,2,0,yes,
+10727880-1,train,basal cell carcinoma,38061706,PMC10727880,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+10757858-1,train,basal cell carcinoma,38161568,PMC10757858,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,0,yes,
+10956713-1,train,basal cell carcinoma,38516482,PMC10956713,https://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+11135141-1,train,basal cell carcinoma,38813281,PMC11135141,https://creativecommons.org/licenses/by/4.0/,3,2,1,1,0,yes,
+2605696-1,train,basal cell carcinoma,19478861,PMC2605696,http://creativecommons.org/licenses/by/2.5/,5,2,0,1,0,yes,
+2687829-1,train,basal cell carcinoma,17191318,PMC2687829,http://creativecommons.org/licenses/by-nc/3.0,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+2956953-1,train,basal cell carcinoma,21031073,PMC2956953,http://creativecommons.org/licenses/by/2.0/,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+2989656-1,train,basal cell carcinoma,21151522,PMC2989656,https://creativecommons.org/licenses/by/3.0/,5,3,2,2,0,yes,
+2992163-1,train,basal cell carcinoma,21120052,PMC2992163,http://creativecommons.org/licenses/by/2.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+3003961-1,train,basal cell carcinoma,21188232,PMC3003961,https://creativecommons.org/licenses/by/3.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+3157603-1,train,basal cell carcinoma,20623309,PMC3157603,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+3296393-1,train,basal cell carcinoma,22408339,PMC3296393,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+3505920-1,train,basal cell carcinoma,23259074,PMC3505920,https://creativecommons.org/licenses/by/3.0/,2,1,0,0,0,yes,
+3523429-1,train,basal cell carcinoma,23248666,PMC3523429,http://creativecommons.org/licenses/by-nc-sa/3.0,1,1,0,0,0,yes,
+3667320-1,train,basal cell carcinoma,23723508,PMC3667320,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,2,0,yes,
+3691894-1,train,basal cell carcinoma,23841002,PMC3691894,https://creativecommons.org/licenses/by/3.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+3827524-1,train,basal cell carcinoma,24249904,PMC3827524,http://creativecommons.org/licenses/by-nc-sa/3.0,8,1,0,1,0,yes,
+4248494-1,train,basal cell carcinoma,25484387,PMC4248494,http://creativecommons.org/licenses/by-nc-sa/3.0,8,2,0,2,0,no,the article holds another case of the dataset
+4248494-2,train,basal cell carcinoma,25484387,PMC4248494,http://creativecommons.org/licenses/by-nc-sa/3.0,8,2,0,2,0,no,the article holds another case of the dataset
+4372948-1,train,basal cell carcinoma,25814744,PMC4372948,http://creativecommons.org/licenses/by-nc-sa/3.0,3,2,1,0,0,yes,
+4448066-1,train,basal cell carcinoma,26034477,PMC4448066,http://creativecommons.org/licenses/by-nc/3.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+4777905-1,train,basal cell carcinoma,26955331,PMC4777905,http://creativecommons.org/licenses/by-nc/4.0/,3,1,1,2,0,yes,
+4924409-2,train,basal cell carcinoma,27398014,PMC4924409,http://creativecommons.org/licenses/by-nc-sa/3.0,4,1,1,1,0,yes,
+4976908-1,train,basal cell carcinoma,27536142,PMC4976908,https://creativecommons.org/licenses/by-nc/3.0/,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+5121552-1,train,basal cell carcinoma,27920679,PMC5121552,http://creativecommons.org/licenses/by-nc/4.0/,2,1,0,1,0,yes,
+5216247-1,train,basal cell carcinoma,28101025,PMC5216247,http://creativecommons.org/licenses/by-nc/4.0/,2,1,0,1,0,yes,
+5398019-2,train,basal cell carcinoma,28469323,PMC5398019,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+6587202-1,train,basal cell carcinoma,31244639,PMC6587202,http://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+6587205-1,train,basal cell carcinoma,31244643,PMC6587205,http://creativecommons.org/licenses/by-nc/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+6745442-1,train,basal cell carcinoma,31534749,PMC6745442,https://creativecommons.org/licenses/by/4.0/,5,2,0,0,0,yes,
+6976741-1,train,basal cell carcinoma,31964127,PMC6976741,https://creativecommons.org/licenses/by-nc/4.0/,5,1,0,2,0,yes,
+7349141-1,train,basal cell carcinoma,32630996,PMC7349141,https://creativecommons.org/licenses/by-nc/4.0/,4,1,0,2,0,yes,
+7593205-1,train,basal cell carcinoma,33133860,PMC7593205,http://creativecommons.org/licenses/by/3.0/,2,2,0,0,0,yes,
+7644349-1,train,basal cell carcinoma,33143401,PMC7644349,https://creativecommons.org/licenses/by-nc/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+7875650-1,train,basal cell carcinoma,33614212,PMC7875650,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+7883528-1,train,basal cell carcinoma,33614324,PMC7883528,http://creativecommons.org/licenses/by/3.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+8056320-1,train,basal cell carcinoma,33936576,PMC8056320,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+8257451-1,train,basal cell carcinoma,34225412,PMC8257451,https://creativecommons.org/licenses/by-nc/4.0/,4,1,0,3,0,yes,
+8520612-1,train,basal cell carcinoma,34656174,PMC8520612,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+8738910-1,train,basal cell carcinoma,35082610,PMC8738910,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+9175047-1,train,basal cell carcinoma,32516426,PMC9175047,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,the article holds another case of the dataset
+9175047-2,train,basal cell carcinoma,32516426,PMC9175047,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,the article holds another case of the dataset
+9234275-1,train,basal cell carcinoma,35769131,PMC9234275,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+9249521-1,train,basal cell carcinoma,35784675,PMC9249521,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9569191-1,train,basal cell carcinoma,36254173,PMC9569191,https://creativecommons.org/licenses/by-nc/3.0/,4,2,1,2,0,yes,
+9588167-1,train,basal cell carcinoma,36299923,PMC9588167,https://creativecommons.org/licenses/by/3.0/,6,3,0,3,0,no,the article holds another case of the dataset
+9588167-2,train,basal cell carcinoma,36299923,PMC9588167,https://creativecommons.org/licenses/by/3.0/,6,3,0,3,0,no,the article holds another case of the dataset
+9588167-3,train,basal cell carcinoma,36299923,PMC9588167,https://creativecommons.org/licenses/by/3.0/,6,3,0,3,0,no,the article holds another case of the dataset
+9593473-1,train,basal cell carcinoma,36000995,PMC9593473,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,0,0,no,the article holds another case of the dataset
+9593473-2,train,basal cell carcinoma,36000995,PMC9593473,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,0,0,no,the article holds another case of the dataset
+9593473-3,train,basal cell carcinoma,36000995,PMC9593473,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,0,0,no,the article holds another case of the dataset
+9793728-1,train,basal cell carcinoma,36582849,PMC9793728,https://creativecommons.org/licenses/by-nc/3.0/,2,1,0,1,0,yes,
+9997686-1,train,basal cell carcinoma,36911588,PMC9997686,https://creativecommons.org/licenses/by/3.0/,5,2,0,3,0,yes,
+pubmed-15696993,train,basal cell carcinoma,15696993,,,0,0,0,0,0,no,no PMC number
+pubmed-15953381,train,basal cell carcinoma,15953381,,,0,0,0,0,0,no,no PMC number
+pubmed-17618177,train,basal cell carcinoma,17618177,,,0,0,0,0,0,no,no PMC number
+pubmed-18757394,train,basal cell carcinoma,18757394,,,0,0,0,0,0,no,no PMC number
+pubmed-21826272,train,basal cell carcinoma,21826272,PMC3150772,https://creativecommons.org/licenses/by/3.0/,7,3,0,1,2,yes,
+pubmed-21957657,train,basal cell carcinoma,21957657,,,0,0,0,0,0,no,no PMC number
+pubmed-21957959,train,basal cell carcinoma,21957959,,,0,0,0,0,0,no,no PMC number
+pubmed-2262624,train,basal cell carcinoma,2262624,,,0,0,0,0,0,no,no PMC number
+pubmed-23864993,train,basal cell carcinoma,23864993,PMC3708640,https://creativecommons.org/licenses/by-nc-nd/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-26295857,train,basal cell carcinoma,26295857,,,0,0,0,0,0,no,no PMC number
+pubmed-26876464,train,basal cell carcinoma,26876464,,,0,0,0,0,0,no,no PMC number
+pubmed-27051742,train,basal cell carcinoma,27051742,PMC4809222,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-27051753,train,basal cell carcinoma,27051753,PMC4809214,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-27075125,train,basal cell carcinoma,27075125,PMC4802550,http://creativecommons.org/licenses/by-nc-nd/3.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-27697696,train,basal cell carcinoma,27697696,PMC5048622,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-28785343,train,basal cell carcinoma,28785343,PMC5535668,http://creativecommons.org/licenses/CC BY-NC/4.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-29563940,train,basal cell carcinoma,29563940,PMC5844689,https://creativecommons.org/licenses/by/3.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-29641710,train,basal cell carcinoma,29641710,PMC5871375,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,2,1,0,2,yes,
+pubmed-29924227,train,basal cell carcinoma,29924227,PMC6001094,http://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,3,0,yes,
+pubmed-31762877,train,basal cell carcinoma,31762877,PMC6850740,http://creativecommons.org/licenses/by/2.0/,2,1,1,1,0,yes,
+pubmed-32685644,train,basal cell carcinoma,32685644,PMC7355212,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-33425577,train,basal cell carcinoma,33425577,PMC7787308,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,1,1,yes,
+pubmed-33584954,train,basal cell carcinoma,33584954,PMC7840091,,0,0,0,0,0,no,no open full text in PMC
+pubmed-34252646,train,basal cell carcinoma,34252646,PMC8369291,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,3,1,yes,
+pubmed-36605976,train,basal cell carcinoma,36605976,PMC9805312,https://creativecommons.org/licenses/by/4.0/,7,3,0,0,2,yes,
+pubmed-36827001,train,basal cell carcinoma,36827001,PMC11309710,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-37487354,train,basal cell carcinoma,37487354,PMC10374954,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-38371171,train,basal cell carcinoma,38371171,PMC10870126,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-38384734,train,basal cell carcinoma,38384734,PMC10879660,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-39268443,train,basal cell carcinoma,39268443,PMC11392278,https://creativecommons.org/licenses/by-nc-sa/4.0/,5,1,0,3,1,yes,
+pubmed-39310074,train,basal cell carcinoma,39310074,PMC11412559,https://creativecommons.org/licenses/by-nc-sa/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-39314575,train,basal cell carcinoma,39314575,PMC11419596,https://creativecommons.org/licenses/by/4.0/,5,2,0,1,2,yes,
+pubmed-39355711,train,basal cell carcinoma,39355711,PMC11444085,https://creativecommons.org/licenses/by/4.0/,3,1,0,2,1,yes,
+pubmed-39522409,train,basal cell carcinoma,39522409,PMC11585664,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,0,1,yes,
+pubmed-39597787,train,basal cell carcinoma,39597787,PMC11594616,https://creativecommons.org/licenses/by/4.0/,10,2,1,4,1,yes,
+pubmed-39650166,train,basal cell carcinoma,39650166,PMC11624536,https://creativecommons.org/licenses/by/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-39664916,train,basal cell carcinoma,39664916,PMC11631210,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-39675064,train,basal cell carcinoma,39675064,PMC11714371,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-39822933,train,basal cell carcinoma,39822933,PMC11737886,https://creativecommons.org/licenses/by-nc/4.0/,4,2,1,1,2,yes,
+pubmed-39863915,train,basal cell carcinoma,39863915,PMC11762882,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-40027537,train,basal cell carcinoma,40027537,PMC11866697,https://creativecommons.org/licenses/by-nc-sa/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-40084188,train,basal cell carcinoma,40084188,PMC11904610,https://creativecommons.org/licenses/by-nc/3.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40276389,train,basal cell carcinoma,40276389,PMC12019886,https://creativecommons.org/licenses/by/4.0/,3,1,0,2,1,yes,
+pubmed-40286695,train,basal cell carcinoma,40286695,PMC12059660,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-40661770,train,basal cell carcinoma,40661770,PMC12256777,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40706330,train,basal cell carcinoma,40706330,PMC12305611,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,2,0,2,0,yes,
+pubmed-40895852,train,basal cell carcinoma,40895852,PMC12393870,https://creativecommons.org/licenses/by/4.0/,5,1,0,1,1,yes,
+pubmed-40978852,train,basal cell carcinoma,40978852,PMC12448567,https://creativecommons.org/licenses/by/4.0/,4,1,0,0,0,yes,
+pubmed-41050009,train,basal cell carcinoma,41050009,PMC12493993,https://creativecommons.org/licenses/by/4.0/,3,1,1,2,0,yes,
+pubmed-41070215,train,basal cell carcinoma,41070215,PMC12506792,https://creativecommons.org/licenses/by-nc/4.0/,2,1,0,0,0,yes,
+pubmed-41626533,train,basal cell carcinoma,41626533,PMC12860216,https://creativecommons.org/licenses/by/4.0/,5,1,0,0,1,yes,
+pubmed-41669576,train,basal cell carcinoma,41669576,PMC12885605,https://creativecommons.org/licenses/by/4.0/,4,1,0,1,1,yes,
+pubmed-41798156,train,basal cell carcinoma,41798156,PMC12966877,https://creativecommons.org/licenses/by/4.0/,5,4,4,0,1,yes,
+pubmed-41835632,train,basal cell carcinoma,41835632,PMC12983114,https://creativecommons.org/licenses/by/4.0/,4,1,0,3,1,yes,
+pubmed-42170233,train,basal cell carcinoma,42170233,PMC13189552,https://creativecommons.org/licenses/by-nc/4.0/,3,2,1,1,2,yes,
+pubmed-42359956,train,basal cell carcinoma,42359956,,,0,0,0,0,0,no,no PMC number
+pubmed-42388425,train,basal cell carcinoma,42388425,PMC13320389,https://creativecommons.org/licenses/by/4.0/,3,2,0,1,1,yes,
+pubmed-42488272,train,basal cell carcinoma,42488272,PMC13390972,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+pubmed-42894695,train,basal cell carcinoma,42894695,PMC13676821,https://creativecommons.org/licenses/by/4.0/,3,1,0,2,1,yes,
+pubmed-8245311,train,basal cell carcinoma,8245311,,,0,0,0,0,0,no,no PMC number
+pubmed-8517497,train,basal cell carcinoma,8517497,,,0,0,0,0,0,no,no PMC number
+pubmed-8675823,train,basal cell carcinoma,8675823,,,0,0,0,0,0,no,no PMC number
+3798357-1,train,dermatofibroma,24173186,PMC3798357,http://creativecommons.org/licenses/by-nc/3.0/,5,2,0,0,0,yes,
+6458953-1,train,dermatofibroma,31049230,PMC6458953,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+pubmed-12100703,train,dermatofibroma,12100703,,,0,0,0,0,0,no,no PMC number
+pubmed-27408454,train,dermatofibroma,27408454,PMC4925593,,0,0,0,0,0,no,no open full text in PMC
+pubmed-38440582,train,dermatofibroma,38440582,PMC10909005,,0,0,0,0,0,no,no open full text in PMC
+pubmed-39502277,train,dermatofibroma,39502277,PMC11535983,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,3,1,yes,
+pubmed-40981342,train,dermatofibroma,40981342,PMC12452420,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+10022727-1,train,melanoma,36937447,PMC10022727,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+10257812-1,train,melanoma,37309332,PMC10257812,https://creativecommons.org/licenses/by/3.0/,4,2,0,0,0,yes,
+10334933-1,train,melanoma,37632907,PMC10334933,https://creativecommons.org/licenses/by/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+10493823-1,train,melanoma,37700960,PMC10493823,https://creativecommons.org/licenses/by/3.0/,5,2,0,2,0,yes,
+10581861-1,train,melanoma,37859876,PMC10581861,https://creativecommons.org/licenses/by/3.0/,2,1,0,0,0,yes,
+10629865-1,train,melanoma,37942344,PMC10629865,https://creativecommons.org/licenses/by-nc/4.0/,3,1,0,1,0,yes,
+10640706-1,train,melanoma,38022238,PMC10640706,https://creativecommons.org/licenses/by/3.0/,11,2,0,1,0,no,the article holds another case of the dataset
+10640706-2,train,melanoma,38022238,PMC10640706,https://creativecommons.org/licenses/by/3.0/,11,2,0,1,0,no,the article holds another case of the dataset
+10656161-1,train,melanoma,37992363,PMC10656161,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+10985282-1,train,melanoma,38567210,PMC10985282,https://creativecommons.org/licenses/by/4.0/,9,0,0,1,0,no,no figure whose caption shows the lesion alone
+11122514-1,train,melanoma,38792595,PMC11122514,https://creativecommons.org/licenses/by/4.0/,5,2,1,1,0,yes,
+11170057-1,train,melanoma,38872690,PMC11170057,https://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+2636101-1,train,melanoma,18417829,PMC2636101,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,1,0,yes,
+3085478-1,train,melanoma,21541184,PMC3085478,https://creativecommons.org/licenses/by/3.0/,3,1,0,0,0,yes,
+3108530-1,train,melanoma,21716556,PMC3108530,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,0,0,yes,
+3162278-1,train,melanoma,21909219,PMC3162278,http://creativecommons.org/licenses/by-nc/3.0,5,2,1,1,0,yes,
+3229054-1,train,melanoma,22148039,PMC3229054,http://creativecommons.org/licenses/by-nc/3.0,4,1,0,2,0,yes,
+3420798-1,train,melanoma,22937296,PMC3420798,https://creativecommons.org/licenses/by/3.0/,7,0,0,5,0,no,no figure whose caption shows the lesion alone
+3699915-1,train,melanoma,23197217,PMC3699915,http://creativecommons.org/licenses/by-nc/3.0/,8,8,5,0,0,yes,
+3728608-1,train,melanoma,23904845,PMC3728608,http://creativecommons.org/licenses/by-nc/3.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+3754372-1,train,melanoma,23793189,PMC3754372,http://creativecommons.org/licenses/by-nc/3.0/,8,0,0,0,0,no,no figure whose caption shows the lesion alone
+3827531-1,train,melanoma,24249911,PMC3827531,http://creativecommons.org/licenses/by-nc-sa/3.0,4,1,0,1,0,yes,
+4008073-1,train,melanoma,24770519,PMC4008073,http://creativecommons.org/licenses/by-nc/3.0/,4,1,0,2,0,yes,
+4049021-1,train,melanoma,24932168,PMC4049021,http://creativecommons.org/licenses/by-nc/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+4377412-1,train,melanoma,25834362,PMC4377412,http://creativecommons.org/licenses/by-nc/3.0/,4,2,0,2,0,yes,
+4411598-1,train,melanoma,25949027,PMC4411598,http://creativecommons.org/licenses/by-nc-sa/3.0,5,1,0,0,0,yes,
+4508639-1,train,melanoma,26266008,PMC4508639,http://creativecommons.org/licenses/by-nc/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+4516104-1,train,melanoma,26131877,PMC4516104,http://creativecommons.org/licenses/by-nc/3.0/,8,2,1,3,0,yes,
+4650992-1,train,melanoma,26594166,PMC4650992,http://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+5624695-1,train,melanoma,28983362,PMC5624695,http://creativecommons.org/licenses/by-nc/4.0/,9,0,0,6,0,no,no figure whose caption shows the lesion alone
+5690489-2,train,melanoma,29159004,PMC5690489,http://creativecommons.org/licenses/by/3.0/,3,2,0,1,0,yes,
+5880972-1,train,melanoma,29628990,PMC5880972,http://creativecommons.org/licenses/by-nc/4.0/,7,0,0,5,0,no,no figure whose caption shows the lesion alone
+6029957-1,train,melanoma,30065586,PMC6029957,http://creativecommons.org/licenses/by-nc/4.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+6381421-1,train,melanoma,30815261,PMC6381421,http://www.creativecommons.org/licenses/by-nc/4.0/,3,2,0,1,0,yes,
+6411517-1,train,melanoma,30703864,PMC6411517,https://creativecommons.org/licenses/by-nc/4.0/,7,0,0,5,0,no,no figure whose caption shows the lesion alone
+6939181-1,train,melanoma,31789252,PMC6939181,http://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+7336622-1,train,melanoma,32642340,PMC7336622,http://creativecommons.org/licenses/by/3.0/,5,1,0,0,0,yes,
+7366130-1,train,melanoma,32685126,PMC7366130,http://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+7838110-2,train,melanoma,33281007,PMC7838110,http://creativecommons.org/licenses/by/4.0/,4,4,4,0,0,no,the article holds another case of the dataset
+7838110-3,train,melanoma,33281007,PMC7838110,http://creativecommons.org/licenses/by/4.0/,4,4,4,0,0,no,the article holds another case of the dataset
+7838949-1,train,melanoma,33445655,PMC7838949,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+7943205-1,train,melanoma,33747615,PMC7943205,https://creativecommons.org/licenses/by/4.0/,1,0,0,0,0,no,the article holds another case of the dataset
+7943205-2,train,melanoma,33747615,PMC7943205,https://creativecommons.org/licenses/by/4.0/,1,0,0,0,0,no,the article holds another case of the dataset
+8328845-1,train,melanoma,34354897,PMC8328845,https://creativecommons.org/licenses/by/3.0/,5,1,0,3,0,yes,
+8362584-1,train,melanoma,34435012,PMC8362584,https://creativecommons.org/licenses/by-nc/4.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+8423318-1,train,melanoma,34540398,PMC8423318,https://creativecommons.org/licenses/by/3.0/,6,2,0,2,0,yes,
+8648425-1,train,melanoma,35024226,PMC8648425,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+8824489-1,train,melanoma,35223182,PMC8824489,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+8882303-1,train,melanoma,35220953,PMC8882303,https://creativecommons.org/licenses/by/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9289571-1,train,melanoma,35860608,PMC9289571,https://creativecommons.org/licenses/by-nc/3.0/,3,2,1,1,0,yes,
+9321777-1,train,melanoma,35434834,PMC9321777,https://creativecommons.org/licenses/by/4.0/,3,2,2,1,0,yes,
+9464542-1,train,melanoma,36159140,PMC9464542,https://creativecommons.org/licenses/by-nc/4.0/,2,1,1,1,0,yes,
+9487200-1,train,melanoma,36148142,PMC9487200,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+9542206-1,train,melanoma,35514028,PMC9542206,https://creativecommons.org/licenses/by/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+9638227-3,train,melanoma,36333615,PMC9638227,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,the article holds another case of the dataset
+9638227-5,train,melanoma,36333615,PMC9638227,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,2,0,no,the article holds another case of the dataset
+9663247-1,train,melanoma,36386569,PMC9663247,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9883383-1,train,melanoma,36721707,PMC9883383,https://creativecommons.org/licenses/by/3.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9904512-1,train,melanoma,36779129,PMC9904512,https://creativecommons.org/licenses/by/3.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9946071-1,train,melanoma,36701586,PMC9946071,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-19805962,train,melanoma,19805962,,,0,0,0,0,0,no,no PMC number
+pubmed-20445300,train,melanoma,20445300,,,0,0,0,0,0,no,no PMC number
+pubmed-21318971,train,melanoma,21318971,,,0,0,0,0,0,no,no PMC number
+pubmed-22066035,train,melanoma,22066035,PMC3208415,open-access,2,1,0,0,0,yes,
+pubmed-22693201,train,melanoma,22693201,PMC3128370,,0,0,0,0,0,no,no open full text in PMC
+pubmed-23565846,train,melanoma,23565846,,,0,0,0,0,0,no,no PMC number
+pubmed-23569358,train,melanoma,23569358,PMC3615922,,0,0,0,0,0,no,no figure
+pubmed-23626553,train,melanoma,23626553,PMC3636959,http://creativecommons.org/licenses/by-nc-nd/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-23782676,train,melanoma,23782676,PMC4079032,,5,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-23785636,train,melanoma,23785636,PMC3663382,,3,1,1,1,1,yes,
+pubmed-24520521,train,melanoma,24520521,PMC3919847,,7,3,3,2,0,yes,
+pubmed-24879513,train,melanoma,24879513,,,0,0,0,0,0,no,no PMC number
+pubmed-25289347,train,melanoma,25289347,PMC4174083,http://creativecommons.org/licenses/by-nc-nd/3.0,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-25386272,train,melanoma,25386272,PMC4211534,open-access,3,3,0,0,3,yes,
+pubmed-26448581,train,melanoma,26448581,PMC4661048,,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-27924801,train,melanoma,27924801,,,0,0,0,0,0,no,no PMC number
+pubmed-28723771,train,melanoma,28723771,PMC5521911,http://creativecommons.org/licenses/by-nc-sa/4.0,2,1,0,1,1,yes,
+pubmed-28785332,train,melanoma,28785332,PMC5535657,http://creativecommons.org/licenses/CC BY-NC/4.0,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-29196822,train,melanoma,29196822,,,0,0,0,0,0,no,no PMC number
+pubmed-29356740,train,melanoma,29356740,,,0,0,0,0,0,no,no PMC number
+pubmed-29531606,train,melanoma,29531606,PMC5839450,http://creativecommons.org/licenses/CC BY-NC/4.0,9,3,0,0,1,yes,
+pubmed-30159073,train,melanoma,30159073,PMC6108806,http://creativecommons.org/licenses/CC BY-NC/4.0,5,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-30607193,train,melanoma,30607193,PMC6311480,http://creativecommons.org/licenses/CC BY-NC/4.0,3,1,0,2,1,yes,
+pubmed-31763424,train,melanoma,31763424,PMC6864298,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,3,0,0,0,yes,
+pubmed-32158881,train,melanoma,32158881,PMC7061656,http://creativecommons.org/licenses/by-nc-nd/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-32650855,train,melanoma,32650855,,,0,0,0,0,0,no,no PMC number
+pubmed-32876038,train,melanoma,32876038,,,0,0,0,0,0,no,no PMC number
+pubmed-32953113,train,melanoma,32953113,PMC7484730,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-33041156,train,melanoma,33041156,PMC7672400,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,2,1,1,2,yes,
+pubmed-33768036,train,melanoma,33768036,PMC7982043,http://creativecommons.org/licenses/by-nc-sa/4.0,3,2,0,0,1,yes,
+pubmed-33997213,train,melanoma,33997213,PMC8099597,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-34320913,train,melanoma,34320913,,,0,0,0,0,0,no,no PMC number
+pubmed-34492616,train,melanoma,34492616,PMC8424583,https://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-34726186,train,melanoma,34726186,,,0,0,0,0,0,no,no PMC number
+pubmed-3617232,train,melanoma,3617232,,,0,0,0,0,0,no,no PMC number
+pubmed-36380543,train,melanoma,36380543,PMC9468374,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,0,1,yes,
+pubmed-36905617,train,melanoma,36905617,,,0,0,0,0,0,no,no PMC number
+pubmed-36937623,train,melanoma,36937623,PMC10017401,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,0,1,yes,
+pubmed-37094414,train,melanoma,37094414,PMC10149260,https://creativecommons.org/licenses/by/4.0/,5,1,0,1,1,yes,
+pubmed-37323976,train,melanoma,37323976,PMC10264841,https://creativecommons.org/licenses/by-nc-nd/4.0/,6,0,0,5,0,no,no figure whose caption shows the lesion alone
+pubmed-37506525,train,melanoma,37506525,PMC10413056,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-37539371,train,melanoma,37539371,PMC10395766,https://creativecommons.org/licenses/by-nc-nd/4.0/,1,1,0,0,1,yes,
+pubmed-37573316,train,melanoma,37573316,PMC10422713,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-38576910,train,melanoma,38576910,PMC10990321,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,0,0,yes,
+pubmed-39363234,train,melanoma,39363234,PMC11447991,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-39385807,train,melanoma,39385807,PMC11462478,https://creativecommons.org/licenses/by/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-39862659,train,melanoma,39862659,PMC11803898,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-39869445,train,melanoma,39869445,PMC11703459,https://creativecommons.org/licenses/by-nc/4.0/,5,1,0,2,1,yes,
+pubmed-40125165,train,melanoma,40125165,PMC11930341,https://creativecommons.org/licenses/by/4.0/,5,1,0,4,1,yes,
+pubmed-40244039,train,melanoma,40244039,PMC12715674,https://creativecommons.org/licenses/by-nc/4.0/,3,2,0,1,1,yes,
+pubmed-40636637,train,melanoma,40636637,PMC12240450,https://creativecommons.org/licenses/by/4.0/,4,1,0,0,1,yes,
+pubmed-40869985,train,melanoma,40869985,PMC12385200,https://creativecommons.org/licenses/by/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-41111856,train,melanoma,41111856,PMC12530668,https://creativecommons.org/licenses/by/4.0/,1,1,0,0,1,yes,
+pubmed-41321603,train,melanoma,41321603,PMC12659637,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-41341824,train,melanoma,41341824,PMC12668925,https://creativecommons.org/licenses/by/4.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+pubmed-41869222,train,melanoma,41869222,PMC13005282,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,1,yes,
+pubmed-41949015,train,melanoma,41949015,PMC13423131,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-42056756,train,melanoma,42056756,PMC13128519,https://creativecommons.org/licenses/by/4.0/,11,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-42195418,train,melanoma,42195418,PMC13208758,https://creativecommons.org/licenses/by/4.0/,7,3,1,2,2,yes,
+pubmed-42245639,train,melanoma,42245639,PMC13230091,https://creativecommons.org/licenses/by/4.0/,4,1,0,2,0,yes,
+pubmed-42262336,train,melanoma,42262336,PMC13734609,https://creativecommons.org/licenses/by-nc-sa/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-42587721,train,melanoma,42587721,PMC13464105,https://creativecommons.org/licenses/by/4.0/,12,2,1,9,0,yes,
+pubmed-42603991,train,melanoma,42603991,PMC13476570,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,2,1,yes,
+pubmed-42909358,train,melanoma,42909358,PMC13685028,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+pubmed-42920588,train,melanoma,42920588,PMC13690673,https://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+10366870-1,train,nevus,37489452,PMC10366870,https://creativecommons.org/licenses/by/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+11167765-1,train,nevus,38867278,PMC11167765,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+3827522-1,train,nevus,24249902,PMC3827522,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,1,0,yes,
+4943305-1,train,nevus,27462219,PMC4943305,http://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+5700600-1,train,nevus,29133658,PMC5700600,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,1,0,yes,
+5726670-1,train,nevus,29267439,PMC5726670,http://creativecommons.org/licenses/by-nc/4.0/,5,3,1,2,0,yes,
+6287087-1,train,nevus,30581937,PMC6287087,http://creativecommons.org/licenses/by/4.0/,4,3,0,1,0,yes,
+6489059-1,train,nevus,31049319,PMC6489059,http://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+6707821-1,train,nevus,31497428,PMC6707821,http://creativecommons.org/licenses/by/3.0/,1,1,0,0,0,yes,
+8094459-1,train,nevus,33947392,PMC8094459,https://creativecommons.org/licenses/by/4.0/,6,1,0,1,0,yes,
+8530055-2,train,nevus,34759412,PMC8530055,https://creativecommons.org/licenses/by-nc-sa/4.0/,2,1,0,0,0,yes,
+9069907-1,train,nevus,35531486,PMC9069907,https://creativecommons.org/licenses/by-nc-sa/4.0/,3,3,1,0,0,yes,
+9837582-1,train,nevus,36685999,PMC9837582,https://creativecommons.org/licenses/by-nc-sa/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+9946098-1,train,nevus,36892352,PMC9946098,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-15134325,train,nevus,15134325,,,0,0,0,0,0,no,no PMC number
+pubmed-16012861,train,nevus,16012861,,,0,0,0,0,0,no,no PMC number
+pubmed-16393608,train,nevus,16393608,,,0,0,0,0,0,no,no PMC number
+pubmed-16618868,train,nevus,16618868,,,0,0,0,0,0,no,no PMC number
+pubmed-20507404,train,nevus,20507404,,,0,0,0,0,0,no,no PMC number
+pubmed-20805689,train,nevus,20805689,,,0,0,0,0,0,no,no PMC number
+pubmed-29943855,train,nevus,29943855,,,0,0,0,0,0,no,no PMC number
+pubmed-34026121,train,nevus,34026121,PMC8117826,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,0,yes,
+pubmed-39165299,train,nevus,39165299,PMC11334130,https://creativecommons.org/licenses/by-nc/4.0/,5,2,0,3,1,yes,
+pubmed-41574354,train,nevus,41574354,PMC12819833,https://creativecommons.org/licenses/by/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+11128169-1,train,pigmented benign keratosis,38799019,PMC11128169,https://creativecommons.org/licenses/by-nc/4.0/,2,1,0,1,0,yes,
+8648421-1,train,pigmented benign keratosis,35024223,PMC8648421,https://creativecommons.org/licenses/by/4.0/,2,1,1,0,0,yes,
+pubmed-19508488,train,pigmented benign keratosis,19508488,,,0,0,0,0,0,no,no PMC number
+pubmed-25386277,train,pigmented benign keratosis,25386277,PMC4211524,open-access,3,1,1,0,0,yes,
+pubmed-41357318,train,pigmented benign keratosis,41357318,PMC12681201,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-41493242,train,pigmented benign keratosis,41493242,,,0,0,0,0,0,no,no PMC number
+pubmed-41904532,train,pigmented benign keratosis,41904532,PMC13151312,https://creativecommons.org/licenses/by-nc-nd/4.0/,6,1,0,3,1,yes,
+10039754-1,train,squamous cell carcinoma,36974168,PMC10039754,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+10056737-4,train,squamous cell carcinoma,36983424,PMC10056737,https://creativecommons.org/licenses/by/4.0/,8,1,0,3,0,yes,
+10263070-1,train,squamous cell carcinoma,37323298,PMC10263070,https://creativecommons.org/licenses/by/3.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+10391777-1,train,squamous cell carcinoma,36705400,PMC10391777,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+10395632-1,train,squamous cell carcinoma,37538336,PMC10395632,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+10421574-1,train,squamous cell carcinoma,37576725,PMC10421574,https://creativecommons.org/licenses/by/4.0/,2,1,0,0,0,yes,
+10568952-1,train,squamous cell carcinoma,37842450,PMC10568952,https://creativecommons.org/licenses/by/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10835559-1,train,squamous cell carcinoma,38313173,PMC10835559,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+10873700-1,train,squamous cell carcinoma,38370500,PMC10873700,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+10881292-1,train,squamous cell carcinoma,38389511,PMC10881292,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+10987401-1,train,squamous cell carcinoma,38571860,PMC10987401,https://creativecommons.org/licenses/by/4.0/,4,2,0,1,0,yes,
+11001315-1,train,squamous cell carcinoma,38590475,PMC11001315,https://creativecommons.org/licenses/by/4.0/,4,2,0,1,0,yes,
+11146447-1,train,squamous cell carcinoma,38832174,PMC11146447,https://creativecommons.org/licenses/by/4.0/,3,1,0,2,0,yes,
+1314891-1,train,squamous cell carcinoma,16309562,PMC1314891,http://creativecommons.org/licenses/by/2.0,7,1,0,2,0,yes,
+2769336-1,train,squamous cell carcinoma,19918506,PMC2769336,http://creativecommons.org/licenses/by/3.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+3198751-1,train,squamous cell carcinoma,21967681,PMC3198751,http://creativecommons.org/licenses/by/2.0,3,1,0,1,0,yes,
+3229955-1,train,squamous cell carcinoma,22148029,PMC3229955,http://creativecommons.org/licenses/by-nc/3.0,3,1,0,2,0,yes,
+3339127-1,train,squamous cell carcinoma,22557854,PMC3339127,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,1,0,yes,
+3796415-1,train,squamous cell carcinoma,24137429,PMC3796415,http://creativecommons.org/licenses/by/3.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+3969683-1,train,squamous cell carcinoma,24700942,PMC3969683,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,1,0,yes,
+4065436-1,train,squamous cell carcinoma,24959058,PMC4065436,http://creativecommons.org/licenses/by-nc-sa/3.0,5,0,0,2,0,no,no figure whose caption shows the lesion alone
+4209265-1,train,squamous cell carcinoma,25408647,PMC4209265,http://creativecommons.org/licenses/by-nc/3.0/,4,0,0,4,0,no,the article holds another case of the dataset
+4209265-2,train,squamous cell carcinoma,25408647,PMC4209265,http://creativecommons.org/licenses/by-nc/3.0/,4,0,0,4,0,no,the article holds another case of the dataset
+4248544-1,train,squamous cell carcinoma,25484436,PMC4248544,http://creativecommons.org/licenses/by-nc-sa/3.0,5,1,0,0,0,yes,
+4466287-1,train,squamous cell carcinoma,26082591,PMC4466287,http://creativecommons.org/licenses/by-nc/3.0/,2,1,0,1,0,yes,
+4560310-1,train,squamous cell carcinoma,26351422,PMC4560310,http://creativecommons.org/licenses/by-nc/3.0/,3,1,0,1,0,yes,
+4607581-1,train,squamous cell carcinoma,26484311,PMC4607581,http://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+4881932-1,train,squamous cell carcinoma,27161144,PMC4881932,http://creativecommons.org/licenses/by-nc/4.0/,6,1,0,1,0,yes,
+5121571-1,train,squamous cell carcinoma,27920677,PMC5121571,http://creativecommons.org/licenses/by-nc/4.0/,5,1,0,1,0,yes,
+5126593-1,train,squamous cell carcinoma,27920683,PMC5126593,http://creativecommons.org/licenses/by-nc/4.0/,4,0,0,1,0,no,the article holds another case of the dataset
+5126593-2,train,squamous cell carcinoma,27920683,PMC5126593,http://creativecommons.org/licenses/by-nc/4.0/,4,0,0,1,0,no,the article holds another case of the dataset
+5126593-3,train,squamous cell carcinoma,27920683,PMC5126593,http://creativecommons.org/licenses/by-nc/4.0/,4,0,0,1,0,no,the article holds another case of the dataset
+5279087-1,train,squamous cell carcinoma,28099342,PMC5279087,http://creativecommons.org/licenses/by/4.0,5,1,0,2,0,yes,
+5387884-1,train,squamous cell carcinoma,28442880,PMC5387884,http://creativecommons.org/licenses/by-nc-sa/3.0,6,1,0,0,0,yes,
+5518578-1,train,squamous cell carcinoma,28761843,PMC5518578,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+5624694-1,train,squamous cell carcinoma,28983361,PMC5624694,http://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+5839895-1,train,squamous cell carcinoma,29606821,PMC5839895,http://creativecommons.org/licenses/by-nc/4.0,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+5884260-1,train,squamous cell carcinoma,29602886,PMC5884260,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+6031951-1,train,squamous cell carcinoma,29998100,PMC6031951,http://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+6064627-1,train,squamous cell carcinoma,30055637,PMC6064627,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+7061685-1,train,squamous cell carcinoma,32158871,PMC7061685,http://creativecommons.org/licenses/by/4.0/,7,0,0,0,0,no,the article holds another case of the dataset
+7061685-5,train,squamous cell carcinoma,32158871,PMC7061685,http://creativecommons.org/licenses/by/4.0/,7,0,0,0,0,no,the article holds another case of the dataset
+7146309-1,train,squamous cell carcinoma,32318346,PMC7146309,http://creativecommons.org/licenses/by/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+7175428-1,train,squamous cell carcinoma,32341711,PMC7175428,https://creativecommons.org/licenses/by/3.0/,12,4,3,2,0,yes,
+7184790-1,train,squamous cell carcinoma,32355488,PMC7184790,http://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+7719265-1,train,squamous cell carcinoma,33050167,PMC7719265,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,0,yes,
+7752640-1,train,squamous cell carcinoma,33363907,PMC7752640,https://creativecommons.org/licenses/by/4.0/,5,1,0,2,0,yes,
+7952297-1,train,squamous cell carcinoma,33718249,PMC7952297,http://creativecommons.org/licenses/by/4.0/,3,0,0,0,0,no,the article holds another case of the dataset
+7952297-2,train,squamous cell carcinoma,33718249,PMC7952297,http://creativecommons.org/licenses/by/4.0/,3,0,0,0,0,no,the article holds another case of the dataset
+8009643-1,train,squamous cell carcinoma,33815911,PMC8009643,https://creativecommons.org/licenses/by/3.0/,8,2,0,4,0,yes,
+8186998-1,train,squamous cell carcinoma,34113181,PMC8186998,https://creativecommons.org/licenses/by-nc/3.0/,3,1,0,2,0,yes,
+8278417-1,train,squamous cell carcinoma,34252640,PMC8278417,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+8740151-1,train,squamous cell carcinoma,35082616,PMC8740151,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9121989-1,train,squamous cell carcinoma,35601538,PMC9121989,https://creativecommons.org/licenses/by-nc/3.0/,4,1,0,1,0,yes,
+9192687-2,train,squamous cell carcinoma,35712462,PMC9192687,https://creativecommons.org/licenses/by/4.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9205272-1,train,squamous cell carcinoma,35733461,PMC9205272,https://creativecommons.org/licenses/by/3.0/,3,0,0,0,0,no,no figure whose caption shows the lesion alone
+9392849-1,train,squamous cell carcinoma,36004016,PMC9392849,https://creativecommons.org/licenses/by/3.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+9420417-1,train,squamous cell carcinoma,36043220,PMC9420417,https://creativecommons.org/licenses/by-nc/3.0/,5,1,0,2,0,yes,
+9831616-1,train,squamous cell carcinoma,36636549,PMC9831616,https://creativecommons.org/licenses/by/3.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+9891020-1,train,squamous cell carcinoma,36743112,PMC9891020,https://creativecommons.org/licenses/by-nc-sa/4.0/,4,2,1,1,0,yes,
+9910816-1,train,squamous cell carcinoma,36788857,PMC9910816,https://creativecommons.org/licenses/by/3.0/,5,1,0,0,0,yes,
+pubmed-12135525,train,squamous cell carcinoma,12135525,,,0,0,0,0,0,no,no PMC number
+pubmed-12207766,train,squamous cell carcinoma,12207766,,,0,0,0,0,0,no,no PMC number
+pubmed-15492424,train,squamous cell carcinoma,15492424,,,0,0,0,0,0,no,no PMC number
+pubmed-16197430,train,squamous cell carcinoma,16197430,,,0,0,0,0,0,no,no PMC number
+pubmed-16466514,train,squamous cell carcinoma,16466514,,,0,0,0,0,0,no,no PMC number
+pubmed-16483058,train,squamous cell carcinoma,16483058,,,0,0,0,0,0,no,no PMC number
+pubmed-18273510,train,squamous cell carcinoma,18273510,,,0,0,0,0,0,no,no PMC number
+pubmed-18559769,train,squamous cell carcinoma,18559769,,,0,0,0,0,0,no,no PMC number
+pubmed-19061623,train,squamous cell carcinoma,19061623,,,0,0,0,0,0,no,no PMC number
+pubmed-21139891,train,squamous cell carcinoma,21139891,PMC2994434,open-access,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-21769774,train,squamous cell carcinoma,21769774,,,0,0,0,0,0,no,no PMC number
+pubmed-21897818,train,squamous cell carcinoma,21897818,PMC3155694,http://creativecommons.org/licenses/by-nc-nd/3.0/,1,1,0,0,1,yes,
+pubmed-21922390,train,squamous cell carcinoma,21922390,,,0,0,0,0,0,no,no PMC number
+pubmed-23271994,train,squamous cell carcinoma,23271994,PMC3529577,http://creativecommons.org/licenses/by-nc-nd/3.0/,2,1,0,1,1,yes,
+pubmed-23714052,train,squamous cell carcinoma,23714052,,,0,0,0,0,0,no,no PMC number
+pubmed-23926398,train,squamous cell carcinoma,23926398,PMC3687638,http://creativecommons.org/licenses/by-nc-nd/3.0/,4,1,0,2,0,yes,
+pubmed-24214953,train,squamous cell carcinoma,24214953,,,0,0,0,0,0,no,no PMC number
+pubmed-25750849,train,squamous cell carcinoma,25750849,PMC4350316,,6,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-25826522,train,squamous cell carcinoma,25826522,,,0,0,0,0,0,no,no PMC number
+pubmed-25878926,train,squamous cell carcinoma,25878926,PMC4387137,open-access,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-26091513,train,squamous cell carcinoma,26091513,,,0,0,0,0,0,no,no PMC number
+pubmed-26472290,train,squamous cell carcinoma,26472290,PMC4611474,,0,0,0,0,0,no,no open full text in PMC
+pubmed-27051710,train,squamous cell carcinoma,27051710,PMC4808703,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,0,1,yes,
+pubmed-27222765,train,squamous cell carcinoma,27222765,PMC4866620,,4,3,2,1,3,yes,
+pubmed-28134189,train,squamous cell carcinoma,28134189,,,0,0,0,0,0,no,no PMC number
+pubmed-28370387,train,squamous cell carcinoma,28370387,,,0,0,0,0,0,no,no PMC number
+pubmed-29139140,train,squamous cell carcinoma,29139140,,,0,0,0,0,0,no,no PMC number
+pubmed-29742561,train,squamous cell carcinoma,29742561,,,0,0,0,0,0,no,no PMC number
+pubmed-29984271,train,squamous cell carcinoma,29984271,PMC6031571,http://creativecommons.org/licenses/by-nc-nd/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-30310837,train,squamous cell carcinoma,30310837,PMC6176848,http://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,1,1,yes,
+pubmed-30591900,train,squamous cell carcinoma,30591900,PMC6304292,,0,0,0,0,0,no,no open full text in PMC
+pubmed-30596017,train,squamous cell carcinoma,30596017,PMC6308257,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-30685629,train,squamous cell carcinoma,30685629,PMC6351348,http://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,2,0,yes,
+pubmed-30881827,train,squamous cell carcinoma,30881827,PMC6416116,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-30894921,train,squamous cell carcinoma,30894921,PMC6420943,http://creativecommons.org/licenses/CC BY-NC/4.0,4,2,1,1,1,yes,
+pubmed-31485536,train,squamous cell carcinoma,31485536,PMC6717160,http://creativecommons.org/licenses/by-nc-nd/4.0/,8,4,0,0,0,yes,
+pubmed-32211494,train,squamous cell carcinoma,32211494,PMC7082606,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,1,1,yes,
+pubmed-32417733,train,squamous cell carcinoma,32417733,PMC7229405,http://creativecommons.org/licenses/by/4.0/,5,1,0,0,1,yes,
+pubmed-32760776,train,squamous cell carcinoma,32760776,PMC7390831,http://creativecommons.org/licenses/by-nc-nd/4.0/,5,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-33145143,train,squamous cell carcinoma,33145143,PMC7599050,http://creativecommons.org/licenses/by/3.0/,4,1,0,2,1,yes,
+pubmed-33294566,train,squamous cell carcinoma,33294566,PMC7701026,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,1,yes,
+pubmed-33655188,train,squamous cell carcinoma,33655188,PMC7746131,https://creativecommons.org/licenses/by/4.0/,6,2,0,3,0,yes,
+pubmed-33732837,train,squamous cell carcinoma,33732837,PMC7940706,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-33842344,train,squamous cell carcinoma,33842344,PMC8027102,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+pubmed-34401428,train,squamous cell carcinoma,34401428,PMC8355808,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-34836741,train,squamous cell carcinoma,34836741,PMC8799863,https://creativecommons.org/licenses/by/4.0/,4,3,0,1,0,yes,
+pubmed-35466139,train,squamous cell carcinoma,35466139,,,0,0,0,0,0,no,no PMC number
+pubmed-35872878,train,squamous cell carcinoma,35872878,PMC9305313,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,2,2,2,1,yes,
+pubmed-35923983,train,squamous cell carcinoma,35923983,PMC9325334,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,0,1,yes,
+pubmed-36268452,train,squamous cell carcinoma,36268452,PMC9577594,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,0,1,yes,
+pubmed-36566739,train,squamous cell carcinoma,36566739,PMC9803812,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,2,1,yes,
+pubmed-37597429,train,squamous cell carcinoma,37597429,PMC10462869,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,1,1,yes,
+pubmed-38279518,train,squamous cell carcinoma,38279518,,,0,0,0,0,0,no,no PMC number
+pubmed-38544962,train,squamous cell carcinoma,38544962,PMC10963947,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-38989265,train,squamous cell carcinoma,38989265,PMC11234092,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,0,yes,
+pubmed-38989504,train,squamous cell carcinoma,38989504,PMC11232461,https://creativecommons.org/licenses/by/4.0/,4,2,0,1,1,yes,
+pubmed-39100612,train,squamous cell carcinoma,39100612,PMC11296581,https://creativecommons.org/licenses/by-nc-sa/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-39184757,train,squamous cell carcinoma,39184757,PMC11345041,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+pubmed-39215660,train,squamous cell carcinoma,39215660,PMC11366091,https://creativecommons.org/licenses/by-nc/4.0/,9,2,0,4,1,yes,
+pubmed-39233960,train,squamous cell carcinoma,39233960,PMC11374354,https://creativecommons.org/licenses/by/4.0/,4,1,0,0,1,yes,
+pubmed-39286828,train,squamous cell carcinoma,39286828,PMC11403461,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,1,yes,
+pubmed-39512980,train,squamous cell carcinoma,39512980,PMC11541159,https://creativecommons.org/licenses/by/4.0/,6,2,0,1,2,yes,
+pubmed-39625710,train,squamous cell carcinoma,39625710,PMC11854041,https://creativecommons.org/licenses/by/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-39640108,train,squamous cell carcinoma,39640108,PMC11620275,https://creativecommons.org/licenses/by/4.0/,1,1,0,0,1,yes,
+pubmed-39995476,train,squamous cell carcinoma,39995476,PMC11850042,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,2,1,yes,
+pubmed-40099174,train,squamous cell carcinoma,40099174,PMC11910622,https://creativecommons.org/licenses/by/4.0/,4,1,1,1,1,yes,
+pubmed-40162153,train,squamous cell carcinoma,40162153,PMC11952882,https://creativecommons.org/licenses/by/4.0/,3,2,1,1,2,yes,
+pubmed-40185053,train,squamous cell carcinoma,40185053,PMC11999488,https://creativecommons.org/licenses/by/4.0/,3,2,0,0,1,yes,
+pubmed-40190970,train,squamous cell carcinoma,40190970,PMC11970878,https://creativecommons.org/licenses/by/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40330832,train,squamous cell carcinoma,40330832,PMC12053265,https://creativecommons.org/licenses/by/4.0/,4,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-40353102,train,squamous cell carcinoma,40353102,PMC12063022,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,2,1,yes,
+pubmed-40747183,train,squamous cell carcinoma,40747183,PMC12312661,https://creativecommons.org/licenses/by/4.0/,2,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-41002780,train,squamous cell carcinoma,41002780,PMC12469173,https://creativecommons.org/licenses/by/4.0/,7,1,0,3,1,yes,
+pubmed-41064298,train,squamous cell carcinoma,41064298,PMC12503607,https://creativecommons.org/licenses/by-nc/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-41084663,train,squamous cell carcinoma,41084663,PMC12515506,https://creativecommons.org/licenses/by/4.0/,2,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-41113234,train,squamous cell carcinoma,41113234,PMC12527822,https://creativecommons.org/licenses/by/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-41209091,train,squamous cell carcinoma,41209091,PMC12589869,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+pubmed-41322864,train,squamous cell carcinoma,41322864,PMC12664703,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,1,yes,
+pubmed-41404217,train,squamous cell carcinoma,41404217,PMC12703644,https://creativecommons.org/licenses/by/4.0/,4,2,2,0,1,yes,
+pubmed-41583186,train,squamous cell carcinoma,41583186,PMC12824549,https://creativecommons.org/licenses/by/4.0/,3,1,0,0,1,yes,
+pubmed-42017103,train,squamous cell carcinoma,42017103,PMC13092995,https://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+pubmed-42117139,train,squamous cell carcinoma,42117139,PMC13157619,https://creativecommons.org/licenses/by/4.0/,6,2,0,0,0,yes,
+pubmed-42117629,train,squamous cell carcinoma,42117629,,,0,0,0,0,0,no,no PMC number
+pubmed-42367710,train,squamous cell carcinoma,42367710,PMC13300597,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,0,1,yes,
+pubmed-42403802,train,squamous cell carcinoma,42403802,PMC13332848,https://creativecommons.org/licenses/by/4.0/,5,1,0,2,0,yes,
+pubmed-42416971,train,squamous cell carcinoma,42416971,PMC13341100,https://creativecommons.org/licenses/by-nc/4.0/,3,2,1,0,2,yes,
+pubmed-42519529,train,squamous cell carcinoma,42519529,PMC13384617,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-42605493,train,squamous cell carcinoma,42605493,PMC13477805,https://creativecommons.org/licenses/by/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-42827682,train,squamous cell carcinoma,42827682,PMC13631526,https://creativecommons.org/licenses/by-nc-nd/4.0/,3,1,0,2,1,yes,
+pubmed-42877944,train,squamous cell carcinoma,42877944,PMC13668426,https://creativecommons.org/licenses/by/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-42997569,train,squamous cell carcinoma,42997569,PMC13742317,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,1,0,yes,
+pubmed-8105625,train,squamous cell carcinoma,8105625,,,0,0,0,0,0,no,no PMC number
+10909320-1,train,vascular lesion,38435842,PMC10909320,https://creativecommons.org/licenses/by-nc/3.0/,3,1,0,0,0,yes,
+4804580-1,train,vascular lesion,27057494,PMC4804580,http://creativecommons.org/licenses/by-nc-sa/3.0,4,1,0,2,0,yes,
+5964439-1,train,vascular lesion,29854524,PMC5964439,http://creativecommons.org/licenses/by/4.0/,3,1,0,1,0,yes,
+pubmed-34990348,train,vascular lesion,34990348,,,0,0,0,0,0,no,no PMC number
+pubmed-41280975,train,vascular lesion,41280975,PMC12634483,https://creativecommons.org/licenses/by/4.0/,7,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-42459423,train,vascular lesion,42459423,PMC13371957,https://creativecommons.org/licenses/by-nc/4.0/,1,1,0,0,0,yes,
+pubmed-28031141,val,actinic keratosis,28031141,,,0,0,0,0,0,no,no PMC number
+10563029-1,val,basal cell carcinoma,37822985,PMC10563029,https://creativecommons.org/licenses/by-nc/4.0/,2,1,1,0,0,yes,
+11110509-1,val,basal cell carcinoma,38778911,PMC11110509,https://creativecommons.org/licenses/by-nc/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+4601466-1,val,basal cell carcinoma,26538745,PMC4601466,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,2,0,yes,
+6796745-1,val,basal cell carcinoma,31557720,PMC6796745,http://creativecommons.org/licenses/by/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+7992662-1,val,basal cell carcinoma,33911569,PMC7992662,http://creativecommons.org/licenses/by-nc/4.0,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+9609975-1,val,basal cell carcinoma,35146530,PMC9609975,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+9831639-1,val,basal cell carcinoma,36636656,PMC9831639,https://creativecommons.org/licenses/by/4.0/,5,2,0,0,0,yes,
+pubmed-21792351,val,basal cell carcinoma,21792351,PMC3142455,http://creativecommons.org/licenses/by-nc-nd/3.0/,4,3,1,1,2,yes,
+pubmed-24786580,val,basal cell carcinoma,24786580,,,0,0,0,0,0,no,no PMC number
+pubmed-38989074,val,basal cell carcinoma,38989074,PMC11233041,https://creativecommons.org/licenses/by-nc-sa/4.0/,3,1,0,2,1,yes,
+pubmed-39649980,val,basal cell carcinoma,39649980,PMC11623415,https://creativecommons.org/licenses/by-nc-sa/4.0/,4,4,0,0,0,yes,
+pubmed-39968018,val,basal cell carcinoma,39968018,PMC11833745,https://creativecommons.org/licenses/by/4.0/,4,1,0,1,0,yes,
+pubmed-40026985,val,basal cell carcinoma,40026985,PMC11871982,https://creativecommons.org/licenses/by/4.0/,4,2,1,1,1,yes,
+pubmed-40842486,val,basal cell carcinoma,40842486,PMC12366782,https://creativecommons.org/licenses/by/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-42299174,val,basal cell carcinoma,42299174,PMC13265097,https://creativecommons.org/licenses/by/4.0/,5,1,0,4,0,yes,
+4763649-1,val,dermatofibroma,26955137,PMC4763649,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,2,0,no,the article holds another case of the dataset
+4763649-2,val,dermatofibroma,26955137,PMC4763649,http://creativecommons.org/licenses/by-nc-sa/3.0,2,0,0,2,0,no,the article holds another case of the dataset
+8136451-1,val,dermatofibroma,34035995,PMC8136451,https://creativecommons.org/licenses/by/3.0/,6,1,0,3,0,no,the article holds another case of the dataset
+8136451-2,val,dermatofibroma,34035995,PMC8136451,https://creativecommons.org/licenses/by/3.0/,6,1,0,3,0,no,the article holds another case of the dataset
+pubmed-12045945,val,dermatofibroma,12045945,,,0,0,0,0,0,no,no PMC number
+pubmed-39215353,val,dermatofibroma,39215353,PMC11365123,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,0,1,yes,
+pubmed-7894102,val,dermatofibroma,7894102,,,0,0,0,0,0,no,no PMC number
+4248522-1,val,melanoma,25484414,PMC4248522,http://creativecommons.org/licenses/by-nc-sa/3.0,9,1,0,4,0,yes,
+4474441-1,val,melanoma,26088594,PMC4474441,https://creativecommons.org/licenses/by/4.0/,5,3,0,0,0,yes,
+pubmed-15541091,val,melanoma,15541091,,,0,0,0,0,0,no,no PMC number
+pubmed-17372102,val,melanoma,17372102,,,0,0,0,0,0,no,no PMC number
+pubmed-29644838,val,melanoma,29644838,,,0,0,0,0,0,no,no PMC number
+pubmed-30726470,val,melanoma,30726470,PMC6360959,http://creativecommons.org/licenses/by-nc-nd/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+pubmed-30792637,val,melanoma,30792637,PMC6381895,,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-31371335,val,melanoma,31371335,PMC6677946,,0,0,0,0,0,no,no open full text in PMC
+pubmed-35990226,val,melanoma,35990226,PMC9388864,https://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,0,0,yes,
+pubmed-39237979,val,melanoma,39237979,PMC11378378,https://creativecommons.org/licenses/by-nc-nd/4.0/,8,2,0,2,1,yes,
+pubmed-40520839,val,melanoma,40520839,PMC12165602,https://creativecommons.org/licenses/by/4.0/,8,1,0,6,1,yes,
+pubmed-41646537,val,melanoma,41646537,PMC12867940,https://creativecommons.org/licenses/by/4.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-42031380,val,melanoma,42031380,,,0,0,0,0,0,no,no PMC number
+pubmed-42199973,val,melanoma,42199973,PMC13200838,https://creativecommons.org/licenses/by-nc/4.0/,1,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-8251363,val,melanoma,8251363,,,0,0,0,0,0,no,no PMC number
+10646499-1,val,nevus,38021933,PMC10646499,https://creativecommons.org/licenses/by/3.0/,1,1,0,0,0,yes,
+10751467-1,val,nevus,38152824,PMC10751467,https://creativecommons.org/licenses/by/4.0/,4,0,0,4,0,no,no figure whose caption shows the lesion alone
+3875981-1,val,nevus,24346910,PMC3875981,http://creativecommons.org/licenses/by-nc/3.0/,5,3,1,2,0,yes,
+3937483-1,val,nevus,24616852,PMC3937483,http://creativecommons.org/licenses/by-nc-sa/3.0,8,5,0,3,0,yes,
+4284490-1,val,nevus,25588635,PMC4284490,https://creativecommons.org/licenses/by-nc/3.0/,2,0,0,1,0,no,no figure whose caption shows the lesion alone
+4481803-1,val,nevus,26167032,PMC4481803,http://creativecommons.org/licenses/by-nc-sa/3.0,4,1,0,3,0,yes,
+7001409-1,val,nevus,32055515,PMC7001409,http://creativecommons.org/licenses/by-nc-sa/4.0,4,1,0,3,0,yes,
+7563016-1,val,nevus,32711929,PMC7563016,http://creativecommons.org/licenses/by/4.0/,4,2,1,2,0,yes,
+pubmed-15009390,val,nevus,15009390,,,0,0,0,0,0,no,no PMC number
+pubmed-27051741,val,nevus,27051741,PMC4809225,http://creativecommons.org/licenses/by-nc-nd/4.0/,2,1,0,1,1,yes,
+pubmed-30719746,val,nevus,30719746,,,0,0,0,0,0,no,no PMC number
+pubmed-3314974,val,nevus,3314974,,,0,0,0,0,0,no,no PMC number
+pubmed-34804761,val,nevus,34804761,PMC8598223,https://creativecommons.org/licenses/by-nc-nd/4.0/,4,1,0,0,1,yes,
+pubmed-40843881,val,nevus,40843881,PMC12372020,https://creativecommons.org/licenses/by/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-931398,val,nevus,931398,,,0,0,0,0,0,no,no PMC number
+2882082-1,val,pigmented benign keratosis,20532145,PMC2882082,http://creativecommons.org/licenses/by-nc/3.0/,2,1,0,0,0,yes,
+7190459-1,val,pigmented benign keratosis,32363100,PMC7190459,https://creativecommons.org/licenses/by/4.0/,1,1,1,0,0,yes,
+7937374-1,val,pigmented benign keratosis,33688271,PMC7937374,http://creativecommons.org/licenses/by-nc/3.0/,4,1,0,3,0,yes,
+8488890-1,val,pigmented benign keratosis,34703401,PMC8488890,https://creativecommons.org/licenses/by-nc-sa/4.0/,1,0,0,1,0,no,no figure whose caption shows the lesion alone
+pubmed-18477232,val,pigmented benign keratosis,18477232,,,0,0,0,0,0,no,no PMC number
+pubmed-41658789,val,pigmented benign keratosis,41658789,PMC12882694,https://creativecommons.org/licenses/by/4.0/,4,2,1,0,1,yes,
+pubmed-41694995,val,pigmented benign keratosis,41694995,PMC12906127,https://creativecommons.org/licenses/by/4.0/,5,2,0,0,1,yes,
+11144422-1,val,squamous cell carcinoma,38827628,PMC11144422,https://creativecommons.org/licenses/by-nc/3.0/,4,1,0,3,0,yes,
+3027001-1,val,squamous cell carcinoma,21274289,PMC3027001,https://creativecommons.org/licenses/by/3.0/,4,1,0,0,0,yes,
+4359804-1,val,squamous cell carcinoma,25815013,PMC4359804,https://creativecommons.org/licenses/by/3.0/,2,1,0,1,0,yes,
+5500717-1,val,squamous cell carcinoma,28761300,PMC5500717,http://creativecommons.org/licenses/by-nc/4.0,3,1,0,1,0,yes,
+5903124-1,val,squamous cell carcinoma,29681810,PMC5903124,http://creativecommons.org/licenses/by-nc/4.0/,3,0,0,1,0,no,no figure whose caption shows the lesion alone
+6180276-1,val,squamous cell carcinoma,30323750,PMC6180276,http://creativecommons.org/licenses/by-nc/4.0/,3,2,0,0,0,yes,
+7670704-1,val,squamous cell carcinoma,33292409,PMC7670704,https://creativecommons.org/licenses/by/4.0/,3,0,0,3,0,no,no figure whose caption shows the lesion alone
+8825690-1,val,squamous cell carcinoma,35155032,PMC8825690,https://creativecommons.org/licenses/by/3.0/,5,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-24765553,val,squamous cell carcinoma,24765553,PMC3997249,,3,2,1,0,1,yes,
+pubmed-28619973,val,squamous cell carcinoma,28619973,PMC5534806,,0,0,0,0,0,no,no open full text in PMC
+pubmed-30204258,val,squamous cell carcinoma,30204258,,,0,0,0,0,0,no,no PMC number
+pubmed-31850123,val,squamous cell carcinoma,31850123,PMC6910792,http://creativecommons.org/licenses/CC BY-NC/4.0,4,0,0,0,0,no,no figure whose caption shows the lesion alone
+pubmed-39411140,val,squamous cell carcinoma,39411140,PMC11473495,https://creativecommons.org/licenses/by/4.0/,4,0,0,2,0,no,no figure whose caption shows the lesion alone
+pubmed-40987224,val,squamous cell carcinoma,40987224,PMC12491876,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,0,0,4,0,no,no figure whose caption shows the lesion alone
+pubmed-42238159,val,squamous cell carcinoma,42238159,PMC13227080,https://creativecommons.org/licenses/by/4.0/,4,0,0,1,0,no,no figure whose caption shows the lesion alone
+4123288-1,val,vascular lesion,25100920,PMC4123288,http://creativecommons.org/licenses/by-nc-sa/3.0,2,1,0,0,0,yes,
+4817473-1,val,vascular lesion,27057048,PMC4817473,http://creativecommons.org/licenses/by-nc-sa/3.0,3,1,0,0,0,yes,
+6939071-1,val,vascular lesion,31789263,PMC6939071,http://creativecommons.org/licenses/by/4.0/,4,2,0,0,0,yes,
+pubmed-40406276,val,vascular lesion,40406276,PMC12087893,https://creativecommons.org/licenses/by-nc-nd/4.0/,5,1,0,4,1,yes,
+pubmed-42719922,val,vascular lesion,42719922,PMC13557840,https://creativecommons.org/licenses/by/4.0/,2,1,0,1,1,yes,

@@ -46,6 +46,7 @@ thesis_research/
 │   └── knowledge/       what open-book runs may retrieve
 ├── results/             one folder per test run: <dataset>/<approach>/<model>/ (phase 1 in phase1/)
 ├── docs/                the method (questions, answers, scores) and the results
+├── archive/             Version 1, frozen for reference (commit a1c9209)
 ├── tests/               unit tests
 └── requirements.txt
 ```

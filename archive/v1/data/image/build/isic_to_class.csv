@@ -1,0 +1,12 @@
+level,isic_wording,class,reason
+diagnosis_3,Solar or actinic keratosis,actinic keratosis,
+diagnosis_3,Basal cell carcinoma,basal cell carcinoma,
+diagnosis_3,Dermatofibroma,dermatofibroma,
+diagnosis_2,Malignant melanocytic proliferations (Melanoma),melanoma,"in situ, invasive and not otherwise specified alike"
+diagnosis_3,Nevus,nevus,all subtypes alike
+diagnosis_3,Pigmented benign keratosis,pigmented benign keratosis,"HAM10000's benign keratosis group, which also holds seborrheic keratoses"
+diagnosis_3,"Squamous cell carcinoma, NOS",squamous cell carcinoma,
+diagnosis_3,Squamous cell carcinoma in situ,squamous cell carcinoma,
+diagnosis_2,Benign soft tissue proliferations - Vascular,vascular lesion,
+diagnosis_2,Collision - Only benign proliferations,,collision: two lesions in one photo
+diagnosis_2,Collision - At least one malignant proliferation,,collision: two lesions in one photo
