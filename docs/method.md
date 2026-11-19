@@ -75,6 +75,21 @@ The first phase of Version 1 asked for one diagnosis name alone, read with a str
 their interpretation are in `archive/v1/` (`archive/v1/docs/results.md`). The code of this repository reads the answer format of
 section 2 only and refuses a run of the first phase, with a pointer to the archive.
 
+## 6. Open-book scores: what is defined, and what is not
+
+Decided on 2026-11-19, after checking each candidate against the literature and the data. Nothing here has been run: no open-book approach exists yet.
+
+| Score | Decision | Reason |
+|---|---|---|
+| **Precision@k** and **nDCG@k** of the retrieved passages | **defined** (`metrics.precision_at_k`, `metrics.ndcg_at_k`; tested) | Standard retrieval measures; nDCG@10 is the main measure of BEIR (Thakur et al. 2021), from the cumulated gain of Järvelin & Kekäläinen 2002. Relevance is *silver*: a passage is relevant when its disease topics include the question's true class (topical, not proof of support; MIRAGE, Xiong et al. 2024, scored retrieval only where gold supporting documents exist). Report them beside the share expected from random retrieval, which is the share of relevant items in the index: 29% for melanoma down to 1.3% for dermatofibroma (from `data/knowledge/index.csv`). |
+| **Recall@k** | not used | A question has hundreds of relevant items (80 for dermatofibroma, 1,745 for melanoma), so even a perfect ranking gives a Recall@10 of at most 12.5% to 0.6%. It measures the size of the index, not the retriever. |
+| **MRR** | not used | With 4% to 29% of the index relevant, the first retrieved passage is relevant by chance in about one question in four for the common classes, so the rank of the first hit separates retrievers poorly. nDCG@k and Precision@k, with the random baseline, say what it would. |
+| **Citation recall and citation precision** (ALCE, Gao et al. 2023) | **deferred** | Standard for attributed generation. They need an entailment judge (a model to download and run) and the exact definitions of the paper, which I could not read here: citation precision in particular was only seen in secondary descriptions, and a follow-up paper notes that ALCE's rule over-penalises two redundant citations. Both are waiting on the choice of judge and hardware. They apply to the claims of the answer (`claims`), not to sentences. |
+| **Faithfulness** (RAGAS, Es et al. 2024) | not used as a separate score | Its definition (claims inferable from the context) is the claim-level citation recall above; RAGAS computes it with an LLM judge, which is excluded here (local models only). Reporting both would count one thing twice. |
+| **AUROC and AUPR** of error detection (Hendrycks & Gimpel 2017) | not applicable now | They need a continuous score for each answer. The approved format gives a yes/no flag, and the API models used for the closed-book runs give no comparable token probabilities. With a local open-weight model the probability of the first diagnosis could serve as the score; the measures would then be added for those models only. |
+
+**What an open-book run must save** for the retrieval scores (to be written with the retrieval code): for each question, in rank order, whether each retrieved passage is relevant (1 or 0), and how many relevant items the index holds for the question. The saved answers then carry everything the scores need, as for the closed-book scores.
+
 ## References
 
 - Brodersen KH, Ong CS, Stephan KE, Buhmann JM. The balanced accuracy and its posterior distribution. *20th International Conference on Pattern Recognition (ICPR)*, 2010.
@@ -85,10 +100,14 @@ section 2 only and refuses a run of the first phase, with a pointer to the archi
 - Field CA, Welsh AH. Bootstrapping clustered data. *Journal of the Royal Statistical Society, Series B* 69(3), 2007.
 - Gao T, Yen H, Yu J, Chen D. Enabling large language models to generate text with citations. *EMNLP*, 2023.
 - Geifman Y, El-Yaniv R. Selective classification for deep neural networks. *Advances in Neural Information Processing Systems (NeurIPS)*, 2017.
+- Hendrycks D, Gimpel K. A baseline for detecting misclassified and out-of-distribution examples in neural networks. *International Conference on Learning Representations (ICLR)*, 2017.
 - Holm S. A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics* 6(2), 1979.
 - Huang L, Yu W, Ma W, et al. A survey on hallucination in large language models: principles, taxonomy, challenges, and open questions. arXiv:2311.05232, 2023 (preprint; the journal version was not checked).
 - Ji Z, Lee N, Frieske R, et al. Survey of hallucination in natural language generation. *ACM Computing Surveys* 55(12), 2023.
+- Järvelin K, Kekäläinen J. Cumulated gain-based evaluation of IR techniques. *ACM Transactions on Information Systems* 20(4), 2002.
 - Liu Y, Jain A, Eng C, et al. A deep learning system for differential diagnosis of skin diseases. *Nature Medicine* 26, 2020.
 - McNemar Q. Note on the sampling error of the difference between correlated proportions or percentages. *Psychometrika* 12(2), 1947.
 - Sokolova M, Lapalme G. A systematic analysis of performance measures for classification tasks. *Information Processing & Management* 45(4), 2009.
+- Thakur N, Reimers N, Rücklé A, Srivastava A, Gurevych I. BEIR: a heterogeneous benchmark for zero-shot evaluation of information retrieval models. *NeurIPS Datasets and Benchmarks*, 2021.
 - Wilson EB. Probable inference, the law of succession, and statistical inference. *Journal of the American Statistical Association* 22(158), 1927.
+- Xiong G, Jin Q, Lu Z, Zhang A. Benchmarking retrieval-augmented generation for medicine. *Findings of ACL*, 2024.

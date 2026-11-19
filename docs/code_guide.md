@@ -49,6 +49,19 @@ Then:
 - Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then the two run folders
 - Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`
 
+### Running the closed-book experiments
+
+For one model and one dataset (the examples use `claude-sonnet-5-5` and `published_text`; the other models are in `configs/models.toml`, the other datasets in `src/datasets.py`):
+
+1. `git pull`, then `python -m src.validate --files` on the laptop: every photo and text is the one its table lists, the views are aligned, the prompts agree.
+2. `python -m src.run check --model claude-sonnet-5-5 --dataset published_text`: one tiny request, so a wrong key, an unavailable model or a cut-off answer shows before a run.
+3. Optional, to look at the answers first: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split val --limit 5`. A validation run stays on the laptop (Git ignores it) and is never a result. Read `raw_text` in its `predictions.jsonl` for answers marked invalid. A run also stops by itself if its first 10 answers are all invalid.
+4. `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`: the result. It needs a clean Git state (the run card names the code) and a pinned model, and it runs once per model, dataset and approach. If it stops (quota, network), the same command continues it. At the end it checks its own answer file and writes `report.md` and `metrics.json`.
+5. Commit the finished folder `results/<dataset>/closed_book/<model>/test_<id>/` (`run_card.json`, `predictions.jsonl`, `metrics.json`, `report.md`, `run.log`). A folder ending in `.partial` is unfinished and is ignored by Git.
+6. Compare two finished runs on the same questions with python -m src.evaluate compare, then the two run folders. The three clinic views pair with each other, and so do the three views of the published cases (on the cases that have photos).
+
+Cost control: a run sends one request per question (`requests_per_minute` in the model list paces it). Check one model on one dataset with `--limit` before a full test run, and read the token counts in `predictions.jsonl` (`usage`) to estimate the rest.
+
 ## Words used in the builders and data sheets
 
 The builders and the data sheets of the published cases were written before the datasets got their present names and still use the older
@@ -79,7 +92,7 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | `prompts.py` | The prompt template (placeholders checked) and `parse_json_answer`, the strict answer reader: the same for every model, so differences come from the models. |
 | `models.py` | One adapter per API: Anthropic and OpenAI-style (GPT-4o, Gemini and Llama through OpenRouter). Each answers one prompt with or without images in the same form; failures are a transient, a quota or a fatal error. No local open-weight adapter exists yet. |
 | `run.py` | `check` (everything a run needs, one tiny request) and `run` (one model, one dataset, one approach, the validation or test split): seeded order, saved as it arrives, resumable, run card with the Git commit and package versions, one test run per model, dataset and approach. |
-| `metrics.py` | Pure functions: balanced accuracy, macro-F1, macro-averaged top-3 accuracy, coverage, selective risk, bootstrap and Wilson intervals, McNemar, Holm. |
+| `metrics.py` | Pure functions: balanced accuracy, macro-F1, macro-averaged top-3 accuracy, coverage, selective risk, precision@k and nDCG@k (for the open-book runs), bootstrap and Wilson intervals, McNemar, Holm. |
 | `evaluate.py` | `verify_answers` (is a saved answer file consistent), `report` (a run's scores and report) and `compare` (two runs, paired). |
 | `validate.py` | The no-cost checks (`python -m src.validate`): tables, leaks, alignment of the views, prompts, model list, knowledge index. |
 | `common.py` | Helpers shared by the builders and the runs: polite download, report sections, tables, crash-safe JSON-lines. |

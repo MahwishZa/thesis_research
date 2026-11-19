@@ -21,6 +21,10 @@ none of these; it counts as wrong in every score and is counted apart. Answers o
                                questions answered validly with "sufficient"; selective risk is the share of wrong diagnoses among
                                those questions (called confident misdiagnosis in the thesis).
     invalid-answer rate        the share of the questions whose answer is not of the required form.
+    precision@k, nDCG@k        open-book runs only: how many of the first k retrieved passages are relevant, and the normalised
+                               discounted cumulative gain of the ranking (Jarvelin and Kekalainen, 2002; nDCG@10 is the main
+                               measure of BEIR, Thakur et al., 2021). Relevance is silver: a passage is relevant when its disease
+                               topics include the question's true class. See ``precision_at_k`` and ``ndcg_at_k``.
 
 The 95% intervals: photos of one lesion, like patients of one article, are not independent, so when the answers carry their
 group, every interval comes from a cluster bootstrap (Field and Welsh, 2007) that resamples whole groups within each true class, so
@@ -108,6 +112,29 @@ def _selective(y_true, y_pred, flags) -> dict:
     covered = [ok for ok, f in valid if f == "yes"]
     return {"valid": len(valid), "covered": len(covered), "coverage": _ratio(len(covered), len(y_true)),
             "covered_wrong": sum(not ok for ok in covered), "selective_risk": _ratio(sum(not ok for ok in covered), len(covered))}
+
+
+def precision_at_k(relevant: list[int], k: int) -> float:
+    """The share of the first k retrieved passages that are relevant. ``relevant`` holds 1 (relevant) or 0 for each retrieved passage,
+    best rank first; a ranking shorter than k counts the missing places as not relevant."""
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    return sum(relevant[:k]) / k
+
+
+def ndcg_at_k(relevant: list[int], k: int, n_relevant: int) -> float | None:
+    """Normalised discounted cumulative gain at k with binary relevance (Jarvelin and Kekalainen, 2002): DCG = sum of rel / log2(rank + 1)
+    over the first k ranks, divided by the DCG of the best possible ranking, which puts min(k, n_relevant) relevant passages first.
+    ``n_relevant`` is how many relevant passages the whole index holds for the question; None when it is 0 (nothing to find)."""
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    if n_relevant < 0:
+        raise ValueError("n_relevant cannot be negative")
+    if n_relevant == 0:
+        return None
+    dcg = sum(rel / math.log2(rank + 1) for rank, rel in enumerate(relevant[:k], start=1))
+    ideal = sum(1 / math.log2(rank + 1) for rank in range(1, min(k, n_relevant) + 1))
+    return dcg / ideal
 
 
 def _percentile(sorted_values: list[float], q: float) -> float:

@@ -1,6 +1,7 @@
 """The metrics (src/metrics.py), checked against values worked out by hand."""
 
 import json
+import math
 import unittest
 
 from src import metrics
@@ -68,6 +69,29 @@ class MetricTests(unittest.TestCase):
                 self.assertEqual((d["valid"], d["covered"]), (len(valid), len(covered)))
                 self.assertEqual(d["coverage"], len(covered) / n)
                 self.assertEqual(d["selective_risk"], sum(a[0][0] != t for t, a in covered) / len(covered) if covered else None)
+
+    def test_precision_and_ndcg_at_k_by_hand(self):
+        ranking = [1, 0, 1, 0, 0]  # relevant at ranks 1 and 3
+        self.assertAlmostEqual(metrics.precision_at_k(ranking, 3), 2 / 3)
+        self.assertAlmostEqual(metrics.precision_at_k(ranking, 5), 2 / 5)
+        self.assertAlmostEqual(metrics.precision_at_k(ranking, 10), 2 / 10)  # a ranking shorter than k: the missing places are not relevant
+        # DCG@5 = 1/log2(2) + 1/log2(4) = 1.5; with 3 relevant passages in the index the best ranking gives 1 + 1/log2(3) + 1/log2(4)
+        ideal = 1 + 1 / math.log2(3) + 1 / math.log2(4)
+        self.assertAlmostEqual(metrics.ndcg_at_k(ranking, 5, 3), 1.5 / ideal)
+        self.assertAlmostEqual(metrics.ndcg_at_k(ranking, 5, 2), 1.5 / (1 + 1 / math.log2(3)))  # only 2 exist: the ideal holds 2 places
+        self.assertAlmostEqual(metrics.ndcg_at_k([1, 1, 1], 3, 100), 1.0)  # the best possible first three, though 100 exist
+        self.assertAlmostEqual(metrics.ndcg_at_k([0, 0, 1], 3, 5), (1 / 2) / (1 + 1 / math.log2(3) + 0.5))  # a hit at rank 3 is discounted by log2(4)
+        self.assertEqual(metrics.ndcg_at_k([0, 0], 2, 3), 0.0)
+        self.assertIsNone(metrics.ndcg_at_k([0, 0], 2, 0))  # nothing relevant exists: no score
+        self.assertEqual(metrics.ndcg_at_k([1, 0, 1], 1, 4), 1.0)  # only the first place counts at k = 1
+        self.assertEqual(metrics.ndcg_at_k([0, 1, 1], 1, 4), 0.0)  # a hit just after k counts for nothing
+        for bad in (0, -1):
+            with self.assertRaises(ValueError):
+                metrics.precision_at_k(ranking, bad)
+            with self.assertRaises(ValueError):
+                metrics.ndcg_at_k(ranking, bad, 3)
+        with self.assertRaises(ValueError):
+            metrics.ndcg_at_k(ranking, 3, -1)
 
     def test_wilson_known_value(self):
         low, high = metrics.wilson(8, 10)
