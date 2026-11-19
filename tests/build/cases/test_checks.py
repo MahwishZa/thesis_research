@@ -32,6 +32,65 @@ def write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
         writer.writerows([{c: r.get(c, "") for c in columns} for r in rows])
 
 
+def lesion(seed: int, background=(200, 150, 140), size=(200, 150)) -> Image.Image:
+    """A dermoscopy-like picture: an irregular brown blob with dots on skin, blurred."""
+    from PIL import ImageDraw, ImageFilter
+
+    rng = random.Random(seed)
+    image = Image.new("RGB", size, background)
+    draw = ImageDraw.Draw(image)
+    cx, cy = size[0] // 2 + rng.randint(-20, 20), size[1] // 2 + rng.randint(-15, 15)
+    for _ in range(rng.randint(3, 7)):
+        rx, ry, dx, dy = rng.randint(20, 55), rng.randint(15, 45), rng.randint(-20, 20), rng.randint(-15, 15)
+        draw.ellipse((cx + dx - rx, cy + dy - ry, cx + dx + rx, cy + dy + ry), fill=(rng.randint(60, 140), rng.randint(30, 90), rng.randint(20, 70)))
+    return image.filter(ImageFilter.GaussianBlur(2))
+
+
+def saved(image: Image.Image, quality=95, size=None) -> bytes:
+    out = io.BytesIO()
+    (image.resize(size) if size else image).save(out, "JPEG", quality=quality)
+    return out.getvalue()
+
+
+class SamePictureTests(unittest.TestCase):
+    """The rule for "the same picture" (SAME), moved without change from the Version 1 image builder."""
+
+    def test_the_limits_are_fixed(self):
+        self.assertEqual(figures.SAME, {"shape_difference_pct": 2.0, "hash_distance": 16, "mean_difference": 5.0})
+        self.assertEqual(figures.SIGNATURE_SIZE, 32)
+
+    def test_a_picture_and_its_own_preview_are_the_same_and_a_different_lesion_is_not(self):
+        original = lesion(1)
+        a = figures._signature(saved(original))
+        preview = figures._signature(saved(original, quality=60, size=(100, 75)))  # another size, another JPEG quality
+        other = figures._signature(saved(lesion(3, background=(150, 170, 210))))
+        self.assertEqual(figures._compare(a, a), {"shape_difference_pct": 0.0, "hash_distance": 0, "mean_difference": 0.0})
+        self.assertTrue(figures._same(a, preview), figures._compare(a, preview))
+        self.assertFalse(figures._same(a, other), figures._compare(a, other))
+        self.assertGreater(figures._compare(a, other)["mean_difference"], figures.SAME["mean_difference"])
+
+    def test_each_of_the_three_measures_can_refuse_alone_by_hand(self):
+        base = {"width": 200, "height": 100, "hash": 0, "pixels": bytes(8)}
+        self.assertEqual(figures._compare(base, {**base, "width": 204}), {"shape_difference_pct": 2.0, "hash_distance": 0, "mean_difference": 0.0})
+        self.assertEqual(figures._compare(base, {**base, "hash": 0b111}), {"shape_difference_pct": 0.0, "hash_distance": 3, "mean_difference": 0.0})
+        self.assertEqual(figures._compare(base, {**base, "pixels": bytes([8] * 4 + [0] * 4)})["mean_difference"], 4.0)
+        self.assertTrue(figures._same(base, {**base, "width": 204, "pixels": bytes([5] * 8)}))  # all three exactly at their limits
+        self.assertTrue(figures._same(base, {**base, "hash": (1 << 16) - 1}))  # 16 bits of hash: still the same
+        self.assertFalse(figures._same(base, {**base, "width": 205}))  # 2.5% of shape
+        self.assertFalse(figures._same(base, {**base, "hash": (1 << 17) - 1}))  # 17 bits of hash
+        self.assertFalse(figures._same(base, {**base, "pixels": bytes([6] * 8)}))  # a mean colour difference of 6
+
+    def test_a_picture_is_read_upright_and_in_colour(self):
+        wide = Image.new("RGB", (60, 30), (200, 10, 10))
+        exif = Image.Exif()
+        exif[0x0112] = 6  # to be turned a quarter turn
+        out = io.BytesIO()
+        wide.save(out, "JPEG", exif=exif)
+        signature = figures._signature(out.getvalue())
+        self.assertEqual((signature["width"], signature["height"]), (60, 30))  # the stored shape, as before
+        self.assertEqual(len(signature["pixels"]), 3 * figures.SIGNATURE_SIZE ** 2)
+
+
 class WordTests(unittest.TestCase):
     def test_names_and_short_forms_in_writing(self):
         names, forms = ["melanoma", "basal cell carcinoma", "nevus"], ["BCC", "SCC"]
@@ -58,14 +117,13 @@ class CheckTests(unittest.TestCase):
                 ("c4", "val", "nevus", "f1", 4, (300, 200), "microscopy", []),
                 ("c5", "val", "melanoma", "f1", 5, (300, 200), "clinical photo", []),
                 ("c6", "train", "melanoma", "f1", 5, (300, 200), "clinical photo", []),  # the same picture as c5's
-                ("c7", "train", "nevus", "f1", 7, (300, 200), "dermoscopy", []),  # the same picture as one of the image dataset
                 ("c8", "train", "nevus", "f1", 8, (300, 200), "dermoscopy", ["x BCC"])]
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         base = Path(tmp.name)
-        self.data, self.text, self.image = base / "cases", base / "text", base / "image"
+        self.data, self.text = base / "cases", base / "text"
         files, captions, self.kinds, self.writing = [], [], {}, {}
         for uid, split, label, fig, seed, size, kind, writing in self.PICTURES:
             content = noise(seed, size)
@@ -84,11 +142,6 @@ class CheckTests(unittest.TestCase):
         write_csv(self.data / figures.COUNT_TABLE, figures.CASE_COLUMNS, cases)
         write_csv(self.text / "build" / "class_terms.csv", ["class", "term", "counts", "source", "note"],
                   [{"class": "melanoma", "term": "melanoma", "counts": "yes"}, {"class": "nevus", "term": "spider nevus", "counts": "no"}])
-        (self.image / "dataset" / "train" / "nevus").mkdir(parents=True)
-        (self.image / "dataset" / "train" / "nevus" / "a.png").write_bytes(noise(7))
-        (self.image / "dataset" / "train" / "nevus" / "b.png").write_bytes(noise(70))
-        write_csv(self.image / "dataset.csv", ["split", "label", "path"], [{"split": "train", "label": "nevus", "path": "train/nevus/a.png"},
-                                                                            {"split": "train", "label": "nevus", "path": "train/nevus/b.png"}])
         self.calls = 0
 
     def classify(self, path):
@@ -101,7 +154,7 @@ class CheckTests(unittest.TestCase):
 
     def run_check(self, **limits):
         with mock.patch.multiple(figures, **limits) if limits else mock.patch.object(figures, "MIN_SIDE", figures.MIN_SIDE):
-            return figures.check(self.data, self.text, self.image, classify=self.classify, read=self.read)
+            return figures.check(self.data, self.text, classify=self.classify, read=self.read)
 
     def test_every_picture_is_kept_or_gets_its_reasons(self):
         done = self.run_check()
@@ -112,7 +165,6 @@ class CheckTests(unittest.TestCase):
                                  ("c4", "f1"): ("no", "the image model sees no photo of the skin"),
                                  ("c5", "f1"): ("no", "the same picture is in another case"),
                                  ("c6", "f1"): ("no", "the same picture is in another case"),
-                                 ("c7", "f1"): ("no", "the same picture is in the image dataset"),
                                  ("c8", "f1"): ("no", "writing in the picture names a diagnosis")})
         rows = {(r["patient_uid"], r["figure"]): r for r in done["rows"]}
         self.assertEqual((rows[("c3", "f1")]["diagnosis_words"], rows[("c8", "f1")]["diagnosis_words"]), ("melanoma", "BCC"))
@@ -127,21 +179,27 @@ class CheckTests(unittest.TestCase):
         report = (self.data / figures.REPORT).read_text(encoding="utf-8")
         for expected in ("**After the checks: 1 test cases keep a picture; 1 classes have at least 1 (melanoma). The rule for building the "
                          "dataset (at least 1 test cases and 1 classes) is met.**", "| melanoma | 1 | 0 | 0 |", "| all | 1 | 0 | 0 |",
-                         "Pictures checked: 9; kept: 1.", "| the same picture is in another case | 2 |",
-                         "agree on whether it is a dermoscopy image for 8; Cohen's kappa 1.00",
+                         "Pictures checked: 8; kept: 1.", "| the same picture is in another case | 2 |",
+                         "agree on whether it is a dermoscopy image for 7; Cohen's kappa 1.00",
                          "with the name of a diagnosis: 2"):
             self.assertIn(expected, report)
 
     def test_a_second_run_asks_the_models_nothing(self):
         first = self.run_check()["rows"]
         self.calls = 0
-        again = figures.check(self.data, self.text, self.image, classify=lambda p: 1 / 0, read=lambda p: 1 / 0)["rows"]
+        again = figures.check(self.data, self.text, classify=lambda p: 1 / 0, read=lambda p: 1 / 0)["rows"]
         self.assertEqual(again, first)
 
     def test_a_changed_picture_stops_the_check(self):
         (self.data / "figures" / "images" / "c1" / "f1.png").write_bytes(noise(99))
         with self.assertRaisesRegex(ValueError, "fingerprint differs"):
             self.run_check()
+
+    def test_the_names_a_picture_may_not_write_are_the_class_terms_and_the_eight_classes(self):
+        # "dermatofibroma" is one of the eight classes but not in class_terms.csv here (only "melanoma" and "spider nevus" are listed)
+        self.writing[(self.data / "figures" / "images" / "c4" / "f1.png").as_posix()] = ["Dermatofibroma"]
+        found = {(r["patient_uid"], r["figure"]): (r["diagnosis_words"], r["reason"]) for r in self.run_check()["rows"]}
+        self.assertEqual(found[("c4", "f1")], ("dermatofibroma", "writing in the picture names a diagnosis; the image model sees no photo of the skin"))
 
     def test_the_least_size_and_the_kinds_are_fixed(self):
         self.assertEqual(figures.MIN_SIDE, 128)

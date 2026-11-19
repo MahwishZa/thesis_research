@@ -8,10 +8,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from src.build.knowledge import enrich, index
-from src.build.image_metadata import prepare
+from src.build.knowledge import enrich
 from src.build.knowledge import library as textlib
-from tests.build.image_metadata.test_prepare import Project
 
 DERMOSCOPY = ("Dermoscopy of the lesion reveals an atypical pigment network with irregular globules and streaks at the periphery of the "
               "lesion, a pattern seen in many cases and described at length by several groups of authors over the years.")
@@ -348,97 +346,25 @@ PASSAGE_IN_LIBRARY = ("Dermoscopy often shows a regular pigment network with eve
                       "which helps to separate them from melanoma in daily practice according to many published series.")
 
 
-class CardTests(Project):
-    """The ISIC records of the image + metadata tests, with the columns the cards need."""
+class DefaultClassesTests(unittest.TestCase):
+    def test_the_appearance_step_asks_for_the_eight_classes_when_none_are_given(self):
+        class Stop(Exception):
+            pass
 
-    def setUp(self):
-        super().setUp()
-        photos = prepare._read_csv(self.image / "build" / "raw_photos.csv")
-        for row in photos:
-            row["diagnosis_confirm_type"] = "histopathology" if row["photo_id"] == "ISIC_0000002" else ""
-        write_csv(self.image / "build" / "raw_photos.csv", photos)
-        prepare.records()
-        prepare.build()
-        index.index()
-
-    def test_a_card_for_each_training_photo_from_its_own_record(self):
-        done = enrich.cards()
-        by_id = {c["item_id"]: c for c in done["cards"]}
-        self.assertEqual(set(by_id), {"image:train/melanoma/ISIC_0000002.jpg", "image:train/basal cell carcinoma/ISIC_0000004.jpg"})
-        self.assertEqual(by_id["image:train/melanoma/ISIC_0000002.jpg"]["card"],
-                         "Dermoscopic photo of a skin lesion. Diagnosis (ISIC): Diagnosis of melanoma. Confirmed by: histopathology. "
-                         "Age: about 70 years. Sex: female. Body site: lower extremity. Lesion size: 8 mm (longest diameter). "
-                         "Family history of melanoma: no.")
-        second = by_id["image:train/basal cell carcinoma/ISIC_0000004.jpg"]
-        self.assertEqual(second["card"], "Dermoscopic photo of a skin lesion. Diagnosis (ISIC): Diagnosis of basal cell carcinoma. "
-                                         "Confirmed by: not recorded. Age: about 75 years. Sex: male. Body site: head and neck. "
-                                         "Family history of melanoma: no.")  # no size recorded: left out, not guessed
-        rows = self.table(enrich.CARDS_TABLE)
-        self.assertEqual([r["source"] for r in rows], ["ISIC ISIC_0000004", "ISIC ISIC_0000002"])  # by class, then file
-        report = (self.knowledge / enrich.REPORT).read_text(encoding="utf-8")
-        self.assertIn("<!-- step: cards -->", report)
-        self.assertIn("| melanoma | 1 | 1 | 1 | 1 | 1 | 0 | 1 | 1 |", report)
-
-    def test_no_validation_or_test_photo_has_a_card_and_no_card_names_a_collection(self):
-        cards = enrich.cards()["cards"]
-        text = " ".join(c["card"] for c in cards)
-        self.assertNotIn("ISIC_0000001", text + " ".join(c["item_id"] for c in cards))  # a test photo
-        self.assertNotIn("ISIC_0000005", " ".join(c["item_id"] for c in cards))  # a validation photo
-        for name in ("Anonymous", "MILK study team", "CC-0", "CC-BY-NC"):
-            self.assertNotIn(name, text)
-
-    def test_a_card_that_breaks_a_rule_stops_the_step(self):
-        photos = prepare._read_csv(self.image / "build" / "raw_photos.csv")
-        for row in photos:  # a confirmation text that names the collection
-            if row["photo_id"] == "ISIC_0000002":
-                row["diagnosis_confirm_type"] = "reviewed by Anonymous"
-        write_csv(self.image / "build" / "raw_photos.csv", photos)
-        with self.assertRaisesRegex(ValueError, "names the photo's collection"):
-            enrich.cards()
-        diseases = prepare._read_csv(self.knowledge / "diseases.csv")  # a diagnosis its class does not list
-        for row in diseases:
-            row["isic_diagnoses"] = "Something else (1)"
-        write_csv(self.knowledge / "diseases.csv", diseases)
-        photos[0]["diagnosis_confirm_type"] = "histopathology"
-        write_csv(self.image / "build" / "raw_photos.csv", photos)
-        with self.assertRaisesRegex(ValueError, "not one that diseases.csv lists"):
-            enrich.cards()
-
-    def test_the_cards_must_be_exactly_the_training_photos_of_the_knowledge_index(self):
-        knowledge = prepare._read_csv(self.knowledge / "index.csv")
-        write_csv(self.knowledge / "index.csv", [r for r in knowledge if r["item_id"] != "image:train/melanoma/ISIC_0000002.jpg"])
-        with self.assertRaisesRegex(ValueError, "not exactly the training photos"):
-            enrich.cards()
-        card = {"diagnosis": "d", "confirmation": "c", "age": "a", "sex": "s", "site": "t", "site_detail": "", "size_mm": "", "personal_hx_mm": "",
-                "family_hx_mm": ""}
-        self.assertEqual(enrich.render_card(card), "Dermoscopic photo of a skin lesion. Diagnosis (ISIC): d. Confirmed by: c. Age: a. Sex: s. Body site: t.")
-        self.assertIn("Body site: t (u, v).", enrich.render_card(card | {"site_detail": "u, v"}))
-
-    def test_a_card_whose_text_is_not_made_from_its_columns_stops_the_step(self):
-        card = {"item_id": "image:p", "class": "melanoma", "diagnosis": "D", "confirmation": "c", "age": "a", "sex": "s", "site": "t",
-                "site_detail": "", "size_mm": "", "personal_hx_mm": "", "family_hx_mm": ""}
-        card["card"] = enrich.render_card(card)
-        arguments = ([card], {"x": {"attribution": "Anonymous"}}, {}, {"p": {"split": "train"}}, {"image:p"}, {"melanoma": {"D"}})
-        self.assertEqual(enrich._card_checks(*arguments)["cards"], 1)
-        with self.assertRaisesRegex(ValueError, "not made from their columns"):
-            enrich._card_checks([card | {"card": card["card"] + " The lesion is probably benign."}], *arguments[1:])
-
-    def test_a_yes_no_field_is_read_only_when_it_is_one(self):
-        self.assertEqual([enrich._flag(v) for v in (True, "True", "true", False, "False", "false", None, "", "maybe", 2)],
-                         ["yes", "yes", "yes", "no", "no", "no", None, None, None, None])
-
-    def table(self, name):
-        with (self.knowledge / name).open(encoding="utf-8", newline="") as f:
-            return list(csv.DictReader(f))
+        with mock.patch.object(textlib, "_checked_headings", side_effect=Stop) as asked, self.assertRaises(Stop):
+            enrich.appearance(Path("nowhere"), Path("nowhere"))
+        self.assertEqual(asked.call_args[0][1], list(enrich.textprep.CLASSES))
 
 
 class CommandLineTests(unittest.TestCase):
-    def test_the_three_steps_are_the_commands(self):
+    def test_the_two_steps_are_the_commands_and_the_cards_of_version_1_are_gone(self):
         parser = enrich.build_parser()
-        for step in ("appearance", "aspects", "cards"):
+        for step in ("appearance", "aspects"):
             self.assertEqual(parser.parse_args([step]).step, step)
-        with self.assertRaises(SystemExit):
-            parser.parse_args(["other"])
+        for step in ("cards", "other"):
+            with self.assertRaises(SystemExit):
+                parser.parse_args([step])
+        self.assertEqual(enrich.COMMANDS, ("appearance", "aspects"))
 
     def test_the_documentation_names_every_step(self):
         for step in enrich.COMMANDS:

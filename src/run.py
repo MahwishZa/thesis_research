@@ -5,7 +5,7 @@
     python -m src.run run --model claude-sonnet-5-5 --dataset text [--approach closed_book] --split test
 
 A run is one model of the model list (configs/models.toml: each model's provider, id, settings and request pace), one dataset
-(image, text, image_metadata, cases or case_photos) and one approach (closed_book: the model alone). The prompt is
+(clinic_photo, clinic_record, clinic_photo_record, text, cases or case_photos) and one approach (closed_book: the model alone). The prompt is
 prompts/<dataset>/<approach>.txt, the same for every model.
 
 ``check`` tests everything a run needs without sending anything from the dataset; run it before every run. The model is asked
@@ -13,7 +13,7 @@ once, with a blank synthetic image (for a text dataset, with a short question an
 key or a used-up quota shows before a run starts.
 ``run`` sends every file of one split, with the prompt, to the model named in the config and saves each answer as it arrives: an
 image goes next to the prompt, exactly as stored; a text case goes into the prompt word for word, where the prompt has
-``{case}``; an image + metadata question is its image with its patient's facts in the prompt, where the prompt has ``{facts}``;
+``{case}``; a photo + record question is its photo with the patient's record in the prompt, where the prompt has ``{facts}``;
 a case question sends its photos, with its case text where the prompt has ``{case}``. A validation run (``--split val``) is for
 tuning the method; it stays on this computer (Git ignores it) and is not a reported result, and ``--limit N`` sends only its first
 N files. A test run (``--split test``) is the result: it runs once per model, dataset and approach (the base paper's practice), needs a clean Git state

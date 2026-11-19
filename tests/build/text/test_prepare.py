@@ -1284,7 +1284,7 @@ class QuestionTests(unittest.TestCase):
 
 
 class TermsTests(unittest.TestCase):
-    """class_terms.csv is written by people: it must fit the image dataset's classes and give each name one class at most."""
+    """class_terms.csv is written by people: it must fit the eight classes and give each name one class at most."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -1302,7 +1302,7 @@ class TermsTests(unittest.TestCase):
         self.assertEqual(len(self._read(good)), 2)
         for text, message in (
                 ("class,term,counts\n", "must have the columns"),
-                (good + "lentigo,lentigo,yes,ISIC,\n", "line 4: 'lentigo' is not a class of the image dataset"),
+                (good + "lentigo,lentigo,yes,ISIC,\n", "line 4: 'lentigo' is not one of the eight classes"),
                 (good + "melanoma,mole,maybe,ISIC,\n", "line 4: every row needs a term, counts .yes or no. and a source"),
                 (good + "melanoma,,yes,ISIC,\n", "every row needs a term"),
                 (good + "melanoma,Melanomas,yes,ISIC,\n", "line 4: 'Melanomas' is listed twice for melanoma"),
@@ -1322,12 +1322,16 @@ class TermsTests(unittest.TestCase):
             self.assertEqual(prepare._words(a), prepare._words(b), (a, b))
         self.assertNotEqual(prepare._words("lentigo maligna"), prepare._words("lentigo"))
 
-    @unittest.skipUnless((ROOT / "data" / "text" / prepare.TERMS).is_file() and (ROOT / prepare.IMAGE_TABLE).is_file(),
+    @unittest.skipUnless((ROOT / "data" / "text" / prepare.TERMS).is_file() and (ROOT / "data" / "text" / "dataset.csv").is_file(),
                          "the committed lists are not there")
-    def test_the_committed_list_fits_the_committed_image_classes(self):
-        classes = prepare.image_classes(prepare.read_table(ROOT / prepare.IMAGE_TABLE))
+    def test_the_committed_list_fits_the_eight_classes_and_the_committed_dataset_uses_only_them(self):
+        classes = list(prepare.CLASSES)
+        self.assertEqual(classes, sorted(classes))
+        self.assertEqual(len(set(classes)), 8)
         rows = prepare.read_terms(ROOT / "data" / "text" / prepare.TERMS, classes)
         self.assertEqual(sorted({r["class"] for r in rows}), classes)
+        with (ROOT / "data" / "text" / "dataset.csv").open(encoding="utf-8", newline="") as f:
+            self.assertEqual(sorted({r["label"] for r in csv.DictReader(f)}), classes)
 
     def test_every_command_in_the_usage_documentation_is_accepted(self):
         usage = re.findall(r"^\s+python -m src\.build\.text\.prepare (.+?)$", prepare.__doc__, re.M)
@@ -1335,6 +1339,20 @@ class TermsTests(unittest.TestCase):
         for line in usage:
             prepare.build_parser().parse_args(shlex.split(line))
 
+
+class DefaultClassesTests(unittest.TestCase):
+    """Each step that needs the classes takes the eight of CLASSES when none are given (they were the image dataset's table before)."""
+
+    def test_every_step_asks_for_the_eight_classes_by_default(self):
+        class Stop(Exception):
+            pass
+
+        for step, name in (("survey", "read_terms"), ("cases", "read_terms"), ("abstracts", "_checked_headings"),
+                           ("mesh", "_checked_headings"), ("build", "read_terms")):
+            with self.subTest(step), mock.patch.object(prepare, name, side_effect=Stop) as asked, self.assertRaises(Stop):
+                getattr(prepare, step)(Path("nowhere"))
+            self.assertEqual(asked.call_args[0][1], list(prepare.CLASSES), step)
+        self.assertEqual(len(prepare.CLASSES), 8)
 
 if __name__ == "__main__":
     unittest.main()

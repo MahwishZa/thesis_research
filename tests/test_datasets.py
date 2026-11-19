@@ -17,6 +17,25 @@ ROOT = Path(__file__).resolve().parents[1]
 # The prepared dataset
 
 
+class DatasetKindTests(unittest.TestCase):
+    def test_the_kinds_the_code_knows_are_the_clinic_views_and_the_published_cases(self):
+        self.assertEqual(sorted(datasets.DATASETS), ["case_photos", "cases", "clinic_photo", "clinic_photo_record", "clinic_record", "text"])
+        self.assertNotIn("image", datasets.DATASETS)  # the Version 1 photo datasets are in archive/v1
+        self.assertNotIn("image_metadata", datasets.DATASETS)
+        self.assertEqual(datasets.dataset_paths("clinic_photo"), (Path("data/clinic_patients/dataset.csv"), Path("data/clinic_patients/files/photos")))
+        self.assertEqual(datasets.dataset_paths("clinic_record"), (Path("data/clinic_patients/record.csv"), Path("data/clinic_patients/files/records")))
+        self.assertEqual((datasets.TABLE, datasets.IMAGES), datasets.dataset_paths("clinic_photo"))
+
+    def test_a_dataset_with_a_facts_column_must_say_how_a_missing_fact_reads(self):
+        with self.assertRaisesRegex(ValueError, "must say how a missing fact reads"):
+            datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why", facts_column="facts")
+        kind = datasets.Dataset(datasets.MEDIA_TYPES, "a JPEG or PNG file", False, "patient_id", "photo", "patient", "why",
+                                facts_column="facts", missing_fact="unknown")
+        self.assertEqual(kind.missing_fact, "unknown")
+        self.assertEqual(datasets.DATASETS["clinic_photo_record"].missing_fact, "unknown")
+        self.assertEqual(datasets.DATASETS["clinic_photo"].missing_fact, "")  # no facts column, nothing to say
+
+
 class DatasetTests(Project):
     header = "split,label,path,sha256\n"
 
@@ -39,12 +58,12 @@ class DatasetTests(Project):
             datasets.load_dataset()
 
     def test_changed_missing_and_extra_images_stop_with_a_count_of_each(self):
-        Image.new("RGB", (60, 45), (1, 2, 3)).save(self.image_dir / "test" / "nevus" / "ISIC_0000013.jpg")
-        (self.image_dir / "val" / "nevus" / "ISIC_0000009.jpg").unlink()
+        Image.new("RGB", (60, 45), (1, 2, 3)).save(self.image_dir / "test" / "nevus" / "PAT_0000013.jpg")
+        (self.image_dir / "val" / "nevus" / "PAT_0000009.jpg").unlink()
         (self.image_dir / "train" / "nevus" / "stray.jpg").write_bytes(b"x")
         with self.assertRaises(ValueError) as raised:
             datasets.load_dataset()
-        for expected in ("1 changed", "1 missing", "1 not in the table", "changed: test/nevus/ISIC_0000013.jpg"):
+        for expected in ("1 changed", "1 missing", "1 not in the table", "changed: test/nevus/PAT_0000013.jpg"):
             self.assertIn(expected, str(raised.exception))
 
     def test_files_that_windows_and_macos_put_in_folders_are_not_extra_images(self):
@@ -53,7 +72,7 @@ class DatasetTests(Project):
         self.assertEqual(len(datasets.load_dataset()), 14)
 
     def test_a_table_that_contradicts_itself_is_refused(self):
-        good = "train/nevus/ISIC_0000004.jpg"
+        good = "train/nevus/PAT_0000004.jpg"
         sha = hashlib.sha256((self.image_dir / good).read_bytes()).hexdigest()
         cases = {
             "lacks the column": ("split,label,path\n", ["train,nevus," + good]),
@@ -61,7 +80,7 @@ class DatasetTests(Project):
             "must be <split>/<label>/<file>": (self.header, [f"train,melanoma,{good},{sha}"]),  # the folder says nevus
             "not a JPEG or PNG": (self.header, [f"train,nevus,train/nevus/a.gif,{sha}"]),
             "64 lowercase": (self.header, [f"train,nevus,{good},{sha.upper()}"]),
-            "same image is also on line 2": (self.header, [self._row(good), f"test,nevus,test/nevus/copy.jpg,{sha}"]),
+            "same photo is also on line 2": (self.header, [self._row(good), f"test,nevus,test/nevus/copy.jpg,{sha}"]),
             "same path is also on line 2": (self.header, [self._row(good), self._row(good)]),
             "lists no file": (self.header, []),
         }
@@ -70,7 +89,7 @@ class DatasetTests(Project):
                 self.table.write_text(header + "".join(r + "\n" for r in rows), encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, message):
                     datasets.read_table()
-        for bad in ("train/../ISIC_0000004.jpg", "train/nevus/../x.jpg"):  # a path cannot point outside its class folder
+        for bad in ("train/../PAT_0000004.jpg", "train/nevus/../x.jpg"):  # a path cannot point outside its class folder
             with self.subTest(bad):
                 self._table(f"train,nevus,{bad},{sha}")
                 with self.assertRaises(ValueError):
@@ -79,7 +98,7 @@ class DatasetTests(Project):
     def test_a_validation_or_test_class_without_training_images_is_refused(self):
         folder = self.image_dir / "test" / "vascular lesion"
         folder.mkdir()
-        Image.new("RGB", (60, 45), (200, 0, 0)).save(folder / "ISIC_0000099.jpg")
+        Image.new("RGB", (60, 45), (200, 0, 0)).save(folder / "PAT_0000099.jpg")
         write_table(self.base)
         with self.assertRaisesRegex(ValueError, "vascular lesion"):
             datasets.classes(datasets.load_dataset())
@@ -91,9 +110,9 @@ class DatasetTests(Project):
         self.assertEqual((mime, sent["sha256"], sent["width"], sent["height"]), ("image/jpeg", item.sha256, 60, 45))
 
     def test_an_unreadable_image_is_reported_not_skipped(self):
-        (self.image_dir / "test" / "nevus" / "ISIC_0000013.jpg").write_bytes(b"not a jpeg")
+        (self.image_dir / "test" / "nevus" / "PAT_0000013.jpg").write_bytes(b"not a jpeg")
         write_table(self.base)
-        item = next(i for i in datasets.load_dataset() if i.path == "test/nevus/ISIC_0000013.jpg")
+        item = next(i for i in datasets.load_dataset() if i.path == "test/nevus/PAT_0000013.jpg")
         with self.assertRaisesRegex(ValueError, "not a readable image"):
             datasets.read_image(item)
 

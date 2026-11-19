@@ -29,17 +29,17 @@ class RunTests(RunProject):
         self.assertEqual(len(preds), 4)
         self.assertTrue(all(p["prediction"] == "melanoma" for p in preds))
         self.assertEqual(preds[1]["attempts"], 2)
-        sent = preds[0]["image_sent"]  # the file exactly as stored, nothing resized or re-encoded
+        sent = preds[0]["photo_sent"]  # the file exactly as stored, nothing resized or re-encoded
         self.assertEqual(sent["sha256"], hashlib.sha256((self.image_dir / preds[0]["path"]).read_bytes()).hexdigest())
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual((metrics["main"]["n"], metrics["main"]["correct"]), (4, 2))
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual((card["status"], card["model_versions_returned"], card["run_id"]), ("complete", ["fake-1-001"], "t1"))
-        self.assertEqual((card["n_images"], card["images_sha256"]),  # the names the image dataset's data sheet gives
+        self.assertEqual((card["n_photos"], card["photos_sha256"]),  # the names of the photo dataset: its item is a photo
                          (4, datasets.items_hash([i for i in datasets.load_dataset() if i.split == "test"])))
         self.assertEqual(card["dataset_table"]["sha256"], hashlib.sha256(self.table.read_bytes()).hexdigest())
-        self.assertEqual({p["lesion_group"] for p in preds}, {"lesion-melanoma", "lesion-nevus"})
-        self.assertEqual((metrics["main"]["groups"], metrics["main"]["interval_method"]), (2, "bootstrap over lesions"))
+        self.assertEqual({p["patient_id"] for p in preds}, {"patient-melanoma", "patient-nevus"})
+        self.assertEqual((metrics["main"]["groups"], metrics["main"]["interval_method"]), (2, "bootstrap over patients"))
         self.assertEqual(list(metrics), ["answer_format", "main"])  # no class of the image dataset is set apart
         self.assertEqual((metrics["answer_format"], card["answer_format"]), (prompts.ANSWER_FORMAT, prompts.ANSWER_FORMAT))
         self.assertEqual(preds[0]["differential"], ["melanoma", "nevus"])  # two classes: a differential of two
@@ -49,7 +49,7 @@ class RunTests(RunProject):
         self.assertEqual((detection["sensitivity"], detection["specificity"], detection["coverage"], detection["selective_risk"]),
                          (0.0, 1.0, 1.0, 0.5))
         text = (out / "report.md").read_text(encoding="utf-8")
-        for expected in ("| **Balanced accuracy (main score)** | **50.0%** |", "(bootstrap over lesions)", "| Macro-F1 |",
+        for expected in ("| **Balanced accuracy (main score)** | **50.0%** |", "(bootstrap over patients)", "| Macro-F1 |",
                          "| Top-3 balanced accuracy (the true class in the differential) | 100.0% |",
                          "| Invalid answers (counted as wrong) | 0.0% (0/4) |",
                          "### Misdiagnosis detection and selective prediction",
@@ -57,7 +57,7 @@ class RunTests(RunProject):
                          "| Specificity: right diagnoses not marked | 100.0% (2/2) |",
                          "| Coverage: questions answered with \"sufficient\" | 100.0% (4/4) |",
                          "| Selective risk: wrong among them | 50.0% (2/4) |",
-                         "### Per class", "### Confusion matrix", "(2 lesions for 4 images)", "sent exactly as stored",
+                         "### Per class", "### Confusion matrix", "(2 patients for 4 photos)", "sent exactly as stored",
                          "docs/method.md", f"answer format `{prompts.ANSWER_FORMAT}`"):
             self.assertIn(expected, text)
         for gone in ("| Accuracy |", "Hallucination", "Matthews", "kappa", "malignancy", "first phase"):
@@ -358,8 +358,8 @@ class RunTests(RunProject):
         with self.assertRaisesRegex(ValueError, "a model name is listed twice"):
             run.load_config("fake", self.dataset)
         self.config.write_text(text, encoding="utf-8")
-        for model, dataset, approach in (("other", "image", "closed_book"), ("fake", "multimodal", "closed_book"),
-                                         ("fake", "image", "open_book")):
+        for model, dataset, approach in (("other", "clinic_photo", "closed_book"), ("fake", "multimodal", "closed_book"),
+                                         ("fake", "clinic_photo", "open_book")):
             with self.assertRaises(ValueError, msg=(model, dataset, approach)):
                 run.load_config(model, dataset, approach)
         for limit in (0, -3):
@@ -398,12 +398,12 @@ class RunTests(RunProject):
         self.assertEqual({p["label"] for p in preds}, {"melanoma", "nevus"})
 
     def test_images_that_differ_from_the_dataset_table_stop_the_run_before_anything_is_written(self):
-        Image.new("RGB", (60, 45), (1, 2, 3)).save(self.image_dir / "test" / "nevus" / "ISIC_0000013.jpg")
+        Image.new("RGB", (60, 45), (1, 2, 3)).save(self.image_dir / "test" / "nevus" / "PAT_0000013.jpg")
         with self.assertRaises(ValueError) as raised:
             self._run(FakeModel(), "test", run_id="t1")
         self.assertIn("1 changed", str(raised.exception))
         self.assertFalse(self.model_dir.exists())
-        (self.image_dir / "test" / "nevus" / "ISIC_0000013.jpg").unlink()
+        (self.image_dir / "test" / "nevus" / "PAT_0000013.jpg").unlink()
         (self.image_dir / "test" / "nevus" / "broken.jpg").write_bytes(b"not a jpeg")
         with self.assertRaisesRegex(ValueError, "1 missing, 1 not in the table"):
             self._run(FakeModel(), "test", run_id="t1")
@@ -437,11 +437,11 @@ class RunTests(RunProject):
 
     def test_the_command_line_turns_expected_problems_into_messages(self):
         with self.assertRaises(SystemExit) as raised:
-            run.main(["run", "--model", "missing", "--dataset", "image", "--split", "val"])
+            run.main(["run", "--model", "missing", "--dataset", "clinic_photo", "--split", "val"])
         self.assertTrue(str(raised.exception).startswith("ERROR: "))
         self.table.unlink()  # the dataset is not prepared yet
         with self.assertRaises(SystemExit) as raised:
-            run.main(["run", "--model", "fake", "--dataset", "image", "--split", "test"])
+            run.main(["run", "--model", "fake", "--dataset", "clinic_photo", "--split", "test"])
         self.assertIn("does not exist yet", str(raised.exception))
 
 
@@ -462,7 +462,8 @@ class CheckTests(Project):
         model = ProbeModel()
         ok, text = self._check(model)
         self.assertTrue(ok, text)
-        for expected in ("[  OK] Settings: model fake (configs/models.toml), dataset image, approach closed_book", "[  OK] Prompt file: prompts/image/closed_book.txt", "[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes",
+        for expected in ("[  OK] Settings: model fake (configs/models.toml), dataset clinic_photo, approach closed_book", "[  OK] Prompt file: prompts/clinic_photo/closed_book.txt",
+                         "[  OK] Prepared dataset: 14 photos (train 6, val 4, test 4), 2 classes",
                          "[  OK] Model adapter and access", "[  OK] Model fake-1", "All checks passed"):
             self.assertIn(expected, text)
         image, mime, _ = model.images[0]  # only a blank synthetic image is ever sent
@@ -518,11 +519,11 @@ class CheckTests(Project):
         model = ProbeModel()
         ok, text = self._check(model)
         self.assertFalse(ok)
-        self.assertIn("[FAIL] Prepared dataset: the images in data/image/dataset differ from data/image/dataset.csv", text)
+        self.assertIn("[FAIL] Prepared dataset: the photos in data/clinic_patients/files/photos differ from data/clinic_patients/dataset.csv", text)
         self.assertEqual(model.calls, 1)  # the model access is still tested, so both problems show at once
         self.table.unlink()
         ok, text = self._check(ProbeModel())
-        self.assertIn("[FAIL] Prepared dataset: data/image/dataset.csv not found", text)
+        self.assertIn("[FAIL] Prepared dataset: data/clinic_patients/dataset.csv not found", text)
         self.assertIn("[  OK] Model fake-1", text)
 
     def test_a_broken_prompt_file_fails(self):
@@ -541,7 +542,7 @@ class CheckTests(Project):
         before = self.config.read_text(encoding="utf-8")
         with mock.patch("src.run.load", side_effect=load), \
                 contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as raised:
-            run.main(["check", "--model", "fake", "--dataset", "image", "--try-id", "other-model"])
+            run.main(["check", "--model", "fake", "--dataset", "clinic_photo", "--try-id", "other-model"])
         self.assertEqual((seen, raised.exception.code), (["other-model"], 0))
         self.assertEqual(self.config.read_text(encoding="utf-8"), before)  # the file itself is unchanged
 
@@ -556,7 +557,7 @@ class TextDatasetTests(TextProject):
         self.assertEqual((len(items), datasets.classes(items)), (16, ["actinic keratosis", "melanoma", "nevus"]))
         self.assertEqual(sorted(i.group for i in items if i.split == "test" and i.label == "melanoma"), ["203", "203", "204"])
         with self.assertRaisesRegex(ValueError, "is not a JPEG or PNG file"):
-            datasets.read_table(self.table, "image")  # a text table is never read as images
+            datasets.read_table(self.table, "clinic_photo")  # a text table is never read as photos
         with self.table.open("a", encoding="utf-8") as f:
             f.write(f"train,nevus,train/nevus/photo.jpg,{'0' * 64},x,9,PMC-Patients\n")
         with self.assertRaisesRegex(ValueError, "is not a .txt file"):
@@ -585,7 +586,7 @@ class TextDatasetTests(TextProject):
             self.assertEqual(sent, prompt.replace("{case}", self.texts[pred["path"]]))
             self.assertEqual(pred["case_sent"]["sha256"], hashlib.sha256(self.texts[pred["path"]].encode("utf-8")).hexdigest())
             self.assertEqual(pred["pmid"], pred["path"].split("/")[2].split("-")[0])
-            self.assertNotIn("image_sent", pred)
+            self.assertNotIn("photo_sent", pred)
         card = json.loads((out / "run_card.json").read_text(encoding="utf-8"))
         self.assertEqual((card["labels"], card["n_cases"], card["group_column"], card["prompt"]), (labels, 8, "pmid", prompt))
         self.assertEqual(card["cases_sha256"], datasets.items_hash([i for i in datasets.load_dataset(*datasets.dataset_paths("text"), "text")
@@ -658,24 +659,26 @@ class MultimodalTests(MultimodalProject):
         with mock.patch("src.run.load", return_value=model):
             return run.run("fake", self.dataset, *args, results=self.results, **kwargs)
 
-    def test_the_questions_are_the_image_dataset_s_photos_with_their_facts(self):
-        self.assertEqual(datasets.dataset_paths("image_metadata"), (Path("data/image_metadata/dataset.csv"), Path("data/image/dataset")))
-        items = datasets.load_dataset(*datasets.dataset_paths("image_metadata"), "image_metadata")
+    def test_the_questions_are_the_clinic_photos_with_their_records(self):
+        self.assertEqual(datasets.dataset_paths("clinic_photo_record"),
+                         (Path("data/clinic_patients/dataset.csv"), Path("data/clinic_patients/files/photos")))
+        self.assertEqual(datasets.dataset_paths("clinic_photo"), datasets.dataset_paths("clinic_photo_record"))  # one table, two views
+        items = datasets.load_dataset(*datasets.dataset_paths("clinic_photo_record"), "clinic_photo_record")
         self.assertEqual(len(items), 14)
         missing = next(i for i in items if i.path == self.MISSING)
-        self.assertTrue(missing.facts.endswith("Body site: not recorded."))
-        changed = [datasets.Item(**{**items[0].__dict__, "facts": "Age: about 99 years. Sex: male. Body site: trunk."}), *items[1:]]
+        self.assertTrue(missing.facts.endswith("3. The lesion itches: unknown"))
+        changed = [datasets.Item(**{**items[0].__dict__, "facts": "1. Age in years: 99\n2. Body site: trunk\n3. The lesion itches: no"}), *items[1:]]
         self.assertNotEqual(datasets.items_hash(changed), datasets.items_hash(items))  # a changed fact is a changed question
         text = self.questions.read_text(encoding="utf-8")
-        self.questions.write_text(text.replace("Age: about 30 years. Sex: female. Body site: trunk.", ""), encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "the facts column is empty"):
-            datasets.read_table(self.questions, "image_metadata")
+        self.questions.write_text(text.replace('"1. Age in years: 30\n2. Body site: trunk\n3. The lesion itches: no"', '""'), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "the facts column is empty \\(a missing fact is written \"unknown\"\\)"):
+            datasets.read_table(self.questions, "clinic_photo_record")
         self.questions.write_text(text.replace(",facts\n", "\n", 1), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "lacks the column"):
-            datasets.read_table(self.questions, "image_metadata")
+            datasets.read_table(self.questions, "clinic_photo_record")
 
-    def test_an_image_metadata_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
-        for template, dataset in (("Pick:\n{labels}", "image_metadata"), ("Patient: {facts}\n{labels}", "image"),
+    def test_a_photo_record_prompt_needs_the_facts_placeholder_and_no_other_prompt_may_have_it(self):
+        for template, dataset in (("Pick:\n{labels}", "clinic_photo_record"), ("Patient: {facts}\n{labels}", "clinic_photo"),
                                   ("Case: {case}\nPatient: {facts}\n{labels}", "text")):
             with self.subTest(dataset):
                 self.prompt.write_text(template, encoding="utf-8")
@@ -692,14 +695,14 @@ class MultimodalTests(MultimodalProject):
         for image, mime, prompt in model.requests:
             path = next(p for p in preds if (self.image_dir / p).read_bytes() == image)  # the photo, exactly as stored
             self.assertEqual(mime, "image/jpeg")
-            self.assertEqual(prompt, "A photo.\nPatient: " + facts[path] + "\nPick one:\n- melanoma\n- nevus\nAnswer with the name only.")
+            self.assertEqual(prompt, "A photo.\nRecord:\n" + facts[path] + "\nPick one:\n- melanoma\n- nevus\nAnswer with the name only.")
             self.assertEqual(preds[path]["facts"], facts[path])
         metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
         self.assertEqual((metrics["main"]["n"], metrics["all_facts_recorded"]["questions"], metrics["all_facts_recorded"]["metrics"]["n"]),
                          (4, 3, 3))
         report = (out / "report.md").read_text(encoding="utf-8")
         for expected in ("sent exactly as stored, each with its patient's facts in the prompt", "## Questions with all facts recorded",
-                         "These scores count only the 3 of 4 questions with every fact recorded", "(bootstrap over lesions)"):
+                         "These scores count only the 3 of 4 questions with every fact recorded", "(bootstrap over patients)"):
             self.assertIn(expected, report)
         self.assertLess(report.index("## Results"), report.index("## Questions with all facts recorded"))
 
@@ -708,7 +711,7 @@ class MultimodalTests(MultimodalProject):
         with mock.patch("src.run.load", return_value=model):
             ok = run.check_setup(run.load_config("fake", self.dataset), say=lines.append)
         self.assertTrue(ok, "\n".join(lines))
-        self.assertIn("[  OK] Prepared dataset: 14 images (train 6, val 4, test 4), 2 classes", "\n".join(lines))
+        self.assertIn("[  OK] Prepared dataset: 14 photos (train 6, val 4, test 4), 2 classes", "\n".join(lines))
         self.assertEqual(model.images[0][1:], ("image/png", run.PROBE_PROMPT))
 
 

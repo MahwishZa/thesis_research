@@ -1,5 +1,5 @@
-"""Shared test fixtures: tiny synthetic projects laid out like the repository (coloured squares for the image dataset, short
-invented cases for the text dataset, photos with facts for the image + metadata dataset) and stand-in models. No tests here."""
+"""Shared test fixtures: tiny synthetic projects laid out like the repository (coloured squares for the clinic photo dataset, short
+invented cases for the text dataset, photos with a record for the clinic photo + record dataset) and stand-in models. No tests here."""
 
 import contextlib
 import csv
@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 COLOURS = {"melanoma": (120, 40, 30), "nevus": (200, 150, 120)}
-SIZES = {"train": 3, "val": 2, "test": 2}  # images per class and split in the synthetic project
+SIZES = {"train": 3, "val": 2, "test": 2}  # photos per class and split in the synthetic project
 MODEL_LIST = """[[models]]
 name = "fake"
 requests_per_minute = 600000
@@ -49,31 +49,31 @@ LABELS = ["nevus", "melanoma", "vascular lesion"]
 
 
 def write_table(base: Path) -> Path:
-    """data/image/dataset.csv for the images now in data/image/dataset (as the dataset preparation writes it)."""
-    image_dir, table = base / "data" / "image" / "dataset", base / "data" / "image" / "dataset.csv"
+    """data/clinic_patients/dataset.csv for the photos now in data/clinic_patients/files/photos (as the dataset preparation writes it)."""
+    image_dir, table = base / "data" / "clinic_patients" / "files" / "photos", base / "data" / "clinic_patients" / "dataset.csv"
     table.parent.mkdir(parents=True, exist_ok=True)
     with table.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(["split", "label", "path", "sha256", "lesion_group", "source"])  # and a further column, as the preparation adds
+        writer.writerow(["split", "label", "path", "sha256", "patient_id", "source"])  # and a further column, as the preparation adds
         for file in sorted(image_dir.rglob("*.jpg")):
             split, label, _ = file.relative_to(image_dir).parts
-            group = f"lesion-{label}" if split == "test" else file.stem  # each class's two test images show one lesion
+            group = f"patient-{label}" if split == "test" else file.stem  # each class's two test photos are of one patient
             writer.writerow([split, label, file.relative_to(image_dir).as_posix(), hashlib.sha256(file.read_bytes()).hexdigest(), group,
-                             "kaggle"])
+                             "PAD-UFES-20"])
     return table
 
 
 class Project(unittest.TestCase):
-    """A prepared dataset (3+3 training, 2+2 validation, 2+2 test images: ISIC_0000001 to ISIC_0000014, in that order), its
+    """A prepared dataset (3+3 training, 2+2 validation, 2+2 test photos: PAT_0000001 to PAT_0000014, in that order), its
     table, a prompt and the model list, in a folder laid out like the repository; each test runs inside it."""
 
-    dataset = "image"
+    dataset = "clinic_photo"
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
-        self.image_dir = self.base / "data" / "image" / "dataset"
+        self.image_dir = self.base / "data" / "clinic_patients" / "files" / "photos"
         number = 0
         for split, n in SIZES.items():
             for label, colour in COLOURS.items():
@@ -83,7 +83,7 @@ class Project(unittest.TestCase):
                     number += 1
                     image = Image.new("RGB", (60, 45), colour)
                     image.paste((255, 255, 255), (0, 0, 2 + number, 2 + number))  # every image differs from every other
-                    image.save(folder / f"ISIC_{number:07d}.jpg", quality=95)
+                    image.save(folder / f"PAT_{number:07d}.jpg", quality=95)
         self.table = write_table(self.base)
         self.config, self.prompt = write_project_files(self.base, self.dataset, "Pick one:\n{labels}\nAnswer with the name only.")
         self.results = self.base / "results"
@@ -240,30 +240,29 @@ class RecordingModel(FakeModel):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# The image + metadata dataset: each photo with its patient's facts in the prompt
+# The clinic photo + record dataset: each photo with its patient's record in the prompt
 
 class MultimodalProject(Project):
-    """The image project, with data/image_metadata/dataset.csv giving each photo its patient's facts (one test photo lacks a fact)
-    and a prompt with the facts placeholder."""
+    """The photo project, with the table's facts column giving each photo its patient's record (one test photo has an unknown) and a
+    prompt with the facts placeholder."""
 
-    dataset = "image_metadata"
+    dataset = "clinic_photo_record"
 
-    MISSING = "test/nevus/ISIC_0000013.jpg"
+    MISSING = "test/nevus/PAT_0000013.jpg"
 
     def setUp(self):
         super().setUp()
         with self.table.open(encoding="utf-8", newline="") as f:
             rows = list(csv.DictReader(f))
-        self.questions = self.base / "data" / "image_metadata" / "dataset.csv"
-        self.questions.parent.mkdir(parents=True)
+        self.questions = self.table  # one table serves the photo view and the photo + record view
         with self.questions.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["split", "label", "path", "sha256", "lesion_group", "facts"], lineterminator="\n")
+            writer = csv.DictWriter(f, fieldnames=["split", "label", "path", "sha256", "patient_id", "facts"], lineterminator="\n")
             writer.writeheader()
             for i, row in enumerate(rows):
-                site = "not recorded" if row["path"] == self.MISSING else "trunk"
-                writer.writerow({k: row[k] for k in ("split", "label", "path", "sha256", "lesion_group")}
-                                | {"facts": f"Age: about {30 + 5 * i} years. Sex: female. Body site: {site}."})
-        self.prompt.write_text("A photo.\nPatient: {facts}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
+                itch = "unknown" if row["path"] == self.MISSING else "no"
+                writer.writerow({k: row[k] for k in ("split", "label", "path", "sha256", "patient_id")}
+                                | {"facts": f"1. Age in years: {30 + 5 * i}\n2. Body site: trunk\n3. The lesion itches: {itch}"})
+        self.prompt.write_text("A photo.\nRecord:\n{facts}\nPick one:\n{labels}\nAnswer with the name only.\n", encoding="utf-8")
         for name, value in (("time.sleep", None), ("_git", {"commit": "c" * 40, "uncommitted_changes": False})):
             patcher = mock.patch(f"src.run.{name}", return_value=value)
             patcher.start()

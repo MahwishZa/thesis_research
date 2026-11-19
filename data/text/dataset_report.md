@@ -1,6 +1,6 @@
 # Preparation of the text dataset
 
-Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the image dataset's classes, and whether each name counts for that class.
+Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the eight classes, and whether each name counts for that class.
 
 <!-- step: survey -->
 ## Survey: the names checked in MeSH, and how much PubMed holds per class
@@ -223,7 +223,7 @@ Skin: ("skin neoplasms"[MeSH Terms] OR "skin diseases"[MeSH Terms]).
 <!-- step: build -->
 ## Build: the text dataset
 
-Written by `python -m src.build.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a real patient description from a published case report: a patient of PMC-Patients, the case sections of an open full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task is the image dataset's: name the class. `dataset.csv` lists the cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them again, the same, from the downloaded files.
+Written by `python -m src.build.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a real patient description from a published case report: a patient of PMC-Patients, the case sections of an open full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task: name the class. `dataset.csv` lists the cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them again, the same, from the downloaded files.
 
 ### Rules
 

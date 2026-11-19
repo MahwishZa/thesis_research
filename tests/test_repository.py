@@ -111,7 +111,7 @@ class RepositoryTests(unittest.TestCase):
                 name, operator, _ = re.fullmatch(r"([A-Za-z0-9._-]+)(==|>=)(\S+)", line).groups()
                 listed[name.lower()] = operator
         self.assertFalse(list(ROOT.glob("requirements*.txt"))[1:], "there must be one requirements file")
-        distribution = {"PIL": "pillow", "anthropic": "anthropic", "openai": "openai", "cv2": "opencv-python-headless", "numpy": "numpy",
+        distribution = {"PIL": "pillow", "anthropic": "anthropic", "openai": "openai", "numpy": "numpy",
                         "torch": "torch", "open_clip": "open_clip_torch", "easyocr": "easyocr"}  # import name -> package name
         imported = set()
         for path in (ROOT / "src").rglob("*.py"):

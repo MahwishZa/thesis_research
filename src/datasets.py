@@ -14,7 +14,7 @@ from PIL import Image
 
 
 
-DATA = Path("data")  # one folder per dataset (image, text, image_metadata, cases), and the knowledge base (data/knowledge/)
+DATA = Path("data")  # one folder per dataset (clinic_patients, text, cases), and the knowledge base (data/knowledge/)
 TABLE_NAME, FILES = "dataset.csv", "dataset"  # in a dataset's folder: the table of the prepared dataset, and its files
 SPLITS = ("train", "val", "test")  # the splits of the prepared dataset
 COLUMNS = ("split", "label", "path", "sha256")  # required in the table; other columns are kept there but not needed here
@@ -22,7 +22,6 @@ MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 TEXT_TYPES = {".txt": "text/plain"}  # the text files: UTF-8, each one case
 SYSTEM_FILES = {"thumbs.db", "desktop.ini"}  # written by Windows Explorer into folders it shows; never part of the dataset
 SHA256 = re.compile(r"[0-9a-f]{64}")
-MISSING_FACT = "not recorded"  # how a missing fact is written in an image + metadata question
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -49,18 +48,17 @@ class Dataset:
     pictures_root: str = ""  # the folder in data/ the pictures' paths start from
     subset: bool = False  # its questions are some of another dataset's files: other files in its folder of files are expected
     unique_content: bool = True  # False: two questions may have the same content (a patient record is the same words for two patients)
-    missing_fact: str = MISSING_FACT  # how a missing fact reads in the facts: the questions without it are scored again beside the main score
+    missing_fact: str = ""  # with a facts column: how a missing fact reads there (the questions without one are scored again beside the main score)
+
+    def __post_init__(self):
+        if self.facts_column and not self.missing_fact:
+            raise ValueError("a dataset with a facts column must say how a missing fact reads (missing_fact)")
 
 
 DATASETS = {  # the datasets a config can name
-    "image": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
-                     "Photos of one lesion are not independent"),
     "text": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article",
                     "Patients described in one article are not independent",
                     set_apart=("actinic keratosis",)),  # 2 test cases: limitation 3 of data/text/datasheet.md
-    "image_metadata": Dataset(MEDIA_TYPES, "a JPEG or PNG file", False, "lesion_group", "image", "lesion",
-                          "Photos of one lesion are not independent", facts_column="facts", folder="image_metadata",
-                          files="image/dataset"),  # the image + metadata dataset: the image dataset's photos, each with its patient's facts
     # The case dataset: the text dataset's cases whose own article shows the lesion in photos (data/cases/dataset.csv), asked
     # with the case text and the photos ("cases") or with the photos only ("case_photos"); the text only is the text dataset.
     "cases": Dataset(TEXT_TYPES, "a .txt file", True, "pmid", "case", "article", "Patients described in one article are not independent",
@@ -81,9 +79,8 @@ DATASETS = {  # the datasets a config can name
                                    "Photos of one patient are not independent", facts_column="facts", folder="clinic_patients",
                                    files="clinic_patients/files/photos", missing_fact="unknown"),
 }
-SAME_QUESTIONS = ({"image", "image_metadata"}, {"text", "cases", "case_photos"},
-                  {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
-TITLES = {"image": "Image", "text": "Text", "image_metadata": "Image + metadata", "cases": "Cases: text and photos",
+SAME_QUESTIONS = ({"text", "cases", "case_photos"}, {"clinic_photo", "clinic_record", "clinic_photo_record"})  # datasets whose questions can be paired: same photos or cases
+TITLES = {"text": "Text", "cases": "Cases: text and photos",
           "case_photos": "Cases: photos only", "clinic_photo": "Clinic patients: photo", "clinic_record": "Clinic patients: record",
           "clinic_photo_record": "Clinic patients: photo + record"}  # how tables and reports name the datasets
 
@@ -99,22 +96,22 @@ class Item:
     label: str
     path: str  # inside the dataset's folder of files, with forward slashes: <split>/<label>/<file>
     sha256: str
-    group: str = ""  # the lesion an image shows, or the article a case comes from; empty when the table does not say
-    facts: str = ""  # an image + metadata question's patient facts, as the model is shown them
+    group: str = ""  # the patient a photo or record is of, or the article a case comes from; empty when the table does not say
+    facts: str = ""  # a photo + record question's record text, as the model is shown it
     pictures: tuple = ()  # a case question's pictures: (path inside the pictures' folder, sha256), in the order they are sent
 
 
 def dataset_paths(dataset: str) -> tuple[Path, Path]:
     """The table and the folder of files of one prepared dataset: data/<folder>/dataset.csv and data/<dataset>/dataset/, or the
-    folders DATASETS names (the image + metadata dataset: data/image_metadata/dataset.csv and the image dataset's folder)."""
+    table and folder DATASETS names (the clinic patients datasets: data/clinic_patients/dataset.csv and files/photos/)."""
     kind = DATASETS[dataset]
     return DATA / (kind.folder or dataset) / kind.table, DATA / (kind.files or f"{dataset}/{FILES}")
 
 
-TABLE, IMAGES = dataset_paths("image")  # the defaults below
+TABLE, IMAGES = dataset_paths("clinic_photo")  # the defaults below
 
 
-def read_table(table: str | Path = TABLE, dataset: str = "image") -> list[Item]:
+def read_table(table: str | Path = TABLE, dataset: str = "clinic_photo") -> list[Item]:
     """The rows of the table, after checking that they describe one consistent dataset (no file is opened)."""
     kind = DATASETS[dataset]
     table = Path(table)
@@ -174,7 +171,7 @@ def pictures_root(dataset: str) -> Path:
     return DATA / DATASETS[dataset].pictures_root
 
 
-def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES, dataset: str = "image") -> list[Item]:
+def load_dataset(table: str | Path = TABLE, root: str | Path = IMAGES, dataset: str = "clinic_photo") -> list[Item]:
     """The table's rows, after checking that the files on disk are exactly the ones it lists, byte for byte."""
     items = read_table(table, dataset)
     files = f"{DATASETS[dataset].item}s"

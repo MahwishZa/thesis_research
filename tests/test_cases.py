@@ -142,7 +142,7 @@ class CaseDatasetTests(CaseProject):
         other = self.results / "image-copy"
         shutil.copytree(cases_run, other)
         card = json.loads((other / "run_card.json").read_text(encoding="utf-8"))
-        card["config"]["dataset"], card["n_images"] = "image_metadata", card["n_cases"]  # photos of other patients: nothing pairs
+        card["config"]["dataset"], card["n_photos"] = "clinic_photo_record", card["n_cases"]  # photos of other patients: nothing pairs
         (other / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(text_run, other)

@@ -20,8 +20,9 @@ from the files `python -m src.build.cases.prepare` writes: `dataset_report.md` (
 
 ## 1. Motivation
 
-The image and image + metadata datasets show a photo with no clinical description, because the ISIC Archive keeps no text about a
-patient, and no authentic source links an ISIC photo to a written case. This dataset gives what they cannot: a real patient's
+The Version 1 image datasets (ISIC photos, removed from the working folders on 2026-11-19) showed a photo with no clinical description,
+because the ISIC Archive keeps no text about a patient, and no authentic source links an ISIC photo to a written case. This dataset
+gives what they could not: a real patient's
 written case together with that patient's own photos, both from the published case report. It answers whether a model diagnoses
 better, and invents less, when it sees the photos with the written case, and how the photos alone compare, on the same patients.
 
@@ -39,7 +40,7 @@ better, and invents less, when it sees the photos with the written case, and how
 |---|---|---|
 | count | read the captions of each case's article in PubMed Central; a figure counts when its caption shows the lesion (a clinical or dermoscopic photo, or a lesion) and names no microscope or stain, scan, state after treatment, removed specimen, chart, or another patient; an article with another case of the dataset is left out | 107 test cases (rule fixed before the count: at least 80, and 6 classes with at least 8) |
 | download | the counted figures' pictures from PMC Article Datasets (NCBI's cloud copy of PubMed Central's open-access articles), each checked against PMC's MD5 checksum; not open access or retracted: nothing | 492 pictures for 339 of 347 cases |
-| check | each picture by itself: at least 128 pixels; no writing that names a diagnosis (EasyOCR); seen as a clinical or dermoscopy photo by an image model (open_clip ViT-B-32); not the same picture as another case's or one of the image dataset | 468 kept; 24 not a skin photo, 1 names a diagnosis |
+| check | each picture by itself: at least 128 pixels; no writing that names a diagnosis (EasyOCR); seen as a clinical or dermoscopy photo by an image model (open_clip ViT-B-32); not the same picture as another case's (on 2026-11-18 it was also compared with the photos of the Version 1 image dataset, with no match; that comparison left the code on 2026-11-19 with the dataset) | 468 kept; 24 not a skin photo, 1 names a diagnosis |
 | build | one question per case with a kept picture that the text dataset still holds | 324 questions (11 cases left out with the text dataset's version 3) |
 
 ## 4. Uses and limits

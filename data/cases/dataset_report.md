@@ -56,7 +56,7 @@ Of the cases with no figure that shows the lesion alone, 171 have a figure that 
 
 ### What this count does not show
 
-- No image was looked at. A caption can be wrong or incomplete; the build step checks the images themselves (what kind of picture each is, writing in the picture, the same picture twice, a picture also in the image dataset).
+- No image was looked at. A caption can be wrong or incomplete; the build step checks the images themselves (what kind of picture each is, writing in the picture, the same picture twice).
 - A figure that counts may still show more than the lesion (an arrow, a ruler, a second panel the caption does not name).
 - The captions stay on this computer (`data/cases/figures/captions.jsonl`), under their publishers' licences.
 
@@ -113,7 +113,6 @@ Pictures checked: 492; kept: 468.
 | smaller than the least size | 0 |
 | writing in the picture names a diagnosis | 1 |
 | the image model sees no photo of the skin | 24 |
-| the same picture is in the image dataset | 0 |
 | the same picture is in another case | 0 |
 | the same picture twice in this case | 0 |
 

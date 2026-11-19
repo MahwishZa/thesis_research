@@ -34,8 +34,6 @@ thesis_research/
 │   ├── clinic_patients/     PAD-UFES-20: phone photos of skin lesions with each patient's clinic record (Version 2)
 │   ├── text/                written cases from published case reports
 │   ├── cases/               written cases with the same patient's published photos
-│   ├── image/               Version 1: dermoscopic photos (to be removed from here; kept in archive/v1)
-│   ├── image_metadata/      Version 1: photos with age, sex and body site (to be removed from here; kept in archive/v1)
 │   └── knowledge/           what open-book runs may retrieve
 ├── docs/                temporary: the Version 2 plan and the method; removed when the research is final
 ├── archive/             temporary: Version 1 (commit a1c9209), frozen for reference; removed when the research is final

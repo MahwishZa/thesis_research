@@ -22,7 +22,7 @@ Every step writes into a few committed files in data/text/ and rewrites only its
     dataset_report.md              one section per step: its counts, its tables and what it does not do
 The question texts themselves are written into data/text/dataset/ (not committed: their licences allow research use only).
 One committed file is written by people, not by code: build/class_terms.csv (the names doctors use for each of the image
-dataset's classes, and whether each name counts for that class). Its classes must be exactly the image dataset's classes.
+dataset's classes, and whether each name counts for that class). Its classes must be exactly the eight of ``CLASSES``.
 
 ``survey`` checks every name in class_terms.csv against MeSH, the US National Library of Medicine's list of medical subject
 headings: a name is confirmed when it is a heading or one of the heading's entry terms (other names MeSH lists for it). It also
@@ -104,11 +104,10 @@ from xml.etree import ElementTree
 
 from ...common import USER_AGENT, fetch, write_section
 from ...datasets import FILES, TABLE_NAME
-from ...datasets import classes as image_classes
-from ...datasets import read_table
 
 DATA = Path("data/text")
-IMAGE_TABLE = Path("data/image/dataset.csv")  # the classes of the text dataset are the image dataset's
+CLASSES = ("actinic keratosis", "basal cell carcinoma", "dermatofibroma", "melanoma", "nevus", "pigmented benign keratosis",
+           "squamous cell carcinoma", "vascular lesion")  # the eight classes of the dataset, as the Version 1 image dataset named them
 TERMS = "build/class_terms.csv"  # written by people
 CHECK = "build/term_check.csv"
 REPORT = "dataset_report.md"
@@ -120,7 +119,7 @@ REVIEW_COLUMNS = ["patient_uid", "split", "label", "source", "year", "words", "r
 REMOVED = "removed"  # data/text/sources/removed/: the question files a revision took out of the dataset (not in Git)
 REPORT_HEAD = ["# Preparation of the text dataset", "",
                "Written by `python -m src.build.text.prepare`, one section per step in the order the steps run; each step rewrites only "
-               "its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the image dataset's "
+               "its own section. `build/class_terms.csv` is written by people: the names doctors use for each of the eight "
                "classes, and whether each name counts for that class.", ""]
 TERM_COLUMNS = ["class", "term", "counts", "source", "note"]
 CHECK_COLUMNS = ["class", "term", "counts", "in_mesh", "mesh_ids", "mesh_headings", "pubmed_articles"]
@@ -278,7 +277,7 @@ LESION_TYPES = ("nodule", "papule", "plaque", "patch", "patches", "macule", "ulc
 SAME_PATIENT, SHARED_RUN = 0.10, 12  # questions of two articles sharing this share of their runs of 12 words: one patient
 SHORT_FORM = r"(?=[A-Za-z]*[A-Z][A-Za-z]*[A-Z])[A-Za-z]{2,6}"  # a short form an author defines: 2 to 6 letters, 2 or more capitals
 TEST_SHARE, VAL_SHARE = 0.6, 0.2  # of each class's cases: into test and into validation (the rest into train)
-TEST_PER_CLASS, VAL_PER_CLASS = 40, 15  # at most, per class, as in the image dataset
+TEST_PER_CLASS, VAL_PER_CLASS = 40, 15  # at most, per class (the sizes of the Version 1 image dataset)
 TEXT_MARK = "the case text does not name the class"  # the one mark that depends on the text, not on the title
 LOOKS_MARK = "the title names the class only as what the lesion looked like, or beside another diagnosis"
 BARE = ("nevus",)  # class names that also name other things: alone in a title they give no class (a nevus can be a birthmark
@@ -304,7 +303,7 @@ def read_terms(path: Path, classes: list[str]) -> list[dict]:
     for line, row in enumerate(rows, start=2):
         where = f"{path.as_posix()} line {line}"
         if row["class"] not in classes:
-            raise ValueError(f"{where}: {row['class']!r} is not a class of the image dataset ({', '.join(classes)})")
+            raise ValueError(f"{where}: {row['class']!r} is not one of the eight classes ({', '.join(classes)})")
         if not row["term"] or row["counts"] not in ("yes", "no") or not row["source"]:
             raise ValueError(f"{where}: every row needs a term, counts (yes or no) and a source")
         key = (row["class"], _words(row["term"]))
@@ -447,7 +446,7 @@ def survey(data: str | Path = DATA, classes: list[str] | None = None, show=None)
     """Checks every name in class_terms.csv against MeSH and counts what PubMed holds per class; writes term_check.csv and the
     survey section of dataset_report.md."""
     data = Path(data)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     terms = read_terms(data / TERMS, classes)
     rows = []
     for n, row in enumerate(terms, start=1):
@@ -811,7 +810,7 @@ def cases(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     in class_terms.csv), with marks where a person should look; writes case_candidates.csv and the cases section of
     dataset_report.md. No case text is written into the repository and nothing is cut."""
     data = Path(data)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     judge = _judge(read_terms(data / TERMS, classes), classes)
     meta = _download_pmc_patients(data / SOURCES / "pmc_patients", show)
     path = data / SOURCES / "pmc_patients" / PMC_PATIENTS["file"]
@@ -1035,7 +1034,7 @@ def abstracts(data: str | Path = DATA, classes: list[str] | None = None, show=No
     applies the candidate rules of ``cases`` to each article's case text (the full text's case sections, else the abstract's
     case part); writes abstract_candidates.csv and the abstracts section of dataset_report.md."""
     data = Path(data)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     terms, headings = _checked_headings(data, classes)
     checked = _read_csv(data / CHECK, CHECK_COLUMNS, "survey")
     listed = {r["pmid"] for r in _read_csv(data / CANDIDATES, CANDIDATE_COLUMNS, "cases")}
@@ -1180,7 +1179,7 @@ def mesh(data: str | Path = DATA, classes: list[str] | None = None, show=None) -
     headings of each class's names that count in term_check.csv) with a skin heading; writes article_mesh.csv and the mesh
     section of dataset_report.md. Only article numbers are sent; no article text is downloaded."""
     data = Path(data)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     headings = _checked_headings(data, classes)[1]
     candidates = _candidates(data)
     pmids = sorted({r["pmid"] for r in candidates}, key=int)
@@ -1427,7 +1426,7 @@ def build(data: str | Path = DATA, classes: list[str] | None = None, show=None) 
     where the sources agree, questions cut before the diagnosis, checks, and splits by article. Writes dataset.csv, the question
     texts into data/text/dataset/ (not committed) and the build section of dataset_report.md."""
     data = Path(data)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     terms = read_terms(data / TERMS, classes)
     candidates = _candidates(data)
     mesh_rows = _read_csv(data / MESH_TABLE, MESH_COLUMNS, "mesh")
@@ -1550,7 +1549,7 @@ def _build_summary(meta, funnel, rows, classes, leaks, duplicates) -> list[str]:
     lines = ["# Build: the text dataset", "",
              "Written by `python -m src.build.text.prepare build`, with no person choosing, labelling or cutting a case. Each case is a "
              "real patient description from a published case report: a patient of PMC-Patients, the case sections of an open "
-             "full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task is the image dataset's: name the class. `dataset.csv` lists the "
+             "full text in PMC, or the case part of a PubMed abstract (`source` in `dataset.csv`). The task: name the class. `dataset.csv` lists the "
              "cases; the question texts are in `data/text/dataset/` (not in Git: research use only), and `build` writes them "
              "again, the same, from the downloaded files.", "",
              "## Rules", "",

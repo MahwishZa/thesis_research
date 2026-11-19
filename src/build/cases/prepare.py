@@ -33,8 +33,8 @@ already done is not asked again.
 ``check`` checks every saved picture by itself, with no person looking: it must be at least MIN_SIDE pixels on its shorter side;
 no writing in it (read by EasyOCR) may name a diagnosis (any name in data/text/build/class_terms.csv, or a class's short form); an image
 model (open_clip, asked which of KINDS the picture is) must see a clinical photo or a dermoscopy image, so a caption that missed a
-panel of histology or a scan is caught; and it may not be the same picture as one of another case or of the image dataset (the
-image dataset's own rule for "the same picture"). A case keeps the pictures that pass; the rule for building the dataset is applied
+panel of histology or a scan is caught; and it may not be the same picture as one of another case (the rule for "the same picture"
+is ``SAME``, below). A case keeps the pictures that pass; the rule for building the dataset is applied
 again to the cases that keep one. The table data/cases/build/figure_checks.csv gives every picture's results; the check section of dataset_report.md the
 counts, the agreement between the captions and the image model on dermoscopy, and the versions of the models. The models' answers
 are kept in data/cases/figures/checks.jsonl (not in Git), so a second run does not ask them again.
@@ -65,13 +65,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
-from PIL import Image
+from PIL import Image, ImageOps
 
-from ...common import fetch
-from ..image import prepare as imageprep
+from ...common import fetch, read_rows, write_rows, write_section
 from ..text import prepare as textprep
-from ...common import write_section
-from ..image_metadata.prepare import TEXT, _read_csv, _write_csv
+
+TEXT = textprep.DATA  # the text dataset: its table of cases and its class names
+_write_csv = write_rows
+
+
+def _read_csv(path: Path) -> list[dict]:
+    return read_rows(path, "the text dataset and the earlier steps of this dataset must be prepared first")
+
 
 DATA = Path("data/cases")  # the case dataset: dataset.csv, dataset_report.md, datasheet.md and build/; figures/ on this computer
 REPORT = "dataset_report.md"
@@ -103,12 +108,18 @@ KINDS = {  # what the image model chooses from; fixed before any picture was see
     "drawing": "a chart, diagram, table or drawing"}
 SKIN_KINDS = ("clinical photo", "dermoscopy")
 CHECK_REASONS = ("smaller than the least size", "writing in the picture names a diagnosis", "the image model sees no photo of the skin",
-                 "the same picture is in the image dataset", "the same picture is in another case", "the same picture twice in this case")
+                 "the same picture is in another case", "the same picture twice in this case")
 CHECK_COLUMNS = ["patient_uid", "split", "class", "pmcid", "figure", "file", "sha256", "width", "height", "caption_type", "model_kind",
                  "model_score", "writing", "diagnosis_words", "kept", "reason"]
 CASES_TABLE = "dataset.csv"
 CASES_COLUMNS = ["split", "label", "path", "sha256", "pmid", "patient_uid", "pictures", "n_pictures"]
 GO_TEST_CASES, GO_CLASSES, GO_PER_CLASS = 80, 6, 8  # fixed on 2026-11-18, before the count
+# The most each may be for "same picture" (moved without change from the Version 1 image builder, commit a1c9209). The mean colour
+# difference decides: on realistic synthetic lesion photos, a photo and its own preview (another size, another JPEG quality, a 3%
+# brightness shift) differed by at most 5.4, while 89,400 pairs of different lesions never differed by less than 8.6. The hash only
+# guards against a gross mismatch: similar-looking lesions can have close hashes.
+SAME = {"shape_difference_pct": 2.0, "hash_distance": 16, "mean_difference": 5.0}
+SIGNATURE_SIZE = 32  # the comparison looks at 32 x 32 versions of both pictures
 
 DERMOSCOPY = re.compile(r"dermoscop|dermatoscop|epiluminescence")
 CLINICAL = re.compile(r"clinical (?:photo|image|picture|appearance|presentation|view|aspect|feature|finding|examination)|photograph"
@@ -328,7 +339,7 @@ def _report(rows: list[dict], captions: list[dict], decision: dict) -> list[str]
               "- Licences of their articles: " + ("; ".join(f"{k}: {n}" for k, n in sorted(licences.items())) or "none"), "",
               "## What this count does not show", "",
               "- No image was looked at. A caption can be wrong or incomplete; the build step checks the images themselves (what kind of "
-              "picture each is, writing in the picture, the same picture twice, a picture also in the image dataset).",
+              "picture each is, writing in the picture, the same picture twice).",
               "- A figure that counts may still show more than the lesion (an arrow, a ruler, a second panel the caption does not name).",
               "- The captions stay on this computer (`data/cases/figures/captions.jsonl`), under their publishers' licences.", ""]
     return lines
@@ -575,16 +586,15 @@ def kappa(pairs: list[tuple[bool, bool]]) -> float | None:
     return None if expected == 1 else (observed - expected) / (1 - expected)
 
 
-def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
-          classify=None, read=None, show=None) -> dict:
+def check(data: Path = DATA, text: Path = TEXT, classify=None, read=None, show=None) -> dict:
     """The check step (see the module's description): build/figure_checks.csv and the check section of the report."""
-    data, text, image = Path(data), Path(text), Path(image)
+    data, text = Path(data), Path(text)
     say = show or (lambda message: None)
     pictures = [r for r in _read_csv(data / FILES_TABLE) if r["status"] == SAVED]
     with (data / CAPTIONS).open(encoding="utf-8") as f:
         captions = {(c["patient_uid"], c["figure"]): c for c in map(json.loads, f) if c}
     terms = [r["term"] for r in _read_csv(text / textprep.TERMS)]
-    names = sorted(set(terms) | {r["label"] for r in _read_csv(image / "dataset.csv")})
+    names = sorted(set(terms) | set(textprep.CLASSES))
     short_forms = sorted({form for forms in textprep.SHORT_FORMS.values() for form in forms})
     cache_path = data / CHECK_CACHE
     cache = {}
@@ -615,7 +625,7 @@ def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
                 f.write(json.dumps(known, ensure_ascii=False) + "\n")
         kind = max(known["scores"], key=known["scores"].get)
         words = diagnosis_words(known["writing"], names, short_forms)
-        signatures.append(imageprep._signature(content))
+        signatures.append(_signature(content))
         rows.append({"patient_uid": picture["patient_uid"], "split": picture["split"], "class": picture["class"], "pmcid": picture["pmcid"],
                      "figure": picture["figure"], "file": picture["file"], "sha256": picture["sha256"], "width": int(picture["width"]),
                      "height": int(picture["height"]), "caption_type": _caption_type(captions.get((picture["patient_uid"], picture["figure"]), {})),
@@ -631,19 +641,14 @@ def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
             row["_reasons"].add(CHECK_REASONS[1])
         if row["model_kind"] not in SKIN_KINDS:
             row["_reasons"].add(CHECK_REASONS[2])
-    for entry in _read_csv(image / "dataset.csv"):
-        theirs = imageprep._signature((image / "dataset" / entry["path"]).read_bytes())
-        for row, mine in zip(rows, signatures):
-            if _same(mine, theirs):
-                row["_reasons"].add(CHECK_REASONS[3])
     for i in range(len(rows)):
         for j in range(i + 1, len(rows)):
             if _same(signatures[i], signatures[j]):
                 if rows[i]["patient_uid"] == rows[j]["patient_uid"]:
-                    rows[j]["_reasons"].add(CHECK_REASONS[5])
-                else:
-                    rows[i]["_reasons"].add(CHECK_REASONS[4])
                     rows[j]["_reasons"].add(CHECK_REASONS[4])
+                else:
+                    rows[i]["_reasons"].add(CHECK_REASONS[3])
+                    rows[j]["_reasons"].add(CHECK_REASONS[3])
     for row in rows:
         found = row.pop("_reasons")
         reasons = [r for r in CHECK_REASONS if r in found]
@@ -658,12 +663,32 @@ def check(data: Path = DATA, text: Path = TEXT, image: Path = imageprep.DATA,
     return {"rows": rows, "decision": decision, "table": (data / CHECKS_TABLE).as_posix(), "report": report.as_posix()}
 
 
+def _signature(content: bytes) -> dict:
+    """What the comparison needs from a picture: its shape, a 64-bit difference hash and a small colour version."""
+    with Image.open(io.BytesIO(content)) as image:
+        width, height = image.size
+        image.draft("RGB", (4 * SIGNATURE_SIZE, 4 * SIGNATURE_SIZE))  # a large JPEG is decoded at a reduced scale: fast, same result
+        image = ImageOps.exif_transpose(image).convert("RGB")
+        grey = image.convert("L").resize((9, 8), Image.Resampling.BOX).tobytes()
+        bits = sum(1 << (row * 8 + col) for row in range(8) for col in range(8) if grey[row * 9 + col] > grey[row * 9 + col + 1])
+        small = image.resize((SIGNATURE_SIZE, SIGNATURE_SIZE), Image.Resampling.BOX).tobytes()
+    return {"width": width, "height": height, "hash": bits, "pixels": small}
+
+
+def _compare(a: dict, b: dict) -> dict:
+    """How far apart two pictures are: shape (% difference of width/height), hash distance (0-64) and mean colour difference (0-255)."""
+    ratio_a, ratio_b = a["width"] / a["height"], b["width"] / b["height"]
+    return {"shape_difference_pct": round(100 * abs(ratio_a - ratio_b) / ratio_a, 1),
+            "hash_distance": (a["hash"] ^ b["hash"]).bit_count(),
+            "mean_difference": round(sum(abs(x - y) for x, y in zip(a["pixels"], b["pixels"])) / len(a["pixels"]), 1)}
+
+
 def _same(a: dict, b: dict) -> bool:
-    """The image dataset's rule for "the same picture" (src/build/image/prepare.py, SAME)."""
-    if (a["hash"] ^ b["hash"]).bit_count() > imageprep.SAME["hash_distance"]:
+    """The rule for "the same picture" (SAME): the shape, the hash and the mean colour difference must all be within their limits."""
+    if (a["hash"] ^ b["hash"]).bit_count() > SAME["hash_distance"]:
         return False
-    found = imageprep._compare(a, b)
-    return all(found[k] <= limit for k, limit in imageprep.SAME.items())
+    found = _compare(a, b)
+    return all(found[k] <= limit for k, limit in SAME.items())
 
 
 def _checks_report(rows, cases, kept, decision, versions) -> list[str]:

@@ -15,7 +15,7 @@ The error rate in section 5 comes from reading questions together with the text 
 | | |
 |---|---|
 | Cases | 716 patient descriptions from 699 published case reports, in English, one diagnosis each |
-| Classes | the image dataset's 8: actinic keratosis, basal cell carcinoma, dermatofibroma, melanoma, nevus, pigmented benign keratosis, squamous cell carcinoma, vascular lesion |
+| Classes | 8, those of the Version 1 image dataset: actinic keratosis, basal cell carcinoma, dermatofibroma, melanoma, nevus, pigmented benign keratosis, squamous cell carcinoma, vascular lesion |
 | Task | name the class from the description of the patient and the lesion |
 | Questions | the case text word for word, up to the sentence that names the diagnosis or reports a test result; at least 25 words, median 92 |
 | Splits | test 209, validation 78, train 429; no article is in two splits |
@@ -30,7 +30,7 @@ The error rate in section 5 comes from reading questions together with the text 
 - closed-book: the model sees only the case
 - open-book: retrieval-augmented generation following RAG² (Sohn et al., 2025), with the knowledge base (`data/knowledge/`) as the texts to retrieve from
 
-The classes are those of the image dataset, so that the results can be compared and later joined in the multimodal phase.
+The classes are those of the Version 1 image dataset (the eight of ISIC 2019), kept so that the Version 1 results can be read next to these. They are a list in `src/build/text/prepare.py` (`CLASSES`); the clinic patients cohort (PAD-UFES-20) has six classes of its own.
 
 **Requirement.** The dataset had to be built entirely from public text sources, by a method that identifies, extracts, organises and maps the information systematically, with no manual role for the researcher in extraction, classification, mapping or construction. Every step is therefore one command, and every decision is a rule in the code or in `build/class_terms.csv` that applies to all cases alike.
 
@@ -81,7 +81,7 @@ The texts are therefore used for research only and are not in Git.
 - **PMC-Patients.** `PMC-Patients-V2.json` from the Hugging Face repository `zhengyun21/PMC-Patients`, version `28d8836518f86d4f1e6358ea8ec09977023e5766`, downloaded on 2026-11-12. It holds 250,294 patient descriptions taken from case reports in PubMed Central whose licence allows reuse. SHA-256 `7bf27ed02dbadd5501f9c89b1d31d8c07d3559cd9b30c6f0b1a84734125ed593`.
 - **PubMed case reports.** Asked on 2026-11-13 through NCBI's E-utilities: each class's case reports on the skin, by its MeSH headings, and the case reports PubMed has not indexed, by the class's names in their title. 27,820 records not already in PMC-Patients were downloaded. For the 1,382 candidate articles with a PubMed Central number, the open full text was asked for; 771 gave case sections, which are used instead of the abstract.
 - **MeSH.** Every name in `build/class_terms.csv` was checked against MeSH, the US National Library of Medicine's subject headings (`build/term_check.csv`, asked again on 2026-11-14 when a name was added; the headings of the names that count did not change). The subject headings of all 16,029 candidate articles were asked from PubMed on 2026-11-13 (`build/article_mesh.csv`); 10,267 are indexed.
-- **The names of the classes.** `build/class_terms.csv` lists 121 names doctors use, and whether each counts for its class. They come from the ISIC records of the image dataset, the HAM10000 group definitions (Tschandl et al., 2018), and names proposed and then checked by the survey against MeSH and PubMed. One name was added after reading cases: acral pseudolymphomatous angiokeratoma (APACHE) counts for no class, because its case reports find a pseudolymphoma, not an angiokeratoma.
+- **The names of the classes.** `build/class_terms.csv` lists 121 names doctors use, and whether each counts for its class. They come from the ISIC records of the Version 1 image dataset, the HAM10000 group definitions (Tschandl et al., 2018), and names proposed and then checked by the survey against MeSH and PubMed. One name was added after reading cases: acral pseudolymphomatous angiokeratoma (APACHE) counts for no class, because its case reports find a pseudolymphoma, not an angiokeratoma.
 - **Nothing new.** No text was written or changed by the researcher, and no person was contacted.
 
 ## 4. Preparation

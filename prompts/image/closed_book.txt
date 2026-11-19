@@ -1,9 +1,0 @@
-This is a dermoscopic image of a skin lesion.
-The possible diagnoses are:
-{labels}
-Answer with one JSON object and nothing else, in this form:
-{"differential": ["<most likely diagnosis>", "<second>", "<third>"], "evidence_sufficient": "<yes or no>", "reason": "<why>", "evidence": []}
-- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.
-- evidence_sufficient: "yes" if what you are given is enough to be confident of the first diagnosis, otherwise "no".
-- reason: at most three sentences, using only what you are given.
-- evidence: leave the list empty; no reference texts are given.

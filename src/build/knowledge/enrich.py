@@ -1,10 +1,8 @@
-"""Additions to the knowledge base (data/knowledge/). The library (src/build/knowledge/library.py) and the index of training items
-(index.csv, written by the image + metadata build) link photos and texts only by disease and hold little text that describes how a
-lesion looks. Three steps add to them, each in a file of its own; no earlier file changes:
+"""Additions to the knowledge base (data/knowledge/). The library (src/build/knowledge/library.py) holds little text that describes
+how a lesion looks. Two steps add to it, each in a file of its own; no earlier file changes:
 
     python -m src.build.knowledge.enrich appearance   open full texts of reviews on dermoscopy and clinical appearance (needs the internet)
     python -m src.build.knowledge.enrich aspects      what each library passage is about (appearance, histology, treatment, epidemiology)
-    python -m src.build.knowledge.enrich cards        one text card per training photo, from its own ISIC record
 
 ``appearance`` searches PubMed Central, with the library's own rules (the class's MeSH headings as a main subject, reviews on the
 skin, English, about people, not case reports, the dataset's articles left out) and finds the reviews that mention dermoscopy or
@@ -23,12 +21,11 @@ against an independent signal: the title of the section a passage sits in, which
 about treatment). It then counts, per class, the passages that describe appearance against a target fixed here. No person reads
 anything: the tags are a word count, and the check shows whether they follow the authors' headings, not whether the medicine is right.
 
-``cards`` writes, for each TRAINING photo, a card from its own ISIC fields: the diagnosis and how it was confirmed, the facts, a finer
-body site, the lesion's size and the melanoma history where recorded. A field the record lacks is "not recorded" or left out, never
-guessed. No validation or test photo gets a card, and a card never names the photo's collection.
+Nothing here describes a patient who was not recorded: a retrieved passage is about the disease. The link between a question and a
+passage is made at question time by retrieval, not stored.
 
-Nothing here describes a patient who was not recorded: a retrieved passage is about the disease, a retrieved card is about another
-patient's photo. The link between a photo and a text is made at question time by retrieval, not stored.
+(Version 1 had a third step, ``cards``: one text card per training photo of the ISIC image dataset. It was removed on 2026-11-19 with the
+Version 1 photo datasets; it is in the Git history, commit a1c9209.)
 """
 
 from __future__ import annotations
@@ -43,19 +40,18 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ...common import write_section
+from ...common import read_rows, write_rows, write_section
 from . import library as textlib
 from ..text import prepare as textprep
-from ..image_metadata.prepare import DATA as IMAGE_METADATA
-from ..image_metadata.prepare import IMAGE, NOT_RECORDED, TEXT, _read_csv, _write_csv, fact_values, read_images
 from .library import KNOWLEDGE, REPORT, REPORT_HEAD, STEPS
 
-COMMANDS = ("appearance", "aspects", "cards")  # this module's steps; the report's sections are STEPS (the library first)
+TEXT = textprep.DATA  # the text dataset: its tables, and on this computer its downloads
+
+COMMANDS = ("appearance", "aspects")  # this module's steps; the report's sections are STEPS (the library first)
 
 APPEARANCE_TABLE = "appearance.csv"
 APPEARANCE_FILE = "appearance.jsonl"  # in data/knowledge/texts/, not in Git
 ASPECTS_TABLE = "passage_aspects.csv"
-CARDS_TABLE = "image_cards.csv"
 
 TARGET_PASSAGES, TARGET_DOCUMENTS = 30, 8  # per class: passages that describe appearance, and the documents they come from. Fixed
 # before the corpus was built; a class that falls short is reported as short, and the target is not lowered.
@@ -90,8 +86,6 @@ HEADINGS = (  # a section title that names one aspect; a title that names two na
                               r"|history and physical|morpholog|appearance|signs? and symptoms|presentation")),
     ("epidemiology", re.compile(r"epidemiolog|incidence|prevalence|risk factor|etiolog")))
 
-CARD_COLUMNS = ["item_id", "class", "diagnosis", "confirmation", "age", "sex", "site", "site_detail", "size_mm", "personal_hx_mm",
-                "family_hx_mm", "card", "source", "licence"]
 ASPECT_COLUMNS = ["passage_id", "origin", "source", "section", "heading_aspect", "appearance", "dermoscopy", "clinical_look", "histology",
                   "treatment", "epidemiology", "dermoscopy_words", "clinical_look_words"]
 
@@ -179,6 +173,13 @@ def _wider(label: str, headings: list[str], names: list[str], excluded: set[str]
     return ids
 
 
+def _read_csv(path: Path) -> list[dict]:
+    return read_rows(path, "build the text dataset and the library first")
+
+
+_write_csv = write_rows
+
+
 def _topics(value: str) -> list[str]:
     return [t.strip() for t in value.split(";") if t.strip()]
 
@@ -200,7 +201,7 @@ def appearance(text: Path = TEXT, data: Path = KNOWLEDGE, classes: list[str] | N
     """Finds, cuts and keeps the appearance passages (see the module's description); writes data/knowledge/appearance.csv, the
     texts into data/knowledge/texts/ and the "appearance" section of the report."""
     text, data = Path(text), Path(data)
-    classes = classes if classes is not None else textlib.image_classes(textlib.read_table(textlib.IMAGE_TABLE))
+    classes = classes if classes is not None else list(textprep.CLASSES)
     _, headings = textlib._checked_headings(text, classes)
     runs = textlib._question_runs(text)
     excluded = textlib._dataset_articles(text)
@@ -391,109 +392,6 @@ def _aspects_summary(rows, labels, coverage, check, origins) -> list[str]:
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
-# Step "cards": one text card per training photo, from its own record
-
-
-def _flag(value) -> str | None:
-    """"yes" or "no" for a recorded yes/no field; None for anything else (a value that is neither is not guessed)."""
-    if value in (True, "True", "true"):
-        return "yes"
-    if value in (False, "False", "false"):
-        return "no"
-    return None
-
-
-def render_card(c: dict) -> str:
-    """The card's text, from its columns only: a field the record lacks reads "not recorded" (the core fields) or is left out."""
-    parts = ["Dermoscopic photo of a skin lesion.", f"Diagnosis (ISIC): {c['diagnosis']}.", f"Confirmed by: {c['confirmation']}.",
-             f"Age: {c['age']}.", f"Sex: {c['sex']}.", f"Body site: {c['site']}" + (f" ({c['site_detail']})." if c["site_detail"] else ".")]
-    if c["size_mm"]:
-        parts.append(f"Lesion size: {c['size_mm']} mm (longest diameter).")
-    if c["personal_hx_mm"]:
-        parts.append(f"Personal history of melanoma: {c['personal_hx_mm']}.")
-    if c["family_hx_mm"]:
-        parts.append(f"Family history of melanoma: {c['family_hx_mm']}.")
-    return " ".join(parts)
-
-
-def cards(image: Path = IMAGE, data: Path = KNOWLEDGE, metadata: Path = IMAGE_METADATA) -> dict:
-    """Writes data/knowledge/image_cards.csv and the "cards" section of the report (see the module's description)."""
-    image, data = Path(image), Path(data)
-    photos = {r["photo_id"]: r for r in _read_csv(image / "build" / "raw_photos.csv")}
-    table = {r["path"]: r for r in _read_csv(image / "dataset.csv")}
-    questions = {r["path"]: r for r in _read_csv(metadata / "dataset.csv")}
-    knowledge = {r["item_id"] for r in _read_csv(data / "index.csv") if r["kind"] == "image"}
-    diseases = {r["class"]: {re.sub(r" \(\d+\)$", "", d) for d in r["isic_diagnoses"].split("; ")} for r in _read_csv(data / "diseases.csv")}
-    out = []
-    for r in sorted(read_images(image), key=lambda r: (r["label"], r["path"])):
-        if r["split"] != "train":
-            continue
-        photo, fields, facts = photos[table[r["path"]]["photo_id"]], r["fields"], fact_values(r["fields"])
-        sites = [str(fields[k]).strip().lower() for k in ("metadata.clinical.anatom_site_2", "metadata.clinical.anatom_site_3",
-                                                           "metadata.clinical.anatom_site_4", "metadata.clinical.anatom_site_5")
-                 if fields.get(k) not in (None, "")]
-        size = fields.get("metadata.clinical.clin_size_long_diam_mm")
-        card = {"item_id": f"image:{r['path']}", "class": r["label"], "diagnosis": photo["isic_diagnosis"] or NOT_RECORDED,
-                "confirmation": photo["diagnosis_confirm_type"] or NOT_RECORDED, "age": facts["age_approx"], "sex": facts["sex"],
-                "site": facts["anatom_site_1"], "site_detail": ", ".join(sites),
-                "size_mm": "" if size in (None, "") else f"{float(size):g}",
-                "personal_hx_mm": _flag(fields.get("metadata.clinical.personal_hx_mm")) or "",
-                "family_hx_mm": _flag(fields.get("metadata.clinical.family_hx_mm")) or "",
-                "source": f"ISIC {r['isic_id']}", "licence": photo["licence"]}
-        card["card"] = render_card(card)
-        out.append(card)
-    checks = _card_checks(out, photos, table, questions, knowledge, diseases)
-    _write_csv(data / CARDS_TABLE, CARD_COLUMNS, out)
-    write_section(data / REPORT, REPORT_HEAD, STEPS, "cards", _cards_summary(out, checks))
-    return {"table": (data / CARDS_TABLE).as_posix(), "cards": out, "checks": checks, "report": (data / REPORT).as_posix()}
-
-
-def _card_checks(out, photos, table, questions, knowledge, diseases) -> dict:
-    """Checks that stop the step when one fails; returns what they counted."""
-    ids = {c["item_id"] for c in out}
-    if ids != knowledge:
-        raise ValueError(f"the cards are not exactly the training photos of index.csv ({len(ids ^ knowledge)} differ)")
-    held_out = [p for p, q in questions.items() if q["split"] != "train" and f"image:{p}" in ids]
-    if held_out:
-        raise ValueError(f"a validation or test photo has a card: {held_out[:3]}")
-    wrong = [c["item_id"] for c in out if c["diagnosis"] not in diseases.get(c["class"], set())]
-    if wrong:
-        raise ValueError(f"the ISIC diagnosis of {len(wrong)} cards is not one that diseases.csv lists for their class, for example {wrong[0]}")
-    collections = {p["attribution"] for p in photos.values() if p["attribution"]}
-    leaking = [c["item_id"] for c in out if any(name in c["card"] for name in collections)]
-    if leaking:
-        raise ValueError(f"the text of {len(leaking)} cards names the photo's collection, for example {leaking[0]}")
-    mismatch = [c["item_id"] for c in out if c["card"] != render_card(c)]
-    if mismatch:
-        raise ValueError(f"the text of {len(mismatch)} cards is not made from their columns, for example {mismatch[0]}")
-    return {"cards": len(out), "train_photos": len(knowledge), "validation_or_test_cards": 0, "collection_named": 0, "diagnosis_not_of_class": 0}
-
-
-def _cards_summary(out: list[dict], checks: dict) -> list[str]:
-    classes = sorted({c["class"] for c in out})
-    lines = ["# Cards: one text card per training photo", "",
-             f"{len(out)} cards in `{CARDS_TABLE}`, one for each training photo of `index.csv`, made from the photo's own ISIC record. "
-             "Core fields (diagnosis, confirmation, age, sex, body site) read \"not recorded\" when the record lacks them; the finer body "
-             "site, the size and the melanoma history are left out when not recorded. Nothing is guessed. The collection and the licence "
-             "are columns of the table, never part of a card's text.", "",
-             "Checks that stop the step when one fails: the cards are exactly the training photos of `index.csv`; no validation or "
-             "test photo has a card; every card's diagnosis is one that `diseases.csv` lists for its class; no card's text names the "
-             "photo's collection; every card's text is made from its columns alone.", "",
-             "## How often each field is recorded, by class", "",
-             "| Class | Cards | Confirmation | Age | Sex | Body site | Finer site | Size | Melanoma history |", "|---|---|---|---|---|---|---|---|---|"]
-    for label in classes:
-        mine = [c for c in out if c["class"] == label]
-        n = len(mine)
-        count = lambda f: sum(bool(c[f]) and c[f] != NOT_RECORDED for c in mine)  # noqa: E731
-        lines.append(f"| {label} | {n} | {count('confirmation')} | {count('age')} | {count('sex')} | {count('site')} | {count('site_detail')} | "
-                     f"{count('size_mm')} | {sum(bool(c['personal_hx_mm'] or c['family_hx_mm']) for c in mine)} |")
-    lines += ["", "## Example", "", "> " + out[0]["card"] if out else "no card", "",
-              "A card describes another patient's photo, not the photo of a question: it can be retrieved as evidence, and it carries the "
-              "diagnosis of its own photo only.", ""]
-    return lines
-
-
-# ---------------------------------------------------------------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -501,7 +399,6 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="step", required=True)
     sub.add_parser("appearance", help="find, cut and keep passages on dermoscopy and clinical appearance (needs the internet)")
     sub.add_parser("aspects", help="tag every passage by aspect, check the tags against section titles, count the coverage per class")
-    sub.add_parser("cards", help="one text card per training photo, from its own ISIC record")
     return parser
 
 
@@ -514,14 +411,11 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Kept {len(done['rows'])} passages from {len({r['source'] for r in done['rows']})} documents; left out: {left}. "
                   f"Written: {done['table']}, the passages in {done['passages']} (not in Git) and {done['report']}. "
                   f"Commit {done['table']} and {done['report']}.")
-        elif args.step == "aspects":
+        else:
             done = aspects()
             short = ", ".join(done["short"]) or "none"
             print(f"{len(done['rows'])} passages tagged. Classes short of the target ({TARGET_PASSAGES} passages from {TARGET_DOCUMENTS} "
                   f"documents): {short}. Written: {done['table']} and {done['report']}.")
-        else:
-            done = cards()
-            print(f"{len(done['cards'])} cards. Written: {done['table']} and {done['report']}.")
     except (ValueError, FileNotFoundError) as exc:
         raise SystemExit(f"ERROR: {exc}") from exc
 

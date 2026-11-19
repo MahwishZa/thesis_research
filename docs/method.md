@@ -4,7 +4,7 @@ This page fixes how every run from now on asks its questions, reads the answers 
 
 ## 1. The question
 
-Each question is one item of a dataset's test split: a photo (image), a photo with the patient's age, sex and body site (image + metadata), a written case that ends before the diagnosis (text), or a case with its photos (cases, case photos). The prompt (`prompts/<dataset>/<approach>.txt`) is the same for every model on a dataset. It lists the eight possible diagnoses, and the model must choose among them.
+Each question is one item of a dataset's test split: a clinic photo (`clinic_photo`), a clinic patient's record without the photo (`clinic_record`), the photo with the same record (`clinic_photo_record`), a written case that ends before the diagnosis (`text`), or a case with its photos (`cases`, `case_photos`). The three clinic views ask the same questions, so their answers can be paired. The prompt (`prompts/<dataset>/<approach>.txt`) is the same for every model on a dataset. It lists the possible diagnoses (six for the clinic patients, eight for the published cases), and the model must choose among them.
 
 Approaches:
 
@@ -34,7 +34,7 @@ Every score is computed by `src/metrics.py` from the saved answers. The classes 
 
 | Score | Definition | Source |
 |---|---|---|
-| **Balanced accuracy (main score)** | The mean recall over the classes present in the test split. Recall of a class: of its questions, the share whose diagnosis is that class. Chance is 1 / 8 = 12.5%. | Brodersen et al. 2010 |
+| **Balanced accuracy (main score)** | The mean recall over the classes present in the test split. Recall of a class: of its questions, the share whose diagnosis is that class. Chance is 1 over the number of classes (1 / 6 = 16.7% for the clinic patients, 1 / 8 = 12.5% for the published cases). | Brodersen et al. 2010 |
 | **Macro-F1** (second score) | The mean F1 over the classes present. F1 of a class: the harmonic mean of its precision and recall. A class never given has no precision and counts as 0. | Sokolova & Lapalme 2009 |
 | Per-class recall, precision and F1; confusion matrix | In each run's report. The confusion matrix has one more column for invalid answers. | Sokolova & Lapalme 2009 |
 | **Top-3 balanced accuracy** | The mean over the classes of the share of questions whose true class is anywhere in the differential. It shows whether the right diagnosis was considered at all. | Liu et al. 2020 (top-3 accuracy of a skin-disease differential) |
@@ -50,7 +50,7 @@ Plain accuracy is not reported: it adds nothing to balanced accuracy where the c
 
 ## 4. Intervals and comparisons
 
-**95% intervals.** A percentile bootstrap (Efron & Tibshirani 1993) with 2,000 resamples and a fixed seed (0). Each resample draws whole groups with replacement inside each class, so every class keeps its number of groups. The group is the lesion (image, image + metadata: several photos of one lesion are not independent), the article (text: several patients of one article are not independent) or the case (cases); resampling whole groups follows Field & Welsh 2007. When every question is its own group, a share (one class's recall, coverage) gets a Wilson interval instead (Wilson 1927).
+**95% intervals.** A percentile bootstrap (Efron & Tibshirani 1993) with 2,000 resamples and a fixed seed (0). Each resample draws whole groups with replacement inside each class, so every class keeps its number of groups. The group is the patient (clinic views: several photos of one patient are not independent), the article (text: several patients of one article are not independent) or the case (cases); resampling whole groups follows Field & Welsh 2007. When every question is its own group, a share (one class's recall, coverage) gets a Wilson interval instead (Wilson 1927).
 
 **Comparing two runs on the same questions** (two models, or one model with and without a method):
 
@@ -63,9 +63,9 @@ The intervals are not corrected for the number of comparisons, so on a page of m
 
 Each is reported beside the main score, never instead of it.
 
-- **Inside each photo collection** (image, image + metadata). Melanoma and nevus photos come from one ISIC collection and the six other classes from another, so the look of the collection alone could separate the two groups. Inside each group, balanced accuracy is computed with an answer outside the group counted as wrong, next to the share of answers that stay in the group and the chance level of the group (1/2 and 1/6). A score near chance inside a group means the model told the collections apart, not the diseases.
-- **Without actinic keratosis** (text). The text test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
-- **Questions with all facts recorded** (image + metadata). A missing fact points to the photo's collection, so the scores are also given for the questions with every fact recorded.
+- **Without actinic keratosis** (`text`, `cases`). The text test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
+- **Questions with a complete record** (`clinic_photo_record`). A record line the patient could not answer reads `unknown`, and the pattern of gaps can point to the class. The scores are also given for the questions with no `unknown` in the record.
+- **Hints that are not the lesion** (clinic patients). The `shortcuts` step of the preparation (`data/clinic_patients/dataset_report.md`) measures how much the empty record fields and the photo's properties alone give away about the class; those numbers are reported beside the results.
 
 ## 6. The first phase of Version 1
 

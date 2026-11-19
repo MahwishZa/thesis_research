@@ -7,7 +7,9 @@ import io
 import json
 import tarfile
 import threading
+import unittest
 import urllib.parse
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
 from xml.sax.saxutils import escape
@@ -110,6 +112,16 @@ def _archive() -> bytes:
 
 
 ARCHIVE = _archive()
+
+
+class DefaultClassesTests(unittest.TestCase):
+    def test_the_library_asks_for_the_eight_classes_when_none_are_given(self):
+        class Stop(Exception):
+            pass
+
+        with mock.patch.object(library, "_checked_headings", side_effect=Stop) as asked, self.assertRaises(Stop):
+            library.library(Path("nowhere"), Path("nowhere"))
+        self.assertEqual(asked.call_args[0][1], list(prepare.CLASSES))
 
 
 class LibraryTests(BuildData):

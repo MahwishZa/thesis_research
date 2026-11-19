@@ -1,7 +1,6 @@
 # Python 3.11 or newer (configs are read with the built-in tomllib).
 pillow==13.0.0
-opencv-python-headless==4.14.0.94  # skin-pattern matching (python -m src.build.image.prepare lesions)
-numpy==2.4.6  # needed by OpenCV
+numpy==2.4.6  # the clinic patients preparation (picture hashes, the shortcut check) and PyTorch
 anthropic==2.6.0  # Claude adapter (Anthropic API); needs Python 3.10 or newer
 openai==3.49.0  # GPT-4o, Gemini and Llama adapter (OpenAI-style chat API, through OpenRouter)
 torch==2.15.0  # picture checks of the case dataset (python -m src.build.cases.prepare check): the image model; CPU is enough

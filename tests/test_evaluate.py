@@ -20,7 +20,7 @@ class Nevus(FakeModel):
         return super().predict(images, prompt) | {"text": json_answer("nevus", listed(prompt), "no")}
 
 
-def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str], dataset: str = "image", answers: list | None = None):
+def write_run(folder: Path, truth: list[str], predicted: list, groups: list[str], dataset: str = "clinic_photo", answers: list | None = None):
     """A finished run: without ``answers`` the answer format is missing (the first phase of Version 1), with ``answers`` (differential
     and flag per question) it is the current one."""
     folder.mkdir(parents=True)
@@ -76,7 +76,7 @@ class CompareTests(RunProject):
         low, high = c["balanced_accuracy_difference_ci95"]
         self.assertTrue(low <= 0 <= high)
         text = evaluate.comparison_text(c)
-        for expected in ("**Balanced accuracy, B minus A: +0.0 points**", "paired bootstrap over lesions", "The interval holds 0",
+        for expected in ("**Balanced accuracy, B minus A: +0.0 points**", "paired bootstrap over patients", "The interval holds 0",
                          "| **Run B right** | 0 | 2 |", "McNemar's exact test (supporting", "p = 1.0000"):
             self.assertIn(expected, text)
         same = evaluate.compare(a, a)
@@ -96,8 +96,8 @@ class CompareTests(RunProject):
             evaluate.main(["compare", str(a), str(a)])
         self.assertIn("McNemar's exact test (supporting", shown.getvalue())
 
-    def test_the_paired_interval_resamples_whole_lesions_of_both_runs_together(self):
-        """Run B misses all 4 photos of lesion a1 and nothing else. Resampling the two lesions of class a (with replacement) gives
+    def test_the_paired_interval_resamples_whole_patients_of_both_runs_together(self):
+        """Run B misses all 4 photos of patient a1 and nothing else. Resampling the two patients of class a (with replacement) gives
         B's recall of a as 0, 1/2 or 1 with chances 1/4, 1/2, 1/4, so the difference in balanced accuracy is -50, -25 or 0 points
         and the 95% interval is exactly -50 to 0. Resampling the 8 photos one by one would make losing all of them rare (under 1%)
         and give an interval of about -44 to -6 instead."""
@@ -118,12 +118,12 @@ class CompareTests(RunProject):
                 self.assertEqual("The interval does not hold 0: the runs differ by more than chance." in text, beyond)
                 self.assertEqual("The interval holds 0: the difference may be chance." in text, not beyond)
 
-    def test_the_image_run_and_the_image_metadata_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
-        """The image + metadata questions are the image dataset's photos with their facts: the two runs differ in dataset and in
+    def test_the_photo_run_and_the_photo_record_run_of_the_same_photos_can_be_compared_but_no_other_datasets(self):
+        """The photo + record questions are the photo dataset's photos with their records: the two runs differ in dataset and in
         the questions' fingerprint, yet answer the same photos, and `compare` must accept exactly that pair."""
         truth = ["a", "a", "b", "b"]
         runs = {}
-        for name, dataset, predicted in (("image", "image", ["a", "b", "b", "a"]), ("multi", "image_metadata", ["a", "a", "b", "b"]),
+        for name, dataset, predicted in (("image", "clinic_photo", ["a", "b", "b", "a"]), ("multi", "clinic_photo_record", ["a", "a", "b", "b"]),
                                          ("text", "text", ["a", "a", "b", "b"])):
             folder = self.base / f"pair_{name}"
             folder.mkdir()
@@ -136,9 +136,9 @@ class CompareTests(RunProject):
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
             runs[name] = folder
         c = evaluate.compare(runs["image"], runs["multi"])
-        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("image and image_metadata", 4, 0, 2))  # the facts fixed 2
+        self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("clinic_photo and clinic_photo_record", 4, 0, 2))  # the facts fixed 2
         self.assertEqual(c["balanced_accuracy_difference"], 0.5)
-        self.assertIn("image and image_metadata dataset, test split, 4 questions", evaluate.comparison_text(c))
+        self.assertIn("clinic_photo and clinic_photo_record dataset, test split, 4 questions", evaluate.comparison_text(c))
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):
             evaluate.compare(runs["image"], runs["text"])
         with self.assertRaisesRegex(ValueError, "differ in their dataset"):

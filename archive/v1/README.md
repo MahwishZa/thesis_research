@@ -13,9 +13,12 @@ This folder is a frozen copy of Version 1 of the research, kept for reference. I
   and `results` folders of the laptop's checkout, made on 2026-11-19), SHA-256
   `0E881B29B1F24F266B070F9DB60DB99F474B8592FF3409382D0BE9296FA85EA5`, in a `thesis_backups` folder outside the repository.
 - **Where the originals are.** `results/phase1/` and `docs/results.md` were removed from the working folders on 2026-11-19 (stage R2a
-  of the clean-up), because nothing of Version 2 uses them; they are here, and in Git history. The Version 1 datasets (`data/image`,
-  `data/image_metadata`) and the code that builds them are still in the working folders and are removed in a later stage, once the
-  builders of the datasets that stay no longer read them.
+  of the clean-up), and the Version 1 photo datasets (`data/image`, `data/image_metadata`), the code that builds them (`src/build/image`,
+  `src/build/image_metadata`), their tests and their prompts on the same day (stage R2b), because nothing of Version 2 uses them. The
+  tables, reports and data sheets are here; the code, the tests and the prompts are in Git history (`git checkout a1c9209`).
+  The text and case datasets and the knowledge base stayed; they no longer read the photo datasets (the eight classes are a list in
+  `src/build/text/prepare.py`; the knowledge index no longer lists photos and its `cards` step is gone; the case builder keeps its
+  rule for "the same picture", moved without change, and no longer compares with the ISIC photos, where it had found no match).
 
 ## What is here
 

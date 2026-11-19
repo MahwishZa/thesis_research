@@ -32,7 +32,7 @@ class PromptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "p.txt"
             for template, dataset in (("Pick:\n{labels}", "text"), ("{case}\n{case}\n{labels}", "text"),
-                                      ("Case: {case}\n{labels}", "image")):
+                                      ("Case: {case}\n{labels}", "clinic_photo")):
                 with self.subTest(template):
                     path.write_text(template, encoding="utf-8")
                     with self.assertRaisesRegex(ValueError, "{case}"):

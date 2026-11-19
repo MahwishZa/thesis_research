@@ -17,7 +17,7 @@ from .datasets import DATASETS
 
 PLACEHOLDER = "{labels}"
 CASE = "{case}"  # in a text prompt: where each case goes
-FACTS = "{facts}"  # in an image + metadata prompt: where the patient's facts go
+FACTS = "{facts}"  # in a photo + record prompt: where the patient's record goes
 ANSWER_FORMAT = "json-v1"  # the answer format of the runs; a run card without it holds single class names (the first phase)
 ANSWER_KEYS = ("differential", "evidence_sufficient", "reason", "evidence")
 DIFFERENTIAL = 3  # the number of different classes in a differential (all of them when a dataset has fewer)
@@ -29,9 +29,9 @@ FENCE = re.compile(r"\A```(?:json)?\s*\n(.*)\n\s*```\Z", re.S | re.I)  # a Markd
 # answers were read
 
 
-def load_template(path: str | Path, dataset: str = "image") -> str:
+def load_template(path: str | Path, dataset: str = "clinic_photo") -> str:
     """The prompt template: the label placeholder exactly once; the case placeholder exactly once in a prompt for text cases
-    (never in one for images, which go next to the prompt); the facts placeholder exactly once in an image + metadata prompt (never in
+    (never in one for images, which go next to the prompt); the facts placeholder exactly once in a photo + record prompt (never in
     another)."""
     text = Path(path).read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:

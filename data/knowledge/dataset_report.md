@@ -1,6 +1,6 @@
 # The knowledge base
 
-What open-book runs may retrieve: training items only, never a validation or test question. One section per step, written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance, aspects and cards); each step rewrites only its own section.
+What open-book runs may retrieve: training items only, never a validation or test question. One section per step, written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance and aspects); each step rewrites only its own section.
 
 <!-- step: library -->
 ## Library: the reference texts for retrieval
@@ -50,21 +50,21 @@ Textbook: StatPearls (NBK430685) from the Bookshelf's Open Access subset, `statp
 <!-- step: index -->
 ## Index: what open-book runs may retrieve
 
-Written by `python -m src.build.knowledge.index`, from the committed tables of the image, image + metadata and text datasets and the library.
+Written by `python -m src.build.knowledge.index`, from the committed tables of the text dataset and the library.
 
-- `index.csv`: 7721 items: 1739 training images, 429 training cases and 5553 library passages. No validation or test item of any dataset is among them. Each is linked to the questions only by its disease: the photos and the texts share no patient.
-- `diseases.csv`: 8 classes, with the ISIC diagnoses, the text names and MeSH headings, and the counts.
+- `index.csv`: 5982 items: 429 training cases and 5553 library passages. No validation or test item of any dataset is among them. Each is linked to the questions only by its disease.
+- `diseases.csv`: 8 classes, with the text names and MeSH headings, and the counts.
 
-| Class | Training images | Training cases | Passages |
-|---|---|---|---|
-| actinic keratosis | 76 | 1 | 852 |
-| basal cell carcinoma | 337 | 117 | 1177 |
-| dermatofibroma | 56 | 7 | 73 |
-| melanoma | 381 | 119 | 1626 |
-| nevus | 238 | 23 | 851 |
-| pigmented benign keratosis | 423 | 6 | 219 |
-| squamous cell carcinoma | 141 | 150 | 1374 |
-| vascular lesion | 87 | 6 | 234 |
+| Class | Training cases | Passages |
+|---|---|---|
+| actinic keratosis | 1 | 852 |
+| basal cell carcinoma | 117 | 1177 |
+| dermatofibroma | 7 | 73 |
+| melanoma | 119 | 1626 |
+| nevus | 23 | 851 |
+| pigmented benign keratosis | 6 | 219 |
+| squamous cell carcinoma | 150 | 1374 |
+| vascular lesion | 6 | 234 |
 
 Each item's licence is in the table, as its source gives it.
 
@@ -133,29 +133,3 @@ Target per class, fixed before the corpus was built: at least 30 passages that d
 | vascular lesion | 239 | 7 | 5 | 12 | 3 | 7 | **short** |
 
 Classes short of the target: dermatofibroma, pigmented benign keratosis, vascular lesion. They stay short: the target is not lowered, and what is missing is a limit of the retrieval experiments for these classes.
-
-<!-- step: cards -->
-## Cards: one text card per training photo
-
-1739 cards in `image_cards.csv`, one for each training photo of `index.csv`, made from the photo's own ISIC record. Core fields (diagnosis, confirmation, age, sex, body site) read "not recorded" when the record lacks them; the finer body site, the size and the melanoma history are left out when not recorded. Nothing is guessed. The collection and the licence are columns of the table, never part of a card's text.
-
-Checks that stop the step when one fails: the cards are exactly the training photos of `index.csv`; no validation or test photo has a card; every card's diagnosis is one that `diseases.csv` lists for its class; no card's text names the photo's collection; every card's text is made from its columns alone.
-
-### How often each field is recorded, by class
-
-| Class | Cards | Confirmation | Age | Sex | Body site | Finer site | Size | Melanoma history |
-|---|---|---|---|---|---|---|---|---|
-| actinic keratosis | 76 | 76 | 76 | 76 | 76 | 66 | 1 | 1 |
-| basal cell carcinoma | 337 | 337 | 337 | 337 | 336 | 252 | 0 | 0 |
-| dermatofibroma | 56 | 56 | 56 | 54 | 54 | 6 | 0 | 0 |
-| melanoma | 381 | 381 | 317 | 318 | 333 | 142 | 233 | 233 |
-| nevus | 238 | 0 | 118 | 127 | 167 | 135 | 0 | 0 |
-| pigmented benign keratosis | 423 | 423 | 421 | 423 | 420 | 288 | 0 | 0 |
-| squamous cell carcinoma | 141 | 141 | 141 | 141 | 141 | 58 | 0 | 0 |
-| vascular lesion | 87 | 87 | 87 | 87 | 87 | 47 | 0 | 0 |
-
-### Example
-
-> Dermoscopic photo of a skin lesion. Diagnosis (ISIC): Indeterminate > Indeterminate epidermal proliferations > Solar or actinic keratosis. Confirmed by: histopathology. Age: about 85 years. Sex: male. Body site: head and neck. Lesion size: 6 mm (longest diameter). Personal history of melanoma: yes. Family history of melanoma: no.
-
-A card describes another patient's photo, not the photo of a question: it can be retrieved as evidence, and it carries the diagnosis of its own photo only.

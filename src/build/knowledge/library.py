@@ -44,19 +44,18 @@ from xml.etree import ElementTree
 
 from ...common import fetch, write_section
 from ...datasets import FILES, TABLE_NAME
-from ..text.prepare import (ABSTRACT_CANDIDATES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
-                      HUMANS, IMAGE_TABLE, NOT_SKIN, SKIN, SOURCES, _checked_headings, _efetch,
+from ..text.prepare import (ABSTRACT_CANDIDATES, CLASSES, ANIMALS, CANDIDATE_COLUMNS, CANDIDATES, DATA, EFETCH_BATCH, FULLTEXT_BATCH, FULLTEXT_SKIP,
+                      HUMANS, NOT_SKIN, SKIN, SOURCES, _checked_headings, _efetch,
                       _found, _licence, _matcher, _named, _pmc_articles, _read_csv, _search, _sentence_starts, _sha256, _stream,
-                      _subject, _tokens, _write_csv, image_classes, read_table)
+                      _subject, _tokens, _write_csv)
 
 KNOWLEDGE = Path("data/knowledge")  # the knowledge base: its committed tables and report; texts/ and sources/ on this computer
 REPORT = "dataset_report.md"
-STEPS = ("library", "index", "appearance", "aspects", "cards")  # the report's sections, in the order the steps run
+STEPS = ("library", "index", "appearance", "aspects")  # the report's sections, in the order the steps run
 REPORT_HEAD = ["# The knowledge base", "",
                "What open-book runs may retrieve: training items only, never a validation or test question. One section per step, "
-               "written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance, aspects "
-               "and cards); each step "
-               "rewrites only its own section.", ""]
+               "written by `src/build/knowledge/` (`library.py`: the library; `index.py`: the index; `enrich.py`: appearance and aspects); "
+               "each step rewrites only its own section.", ""]
 LIBRARY_TABLE = "library.csv"
 LIBRARY_COLUMNS = ["passage_id", "corpus", "source", "title", "section", "year", "licence", "topics", "words", "sha256"]
 FOLDER = "texts"  # data/knowledge/texts/passages.jsonl (not in Git); the StatPearls archive is in data/knowledge/sources/statpearls/
@@ -79,7 +78,7 @@ def library(data: str | Path = DATA, knowledge: str | Path = KNOWLEDGE, classes:
     """Builds the four corpora (see the module's description) for the text dataset in ``data``; writes library.csv,
     texts/passages.jsonl and the library section of dataset_report.md in ``knowledge``."""
     data, knowledge = Path(data), Path(knowledge)
-    classes = classes if classes is not None else image_classes(read_table(IMAGE_TABLE))
+    classes = classes if classes is not None else list(CLASSES)
     terms, headings = _checked_headings(data, classes)
     runs = _question_runs(data)
     dataset_articles = _dataset_articles(data)

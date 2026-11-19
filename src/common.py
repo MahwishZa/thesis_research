@@ -65,6 +65,17 @@ def write_section(path: Path, head: list[str], steps: tuple[str, ...], step: str
     path.write_text("\n".join(text).rstrip("\n") + "\n", encoding="utf-8", newline="\n")
 
 
+def write_rows(path: Path, columns: list[str], rows: list[dict]) -> None:
+    """Writes a CSV table (LF line endings), through a temporary file, so that a stop never leaves half a table."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=columns, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    tmp.replace(path)
+
+
 def read_rows(path: Path, missing: str) -> list[dict]:
     """The rows of a CSV table; ``missing`` says what to do when the table does not exist."""
     if not path.is_file():
