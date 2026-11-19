@@ -203,6 +203,18 @@ DATED = re.compile(r"\d{4}-\d{2}-\d{2}$")  # a model id ending in a date is a fi
 DAILY = re.compile(r"per[- ]day|daily", re.IGNORECASE)  # waiting minutes cannot help with a per-day limit
 
 
+def _provider_detail(exc) -> str:
+    """What OpenRouter adds to a bare "Provider returned error": the provider's name and its own message (error.metadata), so that a
+    refusal says why. Empty when the host gives nothing more."""
+    body = getattr(exc, "body", None)
+    inner = body.get("error", body) if isinstance(body, dict) else None
+    meta = inner.get("metadata") if isinstance(inner, dict) else None
+    if not isinstance(meta, dict):
+        return ""
+    parts = [str(meta[key])[:500] for key in ("provider_name", "raw") if meta.get(key)]
+    return f" [{': '.join(parts)}]" if parts else ""
+
+
 class OpenAICompatibleModel:
     packages = ("openai", "pillow")
     probe_note = "it is one request: a fraction of a cent of credit, or one of a free model's daily requests"
@@ -253,7 +265,7 @@ class OpenAICompatibleModel:
     def _failure(self, exc) -> Exception:
         """The run's own kind of error for a refusal by the host: retry later, stop until credit or quota returns, or fix a setting."""
         status, code = exc.status_code, getattr(exc, "code", None)
-        detail = getattr(exc, "message", None) or str(exc)
+        detail = (getattr(exc, "message", None) or str(exc)) + _provider_detail(exc)
         if code == "insufficient_quota" or status == 402 or (status == 429 and DAILY.search(detail)):
             return QuotaExhausted(f"The host cannot serve more requests ({detail}). Add credit, wait for the daily limit to reset, "
                                   "or use another model; then run the same command again.")

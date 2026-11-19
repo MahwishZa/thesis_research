@@ -285,9 +285,9 @@ class OpenAIAPIError(Exception):
 
 
 class OpenAIStatusError(OpenAIAPIError):
-    def __init__(self, status_code, code=None, message="the reason"):
+    def __init__(self, status_code, code=None, message="the reason", body=None):
         super().__init__(message)
-        self.status_code, self.code, self.message = status_code, code, message
+        self.status_code, self.code, self.message, self.body = status_code, code, message, body
 
 
 class OpenAIConnectionError(OpenAIAPIError):
@@ -425,6 +425,22 @@ class OpenAICompatibleTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, status)
         with self.assertRaisesRegex(models.FatalError, "SDK failed"):
             self._load(error=OpenAIAPIError("odd")).predict([(b"x", "image/png")], "?")
+
+    def test_a_refusal_names_the_provider_and_its_own_message_when_the_host_gives_them(self):
+        body = {"error": {"message": "Provider returned error", "code": 400,
+                          "metadata": {"provider_name": "Google AI Studio", "raw": "Content blocked: PROHIBITED_CONTENT"}}}
+        for given in (body, body["error"]):  # the SDK may hand over the whole body or only its error part
+            with self.subTest(given is body), self.assertRaisesRegex(
+                    models.FatalError, r"Provider returned error \[Google AI Studio: Content blocked: PROHIBITED_CONTENT\]"):
+                self._load(error=OpenAIStatusError(400, None, "Provider returned error", given)).predict([(b"x", "image/png")], "?")
+        for given in (None, {}, {"error": {}}, {"error": {"metadata": "odd"}}, {"error": {"metadata": {}}}, "text"):
+            with self.subTest(repr(given)), self.assertRaises(models.FatalError) as raised:
+                self._load(error=OpenAIStatusError(400, None, "Provider returned error", given)).predict([(b"x", "image/png")], "?")
+            self.assertNotIn("[", str(raised.exception))  # nothing more to say: the message is as before
+        long = {"error": {"metadata": {"raw": "x" * 2000}}}
+        with self.assertRaises(models.FatalError) as raised:
+            self._load(error=OpenAIStatusError(400, None, "bad", long)).predict([(b"x", "image/png")], "?")
+        self.assertLess(len(str(raised.exception)), 800)  # a long reply is cut
 
     def test_settings_are_checked_with_the_name_of_the_wrong_one(self):
         for key in ("id", "temperature", "seed", "max_tokens"):
