@@ -75,7 +75,7 @@ The first phase of Version 1 asked for one diagnosis name alone, read with a str
 their interpretation are in `archive/v1/` (`archive/v1/docs/results.md`). The code of this repository reads the answer format of
 section 2 only and refuses a run of the first phase, with a pointer to the archive.
 
-## 6. Open-book scores: what is defined, and what is not
+## 7. Open-book scores: what is defined, and what is not
 
 Decided on 2026-11-19, after checking each candidate against the literature and the data. Nothing here has been run: no open-book approach exists yet.
 

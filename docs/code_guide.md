@@ -114,6 +114,7 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | `prompts/<dataset>/closed_book.txt` | The prompt of each dataset (six). The answer-format block is identical in all six (checked by `validate`). |
 | `data/<dataset>/` | `dataset.csv` (the table), `dataset_report.md` (what each step found), `datasheet.md` (the data sheet), `build/` (records of each step). |
 | `tests/` | Unit tests; `tests/build/` for the builders. |
+| `docs/index.md` | A map of these pages: which one answers which question. |
 | `docs/method.md` | The approved method: question, answer format, scores, intervals. |
 | `docs/v2_proposal.md` | The Version 2 plan; its sections 4 and 5 are a proposal, only partly approved (see `docs/audit.md`). |
 | `docs/audit.md` | The audit of the repository before further experiments. |

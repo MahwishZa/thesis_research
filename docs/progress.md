@@ -1,23 +1,23 @@
-# Progress (2026-11-19)
+# Progress (updated 2026-11-20)
 
 Temporary page, removed with `docs/` when the research is final. It records where the work stands. The datasets are not frozen yet;
 each run card names the table and its hash that the run used.
 
-## Closed-book results so far
+## Run status: closed-book test runs
 
-Claude Sonnet 5.5 has been run on all six datasets and the other three models on `published_text`; every number, with the paired
-comparisons and what they show, is in `docs/results.md`. The headline for Claude (balanced accuracy, test split):
+One run per model and dataset. The numbers are in `docs/results.md`; enter the new status here when a run is committed.
+Done = finished and committed in `results/`; blank = not run yet.
 
-| Dataset | Balanced accuracy (95% interval) |
-|---|---|
-| `published_text` | 61.0% (55.1 to 66.3) |
-| `published_text_photos` | 53.2% (46.0 to 60.5) |
-| `published_photos` | 39.8% (32.7 to 46.6) |
-| `clinic_record` | 42.0% (38.6 to 45.9) |
-| `clinic_photo` | 58.0% (52.7 to 62.8) |
-| `clinic_photo_record` | 64.5% (58.6 to 70.0) |
+| Dataset | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
+|---|---|---|---|---|
+| `published_text` | done | done | done | done |
+| `published_text_photos` | done | | | |
+| `published_photos` | done | | | |
+| `clinic_record` | done | | | |
+| `clinic_photo` | done | | | |
+| `clinic_photo_record` | done | | | |
 
-Next: Gemini 3.8 Flash on the other five datasets. GPT-4o and Llama wait for funding. The runs are in `results/`, each with its report.
+Order of the remaining runs: Gemini on the five datasets (started 2026-11-20), then Llama. GPT-4o waits for funding.
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
@@ -48,4 +48,4 @@ this research.
 1. Discuss the open decisions of `docs/audit.md` section 6 with the supervisor, and finalise and freeze the data.
 2. Decide the hardware and the local models for the open-book runs.
 3. Build the retrieval approaches, starting with standard RAG, on the validation split.
-4. Run the closed-book baselines on the test split, once per model and dataset, within the API budget.
+4. Finish the closed-book baselines on the test split, once per model and dataset, within the API budget (status above).
