@@ -7,7 +7,7 @@ on GitHub points at that commit.
 - **What is here:** `src/` (code), `tests/`, `configs/`, `prompts/`, `data/` (the committed tables, reports and data sheets; the large
   originals were never in Git), `results/` (the finished test runs), `docs/`, `requirements.txt`, and `README.md`, which is an exact
   copy of the README of that commit.
-- **What was added:** this file and `MANIFEST.sha256` (a SHA-256 for every other file here). `tests/test_workspace.py` in the active
+- **What was added:** this file, `MANIFEST.sha256` (a SHA-256 for every other file here) and `claude_rules_2026-11-20.md`, the rules file `.claude/CLAUDE.md` as it stood when the research was restarted (it holds the history of the earlier work). `tests/test_workspace.py` in the active
   workspace checks the manifest and compares the files with commit `95a9506`.
 - **Paths:** every path inside the documents, run cards and reports is relative to this folder (`archive/v2/`), as they were relative
   to the repository root before.

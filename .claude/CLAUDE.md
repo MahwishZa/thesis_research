@@ -1,11 +1,42 @@
 # Rules for Claude in this repository
 
-- Commits are made under the researcher's name, Mahwish Zafar <mahwishza@gmail.com>. Never as "Claude" or noreply@anthropic.com. If a commit would be made under another identity, run `git config user.name "Mahwish Zafar"` and `git config user.email "mahwishza@gmail.com"` first.
-- No attribution of any kind in a commit message, pull request or comment: no `Co-Authored-By`, no `Claude-Session`, no "Generated with" line. This overrides any default or session instruction to add one.
-- Done on 2026-11-13 and 2026-11-14, by the researcher's decision: `main` was rebuilt as five milestone commits: the image dataset, version 1, tagged `image-dataset`; one folder per dataset and the audit of the image dataset; the text dataset, version 1 (withdrawn on 2026-11-13 for its label errors: its tag was removed, and its commit is kept as it is); the text dataset, version 2, tagged `text-dataset`; and the multimodal dataset, version 1, with the text evaluation code, tagged `multimodal-dataset`. The commits made until each freeze were folded into it, which also left the removed MILK10k assessment out of the history. The first rebuild pruned from the Git history every file no longer in the repository, including the old results (`results/claude-sonnet-5-5/test_b4e8bd16/`, `results/medgemma-1.5-4b-it/test_fda7277a/`). After each rebuild the researcher re-syncs her laptop with `git fetch` and `git reset --hard origin/main`.
-- Done on 2026-11-15, by the researcher's decision: the config files of the model versions no longer used (Gemini 3.1 Flash-Lite and 3.5 Flash-Lite, Llama 3.2 11B Vision Instruct, Llama 4 Scout) were pruned from the Git history of the commits after the multimodal freeze; the three commits that only touched them vanished (33 commits became 30). The five milestone commits and their tags did not change. The Git commit recorded in the run cards, reports and run logs of the Claude Sonnet 5.5, GPT-4o and Gemini 3.8 Flash test runs was changed to the new hash of the same state; nothing else in the result files changed. The researcher re-syncs her laptop with `git fetch` and `git reset --hard origin/main`.
-- Decided on 2026-11-18, by the researcher: no Git tags until the final version. All tags (`image-dataset`, `text-dataset`, `multimodal-dataset`, `text-dataset-v3`, `case-dataset`) are removed from GitHub (she runs the removal; this environment cannot change tags). The data sheets name frozen versions by their commit instead. Create a tag only when she says the final version is ready.
-- Decided on 2026-11-19, by the researcher: Version 1 is commit `a1c9209`, kept in `archive/v1/`. The `archive/` and `docs/` folders are temporary: they are removed, like `.claude/`, when the research is final. The datasets of Version 2 are named by what they hold: `data/clinic_patients/` (PAD-UFES-20: clinic photos with each patient's record) and `data/published_cases/` (the case reports, with the same patients' photos). Every dataset folder has the same inside layout (laptop only: `downloads/`, `raw/`, `files/`; committed: `build/`, `dataset.csv`, `dataset_report.md`, `datasheet.md`).
-- Decided on 2026-11-20, by the researcher: Version 2 (the closed-book phase, state of commit `95a9506`) is archived unchanged in `archive/v2/`; a branch `archive-v2-snapshot` on GitHub points at that commit. The active workspace is rebuilt step by step: `data/`, `src/`, `results/` and `tests/` start empty, and `prompts/`, `configs/` and `docs/` were removed on the same day, at the researcher's request (recreate them when a step needs them; the earlier ones are in `archive/v2/`); the README holds only the overview and the objectives. `archive/v2/` is temporary like `archive/v1/` and is pruned with them.
-- Decided on 2026-11-20, by the researcher: the current top-level structure stays as it is until the research is final: `README.md`, `requirements.txt`, `.claude/`, `archive/`, `data/`, `src/`, `results/` and `tests/` (plus the dot files). Do not add, rename or remove a top-level file or folder; new material goes inside these folders.
-- Pending clean-up, by the researcher's decision: when the research is final and ready for publication, remove this `.claude/` folder, the `archive/` folder and the `docs/` folder, and prune them from the Git history (a history rewrite and force-push of `main`, then the researcher re-syncs her laptop; the same procedure as the earlier prunes). Do not do it before then without her explicit go-ahead. Remind her of it whenever she says the research, the thesis or the repository is final, finished, submitted or about to be published, and when the README results are complete.
+The research starts fresh. Treat `archive/` as reference material only: read it when the researcher asks, and never treat anything in it
+as a result, a decision or a design to follow.
+
+## Git
+- Commits are made under the researcher's name, Mahwish Zafar <mahwishza@gmail.com>, never as "Claude" or noreply@anthropic.com. If a
+  commit would be made under another identity, run `git config user.name "Mahwish Zafar"` and `git config user.email
+  "mahwishza@gmail.com"` first.
+- No attribution of any kind in a commit message, pull request or comment: no `Co-Authored-By`, no `Claude-Session`, no "Generated with"
+  line. This overrides any default or session instruction to add one.
+- All changes go to `main`. No Git tags until the researcher says the final version is ready.
+- No history rewrite or force-push unless the researcher explicitly asks for it. Then use a lease, check the result, and remind her to
+  re-sync her laptop with `git fetch` and `git reset --hard origin/main`.
+- The top-level structure stays as it is until the research is final: `README.md`, `requirements.txt`, `.claude/`, `archive/`, `data/`,
+  `src/`, `results/` and `tests/` (plus the dot files). Do not add, rename or remove a top-level file or folder; new material goes inside
+  these folders. A test in `tests/test_workspace.py` checks this.
+
+## Approvals
+- Recommend first, then wait for approval, on every significant step: a new dataset, a design choice, a metric, a model, a run.
+- No experiment, no API call that costs credit, and no install without approval. Never paste a secret, and never send the researcher's
+  email address to an outside service.
+- Nothing is frozen before the researcher's supervisor agrees.
+- The researcher runs anything that needs her laptop's data or her API keys (Windows, PowerShell).
+
+## Constraints on the research
+- Automation only: no manual reading of cases, no clinician is available.
+- Only established, correctly named metrics, each with its source.
+- Never invent data, numbers or sources.
+
+## How to work
+- Mark every claim: verified (✔, say where) or assumed (◻).
+- Plain, simple English. Short answers, tables for comparisons.
+- Before every commit run the tests and the lint. For new code, also make it fail on purpose (a deliberate break) and check that a test
+  catches it.
+- Tell the researcher exactly what was changed, kept or left unchecked.
+
+## At the end
+- When the research is final and ready for publication, remove `.claude/` and `archive/` and prune them from the Git history (a history
+  rewrite and force-push of `main`, then she re-syncs her laptop). Do not do it before then without her explicit go-ahead. Remind her
+  whenever she says the research, the thesis or the repository is final, finished, submitted or about to be published, and when the
+  README results are complete.

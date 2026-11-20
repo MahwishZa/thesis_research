@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT / "archive" / "v2"
 COMMIT = "95a9506"
-ADDED = ("ARCHIVE.md", "MANIFEST.sha256")  # in the archive, not in the commit
+ADDED = ("ARCHIVE.md", "MANIFEST.sha256", "claude_rules_2026-11-20.md")  # in the archive, not in the commit
 NOT_ARCHIVED = (".claude/", ".gitignore", ".gitattributes", "archive/")  # stay where they are
 
 
