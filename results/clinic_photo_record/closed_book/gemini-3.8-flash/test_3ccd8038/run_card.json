@@ -1,0 +1,108 @@
+{
+  "name": "gemini-3.8-flash",
+  "split": "test",
+  "run_id": "test_3ccd8038",
+  "status": "complete",
+  "fingerprint": "3ccd80389c5846e325edec6f44e307af7695bd88bb932c8230a46f27eb46cecb",
+  "seed": 0,
+  "config_file": "configs/models.toml",
+  "config": {
+    "name": "gemini-3.8-flash",
+    "dataset": "clinic_photo_record",
+    "approach": "closed_book",
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "extra_body": {
+        "provider": {
+          "order": [
+            "google-ai-studio"
+          ],
+          "allow_fallbacks": false
+        },
+        "reasoning": {
+          "effort": "minimal"
+        }
+      },
+      "id": "google/gemini-3.8-flash",
+      "pinned": true,
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 2048
+    },
+    "prompt": {
+      "file": "prompts/clinic_photo_record/closed_book.txt"
+    },
+    "run": {
+      "requests_per_minute": 20,
+      "order_seed": 0
+    },
+    "model_list": "configs/models.toml"
+  },
+  "answer_format": "json-v2",
+  "prompt_file": "prompts/clinic_photo_record/closed_book.txt",
+  "prompt_sha256": "921fcbf8e5c9065dd25bc860e3149c81a1a6d9d3628378c481d6964f78285b38",
+  "prompt": "This is a photograph of a patient's skin lesion, taken with a smartphone at a dermatology clinic. The patient's clinic record follows; \"unknown\" means the patient did not know the answer.\nRecord:\n{facts}\nThe possible diagnoses are:\n- actinic keratosis\n- basal cell carcinoma\n- melanoma\n- nevus\n- seborrheic keratosis\n- squamous cell carcinoma\nAnswer with one JSON object and nothing else, in this form:\n{\"differential\": [\"<most likely diagnosis>\", \"<second>\", \"<third>\"], \"evidence_sufficient\": \"<yes or no>\", \"reason\": \"<why>\", \"claims\": [{\"statement\": \"<one short claim>\", \"evidence\": []}], \"evidence\": []}\n- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.\n- evidence_sufficient: \"yes\" if what you are given is enough to be confident of the first diagnosis, otherwise \"no\".\n- reason: at most three sentences, using only what you are given.\n- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.\n- evidence: leave the list empty; no reference texts are given.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "melanoma",
+    "nevus",
+    "seborrheic keratosis",
+    "squamous cell carcinoma"
+  ],
+  "n_photos": 678,
+  "photos_sha256": "af552c9257ccb0d2c0189c52b6243a7d198c9f0862b44d3d43bbe4766eebb4a0",
+  "group_column": "patient_id",
+  "dataset_table": {
+    "file": "data/clinic_patients/dataset.csv",
+    "sha256": "688206d50bcf15639803c34ec6bf0f8d996137085e96c6af6f2e8cb4770b0b08"
+  },
+  "git": {
+    "commit": "d933159c5ba1f570d10de3dfa8ea129b4af3583c",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "openai": "3.49.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-20T05:00:35+00:00",
+  "finished_utc": "2026-11-20T07:13:02+00:00",
+  "model": {
+    "provider": "openai_compatible",
+    "model_id": "google/gemini-3.8-flash",
+    "base_url": "https://openrouter.ai/api/v1/",
+    "sdk": "openai",
+    "sdk_version": "3.49.0",
+    "generation_config": {
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 2048,
+      "image_detail": null,
+      "extra_body": {
+        "provider": {
+          "order": [
+            "google-ai-studio"
+          ],
+          "allow_fallbacks": false
+        },
+        "reasoning": {
+          "effort": "minimal"
+        }
+      }
+    }
+  },
+  "model_versions_returned": [
+    "google/gemini-3.8-flash@Google AI Studio"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-20T05:00:35+00:00",
+      "commit": "d933159c5ba1f570d10de3dfa8ea129b4af3583c",
+      "uncommitted_changes": false,
+      "model_revision": null
+    }
+  ]
+}
