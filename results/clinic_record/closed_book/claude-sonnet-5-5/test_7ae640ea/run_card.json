@@ -1,0 +1,82 @@
+{
+  "name": "claude-sonnet-5-5",
+  "split": "test",
+  "run_id": "test_7ae640ea",
+  "status": "complete",
+  "fingerprint": "7ae640eaece8ab33582646c156978e447b7e3717abfc5e8e6cc9e4e9f53ee6b5",
+  "seed": null,
+  "config_file": "configs/models.toml",
+  "config": {
+    "name": "claude-sonnet-5-5",
+    "dataset": "clinic_record",
+    "approach": "closed_book",
+    "model": {
+      "provider": "anthropic",
+      "id": "claude-sonnet-5-5",
+      "max_tokens": 512,
+      "thinking": "between_tools",
+      "effort": "low"
+    },
+    "prompt": {
+      "file": "prompts/clinic_record/closed_book.txt"
+    },
+    "run": {
+      "requests_per_minute": 15,
+      "order_seed": 0
+    },
+    "model_list": "configs/models.toml"
+  },
+  "answer_format": "json-v2",
+  "prompt_file": "prompts/clinic_record/closed_book.txt",
+  "prompt_sha256": "419f79cdeab80d5a44694d49a2d85b4762fd715d99a203a960924b12040c93ef",
+  "prompt": "This is the clinic record of a patient with a skin lesion. There is no photograph. \"unknown\" means the patient did not know the answer.\nRecord:\n{case}\nThe possible diagnoses are:\n- actinic keratosis\n- basal cell carcinoma\n- melanoma\n- nevus\n- seborrheic keratosis\n- squamous cell carcinoma\nAnswer with one JSON object and nothing else, in this form:\n{\"differential\": [\"<most likely diagnosis>\", \"<second>\", \"<third>\"], \"evidence_sufficient\": \"<yes or no>\", \"reason\": \"<why>\", \"claims\": [{\"statement\": \"<one short claim>\", \"evidence\": []}], \"evidence\": []}\n- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.\n- evidence_sufficient: \"yes\" if what you are given is enough to be confident of the first diagnosis, otherwise \"no\".\n- reason: at most three sentences, using only what you are given.\n- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.\n- evidence: leave the list empty; no reference texts are given.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "melanoma",
+    "nevus",
+    "seborrheic keratosis",
+    "squamous cell carcinoma"
+  ],
+  "n_records": 678,
+  "records_sha256": "56c8a830ad2e4a14bf2c26d0a5843daee085aed9dc8ef241546c2710e25699bb",
+  "group_column": "patient_id",
+  "dataset_table": {
+    "file": "data/clinic_patients/record.csv",
+    "sha256": "854f1ebef050b4fc2a8e72f787ad2a643600beb8056ad03723ad870080a1dc29"
+  },
+  "git": {
+    "commit": "ecb2f8d40794c7f4bcbbd0b88178a672babaa7d3",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "anthropic": "2.6.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-19T17:50:24+00:00",
+  "finished_utc": "2026-11-19T18:36:28+00:00",
+  "model": {
+    "provider": "anthropic",
+    "model_id": "claude-sonnet-5-5",
+    "sdk": "anthropic",
+    "sdk_version": "2.6.0",
+    "generation_config": {
+      "max_tokens": 512,
+      "thinking": "between_tools",
+      "effort": "low",
+      "sampling": "provider default (temperature, top_p and top_k are not sent)"
+    }
+  },
+  "model_versions_returned": [
+    "claude-sonnet-5-5"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-19T17:50:24+00:00",
+      "commit": "ecb2f8d40794c7f4bcbbd0b88178a672babaa7d3",
+      "uncommitted_changes": false,
+      "model_revision": null
+    }
+  ]
+}
