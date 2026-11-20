@@ -21,8 +21,9 @@ from urllib.parse import urlparse
 # a list of (bytes, media type) pairs, empty for a text case (the case is inside the prompt). The
 # answer is a dict with ``text`` (or None), ``finish_reason`` ("STOP" for a normal end, "MAX_TOKENS" when the answer was cut off at
 # the output limit; any other value passes through), ``model_version`` (as the API reports it), ``response_id`` and ``usage``
-# (token counts). A failure raises TransientError (worth retrying), QuotaExhausted (credit or a per-day quota is used up) or
-# FatalError (retrying cannot fix it; the message says what to do). An adapter also names the ``packages`` whose versions the run
+# (token counts). A failure raises TransientError (worth retrying), QuotaExhausted (credit or a per-day quota is used up),
+# Refused (the host's content moderation refuses this one request; the next may be fine) or FatalError (retrying cannot fix it; the
+# message says what to do). An adapter also names the ``packages`` whose versions the run
 # card records and says whether its model id is ``pinned`` to one version; ``loaded_note`` and ``probe_note`` tell the setup check
 # how to describe it.
 #
@@ -33,6 +34,7 @@ from urllib.parse import urlparse
 
 
 TIMEOUT_SECONDS = 120  # the longest wait for one answer; a stalled connection must never wait forever
+REFUSED = "REFUSED"  # the finish reason saved for a question the host refused (an invalid answer)
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/gif", "image/webp")  # what the Anthropic and OpenAI-style APIs accept
 
 
@@ -42,6 +44,15 @@ class TransientError(Exception):
 
 class QuotaExhausted(Exception):
     """Credit or a per-day quota is used up, so retrying within minutes cannot help. Answers already saved are kept."""
+
+
+class Refused(Exception):
+    """The host refused this one request because of what it holds (its content moderation flagged a photo), so the same request
+    would be refused again. Other requests are not affected: the run saves the question as an invalid answer and goes on."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.attempt = 1  # set by the run: how many requests it took
 
 
 class FatalError(Exception):
@@ -200,6 +211,7 @@ OPENAI_DEFAULT_KEY = "OPENAI_API_KEY"
 OPENAI_DETAIL = ("low", "high", "auto")  # how closely OpenAI looks at the image (more detail = more tokens)
 OPENAI_FINISH = {"stop": "STOP", "length": "MAX_TOKENS", "content_filter": "CONTENT_FILTER"}
 DATED = re.compile(r"\d{4}-\d{2}-\d{2}$")  # a model id ending in a date is a fixed snapshot; one without may move
+MODERATION = re.compile(r"moderation|flagged", re.IGNORECASE)  # a refusal of this request's content, not of the key
 DAILY = re.compile(r"per[- ]day|daily", re.IGNORECASE)  # waiting minutes cannot help with a per-day limit
 
 
@@ -273,6 +285,8 @@ class OpenAICompatibleModel:
             return TransientError(f"HTTP {status}: {detail}")
         if status == 401:
             return FatalError(f"The host refused the API key (HTTP 401: {detail}). Check {self.key_name} in .env.", status)
+        if status == 403 and MODERATION.search(detail):
+            return Refused(f"refused by the host's content moderation (HTTP 403: {detail[:300]})")
         if status == 403:
             return FatalError(f"The host refused the request (HTTP 403: {detail}). The key may lack permission, or the account's "
                               "country or organisation may not be allowed to use this model.", status)

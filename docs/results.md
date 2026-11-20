@@ -42,7 +42,8 @@ Compare the three published datasets only on the same 100 cases (section 6).
 | **95% interval** | The range the true score probably lies in. A wide range means few cases. |
 | Macro-F1 | A second score that balances missed cases and false alarms, averaged over the classes. |
 | Top-3 | How often the right class is among the model's three listed diagnoses, averaged over the classes. |
-| Invalid answers | Answers that could not be read. They count as wrong. Shown as number (share). |
+| Invalid answers | Answers that could not be read, or questions the host refused (below). They count as wrong. Shown as number (share). |
+| Refused by the host | Questions the host's content moderation refused (for example a photo flagged as graphic), so the model never saw them. Each is saved as an invalid answer; this column says how many. |
 | Coverage | The share of answers where the model says its evidence is sufficient ("yes"). |
 | Selective risk | Of those "yes" answers, the share with a wrong diagnosis (a confident misdiagnosis). `n/a` when there are none. |
 
@@ -78,67 +79,67 @@ Every table has the same columns. Run = the results folder of that run.
 
 209 cases, 8 classes, chance 12.5%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 61.0% | 55.1 to 66.3 | 60.9% | 91.4% | 0 (0.0%) | 5.3% | 0.0% (0 of 11) | `test_3a656648` |
-| GPT-4o | 56.1% | 45.5 to 66.3 | 52.8% | 87.5% | 1 (0.5%) | 1.9% | 25.0% (1 of 4) | `test_2fab9eb6` |
-| Gemini 3.8 Flash | 59.6% | 53.5 to 65.1 | 58.6% | 91.6% | 0 (0.0%) | 33.0% | 10.1% (7 of 69) | `test_6e2bd64c` |
-| Llama 4 Maverick | 41.9% | 35.9 to 47.9 | 41.6% | 83.7% | 4 (1.9%) | 6.7% | 28.6% (4 of 14) | `test_5719a8d3` |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 61.0% | 55.1 to 66.3 | 60.9% | 91.4% | 0 (0.0%) | 0 | 5.3% | 0.0% (0 of 11) | `test_3a656648` |
+| GPT-4o | 56.1% | 45.5 to 66.3 | 52.8% | 87.5% | 1 (0.5%) | 0 | 1.9% | 25.0% (1 of 4) | `test_2fab9eb6` |
+| Gemini 3.8 Flash | 59.6% | 53.5 to 65.1 | 58.6% | 91.6% | 0 (0.0%) | 0 | 33.0% | 10.1% (7 of 69) | `test_6e2bd64c` |
+| Llama 4 Maverick | 41.9% | 35.9 to 47.9 | 41.6% | 83.7% | 4 (1.9%) | 0 | 6.7% | 28.6% (4 of 14) | `test_5719a8d3` |
 
 ### 3.2 `published_text_photos`: the case text and the article's photos
 
 100 cases, 8 classes, chance 12.5%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 53.2% | 46.0 to 60.5 | 51.4% | 85.7% | 1 (1.0%) | 10.0% | 0.0% (0 of 10) | `test_5ef83f27` |
-| GPT-4o |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
-| Llama 4 Maverick |  |  |  |  |  |  |  |  |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 53.2% | 46.0 to 60.5 | 51.4% | 85.7% | 1 (1.0%) | 0 | 10.0% | 0.0% (0 of 10) | `test_5ef83f27` |
+| GPT-4o |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.3 `published_photos`: the article's photos only
 
 100 cases, 8 classes, chance 12.5%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 39.8% | 32.7 to 46.6 | 37.6% | 75.2% | 2 (2.0%) | 3.0% | 0.0% (0 of 3) | `test_d56264d6` |
-| GPT-4o |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
-| Llama 4 Maverick |  |  |  |  |  |  |  |  |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 39.8% | 32.7 to 46.6 | 37.6% | 75.2% | 2 (2.0%) | 0 | 3.0% | 0.0% (0 of 3) | `test_d56264d6` |
+| GPT-4o |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.4 `clinic_record`: the clinic record only
 
 678 patients' records, 6 classes, chance 16.7%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 42.0% | 38.6 to 45.9 | 40.3% | 67.4% | 0 (0.0%) | 0.0% | n/a | `test_7ae640ea` |
-| GPT-4o |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
-| Llama 4 Maverick |  |  |  |  |  |  |  |  |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 42.0% | 38.6 to 45.9 | 40.3% | 67.4% | 0 (0.0%) | 0 | 0.0% | n/a | `test_7ae640ea` |
+| GPT-4o |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.5 `clinic_photo`: the phone photo only
 
 678 photos, 6 classes, chance 16.7%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 58.0% | 52.7 to 62.8 | 52.8% | 94.3% | 8 (1.2%) | 0.1% | 0.0% (0 of 1) | `test_06deef76` |
-| GPT-4o |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
-| Llama 4 Maverick |  |  |  |  |  |  |  |  |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 58.0% | 52.7 to 62.8 | 52.8% | 94.3% | 8 (1.2%) | 0 | 0.1% | 0.0% (0 of 1) | `test_06deef76` |
+| GPT-4o |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.6 `clinic_photo_record`: the phone photo and the record
 
 678 photos with records, 6 classes, chance 16.7%.
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
-|---|---|---|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 64.5% | 58.6 to 70.0 | 58.8% | 95.6% | 1 (0.1%) | 0.4% | 0.0% (0 of 3) | `test_16d5a224` |
-| GPT-4o |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
-| Llama 4 Maverick |  |  |  |  |  |  |  |  |
+| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 64.5% | 58.6 to 70.0 | 58.8% | 95.6% | 1 (0.1%) | 0 | 0.4% | 0.0% (0 of 3) | `test_16d5a224` |
+| GPT-4o |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ## 4. Recall of each class
 
@@ -326,26 +327,26 @@ same scores, plus the two retrieval scores below, with a local open-weight model
 not defined yet (`docs/method.md` section 7), so they have no column. Precision@k and nDCG@k are given beside the share expected from
 random retrieval.
 
-| Dataset | Approach | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Precision@k | nDCG@k | Run |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `published_text` | Standard RAG | | | | | | | | | | | |
-| `published_text` | RAG² | | | | | | | | | | | |
-| `published_text` | Proposed method | | | | | | | | | | | |
-| `published_text_photos` | Standard RAG | | | | | | | | | | | |
-| `published_text_photos` | RAG² | | | | | | | | | | | |
-| `published_text_photos` | Proposed method | | | | | | | | | | | |
-| `published_photos` | Standard RAG | | | | | | | | | | | |
-| `published_photos` | RAG² | | | | | | | | | | | |
-| `published_photos` | Proposed method | | | | | | | | | | | |
-| `clinic_record` | Standard RAG | | | | | | | | | | | |
-| `clinic_record` | RAG² | | | | | | | | | | | |
-| `clinic_record` | Proposed method | | | | | | | | | | | |
-| `clinic_photo` | Standard RAG | | | | | | | | | | | |
-| `clinic_photo` | RAG² | | | | | | | | | | | |
-| `clinic_photo` | Proposed method | | | | | | | | | | | |
-| `clinic_photo_record` | Standard RAG | | | | | | | | | | | |
-| `clinic_photo_record` | RAG² | | | | | | | | | | | |
-| `clinic_photo_record` | Proposed method | | | | | | | | | | | |
+| Dataset | Approach | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Precision@k | nDCG@k | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `published_text` | Standard RAG | | | | | | | | | | | | |
+| `published_text` | RAG² | | | | | | | | | | | | |
+| `published_text` | Proposed method | | | | | | | | | | | | |
+| `published_text_photos` | Standard RAG | | | | | | | | | | | | |
+| `published_text_photos` | RAG² | | | | | | | | | | | | |
+| `published_text_photos` | Proposed method | | | | | | | | | | | | |
+| `published_photos` | Standard RAG | | | | | | | | | | | | |
+| `published_photos` | RAG² | | | | | | | | | | | | |
+| `published_photos` | Proposed method | | | | | | | | | | | | |
+| `clinic_record` | Standard RAG | | | | | | | | | | | | |
+| `clinic_record` | RAG² | | | | | | | | | | | | |
+| `clinic_record` | Proposed method | | | | | | | | | | | | |
+| `clinic_photo` | Standard RAG | | | | | | | | | | | | |
+| `clinic_photo` | RAG² | | | | | | | | | | | | |
+| `clinic_photo` | Proposed method | | | | | | | | | | | | |
+| `clinic_photo_record` | Standard RAG | | | | | | | | | | | | |
+| `clinic_photo_record` | RAG² | | | | | | | | | | | | |
+| `clinic_photo_record` | Proposed method | | | | | | | | | | | | |
 
 ## 8. What the results show so far
 
@@ -376,5 +377,6 @@ otherwise.
 - 12 of the 1,556 Claude answers (0.8%) on the four photo datasets were invalid: 11 because a claim had a key that is not allowed (an
   extra key such as `similar_lesion`, or a wrong spelling of `statement`) and 1 because the top-level key `evidence` was missing. They
   count as wrong; the reader rule was not changed again.
+- **A host's content moderation can refuse a photo.** OpenAI's moderation (through OpenRouter) refused a photo flagged "violence/graphic" in the GPT-4o runs on the published photo datasets (decided 2026-11-20, option A). A refused question is saved as an invalid answer, counts as wrong, and is counted in the column "Refused by the host". The model never saw those cases, so its score on them says nothing about its diagnosis; no other model has been refused so far.
 - The labels of the published cases were not checked by a clinician (a stated limitation of the dataset).
 - The Version 1 numbers (`archive/v1/`) are obsolete and are not compared with these.

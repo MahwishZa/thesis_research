@@ -40,7 +40,7 @@ class RunTests(RunProject):
         self.assertEqual(card["dataset_table"]["sha256"], hashlib.sha256(self.table.read_bytes()).hexdigest())
         self.assertEqual({p["patient_id"] for p in preds}, {"patient-melanoma", "patient-nevus"})
         self.assertEqual((metrics["main"]["groups"], metrics["main"]["interval_method"]), (2, "bootstrap over patients"))
-        self.assertEqual(list(metrics), ["answer_format", "main"])  # no class of the image dataset is set apart
+        self.assertEqual(list(metrics), ["answer_format", "refused", "main"])  # no class of the image dataset is set apart
         self.assertEqual((metrics["answer_format"], card["answer_format"]), (prompts.ANSWER_FORMAT, prompts.ANSWER_FORMAT))
         self.assertEqual(preds[0]["differential"], ["melanoma", "nevus"])  # two classes: a differential of two
         self.assertEqual((preds[0]["evidence_sufficient"], preds[0]["evidence"], preds[0]["invalid"]), ("yes", [], None))
@@ -142,6 +142,39 @@ class RunTests(RunProject):
         stops = json.loads((out / "run_card.json").read_text(encoding="utf-8"))["interruptions"]  # the stop stays on record
         self.assertEqual([(s["answered"], s["kind"]) for s in stops], [(2, "TransientError")])
         self.assertIn("Interruptions before the run finished: 1", (out / "report.md").read_text(encoding="utf-8"))
+
+    def test_a_question_the_host_refuses_is_saved_as_an_invalid_answer_and_the_run_goes_on(self):
+        class Refusing(FakeModel):
+            """Call 1 fails once (transient); call 2 is the same question and the host refuses it for its content; the rest answer."""
+
+            def predict(self, images, prompt):
+                if self.calls == 0:
+                    self.calls += 1
+                    raise models.TransientError("rate limited")
+                if self.calls == 1:
+                    self.calls += 1
+                    raise models.Refused("refused by the host's content moderation (HTTP 403: flagged for \"violence/graphic\")")
+                return super().predict(images, prompt)
+
+        out = self._run(Refusing(), "val", run_id="v1")
+        preds = self._preds(out)
+        self.assertEqual(len(preds), 4)  # the run was not stopped: every question has an answer
+        refused = [p for p in preds if p["finish_reason"] == "REFUSED"]
+        self.assertEqual(len(refused), 1)
+        row = refused[0]
+        self.assertEqual((row["prediction"], row["differential"], row["raw_text"], row["usage"], row["model_version"], row["response_id"]),
+                         (None, None, None, None, None, None))
+        self.assertIn("refused by the host's content moderation", row["invalid"])
+        self.assertEqual(row["attempts"], 2)  # the transient failure came first, then the refusal
+        self.assertEqual(sum(p["prediction"] is not None for p in preds), 3)
+        metrics = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
+        self.assertEqual((metrics["refused"], metrics["main"]["invalid"], metrics["main"]["n"]), (1, 1, 4))  # counted as wrong, and on its own
+        report = (out / "report.md").read_text(encoding="utf-8")
+        self.assertIn("1 questions were refused by the host's content moderation", report)
+        self.assertNotIn("did not end normally", report)
+        self.assertIn("a question the host refused cannot hold a diagnosis",
+                      "; ".join(evaluate.verify_answers(json.loads((out / "run_card.json").read_text(encoding="utf-8")),
+                                                        [preds[1] | {"finish_reason": "REFUSED"}])))
 
     def test_a_run_whose_first_answers_are_all_invalid_stops_early_keeps_them_and_can_go_on(self):
         class NotJson(FakeModel):
@@ -669,7 +702,7 @@ class TextDatasetTests(TextProject):
         card["n_cases"] = len(kept)  # the run is rewritten as one that never had those cases
         (out / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
         evaluate.write_report(out)
-        self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["answer_format", "main"])
+        self.assertEqual(list(json.loads((out / "metrics.json").read_text(encoding="utf-8"))), ["answer_format", "refused", "main"])
         self.assertNotIn("## Without", (out / "report.md").read_text(encoding="utf-8"))
 
     def test_the_check_asks_the_model_without_an_image_and_counts_cases(self):

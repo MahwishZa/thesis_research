@@ -29,6 +29,8 @@ The model answers with one JSON object and nothing else:
 
 **An invalid answer counts as wrong** in every score, and the share of invalid answers is reported on its own. The reason each answer was invalid is saved in `predictions.jsonl` and counted in the report.
 
+**A refused question.** A host's content moderation can refuse a photo (the host answers HTTP 403 and says the input was flagged). The model never sees such a question. It is saved as an invalid answer (finish reason `REFUSED`, the host's reason as the invalid reason), counts as wrong like any invalid answer, and the report and the results tables give the number of refused questions on its own. The run goes on with the next question. Any other refusal of a request (a wrong key, a model that does not exist, no permission) still stops the run.
+
 ## 3. The scores
 
 Every score is computed by `src/metrics.py` from the saved answers. The classes are weighted equally: the published cases have unequal numbers of cases per class, and a model can reach a high plain accuracy by naming the most common class.

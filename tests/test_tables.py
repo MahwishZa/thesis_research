@@ -37,12 +37,22 @@ class TableTests(RunProject):
         self.put("clinic_photo", CLAUDE, ["a", "a", "a", "b", "b", "b", "b", None])
         runs = self.runs()
         cells = [c.strip() for c in tables.by_dataset(runs, "clinic_photo")[2].strip("|").split("|")]
-        self.assertEqual(cells[:2] + cells[3:], ["Claude Sonnet 5.5", "75.0%", "80.4%", "75.0%", "1 (12.5%)", "87.5%", "14.3% (1 of 7)", "`test_aaaa1111`"])
-        self.assertEqual(tables.by_dataset(runs, "clinic_photo")[3], "| GPT-4o |  |  |  |  |  |  |  |  |")
+        self.assertEqual(cells[:2] + cells[3:], ["Claude Sonnet 5.5", "75.0%", "80.4%", "75.0%", "1 (12.5%)", "0", "87.5%", "14.3% (1 of 7)", "`test_aaaa1111`"])
+        self.assertEqual(tables.by_dataset(runs, "clinic_photo")[3], "| GPT-4o |  |  |  |  |  |  |  |  |  |")
         overview = {row.split("|")[1].strip(): row for row in tables.overview(runs)[2:]}
         self.assertEqual(overview["`published_text`"], "| `published_text` |  |  |  |  |")
         self.assertRegex(overview["`clinic_photo`"], r"^\| `clinic_photo` \| 75\.0% \(\d+\.\d to \d+\.\d\) \|  \|  \|  \|$")
         self.assertEqual(tables.per_class(runs, "clinic_photo")[2:], ["| a | 4 | 75.0 |  |  |  |", "| b | 4 | 75.0 |  |  |  |"])
+
+    def test_questions_the_host_refused_are_counted_apart_and_are_among_the_invalid_answers(self):
+        folder = self.put("clinic_photo", GPT, ["a", "a", "a", "a", "b", "b", "b", "b"])
+        rows = [json.loads(line) for line in (folder / "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        rows[0] |= {"prediction": None, "differential": None, "evidence_sufficient": None, "reason": None, "claims": None, "evidence": None,
+                    "invalid": "refused by the host's content moderation (HTTP 403: flagged)", "raw_text": None, "finish_reason": "REFUSED",
+                    "model_version": None}
+        (folder / "predictions.jsonl").write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+        cells = [c.strip() for c in tables.by_dataset(self.runs(), "clinic_photo")[3].strip("|").split("|")]
+        self.assertEqual((cells[0], cells[5], cells[6]), ("GPT-4o", "1 (12.5%)", "1"))  # one invalid answer, and it is a refusal
 
     def test_a_flag_that_is_never_yes_has_no_selective_risk(self):
         self.put("clinic_photo", CLAUDE, TRUTH, answers=[([t], "no") for t in TRUTH])

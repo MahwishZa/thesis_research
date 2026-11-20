@@ -26,6 +26,7 @@ from .common import read_jsonl, write_json
 from .datasets import DATASETS, SAME_QUESTIONS, Dataset, dataset_of, question_of
 from .metrics import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, INVALID, _resamples, _scores, _units, confusion_matrix, interval, mcnemar,
                       summarize)
+from .models import REFUSED
 from .prompts import ANSWER_FORMAT
 
 RESULTS = Path("results")  # results/<dataset>/<approach>/<model>/<run>/
@@ -59,6 +60,8 @@ def verify_answers(card: dict, preds: list[dict], complete: bool = False) -> lis
         where = f"answer {number} ({p['path']})"
         if p["label"] not in labels:
             problems.append(f"{where}: the true class {p['label']!r} is not a class of the run")
+        if p["finish_reason"] == REFUSED and p["prediction"] is not None:
+            problems.append(f"{where}: a question the host refused cannot hold a diagnosis")
         if p["prediction"] is None:
             if not p["invalid"] or any(p[k] is not None for k in ("differential", "evidence_sufficient", "reason", "claims", "evidence")):
                 problems.append(f"{where}: an invalid answer must hold its reason and no differential, flag, reason or evidence")
@@ -109,7 +112,7 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
                          [p.get(kind.group_column) or p["path"] for p in rows], kind.group,
                          [p.get("differential") for p in rows], [p.get("evidence_sufficient") for p in rows])
 
-    metrics = {"answer_format": card["answer_format"], "main": scores(preds)}
+    metrics = {"answer_format": card["answer_format"], "refused": sum(p["finish_reason"] == REFUSED for p in preds), "main": scores(preds)}
     left_out = [label for label in kind.set_apart if any(p["label"] == label for p in preds)]
     if left_out:  # a class too small to weigh like the others: the scores without it, beside the main score
         metrics["without_small_classes"] = {
@@ -249,7 +252,7 @@ def write_report(run_dir: str | Path) -> Path:
     commits = sorted({s["commit"] or "unknown" for s in sessions})
     revisions = sorted({s["model_revision"] for s in sessions if s.get("model_revision")})
     finish = Counter(p["finish_reason"] for p in preds)
-    other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS")}
+    other = {k: v for k, v in finish.items() if k not in ("STOP", "MAX_TOKENS", REFUSED)}
     cut = [p for p in preds if p["finish_reason"] == "MAX_TOKENS"]
     harmful = sum(p["prediction"] is None for p in cut)  # a JSON answer cut off is incomplete, so invalid: the limit decided it
     invalid = Counter(p.get("invalid") for p in preds if p["prediction"] is None and p.get("invalid"))
@@ -259,6 +262,8 @@ def write_report(run_dir: str | Path) -> Path:
               *([f"- **{harmful} answers were cut off at the output limit (finish reason MAX_TOKENS) and count as wrong: "
                  "the output limit in the model list (max_tokens) is too low for this model (hidden reasoning can count toward "
                  "it). Results are not valid until it is raised, under a new model entry.**"] if harmful else []),
+              *([f"- **{finish[REFUSED]} questions were refused by the host's content moderation: the model never saw them. Each is an "
+                 "invalid answer and counts as wrong, like any other.**"] if finish[REFUSED] else []),
               *([f"- {len(cut) - harmful} answers reached the output limit but were complete and valid all the same, so the limit did "
                  "not change their score."] if len(cut) > harmful else []),
               *([f"- **{sum(other.values())} answers did not end normally ("

@@ -426,6 +426,15 @@ class OpenAICompatibleTests(unittest.TestCase):
         with self.assertRaisesRegex(models.FatalError, "SDK failed"):
             self._load(error=OpenAIAPIError("odd")).predict([(b"x", "image/png")], "?")
 
+    def test_a_403_that_flags_the_content_refuses_that_question_only_and_any_other_403_stops_the_run(self):
+        moderated = 'openai/gpt-4o-2024-08-06 requires moderation on OpenAI. Your input was flagged for "violence/graphic". No credits were charged.'
+        with self.assertRaisesRegex(models.Refused, r"refused by the host's content moderation \(HTTP 403: .*violence/graphic"):
+            self._load(error=OpenAIStatusError(403, 403, moderated)).predict([(b"x", "image/png")], "?")
+        for message in ("Key limit exceeded (total limit). Manage it using the key's page.", "You are not allowed to use this model"):
+            with self.subTest(message), self.assertRaises(models.FatalError):
+                self._load(error=OpenAIStatusError(403, 403, message)).predict([(b"x", "image/png")], "?")
+        self.assertNotIsInstance(models.Refused("x"), (models.FatalError, models.TransientError, models.QuotaExhausted))
+
     def test_a_refusal_names_the_provider_and_its_own_message_when_the_host_gives_them(self):
         body = {"error": {"message": "Provider returned error", "code": 400,
                           "metadata": {"provider_name": "Google AI Studio", "raw": "Content blocked: PROHIBITED_CONTENT"}}}

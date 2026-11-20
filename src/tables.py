@@ -103,14 +103,14 @@ def by_dataset(runs: Runs, dataset: str) -> list[str]:
     for model, name in MODELS:
         found = runs.scored(dataset, model)
         if not found:
-            rows.append([name, *[""] * 8])
+            rows.append([name, *[""] * 9])
             continue
         folder, _, metrics = found
         main = metrics["main"]
         rows.append([name, pct(main["balanced_accuracy"]), span(main["balanced_accuracy_ci95"]), pct(main["macro_f1"]),
                      pct(main["top3_balanced_accuracy"]), f"{main['invalid']} ({pct(main['invalid_rate'])})",
-                     pct(main["selective"]["coverage"]), _risk(main["selective"]), f"`{folder.name}`"])
-    return table(["Model", "Balanced accuracy", "95% interval", "Macro-F1", "Top-3", "Invalid answers", "Coverage", "Selective risk", "Run"], rows)
+                     str(metrics["refused"]), pct(main["selective"]["coverage"]), _risk(main["selective"]), f"`{folder.name}`"])
+    return table(["Model", "Balanced accuracy", "95% interval", "Macro-F1", "Top-3", "Invalid answers", "Refused by the host", "Coverage", "Selective risk", "Run"], rows)
 
 
 def per_class(runs: Runs, dataset: str) -> list[str]:

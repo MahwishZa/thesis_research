@@ -47,7 +47,7 @@ from .common import read_jsonl, repair_jsonl, write_json
 from .datasets import (DATASETS, SPLITS, classes, dataset_paths, items_hash, load_dataset, pictures_root, read_case, read_image,
                        read_picture)
 from .evaluate import RESULTS, verify_answers, write_report
-from .models import FatalError, QuotaExhausted, TransientError, load, load_env
+from .models import REFUSED, FatalError, QuotaExhausted, Refused, TransientError, load, load_env
 from .prompts import ANSWER_FORMAT, CASE, FACTS, build_prompt, fill, load_template, parse_json_answer
 
 
@@ -231,6 +231,9 @@ def _ask(model, images: list[tuple[bytes, str]], text: str, throttle, say=print)
         throttle()
         try:
             return model.predict(images, text), attempt
+        except Refused as exc:
+            exc.attempt = attempt
+            raise
         except TransientError as exc:
             if attempt == MAX_ATTEMPTS:
                 raise
@@ -392,8 +395,12 @@ def _run_once(job: dict, run_id: str) -> Path:
                     image, mime, sent = read_image(item, job["root"])
                     images = [(image, mime)]
                     text = fill(prompt_text, FACTS, item.facts) if kind.facts_column else prompt_text
-                answer, attempt = _ask(model, images, text, throttle, say)
-                parsed, problem = parse_json_answer(answer["text"], labels)  # closed-book: no passage was given, so no evidence
+                try:
+                    answer, attempt = _ask(model, images, text, throttle, say)
+                    parsed, problem = parse_json_answer(answer["text"], labels)  # closed-book: no passage was given, so no evidence
+                except Refused as exc:  # the host will not take this question: an invalid answer that says so, and the run goes on
+                    answer = {"text": None, "finish_reason": REFUSED, "model_version": None, "response_id": None, "usage": None}
+                    attempt, parsed, problem = exc.attempt, None, str(exc)
                 line = {"path": item.path, "label": item.label, kind.group_column: item.group,
                         "prediction": parsed["diagnosis"] if parsed else None,
                         "differential": parsed["differential"] if parsed else None,
@@ -413,7 +420,8 @@ def _run_once(job: dict, run_id: str) -> Path:
                                      f"{pred_path} and fix the prompt, the output limit (max_tokens) or the model's settings; if this is "
                                      "expected, run the same command again to go on.")
                 say(f"[{i}/{len(items)}] {item.label} -> " + (f"{parsed['diagnosis']} (evidence sufficient: {parsed['evidence_sufficient']})"
-                                                              if parsed else f"INVALID ({problem}): {answer['text']!r}"))
+                                                              if parsed else f"REFUSED ({problem})" if answer["finish_reason"] == REFUSED
+                                                              else f"INVALID ({problem}): {answer['text']!r}"))
     except (TransientError, QuotaExhausted, FatalError) as exc:
         nothing_to_continue = answered == 0 and created
         if nothing_to_continue:
