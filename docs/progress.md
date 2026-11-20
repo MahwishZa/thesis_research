@@ -6,18 +6,18 @@ each run card names the table and its hash that the run used.
 ## Run status: closed-book test runs
 
 One run per model and dataset. The numbers are in `docs/results.md`; enter the new status here when a run is committed.
-Done = finished and committed in `results/`; blank = not run yet.
+Done = finished and committed in `results/`; blank = not committed yet; not planned = left out by decision (2026-11-20).
 
 | Dataset | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|
 | `published_text` | done | done | done | done |
-| `published_text_photos` | done | | | |
-| `published_photos` | done | | | |
-| `clinic_record` | done | | | |
-| `clinic_photo` | done | | | |
-| `clinic_photo_record` | done | | | |
+| `published_text_photos` | done | | | done |
+| `published_photos` | done | | | done |
+| `clinic_record` | done | not planned | | not planned |
+| `clinic_photo` | done | not planned | | not planned |
+| `clinic_photo_record` | done | not planned | | not planned |
 
-Order of the remaining runs: Gemini on the five datasets (started 2026-11-20), then Llama on `published_text_photos` and `published_photos` only, then GPT-4o on the same two datasets only (decided 2026-11-20).
+Finished and committed: Claude on all six datasets, Llama on `published_text` and, by decision, only on `published_text_photos` and `published_photos` (2026-11-20). Finished on the laptop, not committed yet: Gemini on `published_text_photos`, `published_photos`, `clinic_record` and `clinic_photo`, and GPT-4o on `published_text_photos` and `published_photos`. Unfinished at the last check: Gemini on `clinic_photo_record` (426 of 678 answers saved). GPT-4o runs only on the two published photo datasets; a photo its host refuses is saved as an invalid answer.
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
