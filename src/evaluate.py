@@ -342,6 +342,7 @@ def compare(run_a: str | Path, run_b: str | Path) -> dict:
     resampled = [differences(s) for s in _resamples(_units(y_true, labels, groups), BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED)]
     balanced, f1 = differences(range(len(pairs)))
     return {"run_a": Path(run_a).as_posix(), "run_b": Path(run_b).as_posix(),
+            "dataset_a": dataset, "dataset_b": dataset_b, "model_a": card_a["model"]["model_id"], "model_b": card_b["model"]["model_id"],
             "dataset": dataset if dataset == dataset_b else f"{dataset} and {dataset_b}", "split": card_a["split"],
             "n": len(pairs), "groups": f"{kind.group}s",
             "balanced_accuracy_difference": balanced, "balanced_accuracy_difference_ci95": interval([d[0] for d in resampled]),
@@ -361,6 +362,9 @@ def comparison_text(c: dict) -> str:
     low, high = c["balanced_accuracy_difference_ci95"]
     return "\n".join([
         f"# {c['run_b']} against {c['run_a']}", "",
+        f"- **Run A** (the first folder given): dataset `{c['dataset_a']}`, model `{c['model_a']}`",
+        f"- **Run B** (the second folder given): dataset `{c['dataset_b']}`, model `{c['model_b']}`",
+        "- \"B minus A\" is B's score minus A's score: a positive difference means B scored higher.", "",
         f"{c['dataset']} dataset, {c['split']} split, {c['n']} questions answered by both runs.", "",
         f"- **Balanced accuracy, B minus A: {points(c['balanced_accuracy_difference'])}** (95% interval {points(low)} to "
         f"{points(high)}, paired bootstrap over {c['groups']}). "

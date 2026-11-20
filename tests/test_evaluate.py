@@ -164,7 +164,9 @@ class CompareTests(RunProject):
         self.assertTrue(low <= 0 <= high)
         text = evaluate.comparison_text(c)
         for expected in ("**Balanced accuracy, B minus A: +0.0 points**", "paired bootstrap over patients", "The interval holds 0",
-                         "| **Run B right** | 0 | 2 |", "McNemar's exact test (supporting", "p = 1.0000"):
+                         "| **Run B right** | 0 | 2 |", "McNemar's exact test (supporting", "p = 1.0000",
+                         "- **Run A** (the first folder given): dataset `", "- **Run B** (the second folder given): dataset `",
+                         "model `fake-1`", "a positive difference means B scored higher"):
             self.assertIn(expected, text)
         same = evaluate.compare(a, a)
         self.assertEqual((same["only_a"], same["only_b"], same["balanced_accuracy_difference_ci95"]), (0, 0, (0.0, 0.0)))
@@ -216,12 +218,16 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2",
+                    "model": {"model_id": "m-1"}}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
             rows = [answered(f"test/{t}/{i}.jpg", t, kind.group_column, f"L{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
             runs[name] = folder
         c = evaluate.compare(runs["image"], runs["multi"])
+        text = evaluate.comparison_text(c)  # A is the first folder given, B the second
+        self.assertIn("**Run A** (the first folder given): dataset `clinic_photo`, model", text)
+        self.assertIn("**Run B** (the second folder given): dataset `clinic_photo_record`, model", text)
         self.assertEqual((c["dataset"], c["n"], c["only_a"], c["only_b"]), ("clinic_photo and clinic_photo_record", 4, 0, 2))  # the facts fixed 2
         self.assertEqual(c["balanced_accuracy_difference"], 0.5)
         self.assertIn("clinic_photo and clinic_photo_record dataset, test split, 4 questions", evaluate.comparison_text(c))
@@ -247,7 +253,8 @@ class CompareTests(RunProject):
             folder.mkdir()
             kind = datasets.DATASETS[dataset]
             card = {"status": "complete", "config": {"dataset": dataset}, "split": "test", "labels": ["a", "b"],
-                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2"}
+                    f"n_{kind.item}s": 4, f"{kind.item}s_sha256": f"fingerprint of {dataset}", "answer_format": "json-v2",
+                    "model": {"model_id": "m-1"}}
             (folder / "run_card.json").write_text(json.dumps(card), encoding="utf-8")
             rows = [answered(f"test/{t}/P{i}_1_a.{ending}", t, kind.group_column, f"P{i}", p) for i, (t, p) in enumerate(zip(truth, predicted))]
             (folder / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")

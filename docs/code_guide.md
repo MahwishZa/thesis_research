@@ -24,7 +24,7 @@ thesis_research/
 │   ├── clinic_patients/     PAD-UFES-20: phone photos of skin lesions with each patient's clinic record (Version 2)
 │   ├── published_cases/     case reports: each patient's written case, and the same patient's photos from the article (Version 2)
 │   └── knowledge/           what open-book runs may retrieve
-├── docs/                temporary: the Version 2 plan, the method, this guide, the audit and the progress; removed when the research is final
+├── docs/                temporary: the Version 2 plan, the method, this guide, the audit, the progress and the results; removed when the research is final
 ├── archive/             temporary: Version 1 (commit a1c9209), frozen for reference; removed when the research is final
 ├── tests/               unit tests
 └── requirements.txt
@@ -47,7 +47,7 @@ Before any experiment, in this order (the first costs nothing, the second a frac
 
 Then:
 - Run the test split: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`
-- Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then the two run folders
+- Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then run A's folder and run B's folder; the report shows B minus A
 - Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`
 
 ### Running the closed-book experiments
@@ -59,7 +59,7 @@ For one model and one dataset (the examples use `claude-sonnet-5-5` and `publish
 3. Optional, to look at the answers first: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split val --limit 5`. A validation run stays on the laptop (Git ignores it) and is never a result. Read `raw_text` in its `predictions.jsonl` for answers marked invalid. A run also stops by itself if its first 10 answers are all invalid.
 4. `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`: the result. It needs a clean Git state (the run card names the code) and a pinned model, and it runs once per model, dataset and approach. If it stops (quota, network), the same command continues it. At the end it checks its own answer file and writes `report.md` and `metrics.json`.
 5. Commit the finished folder `results/<dataset>/closed_book/<model>/test_<id>/` (`run_card.json`, `predictions.jsonl`, `metrics.json`, `report.md`, `run.log`). A folder ending in `.partial` is unfinished and is ignored by Git.
-6. Compare two finished runs on the same questions with python -m src.evaluate compare, then the two run folders. The three clinic views pair with each other, and so do the three views of the published cases (on the cases that have photos).
+6. Compare two finished runs on the same questions with python -m src.evaluate compare, then the two run folders (run A first, run B second; the report names both and shows B minus A). The three clinic views pair with each other, and so do the three views of the published cases (on the cases that have photos).
 
 Cost control: a run sends one request per question (`requests_per_minute` in the model list paces it). Check one model on one dataset with `--limit` before a full test run, and read the token counts in `predictions.jsonl` (`usage`) to estimate the rest.
 
@@ -118,3 +118,4 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | `docs/v2_proposal.md` | The Version 2 plan; its sections 4 and 5 are a proposal, only partly approved (see `docs/audit.md`). |
 | `docs/audit.md` | The audit of the repository before further experiments. |
 | `docs/progress.md` | Current progress; nothing in it is a final result. |
+| `docs/results.md` | The closed-book results so far, with the paired comparisons; nothing in it is final. |

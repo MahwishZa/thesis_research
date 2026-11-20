@@ -5,16 +5,19 @@ each run card names the table and its hash that the run used.
 
 ## Closed-book results so far
 
-`published_text`, test split (209 cases, 8 classes, chance 12.5%), one run per model. Balanced accuracy is the main score.
+Claude Sonnet 5.5 has been run on all six datasets and the other three models on `published_text`; every number, with the paired
+comparisons and what they show, is in `docs/results.md`. The headline for Claude (balanced accuracy, test split):
 
-| Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers |
-|---|---|---|---|---|---|
-| Claude Sonnet 5.5 | 61.0% | 55.1 to 66.3 | 60.9% | 91.4% | 0 |
-| Gemini 3.8 Flash | 59.6% | 53.5 to 65.1 | 58.6% | 91.6% | 0 |
-| GPT-4o | 56.1% | 45.5 to 66.3 | 52.8% | 87.5% | 1 |
-| Llama 4 Maverick | 41.9% | 35.9 to 47.9 | 41.6% | 83.7% | 4 |
+| Dataset | Balanced accuracy (95% interval) |
+|---|---|
+| `published_text` | 61.0% (55.1 to 66.3) |
+| `published_text_photos` | 53.2% (46.0 to 60.5) |
+| `published_photos` | 39.8% (32.7 to 46.6) |
+| `clinic_record` | 42.0% (38.6 to 45.9) |
+| `clinic_photo` | 58.0% (52.7 to 62.8) |
+| `clinic_photo_record` | 64.5% (58.6 to 70.0) |
 
-The other five datasets (`published_text_photos`, `published_photos`, `clinic_photo`, `clinic_record`, `clinic_photo_record`) are being run with Claude first, then Gemini; GPT-4o and Llama wait for funding. The runs are in `results/`, each with its report.
+Next: Gemini 3.8 Flash on the other five datasets. GPT-4o and Llama wait for funding. The runs are in `results/`, each with its report.
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
