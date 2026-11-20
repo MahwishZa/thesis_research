@@ -1,0 +1,118 @@
+{
+  "name": "gpt-4o",
+  "split": "test",
+  "run_id": "test_51aca59c",
+  "status": "complete",
+  "fingerprint": "51aca59c6ef4b30965b1f8472ad991d2d9c4b9ff5d85f2ec12616e21b6a89585",
+  "seed": 0,
+  "config_file": "configs/models.toml",
+  "config": {
+    "name": "gpt-4o",
+    "dataset": "published_text_photos",
+    "approach": "closed_book",
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "extra_body": {
+        "provider": {
+          "order": [
+            "openai"
+          ],
+          "allow_fallbacks": false
+        }
+      },
+      "id": "openai/gpt-4o-2024-08-06",
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 512,
+      "image_detail": "high"
+    },
+    "prompt": {
+      "file": "prompts/published_text_photos/closed_book.txt"
+    },
+    "run": {
+      "requests_per_minute": 20,
+      "order_seed": 0
+    },
+    "model_list": "configs/models.toml"
+  },
+  "answer_format": "json-v2",
+  "prompt_file": "prompts/published_text_photos/closed_book.txt",
+  "prompt_sha256": "b1a51ff6f0898603ef3b2650280f40459299179ceb2f15ca351eaf651bd1ce8d",
+  "prompt": "This is the description of a patient with a skin lesion, from a published case report, with the photographs of the lesion published in the same report. The description ends before the diagnosis.\nCase: {case}\nThe possible diagnoses are:\n- actinic keratosis\n- basal cell carcinoma\n- dermatofibroma\n- melanoma\n- nevus\n- pigmented benign keratosis\n- squamous cell carcinoma\n- vascular lesion\nAnswer with one JSON object and nothing else, in this form:\n{\"differential\": [\"<most likely diagnosis>\", \"<second>\", \"<third>\"], \"evidence_sufficient\": \"<yes or no>\", \"reason\": \"<why>\", \"claims\": [{\"statement\": \"<one short claim>\", \"evidence\": []}], \"evidence\": []}\n- differential: three different diagnoses from the list above, written exactly as in the list, the most likely first.\n- evidence_sufficient: \"yes\" if what you are given is enough to be confident of the first diagnosis, otherwise \"no\".\n- reason: at most three sentences, using only what you are given.\n- claims: one to three short claims that support your first diagnosis; leave each claim's evidence list empty, as no reference texts are given.\n- evidence: leave the list empty; no reference texts are given.",
+  "labels": [
+    "actinic keratosis",
+    "basal cell carcinoma",
+    "dermatofibroma",
+    "melanoma",
+    "nevus",
+    "pigmented benign keratosis",
+    "squamous cell carcinoma",
+    "vascular lesion"
+  ],
+  "n_cases": 100,
+  "cases_sha256": "a2387a58e7e4b2f350355df4bc383ac8126480fc7d991e9bbdc26dcfb245a811",
+  "group_column": "pmid",
+  "dataset_table": {
+    "file": "data/published_cases/photos.csv",
+    "sha256": "cee3aa4b2699140bd59862c89d0fcd44fb959c84e45cb4bac1248ac642ac509f"
+  },
+  "git": {
+    "commit": "761308709cc65be40954bd7f7d0882877a003a70",
+    "uncommitted_changes": false
+  },
+  "versions": {
+    "python": "3.12.6",
+    "openai": "3.49.0",
+    "pillow": "13.0.0"
+  },
+  "started_utc": "2026-11-20T05:36:13+00:00",
+  "finished_utc": "2026-11-20T06:06:49+00:00",
+  "model": {
+    "provider": "openai_compatible",
+    "model_id": "openai/gpt-4o-2024-08-06",
+    "base_url": "https://openrouter.ai/api/v1/",
+    "sdk": "openai",
+    "sdk_version": "3.49.0",
+    "generation_config": {
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 512,
+      "image_detail": "high",
+      "extra_body": {
+        "provider": {
+          "order": [
+            "openai"
+          ],
+          "allow_fallbacks": false
+        }
+      }
+    }
+  },
+  "model_versions_returned": [
+    "openai/gpt-4o-2024-08-06@OpenAI"
+  ],
+  "sessions": [
+    {
+      "utc": "2026-11-20T05:36:13+00:00",
+      "commit": "761308709cc65be40954bd7f7d0882877a003a70",
+      "uncommitted_changes": false,
+      "model_revision": null
+    },
+    {
+      "utc": "2026-11-20T05:47:47+00:00",
+      "commit": "b7f9e0b988380ab195b00627cf58286ea471e806",
+      "uncommitted_changes": false,
+      "model_revision": null
+    }
+  ],
+  "interruptions": [
+    {
+      "utc": "2026-11-20T05:36:29+00:00",
+      "answered": 3,
+      "kind": "FatalError",
+      "message": "The host refused the request (HTTP 403: Error code: 403 - openai/gpt-4o-2024-08-06 requires moderation on OpenAI. Your input was flagged for \"violence/graphic\". No credits were charged.). The key may lack permission, or the account's country or organisation may not be allowed to use this model."
+    }
+  ]
+}

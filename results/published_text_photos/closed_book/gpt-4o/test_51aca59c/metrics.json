@@ -1,0 +1,519 @@
+{
+  "answer_format": "json-v2",
+  "refused": 4,
+  "main": {
+    "n": 100,
+    "correct": 56,
+    "invalid": 4,
+    "invalid_rate": 0.04,
+    "groups": 100,
+    "group_name": "article",
+    "interval_method": "bootstrap, and Wilson for shares of counts",
+    "balanced_accuracy": 0.48713997560746786,
+    "balanced_accuracy_ci95": [
+      0.41204985223754576,
+      0.5624371716389905
+    ],
+    "macro_f1": 0.4791984754573362,
+    "macro_f1_ci95": [
+      0.3910470249834705,
+      0.5601853729859538
+    ],
+    "macro_precision": 0.535051406926407,
+    "classes_absent": [],
+    "per_class": {
+      "actinic keratosis": {
+        "support": 1,
+        "answered": 0,
+        "tp": 0,
+        "precision": null,
+        "recall": 0.0,
+        "f1": 0.0,
+        "recall_ci95": [
+          0.0,
+          0.7934567085261071
+        ]
+      },
+      "basal cell carcinoma": {
+        "support": 19,
+        "answered": 11,
+        "tp": 7,
+        "precision": 0.6363636363636364,
+        "recall": 0.3684210526315789,
+        "f1": 0.4666666666666667,
+        "recall_ci95": [
+          0.19149272376273843,
+          0.5896084250184328
+        ]
+      },
+      "dermatofibroma": {
+        "support": 10,
+        "answered": 3,
+        "tp": 2,
+        "precision": 0.6666666666666666,
+        "recall": 0.2,
+        "f1": 0.3076923076923077,
+        "recall_ci95": [
+          0.056680947980693314,
+          0.5098431532792765
+        ]
+      },
+      "melanoma": {
+        "support": 17,
+        "answered": 15,
+        "tp": 9,
+        "precision": 0.6,
+        "recall": 0.5294117647058824,
+        "f1": 0.5625,
+        "recall_ci95": [
+          0.30962897311549487,
+          0.738351988039119
+        ]
+      },
+      "nevus": {
+        "support": 15,
+        "answered": 14,
+        "tp": 10,
+        "precision": 0.7142857142857143,
+        "recall": 0.6666666666666666,
+        "f1": 0.6896551724137931,
+        "recall_ci95": [
+          0.41713125151212976,
+          0.8482389930530876
+        ]
+      },
+      "pigmented benign keratosis": {
+        "support": 10,
+        "answered": 7,
+        "tp": 4,
+        "precision": 0.5714285714285714,
+        "recall": 0.4,
+        "f1": 0.47058823529411764,
+        "recall_ci95": [
+          0.16817758120350967,
+          0.6873304525498135
+        ]
+      },
+      "squamous cell carcinoma": {
+        "support": 17,
+        "answered": 30,
+        "tp": 14,
+        "precision": 0.4666666666666667,
+        "recall": 0.8235294117647058,
+        "f1": 0.5957446808510638,
+        "recall_ci95": [
+          0.5897007098262422,
+          0.9380898628745101
+        ]
+      },
+      "vascular lesion": {
+        "support": 11,
+        "answered": 16,
+        "tp": 10,
+        "precision": 0.625,
+        "recall": 0.9090909090909091,
+        "f1": 0.7407407407407407,
+        "recall_ci95": [
+          0.6226353745137962,
+          0.9837682477371741
+        ]
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "dermatofibroma",
+        "melanoma",
+        "nevus",
+        "pigmented benign keratosis",
+        "squamous cell carcinoma",
+        "vascular lesion"
+      ],
+      "columns": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "dermatofibroma",
+        "melanoma",
+        "nevus",
+        "pigmented benign keratosis",
+        "squamous cell carcinoma",
+        "vascular lesion",
+        "(invalid)"
+      ],
+      "counts": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          7,
+          0,
+          2,
+          0,
+          0,
+          7,
+          1,
+          2
+        ],
+        [
+          0,
+          0,
+          2,
+          2,
+          2,
+          0,
+          1,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          0,
+          9,
+          1,
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          10,
+          2,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          1,
+          1,
+          4,
+          3,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          14,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0
+        ]
+      ]
+    },
+    "top3_balanced_accuracy": 0.895704334365325,
+    "top3_balanced_accuracy_ci95": [
+      0.8370327012383901,
+      0.9479102167182663
+    ],
+    "selective": {
+      "valid": 96,
+      "covered": 5,
+      "coverage": 0.05,
+      "covered_wrong": 1,
+      "selective_risk": 0.2,
+      "coverage_ci95": [
+        0.02154336145631356,
+        0.11175196527208817
+      ],
+      "selective_risk_ci95": [
+        0.03622316096978745,
+        0.6244717358814613
+      ]
+    }
+  },
+  "without_small_classes": {
+    "left_out": [
+      "actinic keratosis"
+    ],
+    "metrics": {
+      "n": 99,
+      "correct": 56,
+      "invalid": 4,
+      "invalid_rate": 0.04040404040404041,
+      "groups": 99,
+      "group_name": "article",
+      "interval_method": "bootstrap, and Wilson for shares of counts",
+      "balanced_accuracy": 0.556731400694249,
+      "balanced_accuracy_ci95": [
+        0.466048275769638,
+        0.6415060378218272
+      ],
+      "macro_f1": 0.549505539283077,
+      "macro_f1_ci95": [
+        0.4413914256925341,
+        0.6409911468986421
+      ],
+      "macro_precision": 0.6137861727763205,
+      "classes_absent": [
+        "actinic keratosis"
+      ],
+      "per_class": {
+        "actinic keratosis": {
+          "support": 0,
+          "answered": 0,
+          "tp": 0,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "recall_ci95": null
+        },
+        "basal cell carcinoma": {
+          "support": 19,
+          "answered": 11,
+          "tp": 7,
+          "precision": 0.6363636363636364,
+          "recall": 0.3684210526315789,
+          "f1": 0.4666666666666667,
+          "recall_ci95": [
+            0.19149272376273843,
+            0.5896084250184328
+          ]
+        },
+        "dermatofibroma": {
+          "support": 10,
+          "answered": 3,
+          "tp": 2,
+          "precision": 0.6666666666666666,
+          "recall": 0.2,
+          "f1": 0.3076923076923077,
+          "recall_ci95": [
+            0.056680947980693314,
+            0.5098431532792765
+          ]
+        },
+        "melanoma": {
+          "support": 17,
+          "answered": 15,
+          "tp": 9,
+          "precision": 0.6,
+          "recall": 0.5294117647058824,
+          "f1": 0.5625,
+          "recall_ci95": [
+            0.30962897311549487,
+            0.738351988039119
+          ]
+        },
+        "nevus": {
+          "support": 15,
+          "answered": 14,
+          "tp": 10,
+          "precision": 0.7142857142857143,
+          "recall": 0.6666666666666666,
+          "f1": 0.6896551724137931,
+          "recall_ci95": [
+            0.41713125151212976,
+            0.8482389930530876
+          ]
+        },
+        "pigmented benign keratosis": {
+          "support": 10,
+          "answered": 7,
+          "tp": 4,
+          "precision": 0.5714285714285714,
+          "recall": 0.4,
+          "f1": 0.47058823529411764,
+          "recall_ci95": [
+            0.16817758120350967,
+            0.6873304525498135
+          ]
+        },
+        "squamous cell carcinoma": {
+          "support": 17,
+          "answered": 29,
+          "tp": 14,
+          "precision": 0.4827586206896552,
+          "recall": 0.8235294117647058,
+          "f1": 0.6086956521739131,
+          "recall_ci95": [
+            0.5897007098262422,
+            0.9380898628745101
+          ]
+        },
+        "vascular lesion": {
+          "support": 11,
+          "answered": 16,
+          "tp": 10,
+          "precision": 0.625,
+          "recall": 0.9090909090909091,
+          "f1": 0.7407407407407407,
+          "recall_ci95": [
+            0.6226353745137962,
+            0.9837682477371741
+          ]
+        }
+      },
+      "confusion_matrix": {
+        "rows": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "dermatofibroma",
+          "melanoma",
+          "nevus",
+          "pigmented benign keratosis",
+          "squamous cell carcinoma",
+          "vascular lesion"
+        ],
+        "columns": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "dermatofibroma",
+          "melanoma",
+          "nevus",
+          "pigmented benign keratosis",
+          "squamous cell carcinoma",
+          "vascular lesion",
+          "(invalid)"
+        ],
+        "counts": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            7,
+            0,
+            2,
+            0,
+            0,
+            7,
+            1,
+            2
+          ],
+          [
+            0,
+            0,
+            2,
+            2,
+            2,
+            0,
+            1,
+            2,
+            1
+          ],
+          [
+            0,
+            3,
+            0,
+            9,
+            1,
+            0,
+            4,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            10,
+            2,
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            1,
+            1,
+            4,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            14,
+            1,
+            1
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            10,
+            0
+          ]
+        ]
+      },
+      "top3_balanced_accuracy": 0.8808049535603715,
+      "top3_balanced_accuracy_ci95": [
+        0.809638434321097,
+        0.9454666076957098
+      ],
+      "selective": {
+        "valid": 95,
+        "covered": 5,
+        "coverage": 0.050505050505050504,
+        "covered_wrong": 1,
+        "selective_risk": 0.2,
+        "coverage_ci95": [
+          0.02176291355669111,
+          0.11282853581788105
+        ],
+        "selective_risk_ci95": [
+          0.03622316096978745,
+          0.6244717358814613
+        ]
+      }
+    },
+    "files": [
+      {
+        "path": "test/actinic keratosis/3842183-1.txt",
+        "label": "actinic keratosis",
+        "prediction": "squamous cell carcinoma"
+      }
+    ]
+  }
+}
