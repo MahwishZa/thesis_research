@@ -15,6 +15,16 @@ htmlcov/
 !/data/*/*.md
 !/data/*/build/
 !/data/*/build/*.csv
+!/data/.gitkeep
+
+# The archived Version 2 (archive/v2/) keeps the same rules under its own folder.
+/archive/v2/data/**
+!/archive/v2/data/*/
+!/archive/v2/data/*/*.csv
+!/archive/v2/data/*/*.md
+!/archive/v2/data/*/build/
+!/archive/v2/data/*/build/*.csv
+archive/v2/results/**/val_*/
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes)
 *.partial/
