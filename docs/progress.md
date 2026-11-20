@@ -17,7 +17,7 @@ Done = finished and committed in `results/`; blank = not run yet.
 | `clinic_photo` | done | | | |
 | `clinic_photo_record` | done | | | |
 
-Order of the remaining runs: Gemini on the five datasets (started 2026-11-20), then Llama on `published_text_photos` and `published_photos` only (decided 2026-11-20). GPT-4o waits for funding.
+Order of the remaining runs: Gemini on the five datasets (started 2026-11-20), then Llama on `published_text_photos` and `published_photos` only, then GPT-4o on the same two datasets only (decided 2026-11-20).
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
