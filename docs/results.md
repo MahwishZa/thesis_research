@@ -46,19 +46,16 @@ Compare the three published datasets only on the same 100 cases (section 6).
 | Coverage | The share of answers where the model says its evidence is sufficient ("yes"). |
 | Selective risk | Of those "yes" answers, the share with a wrong diagnosis (a confident misdiagnosis). `n/a` when there are none. |
 
-**Adding a new result.** After a run is committed, copy the numbers from its folder `results/<dataset>/closed_book/<model>/<run>/`:
+**Adding a new result.** After a run is committed:
 
-| Column in this page | Where it is |
-|---|---|
-| Balanced accuracy, 95% interval, Macro-F1, Top-3, Invalid | `report.md`, table "Results" |
-| Coverage, Selective risk | `report.md`, table "Selective prediction" |
-| Run | the folder name, for example `test_3a656648` |
-| Recall of each class | `report.md`, table "Per class" |
-| Section 5 | `report.md`, the last table ("Without actinic keratosis" or "Questions with all facts recorded") |
-| Section 6 | `python -m src.evaluate compare <folder of run A> <folder of run B>`: A is the first folder given, B the second |
+1. Print the tables: `python -m src.evaluate tables --output tables.md` (about a minute; use a file outside the repository, for example
+   `$env:TEMP\tables.md` in PowerShell). Every score is computed from the saved answers.
+2. In this page, replace the tables of sections 2 to 6 by the ones in that file (same headings). A test checks that every table line
+   the command prints is in this page.
+3. Write the run in the status board of `docs/progress.md`.
 
-Then update the overview (section 2) and the run status in `docs/progress.md`. Write percentages with one decimal, intervals as
-"low to high", and differences with a sign (+ or -).
+The numbers of one run are also in its folder `results/<dataset>/closed_book/<model>/<run>/` (`report.md`), and a comparison of any two
+runs is `python -m src.evaluate compare <folder of run A> <folder of run B>`.
 
 ## 2. Overview: balanced accuracy of every model on every dataset
 
@@ -95,9 +92,9 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 53.2% | 46.0 to 60.5 | 51.4% | 85.7% | 1 (1.0%) | 10.0% | 0.0% (0 of 10) | `test_5ef83f27` |
-| GPT-4o | | | | | | | | |
-| Gemini 3.8 Flash | | | | | | | | |
-| Llama 4 Maverick | | | | | | | | |
+| GPT-4o |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |
 
 ### 3.3 `published_photos`: the article's photos only
 
@@ -106,9 +103,9 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 39.8% | 32.7 to 46.6 | 37.6% | 75.2% | 2 (2.0%) | 3.0% | 0.0% (0 of 3) | `test_d56264d6` |
-| GPT-4o | | | | | | | | |
-| Gemini 3.8 Flash | | | | | | | | |
-| Llama 4 Maverick | | | | | | | | |
+| GPT-4o |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |
 
 ### 3.4 `clinic_record`: the clinic record only
 
@@ -117,9 +114,9 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 42.0% | 38.6 to 45.9 | 40.3% | 67.4% | 0 (0.0%) | 0.0% | n/a | `test_7ae640ea` |
-| GPT-4o | | | | | | | | |
-| Gemini 3.8 Flash | | | | | | | | |
-| Llama 4 Maverick | | | | | | | | |
+| GPT-4o |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |
 
 ### 3.5 `clinic_photo`: the phone photo only
 
@@ -128,9 +125,9 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 58.0% | 52.7 to 62.8 | 52.8% | 94.3% | 8 (1.2%) | 0.1% | 0.0% (0 of 1) | `test_06deef76` |
-| GPT-4o | | | | | | | | |
-| Gemini 3.8 Flash | | | | | | | | |
-| Llama 4 Maverick | | | | | | | | |
+| GPT-4o |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |
 
 ### 3.6 `clinic_photo_record`: the phone photo and the record
 
@@ -139,9 +136,9 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 64.5% | 58.6 to 70.0 | 58.8% | 95.6% | 1 (0.1%) | 0.4% | 0.0% (0 of 3) | `test_16d5a224` |
-| GPT-4o | | | | | | | | |
-| Gemini 3.8 Flash | | | | | | | | |
-| Llama 4 Maverick | | | | | | | | |
+| GPT-4o |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |
+| Llama 4 Maverick |  |  |  |  |  |  |  |  |
 
 ## 4. Recall of each class
 
@@ -236,13 +233,13 @@ score is also given without them. The answer options do not change.
 | `published_text` | Gemini 3.8 Flash | 207 | 68.1% | 61.1 to 74.5 | 67.2% |
 | `published_text` | Llama 4 Maverick | 207 | 47.8% | 40.6 to 54.4 | 47.7% |
 | `published_text_photos` | Claude Sonnet 5.5 | 99 | 60.8% | 52.6 to 69.1 | 58.9% |
-| `published_text_photos` | GPT-4o | | | | |
-| `published_text_photos` | Gemini 3.8 Flash | | | | |
-| `published_text_photos` | Llama 4 Maverick | | | | |
+| `published_text_photos` | GPT-4o |  |  |  |  |
+| `published_text_photos` | Gemini 3.8 Flash |  |  |  |  |
+| `published_text_photos` | Llama 4 Maverick |  |  |  |  |
 | `published_photos` | Claude Sonnet 5.5 | 99 | 45.5% | 37.6 to 53.8 | 43.2% |
-| `published_photos` | GPT-4o | | | | |
-| `published_photos` | Gemini 3.8 Flash | | | | |
-| `published_photos` | Llama 4 Maverick | | | | |
+| `published_photos` | GPT-4o |  |  |  |  |
+| `published_photos` | Gemini 3.8 Flash |  |  |  |  |
+| `published_photos` | Llama 4 Maverick |  |  |  |  |
 
 ### 5.2 Questions with a complete record (clinic data)
 
@@ -252,13 +249,13 @@ with no "unknown".
 | Dataset | Model | Questions | Balanced accuracy | 95% interval | Macro-F1 |
 |---|---|---|---|---|---|
 | `clinic_record` | Claude Sonnet 5.5 | 670 | 42.1% | 38.3 to 45.9 | 40.2% |
-| `clinic_record` | GPT-4o | | | | |
-| `clinic_record` | Gemini 3.8 Flash | | | | |
-| `clinic_record` | Llama 4 Maverick | | | | |
+| `clinic_record` | GPT-4o |  |  |  |  |
+| `clinic_record` | Gemini 3.8 Flash |  |  |  |  |
+| `clinic_record` | Llama 4 Maverick |  |  |  |  |
 | `clinic_photo_record` | Claude Sonnet 5.5 | 670 | 64.7% | 58.8 to 69.9 | 59.2% |
-| `clinic_photo_record` | GPT-4o | | | | |
-| `clinic_photo_record` | Gemini 3.8 Flash | | | | |
-| `clinic_photo_record` | Llama 4 Maverick | | | | |
+| `clinic_photo_record` | GPT-4o |  |  |  |  |
+| `clinic_photo_record` | Gemini 3.8 Flash |  |  |  |  |
+| `clinic_photo_record` | Llama 4 Maverick |  |  |  |  |
 
 ## 6. Paired comparisons
 
@@ -278,24 +275,24 @@ classes equally.
 | Claude Sonnet 5.5 | `clinic_record` | `clinic_photo` | 678 | +15.9 | +9.7 to +22.0 | +12.5 | 138 / 164 | 0.1501 |
 | Claude Sonnet 5.5 | `clinic_photo` | `clinic_photo_record` | 678 | +6.6 | +2.0 to +11.0 | +6.0 | 96 / 28 | <0.0001 |
 | Claude Sonnet 5.5 | `clinic_record` | `clinic_photo_record` | 678 | +22.5 | +16.3 to +28.3 | +18.5 | 128 / 86 | 0.0049 |
-| GPT-4o | `published_text` | `published_text_photos` | 100 | | | | | |
-| GPT-4o | `published_text_photos` | `published_photos` | 100 | | | | | |
-| GPT-4o | `published_text` | `published_photos` | 100 | | | | | |
-| GPT-4o | `clinic_record` | `clinic_photo` | 678 | | | | | |
-| GPT-4o | `clinic_photo` | `clinic_photo_record` | 678 | | | | | |
-| GPT-4o | `clinic_record` | `clinic_photo_record` | 678 | | | | | |
-| Gemini 3.8 Flash | `published_text` | `published_text_photos` | 100 | | | | | |
-| Gemini 3.8 Flash | `published_text_photos` | `published_photos` | 100 | | | | | |
-| Gemini 3.8 Flash | `published_text` | `published_photos` | 100 | | | | | |
-| Gemini 3.8 Flash | `clinic_record` | `clinic_photo` | 678 | | | | | |
-| Gemini 3.8 Flash | `clinic_photo` | `clinic_photo_record` | 678 | | | | | |
-| Gemini 3.8 Flash | `clinic_record` | `clinic_photo_record` | 678 | | | | | |
-| Llama 4 Maverick | `published_text` | `published_text_photos` | 100 | | | | | |
-| Llama 4 Maverick | `published_text_photos` | `published_photos` | 100 | | | | | |
-| Llama 4 Maverick | `published_text` | `published_photos` | 100 | | | | | |
-| Llama 4 Maverick | `clinic_record` | `clinic_photo` | 678 | | | | | |
-| Llama 4 Maverick | `clinic_photo` | `clinic_photo_record` | 678 | | | | | |
-| Llama 4 Maverick | `clinic_record` | `clinic_photo_record` | 678 | | | | | |
+| GPT-4o | `published_text` | `published_text_photos` | 100 |  |  |  |  |  |
+| GPT-4o | `published_text_photos` | `published_photos` | 100 |  |  |  |  |  |
+| GPT-4o | `published_text` | `published_photos` | 100 |  |  |  |  |  |
+| GPT-4o | `clinic_record` | `clinic_photo` | 678 |  |  |  |  |  |
+| GPT-4o | `clinic_photo` | `clinic_photo_record` | 678 |  |  |  |  |  |
+| GPT-4o | `clinic_record` | `clinic_photo_record` | 678 |  |  |  |  |  |
+| Gemini 3.8 Flash | `published_text` | `published_text_photos` | 100 |  |  |  |  |  |
+| Gemini 3.8 Flash | `published_text_photos` | `published_photos` | 100 |  |  |  |  |  |
+| Gemini 3.8 Flash | `published_text` | `published_photos` | 100 |  |  |  |  |  |
+| Gemini 3.8 Flash | `clinic_record` | `clinic_photo` | 678 |  |  |  |  |  |
+| Gemini 3.8 Flash | `clinic_photo` | `clinic_photo_record` | 678 |  |  |  |  |  |
+| Gemini 3.8 Flash | `clinic_record` | `clinic_photo_record` | 678 |  |  |  |  |  |
+| Llama 4 Maverick | `published_text` | `published_text_photos` | 100 |  |  |  |  |  |
+| Llama 4 Maverick | `published_text_photos` | `published_photos` | 100 |  |  |  |  |  |
+| Llama 4 Maverick | `published_text` | `published_photos` | 100 |  |  |  |  |  |
+| Llama 4 Maverick | `clinic_record` | `clinic_photo` | 678 |  |  |  |  |  |
+| Llama 4 Maverick | `clinic_photo` | `clinic_photo_record` | 678 |  |  |  |  |  |
+| Llama 4 Maverick | `clinic_record` | `clinic_photo_record` | 678 |  |  |  |  |  |
 
 ### 6.2 Models against each other
 
@@ -306,21 +303,21 @@ A is Claude Sonnet 5.5 (the first model run), B the other model, on the same que
 | `published_text` | GPT-4o | 209 | -4.9 | -14.6 to +5.2 | -8.1 | 11 / 34 | 0.0008 |
 | `published_text` | Gemini 3.8 Flash | 209 | -1.4 | -6.1 to +2.8 | -2.3 | 15 / 17 | 0.8601 |
 | `published_text` | Llama 4 Maverick | 209 | -19.1 | -25.4 to -13.0 | -19.3 | 10 / 48 | <0.0001 |
-| `published_text_photos` | GPT-4o | 100 | | | | | |
-| `published_text_photos` | Gemini 3.8 Flash | 100 | | | | | |
-| `published_text_photos` | Llama 4 Maverick | 100 | | | | | |
-| `published_photos` | GPT-4o | 100 | | | | | |
-| `published_photos` | Gemini 3.8 Flash | 100 | | | | | |
-| `published_photos` | Llama 4 Maverick | 100 | | | | | |
-| `clinic_record` | GPT-4o | 678 | | | | | |
-| `clinic_record` | Gemini 3.8 Flash | 678 | | | | | |
-| `clinic_record` | Llama 4 Maverick | 678 | | | | | |
-| `clinic_photo` | GPT-4o | 678 | | | | | |
-| `clinic_photo` | Gemini 3.8 Flash | 678 | | | | | |
-| `clinic_photo` | Llama 4 Maverick | 678 | | | | | |
-| `clinic_photo_record` | GPT-4o | 678 | | | | | |
-| `clinic_photo_record` | Gemini 3.8 Flash | 678 | | | | | |
-| `clinic_photo_record` | Llama 4 Maverick | 678 | | | | | |
+| `published_text_photos` | GPT-4o | 100 |  |  |  |  |  |
+| `published_text_photos` | Gemini 3.8 Flash | 100 |  |  |  |  |  |
+| `published_text_photos` | Llama 4 Maverick | 100 |  |  |  |  |  |
+| `published_photos` | GPT-4o | 100 |  |  |  |  |  |
+| `published_photos` | Gemini 3.8 Flash | 100 |  |  |  |  |  |
+| `published_photos` | Llama 4 Maverick | 100 |  |  |  |  |  |
+| `clinic_record` | GPT-4o | 678 |  |  |  |  |  |
+| `clinic_record` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
+| `clinic_record` | Llama 4 Maverick | 678 |  |  |  |  |  |
+| `clinic_photo` | GPT-4o | 678 |  |  |  |  |  |
+| `clinic_photo` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
+| `clinic_photo` | Llama 4 Maverick | 678 |  |  |  |  |  |
+| `clinic_photo_record` | GPT-4o | 678 |  |  |  |  |  |
+| `clinic_photo_record` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
+| `clinic_photo_record` | Llama 4 Maverick | 678 |  |  |  |  |  |
 
 ## 7. Open-book results (not started)
 

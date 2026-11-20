@@ -15,6 +15,7 @@ thesis_research/
 │   ├── run.py           runs a model on a dataset (python -m src.run)
 │   ├── metrics.py       the scores
 │   ├── evaluate.py      reports and comparisons from saved answers (python -m src.evaluate)
+│   ├── tables.py        the result tables of docs/results.md, filled from the finished runs (python -m src.evaluate tables)
 │   ├── validate.py      checks of the whole pipeline that cost nothing (python -m src.validate)
 │   └── common.py        helpers they share
 ├── configs/             the models and their settings (models.toml)
@@ -47,6 +48,7 @@ Before any experiment, in this order (the first costs nothing, the second a frac
 
 Then:
 - Run the test split: `python -m src.run run --model claude-sonnet-5-5 --dataset published_text --split test`
+- Print the result tables of `docs/results.md` from every finished test run (nothing is sent or changed; about a minute): `python -m src.evaluate tables --output tables.md`
 - Compare two finished runs on the same questions (nothing is sent or changed): python -m src.evaluate compare, then run A's folder and run B's folder; the report shows B minus A
 - Prepare the clinic patients dataset (needs the PAD-UFES-20 download in `data/clinic_patients/raw/`; the photos stay on this computer): `python -m src.build.clinic_patients.prepare all`
 
@@ -95,6 +97,7 @@ cases** = the photo views `published_text_photos` and `published_photos` (`data/
 | `run.py` | `check` (everything a run needs, one tiny request) and `run` (one model, one dataset, one approach, the validation or test split): seeded order, saved as it arrives, resumable, run card with the Git commit and package versions, one test run per model, dataset and approach. |
 | `metrics.py` | Pure functions: balanced accuracy, macro-F1, macro-averaged top-3 accuracy, coverage, selective risk, precision@k and nDCG@k (for the open-book runs), bootstrap and Wilson intervals, McNemar, Holm. |
 | `evaluate.py` | `verify_answers` (is a saved answer file consistent), `report` (a run's scores and report) and `compare` (two runs, paired). |
+| `tables.py` | The result tables of `docs/results.md` (overview, scores per dataset, recall per class, the two checks beside the main score, paired comparisons), computed from the saved answers of every finished test run; an empty cell is a run not done yet. |
 | `validate.py` | The no-cost checks (`python -m src.validate`): tables, leaks, alignment of the views, prompts, model list, knowledge index. |
 | `common.py` | Helpers shared by the builders and the runs: polite download, report sections, tables, crash-safe JSON-lines. |
 

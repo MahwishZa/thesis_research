@@ -2,6 +2,7 @@
 
     python -m src.evaluate report results/<dataset>/<approach>/<model>/<run-folder>
     python -m src.evaluate compare results/<dataset>/<approach>/<model>/<run-folder> results/<dataset>/<approach>/<model>/<run-folder>
+    python -m src.evaluate tables [--output FILE]
 
 ``report`` writes a run's scores from its saved answers: metrics.json and report.md. It reads the answer format of the code
 (``json-v2``); a run of the first phase of Version 1, whose answers are single class names, is in archive/v1/ with its own scores and
@@ -10,6 +11,7 @@ is not read here. The metrics and their sources are in docs/method.md.
 the difference in balanced accuracy and in macro-F1 with paired 95% intervals (both runs resampled together, by the same groups
 as the reports; the main comparison), and McNemar's exact test on the questions one run gets right and the other wrong (a
 supporting test).
+``tables`` prints the result tables of docs/results.md, filled from every finished test run in results/ (src/tables.py).
 """
 
 from __future__ import annotations
@@ -390,6 +392,8 @@ def build_parser() -> argparse.ArgumentParser:
     cmp = sub.add_parser("compare", help="compare two finished runs on the same questions (paired intervals, McNemar's test)")
     cmp.add_argument("run_a")
     cmp.add_argument("run_b")
+    tab = sub.add_parser("tables", help="print the result tables of docs/results.md from the finished test runs in results/")
+    tab.add_argument("--output", help="write the tables to this file (UTF-8) instead of printing them")
     return parser
 
 
@@ -398,6 +402,16 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "report":
             print(write_report(args.run_dir))
+        elif args.command == "tables":
+            from .tables import render  # imported here: tables.py uses this module
+
+            text = render()
+            if args.output:
+                Path(args.output).write_text(text, encoding="utf-8", newline="\n")
+                print(f"The tables are written to {args.output}")
+            else:
+                sys.stdout.reconfigure(encoding="utf-8")
+                print(text, end="")
         else:
             print(comparison_text(compare(args.run_a, args.run_b)))
     except (ValueError, FileNotFoundError) as exc:  # expected, explainable problems: a message, not a traceback
