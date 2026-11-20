@@ -10,7 +10,7 @@ so nothing here is final.
 | [2. Overview](#2-overview-balanced-accuracy-of-every-model-on-every-dataset) | one number per model and dataset |
 | [3. Results by dataset](#3-results-by-dataset) | all scores of every model, one table per dataset |
 | [4. Recall of each class](#4-recall-of-each-class) | which diagnoses each model finds |
-| [5. Beside the main score](#5-beside-the-main-score) | two checks that are always reported with it |
+| [5. Beside the main score](#5-beside-the-main-score) | three checks that are always reported with it |
 | [6. Paired comparisons](#6-paired-comparisons) | is a difference more than chance? |
 | [7. Open-book results](#7-open-book-results-not-started) | empty tables for the later approaches |
 | [8. What the results show](#8-what-the-results-show-so-far) and [9. Limits](#9-limits) | short summary |
@@ -65,10 +65,10 @@ Balanced accuracy in % (95% interval), test split.
 | Dataset | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|
 | `published_text` | 61.0% (55.1 to 66.3) | 56.1% (45.5 to 66.3) | 59.6% (53.5 to 65.1) | 41.9% (35.9 to 47.9) |
-| `published_text_photos` | 53.2% (46.0 to 60.5) |  |  | 46.1% (39.3 to 53.4) |
-| `published_photos` | 39.8% (32.7 to 46.6) |  |  | 30.0% (23.7 to 36.2) |
-| `clinic_record` | 42.0% (38.6 to 45.9) |  |  |  |
-| `clinic_photo` | 58.0% (52.7 to 62.8) |  |  |  |
+| `published_text_photos` | 53.2% (46.0 to 60.5) | 48.7% (41.2 to 56.2) | 66.3% (59.0 to 73.3) | 46.1% (39.3 to 53.4) |
+| `published_photos` | 39.8% (32.7 to 46.6) | 30.3% (23.0 to 37.2) | 45.1% (37.3 to 52.8) | 30.0% (23.7 to 36.2) |
+| `clinic_record` | 42.0% (38.6 to 45.9) |  | 45.0% (39.3 to 51.4) |  |
+| `clinic_photo` | 58.0% (52.7 to 62.8) |  | 53.7% (48.3 to 59.1) |  |
 | `clinic_photo_record` | 64.5% (58.6 to 70.0) |  |  |  |
 
 ## 3. Results by dataset
@@ -93,8 +93,8 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 53.2% | 46.0 to 60.5 | 51.4% | 85.7% | 1 (1.0%) | 0 | 10.0% | 0.0% (0 of 10) | `test_5ef83f27` |
-| GPT-4o |  |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| GPT-4o | 48.7% | 41.2 to 56.2 | 47.9% | 89.6% | 4 (4.0%) | 4 | 5.0% | 20.0% (1 of 5) | `test_51aca59c` |
+| Gemini 3.8 Flash | 66.3% | 59.0 to 73.3 | 67.1% | 91.2% | 2 (2.0%) | 0 | 66.0% | 16.7% (11 of 66) | `test_17449ed7` |
 | Llama 4 Maverick | 46.1% | 39.3 to 53.4 | 44.9% | 85.1% | 2 (2.0%) | 0 | 10.0% | 30.0% (3 of 10) | `test_53efcf3d` |
 
 ### 3.3 `published_photos`: the article's photos only
@@ -104,8 +104,8 @@ Every table has the same columns. Run = the results folder of that run.
 | Model | Balanced accuracy | 95% interval | Macro-F1 | Top-3 | Invalid answers | Refused by the host | Coverage | Selective risk | Run |
 |---|---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 39.8% | 32.7 to 46.6 | 37.6% | 75.2% | 2 (2.0%) | 0 | 3.0% | 0.0% (0 of 3) | `test_d56264d6` |
-| GPT-4o |  |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| GPT-4o | 30.3% | 23.0 to 37.2 | 30.0% | 68.9% | 8 (8.0%) | 7 | 0.0% | n/a | `test_366e2923` |
+| Gemini 3.8 Flash | 45.1% | 37.3 to 52.8 | 43.5% | 79.1% | 0 (0.0%) | 0 | 57.0% | 40.4% (23 of 57) | `test_c1de9829` |
 | Llama 4 Maverick | 30.0% | 23.7 to 36.2 | 24.8% | 72.5% | 0 (0.0%) | 0 | 3.0% | 100.0% (3 of 3) | `test_69dbecaf` |
 
 ### 3.4 `clinic_record`: the clinic record only
@@ -116,7 +116,7 @@ Every table has the same columns. Run = the results folder of that run.
 |---|---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 42.0% | 38.6 to 45.9 | 40.3% | 67.4% | 0 (0.0%) | 0 | 0.0% | n/a | `test_7ae640ea` |
 | GPT-4o |  |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash | 45.0% | 39.3 to 51.4 | 41.2% | 81.3% | 0 (0.0%) | 0 | 0.0% | n/a | `test_702914d8` |
 | Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.5 `clinic_photo`: the phone photo only
@@ -127,7 +127,7 @@ Every table has the same columns. Run = the results folder of that run.
 |---|---|---|---|---|---|---|---|---|---|
 | Claude Sonnet 5.5 | 58.0% | 52.7 to 62.8 | 52.8% | 94.3% | 8 (1.2%) | 0 | 0.1% | 0.0% (0 of 1) | `test_06deef76` |
 | GPT-4o |  |  |  |  |  |  |  |  |  |
-| Gemini 3.8 Flash |  |  |  |  |  |  |  |  |  |
+| Gemini 3.8 Flash | 53.7% | 48.3 to 59.1 | 53.2% | 96.0% | 3 (0.4%) | 0 | 22.7% | 17.5% (27 of 154) | `test_d9a96c51` |
 | Llama 4 Maverick |  |  |  |  |  |  |  |  |  |
 
 ### 3.6 `clinic_photo_record`: the phone photo and the record
@@ -163,49 +163,49 @@ numbers. Intervals are in each run's `report.md`. Cases = test questions of the 
 
 | Class | Cases | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|---|
-| actinic keratosis | 1 | 0.0 |  |  | 0.0 |
-| basal cell carcinoma | 19 | 78.9 |  |  | 42.1 |
-| dermatofibroma | 10 | 10.0 |  |  | 20.0 |
-| melanoma | 17 | 47.1 |  |  | 58.8 |
-| nevus | 15 | 46.7 |  |  | 40.0 |
-| pigmented benign keratosis | 10 | 70.0 |  |  | 20.0 |
-| squamous cell carcinoma | 17 | 82.4 |  |  | 88.2 |
-| vascular lesion | 11 | 90.9 |  |  | 100.0 |
+| actinic keratosis | 1 | 0.0 | 0.0 | 0.0 | 0.0 |
+| basal cell carcinoma | 19 | 78.9 | 36.8 | 84.2 | 42.1 |
+| dermatofibroma | 10 | 10.0 | 20.0 | 50.0 | 20.0 |
+| melanoma | 17 | 47.1 | 52.9 | 70.6 | 58.8 |
+| nevus | 15 | 46.7 | 66.7 | 66.7 | 40.0 |
+| pigmented benign keratosis | 10 | 70.0 | 40.0 | 80.0 | 20.0 |
+| squamous cell carcinoma | 17 | 82.4 | 82.4 | 88.2 | 88.2 |
+| vascular lesion | 11 | 90.9 | 90.9 | 90.9 | 100.0 |
 
 ### 4.3 `published_photos`
 
 | Class | Cases | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|---|
-| actinic keratosis | 1 | 0.0 |  |  | 0.0 |
-| basal cell carcinoma | 19 | 63.2 |  |  | 0.0 |
-| dermatofibroma | 10 | 0.0 |  |  | 10.0 |
-| melanoma | 17 | 52.9 |  |  | 52.9 |
-| nevus | 15 | 46.7 |  |  | 40.0 |
-| pigmented benign keratosis | 10 | 10.0 |  |  | 0.0 |
-| squamous cell carcinoma | 17 | 82.4 |  |  | 82.4 |
-| vascular lesion | 11 | 63.6 |  |  | 54.5 |
+| actinic keratosis | 1 | 0.0 | 0.0 | 0.0 | 0.0 |
+| basal cell carcinoma | 19 | 63.2 | 36.8 | 84.2 | 0.0 |
+| dermatofibroma | 10 | 0.0 | 0.0 | 10.0 | 10.0 |
+| melanoma | 17 | 52.9 | 41.2 | 29.4 | 52.9 |
+| nevus | 15 | 46.7 | 46.7 | 40.0 | 40.0 |
+| pigmented benign keratosis | 10 | 10.0 | 20.0 | 60.0 | 0.0 |
+| squamous cell carcinoma | 17 | 82.4 | 70.6 | 82.4 | 82.4 |
+| vascular lesion | 11 | 63.6 | 27.3 | 54.5 | 54.5 |
 
 ### 4.4 `clinic_record`
 
 | Class | Cases | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|---|
-| actinic keratosis | 217 | 58.5 |  |  |  |
-| basal cell carcinoma | 250 | 70.8 |  |  |  |
-| melanoma | 15 | 0.0 |  |  |  |
-| nevus | 73 | 74.0 |  |  |  |
-| seborrheic keratosis | 70 | 30.0 |  |  |  |
-| squamous cell carcinoma | 53 | 18.9 |  |  |  |
+| actinic keratosis | 217 | 58.5 |  | 47.5 |  |
+| basal cell carcinoma | 250 | 70.8 |  | 49.6 |  |
+| melanoma | 15 | 0.0 |  | 26.7 |  |
+| nevus | 73 | 74.0 |  | 74.0 |  |
+| seborrheic keratosis | 70 | 30.0 |  | 38.6 |  |
+| squamous cell carcinoma | 53 | 18.9 |  | 34.0 |  |
 
 ### 4.5 `clinic_photo`
 
 | Class | Cases | Claude Sonnet 5.5 | GPT-4o | Gemini 3.8 Flash | Llama 4 Maverick |
 |---|---|---|---|---|---|
-| actinic keratosis | 217 | 37.8 |  |  |  |
-| basal cell carcinoma | 250 | 65.2 |  |  |  |
-| melanoma | 15 | 80.0 |  |  |  |
-| nevus | 73 | 63.0 |  |  |  |
-| seborrheic keratosis | 70 | 35.7 |  |  |  |
-| squamous cell carcinoma | 53 | 66.0 |  |  |  |
+| actinic keratosis | 217 | 37.8 |  | 41.5 |  |
+| basal cell carcinoma | 250 | 65.2 |  | 86.4 |  |
+| melanoma | 15 | 80.0 |  | 46.7 |  |
+| nevus | 73 | 63.0 |  | 43.8 |  |
+| seborrheic keratosis | 70 | 35.7 |  | 70.0 |  |
+| squamous cell carcinoma | 53 | 66.0 |  | 34.0 |  |
 
 ### 4.6 `clinic_photo_record`
 
@@ -234,12 +234,12 @@ score is also given without them. The answer options do not change.
 | `published_text` | Gemini 3.8 Flash | 207 | 68.1% | 61.1 to 74.5 | 67.2% |
 | `published_text` | Llama 4 Maverick | 207 | 47.8% | 40.6 to 54.4 | 47.7% |
 | `published_text_photos` | Claude Sonnet 5.5 | 99 | 60.8% | 52.6 to 69.1 | 58.9% |
-| `published_text_photos` | GPT-4o |  |  |  |  |
-| `published_text_photos` | Gemini 3.8 Flash |  |  |  |  |
+| `published_text_photos` | GPT-4o | 99 | 55.7% | 46.6 to 64.2 | 55.0% |
+| `published_text_photos` | Gemini 3.8 Flash | 99 | 75.8% | 67.2 to 83.9 | 77.0% |
 | `published_text_photos` | Llama 4 Maverick | 99 | 52.7% | 44.7 to 60.7 | 51.5% |
 | `published_photos` | Claude Sonnet 5.5 | 99 | 45.5% | 37.6 to 53.8 | 43.2% |
-| `published_photos` | GPT-4o |  |  |  |  |
-| `published_photos` | Gemini 3.8 Flash |  |  |  |  |
+| `published_photos` | GPT-4o | 99 | 34.6% | 26.4 to 43.0 | 34.4% |
+| `published_photos` | Gemini 3.8 Flash | 99 | 51.5% | 42.5 to 60.5 | 50.1% |
 | `published_photos` | Llama 4 Maverick | 99 | 34.3% | 26.9 to 41.9 | 28.6% |
 
 ### 5.2 Questions with a complete record (clinic data)
@@ -251,12 +251,30 @@ with no "unknown".
 |---|---|---|---|---|---|
 | `clinic_record` | Claude Sonnet 5.5 | 670 | 42.1% | 38.3 to 45.9 | 40.2% |
 | `clinic_record` | GPT-4o |  |  |  |  |
-| `clinic_record` | Gemini 3.8 Flash |  |  |  |  |
+| `clinic_record` | Gemini 3.8 Flash | 670 | 45.3% | 39.4 to 51.8 | 41.4% |
 | `clinic_record` | Llama 4 Maverick |  |  |  |  |
 | `clinic_photo_record` | Claude Sonnet 5.5 | 670 | 64.7% | 58.8 to 69.9 | 59.2% |
 | `clinic_photo_record` | GPT-4o |  |  |  |  |
 | `clinic_photo_record` | Gemini 3.8 Flash |  |  |  |  |
 | `clinic_photo_record` | Llama 4 Maverick |  |  |  |  |
+
+### 5.3 Without the questions the host refused
+
+A host's content moderation can refuse a photo, so that the model never sees it (section 9). The refused questions count as wrong in
+the main score. Here the score is given again on the questions the model did see. Only datasets where some host refused questions are
+listed; a model with no refusal is shown with its main score. The models are not scored on the same questions, so compare them with the
+main score, and use this table to see what the refusals cost.
+
+| Dataset | Model | Questions | Balanced accuracy | 95% interval | Macro-F1 |
+|---|---|---|---|---|---|
+| `published_text_photos` | Claude Sonnet 5.5 | 100 | 53.2% | 46.0 to 60.5 | 51.4% |
+| `published_text_photos` | GPT-4o | 96 | 50.2% | 42.8 to 57.9 | 48.8% |
+| `published_text_photos` | Gemini 3.8 Flash | 100 | 66.3% | 59.0 to 73.3 | 67.1% |
+| `published_text_photos` | Llama 4 Maverick | 100 | 46.1% | 39.3 to 53.4 | 44.9% |
+| `published_photos` | Claude Sonnet 5.5 | 100 | 39.8% | 32.7 to 46.6 | 37.6% |
+| `published_photos` | GPT-4o | 93 | 33.6% | 26.5 to 41.4 | 31.0% |
+| `published_photos` | Gemini 3.8 Flash | 100 | 45.1% | 37.3 to 52.8 | 43.5% |
+| `published_photos` | Llama 4 Maverick | 100 | 30.0% | 23.7 to 36.2 | 24.8% |
 
 ## 6. Paired comparisons
 
@@ -276,16 +294,16 @@ classes equally.
 | Claude Sonnet 5.5 | `clinic_record` | `clinic_photo` | 678 | +15.9 | +9.7 to +22.0 | +12.5 | 138 / 164 | 0.1501 |
 | Claude Sonnet 5.5 | `clinic_photo` | `clinic_photo_record` | 678 | +6.6 | +2.0 to +11.0 | +6.0 | 96 / 28 | <0.0001 |
 | Claude Sonnet 5.5 | `clinic_record` | `clinic_photo_record` | 678 | +22.5 | +16.3 to +28.3 | +18.5 | 128 / 86 | 0.0049 |
-| GPT-4o | `published_text` | `published_text_photos` | 100 |  |  |  |  |  |
-| GPT-4o | `published_text_photos` | `published_photos` | 100 |  |  |  |  |  |
-| GPT-4o | `published_text` | `published_photos` | 100 |  |  |  |  |  |
+| GPT-4o | `published_text` | `published_text_photos` | 100 | -1.5 | -8.5 to +5.5 | -2.9 | 8 / 9 | 1.0000 |
+| GPT-4o | `published_text_photos` | `published_photos` | 100 | -18.4 | -27.0 to -10.3 | -18.0 | 6 / 24 | 0.0014 |
+| GPT-4o | `published_text` | `published_photos` | 100 | -19.9 | -29.7 to -10.1 | -20.9 | 9 / 28 | 0.0026 |
 | GPT-4o | `clinic_record` | `clinic_photo` | 678 |  |  |  |  |  |
 | GPT-4o | `clinic_photo` | `clinic_photo_record` | 678 |  |  |  |  |  |
 | GPT-4o | `clinic_record` | `clinic_photo_record` | 678 |  |  |  |  |  |
-| Gemini 3.8 Flash | `published_text` | `published_text_photos` | 100 |  |  |  |  |  |
-| Gemini 3.8 Flash | `published_text_photos` | `published_photos` | 100 |  |  |  |  |  |
-| Gemini 3.8 Flash | `published_text` | `published_photos` | 100 |  |  |  |  |  |
-| Gemini 3.8 Flash | `clinic_record` | `clinic_photo` | 678 |  |  |  |  |  |
+| Gemini 3.8 Flash | `published_text` | `published_text_photos` | 100 | +6.5 | +0.9 to +12.4 | +8.2 | 10 / 2 | 0.0386 |
+| Gemini 3.8 Flash | `published_text_photos` | `published_photos` | 100 | -21.3 | -29.3 to -13.6 | -23.6 | 1 / 23 | <0.0001 |
+| Gemini 3.8 Flash | `published_text` | `published_photos` | 100 | -14.8 | -22.6 to -7.0 | -15.4 | 5 / 19 | 0.0066 |
+| Gemini 3.8 Flash | `clinic_record` | `clinic_photo` | 678 | +8.7 | -0.2 to +17.2 | +12.0 | 182 / 100 | <0.0001 |
 | Gemini 3.8 Flash | `clinic_photo` | `clinic_photo_record` | 678 |  |  |  |  |  |
 | Gemini 3.8 Flash | `clinic_record` | `clinic_photo_record` | 678 |  |  |  |  |  |
 | Llama 4 Maverick | `published_text` | `published_text_photos` | 100 | +8.4 | +1.3 to +15.8 | +9.2 | 13 / 3 | 0.0213 |
@@ -304,17 +322,17 @@ A is Claude Sonnet 5.5 (the first model run), B the other model, on the same que
 | `published_text` | GPT-4o | 209 | -4.9 | -14.6 to +5.2 | -8.1 | 11 / 34 | 0.0008 |
 | `published_text` | Gemini 3.8 Flash | 209 | -1.4 | -6.1 to +2.8 | -2.3 | 15 / 17 | 0.8601 |
 | `published_text` | Llama 4 Maverick | 209 | -19.1 | -25.4 to -13.0 | -19.3 | 10 / 48 | <0.0001 |
-| `published_text_photos` | GPT-4o | 100 |  |  |  |  |  |
-| `published_text_photos` | Gemini 3.8 Flash | 100 |  |  |  |  |  |
+| `published_text_photos` | GPT-4o | 100 | -4.5 | -12.6 to +3.6 | -3.4 | 11 / 17 | 0.3449 |
+| `published_text_photos` | Gemini 3.8 Flash | 100 | +13.1 | +5.8 to +20.9 | +15.8 | 19 / 5 | 0.0066 |
 | `published_text_photos` | Llama 4 Maverick | 100 | -7.1 | -14.5 to +0.9 | -6.5 | 9 / 17 | 0.1686 |
-| `published_photos` | GPT-4o | 100 |  |  |  |  |  |
-| `published_photos` | Gemini 3.8 Flash | 100 |  |  |  |  |  |
+| `published_photos` | GPT-4o | 100 | -9.5 | -16.9 to -2.4 | -7.7 | 5 / 17 | 0.0169 |
+| `published_photos` | Gemini 3.8 Flash | 100 | +5.2 | -2.1 to +12.2 | +5.9 | 12 / 8 | 0.5034 |
 | `published_photos` | Llama 4 Maverick | 100 | -9.9 | -16.2 to -3.6 | -12.8 | 4 / 18 | 0.0043 |
 | `clinic_record` | GPT-4o | 678 |  |  |  |  |  |
-| `clinic_record` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
+| `clinic_record` | Gemini 3.8 Flash | 678 | +3.0 | -2.4 to +8.6 | +0.9 | 32 / 91 | <0.0001 |
 | `clinic_record` | Llama 4 Maverick | 678 |  |  |  |  |  |
 | `clinic_photo` | GPT-4o | 678 |  |  |  |  |  |
-| `clinic_photo` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
+| `clinic_photo` | Gemini 3.8 Flash | 678 | -4.2 | -10.4 to +2.1 | +0.4 | 124 / 75 | 0.0006 |
 | `clinic_photo` | Llama 4 Maverick | 678 |  |  |  |  |  |
 | `clinic_photo_record` | GPT-4o | 678 |  |  |  |  |  |
 | `clinic_photo_record` | Gemini 3.8 Flash | 678 |  |  |  |  |  |
@@ -350,43 +368,60 @@ random retrieval.
 
 ## 8. What the results show so far
 
-Claude has been run on all six datasets and Llama on the two published photo datasets (by decision). Gemini and GPT-4o results are not in
-the repository yet. Every statement below is about one run per model.
+Claude has been run on all six datasets, Gemini on five (`clinic_photo_record` is still running), GPT-4o on the three published datasets and
+Llama on the same three, by decision. Every statement below is about one run per model, and an interval that holds 0 means the difference
+may be chance.
 
-1. **Clinic data: photo and record together are best.** Claude scores 64.5% with both, 58.0% with the photo alone and 42.0% with the
-   record alone. All three paired intervals stay above 0. The record alone finds none of the 15 melanomas and 19% of the squamous cell
-   carcinomas; the photo finds most of them.
-2. **Record against photo:** the balanced-accuracy gap (+15.9) is clear, but McNemar's test is not (p = 0.15): the two runs are right about
-   equally often overall (164 questions only the record got right, 138 only the photo). The gap probably comes from the rare classes,
-   which balanced accuracy weighs fully; this was not tested.
-3. **Published cases: the text alone is best.** On the same 100 cases the text alone scores 63.9% (53.2 + 10.7), the text with photos
-   53.2% and the photos alone 39.8%. A published photo is chosen to illustrate a diagnosis the authors already know, which may explain it;
-   this was not tested.
-4. **Actinic keratosis (published cases):** there are only 2 test cases (1 in the photo datasets), and Claude, Gemini and Llama got none right (GPT-4o got one of the 2 on `published_text`).
-   Without them the scores rise (section 5.1; for example Claude on `published_text`, 61.0% to 69.7%).
-5. **Models on `published_text`:** Gemini (-1.4 points, interval -6.1 to +2.8) is not clearly different from Claude. GPT-4o is 4.9 points
-   lower, but its interval holds 0 (-14.6 to +5.2) while McNemar's test is clear (p = 0.0008). Its interval is wide probably because it is
-   the only model that got one of the 2 actinic keratosis cases right: a resample that drops or doubles them moves its score by up to
-   6.25 points (a class is 1/8 of the score). Llama is clearly lower (-19.1 points).
-6. **The article's photos help Llama but hurt Claude.** On the same 100 cases, Llama scores 37.7% on the text alone (46.1 - 8.4), 46.1% with the
-   photos added (+8.4 points, interval +1.3 to +15.8, p = 0.021) and 30.0% on the photos alone (-16.2 points against text with photos,
-   interval -23.4 to -9.3). For Claude the first change had the opposite sign (-10.7). The effect of the photos therefore depends on the
-   model; why was not tested.
-7. **Llama against Claude on the photo datasets:** with text and photos Llama is 7.1 points lower, and the interval holds 0 (-14.5 to +0.9);
-   on the photos alone it is 9.9 points lower, and the interval does not hold 0 (-16.2 to -3.6).
-8. **The "evidence sufficient" flag:** Claude almost never uses it (coverage 0% to 10%), so its selective risk says little. Gemini uses it
-   in 33% of its `published_text` answers and 10.1% of those are wrong (7 of 69). GPT-4o and Llama use it in 1.9% and 6.7% there; Llama on
-   the two photo datasets uses it in 10.0% and 3.0%, too few answers (10 and 3) to say anything.
+**Clinic data**
+1. **Photo and record together are best for Claude:** 64.5%, against 58.0% with the photo alone and 42.0% with the record alone. The paired
+   intervals of all three comparisons stay above 0. The record alone finds none of the 15 melanomas and 19% of the squamous cell carcinomas.
+2. **Record against photo:** for Claude the gap (+15.9) is clear, but McNemar's test is not (p = 0.15). For Gemini the gap is +8.7 points with an
+   interval that holds 0 (-0.2 to +17.2), while McNemar's test is clear (p < 0.0001, 182 questions only the photo got right against 100
+   only the record). The balanced accuracy counts every class equally and McNemar's test counts every question equally, so they can
+   disagree; the rare classes (melanoma, 15 cases) probably decide it. This was not tested.
+3. **Gemini against Claude:** on `clinic_record` +3.0 (-2.4 to +8.6) and on `clinic_photo` -4.2 (-10.4 to +2.1): both intervals hold 0, and in both
+   McNemar's test points the other way (p = 0.0006 for the photo, where Gemini is right more often). Gemini finds more basal cell
+   carcinomas (86.4% against 65.2% on `clinic_photo`) but fewer melanomas (46.7% against 80.0%) and squamous cell carcinomas (34.0% against 66.0%).
+
+**Published cases: what the article's photos do**
+4. **The text alone is best for Claude, and the photos alone are worst for every model.** On the same 100 cases, adding the photos to the text changes
+   the balanced accuracy by -10.7 points for Claude (interval -18.1 to -3.4), by -1.5 for GPT-4o (-8.5 to +5.5), by +6.5 for Gemini (+0.9 to
+   +12.4) and by +8.4 for Llama (+1.3 to +15.8). Photos alone against the text alone: Claude -24.1, GPT-4o -19.9, Gemini -14.8 (all clearly
+   below 0) and Llama -7.7 (interval -16.5 to +0.9, which holds 0). So the effect of the photos depends on the model; why was not tested.
+   A published photo is chosen to illustrate a diagnosis the authors already know, which may play a part.
+5. **Actinic keratosis** has only 2 test cases (1 in the photo datasets), and every model but GPT-4o got none right (GPT-4o got one of the 2 on
+   `published_text`). Without them the scores rise (section 5.1; Claude on `published_text`: 61.0% to 69.7%).
+
+**Models against each other**
+6. **On `published_text`** Gemini (-1.4 points, interval -6.1 to +2.8) is not clearly different from Claude. GPT-4o is 4.9 points lower, but its
+   interval holds 0 (-14.6 to +5.2) while McNemar's test is clear (p = 0.0008). The interval is wide probably because GPT-4o is the only model
+   that got one of the 2 actinic keratosis cases right: a resample that drops or doubles them moves its score by up to 6.25 points. Llama
+   is clearly lower (-19.1).
+7. **On `published_text_photos` Gemini is best:** 66.3%, which is +13.1 points above Claude (interval +5.8 to +20.9). GPT-4o (-4.5) and Llama
+   (-7.1) are not clearly different from Claude.
+8. **On `published_photos`** Gemini (+5.2, interval -2.1 to +12.2) is not clearly different from Claude; GPT-4o (-9.5) and Llama (-9.9) are
+   lower, and both intervals stay below 0.
+
+**The "evidence sufficient" flag**
+9. **Claude hardly uses it** (coverage 0% to 10%), so its selective risk says little. Gemini uses it much more: in 33.0% of its `published_text`
+   answers, 66.0% on `published_text_photos`, 57.0% on `published_photos` and 22.7% on `clinic_photo`, and 0% on `clinic_record`. The answers
+   marked sufficient were wrong in 10.1%, 16.7%, 40.4% and 17.5% of the cases. GPT-4o and Llama use the flag in 0% to 10% of their answers, too few for the selective risk to
+   say anything. Plain accuracy is not reported (`docs/method.md` section 3), so these rates are not set against the overall error here.
+
+**Refusals by the host**
+10. **GPT-4o's host refused 4 of 100 questions on `published_text_photos` and 7 of 100 on `published_photos`** (section 5.3). On the questions it did see,
+   GPT-4o scores 50.2% (main score 48.7%) and 33.6% (main score 30.3%): the refusals cost about 1.5 and 3.3 points. This does not change
+   the order of the models in section 2 on either dataset. In `published_photos` GPT-4o also answered one question with its own refusal ("I'm sorry, I can't
+   assist with that."); that answer is an ordinary invalid one.
 
 ## 9. Limits
 
-- One run per model and dataset, one prompt, the test split only. Llama is run on `published_text` and the two published photo datasets only,
-  and GPT-4o will be run on the two published photo datasets only (decided 2026-11-20); the clinic datasets stay empty for both. Gemini
-  and GPT-4o results are not in the repository yet.
+- One run per model and dataset, one prompt, the test split only. Llama and GPT-4o are run on the three published datasets only (decided
+  2026-11-20), so their clinic cells stay empty. Gemini on `clinic_photo_record` is still running.
 - 12 of the 1,556 Claude answers (0.8%) on the four photo datasets were invalid: 11 because a claim had a key that is not allowed (an
   extra key such as `similar_lesion`, or a wrong spelling of `statement`) and 1 because the top-level key `evidence` was missing. They
   count as wrong; the reader rule was not changed again. Llama had 2 invalid answers on `published_text_photos`: in both it named a
   diagnosis that is not in the class list ("glomus tumor", "seborrheic keratosis").
-- **A host's content moderation can refuse a photo.** OpenAI's moderation (through OpenRouter) refused a photo flagged "violence/graphic" in the GPT-4o runs on the published photo datasets (decided 2026-11-20, option A). A refused question is saved as an invalid answer, counts as wrong, and is counted in the column "Refused by the host". The model never saw those cases, so its score on them says nothing about its diagnosis; no other model has been refused so far. A refusal is not a fixed property of a case: the same photo (case 4 of both published photo datasets) was refused in the first attempt and answered when the run was resumed, so a rerun could refuse other cases.
+- **A host's content moderation can refuse a photo.** OpenAI's moderation (through OpenRouter) refused a photo flagged "violence/graphic" in the GPT-4o runs on the published photo datasets (decided 2026-11-20, option A). A refused question is saved as an invalid answer, counts as wrong, and is counted in the column "Refused by the host". The model never saw those cases, so its score on them says nothing about its diagnosis. Only GPT-4o has been refused so far: 4 questions on `published_text_photos` and 7 on `published_photos`. A refusal is not a fixed property of a case: the same photo (case 4 of both published photo datasets) was refused in the first attempt and answered when the run was resumed, so a rerun could refuse other cases.
 - The labels of the published cases were not checked by a clinician (a stated limitation of the dataset).
 - The Version 1 numbers (`archive/v1/`) are obsolete and are not compared with these.

@@ -121,17 +121,19 @@ def per_class(runs: Runs, dataset: str) -> list[str]:
     return table(["Class", "Cases", *(name for _, name in MODELS)], rows)
 
 
-def _beside(runs: Runs, datasets: list[str], key: str) -> list[str]:
+def _beside(runs: Runs, datasets: list[str], key: str, main_if_absent: bool = False) -> list[str]:
+    """The rows of a check beside the main score. A run without the check has no such questions to leave out: ``n/a``, or with
+    ``main_if_absent`` its main score (nothing was left out)."""
     rows = []
     for dataset in datasets:
         for model, name in MODELS:
             found = runs.scored(dataset, model)
             if not found:
                 rows.append([f"`{dataset}`", name, "", "", "", ""])
-            elif key not in found[2]:
+            elif key not in found[2] and not main_if_absent:
                 rows.append([f"`{dataset}`", name, "n/a", "n/a", "n/a", "n/a"])
             else:
-                part = found[2][key]["metrics"]
+                part = found[2][key]["metrics"] if key in found[2] else found[2]["main"]
                 rows.append([f"`{dataset}`", name, str(part["n"]), pct(part["balanced_accuracy"]), span(part["balanced_accuracy_ci95"]),
                              pct(part["macro_f1"])])
     return table(["Dataset", "Model", "Questions", "Balanced accuracy", "95% interval", "Macro-F1"], rows)
@@ -143,6 +145,12 @@ def without_small_classes(runs: Runs) -> list[str]:
 
 def complete_record(runs: Runs) -> list[str]:
     return _beside(runs, [d for d in SEES if DATASETS[d].missing_fact], "all_facts_recorded")
+
+
+def without_refused(runs: Runs) -> list[str]:
+    """The datasets on which some host refused questions: the scores of every model on the questions it saw."""
+    refusing = [d for d in SEES if any(f and f[2]["refused"] for f in (runs.scored(d, m) for m, _ in MODELS))]
+    return _beside(runs, refusing, "without_refused", main_if_absent=True)
 
 
 def _difference(a: Path, b: Path) -> list[str]:
@@ -199,6 +207,7 @@ def render(results: Path | None = None) -> str:
     out.extend(["## 5. Beside the main score", ""])
     add("### 5.1 Without actinic keratosis (published cases)", without_small_classes(runs))
     add("### 5.2 Questions with a complete record (clinic data)", complete_record(runs))
+    add("### 5.3 Without the questions the host refused", without_refused(runs))
     out.extend(["## 6. Paired comparisons", ""])
     add("### 6.1 The same model with different inputs", same_model(runs))
     add("### 6.2 Models against each other", models_against_each_other(runs))

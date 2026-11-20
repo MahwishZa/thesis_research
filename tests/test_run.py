@@ -171,6 +171,9 @@ class RunTests(RunProject):
         self.assertEqual((metrics["refused"], metrics["main"]["invalid"], metrics["main"]["n"]), (1, 1, 4))  # counted as wrong, and on its own
         report = (out / "report.md").read_text(encoding="utf-8")
         self.assertIn("1 questions were refused by the host's content moderation", report)
+        self.assertEqual(metrics["without_refused"]["questions"], 3)  # the scores again on the three questions the model saw
+        self.assertEqual(metrics["without_refused"]["metrics"]["n"], 3)
+        self.assertIn("## Questions the model saw", report)
         self.assertNotIn("did not end normally", report)
         self.assertIn("a question the host refused cannot hold a diagnosis",
                       "; ".join(evaluate.verify_answers(json.loads((out / "run_card.json").read_text(encoding="utf-8")),

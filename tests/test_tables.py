@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TRUTH = ["a", "a", "a", "a", "b", "b", "b", "b"]
 GROUPS = [f"P{i}" for i in range(8)]
 CLAUDE, GPT = "claude-sonnet-5-5", "gpt-4o"
+CLAUDE_NAME = "Claude Sonnet 5.5"
 
 
 class TableTests(RunProject):
@@ -53,6 +54,14 @@ class TableTests(RunProject):
         (folder / "predictions.jsonl").write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
         cells = [c.strip() for c in tables.by_dataset(self.runs(), "clinic_photo")[3].strip("|").split("|")]
         self.assertEqual((cells[0], cells[5], cells[6]), ("GPT-4o", "1 (12.5%)", "1"))  # one invalid answer, and it is a refusal
+        self.put("clinic_photo", CLAUDE, TRUTH)  # a model with no refusal: its main score stands, nothing was left out
+        self.put("clinic_record", CLAUDE, TRUTH)  # a dataset where nothing was refused is not listed
+        rows = tables.without_refused(self.runs())[2:]
+        self.assertEqual([r.split("|")[1].strip() for r in rows], ["`clinic_photo`"] * 4)  # only a dataset with a refusal is listed
+        by_model = {r.split("|")[2].strip(): [c.strip() for c in r.strip("|").split("|")] for r in rows}
+        self.assertEqual((by_model["GPT-4o"][2], by_model["GPT-4o"][3]), ("7", "100.0%"))  # the 7 questions it saw, all right
+        self.assertEqual((by_model[CLAUDE_NAME][2], by_model[CLAUDE_NAME][3]), ("8", "100.0%"))
+        self.assertEqual(by_model["Gemini 3.8 Flash"][2:], ["", "", "", ""])  # no run
 
     def test_a_flag_that_is_never_yes_has_no_selective_risk(self):
         self.put("clinic_photo", CLAUDE, TRUTH, answers=[([t], "no") for t in TRUTH])

@@ -69,6 +69,7 @@ Each is reported beside the main score, never instead of it.
 
 - **Without actinic keratosis** (`published_text`, `published_text_photos`, `published_photos`). The published cases' test split has only 2 actinic keratosis cases, which weigh one eighth of the balanced accuracy. The scores are also given without them. The answer options stay the same.
 - **Questions with a complete record** (`clinic_photo_record`). A record line the patient could not answer reads `unknown`, and the pattern of gaps can point to the class. The scores are also given for the questions with no `unknown` in the record.
+- **Questions the host refused.** Where a host's content moderation refused some questions (see section 2), the scores are also given on the questions the model did see. The main score counts the refused ones as wrong.
 - **Hints that are not the lesion** (clinic patients). The `shortcuts` step of the preparation (`data/clinic_patients/dataset_report.md`) measures how much the empty record fields and the photo's properties alone give away about the class; those numbers are reported beside the results.
 
 ## 6. The first phase of Version 1

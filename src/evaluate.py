@@ -122,6 +122,9 @@ def score_run(run_dir: str | Path) -> tuple[dict, list[dict], dict]:
     if kind.missing_fact:  # a missing fact points to the photo's collection, and so to the class: the questions with all facts
         complete_facts = [p for p in preds if kind.missing_fact not in p["facts"]]
         metrics["all_facts_recorded"] = {"questions": len(complete_facts), "metrics": scores(complete_facts)}
+    seen = [p for p in preds if p["finish_reason"] != REFUSED]
+    if len(seen) < len(preds):  # the host refused some questions: the scores on the ones the model did see, beside the main score
+        metrics["without_refused"] = {"questions": len(seen), "metrics": scores(seen)}
     return card, preds, metrics
 
 
@@ -247,6 +250,12 @@ def write_report(run_dir: str | Path) -> Path:
                   f"A missing fact (\"{kind.missing_fact}\") can itself point to the class: which facts are missing is not the same for every "
                   f"class (see the data sheet of the dataset). These scores count only the {part['questions']} of {len(preds)} "
                   "questions with every fact recorded, beside the main score, never instead of it.", "", *_main_rows(part["metrics"]), ""]
+    if "without_refused" in metrics:
+        part = metrics["without_refused"]
+        lines += ["## Questions the model saw", "",
+                  f"The host refused {len(preds) - part['questions']} of {len(preds)} questions, so the model never saw them. These scores count "
+                  f"only the {part['questions']} it did see, beside the main score, never instead of it. The main score counts the refused "
+                  "questions as wrong.", "", *_main_rows(part["metrics"]), ""]
 
     sessions = card.get("sessions", [])
     commits = sorted({s["commit"] or "unknown" for s in sessions})
