@@ -17,7 +17,7 @@ Done = finished and committed in `results/`; blank = not committed yet; not plan
 | `clinic_photo` | done | not planned | | not planned |
 | `clinic_photo_record` | done | not planned | | not planned |
 
-Finished and committed: Claude on all six datasets, Llama on `published_text` and, by decision, only on `published_text_photos` and `published_photos` (2026-11-20). On the laptop, not committed yet: Gemini on four datasets and GPT-4o on `published_text_photos`. Still to run: Gemini on `clinic_photo_record` and GPT-4o on `published_photos`. GPT-4o runs only on the two published photo datasets; a photo its host refuses is saved as an invalid answer.
+Finished and committed: Claude on all six datasets, Llama on `published_text` and, by decision, only on `published_text_photos` and `published_photos` (2026-11-20). Finished on the laptop, not committed yet: Gemini on `published_text_photos`, `published_photos`, `clinic_record` and `clinic_photo`, and GPT-4o on `published_text_photos`. Unfinished (checked on the laptop, 2026-11-20): Gemini on `clinic_photo_record` (426 of 678 answers saved) and GPT-4o on `published_photos` (76 of 100). GPT-4o runs only on the two published photo datasets; a photo its host refuses is saved as an invalid answer.
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
