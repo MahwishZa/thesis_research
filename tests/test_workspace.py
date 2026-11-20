@@ -27,15 +27,23 @@ def tracked(folder: str) -> list[str]:
     return [p for p in git("ls-files", "-z", folder).stdout.decode("utf-8").split("\0") if p]
 
 
+TOP_LEVEL = {".claude", ".gitattributes", ".gitignore", "README.md", "archive", "data", "requirements.txt", "results", "src", "tests"}
+
+
 class WorkspaceTests(unittest.TestCase):
+    def test_the_top_level_structure_is_the_one_the_researcher_fixed_until_the_research_is_final(self):
+        """Decided 2026-11-20 (.claude/CLAUDE.md): no top-level file or folder is added, renamed or removed; new material goes inside."""
+        if shutil.which("git") and (ROOT / ".git").exists():
+            held = {p.split("/")[0] for p in tracked(".")}
+            self.assertEqual(sorted(held ^ TOP_LEVEL), [], "the tracked top level differs from the fixed structure")
+        else:
+            present = {p.name for p in ROOT.iterdir() if p.name not in {".git", ".ruff_cache", "__pycache__", ".venv", "venv", ".env"}}
+            self.assertEqual(sorted(present - TOP_LEVEL), [])
+
     def test_the_readme_holds_only_the_overview_and_the_objectives(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"^#{2,3} (.+)$", readme, re.M), ["Overview", "Objectives"])
         self.assertEqual(len(re.findall(r"^\d+\. ", readme, re.M)), 2)  # the two objectives
-
-    def test_the_archived_readme_and_requirements_are_the_ones_of_the_commit_and_the_active_ones_are_unchanged(self):
-        self.assertEqual((ARCHIVE / "README.md").read_bytes(), (ROOT / "README.md").read_bytes())
-        self.assertEqual((ARCHIVE / "requirements.txt").read_bytes(), (ROOT / "requirements.txt").read_bytes())
 
 
 class ArchiveTests(unittest.TestCase):
