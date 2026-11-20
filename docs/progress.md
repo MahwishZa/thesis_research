@@ -15,9 +15,9 @@ Done = finished and committed in `results/`; blank = not done or not committed y
 | `published_photos` | done | done | done | done |
 | `clinic_record` | done | not planned | done | not planned |
 | `clinic_photo` | done | not planned | done | not planned |
-| `clinic_photo_record` | done | not planned | | not planned |
+| `clinic_photo_record` | done | not planned | done | not planned |
 
-Finished and committed: Claude on all six datasets, Gemini on five, GPT-4o and Llama on the three published datasets (the clinic datasets are left out for both by decision, 2026-11-20). Unfinished at the last check: Gemini on `clinic_photo_record` (461 of 678 answers saved). A photo the host's moderation refuses is saved as an invalid answer (GPT-4o: 4 and 7 questions).
+Finished and committed: Claude and Gemini on all six datasets, GPT-4o and Llama on the three published datasets (the clinic datasets are left out for both by decision, 2026-11-20). No run was unfinished at the last check. A photo the host's moderation refuses is saved as an invalid answer (GPT-4o: 4 and 7 questions).
 
 ## Data (prepared, not frozen: to be finalised with the supervisor)
 
