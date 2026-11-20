@@ -1,0 +1,380 @@
+{
+  "answer_format": "json-v2",
+  "main": {
+    "n": 678,
+    "correct": 431,
+    "invalid": 1,
+    "invalid_rate": 0.0014749262536873156,
+    "groups": 498,
+    "group_name": "patient",
+    "interval_method": "bootstrap over patients",
+    "balanced_accuracy": 0.6453396643293674,
+    "balanced_accuracy_ci95": [
+      0.5863161814558256,
+      0.6996989219730467
+    ],
+    "macro_f1": 0.5881526351588441,
+    "macro_f1_ci95": [
+      0.5402336265573113,
+      0.6346076464682023
+    ],
+    "macro_precision": 0.6261333718324614,
+    "classes_absent": [],
+    "per_class": {
+      "actinic keratosis": {
+        "support": 217,
+        "answered": 122,
+        "tp": 108,
+        "precision": 0.8852459016393442,
+        "recall": 0.4976958525345622,
+        "f1": 0.6371681415929203,
+        "recall_ci95": [
+          0.4259112619406737,
+          0.5734614580429328
+        ]
+      },
+      "basal cell carcinoma": {
+        "support": 250,
+        "answered": 274,
+        "tp": 194,
+        "precision": 0.708029197080292,
+        "recall": 0.776,
+        "f1": 0.7404580152671756,
+        "recall_ci95": [
+          0.7195085799672226,
+          0.8326534170153416
+        ]
+      },
+      "melanoma": {
+        "support": 15,
+        "answered": 28,
+        "tp": 12,
+        "precision": 0.42857142857142855,
+        "recall": 0.8,
+        "f1": 0.5581395348837209,
+        "recall_ci95": [
+          0.5333333333333333,
+          1.0
+        ]
+      },
+      "nevus": {
+        "support": 73,
+        "answered": 81,
+        "tp": 57,
+        "precision": 0.7037037037037037,
+        "recall": 0.7808219178082192,
+        "f1": 0.7402597402597403,
+        "recall_ci95": [
+          0.676056338028169,
+          0.8695793337097684
+        ]
+      },
+      "seborrheic keratosis": {
+        "support": 70,
+        "answered": 32,
+        "tp": 25,
+        "precision": 0.78125,
+        "recall": 0.35714285714285715,
+        "f1": 0.49019607843137253,
+        "recall_ci95": [
+          0.2328767123287671,
+          0.4788732394366197
+        ]
+      },
+      "squamous cell carcinoma": {
+        "support": 53,
+        "answered": 140,
+        "tp": 35,
+        "precision": 0.25,
+        "recall": 0.660377358490566,
+        "f1": 0.3626943005181347,
+        "recall_ci95": [
+          0.5283018867924528,
+          0.788486842105263
+        ]
+      }
+    },
+    "confusion_matrix": {
+      "rows": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "melanoma",
+        "nevus",
+        "seborrheic keratosis",
+        "squamous cell carcinoma"
+      ],
+      "columns": [
+        "actinic keratosis",
+        "basal cell carcinoma",
+        "melanoma",
+        "nevus",
+        "seborrheic keratosis",
+        "squamous cell carcinoma",
+        "(invalid)"
+      ],
+      "counts": [
+        [
+          108,
+          47,
+          2,
+          2,
+          2,
+          56,
+          0
+        ],
+        [
+          7,
+          194,
+          2,
+          1,
+          0,
+          46,
+          0
+        ],
+        [
+          0,
+          0,
+          12,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          9,
+          0,
+          57,
+          5,
+          0,
+          1
+        ],
+        [
+          4,
+          9,
+          11,
+          18,
+          25,
+          3,
+          0
+        ],
+        [
+          2,
+          15,
+          1,
+          0,
+          0,
+          35,
+          0
+        ]
+      ]
+    },
+    "top3_balanced_accuracy": 0.955663278833407,
+    "top3_balanced_accuracy_ci95": [
+      0.9382676694297034,
+      0.9720947700609656
+    ],
+    "selective": {
+      "valid": 677,
+      "covered": 3,
+      "coverage": 0.004424778761061947,
+      "covered_wrong": 0,
+      "selective_risk": 0.0,
+      "coverage_ci95": [
+        0.0,
+        0.010264306415009838
+      ],
+      "selective_risk_ci95": null
+    }
+  },
+  "all_facts_recorded": {
+    "questions": 670,
+    "metrics": {
+      "n": 670,
+      "correct": 428,
+      "invalid": 1,
+      "invalid_rate": 0.0014925373134328358,
+      "groups": 492,
+      "group_name": "patient",
+      "interval_method": "bootstrap over patients",
+      "balanced_accuracy": 0.6472372508281968,
+      "balanced_accuracy_ci95": [
+        0.5882855413098264,
+        0.698866886412805
+      ],
+      "macro_f1": 0.5917092533567875,
+      "macro_f1_ci95": [
+        0.5422304463008891,
+        0.6396445751318854
+      ],
+      "macro_precision": 0.6310989980347398,
+      "classes_absent": [],
+      "per_class": {
+        "actinic keratosis": {
+          "support": 215,
+          "answered": 119,
+          "tp": 108,
+          "precision": 0.907563025210084,
+          "recall": 0.5023255813953489,
+          "f1": 0.6467065868263473,
+          "recall_ci95": [
+            0.42857142857142855,
+            0.576931818181818
+          ]
+        },
+        "basal cell carcinoma": {
+          "support": 247,
+          "answered": 273,
+          "tp": 193,
+          "precision": 0.706959706959707,
+          "recall": 0.7813765182186235,
+          "f1": 0.7423076923076923,
+          "recall_ci95": [
+            0.7217741935483871,
+            0.8408163265306122
+          ]
+        },
+        "melanoma": {
+          "support": 15,
+          "answered": 27,
+          "tp": 12,
+          "precision": 0.4444444444444444,
+          "recall": 0.8,
+          "f1": 0.5714285714285714,
+          "recall_ci95": [
+            0.5333333333333333,
+            1.0
+          ]
+        },
+        "nevus": {
+          "support": 71,
+          "answered": 80,
+          "tp": 56,
+          "precision": 0.7,
+          "recall": 0.7887323943661971,
+          "f1": 0.7417218543046358,
+          "recall_ci95": [
+            0.6874766791044776,
+            0.88
+          ]
+        },
+        "seborrheic keratosis": {
+          "support": 70,
+          "answered": 32,
+          "tp": 25,
+          "precision": 0.78125,
+          "recall": 0.35714285714285715,
+          "f1": 0.49019607843137253,
+          "recall_ci95": [
+            0.2328767123287671,
+            0.47890140845070406
+          ]
+        },
+        "squamous cell carcinoma": {
+          "support": 52,
+          "answered": 138,
+          "tp": 34,
+          "precision": 0.2463768115942029,
+          "recall": 0.6538461538461539,
+          "f1": 0.35789473684210527,
+          "recall_ci95": [
+            0.5192307692307693,
+            0.7884615384615384
+          ]
+        }
+      },
+      "confusion_matrix": {
+        "rows": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "melanoma",
+          "nevus",
+          "seborrheic keratosis",
+          "squamous cell carcinoma"
+        ],
+        "columns": [
+          "actinic keratosis",
+          "basal cell carcinoma",
+          "melanoma",
+          "nevus",
+          "seborrheic keratosis",
+          "squamous cell carcinoma",
+          "(invalid)"
+        ],
+        "counts": [
+          [
+            108,
+            47,
+            1,
+            2,
+            2,
+            55,
+            0
+          ],
+          [
+            5,
+            193,
+            2,
+            1,
+            0,
+            46,
+            0
+          ],
+          [
+            0,
+            0,
+            12,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            9,
+            0,
+            56,
+            5,
+            0,
+            1
+          ],
+          [
+            4,
+            9,
+            11,
+            18,
+            25,
+            3,
+            0
+          ],
+          [
+            2,
+            15,
+            1,
+            0,
+            0,
+            34,
+            0
+          ]
+        ]
+      },
+      "top3_balanced_accuracy": 0.9584409984370335,
+      "top3_balanced_accuracy_ci95": [
+        0.9408051993453503,
+        0.9737250783486543
+      ],
+      "selective": {
+        "valid": 669,
+        "covered": 3,
+        "coverage": 0.004477611940298508,
+        "covered_wrong": 0,
+        "selective_risk": 0.0,
+        "coverage_ci95": [
+          0.0,
+          0.010386142477325935
+        ],
+        "selective_risk_ci95": null
+      }
+    }
+  }
+}
