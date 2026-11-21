@@ -35,6 +35,17 @@ as a result, a decision or a design to follow.
   catches it.
 - Tell the researcher exactly what was changed, kept or left unchecked.
 
+## Planned history prune (later, not now)
+- Decided 2026-11-21. When the researcher says the research direction and pipeline are finalized, prune the Git history so that it holds
+  the new research's commits plus only 2 to 4 commits about the `archive/` folder. Those commits add only Version 1 (`archive/v1/`) and
+  Version 2 (`archive/v2/`) and carry no other information about the earlier work; every other earlier commit is removed.
+- This is a history rewrite and a force-push of `main`. Do not start it until she says so, and confirm the plan with her first. Then use
+  a lease, delete the branch `archive-v2-snapshot` and every other ref to the old commits, check the result, and remind her to re-sync
+  her laptop and that GitHub may keep the old commits for a while.
+- Afterwards the checks that compare with old commits skip themselves (`history_available`). Note in `archive/v2/ARCHIVE.md` that the
+  commit hashes named in the archived run cards no longer exist.
+- This is separate from the end-of-research removal below.
+
 ## At the end
 - When the research is final and ready for publication, remove `.claude/` and `archive/` and prune them from the Git history (a history
   rewrite and force-push of `main`, then she re-syncs her laptop). Do not do it before then without her explicit go-ahead. Remind her
