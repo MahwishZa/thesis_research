@@ -125,10 +125,10 @@ class MetricRequirements(unittest.TestCase):
                         "raw_output": "", "finish_reason": "stop"} for i, q in cls.qa.items()}
 
     def test_the_approved_diagnosis_metrics_are_reported(self):
-        """Approved: accuracy with an interval, macro-F1, per-class precision / recall / specificity / F1, the confusion matrix,
-        top-k accuracy, coverage and selective risk; refusals apart from other invalid answers."""
+        """Approved: accuracy (top-1) with an interval, macro-F1, per-class precision / recall / specificity / F1, the confusion
+        matrix, coverage and selective risk; refusals apart from other invalid answers."""
         d = ev.diagnosis_metrics(self.qa, self.pred)
-        for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix", "top3_accuracy", "coverage",
+        for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix", "coverage",
                     "selective_risk", "invalid_answers", "invalid_answers_by_cause", "missing_predictions"):
             self.assertIn(key, d)
         for row in d["per_class"].values():
@@ -136,16 +136,16 @@ class MetricRequirements(unittest.TestCase):
         self.assertEqual(set(d["per_class"]), set(CLASSES))
 
     def test_the_metrics_the_researcher_did_not_approve_are_not_reported(self):
-        """Not approved: balanced accuracy and macro-recall (the same number on a balanced test split), BERTScore, a separate
-        melanoma sensitivity, a score on seen questions."""
+        """Not approved: top-k accuracy (removed 2026-11-22: standard top-1 accuracy only), balanced accuracy and macro-recall (the
+        same number on a balanced test split), BERTScore, a separate melanoma sensitivity, a score on seen questions."""
         text = json.dumps(ev.diagnosis_metrics(self.qa, self.pred)).lower()
-        for banned in ("balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
+        for banned in ("top3", "top_k", "topk", "balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
             self.assertNotIn(banned, text)
 
     def test_every_metric_family_names_its_source_in_evaluate_py(self):
         """Only established, correctly named metrics, each with its source (.claude/CLAUDE.md)."""
         doc = ev.__doc__
-        for source in ("McNemar (1947)", "Holm (1979)", "Liu et al. (2020)", "Geifman", "Jarvelin", "MedCPT", "Jaccard (1912)",
+        for source in ("McNemar (1947)", "Holm (1979)", "Geifman", "Jarvelin", "MedCPT", "Jaccard (1912)",
                        "Es et al."):
             self.assertIn(source, doc)
 

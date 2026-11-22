@@ -47,7 +47,7 @@ import time
 import urllib.error
 import urllib.request
 
-from common import SEED, SPLITS, VIEWS, get_logger, question_file, read_jsonl, write_json
+from common import SEED, SPLITS, VIEWS, get_logger, load_env, question_file, read_jsonl, write_json
 
 PROMPT_VERSION = "llm_only_v2"
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -91,23 +91,6 @@ class Refused(RuntimeError):
 
 
 # ---- keys -----------------------------------------------------------------------------------------------------------------
-def load_env(path=".env"):
-    """Puts the NAME=value lines of a local .env file into the environment (a variable already set keeps its value).
-    Blank lines, # comments and lines without "=" are skipped; quotes around a value are removed; a missing file is fine."""
-    if not os.path.isfile(path):
-        return
-    with open(path, encoding="utf-8-sig") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            name, value = (part.strip() for part in line.split("=", 1))
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-                value = value[1:-1]
-            if name and value:
-                os.environ.setdefault(name, value)
-
-
 def api_key(api):
     for name in KEYS[api]:
         if os.environ.get(name, "").strip():
@@ -380,7 +363,9 @@ def llm_only_main(argv=None):
     name = f"llm_only.{args.model}.{args.view}.{args.split}"
     log, client = get_logger(name), None
     if not args.dry_run and not os.path.isdir(final):
-        load_env(args.env_file)
+        unusable = load_env(args.env_file)
+        if unusable:
+            log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
         client = make_client(args.model, log)                       # stops here when the key is missing
         log = get_logger(name, os.path.join(partial, "run.log"))
     return run(args, client, log)

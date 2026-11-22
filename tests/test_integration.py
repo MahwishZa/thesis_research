@@ -14,6 +14,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest import mock
 
@@ -199,6 +200,13 @@ WIKI_PAGE = ("<div><p>Dermatofibroma is a benign skin lesion, often on the legs 
              "</table><span class='mw-editsection'>edit</span></div>")
 
 
+CC_BY = ('<license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">'
+         '<license-p>This is an open access article under the CC BY license.</license-p></license>')
+JATS = ('<pmc-articleset xmlns:xlink="http://www.w3.org/1999/xlink"><article article-type="{article_type}"><front><article-meta>'
+        '<permissions><copyright-statement>(c) the authors</copyright-statement>{licence}</permissions>{related}'
+        '</article-meta></front></article></pmc-articleset>')
+
+
 class FakeFetcher:
     """Answers like the real services; every class gets the same made-up documents."""
     def __init__(self):
@@ -211,12 +219,12 @@ class FakeFetcher:
             guideline = "guideline" in params["term"]
             ids = ["101", "102", "103", "104"] if params["db"] == "pubmed" else ["11", "12"] if guideline else ["13", "12"]
             return json.dumps({"esearchresult": {"idlist": ids}})
+        if url.endswith("efetch.fcgi") and params["db"] == "pmc":
+            if params["id"] == "12":                          # a paper with no Creative Commons licence
+                return JATS.format(licence="", article_type="research-article", related="")
+            return JATS.format(licence=CC_BY, article_type="research-article", related="")
         if url.endswith("efetch.fcgi"):
             return PUBMED_XML
-        if url == bd.PMC_OA:
-            if params["id"] == "PMC12":
-                return '<OA><error code="idIsNotOpenAccess">not open access</error></OA>'
-            return f'<OA><records><record id="{params["id"]}" license="CC BY" retracted="no"/></records></OA>'
         if "BioC_json" in url:
             return json.dumps(BIOC_AK if "PMC13" in url else BIOC)
         if url == bd.DERMOSCOPEDIA_APIS[0]:
@@ -299,10 +307,30 @@ class ParserTests(unittest.TestCase):
         self.assertEqual((docs[0]["year"], docs[0]["url"]), ("2020", "https://pubmed.ncbi.nlm.nih.gov/101/"))
         self.assertEqual([d["retracted"] for d in docs], [False, False, True, False])
 
-    def test_pmc_oa_answer(self):
-        self.assertEqual(bd.parse_oa_record('<OA><records><record id="PMC1" license="CC BY-NC" retracted="yes"/></records></OA>'),
-                         ("CC BY-NC", True))
-        self.assertEqual(bd.parse_oa_record('<OA><error code="idIsNotOpenAccess">x</error></OA>'), (None, None))
+    def test_the_licence_and_retraction_of_a_pmc_paper_come_from_its_own_xml(self):
+        def jats(licence="", article_type="research-article", related=""):
+            return JATS.format(licence=licence, article_type=article_type, related=related)
+
+        def lic(url, text=""):
+            return f'<license xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="{url}"><license-p>{text}</license-p></license>'
+
+        for url, name in (("https://creativecommons.org/licenses/by/4.0/", "CC BY 4.0"),
+                          ("http://creativecommons.org/licenses/by-nc-sa/3.0/", "CC BY-NC-SA 3.0"),
+                          ("https://creativecommons.org/publicdomain/zero/1.0/", "CC0 1.0"),
+                          ("https://creativecommons.org/licenses/by-nd/4.0", "CC BY-ND 4.0")):
+            self.assertEqual(bd.parse_pmc_licence(jats(lic(url))), (name, False), url)
+            self.assertTrue(bd.open_licence(name))
+        self.assertEqual(bd.parse_pmc_licence(jats()), (None, False))                                  # no licence element
+        self.assertEqual(bd.parse_pmc_licence(jats('<license><license-p>All rights reserved.</license-p></license>')), (None, False))
+        self.assertEqual(bd.parse_pmc_licence(jats(lic("", "see https://creativecommons.org/licenses/by/4.0/ for terms"))),
+                         ("CC BY 4.0", False))                                                         # the link in the text
+        self.assertEqual(bd.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), "retraction")
+                                              .replace("research-article", "retraction"))[1], True)    # a retraction notice
+        related = '<related-article related-article-type="retracted-article" xlink:href="x"/>'
+        self.assertEqual(bd.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), related=related)),
+                         ("CC BY 4.0", True))
+        self.assertEqual(bd.parse_pmc_licence("<article/>"), (None, False))
+        self.assertEqual(bd.parse_pmc_licence("<pmc-articleset/>"), (None, False))
 
     def test_bioc_keeps_text_sections_and_drops_references_and_tables(self):
         for answer in (BIOC, BIOC[0]):                        # a list of collections, or one collection
@@ -316,6 +344,47 @@ class ParserTests(unittest.TestCase):
         self.assertEqual([d["doc_id"] for d in docs], ["meditron:g1"])
         self.assertEqual(len(docs[0]["paragraphs"]), 3)
         self.assertEqual(removed, {"guidelines: source wikidoc excluded": 1, "guidelines: source nice excluded": 1})
+
+
+class MeditronCacheTests(unittest.TestCase):
+    def test_the_large_download_is_made_once_and_read_from_the_cache_afterwards(self):
+        def refuse():
+            raise AssertionError("downloaded again")
+
+        with tempfile.TemporaryDirectory() as d:
+            cache = os.path.join(d, "meditron_skin_cancer.json")
+            first = bd.Counter()
+            docs = bd.meditron_guideline_docs(first, cache=cache, load=lambda: MEDITRON)
+            self.assertEqual([x["doc_id"] for x in docs], ["meditron:g1"])
+            self.assertTrue(os.path.isfile(cache))
+            again = bd.Counter()
+            self.assertEqual(bd.meditron_guideline_docs(again, cache=cache, load=refuse), docs)
+            self.assertEqual(again, first)                                   # the removal counts come back with it
+            self.assertEqual(first, {"guidelines: source wikidoc excluded": 1, "guidelines: source nice excluded": 1})
+            other = os.path.join(d, "not_written.json")
+            bd.meditron_guideline_docs(bd.Counter(), MEDITRON, cache=other)       # rows given by a caller: no cache is written
+            self.assertFalse(os.path.exists(other))
+
+    def test_an_interrupted_pass_saves_nothing(self):
+        def broken():
+            yield MEDITRON[0]
+            raise KeyboardInterrupt
+
+        with tempfile.TemporaryDirectory() as d:
+            cache = os.path.join(d, "meditron_skin_cancer.json")
+            with self.assertRaises(KeyboardInterrupt):
+                bd.meditron_guideline_docs(bd.Counter(), cache=cache, load=broken)
+            self.assertEqual(os.listdir(d), [])
+
+    def test_the_hugging_face_library_gets_a_longer_timeout_and_no_symlink_warning(self):
+        with mock.patch.dict(os.environ, {}, clear=False), mock.patch.dict(sys.modules, {"datasets": mock.Mock()}):
+            os.environ.pop("HF_HUB_DOWNLOAD_TIMEOUT", None)
+            bd.meditron_rows_from_hub()
+            self.assertEqual(os.environ["HF_HUB_DOWNLOAD_TIMEOUT"], "60")
+            os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "5"
+            bd.meditron_rows_from_hub()
+            self.assertEqual(os.environ["HF_HUB_DOWNLOAD_TIMEOUT"], "5")        # a value the researcher set is kept
+            del os.environ["HF_HUB_DOWNLOAD_TIMEOUT"]
 
 
 class BuildTests(unittest.TestCase):
@@ -346,6 +415,88 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(removed["pubmed: document already used"], 14)  # PMIDs 101 and 104 come back for all 8 diagnoses
         self.assertGreater(removed["pubmed: duplicate passage"], 0)      # the text of 101 is also in a guideline
         self.assertIn("PMID:104", ids)
+
+    def test_a_failed_licence_lookup_is_counted_and_does_not_stop_the_build(self):
+        class Failing(FakeFetcher):
+            def get(self, url, params=None, ncbi=False):
+                if url.endswith("efetch.fcgi") and (params or {}).get("db") == "pmc":
+                    raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+                return super().get(url, params, ncbi)
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            passages, removed = bd.build_corpus(args(), Failing(), meditron_rows=MEDITRON)
+        self.assertGreater(removed["pmc: licence lookup failed"], 0)
+        self.assertEqual(removed["pmc: no open licence"], 0)
+        self.assertEqual({p["library"] for p in passages} & {"pubmed", "textbook"}, {"pubmed", "textbook"})   # the rest goes on
+        self.assertNotIn("pmc", {p["library"] for p in passages})                                           # nothing unverified is kept
+        self.assertNotIn("PMC13", {p["doc_id"] for p in passages})
+
+    def test_pmc_licences_are_asked_of_the_e_utilities_not_of_the_retired_oa_service(self):
+        _, _, fetch = self.build()
+        asked = [(u, p) for u, p, _ in fetch.calls if u.endswith("efetch.fcgi") and p.get("db") == "pmc"]
+        self.assertTrue(asked)
+        self.assertFalse([u for u, _, _ in fetch.calls if "oa.fcgi" in u])
+        self.assertFalse(hasattr(bd, "PMC_OA"))
+
+    def test_no_meditron_skips_the_large_download_and_the_cached_download_is_used_by_the_build(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            with_it, _ = bd.build_corpus(args(libraries=["guidelines"]), FakeFetcher(), meditron_rows=MEDITRON)
+            without, _ = bd.build_corpus(args(libraries=["guidelines"], no_meditron=True), FakeFetcher(), meditron_rows=MEDITRON)
+        self.assertTrue([p for p in with_it if p["doc_id"].startswith("meditron:")])
+        self.assertFalse([p for p in without if p["doc_id"].startswith("meditron:")])
+        with tempfile.TemporaryDirectory() as d:
+            fetch = FakeFetcher()
+            fetch.cache = d
+            bd.write_json(os.path.join(d, "meditron_skin_cancer.json"),
+                          {"docs": bd.meditron_guideline_docs(bd.Counter(), MEDITRON), "removed": {}})
+            with contextlib.redirect_stdout(io.StringIO()):
+                passages, _ = bd.build_corpus(args(libraries=["guidelines"]), fetch)       # no rows given: the cache answers
+        self.assertTrue([p for p in passages if p["doc_id"].startswith("meditron:")])
+
+    def test_the_keys_come_from_the_env_file_and_are_never_printed(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, ".env")
+            Path(env).write_text("HF_TOKEN=hf_SECRET_VALUE\nNCBI_API_KEY=\n", encoding="utf-8")
+            argv = ["--out", os.path.join(d, "corpus"), "--libraries", "textbook", "--textbook-pages", "1", "--env-file", env]
+            seen = {}
+
+            def build(args_, fetch):
+                seen["token"] = os.environ.get("HF_TOKEN")
+                return [], bd.Counter()
+
+            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(bd, "build_corpus", build), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                os.environ.pop("HF_TOKEN", None)
+                os.environ.pop("NCBI_API_KEY", None)
+                bd.corpus_main(argv)
+                os.environ.pop("HF_TOKEN", None)
+            log_text = out.getvalue() + Path(d, "corpus", "build_corpus.log").read_text(encoding="utf-8")
+            card = Path(d, "corpus", "corpus_card.json").read_text(encoding="utf-8")
+        self.assertEqual(seen["token"], "hf_SECRET_VALUE")
+        self.assertNotIn("hf_SECRET_VALUE", log_text + card)
+        self.assertNotIn("env_file", card)                                  # the path of the key file is not recorded either
+        self.assertIn("HF_TOKEN: found", log_text)
+        self.assertIn("NCBI_API_KEY: not set", log_text)
+
+    def test_a_broken_env_line_is_reported_by_its_number_only_in_the_corpus_build_and_in_a_run(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, ".env")
+            Path(env).write_text("# keys\nHF_TOKEN=hf_ok\nsk-or-a-value-without-a-name\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(bd, "build_corpus", lambda a, f: ([], bd.Counter())), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                os.environ.pop("HF_TOKEN", None)
+                bd.corpus_main(["--out", os.path.join(d, "corpus"), "--env-file", env])
+                os.environ.pop("HF_TOKEN", None)
+            self.assertIn("lines [3] are not NAME=value", out.getvalue())
+            self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
+            questions = os.path.join(d, "data", question_file("text_only", "val"))
+            write_jsonl(questions, [])
+            with mock.patch.object(rl, "make_client", lambda model, log: object()), mock.patch.object(rl, "run", lambda *a: "done"), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                rl.llm_only_main(["--model", "gpt-4o", "--view", "text_only", "--split", "val", "--env-file", env,
+                                  "--data", os.path.join(d, "data"), "--results", os.path.join(d, "results")])
+            self.assertIn("lines [3] are not NAME=value", out.getvalue())
+            self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
 
     def test_no_library_gets_more_than_the_cap_per_diagnosis(self):
         passages, _, _ = self.build(per_class=1)
@@ -807,7 +958,6 @@ class RunTests(unittest.TestCase):
         pred = ev.load(os.path.join(out, "predictions.jsonl"))
         d = ev.diagnosis_metrics(qa, pred)
         self.assertEqual((d["accuracy"], d["invalid_answers"]), (0.3333, 1))    # ids 0 and 4 right; 2 has no letter
-        self.assertEqual(d["top3_accuracy"], 0.5)                                  # ids 0, 4 first; id 1 second
         self.assertEqual((d["n_covered"], d["coverage"]), (3, 0.5))                # ids 1, 4, 5 say yes (k % 3); 2 is invalid
         self.assertEqual(d["selective_risk"], 0.6667)                              # ids 1 and 5 are wrong
 

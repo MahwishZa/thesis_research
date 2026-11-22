@@ -408,30 +408,10 @@ class ReportTests(unittest.TestCase):
                 ev.load(path)
 
 
-class TopKAndSelectiveTests(unittest.TestCase):
+class SelectiveTests(unittest.TestCase):
     def setUp(self):
         self.qs = [question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
         self.qa = as_dict(self.qs)
-
-    def top(self, q, *codes):
-        return [answer(q, c) for c in codes]
-
-    def test_top3_accuracy_counts_the_true_class_anywhere_in_the_first_three(self):
-        q = self.qs
-        pred = {q[0]["id"]: {"pred": answer(q[0], "MEL"), "top3": self.top(q[0], "MEL", "NV", "DF")},     # first
-                q[1]["id"]: {"pred": answer(q[1], "MEL"), "top3": self.top(q[1], "MEL", "BCC", "NV")},    # third
-                q[2]["id"]: {"pred": answer(q[2], "NV"), "top3": self.top(q[2], "NV", "DF", "SCC")},      # not there
-                q[3]["id"]: {"pred": "Z", "top3": []}}                                                     # invalid
-        d = ev.diagnosis_metrics(self.qa, pred)
-        self.assertEqual((d["accuracy"], d["top3_accuracy"]), (0.25, 0.5))
-        lo, hi = d["top3_accuracy_95ci"]
-        self.assertTrue(lo <= 0.5 <= hi)
-
-    def test_only_the_first_three_count_and_repeats_are_dropped(self):
-        q = self.qs[3]
-        self.assertEqual(ev.predicted_classes(q, {"top3": self.top(q, "NV", "NV", "MEL", "BCC", "AK")}), ["NV", "MEL", "BCC"])
-        self.assertEqual(ev.predicted_classes(q, {"pred": answer(q, "AK")}), ["AK"])   # an answer without a top 3
-        self.assertEqual(ev.predicted_classes(q, None), [])
 
     def test_coverage_and_selective_risk(self):
         q = self.qs
@@ -445,9 +425,13 @@ class TopKAndSelectiveTests(unittest.TestCase):
         none = ev.diagnosis_metrics(self.qa, {i: {"pred": "A", "evidence_sufficient": "no"} for i in self.qa})
         self.assertEqual((none["coverage"], none["selective_risk"]), (0.0, None))
 
-    def test_old_style_predictions_get_no_top3_or_selective_scores(self):
+    def test_predictions_without_the_flag_get_no_selective_scores_and_no_top_k_accuracy_is_ever_reported(self):
         d = ev.diagnosis_metrics(self.qa, {i: {"pred": "A"} for i in self.qa})
-        self.assertFalse({"top3_accuracy", "coverage", "selective_risk"} & set(d))
+        self.assertFalse({"coverage", "selective_risk"} & set(d))
+        full = ev.diagnosis_metrics(self.qa, {i: {"pred": q["answer"], "top3": [q["answer"], "A", "B"], "evidence_sufficient": "yes"}
+                                              for i, q in self.qa.items()})
+        self.assertFalse([k for k in full if "top" in k])                      # the extra letters of a reply are not scored
+        self.assertFalse(hasattr(ev, "top_k_accuracy"))
 
     def test_holm_correction(self):
         adjusted = ev.holm([0.01, 0.04, 0.03, 0.5])
@@ -746,12 +730,25 @@ class RequestTests(unittest.TestCase):
     def test_load_env_reads_keys_without_overriding_the_terminal(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d, ".env")
-            path.write_text("# comment\nA_KEY=\"one\"\nB_KEY = two\nbroken line\nEMPTY=\n", encoding="utf-8")
+            path.write_text("# comment\nA_KEY=\"one\"\nB_KEY = two\nbroken line\nEMPTY=\n=novalue\nC_KEY='x=y'\n", encoding="utf-8")
             with mock.patch.dict(os.environ, {"B_KEY": "terminal"}, clear=True):
-                rl.load_env(path)
-                self.assertEqual((os.environ["A_KEY"], os.environ["B_KEY"]), ("one", "terminal"))
+                unusable = common.load_env(path)
+                self.assertEqual((os.environ["A_KEY"], os.environ["B_KEY"], os.environ["C_KEY"]), ("one", "terminal", "x=y"))
                 self.assertNotIn("EMPTY", os.environ)
-            rl.load_env(Path(d, "missing.env"))                       # a missing file is fine
+                self.assertEqual(unusable, [4, 5, 6])                    # line numbers only, never the lines themselves
+            self.assertEqual(common.load_env(Path(d, "missing.env")), [])   # a missing file is fine
+            self.assertIs(rl.load_env, common.load_env)
+
+    def test_an_empty_variable_in_the_terminal_does_not_hide_the_env_file_and_a_secret_is_never_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d, ".env")
+            path.write_text("HF_TOKEN=hf_secret\nOPENROUTER_API_KEY=sk-or-secret-without-name-part\nsk-or-just-a-value\n",
+                            encoding="utf-8")
+            with mock.patch.dict(os.environ, {"HF_TOKEN": "  "}, clear=True):
+                unusable = common.load_env(path)
+                self.assertEqual(os.environ["HF_TOKEN"], "hf_secret")
+            self.assertEqual(unusable, [3])
+            self.assertNotIn("sk-or-just-a-value", repr(unusable))
 
     def test_busy_servers_are_retried_and_other_errors_stop_at_once(self):
         class Answer(io.BytesIO):

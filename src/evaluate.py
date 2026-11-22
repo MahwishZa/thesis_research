@@ -24,8 +24,8 @@ Metrics
               into refusals, by REFUSAL, and other invalid answers),
               McNemar's exact test against --pred-b. The bootstrap draws whole lesions, so photos of one lesion stay together.
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
-              When the predictions carry them: top-3 accuracy (the true class among the model's three most likely, "top3"),
-              and selective classification from the "evidence_sufficient" flag: coverage (share of all questions answered
+              Accuracy is top-1 accuracy (the chosen option is the true class); no top-k accuracy is reported (decided 2026-11-22).
+              When the predictions carry them: selective classification from the "evidence_sufficient" flag: coverage (share of all questions answered
               with a valid diagnosis marked "yes") and selective risk (share of those that are wrong: confident misdiagnoses).
               Several runs are compared with src/evaluate.py compare (McNemar for every pair, Holm's correction).
   Retrieval : Hit@k, Precision@k, MRR, nDCG@k and context precision. Weak labels: a passage counts as relevant when its
@@ -38,8 +38,7 @@ Metrics
 
 Sources: McNemar (1947) Psychometrika 12:153-157; Jaccard (1912) New Phytologist 11:37-50; nDCG: Jarvelin & Kekalainen (2002)
 ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651; RAGAS: Es et al. (2024) EACL demos 150-158;
-top-k accuracy of a skin-disease differential: Liu et al. (2020) Nature Medicine 26:900-908; coverage and selective risk: Geifman &
-El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70.
+coverage and selective risk: Geifman & El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70.
 
 Every report records its input files with their SHA-256, so two reports can be checked to use the same question file.
 
@@ -156,22 +155,6 @@ def bootstrap_ci(y, p, groups, fn, n=1000, seed=42):
     return [round(percentile(values, 2.5), 4), round(percentile(values, 97.5), 4)]
 
 
-def predicted_classes(q, p, k=3):
-    """The classes of the first k letters of a prediction's "top3" (or of its "pred" alone), in order, without repeats."""
-    letters = (p or {}).get("top3") or ([(p or {}).get("pred")] if (p or {}).get("pred") else [])
-    out = []
-    for letter in letters:
-        c = predicted_class(q, {"pred": letter})
-        if c != INVALID and c not in out:
-            out.append(c)
-    return out[:k]
-
-
-def top_k_accuracy(y, tops):
-    """Share of questions whose true class is among the model's first k diagnoses (an invalid answer counts as wrong)."""
-    return sum(t in top for t, top in zip(y, tops)) / len(y)
-
-
 def coverage(y, answers):
     """Selective classification: share of all questions answered with a valid diagnosis marked "evidence sufficient: yes"."""
     return sum(c != INVALID and flag == "yes" for c, flag in answers) / len(y)
@@ -223,10 +206,6 @@ def diagnosis_metrics(qa, pred, pred_b=None):
            "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
            "confusion_matrix": {"rows_true": CLASSES, "columns_predicted": columns,
                                 "matrix": [[sum(t == r and q == c for t, q in zip(y, p)) for c in columns] for r in CLASSES]}}
-    if any("top3" in (pred.get(i) or {}) for i in ids):
-        tops = [predicted_classes(qa[i], pred.get(i)) for i in ids]
-        out["top3_accuracy"] = round(top_k_accuracy(y, tops), 4)
-        out["top3_accuracy_95ci"] = bootstrap_ci(y, tops, groups, top_k_accuracy)
     if any("evidence_sufficient" in (pred.get(i) or {}) for i in ids):
         answers = [(c, (pred.get(i) or {}).get("evidence_sufficient")) for i, c in zip(ids, p)]
         risk = selective_risk(y, answers)

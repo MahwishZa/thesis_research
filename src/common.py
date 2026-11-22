@@ -80,6 +80,29 @@ def atomic_path(path):
             os.remove(tmp)
 
 
+def load_env(path=".env"):
+    """Puts the NAME=value lines of a local .env file into the environment. A variable already set in the terminal keeps its value
+    (one that is set but empty counts as not set). Blank lines and # comments are skipped; quotes around a value are removed; a
+    missing file is fine. Returns the line numbers (never the lines: they may hold a secret) of the lines that could not be used:
+    no "=", no name, or no value."""
+    unusable = []
+    if not os.path.isfile(path):
+        return unusable
+    with open(path, encoding="utf-8-sig") as f:
+        for number, line in enumerate(f, 1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, _, value = (part.strip() for part in line.partition("="))
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            if not (name and value):
+                unusable.append(number)
+            elif not os.environ.get(name, "").strip():
+                os.environ[name] = value
+    return unusable
+
+
 def write_text(path, text):
     with atomic_path(path) as tmp, open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)

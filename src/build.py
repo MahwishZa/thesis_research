@@ -24,8 +24,8 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from html.parser import HTMLParser
 
-from common import (ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, LETTERS, OPTION_TEXT, SEED, SPLITS, VIEWS, get_logger, question_file,
-                    read_csv, view_table, write_csv, write_json, write_jsonl)
+from common import (ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, LETTERS, OPTION_TEXT, SEED, SPLITS, VIEWS, get_logger, load_env,
+                    question_file, read_csv, view_table, write_csv, write_json, write_jsonl)
 
 log = get_logger("corpus")
 
@@ -110,7 +110,7 @@ def views_main(argv=None):
 #
 # Four libraries, as in RAG^2 (PubMed, PMC, clinical guidelines, textbooks; Sohn et al. 2025, Appendix A.3), limited to skin cancer:
 #   pubmed      PubMed abstracts found per diagnosis (NCBI E-utilities)
-#   pmc         full open-access papers from PubMed Central (search: E-utilities; licence: PMC OA service; text: BioC API)
+#   pmc         full open-access papers from PubMed Central (search: E-utilities; licence: the paper's own Creative Commons link, from E-utilities; text: BioC API)
 #   guidelines  open-access guideline and consensus papers in PMC, and the public part of the Meditron guideline collection
 #               (Hugging Face epfl-llm/guidelines) without WikiDoc (crowdsourced) and NICE (AI use needs NICE's written permission)
 #   textbook    Dermoscopedia, the dermoscopy wiki of the International Dermoscopy Society (CC BY-NC-SA 4.0)
@@ -198,7 +198,6 @@ TOPICS = {
     "basics": r"benign|malignan|carcinoma|tumou?r|neoplasm|lesion|prognos|histolog|patholog|definition|defined as",
 }
 NCBI = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
-PMC_OA = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
 BIOC = "https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/{}/unicode"
 DERMOSCOPEDIA_APIS = ("https://dermoscopedia.org/api.php", "https://dermoscopedia.org/w/api.php")
 TOOL = "thesis_skin_rag_corpus"
@@ -316,12 +315,29 @@ def parse_pubmed_xml(xml_text):
     return docs
 
 
-def parse_oa_record(xml_text):
-    """The PMC OA service answer for one paper: (licence, retracted), or (None, None) when it is not open access."""
-    rec = ET.fromstring(xml_text).find(".//record")
-    if rec is None:
-        return None, None
-    return rec.get("license"), rec.get("retracted", "no") == "yes"
+XLINK_HREF = "{http://www.w3.org/1999/xlink}href"
+CC_URL = re.compile(r"creativecommons\.org/(?:licenses|publicdomain)/([a-z-]+)(?:/([\d.]+))?", re.I)
+
+
+def parse_pmc_licence(xml_text):
+    """The licence and the retraction flag of one PMC paper, from its full-text XML (JATS, E-utilities efetch db=pmc):
+    (licence such as "CC BY 4.0", retracted), or (None, retracted) when the paper carries no machine-readable Creative Commons
+    licence. The licence is read from the <license> element's link to creativecommons.org (licenses/by, by-nc, ... or
+    publicdomain/zero for CC0). A retraction notice (article-type "retraction") or a paper with a related article of a "retract..."
+    type is flagged as retracted. (The PMC OA web service that gave this before is being retired by NLM in 2026.)"""
+    root = ET.fromstring(xml_text)
+    article = root if root.tag == "article" else root.find(".//article")
+    if article is None:
+        return None, False
+    retracted = article.get("article-type") == "retraction" or any(
+        "retract" in (r.get("related-article-type") or "") for r in article.iter("related-article"))
+    for lic in article.iter("license"):
+        m = CC_URL.search(lic.get(XLINK_HREF) or "") or CC_URL.search("".join(lic.itertext()))
+        if m:
+            kind, version = m.group(1).lower(), m.group(2)
+            name = "CC0" if kind == "zero" else "CC " + kind.upper()
+            return (name + (f" {version}" if version else "")), retracted
+    return None, retracted
 
 
 def parse_bioc(bioc):
@@ -391,7 +407,13 @@ def pubmed_docs(fetch, cls, n):
 def pmc_docs(fetch, term, n, removed):
     for uid in esearch(fetch, "pmc", term + ' AND "open access"[filter]', n):
         pmcid = f"PMC{uid}"
-        licence, retracted = parse_oa_record(fetch.get(PMC_OA, {"id": pmcid}))
+        try:
+            licence, retracted = parse_pmc_licence(fetch.get(NCBI + "efetch.fcgi", {"db": "pmc", "id": uid, "retmode": "xml"},
+                                                              ncbi=True))
+        except Exception as e:                               # one paper must not stop the whole build; the card counts them
+            log.warning(f"{pmcid}: licence lookup failed ({type(e).__name__}: {e})")
+            removed["pmc: licence lookup failed"] += 1
+            continue
         if licence is None or not open_licence(licence):
             removed["pmc: no open licence"] += 1
             continue
@@ -404,22 +426,40 @@ def pmc_docs(fetch, term, n, removed):
                "url": f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/", "retracted": retracted}
 
 
-def meditron_guideline_docs(removed, rows=None):
-    """The public Meditron guideline collection, skin-cancer articles only, without the excluded sources."""
-    if rows is None:
-        from datasets import load_dataset
-        rows = load_dataset("epfl-llm/guidelines", split="train", streaming=True)
-    for r in rows:
+def meditron_rows_from_hub():
+    """The public Meditron guideline collection, streamed from Hugging Face (one large file; no token is needed, but a token in the
+    environment as HF_TOKEN is used by the Hugging Face library and makes the download faster)."""
+    os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")            # the library's default (10 s) is too short on a slow line
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")      # Windows without developer mode: a harmless warning
+    from datasets import load_dataset
+    return load_dataset("epfl-llm/guidelines", split="train", streaming=True)
+
+
+def meditron_guideline_docs(removed, rows=None, cache=None, load=meditron_rows_from_hub):
+    """The public Meditron guideline collection, skin-cancer articles only, without the excluded sources.
+    With `cache` (a file path) the answer is saved there after one complete pass and read from there afterwards, so the large
+    download is made once; an interrupted pass saves nothing."""
+    if rows is None and cache and os.path.isfile(cache):
+        with open(cache, encoding="utf-8") as f:
+            saved = json.load(f)
+        removed.update(saved["removed"])
+        return saved["docs"]
+    docs, dropped = [], Counter()
+    for r in (load() if rows is None else rows):
         source = (r.get("source") or "").lower()
         text = r.get("clean_text") or r.get("raw_text") or ""
         if source in GUIDELINE_EXCLUDED_SOURCES:
-            removed[f"guidelines: source {source} excluded"] += 1
+            dropped[f"guidelines: source {source} excluded"] += 1
             continue
         if not tag(text[:5000], r.get("title", "")):
             continue                                            # not about the 8 diagnoses
-        yield {"doc_id": f"meditron:{r.get('id', '')}", "title": clean(r.get("title")), "year": "",
-               "paragraphs": [p for p in re.split(r"\n\s*\n", text) if p.strip()], "url": r.get("url") or "",
-               "licence": f"Meditron guidelines collection (source: {source}); see the source's terms", "retracted": False}
+        docs.append({"doc_id": f"meditron:{r.get('id', '')}", "title": clean(r.get("title")), "year": "",
+                     "paragraphs": [p for p in re.split(r"\n\s*\n", text) if p.strip()], "url": r.get("url") or "",
+                     "licence": f"Meditron guidelines collection (source: {source}); see the source's terms", "retracted": False})
+    removed.update(dropped)
+    if rows is None and cache:
+        write_json(cache, {"docs": docs, "removed": dict(dropped)})
+    return docs
 
 
 def dermoscopedia_api(fetch):
@@ -494,7 +534,7 @@ def corpus_card(passages, removed, args, snapshot):
             "empty_topic_boxes": [f"{c}/{t}" for c, row in coverage.items() for t, n in row.items() if n == 0],
             "licences": dict(Counter(p["licence"] for p in passages).most_common()),
             "removed": dict(sorted(removed.items())),
-            "settings": {k: v for k, v in vars(args).items() if k not in ("out", "cache")}}
+            "settings": {k: v for k, v in vars(args).items() if k not in ("out", "cache", "env_file")}}
 
 
 MANIFEST_COLUMNS = ["passage_id", "library", "doc_id", "url", "licence", "query_class", "tags", "n_words", "md5"]
@@ -511,12 +551,19 @@ def build_corpus(args, fetch, meditron_rows=None):
     passages, removed, seen_text, seen_docs = [], Counter(), set(), set()
     for library in [lib for lib in LIBRARIES if lib in args.libraries]:
         if library == "guidelines":
-            try:
-                meditron = list(meditron_guideline_docs(removed, meditron_rows))
-            except Exception as e:                          # e.g. not logged in to Hugging Face for this gated collection
-                log.warning(f"Meditron guideline collection not available ({type(e).__name__}); using PMC guideline papers only")
-                removed["guidelines: Meditron collection not available"] += 1
-                meditron = []
+            meditron = []
+            if getattr(args, "no_meditron", False):
+                log.info("Meditron guideline collection skipped (--no-meditron); PMC guideline papers only")
+            else:
+                cache = os.path.join(fetch.cache, "meditron_skin_cancer.json") if hasattr(fetch, "cache") else None
+                try:
+                    if meditron_rows is None and not (cache and os.path.isfile(cache)):
+                        log.info("Meditron guideline collection: one large download, saved after one complete pass "
+                                 "(it can take several minutes; Ctrl-C is safe, nothing is saved until it completes)")
+                    meditron = meditron_guideline_docs(removed, meditron_rows, cache)
+                except Exception as e:                      # e.g. no network to Hugging Face: the PMC guideline papers still count
+                    log.warning(f"Meditron guideline collection not available ({type(e).__name__}); using PMC guideline papers only")
+                    removed["guidelines: Meditron collection not available"] += 1
         for cls in CLASSES:
             if library == "pubmed":
                 docs = pubmed_docs(fetch, cls, args.pubmed_docs)
@@ -545,12 +592,19 @@ def corpus_args(argv=None):
     ap.add_argument("--pmc-docs", type=int, default=40, help="open-access papers searched per diagnosis")
     ap.add_argument("--guideline-docs", type=int, default=20, help="open-access guideline papers searched per diagnosis")
     ap.add_argument("--textbook-pages", type=int, default=15, help="Dermoscopedia pages per diagnosis")
+    ap.add_argument("--no-meditron", action="store_true", help="skip the large Meditron download (PMC guideline papers only)")
+    ap.add_argument("--env-file", default=".env", help="keys: NCBI_API_KEY and HF_TOKEN are read from it if present (both optional)")
     return ap.parse_args(argv)
 
 
 def corpus_main(argv=None):
     args = corpus_args(argv)
     get_logger("corpus", os.path.join(args.out, "build_corpus.log"))
+    unusable = load_env(args.env_file)                       # a variable already set in the terminal keeps its value
+    if unusable:
+        log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
+    for name, what in (("NCBI_API_KEY", "faster NCBI requests"), ("HF_TOKEN", "faster Hugging Face downloads")):
+        log.info(f"{name}: " + (f"found ({what})" if os.environ.get(name, "").strip() else "not set (optional; anonymous access)"))
     fetch = Fetcher(args.cache or os.path.join(args.out, "cache"))
     passages, removed = build_corpus(args, fetch)
     card = corpus_card(passages, removed, args, datetime.date.today().isoformat())

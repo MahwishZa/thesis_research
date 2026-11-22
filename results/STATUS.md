@@ -4,10 +4,10 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 
 ## Where things are
 - Data: `data/datasheet.md` (the pipeline, every folder and file, the three views, the limitations).
-- Code: `src/README.md` (the six files and their commands, the four test files, the old names).
+- Code: `src/methodology.md` (the six files and their commands, the four test files, the old names).
 - Results: `results/feature_check/` (the data analysis); `results/llm_only/<run>/<view>_<split>/` (LLM-only runs, none yet).
 - Checks: `tests/` (`python -m unittest discover -s tests`).
-The sections below are dated; older ones use the names of their day (files and tests renamed on 2026-11-22: see the table in `src/README.md`).
+The sections below are dated; older ones use the names of their day (files and tests renamed on 2026-11-22: see the table in `src/methodology.md`).
 
 ## Done (checked on 2026-11-22 against the tables, by `tests/test_system.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
@@ -248,10 +248,10 @@ Checked: 6 new tests of the checker.
 ## Code and tests consolidated (researcher's request, 2026-11-22)
 - `src/` is six files: `common.py`, `preprocess.py`, `build.py` (views, corpus, references), `check.py` (pipeline status, features),
   `run.py` (llm-only), `evaluate.py` (report, compare). The balanced-test rule moved into `common.py`. The old names and where each
-  went are in `src/README.md`. Nothing was changed in the rules; only moved, renamed and reconnected (the commands are now
+  went are in `src/methodology.md`. Nothing was changed in the rules; only moved, renamed and reconnected (the commands are now
   `python src/build.py views`, `python src/check.py`, `python src/run.py llm-only ...`, `python src/evaluate.py compare ...`).
 - `tests/` is four files: `test_unit.py`, `test_integration.py`, `test_system.py`, `test_acceptance.py` (what each level checks is in
-  `src/README.md`). All 150 earlier tests are kept (none dropped), plus 22 new ones: 3 for the commands (`build.py`, `check.py`,
+  `src/methodology.md`). All 150 earlier tests are kept (none dropped), plus 22 new ones: 3 for the commands (`build.py`, `check.py`,
   `evaluate.py`, `run.py` hand the right arguments to the right command), 2 for the command line (every command answers `--help`;
   only the six files exist), 2 for the committed folder (no data step has a problem; a free dry run of `run.py` needs no key) and
   15 acceptance tests of the researcher's requirements.
@@ -261,6 +261,35 @@ Checked: 6 new tests of the checker.
   an e-mail address, a Git tag): all caught.
 - Also: the one-line summary of `evaluate.py` no longer prints "melanoma recall" (the separate melanoma figure was removed on
   2026-11-22, per-class recall stays).
+
+## Corpus build failed on the laptop; top-k accuracy removed (2026-11-22)
+- The first `python src/build.py corpus` run stopped with HTTP 404 on the PMC licence lookup (the PMC "OA web service", `oa.fcgi`).
+  NLM announced in its 2026 bulletin that this service will no longer be available ✔ (jf26 "Changes to PMC article dataset
+  distribution services"). The licence of a PMC paper is now read from the paper's own full-text XML (E-utilities efetch db=pmc:
+  the `<license>` link to creativecommons.org); a retraction notice or a paper with a related "retract..." article is flagged
+  retracted. A lookup that fails is counted ("pmc: licence lookup failed") and the build goes on, so one paper cannot stop it.
+  Untested against the live service (no network here) ◻: tested with made-up JATS XML. The efetch answers are cached (about
+  100-500 KB per paper ◻, in the ignored cache folder). 10 deliberate breaks, all caught.
+- Top-k accuracy removed from `evaluate.py` (the researcher's decision): accuracy is top-1 accuracy. The prompt still asks for three
+  letters and the answer is still parsed that way; whether to ask for one letter (a new prompt version, `llm_only_v3`) is open.
+- The code guide `src/README.md` was renamed `src/methodology.md` by the researcher; the references were updated.
+
+## Corpus: keys from .env, the Meditron download made once (2026-11-22)
+- Laptop run 2 of the trial: the licence fix worked (the run got to the Meditron guideline download), then stopped on read timeouts
+  of the 1 file download from Hugging Face (`open_guidelines.jsonl`; the researcher interrupted it). The warning "unauthenticated
+  requests to the HF Hub" showed that the HF_TOKEN in the researcher's `.env` was not used: only `run.py` read `.env`; `build.py`
+  did not. A token is optional for this public collection (it gives faster downloads and higher limits).
+- Changes: `build.py corpus` now reads `.env` (`--env-file`, default `.env`; a variable already set in the terminal wins) for
+  `NCBI_API_KEY` and `HF_TOKEN`, and logs only "found" or "not set", never the value (the path of the key file is not recorded in
+  the corpus card either). `load_env` moved to `common.py` (shared with `run.py`). The Meditron pass keeps the skin-cancer articles
+  only, saves them once after a complete pass (`<cache>/meditron_skin_cancer.json`; an interrupted pass saves nothing) and reads
+  them from there afterwards. The Hugging Face read timeout is 60 s (default 10 s) and the Windows symlink warning is off.
+  `--no-meditron` skips the collection (PMC guideline papers only), recorded in the card's settings.
+- Tests: 5 new; 14 deliberate breaks of this code, all caught (3 missed at first; tests strengthened).
+- The names in the researcher's `.env` (`CLAUDE_API_KEY`, `OPENROUTER_API_KEY`, `HF_TOKEN`) are the ones the code reads ✔ (names
+  only were shown to me; no value was seen). Hardening: an empty variable in the terminal no longer hides the `.env` value; an
+  unusable `.env` line (no "=", no name, no value) is reported by its line number only, never its content, by `build.py corpus`
+  and `run.py llm-only`. 6 more deliberate breaks, all caught; 178 tests.
 
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
