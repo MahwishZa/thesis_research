@@ -15,12 +15,12 @@ What it does (in order):
                       colour constancy, sRGB JPEG q=95.
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
   8. Splits         - lesion-grouped, stratified 70/15/15; then the test split is balanced to 30 images per class by
-                      whole lesion groups (src/balance_test.py; validation unchanged); then 5 CV folds over train+val.
+                      whole lesion groups (balanced_splits in src/common.py; validation unchanged); then 5 CV folds over train+val.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
  10. Outputs        - OUT_DIR/processed_images/ (the cleaned images) and OUT_DIR/processed_cases/: all_cases.csv (every kept case),
                       raw_files_audit.csv, near_duplicates.csv, classes.json, normalization.json,
                       class_weights.json, the balanced training lists, and preprocess.log.
-                      The three views are made from all_cases.csv by the next step, src/build_views.py.
+                      The three views are made from all_cases.csv by the next step, src/build.py views.
 
 Usage (this repository):
   python src/preprocess.py --raw data/raw --meta data/official_labels --out data [--no-colour-constancy]
@@ -40,9 +40,8 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
-from balance_test import TEST_PER_CLASS, balanced_splits
-from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, atomic_path, \
-    get_logger, image_path, images_not_in_table, write_json
+from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, TEST_PER_CLASS, atomic_path, \
+    balanced_splits, get_logger, image_path, images_not_in_table, write_json
 
 META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
               "isic_archive_api_441.csv")
@@ -382,7 +381,7 @@ def main():
     # balanced test split: the same number of images per class, by whole lesion groups (validation unchanged)
     before = u.split.copy()
     u["split"] = u.isic_id.map(balanced_splits(u[["isic_id", "group_id", "label", "split"]].to_dict("records"),
-                                               a.test_per_class, SEED))
+                                               a.test_per_class))
     log.info(f"[8] balanced test split: {a.test_per_class} images per class; moved test->train "
              f"{((before == 'test') & (u.split == 'train')).sum()}, train->test {((before == 'train') & (u.split == 'test')).sum()}")
     # 5-fold CV over train+val (test kept untouched)
@@ -460,7 +459,7 @@ def main():
     if extra:
         log.warning(f"[10] {len(extra)} images in {os.path.join(a.out, PROCESSED_IMAGES)} are not in the case table (left from an "
                     f"earlier run; not deleted, delete them by hand): {', '.join(extra)}")
-    log.info(f"[10] done: {proc}. Next: python src/build_views.py --data {a.out}")
+    log.info(f"[10] done: {proc}. Next: python src/build.py views --data {a.out}")
 
 
 if __name__ == "__main__":

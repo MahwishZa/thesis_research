@@ -21,7 +21,7 @@ Processed: 22 Nov 2026 with `src/preprocess.py` (seed 42). Everything here is re
 ## Final split (lesion-grouped; balanced test split; 5 CV folds on train+val)
 
 First a stratified, lesion-grouped 70/15/15 split (seed 42); then the test split is balanced to **30 images of every class** by
-moving whole lesion groups between test and train in a fixed order (`src/balance_test.py`, decided 2026-11-22); validation is not
+moving whole lesion groups between test and train in a fixed order (`balanced_splits` in `src/common.py`, decided 2026-11-22); validation is not
 changed. The numbers below are the rule applied to the cases ✔ (checked on the committed table); the laptop rerun of
 `preprocess.py` writes them into the tables.
 
@@ -47,11 +47,11 @@ data/raw/  +  data/official_labels/            inputs: the Kaggle download (lapt
    │  step 1: python src/preprocess.py            (cleans, removes duplicates, corrects labels, splits)
    ▼
 data/processed_images/  +  data/processed_cases/                   the cleaned images (laptop only); the cleaned, split cases
-   │  step 2: python src/build_views.py
+   │  step 2: python src/build.py views
    ▼
 data/views/image_only/  text_only/  multimodal/            the same cases in three views, with their questions
 
-data/knowledge_corpus/                                     the medical text library for RAG: python src/build_knowledge_corpus.py
+data/knowledge_corpus/                                     the medical text library for RAG: python src/build.py corpus
 ```
 
 | Path | What it holds | In Git |

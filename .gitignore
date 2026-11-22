@@ -18,6 +18,7 @@ htmlcov/
 # data/knowledge_corpus/manifest.csv and corpus_card.json (no text) are committed.
 /data/knowledge_corpus/passages.jsonl
 /data/knowledge_corpus/cache/
+/data/knowledge_corpus_trial/
 
 # The archived Version 2 (archive/v2/) keeps the same rules under its own folder.
 /archive/v2/data/**

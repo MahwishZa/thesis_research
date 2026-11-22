@@ -4,18 +4,18 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 
 ## Where things are
 - Data: `data/datasheet.md` (the pipeline, every folder and file, the three views, the limitations).
-- Code: `src/README.md` (every script, its order, inputs, outputs and command).
+- Code: `src/README.md` (the six files and their commands, the four test files, the old names).
 - Results: `results/feature_check/` (the data analysis); `results/llm_only/<run>/<view>_<split>/` (LLM-only runs, none yet).
 - Checks: `tests/` (`python -m unittest discover -s tests`).
-The sections below are dated; older ones use the names of their day (renamed on 2026-11-22, see the last dated section).
+The sections below are dated; older ones use the names of their day (files and tests renamed on 2026-11-22: see the table in `src/README.md`).
 
-## Done (checked on 2026-11-22 against the tables, by `tests/test_data.py`)
+## Done (checked on 2026-11-22 against the tables, by `tests/test_system.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
 - Split by lesion group: train 1,568, validation 314, test 315, plus 5 folds on train and validation; no lesion group in two splits.
   (Replaced on 2026-11-22 by the balanced test split: train 1,643, validation 314, test 240; see the dated section.)
 - Three views on the same cases (image only, text only, image + text) and their question files.
 - Class weights and balanced training lists (training cases only).
-- Feature and shortcut check (`src/feature_check.py`, `results/feature_check/`).
+- Feature and shortcut check (`src/check.py features`, `results/feature_check/`; made on the old split, rerun if reported).
 
 ## Corrected (approved 2026-11-22, rerun on the laptop the same day, checked)
 1. Corrected labels: 158 among the 2,202 ISIC numbers, 157 among the 2,197 kept images; the one between is ISIC_0010990, corrected and
@@ -244,6 +244,23 @@ Checked: 6 new tests of the checker.
   12 deliberate breaks, 11 caught; the 12th removed an early exit that changed nothing, so those lines were removed.
 - Not yet: the laptop rerun of `preprocess.py` and `build_views.py`, and the commit of the new tables.
 - Other decisions the same day: nothing is frozen yet; the repository stays private until publication.
+
+## Code and tests consolidated (researcher's request, 2026-11-22)
+- `src/` is six files: `common.py`, `preprocess.py`, `build.py` (views, corpus, references), `check.py` (pipeline status, features),
+  `run.py` (llm-only), `evaluate.py` (report, compare). The balanced-test rule moved into `common.py`. The old names and where each
+  went are in `src/README.md`. Nothing was changed in the rules; only moved, renamed and reconnected (the commands are now
+  `python src/build.py views`, `python src/check.py`, `python src/run.py llm-only ...`, `python src/evaluate.py compare ...`).
+- `tests/` is four files: `test_unit.py`, `test_integration.py`, `test_system.py`, `test_acceptance.py` (what each level checks is in
+  `src/README.md`). All 150 earlier tests are kept (none dropped), plus 22 new ones: 3 for the commands (`build.py`, `check.py`,
+  `evaluate.py`, `run.py` hand the right arguments to the right command), 2 for the command line (every command answers `--help`;
+  only the six files exist), 2 for the committed folder (no data step has a problem; a free dry run of `run.py` needs no key) and
+  15 acceptance tests of the researcher's requirements.
+- Deliberate breaks: 26 on the moved code and the new commands; 4 were missed at first (the arguments handed to a command were hidden
+  by `--help`; the default seed of the balanced split was not covered), tests added, all caught. 7 breaks of the acceptance tests (a
+  moved test case, a changed licence, an image in the text view, a renamed question file on a copy of the data; a key-like string,
+  an e-mail address, a Git tag): all caught.
+- Also: the one-line summary of `evaluate.py` no longer prints "melanoma recall" (the separate melanoma figure was removed on
+  2026-11-22, per-class recall stays).
 
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text

@@ -31,9 +31,9 @@ classes; the scores do not depend on the order.
 An API error that retrying cannot fix (wrong key, no credit, ...) stops the run; nothing already answered is lost.
 
 Usage (on the laptop):
-  python src/run_llm_only.py --model gpt-4o --view text_only --split val --dry-run --limit 2     # see the prompt; free
-  python src/run_llm_only.py --model gpt-4o --view text_only --split val --limit 5              # a small paid trial
-  python src/run_llm_only.py --model gpt-4o --view text_only --split test                       # a full run
+  python src/run.py llm-only --model gpt-4o --view text_only --split val --dry-run --limit 2     # see the prompt; free
+  python src/run.py llm-only --model gpt-4o --view text_only --split val --limit 5              # a small paid trial
+  python src/run.py llm-only --model gpt-4o --view text_only --split test                       # a full run
 """
 import argparse
 import base64
@@ -42,6 +42,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -359,7 +360,7 @@ def close_log_files(log):
 
 
 def parse_args(argv=None):
-    ap = argparse.ArgumentParser(description="LLM-only baseline: one model, one view, one split.")
+    ap = argparse.ArgumentParser(prog="run.py llm-only", description="LLM-only baseline: one model, one view, one split.")
     ap.add_argument("--model", required=True, choices=sorted(MODELS))
     ap.add_argument("--view", required=True, choices=VIEWS)
     ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
@@ -373,7 +374,7 @@ def parse_args(argv=None):
     return ap.parse_args(argv)
 
 
-def main(argv=None):
+def llm_only_main(argv=None):
     args = parse_args(argv)
     final, partial = run_folder(args.results, args.model, args.view, args.split)
     name = f"llm_only.{args.model}.{args.view}.{args.split}"
@@ -385,5 +386,17 @@ def main(argv=None):
     return run(args, client, log)
 
 
+COMMANDS = {"llm-only": llm_only_main}      # the other baselines (standard RAG, RAG^2, the proposed system) are added here
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if not argv or argv[0] not in COMMANDS:
+        print("usage: python src/run.py llm-only --model <model> --view <view> --split <split> [--limit N] [--dry-run]\n"
+              "commands: " + ", ".join(COMMANDS))
+        return 0 if argv in ([], ["-h"], ["--help"]) else 2
+    return COMMANDS[argv[0]](argv[1:])
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
