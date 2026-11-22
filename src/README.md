@@ -7,7 +7,7 @@ Run every command from the repository folder. Each script explains itself at the
 | 1 | `preprocess.py` | `data/raw/`, `data/official_labels/` | `data/processed_images/`, `data/processed_cases/` | the Kaggle download; pandas, OpenCV, scikit-learn |
 | 2 | `build_views.py` | `data/processed_cases/all_cases.csv` | `data/views/<view>/cases.csv`, `{train,val,test}.jsonl` | Python only |
 | 3 | `build_knowledge_corpus.py` | PubMed, PMC, guidelines, Dermoscopedia (internet) | `data/knowledge_corpus/` | internet; `datasets` for the Meditron guidelines |
-| 3b | `build_reference_texts.py` | Dermoscopedia (internet) | `data/knowledge_corpus/reference_texts.json`: one quoted reference text per disease, for semantic similarity | internet |
+| 3b | `build_reference_texts.py` | Dermoscopedia (internet) | `data/knowledge_corpus/reference_texts.json`: quoted reference texts per disease (one per dermoscopy section), for semantic similarity; `--token-check` counts their tokens; `--show-tables` / `--show-skipped` print the text it leaves out | internet |
 | – | `feature_check.py` | `data/processed_cases/all_cases.csv`, `data/processed_images/` | `results/feature_check/` | an analysis of the data, not an experiment |
 | 4 | `run_llm_only.py` | `data/views/<view>/<split>.jsonl` (+ images) | `results/llm_only/<model>/<view>_<split>/` | keys in `.env`; costs credit |
 | 5 | `evaluate.py` | a question file and a prediction file | one `report.json` | Python only (optional metrics need models) |

@@ -151,6 +151,62 @@ Checked: 6 new tests of the checker.
   `preprocess.py` logs such left-over images at the end (it does not delete them). The shared rule is `images_not_in_table` in
   `src/common.py` (tests in `tests/test_check_pipeline.py`; 5 deliberate breaks, all caught).
 
+## Reference texts: one text per dermoscopy section (approved 2026-11-22, option B)
+- Review of the first file (8 texts, the first 200 words of each page): DF, SCC, VASC good; AK acceptable; BKL partial (seborrheic
+  keratosis only); BCC, MEL and NV weak (BCC: pigmented nests only, no arborizing vessels; MEL: half a general statement, its list
+  of criteria missing ◻; NV: congenital globular nevi only, no reticular pattern).
+- `src/build_reference_texts.py` now keeps every section of the chosen part of the page, each split into texts of whole sentences
+  of at most 200 words; texts under 20 words are left out and listed under "skipped"; sections on references, literature, see
+  also, external links, further reading and differential diagnosis are left out; a section is read without its subsections (no
+  text twice); "(Figure )" and ". ." leftovers are removed. The page choice (steps 1-2) is unchanged.
+- `src/evaluate.py`: an explanation is compared with every reference text of its true class and the highest cosine is kept; the
+  report gives the number of texts per class and counts texts longer than the model reads.
+- Word limit: kept at 200. Raising it would only make each text longer, not add content (every section is now kept whole, in
+  pieces), and the model ignores text past its token limit. That limit could not be read here (Hugging Face is blocked) ◻:
+  `--token-check` measures it on the laptop.
+- Not yet: BKL still lacks solar lentigo and lichen planus-like keratosis (separate pages; a limitation, not hand-picked). The
+  committed `reference_texts.json` has the old form until it is rebuilt (the checker says so).
+- Tests: `tests/test_reference_texts.py`, `tests/test_evaluate.py`, `tests/test_check_pipeline.py`; 25 deliberate breaks on the final code, all caught (2 missed at first; the tests were fixed).
+
+## Reference texts rebuilt; reference lists removed (2026-11-22)
+- Laptop rebuild: 41 texts (MEL 2, NV 10, BCC 8, AK 5, BKL 8, DF 5, VASC 1, SCC 2). BCC now has leaf-like, spoke-wheel, arborizing
+  vessels, ulceration and shiny white structures; NV has globular, reticular, starburst, blue and site-related nevi; AK has
+  pigmented AK.
+- Token check ✔ (laptop output): the similarity model reads at most 350 tokens. 200 words gave up to 294 tokens of plain text, so
+  the word limit stays at 200 (250 words would exceed 350 tokens ◻, about 1.5 tokens per word). The two texts over the limit (AK
+  413, SCC 393 tokens) were reference lists written as plain text at the end of a section.
+- Fix: `without_bibliography` cuts a section at the first sentence that starts with an author ("Kittler, H., ...") or names a book
+  edition; the file lists what was cut ("bibliography_removed"). On the committed texts it cuts only those two lists (AK, SCC); the
+  other 39 texts are unchanged; a citation inside a sentence is kept. Tests; 8 deliberate breaks, all caught.
+- Open: MEL's two lists of criteria are still missing ("... are the following:" with nothing after), likely in a table, which
+  the parser skips ◻. Some texts are not dermoscopy (NV: histopathology, "unclassifiable lesions"; BKL: the wobble test).
+- Note for the thesis: with the best-matching reference kept, a class with more texts tends to get higher scores (NV 10 texts,
+  VASC 1), so per-class similarity is not comparable between classes; comparisons between systems are fair (same references).
+
+## Decisions on the reference texts (approved 2026-11-22)
+1. MEL's missing lists: `--show-tables` prints the text of the tables in the sections the rule reads (from the laptop's cache; it
+   writes nothing). If the criteria are there, table text will be allowed for every class by a fixed rule (not for MEL alone).
+   Tests; 7 deliberate breaks, 6 caught; the 7th changes no output (the buffer is cleared at each table's start).
+2. Texts that are not dermoscopy (NV histopathology and "unclassifiable lesions", BKL wobble test) stay: removing them would be
+   hand-picking, and with the best match kept they rarely decide a score.
+
+## MEL's lists: not in tables; a look at the other skipped text (approved 2026-11-22, option A)
+- `--show-tables` on the laptop: the only tables in the chosen sections are the page information boxes of MEL and VASC (author,
+  status, date), so no table rule is added.
+- `--show-skipped` prints the text outside paragraphs, list items and tables (captions, definition lists, divs, image alt text)
+  in the chosen sections; it writes nothing. If melanoma's criteria are there, one fixed rule for every class will be proposed.
+  Tests; 11 deliberate breaks, all caught (2 missed at first; tests added).
+- Laptop output, ✔ checked here: the committed file has 40 texts (MEL 2, NV 10, BCC 8, AK 4, BKL 8, DF 5, VASC 1, SCC 2); the
+  longest has 294 tokens, the model reads 350.
+
+## MEL's lists are images; no new rule (2026-11-22)
+- `--show-skipped` on the laptop ✔: MEL's list of criteria is an image ("Dermoscopic features associated with melanoma.jpeg"),
+  not text, so it cannot be quoted. The other skipped text is site furniture (app advert, ratings, author lines, "References"
+  headings), image file names, and a few short image captions (BCC, AK) that repeat what the texts already say.
+- Decision (recommended, no rule change): no caption or image text is added; the reference texts stay as built (40 texts).
+- Limitation for the thesis: MEL has 2 texts from the superficial spreading melanoma introduction; they name asymmetry of shape
+  and structures, more than 2 colours, atypical network and regression, but not the full list of local criteria.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.
@@ -163,7 +219,7 @@ Checked: 6 new tests of the checker.
 - The supervisor's answers: outside label files; adding HAM10000 images; a text corpus as evidence.
 - Pinning the package versions in `requirements.txt` (`pip freeze` on the laptop). Note: installing `ragas` replaced `openai` 3.49 with 1.109 in the laptop's environment; only the archived Version 2 code uses `openai`.
 - The first run of the corpus builder on the laptop, then a check of its card (counts, removed, empty topics) before freezing.
-- A cited reference text per class (needed for semantic similarity).
+- Rebuild the reference texts in the new form on the laptop, with `--token-check`, and review them before freezing.
 - The model(s) for the LLM-only baseline (approval needed: it costs credit), then a small trial on validation, then the runs.
 - The other baselines (standard RAG, RAG², proposed) on the three views.
 - Tests for `src/feature_check.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`; the evaluation code in `tests/test_evaluate.py`; the corpus builder in `tests/test_corpus.py`).

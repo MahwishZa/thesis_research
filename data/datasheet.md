@@ -60,7 +60,7 @@ data/knowledge_corpus/                                     the medical text libr
 | `processed_cases/class_weights.json`, `normalization.json`, `train_oversampled.csv`, `train_undersampled.csv` | train counts and class weights; train-only image and age statistics; balanced training lists (for a trained model only) | yes |
 | `views/<view>/cases.csv` | one row per case: id, split, fold, lesion group, label, and only the inputs of that view | yes |
 | `views/<view>/{train,val,test}.jsonl` | one 8-option multiple-choice question per case, for every system (LLM only, standard RAG, RAG², proposed) | yes |
-| `knowledge_corpus/` | `manifest.csv` and `corpus_card.json` (no text); `reference_texts.json` (one quoted Dermoscopedia paragraph per disease, with its source, for semantic similarity); `passages.jsonl` and the download cache stay on the laptop | partly |
+| `knowledge_corpus/` | `manifest.csv` and `corpus_card.json` (no text); `reference_texts.json` (quoted Dermoscopedia texts, one or more per disease (one per dermoscopy section), with their source, for semantic similarity); `passages.jsonl` and the download cache stay on the laptop | partly |
 
 Image paths in every table are relative to `data/` (`processed_images/<id>.jpg`).
 
@@ -97,7 +97,7 @@ Each question has the 8 classes as options in an order fixed per case (seed 42),
 | `processed_cases/`, `views/` | derived from the two rows above: ISIC ids, labels, age, sex, body site | the same terms as their sources | yes, with attribution |
 | `knowledge_corpus/passages.jsonl`, `cache/` | full texts of PubMed abstracts, PMC papers, guidelines and Dermoscopedia pages | each passage's own licence (publishers' copyright, CC BY-NC-ND, ...) | **no** (laptop only) |
 | `knowledge_corpus/manifest.csv`, `corpus_card.json` | lists and counts, no text | – | yes |
-| `knowledge_corpus/reference_texts.json` | 8 quoted Dermoscopedia paragraphs, each with its source | CC BY-NC-SA 4.0: attribution, non-commercial, shared under the same licence | yes (the file keeps the source of each text) |
+| `knowledge_corpus/reference_texts.json` | quoted Dermoscopedia texts (one per dermoscopy section of each disease's page), each with its source | CC BY-NC-SA 4.0: attribution, non-commercial, shared under the same licence | yes (the file keeps the source of each text) |
 | `.env` | API keys | secret | **never** |
 
 Attribution: images and metadata from the ISIC Archive (isic-archive.com), including HAM10000 (Tschandl et al. 2018, Scientific

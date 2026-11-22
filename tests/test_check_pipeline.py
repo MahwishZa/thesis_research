@@ -29,20 +29,22 @@ class CheckTests(unittest.TestCase):
         rows = {name: status for name, status, _ in cp.check(str(self.data), str(self.results))}
         self.assertEqual(set(rows.values()), {cp.NOT_RUN})
 
-    def test_short_reference_texts_are_a_problem(self):
+    def test_reference_texts_old_form_or_empty_are_a_problem(self):
         path = self.data / "knowledge_corpus" / "reference_texts.json"
         path.parent.mkdir(parents=True)
-        good = {"section": "Dermoscopic criteria", "n_words": 120}
-        path.write_text(json.dumps({c: good for c in CLASSES}), encoding="utf-8")
-        self.assertEqual(cp.step_references(str(self.data))[0], cp.DONE)
-        path.write_text(json.dumps({**{c: good for c in CLASSES}, "VASC": {"section": "(introduction)", "n_words": 90}}),
-                        encoding="utf-8")
-        self.assertEqual(cp.step_references(str(self.data)), (cp.DONE, "8 reference texts (from a page introduction: VASC)"))
-        path.write_text(json.dumps({**{c: good for c in CLASSES}, "NV": {"section": "(introduction)", "n_words": 14}}),
-                        encoding="utf-8")
+        good = {"texts": [{"section": "Dermoscopic criteria", "text": "x", "n_words": 120}]}
+        path.write_text(json.dumps({**{c: good for c in CLASSES}, "BCC": {"texts": good["texts"] * 3}}), encoding="utf-8")
+        status, note = cp.step_references(str(self.data))
+        self.assertEqual(status, cp.DONE)
+        self.assertEqual(note, "10 reference texts (MEL 1, NV 1, BCC 3, AK 1, BKL 1, DF 1, VASC 1, SCC 1)")
+        path.write_text(json.dumps({**{c: good for c in CLASSES}, "NV": {"texts": []}}), encoding="utf-8")
+        self.assertEqual(cp.step_references(str(self.data)), (cp.PROBLEM, "no text: ['NV']"))
+        path.write_text(json.dumps({c: good for c in CLASSES if c != "DF"}), encoding="utf-8")
+        self.assertEqual(cp.step_references(str(self.data)), (cp.PROBLEM, "missing ['DF']"))
+        path.write_text(json.dumps({c: {"text": "x", "n_words": 120} for c in CLASSES}), encoding="utf-8")
         status, note = cp.step_references(str(self.data))
         self.assertEqual(status, cp.PROBLEM)
-        self.assertIn("NV", note)
+        self.assertIn("old form", note)
 
     def test_missing_and_left_over_images_are_named(self):
         cases = self.data / PROCESSED_CASES

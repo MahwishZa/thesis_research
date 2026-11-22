@@ -31,7 +31,8 @@ Metrics
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
   Relevance : how well each retrieved passage fits the query: Jaccard similarity of the content words (free, no model);
               with --relevance-models also the cosine similarity of MedCPT embeddings and the MedCPT cross-encoder score.
-  Text      : semantic similarity (cosine of sentence embeddings, rationale vs a cited reference text), and optionally
+  Text      : semantic similarity (cosine of sentence embeddings, rationale vs the cited reference texts of the true class, the
+              best-matching one kept), and optionally
               RAGAS faithfulness / context relevance / answer relevancy (an LLM judge that costs credit).
 
 Sources: McNemar (1947) Psychometrika 12:153-157; Jaccard (1912) New Phytologist 11:37-50; nDCG: Jarvelin & Kekalainen (2002)
@@ -346,30 +347,63 @@ def sentence_encoder(model=SIMILARITY_MODEL):
     """A function that turns a list of texts into a list of embedding vectors (downloads the model on first use)."""
     from sentence_transformers import SentenceTransformer
     enc = SentenceTransformer(model)
-    return lambda texts: enc.encode(list(texts), convert_to_numpy=True).tolist()
+
+    def encode(texts):
+        return enc.encode(list(texts), convert_to_numpy=True).tolist()
+    # the model reads at most max_seq_length tokens of a text and ignores the rest: counted so a report can say so
+    encode.max_tokens = enc.max_seq_length
+    encode.n_tokens = lambda text: len(enc.tokenizer(text)["input_ids"])
+    return encode
+
+
+def reference_lists(reference_texts):
+    """{class: [text, ...]} from any of the accepted forms: {class: text}, {class: {"text": ...}} or the file of
+    src/build_reference_texts.py, {class: {"texts": [{"text": ...}, ...]}}."""
+    out = {}
+    for c, r in reference_texts.items():
+        if isinstance(r, str):
+            out[c] = [r]
+        elif "texts" in r:
+            out[c] = [t["text"] for t in r["texts"]]
+        else:
+            out[c] = [r["text"]]
+        if not out[c]:
+            raise ValueError(f"the class {c} has no reference text")
+    return out
 
 
 def semantic_similarity(qa, pred, reference_texts, encode):
-    """Cosine similarity between the embedding of each model explanation ("rationale") and the embedding of the reference text of
-    the question's true class, then the mean over the questions, with a 95% interval over lesions and the mean per class.
-    reference_texts: {class: text} or {class: {"text": ..., "source": ...}}, quoted from a cited source, never written by us."""
+    """Cosine similarity between the embedding of each model explanation ("rationale") and the embeddings of the reference texts of
+    the question's true class, keeping the highest (the best-matching reference, as in multi-reference scoring); then the mean
+    over the questions, with a 95% interval over lesions and the mean per class.
+    reference_texts: see reference_lists; the texts are quoted from a cited source, never written by us."""
     ids = [i for i in qa if (pred.get(i) or {}).get("rationale")]
     if not ids:
         return None
-    refs = {c: (r["text"] if isinstance(r, dict) else r) for c, r in reference_texts.items()}
+    refs = reference_lists(reference_texts)
     missing = sorted({qa[i]["gold_label"] for i in ids} - set(refs))
     if missing:
         raise ValueError(f"no reference text for the classes {missing}")
     classes = sorted({qa[i]["gold_label"] for i in ids})
-    ref_vec = dict(zip(classes, encode([refs[c] for c in classes])))
-    sims = [cosine(h, ref_vec[qa[i]["gold_label"]]) for i, h in zip(ids, encode([pred[i]["rationale"] for i in ids]))]
+    flat = [(c, t) for c in classes for t in refs[c]]
+    ref_vec = defaultdict(list)
+    for (c, _), v in zip(flat, encode([t for _, t in flat])):
+        ref_vec[c].append(v)
+    rationales = [pred[i]["rationale"] for i in ids]
+    sims = [max(cosine(h, r) for r in ref_vec[qa[i]["gold_label"]]) for i, h in zip(ids, encode(rationales))]
     groups = [qa[i].get("group_id", i) for i in ids]
     per_class = defaultdict(list)
     for i, v in zip(ids, sims):
         per_class[qa[i]["gold_label"]].append(v)
-    return {"mean": round(mean(sims), 4), "95ci": bootstrap_ci(sims, sims, groups, lambda a, b: mean(a)),
-            "per_class": {c: round(mean(per_class[c]), 4) for c in CLASSES if c in per_class},
-            "n_questions_with_rationale": len(ids)}
+    out = {"mean": round(mean(sims), 4), "95ci": bootstrap_ci(sims, sims, groups, lambda a, b: mean(a)),
+           "per_class": {c: round(mean(per_class[c]), 4) for c in CLASSES if c in per_class},
+           "n_questions_with_rationale": len(ids), "n_reference_texts": {c: len(refs[c]) for c in classes},
+           "aggregation": "highest cosine over the reference texts of the true class"}
+    if hasattr(encode, "n_tokens"):
+        out["longer_than_the_model_reads"] = {"max_tokens": encode.max_tokens,
+                                              "reference_texts": sum(encode.n_tokens(t) > encode.max_tokens for _, t in flat),
+                                              "rationales": sum(encode.n_tokens(t) > encode.max_tokens for t in rationales)}
+    return out
 
 
 def text_metrics(qa, pred, reference_texts, use_ragas=False, encode=None):

@@ -118,12 +118,15 @@ def step_references(data):
         return NOT_RUN, "no reference texts"
     with open(path, encoding="utf-8") as f:
         refs = json.load(f)
+    old = [c for c, r in refs.items() if "texts" not in r]
+    if old:
+        return PROBLEM, "the file has the old form (one text per disease): rerun build_reference_texts.py"
     missing = [c for c in CLASSES if c not in refs]
-    short = [c for c, r in refs.items() if r.get("n_words", 0) < 50]
-    if missing or short:
-        return PROBLEM, (f"missing {missing}; " if missing else "") + (f"under 50 words: {short}" if short else "")
-    intro = [c for c, r in refs.items() if "introduction" in str(r.get("section", ""))]
-    return DONE, "8 reference texts" + (f" (from a page introduction: {', '.join(intro)})" if intro else "")
+    empty = [c for c, r in refs.items() if not r["texts"]]
+    if missing or empty:
+        return PROBLEM, "; ".join(([f"missing {missing}"] if missing else []) + ([f"no text: {empty}"] if empty else []))
+    counts = ", ".join(f"{c} {len(refs[c]['texts'])}" for c in CLASSES)
+    return DONE, f"{sum(len(r['texts']) for r in refs.values())} reference texts ({counts})"
 
 
 def step_runs(data, results, models):

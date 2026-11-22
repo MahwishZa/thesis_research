@@ -239,6 +239,30 @@ class SemanticSimilarityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ev.semantic_similarity(self.qa, {"ISIC_0000003": {"rationale": "x"}}, {"MEL": "melanoma"}, bag_of_words)
 
+    def test_the_best_matching_reference_text_of_the_true_class_counts(self):
+        refs = {"MEL": {"texts": [{"text": "pigment network"}, {"text": "melanoma veil"}]},
+                "BCC": {"texts": [{"text": "arborizing vessels"}]}}
+        pred = {"ISIC_0000001": {"rationale": "melanoma veil"},          # the second MEL text: 1.0
+                "ISIC_0000002": {"rationale": "pigment network"},        # the first MEL text: 1.0
+                "ISIC_0000003": {"rationale": "melanoma veil"}}          # nothing shared with the BCC text: 0.0
+        r = ev.semantic_similarity(self.qa, pred, refs, bag_of_words)
+        self.assertEqual(r["per_class"], {"MEL": 1.0, "BCC": 0.0})
+        self.assertEqual(r["n_reference_texts"], {"BCC": 1, "MEL": 2})
+        self.assertNotIn("longer_than_the_model_reads", r)
+        with self.assertRaisesRegex(ValueError, "the class BCC has no reference text"):
+            ev.semantic_similarity(self.qa, pred, {**refs, "BCC": {"texts": []}}, bag_of_words)
+        self.assertEqual(ev.reference_lists({"MEL": "a", "NV": {"text": "b"}, "BCC": {"texts": [{"text": "c"}, {"text": "d"}]}}),
+                         {"MEL": ["a"], "NV": ["b"], "BCC": ["c", "d"]})
+
+    def test_texts_longer_than_the_model_reads_are_counted(self):
+        def encode(texts):
+            return bag_of_words(texts)
+        encode.max_tokens, encode.n_tokens = 2, lambda t: len(t.split())
+        refs = {"MEL": {"texts": [{"text": "pigment network veil"}, {"text": "veil"}]}, "BCC": "arborizing vessels"}
+        pred = {"ISIC_0000001": {"rationale": "melanoma pigment network veil"}, "ISIC_0000003": {"rationale": "vessels"}}
+        r = ev.semantic_similarity(self.qa, pred, refs, encode)
+        self.assertEqual(r["longer_than_the_model_reads"], {"max_tokens": 2, "reference_texts": 1, "rationales": 1})
+
     def test_text_metrics_reports_it_only_with_reference_texts(self):
         pred = {"ISIC_0000003": {"rationale": "arborizing vessels"}}
         self.assertEqual(ev.text_metrics(self.qa, pred, None), {})
