@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 import build_views
+from balance_test import TEST_PER_CLASS
 from common import (ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, PROCESSED_CASES, PROCESSED_IMAGES, RAW, SPLITS, VIEWS,
                     images_not_in_table, question_file, read_csv, view_table)
 
@@ -56,6 +57,10 @@ def step_clean(data):
     if missing:
         return PROBLEM, f"missing: {', '.join(missing)}"
     cases = read_csv(os.path.join(data, ALL_CASES))
+    test = {c: sum(r["split"] == "test" and r["label"] == c for r in cases) for c in CLASSES}
+    if set(test.values()) != {TEST_PER_CLASS}:
+        return PROBLEM, (f"the test split is not balanced to {TEST_PER_CLASS} per class ("
+                         + ", ".join(f"{c} {n}" for c, n in test.items()) + "): rerun preprocess.py, then build_views.py")
     images = os.path.join(data, PROCESSED_IMAGES)
     if not os.path.isdir(images):
         return NOT_RUN, f"{len(cases)} cases; the cleaned images are not in data/{PROCESSED_IMAGES}/ (laptop only)"
@@ -69,7 +74,7 @@ def step_clean(data):
                      f"data/{PROCESSED_IMAGES}/: {', '.join(extra[:10])}" + (" ..." if len(extra) > 10 else ""))
     if notes:
         return PROBLEM, "; ".join(notes)
-    return DONE, f"{len(cases)} cases, every image present"
+    return DONE, f"{len(cases)} cases, {TEST_PER_CLASS} test images per class, every image present"
 
 
 def step_views(data):

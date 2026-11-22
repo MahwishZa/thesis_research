@@ -46,18 +46,31 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(status, cp.PROBLEM)
         self.assertIn("old form", note)
 
+    def test_an_unbalanced_test_split_is_a_problem(self):
+        cases = self.data / PROCESSED_CASES
+        cases.mkdir(parents=True)
+        for f in cp.PROCESSED_FILES:
+            (cases / f).write_text("isic_id\n", encoding="utf-8")
+        rows = "".join(f"T_{c}_{k},{c},test\n" for c in CLASSES for k in range(31 if c == "DF" else 30))
+        (self.data / ALL_CASES).write_text("isic_id,label,split\n" + rows, encoding="utf-8")
+        status, note = cp.step_clean(str(self.data))
+        self.assertEqual(status, cp.PROBLEM)
+        self.assertIn("not balanced to 30 per class", note)
+        self.assertIn("DF 31", note)
+
     def test_missing_and_left_over_images_are_named(self):
         cases = self.data / PROCESSED_CASES
         cases.mkdir(parents=True)
         for f in cp.PROCESSED_FILES:
             (cases / f).write_text("isic_id,image_path\n", encoding="utf-8")
-        (self.data / ALL_CASES).write_text("isic_id,image_path\nISIC_1,processed_images/ISIC_1.jpg\n"
-                                           "ISIC_2,processed_images/ISIC_2.jpg\n", encoding="utf-8")
+        test_rows = "".join(f"T_{c}_{k},{c},test,processed_images/T_{c}_{k}.jpg\n" for c in CLASSES for k in range(30))
+        (self.data / ALL_CASES).write_text("isic_id,label,split,image_path\nISIC_1,MEL,train,processed_images/ISIC_1.jpg\n"
+                                           "ISIC_2,NV,val,processed_images/ISIC_2.jpg\n" + test_rows, encoding="utf-8")
         images = self.data / "processed_images"
         images.mkdir()
-        for name in ("ISIC_1.jpg", "ISIC_2.jpg"):
+        for name in ["ISIC_1.jpg", "ISIC_2.jpg"] + [f"T_{c}_{k}.jpg" for c in CLASSES for k in range(30)]:
             (images / name).write_bytes(b"")
-        self.assertEqual(cp.step_clean(str(self.data)), (cp.DONE, "2 cases, every image present"))
+        self.assertEqual(cp.step_clean(str(self.data)), (cp.DONE, "242 cases, 30 test images per class, every image present"))
         (images / "ISIC_9.jpg").write_bytes(b"")
         (images / "notes.txt").write_text("not an image", encoding="utf-8")
         status, note = cp.step_clean(str(self.data))

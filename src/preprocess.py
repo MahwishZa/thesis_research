@@ -14,7 +14,8 @@ What it does (in order):
   6. Standardisation- centre-crop to 4:3, resize to 600x450, Shades-of-Gray
                       colour constancy, sRGB JPEG q=95.
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
-  8. Splits         - lesion-grouped, stratified 70/15/15 + 5 CV folds.
+  8. Splits         - lesion-grouped, stratified 70/15/15; then the test split is balanced to 30 images per class by
+                      whole lesion groups (src/balance_test.py; validation unchanged); then 5 CV folds over train+val.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
  10. Outputs        - OUT_DIR/processed_images/ (the cleaned images) and OUT_DIR/processed_cases/: all_cases.csv (every kept case),
                       raw_files_audit.csv, near_duplicates.csv, classes.json, normalization.json,
@@ -39,6 +40,7 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
+from balance_test import TEST_PER_CLASS, balanced_splits
 from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, atomic_path, \
     get_logger, image_path, images_not_in_table, write_json
 
@@ -213,6 +215,7 @@ def main():
     # Visual audit: pHash distance <=3 = same lesion (re-photographed / re-uploaded);
     # 4-6 produced false matches between different lesions in dermoscopy, so 3 is the default.
     ap.add_argument("--near-dup-threshold", type=int, default=3)
+    ap.add_argument("--test-per-class", type=int, default=TEST_PER_CLASS, help="images of each class in the balanced test split")
     a = ap.parse_args()
     check_inputs(a.raw, a.meta)
     proc = os.path.join(a.out, PROCESSED_CASES)
@@ -376,6 +379,12 @@ def main():
     sgkf2 = StratifiedGroupKFold(n_splits=6, shuffle=True, random_state=SEED)
     tr_i, va_i = next(sgkf2.split(tv, tv.label.values, tv.group_id.values))
     u.loc[tv.index[va_i], "split"] = "val"
+    # balanced test split: the same number of images per class, by whole lesion groups (validation unchanged)
+    before = u.split.copy()
+    u["split"] = u.isic_id.map(balanced_splits(u[["isic_id", "group_id", "label", "split"]].to_dict("records"),
+                                               a.test_per_class, SEED))
+    log.info(f"[8] balanced test split: {a.test_per_class} images per class; moved test->train "
+             f"{((before == 'test') & (u.split == 'train')).sum()}, train->test {((before == 'train') & (u.split == 'test')).sum()}")
     # 5-fold CV over train+val (test kept untouched)
     u["cv_fold"] = -1
     tv = u[u.split != "test"]

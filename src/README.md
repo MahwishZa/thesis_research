@@ -14,6 +14,8 @@ Run every command from the repository folder. Each script explains itself at the
 | any | `check_pipeline.py` | everything above | a table: each step done / not run / problem, and why | Python only |
 | 6 | `compare.py` | several runs on the same cases | McNemar for every pair, Holm-corrected | Python only |
 
+`balance_test.py` holds the rule that balances the test split (30 images per class, whole lesion groups); `preprocess.py` uses it.
+
 `common.py` holds what every script shares: the 8 classes and their names, the option texts, the seed, the layout of `data/`,
 safe writing (a file is replaced in one step, so an interrupted run never leaves half a file), reading and logging.
 

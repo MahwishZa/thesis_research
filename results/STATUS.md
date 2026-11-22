@@ -12,6 +12,7 @@ The sections below are dated; older ones use the names of their day (renamed on 
 ## Done (checked on 2026-11-22 against the tables, by `tests/test_data.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
 - Split by lesion group: train 1,568, validation 314, test 315, plus 5 folds on train and validation; no lesion group in two splits.
+  (Replaced on 2026-11-22 by the balanced test split: train 1,643, validation 314, test 240; see the dated section.)
 - Three views on the same cases (image only, text only, image + text) and their question files.
 - Class weights and balanced training lists (training cases only).
 - Feature and shortcut check (`src/feature_check.py`, `results/feature_check/`).
@@ -230,9 +231,23 @@ Checked: 6 new tests of the checker.
   are checked; the scores do not change (a refusal is wrong, as before); refusals are not retried. Tests; 11 deliberate breaks,
   all caught (1 missed at first; test added; the test also caught a fault in the first pattern: "I’m unable to").
 
+## Balanced test split (decided 2026-11-22)
+- Decision: the test split holds 30 images of every class (240 images, 190 lesions). Rule (`src/balance_test.py`, used by
+  `preprocess.py` step 8): whole lesion groups only, in a fixed order (sha256 of "42:<group_id>"); a class keeps its test groups
+  that fit, the rest move to train; a class with too few takes train groups. Validation is not changed.
+- Effect ✔ (the rule on the committed table): test 240 (30 each); train 1,568 -> 1,643; val 314 (the same cases). Moved: 111
+  test -> train (MEL 35, BKL 38, BCC 26, NV 12), 36 train -> test (DF 14, AK 12, VASC 9, SCC 1). No lesion in two splits.
+- Consequences: the training tables (class weights, balanced lists, normalisation, CV folds) change with the rerun; the
+  validation questions stay the same, so the 120 trial answers stay valid ◻ (to confirm with `check_pipeline.py` after the rerun);
+  `results/feature_check/` was made on the old split (an analysis, not an experiment; rerun if it is reported).
+- `check_pipeline.py` reports a test split that is not balanced. Tests (`tests/test_balance_test.py`, `tests/test_check_pipeline.py`);
+  12 deliberate breaks, 11 caught; the 12th removed an early exit that changed nothing, so those lines were removed.
+- Not yet: the laptop rerun of `preprocess.py` and `build_views.py`, and the commit of the new tables.
+- Other decisions the same day: nothing is frozen yet; the repository stays private until publication.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
-   results on all 315 test cases and again on the 277 with all three facts recorded.
+   results on all test cases and again on those with all three facts recorded (counts change with the balanced test split).
 2. Source confound: all melanoma and nevus come from the older ISIC archive, the other classes almost all from HAM10000.
 3. The cleaning used outside label files (ISIC 2019, HAM10000), and the documents propose adding HAM10000 images; the supervisor has
    not yet confirmed either is allowed under "only this Kaggle dataset".
