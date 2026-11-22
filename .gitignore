@@ -1,6 +1,7 @@
-# Python leftovers, virtual environments and test-coverage data
+# Python leftovers, virtual environments, lint cache and test-coverage data
 __pycache__/
 *.py[cod]
+.ruff_cache/
 .venv/
 venv/
 .coverage
@@ -26,8 +27,10 @@ htmlcov/
 !/archive/v2/data/*/build/*.csv
 archive/v2/results/**/val_*/
 
-# Unfinished runs (a run's folder loses the .partial ending when it finishes)
+# Unfinished runs (a run's folder loses the .partial ending when it finishes), half-written files and run logs
 *.partial/
+.*.partial
+*.log
 
 # Validation runs tune the method; they stay on this computer and are not reported results.
 results/**/val_*/

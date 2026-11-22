@@ -29,9 +29,9 @@ class PreprocessTests(unittest.TestCase):
         self.assertEqual(self.p.clinical_text(70.0, "male", "trunk", "trunk"), "Patient: 70-year-old male. Skin lesion on the trunk.")  # no repeat
 
     def test_the_new_text_is_the_old_text_without_the_image_sentence_for_every_committed_case(self):
-        path = ROOT / "data" / "master_clean.csv"
+        path = ROOT / "data" / "processed" / "master_clean.csv"
         if not path.is_file():
-            self.skipTest("data/master_clean.csv is not in data/")
+            self.skipTest("data/processed/master_clean.csv is not there")
         m = self.pd.read_csv(path)
         old = [t.removesuffix(SENTENCE) for t in m.clinical_text]
         new = [self.p.clinical_text(*x) for x in zip(m.age, m.sex, m.site, m.site_detail)]
@@ -61,8 +61,8 @@ class PreprocessTests(unittest.TestCase):
 class OptionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import build_qa
-        cls.q = build_qa
+        import build_views
+        cls.q = build_views
 
     def test_the_options_are_the_eight_classes_in_a_fixed_order_for_each_case(self):
         options, letter = self.q.options_for("ISIC_0024948")

@@ -32,34 +32,58 @@ Processed: 22 Nov 2026 with `src/preprocess.py` (seed 42). Everything here is re
 | SCC squamous cell carcinoma | 140 | 28 | 29 | 197 |
 | **Total** | **1,568** | **314** | **315** | **2,197** |
 
-Imbalance ratio (train): 341 / 80 = **4.26 : 1**. Class weights are in `class_balance.json`.
+Imbalance ratio (train): 341 / 80 = **4.26 : 1**. Class weights are in `processed/class_balance.json`.
 
-## Files
+## The pipeline and the folders
 
-| File | Use |
-|---|---|
-| `master_clean.csv` | Everything: label + provenance, metadata, quality flags, split, CV fold, model features |
-| `dataset_image_only.csv` | id, split, label, image_path |
-| `dataset_text_only.csv` | id, split, label, clinical_text + metadata features (no image) |
-| `dataset_multimodal.csv` | id, split, label, image_path + clinical_text + metadata features |
-| `qa/qa_{image_only,text_only,multimodal}_{train,val,test}.jsonl` | 8-option diagnostic QA items for LLM-only / RAG / RAG² / Proposed RAG |
-| `images/` | 2,197 standardised images (on the researcher's laptop only, not in Git) |
-| `class_balance.json` | train counts, balanced & effective-number class weights |
-| `train_oversampled_index.csv` / `train_undersampled_index.csv` | ready-made balanced training lists (train split only) |
-| `near_duplicate_pairs.csv` | near-duplicate audit and the action taken |
-| `original_files_audit.csv` | every original Kaggle file → its final label and split |
-| `results/feature_check/` | `feature_check_results.json` and `image_handcrafted_features.csv`: the feature-sufficiency / shortcut experiment |
-| `src/` (repository) | preprocess.py, feature_check.py, build_qa.py, build_knowledge_corpus.py, evaluate.py |
-| `meta/` | official label/metadata files used (ISIC 2019 GT + metadata, HAM10000 metadata, ISIC Archive API extract) |
+```
+data/raw/  +  data/meta/                                   inputs: the Kaggle download (laptop only) and the official label files
+   │  step 1: python src/preprocess.py --raw data/raw --meta data/meta --out data
+   ▼
+data/images/  +  data/processed/                           cleaned images (laptop only); cleaned, de-duplicated, split cases
+   │  step 2: python src/build_views.py --data data
+   ▼
+data/views/image_only/  text_only/  multimodal/            the same cases in three views, with their question files
+
+data/corpus/                                               the knowledge corpus for RAG: python src/build_knowledge_corpus.py
+```
+
+| Path | What it holds | In Git |
+|---|---|---|
+| `raw/` | the Kaggle download (2,357 files), untouched | no |
+| `meta/` | official label/metadata files used (ISIC 2019 ground truth + metadata, HAM10000 metadata, ISIC Archive API extract) | yes |
+| `images/` | the 2,197 standardised images | no |
+| `processed/master_clean.csv` | every kept case: label + provenance, metadata, quality flags, split, CV fold, model features | yes |
+| `processed/original_files_audit.csv` | every original Kaggle file → its final label and split | yes |
+| `processed/near_duplicate_pairs.csv` | near-duplicate audit and the action taken | yes |
+| `processed/label_map.json`, `normalization.json`, `class_balance.json` | class index and name; train-only RGB and age statistics; train counts and class weights | yes |
+| `processed/train_oversampled_index.csv`, `train_undersampled_index.csv` | ready-made balanced training lists (train split only) | yes |
+| `views/<view>/cases.csv` | one row per case: id, split, fold, lesion group, label, and the inputs of the view only | yes |
+| `views/<view>/qa_{train,val,test}.jsonl` | 8-option diagnostic questions for LLM only / standard RAG / RAG² / proposed RAG | yes |
+| `corpus/` | `manifest.csv` and `corpus_card.json` (no text); `passages.jsonl` and the download cache stay on the laptop | partly |
+
+Image paths in every table are relative to `data/` (`images/<id>.jpg`).
+
+## The three views (the same 2,197 cases, the same splits)
+
+| View | Inputs | Example of the question text |
+|---|---|---|
+| `image_only` | the image | "Look at the dermoscopic image of the skin lesion. What is the most likely diagnosis?" |
+| `text_only` | age, sex, body site in one fixed sentence | "Patient: 55-year-old female. Skin lesion on the head/neck (face). What is the most likely diagnosis?" |
+| `multimodal` | the image and the same sentence | the sentence + "Look at the dermoscopic image of the lesion. What is the most likely diagnosis?" |
+
+Each question has the 8 classes as options in an order fixed per case (seed 42), the answer letter, the class code
+(`gold_label`) and the lesion group. The analysis results of the features are in `results/feature_check/`.
 
 ## Model inputs vs analysis-only columns
 
-- **Model inputs (no label leakage):** image; age_z, age_missing, sex_male, sex_missing, site one-hots, site_missing; clinical_text.
+- **Model inputs (no label leakage):** image; clinical_text (age, sex, site); for a trained model also age_z, age_missing, sex_male,
+  sex_missing, site one-hots, site_missing (in `processed/master_clean.csv` only).
 - **Do NOT feed to a model:** `confirm_type` (histopathology vs follow-up reveals benign/malignant), `source`, `orig_width/height/kb`, `diagnosis_detail`, `label_*`, `folder_*`.
 
 ## Known limitations
 
-1. **Source confound:** all MEL and NV come from the older ISIC archive; all other classes come mostly from HAM10000. Even after standardisation, image features detect the source with AUC 0.935, and original file size alone gives 0.33 balanced accuracy (chance = 0.125). Fix: rerun with `--ham-images <HAM10000 folder>` to add real HAM10000 MEL/NV, and report source-stratified results.
-2. Metadata is missing for some older images (age 10.6%, sex 9.8%, site 6.7% missing; mostly NV/MEL). Missingness itself correlates with class, so report metadata results with and without the missing flags.
-3. The test set is small (16–68 per class), so always report 95% bootstrap CIs or 5-fold CV.
+1. **Source confound:** all MEL and NV come from the older ISIC archive; all other classes come mostly from HAM10000. Even after standardisation, image features detect the source with AUC 0.935, and original file size alone gives 0.33 balanced accuracy (chance = 0.125). Only the Kaggle dataset is used (decision of 2026-11-22), so no images are added: report it as a limitation and give results per source (`src/evaluate.py --cases data/processed/master_clean.csv --by source`).
+2. Metadata is missing for some older images (age 10.6%, sex 9.8%, site 6.7% missing; mostly NV/MEL). Missingness itself correlates with class, so report the text and multimodal results also for the cases with all facts recorded (`--by facts_recorded`).
+3. The test set is small (16–68 per class), so always report 95% bootstrap CIs (`src/evaluate.py` draws whole lesions).
 4. Licence: ISIC images are mostly CC-BY-NC, for non-commercial research only.

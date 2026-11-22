@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Preprocessing pipeline for the Kaggle "Skin Cancer ISIC - 9 classes" dataset.
+Step 1 of the data pipeline: cleans the Kaggle "Skin Cancer ISIC - 9 classes" dataset (raw -> cleaned, de-duplicated, split).
 
 What it does (in order):
   1. Inventory      - reads every JPG in the original Train/Test folders, hashes it.
@@ -16,18 +16,23 @@ What it does (in order):
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
   8. Splits         - lesion-grouped, stratified 70/15/15 + 5 CV folds.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
- 10. Outputs        - image / text / multimodal dataset tables, class weights,
-                      balanced sampling indices, data card.
+ 10. Outputs        - OUT_DIR/images/ (the cleaned images) and OUT_DIR/processed/: master_clean.csv (every kept case),
+                      original_files_audit.csv, near_duplicate_pairs.csv, label_map.json, normalization.json,
+                      class_balance.json, the balanced training lists, and preprocess.log.
+                      The three views are made from master_clean.csv by the next step, src/build_views.py.
 
-Usage:
-  python preprocess.py --raw RAW_DIR --meta META_DIR --out OUT_DIR [--no-colour-constancy]
+Usage (this repository):
+  python src/preprocess.py --raw data/raw --meta data/meta --out data [--no-colour-constancy]
 
 RAW_DIR holds the Kaggle download in either layout: "Train/<class>" and "Test/<class>" (the unpacked dataset), or
 "Train_1/Train 1", "Train_2/Train 2" and "Test/Test" (the parts of the Kaggle zips).
 META_DIR must contain ISIC_2019_Training_GroundTruth.csv, ISIC_2019_Training_Metadata.csv,
 HAM10000_metadata.csv and isic_archive_api_441.csv.
 """
-import argparse, hashlib, json, os, re
+import argparse
+import hashlib
+import os
+import re
 
 import cv2
 import numpy as np
@@ -35,13 +40,10 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
-SEED = 42
-CLASSES = ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"]
-CLASS_NAMES = {
-    "MEL": "melanoma", "NV": "melanocytic nevus", "BCC": "basal cell carcinoma",
-    "AK": "actinic keratosis", "BKL": "benign keratosis-like lesion (pigmented benign keratosis)",
-    "DF": "dermatofibroma", "VASC": "vascular lesion", "SCC": "squamous cell carcinoma",
-}
+from common import CLASS_NAMES, CLASSES, IMAGES, PROCESSED, SEED, atomic_path, get_logger, write_json
+
+META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
+              "isic_archive_api_441.csv")
 FOLDER_TO_CODE = {
     "melanoma": "MEL", "nevus": "NV", "basal cell carcinoma": "BCC",
     "actinic keratosis": "AK", "pigmented benign keratosis": "BKL",
@@ -94,7 +96,22 @@ def image_rel_path(isic_id):
 
 
 def md5(path):
-    return hashlib.md5(open(path, "rb").read()).hexdigest()
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+
+def check_inputs(raw, meta):
+    """Stops with a clear message when an input folder or file is missing, before any work is done."""
+    missing = [os.path.join(raw, sub) for _, sub in source_dirs(raw) if not os.path.isdir(os.path.join(raw, sub))]
+    missing += [os.path.join(meta, f) for f in META_FILES if not os.path.isfile(os.path.join(meta, f))]
+    if missing:
+        raise SystemExit("missing input(s):\n  " + "\n  ".join(missing))
+
+
+def save_csv(df, path):
+    """Writes a table in one step (an interrupted run leaves the previous file untouched)."""
+    with atomic_path(path) as tmp:
+        df.to_csv(tmp, index=False)
 
 
 def phash(gray):
@@ -199,14 +216,16 @@ def main():
     ap.add_argument("--meta", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--no-colour-constancy", action="store_true")
-    ap.add_argument("--ham-images", default=None,
-                    help="optional folder with HAM10000 JPGs; adds real MEL and NV images from HAM10000")
-    ap.add_argument("--ham-per-class", type=int, default=300)
     # Visual audit: pHash distance <=3 = same lesion (re-photographed / re-uploaded);
     # 4-6 produced false matches between different lesions in dermoscopy, so 3 is the default.
     ap.add_argument("--near-dup-threshold", type=int, default=3)
     a = ap.parse_args()
-    os.makedirs(os.path.join(a.out, "images"), exist_ok=True)
+    check_inputs(a.raw, a.meta)
+    proc = os.path.join(a.out, PROCESSED)
+    os.makedirs(os.path.join(a.out, IMAGES), exist_ok=True)
+    os.makedirs(proc, exist_ok=True)
+    log = get_logger("preprocess", os.path.join(proc, "preprocess.log"))
+    log.info(f"preprocess: raw={a.raw} meta={a.meta} out={a.out} colour_constancy={not a.no_colour_constancy}")
     rng = np.random.default_rng(SEED)
 
     # 1. inventory -------------------------------------------------------------
@@ -221,30 +240,7 @@ def main():
                 rows.append(dict(isic_id=f[:-4], orig_split=split, folder_label=folder,
                                  folder_code=FOLDER_TO_CODE[folder], path=p, md5=md5(p)))
     raw = pd.DataFrame(rows)
-    print(f"[1] files: {len(raw)}")
-
-    # 1b. OPTIONAL: add real HAM10000 melanoma / nevus images to break the source confound
-    #     (in the Kaggle copy every MEL and NV image comes from the old ISIC archive and every
-    #      other class from HAM10000, so "source" alone predicts the class).
-    if a.ham_images:
-        hm = pd.read_csv(os.path.join(a.meta, "HAM10000_metadata.csv"))
-        files = {}
-        for root, _, fs in os.walk(a.ham_images):
-            for f in fs:
-                if f.lower().endswith(".jpg") and f.startswith("ISIC_"):
-                    files[f[:-4]] = os.path.join(root, f)
-        hm = hm[hm.image_id.isin(files) & hm.dx.isin(["mel", "nv"]) & ~hm.image_id.isin(raw.isic_id)]
-        hm = hm.sort_values("image_id").drop_duplicates("lesion_id")       # one image per lesion
-        add = []
-        for dx, code in (("mel", "MEL"), ("nv", "NV")):
-            pool = hm[hm.dx == dx]
-            k = min(a.ham_per_class, len(pool))
-            for iid in rng.choice(pool.image_id.values, k, replace=False):
-                p = files[iid]
-                add.append(dict(isic_id=iid, orig_split="added_HAM10000", folder_label="added from HAM10000",
-                                folder_code=code, path=p, md5=md5(p)))
-        raw = pd.concat([raw, pd.DataFrame(add)], ignore_index=True)
-        print(f"[1b] added {len(add)} real HAM10000 images (MEL+NV, one per lesion)")
+    log.info(f"[1] files: {len(raw)}")
 
     # 2. official labels ---------------------------------------------------------
     gt = pd.read_csv(os.path.join(a.meta, "ISIC_2019_Training_GroundTruth.csv"))
@@ -286,7 +282,7 @@ def main():
     # consistency check HAM vs ISIC2019
     chk = u[u.ham_code.notna()]
     bad = chk[~chk.apply(lambda r: r.label in r.ham_code.split("/"), axis=1)]
-    print(f"[3] label corrected: {int(u.label_corrected.sum())}; HAM vs ISIC2019 disagreements: {len(bad)}")
+    log.info(f"[3] label corrected: {int(u.label_corrected.sum())}; HAM vs ISIC2019 disagreements: {len(bad)}")
 
     # diagnosis confirmation type (kept as analysis column, NOT a model input: it leaks the label)
     u["confirm_type"] = u.dx_type.map({"histo": "histopathology", "follow_up": "follow-up",
@@ -338,7 +334,7 @@ def main():
     u["flag_exposure"] = (u.mean_brightness < 60) | (u.mean_brightness > 235)
     u["flag_dermoscope_vignette"] = u.dark_corner_frac > 0.5
     u["flag_heavy_hair"] = u.hair_frac > u.hair_frac.quantile(0.95)
-    print(f"[5] blurry {u.flag_blurry.sum()}, exposure {u.flag_exposure.sum()}, "
+    log.info(f"[5] blurry {u.flag_blurry.sum()}, exposure {u.flag_exposure.sum()}, "
           f"vignette {u.flag_dermoscope_vignette.sum()}, heavy hair {u.flag_heavy_hair.sum()}")
 
     # near-duplicates (different ISIC id, visually same) + lesion grouping
@@ -365,15 +361,15 @@ def main():
     drop = npairs[(npairs.phash_distance == 0) & (npairs.label_a == npairs.label_b)]
     npairs["action"] = np.where(npairs.index.isin(drop.index), "removed isic_id_b (same image, same label)",
                                 "kept both; grouped into same split")
-    npairs.to_csv(os.path.join(a.out, "near_duplicate_pairs.csv"), index=False)
+    save_csv(npairs, os.path.join(proc, "near_duplicate_pairs.csv"))
     removed = set(drop.isic_id_b)
     conflict = npairs[(npairs.phash_distance == 0) & (npairs.label_a != npairs.label_b)]
     assert conflict.empty, f"identical images with different official labels: {conflict}"
     for x in removed:
-        os.remove(os.path.join(a.out, "images", f"{x}.jpg"))
+        os.remove(os.path.join(a.out, IMAGES, f"{x}.jpg"))
     u = u[~u.isic_id.isin(removed)].copy()
     u["group_size"] = u.groupby("group_id").isic_id.transform("size")
-    print(f"[4] near-duplicate pairs: {len(npairs)}; removed as duplicates: {len(removed)}; "
+    log.info(f"[4] near-duplicate pairs: {len(npairs)}; removed as duplicates: {len(removed)}; "
           f"groups with >1 image: {(u.groupby('group_id').size() > 1).sum()}")
 
     # 8. splits -------------------------------------------------------------------
@@ -394,7 +390,7 @@ def main():
         u.loc[tv.index[vi], "cv_fold"] = k
     leak = set(u[u.split == "train"].group_id) & set(u[u.split == "test"].group_id)
     assert not leak, "group leakage between train and test"
-    print("[8] split counts\n", pd.crosstab(u.label, u.split, margins=True))
+    log.info("[8] split counts\n" + str(pd.crosstab(u.label, u.split, margins=True)))
 
     # 9. normalisation (TRAIN only) ------------------------------------------------
     tr = u[u.split == "train"]
@@ -407,7 +403,7 @@ def main():
     norm = dict(image_mean_rgb=[round(x, 4) for x in mean], image_std_rgb=[round(x, 4) for x in std],
                 image_size=[OUT_W, OUT_H], colour_constancy="shades_of_gray_p6" if cc else "none",
                 age_mean=round(age_mu, 2), age_std=round(age_sd, 2), computed_on="train split only")
-    json.dump(norm, open(os.path.join(a.out, "normalization.json"), "w"), indent=2)
+    write_json(os.path.join(proc, "normalization.json"), norm)
 
     # metadata features (model-ready, no label leakage)
     u["age_missing"] = u.age.isna().astype(int)
@@ -435,37 +431,29 @@ def main():
                           "dark_corner_frac", "hair_frac", "flag_blurry", "flag_exposure",
                           "flag_dermoscope_vignette", "flag_heavy_hair", "image_path", "clinical_text"] + meta_feats
     u = u.sort_values(["split", "label", "isic_id"])
-    u[master_cols].to_csv(os.path.join(a.out, "master_clean.csv"), index=False)
-    u[core + ["image_path"]].to_csv(os.path.join(a.out, "dataset_image_only.csv"), index=False)
-    u[core + ["clinical_text", "age", "sex", "site"] + meta_feats].to_csv(
-        os.path.join(a.out, "dataset_text_only.csv"), index=False)
-    u[core + ["image_path", "clinical_text", "age", "sex", "site"] + meta_feats].to_csv(
-        os.path.join(a.out, "dataset_multimodal.csv"), index=False)
-    audit_table(raw, u, dict(zip(drop.isic_id_b, drop.isic_id_a)), lab).to_csv(
-        os.path.join(a.out, "original_files_audit.csv"), index=False)
+    save_csv(u[master_cols], os.path.join(proc, "master_clean.csv"))
+    save_csv(audit_table(raw, u, dict(zip(drop.isic_id_b, drop.isic_id_a)), lab), os.path.join(proc, "original_files_audit.csv"))
 
     # balancing helpers (TRAIN only)
     tr = u[u.split == "train"]
     cnt = tr.label.value_counts().reindex(CLASSES)
     w = (len(tr) / (len(CLASSES) * cnt)).round(4)
-    json.dump(dict(class_counts_train=cnt.astype(int).to_dict(),
-                   class_weights_balanced=w.to_dict(),
-                   class_weights_effective_number_beta_0_999=
-                   ((1 - 0.999) / (1 - 0.999 ** cnt) / ((1 - 0.999) / (1 - 0.999 ** cnt)).mean()).round(4).to_dict(),
-                   imbalance_ratio=round(float(cnt.max() / cnt.min()), 2)),
-              open(os.path.join(a.out, "class_balance.json"), "w"), indent=2)
+    write_json(os.path.join(proc, "class_balance.json"),
+               dict(class_counts_train=cnt.astype(int).to_dict(), class_weights_balanced=w.to_dict(),
+                    class_weights_effective_number_beta_0_999=
+                    ((1 - 0.999) / (1 - 0.999 ** cnt) / ((1 - 0.999) / (1 - 0.999 ** cnt)).mean()).round(4).to_dict(),
+                    imbalance_ratio=round(float(cnt.max() / cnt.min()), 2)))
     over, under = [], []
     for c in CLASSES:
         ids_c = tr[tr.label == c].isic_id.values
         over += list(ids_c) + list(rng.choice(ids_c, cnt.max() - len(ids_c), replace=True))
         under += list(rng.choice(ids_c, cnt.min(), replace=False))
-    pd.DataFrame({"isic_id": over}).merge(tr[["isic_id", "label"]], on="isic_id").to_csv(
-        os.path.join(a.out, "train_oversampled_index.csv"), index=False)
-    pd.DataFrame({"isic_id": under}).merge(tr[["isic_id", "label"]], on="isic_id").to_csv(
-        os.path.join(a.out, "train_undersampled_index.csv"), index=False)
-    json.dump({c: dict(idx=i, name=CLASS_NAMES[c]) for i, c in enumerate(CLASSES)},
-              open(os.path.join(a.out, "label_map.json"), "w"), indent=2)
-    print("[10] done:", a.out)
+    save_csv(pd.DataFrame({"isic_id": over}).merge(tr[["isic_id", "label"]], on="isic_id"),
+             os.path.join(proc, "train_oversampled_index.csv"))
+    save_csv(pd.DataFrame({"isic_id": under}).merge(tr[["isic_id", "label"]], on="isic_id"),
+             os.path.join(proc, "train_undersampled_index.csv"))
+    write_json(os.path.join(proc, "label_map.json"), {c: dict(idx=i, name=CLASS_NAMES[c]) for i, c in enumerate(CLASSES)})
+    log.info(f"[10] done: {proc}. Next: python src/build_views.py --data {a.out}")
 
 
 if __name__ == "__main__":

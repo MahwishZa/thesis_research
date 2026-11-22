@@ -9,9 +9,11 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 | `data/raw/` | the Kaggle download "Skin Cancer ISIC" (2,357 files), untouched | no (laptop only) |
 | `data/images/` | the 2,197 cleaned images (600 × 450) | no (laptop only) |
 | `data/meta/` | the official label files the cleaning used (ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records) | yes |
-| `data/qa/` | the multiple-choice question files: 3 views × 3 splits | yes |
-| `data/` (tables) | `master_clean.csv` (every case), the three view tables, the audit and near-duplicate tables, label map, normalisation, class weights, balanced lists, `DATA_CARD.md` | yes |
-| `src/` | the scripts: `preprocess.py`, `build_qa.py`, `feature_check.py`, `build_knowledge_corpus.py`, `evaluate.py` | yes |
+| `data/processed/` | step 1: `master_clean.csv` (every kept case with its split), the audit and near-duplicate tables, label map, normalisation, class weights, balanced lists | yes |
+| `data/views/` | step 2: `image_only/`, `text_only/`, `multimodal/`, each with `cases.csv` and `qa_{train,val,test}.jsonl` | yes |
+| `data/corpus/` | the knowledge corpus (not built yet); only its manifest and card go to Git | partly |
+| `data/DATA_CARD.md` | the data card: pipeline, files, views, limitations | yes |
+| `src/` | `common.py` (shared), `preprocess.py` (step 1), `build_views.py` (step 2), `build_knowledge_corpus.py`, `feature_check.py`, `evaluate.py`; guide in `src/README.md` | yes |
 | `results/` | run outputs; now the feature check (`results/feature_check/`) and this page | yes |
 | `tests/` | `test_data.py` (the tables and questions agree), `test_scripts.py` (parts of the scripts), `test_evaluate.py` (the evaluation code), `test_corpus.py` (the corpus builder), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
 
@@ -61,6 +63,22 @@ optional NCBI API key comes from the environment variable `NCBI_API_KEY` and is 
 Checked: 21 tests on made-up answers in the services' formats, and 15 deliberate breaks each caught by a test.
 Not checked: the real services (no internet here) — the PubMed, PMC OA, BioC and Dermoscopedia answers and the Meditron
 collection's columns are written from their documentation; the first run on the laptop shows the counts per library.
+
+## Repository audit and reorganisation (2026-11-22)
+1. `data/` follows the pipeline: `raw/` and `meta/` (inputs) → `images/` and `processed/` (step 1) → `views/<view>/` (step 2);
+   the files were moved with `git mv`, so their history follows them. The question files are unchanged byte for byte.
+2. `src/build_qa.py` became `src/build_views.py` (Python only); it writes the view tables too. The view tables now hold only the
+   inputs of their view (the 11 model features stay in `processed/master_clean.csv`, where the feature check reads them).
+3. `src/common.py` holds what the scripts shared or repeated: the classes and their names, the folder layout, safe writing (a file
+   is replaced in one step, so an interrupted run never leaves half a file), reading, logging.
+4. `src/preprocess.py`: writes to `processed/`, checks its inputs first, logs to `processed/preprocess.log`; the unused
+   `--ham-images` option is removed (only the Kaggle dataset is used). Its cleaning logic is unchanged.
+5. `src/evaluate.py`: each report records its input files with their SHA-256, how often each letter was chosen, cost and time when
+   the predictions give them, and accuracy per subgroup (`--cases ... --by source facts_recorded`).
+6. Removed: the empty `.gitkeep` files. Ignored: `.ruff_cache/`, logs, half-written files.
+Checked: 76 tests; 39 deliberate breaks (12 new, 15 corpus, 12 evaluation), each caught. Not checked here: `preprocess.py` and
+`feature_check.py` end to end (they need the images and packages of the laptop). A rerun of step 1 on the laptop should leave
+`git status` without changes in `data/processed/`.
 
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text

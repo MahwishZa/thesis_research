@@ -1,7 +1,7 @@
 # Python 3.11 or newer. Versions are not pinned yet: after installing, run `pip freeze` and pin the versions used here.
 # (The packages of Version 2 are kept in archive/v2/requirements.txt.)
 
-# Preprocessing, question files and the feature check (src/preprocess.py, src/build_qa.py, src/feature_check.py)
+# Step 1 (src/preprocess.py) and the feature check (src/feature_check.py). Step 2 (src/build_views.py) needs only Python.
 pandas
 numpy
 pillow

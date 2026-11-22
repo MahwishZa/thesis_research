@@ -1,6 +1,9 @@
 """Checks of src/evaluate.py with small made-up question files (Python only, no packages), plus one check on the committed test
 questions that skips when data/qa/ is not there."""
 
+import contextlib
+import hashlib
+import io
 import json
 import math
 import os
@@ -12,7 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 import evaluate as ev  # noqa: E402
-from build_qa import CLASSES, OPTION_TEXT, options_for  # noqa: E402
+from build_views import options_for  # noqa: E402
+from common import CLASSES, OPTION_TEXT  # noqa: E402
 
 
 def question(case_id, gold, group=None):
@@ -117,6 +121,41 @@ class DiagnosisTests(unittest.TestCase):
         self.assertEqual(d["mcnemar_vs_system_b"]["a_right_b_wrong"], 3)
 
 
+class ReportTests(unittest.TestCase):
+    def test_the_chosen_letters_show_a_preference_for_one_position(self):
+        qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(5)]
+        pred = {q["id"]: {"pred": "a"} for q in qs[:3]}
+        pred[qs[3]["id"]] = {"pred": "maybe"}
+        d = ev.diagnosis_metrics(as_dict(qs), pred)
+        self.assertEqual(d["chosen_letters"], {"A": 3, "invalid": 2})
+
+    def test_usage_is_summed_only_over_predictions_that_report_it(self):
+        qa = as_dict([question("ISIC_0000001", "MEL"), question("ISIC_0000002", "NV")])
+        pred = {"ISIC_0000001": {"pred": "A", "tokens_in": 100, "seconds": 1.5}, "ISIC_0000002": {"pred": "B"}}
+        u = ev.usage_summary(qa, pred)
+        self.assertEqual(u, {"tokens_in": {"total": 100.0, "mean": 100.0, "n": 1}, "seconds": {"total": 1.5, "mean": 1.5, "n": 1}})
+        self.assertIsNone(ev.usage_summary(qa, {}))
+
+    def test_accuracy_per_subgroup_and_per_recorded_facts(self):
+        qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(4)]
+        cases = {q["id"]: {"isic_id": q["id"], "source": "HAM10000" if k < 2 else "archive", "age": "50.0", "sex": "male",
+                           "site": "trunk" if k != 3 else ""} for k, q in enumerate(qs)}
+        pred = {qs[0]["id"]: {"pred": qs[0]["answer"]}, qs[2]["id"]: {"pred": qs[2]["answer"]}}
+        g = ev.subgroup_accuracy(as_dict(qs), pred, cases, ["source", "facts_recorded"])
+        self.assertEqual(g["source"], {"HAM10000": {"n": 2, "accuracy": 0.5}, "archive": {"n": 2, "accuracy": 0.5}})
+        self.assertEqual(g["facts_recorded"], {"all": {"n": 3, "accuracy": round(2 / 3, 4)}, "some missing": {"n": 1, "accuracy": 0.0}})
+        with self.assertRaises(ValueError):
+            ev.subgroup_accuracy(as_dict(qs), pred, cases, ["no_such_column"])
+
+    def test_a_repeated_question_id_stops_the_evaluation(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "qa.jsonl")
+            q = question("ISIC_0000001", "MEL")
+            Path(path).write_text(json.dumps(q) + "\n" + json.dumps(q) + "\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                ev.load(path)
+
+
 class RetrievalTests(unittest.TestCase):
     def setUp(self):
         self.qa = as_dict([question("ISIC_0000001", "BCC")])
@@ -171,18 +210,21 @@ class CommandTests(unittest.TestCase):
             with open(paths["pred"], "w", encoding="utf-8") as f:
                 f.write("\n".join(json.dumps({"id": q["id"], "pred": q["answer"]}) for q in qs[:4]))
             out = os.path.join(d, "report.json")
-            ev.main(["--qa", paths["qa"], "--pred", paths["pred"], "--out", out, "--skip-text"])
+            with contextlib.redirect_stdout(io.StringIO()):
+                ev.main(["--qa", paths["qa"], "--pred", paths["pred"], "--out", out, "--skip-text"])
             with open(out, encoding="utf-8") as f:
                 rep = json.load(f)
+            sha = hashlib.sha256(Path(paths["qa"]).read_bytes()).hexdigest()
         self.assertEqual((rep["diagnosis"]["accuracy"], rep["diagnosis"]["missing_predictions"]), (0.5, 4))
         self.assertIsNone(rep["retrieval"])
+        self.assertEqual(rep["inputs"]["questions"]["sha256"], sha)  # the report says which question file it used
 
 
 class CommittedQuestionTests(unittest.TestCase):
     def test_on_the_committed_test_questions_one_fixed_letter_is_about_chance(self):
-        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "qa" / "qa_multimodal_test.jsonl"
+        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "qa_test.jsonl"
         if not path.is_file():
-            self.skipTest("data/qa/ is not there")
+            self.skipTest("data/views/ is not there")
         qa = ev.load(path)
         right = ev.diagnosis_metrics(qa, {i: {"pred": q["answer"]} for i, q in qa.items()})
         self.assertEqual(right["accuracy"], 1.0)

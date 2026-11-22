@@ -30,7 +30,6 @@ Usage (on the laptop, with internet):
   python src/build_knowledge_corpus.py --out data/corpus --libraries pubmed pmc   # some libraries only
 """
 import argparse
-import csv
 import datetime
 import hashlib
 import html
@@ -44,7 +43,9 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from html.parser import HTMLParser
 
-CLASSES = ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"]
+from common import CLASSES, CORPUS, get_logger, write_csv, write_json, write_jsonl
+
+log = get_logger("corpus")
 LIBRARIES = ("guidelines", "pmc", "pubmed", "textbook")     # guidelines first, so a guideline paper is not counted again as pmc
 SYNONYMS = {
     "MEL": ["melanoma", "lentigo maligna", "melanoma in situ"],
@@ -401,19 +402,14 @@ def corpus_card(passages, removed, args, snapshot):
             "settings": {k: v for k, v in vars(args).items() if k not in ("out", "cache")}}
 
 
+MANIFEST_COLUMNS = ["passage_id", "library", "doc_id", "url", "licence", "query_class", "tags", "n_words", "md5"]
+
+
 def write_outputs(passages, card, out):
-    os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, "passages.jsonl"), "w", encoding="utf-8") as f:
-        for p in passages:
-            f.write(json.dumps(p, ensure_ascii=False) + "\n")
-    with open(os.path.join(out, "manifest.csv"), "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["passage_id", "library", "doc_id", "url", "licence", "query_class", "tags", "n_words", "md5"])
-        for p in passages:
-            w.writerow([p["passage_id"], p["library"], p["doc_id"], p["url"], p["licence"], p["query_class"],
-                        " ".join(p["tags"]), p["n_words"], p["md5"]])
-    with open(os.path.join(out, "corpus_card.json"), "w", encoding="utf-8") as f:
-        json.dump(card, f, indent=2, ensure_ascii=False)
+    """passages.jsonl (with the text), manifest.csv (without it) and corpus_card.json, each written in one step."""
+    write_jsonl(os.path.join(out, "passages.jsonl"), passages)
+    write_csv(os.path.join(out, "manifest.csv"), [{**p, "tags": " ".join(p["tags"])} for p in passages], MANIFEST_COLUMNS)
+    write_json(os.path.join(out, "corpus_card.json"), card)
 
 
 def build(args, fetch, meditron_rows=None):
@@ -423,7 +419,7 @@ def build(args, fetch, meditron_rows=None):
             try:
                 meditron = list(meditron_guideline_docs(removed, meditron_rows))
             except Exception as e:                          # e.g. not logged in to Hugging Face for this gated collection
-                print(f"Meditron guideline collection not available ({type(e).__name__}); using PMC guideline papers only")
+                log.warning(f"Meditron guideline collection not available ({type(e).__name__}); using PMC guideline papers only")
                 removed["guidelines: Meditron collection not available"] += 1
                 meditron = []
         for cls in CLASSES:
@@ -438,13 +434,13 @@ def build(args, fetch, meditron_rows=None):
                 docs = textbook_docs(fetch, cls, args.textbook_pages)
             got = passages_from(docs, library, cls, args, seen_text, seen_docs, removed)
             passages.extend(got)
-            print(f"{library:10s} {cls:4s} {len(got):5d} passages")
+            log.info(f"{library:10s} {cls:4s} {len(got):5d} passages")
     return passages, removed
 
 
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--out", default=os.path.join("data", "corpus"))
+    ap.add_argument("--out", default=os.path.join("data", CORPUS))
     ap.add_argument("--cache", default=None, help="download cache (default: <out>/cache)")
     ap.add_argument("--libraries", nargs="+", default=list(LIBRARIES), choices=LIBRARIES)
     ap.add_argument("--per-class", type=int, default=150, help="most passages per library and diagnosis")
@@ -459,13 +455,14 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
+    get_logger("corpus", os.path.join(args.out, "build_corpus.log"))
     fetch = Fetcher(args.cache or os.path.join(args.out, "cache"))
     passages, removed = build(args, fetch)
     card = corpus_card(passages, removed, args, datetime.date.today().isoformat())
     write_outputs(passages, card, args.out)
-    print(f"{card['n_passages']} passages from {card['n_documents']} documents -> {args.out}")
+    log.info(f"{card['n_passages']} passages from {card['n_documents']} documents -> {args.out}")
     if card["empty_topic_boxes"]:
-        print("topics with no passage yet:", ", ".join(card["empty_topic_boxes"]))
+        log.info("topics with no passage yet: " + ", ".join(card["empty_topic_boxes"]))
 
 
 if __name__ == "__main__":

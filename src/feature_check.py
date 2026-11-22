@@ -7,12 +7,19 @@ Answers three questions on the cleaned dataset:
   2. Do simple image features (colour, texture, shape) carry signal?
   3. Can a model "cheat" by recognising the image SOURCE / file properties instead of the lesion?
 
-Usage: python feature_check.py --data OUT_DIR
-Writes feature_check_results.json and image_handcrafted_features.csv into --out (default: the --data folder);
-for this repository: python src/feature_check.py --data data --out results/feature_check
+It is an analysis of the data, not an evaluation of the LLM/RAG systems: its score is balanced accuracy (the mean recall over the
+8 classes) of small classifiers trained here, so that the 8 classes count the same in an uneven test split.
+
+Usage (this repository): python src/feature_check.py --data data --out results/feature_check
+Reads data/processed/master_clean.csv and the images in data/images/; writes feature_check_results.json and
+image_handcrafted_features.csv (a cache: when it exists, the image features are not computed again).
 """
-import argparse, json, os
-import cv2, numpy as np, pandas as pd
+import argparse
+import os
+
+import cv2
+import numpy as np
+import pandas as pd
 from skimage.feature import graycomatrix, graycoprops, local_binary_pattern
 from skimage.measure import label as cc_label, regionprops
 from sklearn.ensemble import HistGradientBoostingClassifier
@@ -21,7 +28,7 @@ from sklearn.metrics import balanced_accuracy_score, f1_score, roc_auc_score, re
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-SEED = 42
+from common import CLASSES, MASTER, SEED, write_json
 
 
 def image_features(path):
@@ -85,12 +92,14 @@ def evaluate(name, model, Xtr, ytr, Xev, yev, classes):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--data", required=True)
-    ap.add_argument("--out", default=None, help="folder for the results (default: the --data folder)"); a = ap.parse_args()
-    out = a.out or a.data
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--out", default=os.path.join("results", "feature_check"))
+    a = ap.parse_args()
+    out = a.out
     os.makedirs(out, exist_ok=True)
-    m = pd.read_csv(os.path.join(a.data, "master_clean.csv"))
-    classes = ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"]
+    m = pd.read_csv(os.path.join(a.data, MASTER))
+    classes = CLASSES
     fpath = os.path.join(out, "image_handcrafted_features.csv")
     if os.path.exists(fpath):
         F = pd.read_csv(fpath)
@@ -126,7 +135,7 @@ def main():
     auc = roc_auc_score(src[ev["test"].index], clf.predict_proba(ev["test"][img_cols])[:, 1])
     print(f"\nSource detectable from STANDARDISED image features: AUC={auc:.3f} (0.5 = not detectable)")
     res["source_detectability_auc_after_standardisation"] = round(auc, 3)
-    json.dump(res, open(os.path.join(out, "feature_check_results.json"), "w"), indent=2)
+    write_json(os.path.join(out, "feature_check_results.json"), res)
 
 
 if __name__ == "__main__":
