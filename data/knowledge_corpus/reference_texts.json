@@ -1,0 +1,82 @@
+{
+  "MEL": {
+    "text": "Dermoscopy significantly improves the sensitivity and specificity of clinicians for melanoma diagnosis. The dual benefit of dermoscopy lays on its potential to allow the detection of clinically inconspicuous melanomas, while enabling the recognition of benign lesions that might look clinically worrisome, reducing, thus, the number of unnecessary excisions. Melanoma becomes clinically recognizable at a certain progression point, after acquiring one or more of the ABCD clinical criteria. At an earlier stage, melanoma is macroscopically undetectable, since it is small in size and symmetric in terms of shape and color. At such an early stage, dermoscopy often uncovers sub-macroscopic morphologic criteria that allow melanoma recognition. The dermoscopic criteria of melanoma are a result of its asymmetric growth and vary among different subtypes of the disease. The main dermoscopic features seen in superficial spreading melanoma of the trunk and the extremities are: As a rule, dermoscopy of superficial spreading melanoma of the trunk and the extremities reveals asymmetry of shape, more than 2 colors (light brown, dark brown, black, blue, gray, red, white) and asymmetry of structures.",
+    "source": "Dermoscopedia: Superficial Spreading Melanoma",
+    "url": "https://dermoscopedia.org/Superficial_Spreading_Melanoma",
+    "section": "(introduction)",
+    "rule": "page: title equals 'melanoma'; chapter page 'Melanoma': its first subchapter",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 175
+  },
+  "NV": {
+    "text": "In the definition of globular congenital naevi we include benign melanocytic lesions that are present at birth (traditionally known as \u2018true\u2019 congenital naevi) or appear before puberty (traditionally described as \u2018early\u2019 acquired naevi). From a clinical, dermoscopic or histopathological perspective, distinguishing between true small congenital naevi and earlyacquired naevi is usually impossible. This is not a problem because small congenital naevi and early-acquired naevi often share the same features. They show most frequently a globular pattern, whereas acquired naevi in adults are most commonly reticular. In children congenital naevi are of browncolor, flat or slightly elevated, symmetrical, and usually < 15 mm in size. The most striking dermoscopic feature of congenital naevi in children is the globular pattern, in which brown globules are seen throughout the lesion but are especially visible at the periphery. Globular naevi may also show areas of hypopigmentation and/or structureless brown pigmentation that may obscure the globules completely. This has been described as globular homogenous pattern. In adults these naevi become more elevated, with a papillomatous surface, and are characterized dermoscopically by a cobblestone pattern. The latter is a variation of the globular pattern in which the globules are larger and more angulated, resembling a cobblestone.",
+    "source": "Dermoscopedia: Classification of nevi / benign nevus pattern",
+    "url": "https://dermoscopedia.org/Classification_of_nevi_/_benign_nevus_pattern",
+    "section": "all sections from 'Globular (congenital) naevus' (no dermoscopy heading)",
+    "rule": "page: title equals 'classification of nevi / benign nevus pattern'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 200
+  },
+  "BCC": {
+    "text": "The nests are defined as confluent or nearly confluent, well-circumscribed, pigmented ovoid areas. The difference between an ovoid nest and a blue-gray globule is the relative size of the structure. An ovoid nest encompasses at least 10% of the surface area of the lesion and blue-gray globules are smaller. The presence of an ovoid nest corresponds to basal cell tumor islands in the dermis and these lesions will prove to be nodular BCC on histopathology. . Blue-gray dots are pinpoint blue-gray structures that are often distributed in a buckshot scatter like pattern (Figure ). This structure can be seen in early nodular BCC or in superficial BCC. Blue-gray globules are well-defined round or oval structures, larger than dots, but smaller than large ovoid nests. They are not aggregated as would be seen in melanocytic lesions. They usually have a blue-gray color; however, depending on the location within the dermis (Tyndall effect) and degree of melanin within the pigmented basaloid tumor islands, the globules can appear brown or pink in color. This structure corresponds to small basal cell tumor islands in the dermis and thus they will prove to be nodular BCC on histopathology.",
+    "source": "Dermoscopedia: Basal cell carcinoma",
+    "url": "https://dermoscopedia.org/Basal_cell_carcinoma",
+    "section": "all sections from 'Large blue-gray ovoid nests:' (no dermoscopy heading)",
+    "rule": "page: title equals 'basal cell carcinoma'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 193
+  },
+  "AK": {
+    "text": "Nonpigmented AK on the face show four dermoscopic features, allowing an accurate diagnosis with high sensitivity and specificity: Erythema: Structureless pale-red Areas without any recognizable areas of hypopigmentation Pink-to-Red pseudonetwork: structureless red areas that resemble Network structure- small white areas correspond to follicular openings of the skin Fine, wavy vessels (straight or coiled) surrounding the hair follicles Targetoid hair follicles: Hair follicle openings surrounded by a white halo and filled with a yellowish keratotic plug (white circle surrounding a yellow clod) On nonfacial skin, AK usually exhibits nonspecific patterns, with features such as surface scale and keratin and dotted vessels (tiny red dots densely aligned next to each other). An additional clue to the diagnosis of AK is the rosette sign, which can only be seen with polarized light and consists of a white four-leaf clover-shaped structure. Although the rosette sign can be seen in actinic damaged skin and in tumors such as basal cell carcinoma (BCC) and melanoma, they are more commonly encountered in AK and thin SCCs.",
+    "source": "Dermoscopedia: Actinic keratosis",
+    "url": "https://dermoscopedia.org/Actinic_keratosis",
+    "section": "all sections from 'Nonpigmented actinic keratosis' (no dermoscopy heading)",
+    "rule": "page: title equals 'actinic keratosis'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 169
+  },
+  "BKL": {
+    "text": "Milia-like cysts are white-to-yellow, round structures that appear very bright when contrasted with their dark brown or black surroundings. The presence of multiple milia-like cysts in pigmented seborrheic keratoses conjures up an image of \u201cstars in the sky.\u201d Milia-like cysts can also be seen in non-pigmented seborrheic keratosis and other lesions such as basal cell carcinoma and melanocytic lesions including congenital nevi and melanoma. In melanocytic lesions, the cysts appear \u201cstarry\u201d (small, bright and sharp), while in seborrheic keratosis they are \u201ccloudy\u201d (larger and hazier in appearance). Histologically, the cysts correspond to intraepidermal, keratin-filled cysts. It is important to be aware that milia-like cysts are more conspicuous with non-polarized dermoscopy and are often difficult to visualize with polarized dermoscopy. Comedo-like openings are round to ovoid craters that have black or brown comedo-like plugs. Histologically, they correlate with keratin-filled invaginations of the skin surface. Fissures (sulci) are comedo-like openings, which are not round but rather linear and appear as dark brown to black linear to curvilinear structures within the lesion. The presence of numerous fissures and ridges can result in the formation of network-like structures or result in a cerebriform pattern.",
+    "source": "Dermoscopedia: 03-Seborrheic Keratosis / Lentigos",
+    "url": "https://dermoscopedia.org/03-Seborrheic_Keratosis_/_Lentigos",
+    "section": "from 'Dermoscopic features'",
+    "rule": "page: first result for 'seborrheic keratosis'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 190
+  },
+  "DF": {
+    "text": "Delicate pigment network: light-to-medium pigment network, brown in color, with a fine and delicate quality, which gradually fades into the surrounding skin and is usually located at the periphery of the lesion. Central scar-like white patch: an irregularly outlined and sharply demarcated white area in the center of the lesion. In nonpolarized light dermoscopy appears as a white scar-like area and in polarized light dermoscopy as a bright white area with or without bright white linear streaks (shiny white lines). Ring-like or donut-shaped globules: the pigment network located toward the center of the lesion often ceases to look like a reticulated mesh but rather begins to resemble \u201cring-like\u201d globular structures. White network : white lines surrounding small islands of brown pigment or surrounding globule-like (i.e., \u201cring-like\u201d) structures. Homogenous areas with brown color. Vascular structures: erythema, dotted vessels, comma vessels, and hairpin vessels. Less frequently, glomerular vessels, linear\u2013irregular vessels, linear vessels in a radial arrangement, and polymorphous/atypical vessels are visible. Rarely comedo-like openings, scale, ulceration, peripheral collarette fissures, ridges and mamillated surface.",
+    "source": "Dermoscopedia: 03-Dermatofibroma",
+    "url": "https://dermoscopedia.org/03-Dermatofibroma",
+    "section": "from 'Dermoscopy features'",
+    "rule": "page: first result for 'dermatofibroma'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 171
+  },
+  "VASC": {
+    "text": "The most common vascular lesions in childhood are the hemangiomas of infancy and, in adulthood, the cherry angiomas. Hemangiomas and angiomas are benign proliferations of blood vessels and although they have different clinical behavior, they are described together because they share common dermoscopic features. Dermoscopy: Absence of melanocytic criteria Lacunae (also known as lagoons): well-demarcated, round to oval red, reddish-brown or reddish-blue areas that commonly vary in size and color within a given lesion. Lacunae may be either tightly clustered or loosely scattered throughout the lesion and they are often located on a background of red, red-blue, or red-white homogeneous color. No vascular structures are seen inside the lacunae. Occasionally, individual dilated blood vessels or a red network of vessels may be visible. Hemangiomas may develop a partial thrombosis, acquiring a focal blue-black color, or a total thrombosis manifesting a jet-black color.",
+    "source": "Dermoscopedia: Angioma",
+    "url": "https://dermoscopedia.org/Angioma",
+    "section": "(introduction)",
+    "rule": "page: title equals 'vascular lesions'; chapter page 'Vascular lesions': its first subchapter",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 142
+  },
+  "SCC": {
+    "text": "Invasive SCC appears often clinically as papulonodular, plaque-like, papillomatous or exophytic. Central mass of keratin: amorphous, yellow-white to light-brown areas without any recognizable structure Targetoid hair follicles: keratotic plugs within follicular openings of the skin, mostly over a white structureless area Ulceration: large irregularly shaped or roundish areas of dull red or red-brown structureless color Hairpin vessels: vascular loops, usually surrounded by whitish halo Linear-irregular vessels (serpentine): linear or slightly curved, irregularly shaped, sized and distributed red structures Other vascular patterns, such as dotted and glomerular (coiled) vessels may also be present. Combinations of these vascular morphologies result in the so-called polymorphous pattern. Poorly differentiated SCCs are dermoscopically typified by a predominantly red color, resulting from the presence of bleeding and dense vascularity. On the other hand, white colored criteria (central mass of keratin, whitish halos and structureless whitish areas) are associated with well- or moderately differentiated variants. Invasive SCC often arises in association with actinic keratosis (AK). The progression model of AK to SCC suggests an initial transition from a red pseudonetwork (\"strawberry pattern\") to an increasing neovascularization (development of clustered dotted/glomerular vessels). The follicles gradually miniaturize and disappear, whereas hairpin and linear-irregular vessels appear.",
+    "source": "Dermoscopedia: Squamous cell carcinoma",
+    "url": "https://dermoscopedia.org/Squamous_cell_carcinoma",
+    "section": "all sections from 'Invasive squamous cell carcinoma' (no dermoscopy heading)",
+    "rule": "page: title equals 'squamous cell carcinoma'",
+    "licence": "CC BY-NC-SA 4.0",
+    "retrieved": "2026-11-22",
+    "n_words": 196
+  }
+}

@@ -60,7 +60,7 @@ data/knowledge_corpus/                                     the medical text libr
 | `processed_cases/class_weights.json`, `normalization.json`, `train_oversampled.csv`, `train_undersampled.csv` | train counts and class weights; train-only image and age statistics; balanced training lists (for a trained model only) | yes |
 | `views/<view>/cases.csv` | one row per case: id, split, fold, lesion group, label, and only the inputs of that view | yes |
 | `views/<view>/{train,val,test}.jsonl` | one 8-option multiple-choice question per case, for every system (LLM only, standard RAG, RAG², proposed) | yes |
-| `knowledge_corpus/` | `manifest.csv` and `corpus_card.json` (no text); `passages.jsonl` and the download cache stay on the laptop | partly |
+| `knowledge_corpus/` | `manifest.csv` and `corpus_card.json` (no text); `reference_texts.json` (one quoted Dermoscopedia paragraph per disease, with its source, for semantic similarity); `passages.jsonl` and the download cache stay on the laptop | partly |
 
 Image paths in every table are relative to `data/` (`processed_images/<id>.jpg`).
 
@@ -87,3 +87,25 @@ Each question has the 8 classes as options in an order fixed per case (seed 42),
 2. Metadata is missing for some older images (age 10.6%, sex 9.8%, site 6.7% missing; mostly NV/MEL). Missingness itself correlates with class, so report the text and multimodal results also for the cases with all facts recorded (`--by facts_recorded`).
 3. The test set is small (16–68 per class), so always report 95% bootstrap CIs (`src/evaluate.py` draws whole lesions).
 4. Licence: ISIC images are mostly CC-BY-NC, for non-commercial research only.
+
+## Licences and research ethics
+
+| Part | What it is | Terms | In Git |
+|---|---|---|---|
+| `raw/`, `processed_images/` | dermoscopic images (Kaggle copy of the ISIC Archive) | each image carries its own ISIC licence (mostly CC BY-NC, some CC0): non-commercial research, attribution | **no** (laptop only) |
+| `official_labels/` | ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records | the ISIC / HAM10000 data licences (non-commercial, attribution) ◻ | yes, with attribution (below) |
+| `processed_cases/`, `views/` | derived from the two rows above: ISIC ids, labels, age, sex, body site | the same terms as their sources | yes, with attribution |
+| `knowledge_corpus/passages.jsonl`, `cache/` | full texts of PubMed abstracts, PMC papers, guidelines and Dermoscopedia pages | each passage's own licence (publishers' copyright, CC BY-NC-ND, ...) | **no** (laptop only) |
+| `knowledge_corpus/manifest.csv`, `corpus_card.json` | lists and counts, no text | – | yes |
+| `knowledge_corpus/reference_texts.json` | 8 quoted Dermoscopedia paragraphs, each with its source | CC BY-NC-SA 4.0: attribution, non-commercial, shared under the same licence | yes (the file keeps the source of each text) |
+| `.env` | API keys | secret | **never** |
+
+Attribution: images and metadata from the ISIC Archive (isic-archive.com), including HAM10000 (Tschandl et al. 2018, Scientific
+Data 5:180161) and the ISIC 2019 challenge data; Kaggle copy "Skin Cancer ISIC – 9 classes" (nodoubttome). ◻ The exact licence of
+each source file is to be confirmed on its page before publication.
+
+Ethics: all data are public and de-identified (no names, no dates of birth; age, sex and body site only), and no patient is
+contacted, so no new consent is involved. ◻ Whether the university's ethics committee must still register or exempt the study is
+to be confirmed with the supervisor. The LLM-only and RAG runs send images and patient facts to the providers' servers (Anthropic,
+OpenAI, Google, Parasail via OpenRouter); this is research use of non-commercial data, and the method chapter should say so.
+

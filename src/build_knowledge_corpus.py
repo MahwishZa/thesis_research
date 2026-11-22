@@ -333,24 +333,30 @@ def meditron_guideline_docs(removed, rows=None):
                "licence": f"Meditron guidelines collection (source: {source}); see the source's terms", "retracted": False}
 
 
-def textbook_docs(fetch, cls, n):
-    api = None
+def dermoscopedia_api(fetch):
+    """The address of Dermoscopedia's wiki API (the first of the known addresses that answers)."""
     for candidate in DERMOSCOPEDIA_APIS:
         try:
             json.loads(fetch.get(candidate, {"action": "query", "meta": "siteinfo", "format": "json"}))
-            api = candidate
-            break
+            return candidate
         except Exception:
             continue
-    if api is None:
-        raise RuntimeError("Dermoscopedia's API did not answer at " + " or ".join(DERMOSCOPEDIA_APIS))
+    raise RuntimeError("Dermoscopedia's API did not answer at " + " or ".join(DERMOSCOPEDIA_APIS))
+
+
+def page_url(title):
+    return "https://dermoscopedia.org/" + urllib.parse.quote(title.replace(" ", "_"))
+
+
+def textbook_docs(fetch, cls, n):
+    api = dermoscopedia_api(fetch)
     hits = json.loads(fetch.get(api, {"action": "query", "list": "search", "srsearch": TEXTBOOK_SEARCH[cls], "srlimit": n,
                                       "format": "json"}))["query"]["search"]
     for h in hits:
         page = json.loads(fetch.get(api, {"action": "parse", "page": h["title"], "prop": "text", "format": "json",
                                           "formatversion": 2}))
         yield {"doc_id": f"dermoscopedia:{h['title']}", "title": h["title"], "year": "", "licence": TEXTBOOK_LICENCE,
-               "url": "https://dermoscopedia.org/" + urllib.parse.quote(h["title"].replace(" ", "_")),
+               "url": page_url(h["title"]),
                "paragraphs": html_paragraphs(page["parse"]["text"]), "retracted": False}
 
 

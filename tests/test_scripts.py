@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,13 @@ class PreprocessTests(unittest.TestCase):
         old = [t.removesuffix(SENTENCE) for t in m.clinical_text]
         new = [self.p.clinical_text(*x) for x in zip(m.age, m.sex, m.site, m.site_detail)]
         self.assertEqual(new, old)
+
+    def test_a_table_has_unix_line_endings_even_on_windows(self):
+        df = self.pd.DataFrame({"isic_id": ["ISIC_1", "ISIC_2"], "label": ["MEL", "NV"]})
+        with tempfile.TemporaryDirectory() as d, mock.patch("os.linesep", "\r\n"):   # what Windows uses
+            path = Path(d, "t.csv")
+            self.p.save_csv(df, path)
+            self.assertEqual(path.read_bytes(), b"isic_id,label\nISIC_1,MEL\nISIC_2,NV\n")
 
     def test_an_image_path_uses_a_forward_slash_on_every_system(self):
         self.assertEqual(self.p.image_rel_path("ISIC_0000000"), "processed_images/ISIC_0000000.jpg")

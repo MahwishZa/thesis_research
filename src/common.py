@@ -44,6 +44,15 @@ def image_path(isic_id):
     return f"{PROCESSED_IMAGES}/{isic_id}.jpg"
 
 
+def images_not_in_table(data, isic_ids):
+    """The .jpg files in data/processed_images/ whose name is not a case in the table (left over from an earlier run), sorted."""
+    folder = os.path.join(data, PROCESSED_IMAGES)
+    if not os.path.isdir(folder):
+        return []
+    keep = {f"{i}.jpg" for i in isic_ids}
+    return sorted(f for f in os.listdir(folder) if f.lower().endswith(".jpg") and f not in keep)
+
+
 def view_table(view):
     return f"{VIEWS_DIR}/{view}/cases.csv"
 
@@ -100,12 +109,27 @@ def write_csv(path, rows, columns):
         w.writerows([r[c] for c in columns] for r in rows)
 
 
+class _Screen(logging.StreamHandler):
+    """Writes to the screen as it is when a message is logged (so a test or a caller can redirect it)."""
+
+    def __init__(self):
+        super().__init__(sys.stdout)
+
+    @property
+    def stream(self):
+        return sys.stdout
+
+    @stream.setter
+    def stream(self, value):
+        pass
+
+
 def get_logger(name, log_file=None):
     """A logger that prints to the screen and, when log_file is given, also appends to that file."""
     log = logging.getLogger(name)
     if not log.handlers:
         log.setLevel(logging.INFO)
-        screen = logging.StreamHandler(sys.stdout)
+        screen = _Screen()
         screen.setFormatter(logging.Formatter("%(message)s"))
         log.addHandler(screen)
         log.propagate = False

@@ -1,5 +1,7 @@
 """Checks of src/compare.py: every pair of runs gets McNemar's test, and the p-values are corrected with Holm's method."""
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -51,9 +53,10 @@ class CompareTests(unittest.TestCase):
                 write_jsonl(os.path.join(d, f"{view}_pred.jsonl"),
                             [{"id": q["id"], "pred": q["answer"] if view == "multimodal" or k < 2 else "Z"} for k, q in enumerate(qs)])
             out = os.path.join(d, "cmp.json")
-            compare.main(["--out", out,
-                          "--run", f"text={files['text_only']},{os.path.join(d, 'text_only_pred.jsonl')}",
-                          "--run", f"mm={files['multimodal']},{os.path.join(d, 'multimodal_pred.jsonl')}"])
+            with contextlib.redirect_stdout(io.StringIO()):
+                compare.main(["--out", out,
+                              "--run", f"text={files['text_only']},{os.path.join(d, 'text_only_pred.jsonl')}",
+                              "--run", f"mm={files['multimodal']},{os.path.join(d, 'multimodal_pred.jsonl')}"])
             rep = json.loads(Path(out).read_text(encoding="utf-8"))
         self.assertEqual(rep["accuracy"], {"text": 0.5, "mm": 1.0})
         self.assertEqual(rep["pairs"][0]["a_wrong_b_right"], 2)

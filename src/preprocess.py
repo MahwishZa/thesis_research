@@ -40,7 +40,7 @@ from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
 from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, atomic_path, \
-    get_logger, image_path, write_json
+    get_logger, image_path, images_not_in_table, write_json
 
 META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
               "isic_archive_api_441.csv")
@@ -105,7 +105,7 @@ def check_inputs(raw, meta):
 def save_csv(df, path):
     """Writes a table in one step (an interrupted run leaves the previous file untouched)."""
     with atomic_path(path) as tmp:
-        df.to_csv(tmp, index=False)
+        df.to_csv(tmp, index=False, lineterminator="\n")   # LF on every system, so a rerun on Windows gives the same bytes
 
 
 def phash(gray):
@@ -447,6 +447,10 @@ def main():
     save_csv(pd.DataFrame({"isic_id": under}).merge(tr[["isic_id", "label"]], on="isic_id"),
              os.path.join(proc, "train_undersampled.csv"))
     write_json(os.path.join(proc, "classes.json"), {c: dict(idx=i, name=CLASS_NAMES[c]) for i, c in enumerate(CLASSES)})
+    extra = images_not_in_table(a.out, u.isic_id)
+    if extra:
+        log.warning(f"[10] {len(extra)} images in {os.path.join(a.out, PROCESSED_IMAGES)} are not in the case table (left from an "
+                    f"earlier run; not deleted, delete them by hand): {', '.join(extra)}")
     log.info(f"[10] done: {proc}. Next: python src/build_views.py --data {a.out}")
 
 

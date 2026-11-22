@@ -121,6 +121,36 @@ Version 2 method (`archive/v2/docs/method.md`), not re-checked now.
    retrieval quality (Hit@k, Precision@k, nDCG@k, MRR, context precision) were already in place and tested.
 Checked: 111 tests; 5 deliberate breaks of semantic similarity, each caught. Still missing: the reference texts themselves.
 
+## Reference texts for semantic similarity (approved 2026-11-22, option A)
+`src/build_reference_texts.py` quotes one paragraph per disease from Dermoscopedia (CC BY-NC-SA 4.0) by a fixed rule: the page whose
+title equals a search term (else the first result), its first section whose heading mentions dermoscopy (else the introduction),
+whole sentences up to 200 words. Output `data/knowledge_corpus/reference_texts.json` with source, URL, section, rule, licence and
+date. Checked: 6 tests, 6 deliberate breaks caught. Not run yet (needs internet): the 8 texts must be checked once after the run.
+
+## Pipeline checker; reference-text rule corrected in part (2026-11-22)
+1. `src/check_pipeline.py` reads every step's output and reports it as done, not run or a problem (incomplete, out of date, an
+   unfinished run, a run on changed questions, a run without its report), with the reason. It changes nothing.
+2. The first run of `build_reference_texts.py` on the laptop gave introductions (chapter menus and wiki template lines) for 6 of 8
+   diseases and the lichen planus-like keratosis page for BKL: not usable, not committed. Fixed: headings cleaned (entities,
+   footnote marks), template lines dropped. Added `--inspect` to see each disease's pages and sections before the rule is set.
+3. `data/datasheet.md`: licences and research ethics of every part of `data/`.
+Checked: 6 new tests of the checker.
+4. Reference-text rule set from the `--inspect` output (laptop, 2026-11-22): the first search term with results decides the page
+   (an equal title wins within it); a chapter page without sections is replaced by its first subchapter (melanoma, vascular
+   lesions); the text starts at the dermoscopy heading, else at the first section (pages whose sections are the criteria: BCC,
+   AK, SCC), else the introduction; NV uses the site's general nevus-pattern page (the page "Nevus" is about nail nevi).
+   Checked: 9 tests on a made-up wiki with the site's layouts; 7 deliberate breaks caught. The checker now flags only texts under
+   50 words. Test output is quiet (the screen log follows a redirected output).
+
+## Reproducible tables on Windows; left-over images named (2026-11-22)
+- The laptop rerun of `preprocess.py` showed the 5 tables written by pandas as changed (`all_cases.csv`, `raw_files_audit.csv`,
+  `near_duplicates.csv`, `train_oversampled.csv`, `train_undersampled.csv`), while the JSON files and the views were unchanged. Likely
+  cause ◻: pandas on Windows ends lines with CRLF. `save_csv` now always writes LF (test in `tests/test_scripts.py`; it runs where
+  pandas is installed). To confirm on the laptop: rerun, then `git status` shows no change.
+- `check_pipeline.py` now names the missing images and the images in `data/processed_images/` that are not in the case table;
+  `preprocess.py` logs such left-over images at the end (it does not delete them). The shared rule is `images_not_in_table` in
+  `src/common.py` (tests in `tests/test_check_pipeline.py`; 5 deliberate breaks, all caught).
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.

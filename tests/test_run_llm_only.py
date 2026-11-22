@@ -1,6 +1,7 @@
 """Checks of src/run_llm_only.py without any API call: a fake model answers, and the three request formats are checked as data."""
 
 import argparse
+import contextlib
 import io
 import json
 import os
@@ -78,8 +79,8 @@ class RunTests(unittest.TestCase):
 
     def go(self, args, client):
         log = rl.get_logger(f"test.{id(self)}.{args.view}")
-        log.handlers[0].setStream(io.StringIO())                     # keep the test output quiet
-        return rl.run(args, client, log)
+        with contextlib.redirect_stdout(io.StringIO()):               # keep the test output quiet
+            return rl.run(args, client, log)
 
     def folder(self, view="text_only", partial=False):
         final = os.path.join(self.results, "llm_only", "gpt-4o", f"{view}_val")
@@ -175,7 +176,8 @@ class RunTests(unittest.TestCase):
     def test_the_api_key_is_needed_and_never_written(self):
         argv = ["--model", "gpt-4o", "--view", "text_only", "--data", self.data, "--results", self.results,
                 "--env-file", os.path.join(self.tmp.name, ".env")]
-        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit):
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit), \
+                contextlib.redirect_stdout(io.StringIO()):
             rl.main(argv)
         self.assertFalse(os.path.exists(self.results))                  # nothing is left behind
         Path(self.tmp.name, ".env").write_text("# keys\nOPENROUTER_API_KEY = 'SECRET123'\n", encoding="utf-8")
@@ -186,7 +188,8 @@ class RunTests(unittest.TestCase):
             made.append(key)
             return fake
 
-        with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(rl, "OpenRouterClient", client):
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(rl, "OpenRouterClient", client), \
+                contextlib.redirect_stdout(io.StringIO()):
             rl.main(argv)
         self.assertEqual(made, ["SECRET123"])                         # read from .env, quotes removed
         written = "".join(p.read_text(encoding="utf-8") for p in Path(self.results).rglob("*") if p.is_file())
