@@ -22,12 +22,12 @@ What it does (in order):
 Usage:
   python preprocess.py --raw RAW_DIR --meta META_DIR --out OUT_DIR [--no-colour-constancy]
 
-RAW_DIR must contain "Train_1/Train 1", "Train_2/Train 2", "Test/Test" (as in the Kaggle zips).
+RAW_DIR holds the Kaggle download in either layout: "Train/<class>" and "Test/<class>" (the unpacked dataset), or
+"Train_1/Train 1", "Train_2/Train 2" and "Test/Test" (the parts of the Kaggle zips).
 META_DIR must contain ISIC_2019_Training_GroundTruth.csv, ISIC_2019_Training_Metadata.csv,
 HAM10000_metadata.csv and isic_archive_api_441.csv.
 """
 import argparse, hashlib, json, os, re
-from collections import defaultdict
 
 import cv2
 import numpy as np
@@ -49,10 +49,50 @@ FOLDER_TO_CODE = {
     "vascular lesion": "VASC", "squamous cell carcinoma": "SCC",
 }
 SOURCE_DIRS = [("Train", "Train_1/Train 1"), ("Train", "Train_2/Train 2"), ("Test", "Test/Test")]
+PLAIN_DIRS = [("Train", "Train"), ("Test", "Test")]
 OUT_W, OUT_H = 600, 450
 
 
 # ----------------------------------------------------------------------------- helpers
+def source_dirs(raw):
+    """The (original split, folder) pairs of the Kaggle download: the plain layout when RAW_DIR/Train exists, else the zip parts."""
+    return PLAIN_DIRS if os.path.isdir(os.path.join(raw, "Train")) else SOURCE_DIRS
+
+
+GENERIC_SITES = {"trunk", "head and neck", "head/neck", "upper extremity", "lower extremity", "anogenital region",
+                 "oral/genital", "palms/soles"}
+
+
+def clinical_text(age, sex, site, site_detail):
+    """The patient's recorded facts as one sentence (real metadata only, the same template for every case, never the label).
+    It says nothing about an image: each question adds its own line about the image when it shows one."""
+    age_text = f"{int(age)}-year-old" if pd.notna(age) else "age not recorded,"
+    sex_text = sex if pd.notna(sex) else "sex not recorded"
+    if pd.notna(site):
+        detail = site_detail if pd.notna(site_detail) else ""
+        where = f"Skin lesion on the {site}" + (f" ({detail})" if detail and detail not in GENERIC_SITES else "") + "."
+    else:
+        where = "Lesion site not recorded."
+    return f"Patient: {age_text} {sex_text}. {where}"
+
+
+def audit_table(raw, kept, same_picture_as, official_label):
+    """Every original file with its final label and split. A file of a removed copy keeps its official label, and its split says
+    which kept case it duplicates. Stops if any original file is left without a split."""
+    audit = raw.merge(kept[["isic_id", "label", "split"]], on="isic_id", how="left")
+    gone = audit.isic_id.isin(list(same_picture_as))
+    if gone.any():
+        audit.loc[gone, "label"] = audit.loc[gone, "isic_id"].map(official_label)
+        audit.loc[gone, "split"] = [f"removed: same picture as {same_picture_as[i]}" for i in audit.loc[gone, "isic_id"]]
+    assert audit.split.notna().all() and audit.label.notna().all(), "an original file has no label or split in the audit"
+    return audit.drop(columns=["path"])
+
+
+def image_rel_path(isic_id):
+    """Where a cleaned image is, relative to the output folder, with "/" on every system (never "\\" from Windows)."""
+    return f"images/{isic_id}.jpg"
+
+
 def md5(path):
     return hashlib.md5(open(path, "rb").read()).hexdigest()
 
@@ -171,7 +211,7 @@ def main():
 
     # 1. inventory -------------------------------------------------------------
     rows = []
-    for split, sub in SOURCE_DIRS:
+    for split, sub in source_dirs(a.raw):
         d = os.path.join(a.raw, sub)
         for folder in sorted(os.listdir(d)):
             for f in sorted(os.listdir(os.path.join(d, folder))):
@@ -285,7 +325,7 @@ def main():
         std = cv2.resize(crop, (OUT_W, OUT_H), interpolation=cv2.INTER_AREA)
         if cc:
             std = shades_of_gray(std)
-        out_rel = os.path.join("images", f"{r.isic_id}.jpg")
+        out_rel = image_rel_path(r.isic_id)
         Image.fromarray(std).save(os.path.join(a.out, out_rel), quality=95)
         recs.append(dict(isic_id=r.isic_id, orig_width=w0, orig_height=h0,
                          orig_kb=round(os.path.getsize(r.path) / 1024, 1),
@@ -380,19 +420,7 @@ def main():
         u["site_" + re.sub(r"[^a-z]+", "_", c)] = (u.site == c).astype(int)
 
     # clinical text (real metadata only, deterministic, label-free)
-    def text(r):
-        age = f"{int(r.age)}-year-old" if pd.notna(r.age) else "age not recorded,"
-        sex = r.sex if pd.notna(r.sex) else "sex not recorded"
-        if pd.notna(r.site):
-            detail = r.site_detail if pd.notna(r.site_detail) else ""
-            generic = {"trunk", "head and neck", "head/neck", "upper extremity", "lower extremity",
-                       "anogenital region", "oral/genital", "palms/soles"}
-            site = r.site + (f" ({detail})" if detail and detail not in generic else "")
-            where = f"Skin lesion on the {site}."
-        else:
-            where = "Lesion site not recorded."
-        return f"Patient: {age} {sex}. {where} A dermoscopic image of the lesion is available."
-    u["clinical_text"] = u.apply(text, axis=1)
+    u["clinical_text"] = [clinical_text(*x) for x in zip(u.age, u.sex, u.site, u.site_detail)]
     u["label_name"] = u.label.map(CLASS_NAMES)
     u["label_idx"] = u.label.map({c: i for i, c in enumerate(CLASSES)})
 
@@ -413,7 +441,7 @@ def main():
         os.path.join(a.out, "dataset_text_only.csv"), index=False)
     u[core + ["image_path", "clinical_text", "age", "sex", "site"] + meta_feats].to_csv(
         os.path.join(a.out, "dataset_multimodal.csv"), index=False)
-    raw.merge(u[["isic_id", "label", "split"]], on="isic_id").drop(columns=["path"]).to_csv(
+    audit_table(raw, u, dict(zip(drop.isic_id_b, drop.isic_id_a)), lab).to_csv(
         os.path.join(a.out, "original_files_audit.csv"), index=False)
 
     # balancing helpers (TRAIN only)

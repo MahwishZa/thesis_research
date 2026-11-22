@@ -623,6 +623,7 @@ ISIC_0000175,Train,melanoma,MEL,1eceb5722102c936ac8a441db398b163,MEL,test
 ISIC_0000176,Train,melanoma,MEL,7b2464cd27ad9832ef81790e96ccb7a3,MEL,train
 ISIC_0000278,Train,melanoma,MEL,337335807507a95b69801366620bd6a6,MEL,train
 ISIC_0000279,Train,melanoma,MEL,6c3fef79567729bf58682eaa3c33ce65,MEL,train
+ISIC_0000280,Train,melanoma,MEL,6c3fef79567729bf58682eaa3c33ce65,MEL,removed: same picture as ISIC_0000279
 ISIC_0000285,Train,melanoma,MEL,86511ae4e8252450d116ee5f31ccabbe,MEL,test
 ISIC_0000288,Train,melanoma,MEL,fa8e0a13a2b68b7d08dfa5bba25ed19b,MEL,train
 ISIC_0000289,Train,melanoma,MEL,6758acbd9b15609f56180953d06e3368,MEL,train
@@ -721,6 +722,7 @@ ISIC_0001116,Train,melanoma,MEL,e59a10af4565319919cd306f829cc243,MEL,train
 ISIC_0001118,Train,melanoma,MEL,3f5232bd184860fa2e54c066fea78267,MEL,test
 ISIC_0001119,Train,melanoma,MEL,0bda0994539b6f4834716c26c7275153,MEL,train
 ISIC_0001121,Train,melanoma,MEL,7f0dfb6888bab9968fbc7809dd748603,MEL,train
+ISIC_0001124,Train,melanoma,MEL,44eef7897a29aba7cb945c2e6809fcfa,MEL,removed: same picture as ISIC_0000399
 ISIC_0001125,Train,melanoma,MEL,d4eaedcaf5ee3c6928585082d1877f24,MEL,train
 ISIC_0001126,Train,melanoma,MEL,faa9fd6b827813217b71b79425edd29a,MEL,val
 ISIC_0001127,Train,melanoma,MEL,f603234363f64a72f42d843cb932818c,MEL,train
@@ -820,6 +822,7 @@ ISIC_0010288,Train,melanoma,MEL,ce7d92d85d5ab6d487a52e1f3d098204,MEL,val
 ISIC_0010289,Train,melanoma,MEL,3735387977b4b597265cfe2ef33f21d7,MEL,train
 ISIC_0010295,Train,melanoma,MEL,a91db4c185681ad6ea62c1636ed77a7f,MEL,train
 ISIC_0010299,Train,melanoma,MEL,c5fdc5e2d35d051f3757de3bdc094e0a,MEL,test
+ISIC_0010302,Train,melanoma,MEL,cdc4bd1376cb56fc8ca907c7e6c8dd02,MEL,removed: same picture as ISIC_0000520
 ISIC_0010313,Train,melanoma,MEL,f71e35a497c49835aa0de9dddc493568,MEL,train
 ISIC_0010319,Train,melanoma,MEL,59836d57a93e44662345817ee4d8ab0c,MEL,train
 ISIC_0010321,Train,melanoma,MEL,487a00fbe29d87a560ff05d436a7c2da,MEL,train
@@ -973,6 +976,7 @@ ISIC_0010977,Train,melanoma,MEL,721ba2f6424f744a1527532989ce99f4,MEL,train
 ISIC_0010978,Train,melanoma,MEL,141dcd57f5d1de96993578ec8eefd2d8,MEL,val
 ISIC_0010979,Train,melanoma,MEL,4181378ec46c60537a7be0dc901cdb5a,MEL,train
 ISIC_0010982,Train,melanoma,MEL,072afbd645cef562dd881a186c65e77c,MEL,test
+ISIC_0010990,Train,melanoma,MEL,9d0ff0b17d786a49b95d82086d384a54,MEL,removed: same picture as ISIC_0000521
 ISIC_0010993,Train,melanoma,MEL,fbd2afcf564f4ece0822fde61f15245f,MEL,train
 ISIC_0010995,Train,melanoma,MEL,3105ce58ecaf8232ffde046b718e50e2,MEL,train
 ISIC_0011007,Train,melanoma,MEL,984e9216cb105b1cec0b228fe28092a2,MEL,train
@@ -1272,6 +1276,7 @@ ISIC_0000507,Train,nevus,NV,f787694d7c585d727a2f74652f1df1b8,NV,train
 ISIC_0000508,Train,nevus,NV,9b339564229950af21e39526b675f427,NV,train
 ISIC_0000509,Train,nevus,NV,987358d708cd157195fc4b42d7b7d34f,NV,train
 ISIC_0000510,Train,nevus,NV,ec9ff142e0d55e5d9c4a7c7f219ddb4b,NV,test
+ISIC_0000512,Train,nevus,NV,253b0e3e74f1a51a1f4e5226760c3913,NV,removed: same picture as ISIC_0000477
 ISIC_0000514,Train,nevus,NV,7530bd52ce0e1c8c855ab5429d0c3316,NV,train
 ISIC_0000515,Train,nevus,NV,8bace6c5368c624fe1b0bd166db955b8,NV,train
 ISIC_0000523,Train,nevus,NV,ab85761dfc3422ffc058ef2af98c0d66,NV,test
@@ -1865,6 +1870,7 @@ ISIC_0010977,Train,seborrheic keratosis,SK,721ba2f6424f744a1527532989ce99f4,MEL,
 ISIC_0010978,Train,seborrheic keratosis,SK,141dcd57f5d1de96993578ec8eefd2d8,MEL,val
 ISIC_0010979,Train,seborrheic keratosis,SK,4181378ec46c60537a7be0dc901cdb5a,MEL,train
 ISIC_0010982,Train,seborrheic keratosis,SK,072afbd645cef562dd881a186c65e77c,MEL,test
+ISIC_0010990,Train,seborrheic keratosis,SK,9d0ff0b17d786a49b95d82086d384a54,MEL,removed: same picture as ISIC_0000521
 ISIC_0010993,Train,seborrheic keratosis,SK,fbd2afcf564f4ece0822fde61f15245f,MEL,train
 ISIC_0010995,Train,seborrheic keratosis,SK,3105ce58ecaf8232ffde046b718e50e2,MEL,train
 ISIC_0011007,Train,seborrheic keratosis,SK,984e9216cb105b1cec0b228fe28092a2,MEL,train

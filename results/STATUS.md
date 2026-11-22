@@ -13,7 +13,7 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 | `data/` (tables) | `master_clean.csv` (every case), the three view tables, the audit and near-duplicate tables, label map, normalisation, class weights, balanced lists, `DATA_CARD.md` | yes |
 | `src/` | the scripts: `preprocess.py`, `build_qa.py`, `feature_check.py`, `build_knowledge_corpus.py`, `evaluate.py` | yes |
 | `results/` | run outputs; now the feature check (`results/feature_check/`) and this page | yes |
-| `tests/` | `test_data.py` (the tables and questions agree), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
+| `tests/` | `test_data.py` (the tables and questions agree), `test_scripts.py` (parts of the scripts), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
 
 ## Done (checked on 2026-11-22 against the tables, by `tests/test_data.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
@@ -22,22 +22,29 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 - Class weights and balanced training lists (training cases only).
 - Feature and shortcut check (`src/feature_check.py`, `results/feature_check/`).
 
-## In progress
-- Moving the files into this layout and committing them (2026-11-22).
+## Corrected (approved 2026-11-22, rerun on the laptop the same day, checked)
+1. Corrected labels: 158 among the 2,202 ISIC numbers, 157 among the 2,197 kept images; the one between is ISIC_0010990, corrected and
+   then removed as the same picture as ISIC_0000521 (checked against the Version 1 records). The data card says both.
+2. `original_files_audit.csv` lists all 2,357 original files; the 6 files of the 5 removed copies say "removed: same picture as …".
+3. The patient text no longer says "A dermoscopic image of the lesion is available"; the questions' text is unchanged.
+4. The 8 options of each question are shuffled with a fixed seed (the same order for a case in all three views).
+5. The cleaning reads the Kaggle download as unpacked in `data/raw/`.
+6. Image paths are written `images/<id>.jpg` on every system (the rerun on Windows had written `images\<id>.jpg`; the committed tables
+   were corrected to the value the fixed code writes).
+The rerun changed nothing else: the same 2,197 cases, splits, folds, groups, labels, balanced lists, class weights and normalisation.
 
-## Known issues (corrections proposed, waiting for approval)
-1. The documents say 158 corrected labels; `master_clean.csv` marks 157.
-2. `original_files_audit.csv` lists 2,351 of the 2,357 original files; the 6 files of the 5 removed same-picture copies are missing.
-3. The text-only table ends every text with "A dermoscopic image of the lesion is available." (the text-only question files do not). A test marks this as a known failure.
-4. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class.
-5. Source confound: all melanoma and nevus come from the older ISIC archive, the other classes almost all from HAM10000.
-6. The answer options are always in the same order (A is always melanoma).
-7. The cleaning used outside label files (ISIC 2019, HAM10000); the supervisor has not yet confirmed this is allowed.
+## Known issues
+1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
+   results on all 315 test cases and again on the 277 with all three facts recorded.
+2. Source confound: all melanoma and nevus come from the older ISIC archive, the other classes almost all from HAM10000.
+3. The cleaning used outside label files (ISIC 2019, HAM10000), and the documents propose adding HAM10000 images; the supervisor has
+   not yet confirmed either is allowed under "only this Kaggle dataset".
+4. No clinician is available: reference texts must come from cited sources only, and no answer is rated by a dermatologist.
 
 ## Pending
 - The supervisor's answers: outside label files; adding HAM10000 images; a text corpus as evidence.
-- Pinning the package versions in `requirements.txt`.
+- Pinning the package versions in `requirements.txt` (`pip freeze` on the laptop). Note: installing `ragas` replaced `openai` 3.49 with 1.109 in the laptop's environment; only the archived Version 2 code uses `openai`.
 - The knowledge corpus (`src/build_knowledge_corpus.py`, never run).
 - A cited reference text per class (needed for semantic similarity).
 - The four baselines (LLM only, standard RAG, RAG², proposed) on the three views; then `src/evaluate.py` (never run).
-- Tests for the scripts in `src/`.
+- Tests for `src/evaluate.py`, `src/feature_check.py` and `src/build_knowledge_corpus.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`).

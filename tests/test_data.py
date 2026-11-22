@@ -83,7 +83,31 @@ class DataTests(unittest.TestCase):
         balance = json.loads((DATA / "class_balance.json").read_text(encoding="utf-8"))
         self.assertEqual(balance["class_counts_train"], dict(counts))
 
-    @unittest.expectedFailure  # known issue: the text-only table says an image is available; remove this line when it is fixed
+    def test_every_original_file_in_the_audit_is_a_kept_case_or_a_marked_copy_of_one(self):
+        for r in rows("original_files_audit.csv"):
+            if r["isic_id"] not in self.master:
+                self.assertTrue(r["split"].startswith("removed: same picture as "), r["isic_id"])
+                self.assertIn(r["split"].removeprefix("removed: same picture as "), self.master, r["isic_id"])
+
+    def test_the_audit_lists_all_2357_files_of_the_kaggle_download(self):
+        self.assertEqual(len(rows("original_files_audit.csv")), 2357)
+
+    def test_the_answer_options_are_not_in_one_fixed_order(self):
+        orders = {json.dumps(q["options"]) for q in jsonl("qa/qa_image_only_test.jsonl")}
+        self.assertGreater(len(orders), 1)
+
+    def test_every_image_path_is_images_slash_the_case_id(self):
+        expected = {i: f"images/{i}.jpg" for i in self.master}
+        for name in ("master_clean.csv", "dataset_image_only.csv", "dataset_multimodal.csv"):
+            with self.subTest(name):
+                wrong = [r["isic_id"] for r in rows(name) if r["image_path"] != expected[r["isic_id"]]]
+                self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not images/<id>.jpg")
+        for view in ("image_only", "multimodal"):
+            for split in SPLITS:
+                with self.subTest(f"{view} {split}"):
+                    wrong = [q["id"] for q in jsonl(f"qa/qa_{view}_{split}.jsonl") if q["image_path"] != expected[q["id"]]]
+                    self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not images/<id>.jpg")
+
     def test_the_text_only_table_does_not_mention_an_image(self):
         self.assertFalse(any("image" in r["clinical_text"].lower() for r in rows("dataset_text_only.csv")))
 

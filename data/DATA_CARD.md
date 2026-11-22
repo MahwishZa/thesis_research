@@ -1,7 +1,7 @@
 # Cleaned ISIC Skin-Lesion Dataset: Data Card
 
 Source: Kaggle "Skin Cancer ISIC – 9 classes" (nodoubttome); images from the ISIC Archive (CC-BY-NC / CC-0).
-Processed: 22 Nov 2026 with `code/preprocess.py` (seed 42). Everything here is real data: no synthetic images and no AI-generated text.
+Processed: 22 Nov 2026 with `src/preprocess.py` (seed 42). Everything here is real data: no synthetic images and no AI-generated text.
 
 ## What changed vs the Kaggle copy
 
@@ -11,7 +11,7 @@ Processed: 22 Nov 2026 with `code/preprocess.py` (seed 42). Everything here is r
 | Exact duplicates (same bytes) removed | 157 files → 2,202 ISIC IDs |
 | Same picture under 2 ISIC IDs (pHash 0) removed | 5 → **2,197 unique images** |
 | Labels checked against official sources | 1,761 from ISIC 2019 GroundTruth, 436 from ISIC Archive API records |
-| Labels corrected | 158 (77 "nevus" copies → AK; 78 "SK" copies → MEL; 1 nevus → AK; 2 SK → MEL) |
+| Labels corrected | 158 among the 2,202 ISIC IDs (77 "nevus" copies → AK; 78 "SK" copies → MEL; 1 nevus → AK; 2 SK → MEL); **157 among the 2,197 kept images**, because one corrected image (ISIC_0010990, filed under both melanoma and SK) was then removed as the same picture as ISIC_0000521 |
 | HAM10000 vs ISIC 2019 label disagreements | 0 |
 | "Seborrheic keratosis" class | No genuine SK images, so the class was dropped. Final taxonomy = ISIC 2019's 8 classes |
 | Train/test leakage | Removed: new split is grouped by lesion (lesion_id + pHash ≤ 3) |
@@ -43,14 +43,14 @@ Imbalance ratio (train): 341 / 80 = **4.26 : 1**. Class weights are in `class_ba
 | `dataset_text_only.csv` | id, split, label, clinical_text + metadata features (no image) |
 | `dataset_multimodal.csv` | id, split, label, image_path + clinical_text + metadata features |
 | `qa/qa_{image_only,text_only,multimodal}_{train,val,test}.jsonl` | 8-option diagnostic QA items for LLM-only / RAG / RAG² / Proposed RAG |
-| `images/` | 2,197 standardised images |
+| `images/` | 2,197 standardised images (on the researcher's laptop only, not in Git) |
 | `class_balance.json` | train counts, balanced & effective-number class weights |
 | `train_oversampled_index.csv` / `train_undersampled_index.csv` | ready-made balanced training lists (train split only) |
 | `near_duplicate_pairs.csv` | near-duplicate audit and the action taken |
 | `original_files_audit.csv` | every original Kaggle file → its final label and split |
-| `feature_check_results.json`, `image_handcrafted_features.csv` | feature-sufficiency / shortcut experiment |
-| `code/` | preprocess.py, feature_check.py, build_qa.py, build_knowledge_corpus.py, evaluate.py |
-| `code/meta/` | official label/metadata files used (ISIC 2019 GT + metadata, HAM10000 metadata, ISIC Archive API extract) |
+| `results/feature_check/` | `feature_check_results.json` and `image_handcrafted_features.csv`: the feature-sufficiency / shortcut experiment |
+| `src/` (repository) | preprocess.py, feature_check.py, build_qa.py, build_knowledge_corpus.py, evaluate.py |
+| `meta/` | official label/metadata files used (ISIC 2019 GT + metadata, HAM10000 metadata, ISIC Archive API extract) |
 
 ## Model inputs vs analysis-only columns
 

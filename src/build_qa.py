@@ -11,10 +11,11 @@ Output (JSONL, one file per modality x split):
   qa_text_only_{split}.jsonl    - clinical vignette from metadata, no image
   qa_multimodal_{split}.jsonl   - image + clinical vignette
 
+The eight options are shuffled for each case with a fixed seed, so that a position (for example "A") never stands for one class;
+a case has the same order in all three views, so the views stay paired.
 Usage: python build_qa.py --data OUT_DIR
 """
-import argparse, json, os
-import pandas as pd
+import argparse, json, os, random
 
 CLASSES = ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"]
 OPTION_TEXT = {
@@ -23,13 +24,21 @@ OPTION_TEXT = {
     "DF": "Dermatofibroma", "VASC": "Vascular lesion", "SCC": "Squamous cell carcinoma",
 }
 LETTERS = "ABCDEFGH"
-OPTIONS = {LETTERS[i]: OPTION_TEXT[c] for i, c in enumerate(CLASSES)}
+OPTION_SEED = 42
+
+
+def options_for(case_id, seed=OPTION_SEED):
+    """The options of one case: the eight classes in an order fixed by the seed and the case id (the same on every computer)."""
+    order = random.Random(f"{seed}:{case_id}").sample(CLASSES, len(CLASSES))
+    return {LETTERS[i]: OPTION_TEXT[c] for i, c in enumerate(order)}, {c: LETTERS[i] for i, c in enumerate(order)}
+
 Q_IMAGE = "Look at the dermoscopic image of the skin lesion. What is the most likely diagnosis?"
 Q_TEXT = "{vignette} What is the most likely diagnosis?"
 Q_MM = "{vignette} Look at the dermoscopic image of the lesion. What is the most likely diagnosis?"
 
 
 def main():
+    import pandas as pd
     ap = argparse.ArgumentParser(); ap.add_argument("--data", required=True); a = ap.parse_args()
     m = pd.read_csv(os.path.join(a.data, "master_clean.csv"))
     qa_dir = os.path.join(a.data, "qa"); os.makedirs(qa_dir, exist_ok=True)
@@ -37,9 +46,9 @@ def main():
         s = m[m.split == split]
         files = {k: open(os.path.join(qa_dir, f"qa_{k}_{split}.jsonl"), "w") for k in ("image_only", "text_only", "multimodal")}
         for r in s.itertuples():
-            vignette = r.clinical_text.replace(" A dermoscopic image of the lesion is available.", "")
-            ans = LETTERS[CLASSES.index(r.label)]
-            base = dict(id=r.isic_id, split=split, options=OPTIONS, answer=ans, answer_text=OPTION_TEXT[r.label],
+            vignette = r.clinical_text
+            options, letter = options_for(r.isic_id)
+            base = dict(id=r.isic_id, split=split, options=options, answer=letter[r.label], answer_text=OPTION_TEXT[r.label],
                         gold_label=r.label, group_id=r.group_id)
             files["image_only"].write(json.dumps(dict(base, question=Q_IMAGE, image_path=r.image_path)) + "\n")
             files["text_only"].write(json.dumps(dict(base, question=Q_TEXT.format(vignette=vignette))) + "\n")
