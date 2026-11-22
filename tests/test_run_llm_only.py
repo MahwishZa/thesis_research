@@ -91,10 +91,12 @@ class RunTests(unittest.TestCase):
         self.assertEqual(out, self.folder())
         self.assertFalse(os.path.exists(self.folder(partial=True)))
         preds = rl.read_jsonl(os.path.join(out, "predictions.jsonl"))
-        self.assertEqual([p["id"] for p in preds], [q["id"] for q in self.questions])
+        self.assertEqual([p["id"] for p in preds], [q["id"] for q in rl.asking_order(self.questions)])
+        self.assertEqual(sorted(p["id"] for p in preds), sorted(q["id"] for q in self.questions))
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
         self.assertEqual((info["status"], info["answered"], info["of"]), ("complete", 6, 6))
         self.assertEqual(info["settings"]["prompt_version"], rl.PROMPT_VERSION)
+        self.assertIn("42:<case id>", info["question_order"])
         refused = next(p for p in preds if p["id"].endswith("002"))
         self.assertEqual((refused["pred"], refused["valid"], refused["finish_reason"]), (None, False, "refusal"))
         first = preds[0]
@@ -109,6 +111,23 @@ class RunTests(unittest.TestCase):
         self.assertEqual(d["top3_accuracy"], 0.5)                                  # ids 0, 4 first; id 1 second
         self.assertEqual((d["n_covered"], d["coverage"]), (3, 0.5))                # ids 1, 4, 5 say yes (k % 3); 2 is invalid
         self.assertEqual(d["selective_risk"], 0.6667)                              # ids 1 and 5 are wrong
+
+    def test_the_asking_order_is_fixed_mixed_and_the_same_for_every_view(self):
+        qs = [{"id": f"ISIC_{k:07d}", "gold_label": c} for k, c in enumerate(["AK"] * 10 + ["BCC"] * 10 + ["MEL"] * 10)]
+        order = [q["id"] for q in rl.asking_order(qs)]
+        self.assertEqual(order, [q["id"] for q in rl.asking_order(list(reversed(qs)))])    # the file order does not matter
+        self.assertEqual(sorted(order), [q["id"] for q in qs])                              # every question once
+        self.assertNotEqual(order, [q["id"] for q in qs])
+        first = {q["gold_label"] for q in rl.asking_order(qs)[:5]}
+        self.assertGreater(len(first), 1)                                                   # a trial of 5 is not one class
+        self.assertEqual(order[:3], ["ISIC_0000003", "ISIC_0000026", "ISIC_0000015"])        # fixed: seed 42
+
+    def test_a_limited_run_asks_the_first_questions_of_the_asking_order(self):
+        self.go(self.args(limit=2), FakeClient(self.questions))
+        preds = rl.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
+        self.assertEqual([p["id"] for p in preds], [q["id"] for q in rl.asking_order(self.questions)[:2]])
+        info = json.loads(Path(self.folder(partial=True), "run.json").read_text(encoding="utf-8"))
+        self.assertEqual(info["question_order"], rl.ORDER)
 
     def test_an_interrupted_run_continues_where_it_stopped_without_repeating(self):
         self.go(self.args(limit=2), FakeClient(self.questions))

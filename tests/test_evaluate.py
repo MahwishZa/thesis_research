@@ -56,6 +56,29 @@ class DiagnosisTests(unittest.TestCase):
         self.assertAlmostEqual(ev.macro_f1(y, p), (0.5 + 0.5) / 8)  # every class weighs the same, also those without cases
         self.assertEqual(ev.accuracy(y, p), 0.4)
 
+    def test_invalid_answers_are_split_into_refusals_and_other_invalid_answers(self):
+        qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(7)]
+        qa = {q["id"]: q for q in qs}
+        right = answer(qs[0], "MEL")
+        pred = {"ISIC_0000000": {"pred": right, "raw_output": "I'm sorry to say it looks like melanoma. Answer: " + right},
+                "ISIC_0000001": {"pred": None, "finish_reason": "stop",
+                                 "raw_output": "I'm sorry, I can't help with identifying or diagnosing images of skin lesions."},
+                "ISIC_0000002": {"pred": None, "finish_reason": "refusal: cyber", "raw_output": ""},
+                "ISIC_0000003": {"pred": None, "finish_reason": "stop", "raw_output": "I cannot provide a diagnosis."},
+                "ISIC_0000004": {"pred": None, "finish_reason": "length", "raw_output": "The lesion shows a network and"},
+                "ISIC_0000005": {"pred": "Z", "raw_output": "Answer: Z"}}
+        d = ev.diagnosis_metrics(qa, pred)
+        self.assertEqual((d["invalid_answers"], d["missing_predictions"]), (5, 1))
+        self.assertEqual(d["invalid_answers_by_cause"],
+                         {"refusals": 3, "other_invalid": 2, "refusal_ids": ["ISIC_0000001", "ISIC_0000002", "ISIC_0000003"],
+                          "other_invalid_ids": ["ISIC_0000004", "ISIC_0000005"]})
+        self.assertEqual(d["accuracy"], round(1 / 7, 4))                         # refusals count as wrong, as before
+        for text in ("I am sorry, but I cannot assist.", "I’m sorry, that is outside what I do here.", "I’m unable to analyze this image.", "I won't diagnose this.",
+                     "I am not able to evaluate medical images."):
+            self.assertTrue(ev.REFUSAL.search(text), text)
+        for text in ("Sorry state of the skin.", "I can see a pigment network.", "It cannot be excluded."):
+            self.assertFalse(ev.REFUSAL.search(text), text)
+
     def test_a_missing_or_unusable_answer_counts_as_wrong(self):
         qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(4)]
         qa = as_dict(qs)

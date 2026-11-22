@@ -207,6 +207,29 @@ Checked: 6 new tests of the checker.
 - Limitation for the thesis: MEL has 2 texts from the superficial spreading melanoma introduction; they name asymmetry of shape
   and structures, more than 2 colours, atypical network and regression, but not the full list of local criteria.
 
+## LLM-only: prompt accepted, first paid trial, fixed asking order (2026-11-22)
+- Dry run on the laptop ✔: the three views give the right inputs; the same option order for a case in every view; images found.
+  The prompt (`llm_only_v2`) was accepted.
+- Paid trial 1 (approved): 5 validation questions x 4 models x 3 views = 60 calls. All 60 answered and read (valid), no refusal,
+  no cut-off; each served by the pinned host; 2-8 s per question. Image questions used more input tokens than text-only ones
+  (GPT-4o 640 vs 222, Claude 700 vs 332), as expected for a 600x450 image ◻.
+- Flaw: the question files are sorted by class, so all 5 trial questions were AK. 5 cases of one class say nothing about
+  accuracy. GPT-4o (image only) answered BKL / NV / DF for all five images, Llama BKL / NV ◻ (to watch in the full runs).
+- Fix (approved, option A): `run_llm_only.py` asks the questions in a fixed shuffled order (sha256 of "42:<case id>"), the same
+  for every model, view and split; the files and the scores are unchanged; `run.json` records the order. The 60 answers stay
+  valid. The next 5 validation questions are NV, NV, BCC, BCC, MEL. Tests; 6 deliberate breaks, all caught (removing the
+  order note from only one of its two writes changes nothing: the end-of-run write replaces the first).
+
+## Refusals reported apart from other invalid answers (approved 2026-11-22, option A)
+- Trial 2 (5 more validation questions x 4 models x 3 views, mixed classes): 60 answers, 59 valid. The invalid one is a refusal:
+  GPT-4o, image only, ISIC_0010866 (MEL): "I'm sorry, I can't help with identifying or diagnosing images of skin lesions."
+  It ended normally ("stop"), so the host did not flag it.
+- `evaluate.py` now splits the invalid answers into refusals and other invalid answers (`invalid_answers_by_cause`, with the
+  ids). A refusal: the host's refusal flag, or a fixed phrase (REFUSAL: "I'm sorry", "I can't / cannot / won't / am unable to /
+  am not able to" + help, assist, provide, identify, diagnose, answer, comply, interpret, analyse, evaluate). Only invalid answers
+  are checked; the scores do not change (a refusal is wrong, as before); refusals are not retried. Tests; 11 deliberate breaks,
+  all caught (1 missed at first; test added; the test also caught a fault in the first pattern: "I’m unable to").
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.

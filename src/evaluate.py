@@ -20,7 +20,8 @@ A question with no prediction, or with an answer that is not one of its option l
 
 Metrics
   Diagnosis : accuracy (the main score) with a 95% bootstrap interval, macro-F1 with its interval, per-class precision,
-              recall (= sensitivity), specificity and F1, confusion matrix, missing and invalid answers,
+              recall (= sensitivity), specificity and F1, confusion matrix, missing and invalid answers (the invalid ones split
+              into refusals, by REFUSAL, and other invalid answers),
               McNemar's exact test against --pred-b. The bootstrap draws whole lesions, so photos of one lesion stay together.
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
               When the predictions carry them: top-3 accuracy (the true class among the model's three most likely, "top3"),
@@ -59,6 +60,25 @@ from common import CLASSES, OPTION_TEXT, get_logger, read_csv, read_jsonl, write
 
 TEXT_TO_CLASS = {text: code for code, text in OPTION_TEXT.items()}
 INVALID = "invalid"
+# A refusal: the host flagged it (finish_reason "refusal...") or the reply says so in one of these fixed phrases (set on 2026-11-22
+# from a real reply: "I'm sorry, I can't help with identifying or diagnosing images of skin lesions."). Only an invalid answer
+# (no usable letter) is checked, so a valid answer that apologises is never counted.
+REFUSAL = re.compile(r"\bI(?:['’]m| am) sorry\b|\bI(?: can['’]?t| cannot| can not| won['’]t| am unable to|['’]m unable to"
+                     r"| am not able to|['’]m not able to) (?:help|assist|provide|identify|diagnose|answer|comply|interpret"
+                     r"|analy[sz]e|evaluate)", re.I)
+
+
+def invalid_causes(ids, classes, pred):
+    """Splits the invalid answers into refusals (REFUSAL) and other invalid answers (a reply without a usable letter)."""
+    out = {"refusals": [], "other": []}
+    for i, c in zip(ids, classes):
+        r = pred.get(i)
+        if r is None or c != INVALID:
+            continue
+        refused = str(r.get("finish_reason") or "").startswith("refusal") or REFUSAL.search(str(r.get("raw_output") or ""))
+        out["refusals" if refused else "other"].append(i)
+    return {"refusals": len(out["refusals"]), "other_invalid": len(out["other"]), "refusal_ids": out["refusals"],
+            "other_invalid_ids": out["other"]}
 MEDCPT = ("ncbi/MedCPT-Query-Encoder", "ncbi/MedCPT-Article-Encoder", "ncbi/MedCPT-Cross-Encoder")
 
 
@@ -194,6 +214,7 @@ def diagnosis_metrics(qa, pred, pred_b=None):
     out = {"n_questions": len(ids),
            "missing_predictions": sum(i not in pred for i in ids),
            "invalid_answers": sum(i in pred and c == INVALID for i, c in zip(ids, p)),
+           "invalid_answers_by_cause": invalid_causes(ids, p, pred),
            "accuracy": round(accuracy(y, p), 4), "accuracy_95ci": bootstrap_ci(y, p, groups, accuracy),
            "macro_f1": round(macro_f1(y, p), 4), "macro_f1_95ci": bootstrap_ci(y, p, groups, macro_f1),
            "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
@@ -473,7 +494,7 @@ def main(argv=None):
     log = get_logger("evaluate")
     d = rep["diagnosis"]
     log.info(f"accuracy {d['accuracy']} (95% CI {d['accuracy_95ci'][0]}-{d['accuracy_95ci'][1]}) | macro-F1 {d['macro_f1']} | "
-             f"melanoma recall {d['per_class']['MEL']['recall']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']}")
+             f"melanoma recall {d['per_class']['MEL']['recall']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']} (refusals {d['invalid_answers_by_cause']['refusals']})")
     if rep["retrieval"]:
         log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr', 'context_precision')} }")
         log.info(f"relevance: {rep['relevance']}")

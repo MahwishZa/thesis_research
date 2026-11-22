@@ -26,6 +26,8 @@ Output: results/llm_only/<model>/<view>_<split>/
   run.log             progress and errors
 While a run is unfinished its folder ends in ".partial" (never committed); it loses that ending when every question has an answer.
 Checkpointing: each answer is written as soon as it arrives; running the same command again continues where it stopped.
+Order: the questions are asked in a fixed shuffled order (asking_order), so a --limit trial or an interrupted run covers all
+classes; the scores do not depend on the order.
 An API error that retrying cannot fix (wrong key, no credit, ...) stops the run; nothing already answered is lost.
 
 Usage (on the laptop):
@@ -44,7 +46,7 @@ import time
 import urllib.error
 import urllib.request
 
-from common import SPLITS, VIEWS, get_logger, question_file, read_jsonl, write_json
+from common import SEED, SPLITS, VIEWS, get_logger, question_file, read_jsonl, write_json
 
 PROMPT_VERSION = "llm_only_v2"
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -252,6 +254,15 @@ def make_client(name, log=None):
 
 
 # ---- the run (checkpointed) ---------------------------------------------------------------------------------------------
+ORDER = f"sha256 of '{SEED}:<case id>', ascending (the same order for every model, view and split; the file is not changed)"
+
+
+def asking_order(questions):
+    """The order the questions are asked in: a fixed shuffle by case id (approved 2026-11-22). The question files are sorted by
+    class, so asking them in file order would make a --limit trial, or an interrupted run, cover only the first classes."""
+    return sorted(questions, key=lambda q: hashlib.sha256(f"{SEED}:{q['id']}".encode("utf-8")).hexdigest())
+
+
 def run_folder(results, model, view, split):
     final = os.path.join(results, "llm_only", model, f"{view}_{split}")
     return final, final + ".partial"
@@ -269,7 +280,7 @@ def run(args, client, log):
         if missing:
             raise SystemExit(f"{len(missing)} images are missing, e.g. {os.path.join(args.data, missing[0])}")
     if args.dry_run:
-        for q in questions[:args.limit or 3]:
+        for q in asking_order(questions)[:args.limit or 3]:
             log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[user] {user_text(q, args.style)}")
         return None
     os.makedirs(partial, exist_ok=True)
@@ -288,12 +299,12 @@ def run(args, client, log):
         if changed:
             raise SystemExit(f"the unfinished run in {partial} used other settings ({', '.join(changed)}); "
                              "finish it with the old settings or delete that folder")
-    todo = [q for q in questions if q["id"] not in done]
+    todo = [q for q in asking_order(questions) if q["id"] not in done]
     if args.limit:
         todo = todo[:args.limit]
     log.info(f"{args.model}: {len(questions)} questions, {len(done)} already answered, {len(todo)} to ask now -> {partial}")
     status = "running"
-    write_json(info_path, {"settings": settings, "status": status, "answered": len(done), "of": len(questions)})
+    write_json(info_path, {"settings": settings, "status": status, "answered": len(done), "of": len(questions), "question_order": ORDER})
     try:
         with open(out, "a", encoding="utf-8") as f:
             for k, q in enumerate(todo, 1):
@@ -329,7 +340,7 @@ def run(args, client, log):
     finally:
         complete = len(done) == len(questions)
         final_status = "complete" if complete else "stopped" if status == "stopped" else "unfinished"
-        write_json(info_path, {"settings": settings, "status": final_status, "answered": len(done), "of": len(questions)})
+        write_json(info_path, {"settings": settings, "status": final_status, "answered": len(done), "of": len(questions), "question_order": ORDER})
     if complete:
         close_log_files(log)
         os.replace(partial, final)
