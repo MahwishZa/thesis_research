@@ -12,6 +12,11 @@ htmlcov/
 /data/images/
 *.zip
 
+# The knowledge corpus: its passages (published text under the sources' licences) and the download cache stay on the laptop;
+# data/corpus/manifest.csv and corpus_card.json (no text) are committed.
+/data/corpus/passages.jsonl
+/data/corpus/cache/
+
 # The archived Version 2 (archive/v2/) keeps the same rules under its own folder.
 /archive/v2/data/**
 !/archive/v2/data/*/

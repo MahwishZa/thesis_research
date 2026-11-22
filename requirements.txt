@@ -9,14 +9,13 @@ opencv-python
 scikit-learn
 scikit-image
 
-# Evaluation (src/evaluate.py): McNemar's test
-scipy
+# Evaluation (src/evaluate.py): diagnosis and retrieval metrics need only Python.
 
-# Only for building the knowledge corpus (src/build_knowledge_corpus.py)
-requests
+# Building the knowledge corpus (src/build_knowledge_corpus.py): the Meditron guideline collection on Hugging Face
 datasets
 
-# Optional text metrics of src/evaluate.py (semantic similarity, BERTScore, RAGAS)
+# Optional metrics of src/evaluate.py: semantic similarity and the MedCPT relevance scores (sentence-transformers brings
+# transformers and torch), BERTScore, RAGAS
 sentence-transformers
 bert-score
 ragas

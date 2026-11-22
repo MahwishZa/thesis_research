@@ -13,7 +13,7 @@ Updated 2026-11-22. Done = present and checked; in progress = started, not finis
 | `data/` (tables) | `master_clean.csv` (every case), the three view tables, the audit and near-duplicate tables, label map, normalisation, class weights, balanced lists, `DATA_CARD.md` | yes |
 | `src/` | the scripts: `preprocess.py`, `build_qa.py`, `feature_check.py`, `build_knowledge_corpus.py`, `evaluate.py` | yes |
 | `results/` | run outputs; now the feature check (`results/feature_check/`) and this page | yes |
-| `tests/` | `test_data.py` (the tables and questions agree), `test_scripts.py` (parts of the scripts), `test_evaluate.py` (the evaluation code), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
+| `tests/` | `test_data.py` (the tables and questions agree), `test_scripts.py` (parts of the scripts), `test_evaluate.py` (the evaluation code), `test_corpus.py` (the corpus builder), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
 
 ## Done (checked on 2026-11-22 against the tables, by `tests/test_data.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
@@ -50,6 +50,18 @@ The rerun changed nothing else: the same 2,197 cases, splits, folds, groups, lab
    predictions for questions that are not in it.
 Checked: 19 tests, and 12 deliberate breaks each caught by a test. Not checked: the MedCPT scorers (they download 3 models; not run yet).
 
+## Knowledge corpus builder rewritten (approved 2026-11-22, step 4; `src/build_knowledge_corpus.py`, `tests/test_corpus.py`)
+Four libraries as in RAG² (approved list): PubMed abstracts; open-access PMC papers (licence from the PMC OA service, text from
+BioC); guidelines (open-access guideline and consensus papers in PMC, and the public Meditron guideline collection without WikiDoc
+and NICE); Dermoscopedia (CC BY-NC-SA 4.0). Rules: no AI or image-dataset papers, no retracted papers, only CC licences for PMC,
+passages of whole sentences (at most 200 words, one sentence overlap), no duplicates, at most 150 passages per library and
+diagnosis, disease tags from names and synonyms, a keyword check of four topics per diagnosis. No e-mail address is sent; the
+optional NCBI API key comes from the environment variable `NCBI_API_KEY` and is never stored. Output in `data/corpus/`:
+`passages.jsonl` and the download cache stay on the laptop; `manifest.csv` and `corpus_card.json` (no text) are committed.
+Checked: 21 tests on made-up answers in the services' formats, and 15 deliberate breaks each caught by a test.
+Not checked: the real services (no internet here) — the PubMed, PMC OA, BioC and Dermoscopedia answers and the Meditron
+collection's columns are written from their documentation; the first run on the laptop shows the counts per library.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.
@@ -61,8 +73,8 @@ Checked: 19 tests, and 12 deliberate breaks each caught by a test. Not checked: 
 ## Pending
 - The supervisor's answers: outside label files; adding HAM10000 images; a text corpus as evidence.
 - Pinning the package versions in `requirements.txt` (`pip freeze` on the laptop). Note: installing `ragas` replaced `openai` 3.49 with 1.109 in the laptop's environment; only the archived Version 2 code uses `openai`.
-- The knowledge corpus (`src/build_knowledge_corpus.py`, never run).
+- The first run of the corpus builder on the laptop, then a check of its card (counts, removed, empty topics) before freezing.
 - A cited reference text per class (needed for semantic similarity).
 - The four baselines (LLM only, standard RAG, RAG², proposed) on the three views; then `src/evaluate.py` (tested on made-up files and the committed questions; never run on real predictions).
-- Tests for `src/feature_check.py` and `src/build_knowledge_corpus.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`; the evaluation code in `tests/test_evaluate.py`).
+- Tests for `src/feature_check.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`; the evaluation code in `tests/test_evaluate.py`; the corpus builder in `tests/test_corpus.py`).
 - A first run of the MedCPT relevance scorers on the laptop (`--relevance-models`).
