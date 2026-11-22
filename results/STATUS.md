@@ -3,19 +3,11 @@
 Updated 2026-11-22. Done = present and checked; in progress = started, not finished; pending = not started. Every item names its files.
 
 ## Where things are
-
-| Folder | Holds | In Git |
-|---|---|---|
-| `data/raw/` | the Kaggle download "Skin Cancer ISIC" (2,357 files), untouched | no (laptop only) |
-| `data/images/` | the 2,197 cleaned images (600 × 450) | no (laptop only) |
-| `data/meta/` | the official label files the cleaning used (ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records) | yes |
-| `data/processed/` | step 1: `master_clean.csv` (every kept case with its split), the audit and near-duplicate tables, label map, normalisation, class weights, balanced lists | yes |
-| `data/views/` | step 2: `image_only/`, `text_only/`, `multimodal/`, each with `cases.csv` and `qa_{train,val,test}.jsonl` | yes |
-| `data/corpus/` | the knowledge corpus (not built yet); only its manifest and card go to Git | partly |
-| `data/DATA_CARD.md` | the data card: pipeline, files, views, limitations | yes |
-| `src/` | `common.py` (shared), `preprocess.py` (step 1), `build_views.py` (step 2), `build_knowledge_corpus.py`, `feature_check.py`, `evaluate.py`; guide in `src/README.md` | yes |
-| `results/` | run outputs; now the feature check (`results/feature_check/`) and this page | yes |
-| `tests/` | `test_data.py` (the tables and questions agree), `test_scripts.py` (parts of the scripts), `test_evaluate.py` (the evaluation code), `test_corpus.py` (the corpus builder), `test_workspace.py` and `test_archive.py` (structure and archive) | yes |
+- Data: `data/datasheet.md` (the pipeline, every folder and file, the three views, the limitations).
+- Code: `src/README.md` (every script, its order, inputs, outputs and command).
+- Results: `results/feature_check/` (the data analysis); `results/llm_only/<run>/<view>_<split>/` (LLM-only runs, none yet).
+- Checks: `tests/` (`python -m unittest discover -s tests`).
+The sections below are dated; older ones use the names of their day (renamed on 2026-11-22, see the last dated section).
 
 ## Done (checked on 2026-11-22 against the tables, by `tests/test_data.py`)
 - Cleaning of the Kaggle dataset: duplicates removed, labels taken from official records, 8 classes, images standardised (`src/preprocess.py`).
@@ -80,6 +72,36 @@ Checked: 76 tests; 39 deliberate breaks (12 new, 15 corpus, 12 evaluation), each
 `feature_check.py` end to end (they need the images and packages of the laptop). A rerun of step 1 on the laptop should leave
 `git status` without changes in `data/processed/`.
 
+## Clear names, the LLM-only run script, fewer metrics (2026-11-22)
+1. Renamed with `git mv` (history kept): `raw/` → `kaggle_original/` (laptop), `meta/` → `official_labels/`, `images/` →
+   `clean_images/` (laptop), `processed/` → `clean_cases/` (`master_clean.csv` → `all_cases.csv`, `original_files_audit.csv` →
+   `kaggle_files_audit.csv`, `near_duplicate_pairs.csv` → `near_duplicates.csv`, `label_map.json` → `classes.json`,
+   `class_balance.json` → `class_weights.json`, `train_*_index.csv` → `train_*.csv`), `views/<view>/qa_<split>.jsonl` →
+   `questions_<split>.jsonl`, `corpus/` → `knowledge_corpus/`. Image paths now read `clean_images/<id>.jpg`; all 6,591 questions
+   are otherwise unchanged (checked one by one).
+2. `src/run_llm_only.py`: the LLM-only baseline for OpenAI, OpenAI-compatible servers (e.g. Llama hosts), Anthropic and Gemini;
+   one prompt for every view and model; the answer letter read with one fixed rule; each answer saved at once; a rerun continues
+   where it stopped; a run folder ends in `.partial` until complete; keys only from environment variables. Not run yet.
+3. `src/evaluate.py`: options renamed `--questions`, `--predictions`, `--predictions-b`; per class "sensitivity" is now called
+   recall (the same number); the separate melanoma sensitivity is removed (it is the melanoma row of the per-class table);
+   BERTScore is removed (it repeated semantic similarity).
+4. `src/preprocess.py`: reads only the unpacked Kaggle layout (`Train/`, `Test/`); the zip-part layout is removed.
+Checked: 94 tests; 13 new deliberate breaks of the run script, each caught (and the 39 earlier ones still caught).
+Not checked: the real APIs (no keys or internet here) — the request formats follow the providers' documentation.
+
+## Preferred names, the four research models (2026-11-22)
+1. Renamed (with `git mv`): `kaggle_original/` → `raw/` (laptop), `clean_images/` → `processed_images/` (laptop), `clean_cases/` →
+   `processed_cases/`, `kaggle_files_audit.csv` → `raw_files_audit.csv`, `data/DATA_CARD.md` → `data/datasheet.md`. Image paths now
+   read `processed_images/<id>.jpg`; the questions are otherwise unchanged (checked one by one); the text-only files did not change.
+2. `src/run_llm_only.py` runs the four research models with fixed settings (taken from the Version 2 model settings in the archive):
+   Claude Sonnet 5.5 through Anthropic's official package (no temperature: the model rejects one; hidden reasoning off), GPT-4o,
+   Gemini 3.8 Flash and Llama 4 Maverick through OpenRouter, each pinned to one host with no fallback, temperature 0, seed 0.
+   Keys are read from `.env` (CLAUDE_API_KEY, OPENROUTER_API_KEY). A question refused by a host's content moderation is saved as
+   invalid and the run goes on. The models are used as they are (no fine-tuning), as in RAG².
+3. The training-only files (class weights, balanced lists, normalisation, folds, model features) stay: model training is still part
+   of the research.
+Checked: 98 tests; 17 deliberate breaks of the run script, each caught. Not checked: the real APIs (no keys or internet here).
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.
@@ -93,6 +115,7 @@ Checked: 76 tests; 39 deliberate breaks (12 new, 15 corpus, 12 evaluation), each
 - Pinning the package versions in `requirements.txt` (`pip freeze` on the laptop). Note: installing `ragas` replaced `openai` 3.49 with 1.109 in the laptop's environment; only the archived Version 2 code uses `openai`.
 - The first run of the corpus builder on the laptop, then a check of its card (counts, removed, empty topics) before freezing.
 - A cited reference text per class (needed for semantic similarity).
-- The four baselines (LLM only, standard RAG, RAG², proposed) on the three views; then `src/evaluate.py` (tested on made-up files and the committed questions; never run on real predictions).
+- The model(s) for the LLM-only baseline (approval needed: it costs credit), then a small trial on validation, then the runs.
+- The other baselines (standard RAG, RAG², proposed) on the three views.
 - Tests for `src/feature_check.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`; the evaluation code in `tests/test_evaluate.py`; the corpus builder in `tests/test_corpus.py`).
 - A first run of the MedCPT relevance scorers on the laptop (`--relevance-models`).

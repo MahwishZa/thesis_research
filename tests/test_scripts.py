@@ -1,4 +1,4 @@
-"""Checks of the scripts in src/ that need no images: the patient text, the options of a question, the raw folder layout and the
+"""Checks of the scripts in src/ that need no images: the patient text, the options of a question, the input check and the
 audit of the original files. They skip when the scripts' packages are not installed (pip install -r requirements.txt)."""
 
 import importlib.util
@@ -29,22 +29,23 @@ class PreprocessTests(unittest.TestCase):
         self.assertEqual(self.p.clinical_text(70.0, "male", "trunk", "trunk"), "Patient: 70-year-old male. Skin lesion on the trunk.")  # no repeat
 
     def test_the_new_text_is_the_old_text_without_the_image_sentence_for_every_committed_case(self):
-        path = ROOT / "data" / "processed" / "master_clean.csv"
+        path = ROOT / "data" / "processed_cases" / "all_cases.csv"
         if not path.is_file():
-            self.skipTest("data/processed/master_clean.csv is not there")
+            self.skipTest("data/processed_cases/all_cases.csv is not there")
         m = self.pd.read_csv(path)
         old = [t.removesuffix(SENTENCE) for t in m.clinical_text]
         new = [self.p.clinical_text(*x) for x in zip(m.age, m.sex, m.site, m.site_detail)]
         self.assertEqual(new, old)
 
     def test_an_image_path_uses_a_forward_slash_on_every_system(self):
-        self.assertEqual(self.p.image_rel_path("ISIC_0000000"), "images/ISIC_0000000.jpg")
+        self.assertEqual(self.p.image_rel_path("ISIC_0000000"), "processed_images/ISIC_0000000.jpg")
 
-    def test_both_layouts_of_the_kaggle_download_are_read(self):
+    def test_a_missing_input_stops_the_run_with_its_name(self):
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(self.p.source_dirs(d), self.p.SOURCE_DIRS)  # the zip parts
-            os.makedirs(os.path.join(d, "Train"))
-            self.assertEqual(self.p.source_dirs(d), [("Train", "Train"), ("Test", "Test")])  # the unpacked dataset
+            with self.assertRaises(SystemExit) as stop:
+                self.p.check_inputs(os.path.join(d, "raw"), os.path.join(d, "official_labels"))
+            self.assertIn("Train", str(stop.exception))
+            self.assertIn("HAM10000_metadata.csv", str(stop.exception))
 
     def test_the_audit_keeps_every_original_file_and_marks_the_removed_copies(self):
         pd = self.pd

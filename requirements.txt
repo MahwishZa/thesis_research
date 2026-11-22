@@ -9,13 +9,16 @@ opencv-python
 scikit-learn
 scikit-image
 
+# The LLM-only baseline (src/run_llm_only.py): Claude through Anthropic's official package; the other models through OpenRouter
+# need only Python. API keys go in .env (CLAUDE_API_KEY, OPENROUTER_API_KEY), never here.
+anthropic
+
 # Evaluation (src/evaluate.py): diagnosis and retrieval metrics need only Python.
 
 # Building the knowledge corpus (src/build_knowledge_corpus.py): the Meditron guideline collection on Hugging Face
 datasets
 
 # Optional metrics of src/evaluate.py: semantic similarity and the MedCPT relevance scores (sentence-transformers brings
-# transformers and torch), BERTScore, RAGAS
+# transformers and torch), RAGAS (an LLM judge; costs credit)
 sentence-transformers
-bert-score
 ragas

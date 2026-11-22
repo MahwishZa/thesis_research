@@ -42,16 +42,16 @@ class DiagnosisTests(unittest.TestCase):
         d = ev.diagnosis_metrics(qa, pred)
         self.assertEqual(d["accuracy"], 1.0)
         self.assertEqual(d["macro_f1"], 1.0)
-        self.assertTrue(all(r["sensitivity"] == 1.0 and r["specificity"] == 1.0 for r in d["per_class"].values()))
+        self.assertTrue(all(r["recall"] == 1.0 and r["specificity"] == 1.0 for r in d["per_class"].values()))
         self.assertEqual([row[k] for k, row in enumerate(d["confusion_matrix"]["matrix"])], [1] * 8)
 
     def test_per_class_counts_match_a_hand_count(self):
         # true: MEL MEL NV NV BCC; predicted: MEL NV NV MEL invalid
         y, p = ["MEL", "MEL", "NV", "NV", "BCC"], ["MEL", "NV", "NV", "MEL", ev.INVALID]
         r = ev.per_class(y, p)
-        self.assertEqual((r["MEL"]["precision"], r["MEL"]["sensitivity"]), (0.5, 0.5))
+        self.assertEqual((r["MEL"]["precision"], r["MEL"]["recall"]), (0.5, 0.5))
         self.assertAlmostEqual(r["MEL"]["specificity"], 2 / 3)  # of NV, NV, BCC only one called MEL
-        self.assertEqual((r["BCC"]["sensitivity"], r["BCC"]["specificity"], r["BCC"]["support"]), (0.0, 1.0, 1))
+        self.assertEqual((r["BCC"]["recall"], r["BCC"]["specificity"], r["BCC"]["support"]), (0.0, 1.0, 1))
         self.assertEqual(r["DF"]["support"], 0)
         self.assertAlmostEqual(ev.macro_f1(y, p), (0.5 + 0.5) / 8)  # every class weighs the same, also those without cases
         self.assertEqual(ev.accuracy(y, p), 0.4)
@@ -211,7 +211,7 @@ class CommandTests(unittest.TestCase):
                 f.write("\n".join(json.dumps({"id": q["id"], "pred": q["answer"]}) for q in qs[:4]))
             out = os.path.join(d, "report.json")
             with contextlib.redirect_stdout(io.StringIO()):
-                ev.main(["--qa", paths["qa"], "--pred", paths["pred"], "--out", out, "--skip-text"])
+                ev.main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text"])
             with open(out, encoding="utf-8") as f:
                 rep = json.load(f)
             sha = hashlib.sha256(Path(paths["qa"]).read_bytes()).hexdigest()
@@ -222,7 +222,7 @@ class CommandTests(unittest.TestCase):
 
 class CommittedQuestionTests(unittest.TestCase):
     def test_on_the_committed_test_questions_one_fixed_letter_is_about_chance(self):
-        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "qa_test.jsonl"
+        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "questions_test.jsonl"
         if not path.is_file():
             self.skipTest("data/views/ is not there")
         qa = ev.load(path)
@@ -231,7 +231,7 @@ class CommittedQuestionTests(unittest.TestCase):
         self.assertEqual(sum(r["support"] for r in right["per_class"].values()), len(qa))
         always_a = ev.diagnosis_metrics(qa, {i: {"pred": "A"} for i in qa})
         self.assertLess(always_a["accuracy"], 0.25)  # "A" is a different class in each question
-        self.assertGreater(sum(r["sensitivity"] > 0 for r in always_a["per_class"].values()), 1)  # "A" picks several classes
+        self.assertGreater(sum(r["recall"] > 0 for r in always_a["per_class"].values()), 1)  # "A" picks several classes
 
 
 if __name__ == "__main__":

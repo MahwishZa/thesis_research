@@ -7,16 +7,17 @@ venv/
 .coverage
 htmlcov/
 
-# The dataset in data/: the tables, question files, label files and data card are committed; the Kaggle download (data/raw/)
-# and the cleaned images (data/images/) stay on the researcher's laptop. Zip files are never committed (keep them outside the repository).
+# The dataset in data/: the tables, question files, label files and data card are committed; the Kaggle download
+# (data/raw/) and the cleaned images (data/processed_images/) stay on the researcher's laptop.
+# Zip files are never committed (keep them outside the repository).
 /data/raw/
-/data/images/
+/data/processed_images/
 *.zip
 
 # The knowledge corpus: its passages (published text under the sources' licences) and the download cache stay on the laptop;
-# data/corpus/manifest.csv and corpus_card.json (no text) are committed.
-/data/corpus/passages.jsonl
-/data/corpus/cache/
+# data/knowledge_corpus/manifest.csv and corpus_card.json (no text) are committed.
+/data/knowledge_corpus/passages.jsonl
+/data/knowledge_corpus/cache/
 
 # The archived Version 2 (archive/v2/) keeps the same rules under its own folder.
 /archive/v2/data/**
@@ -32,8 +33,8 @@ archive/v2/results/**/val_*/
 .*.partial
 *.log
 
-# Validation runs tune the method; they stay on this computer and are not reported results.
-results/**/val_*/
+# Validation runs tune the method; they stay on this computer and are not reported results (folders <view>_val/).
+results/**/*_val/
 
 # API keys (also .env.txt and the like, which Windows editors create by mistake)
 .env

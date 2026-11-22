@@ -30,13 +30,18 @@ SPLITS = ("train", "val", "test")
 VIEWS = ("image_only", "text_only", "multimodal")
 
 # Layout of data/ (all paths relative to the data folder; image paths in the tables are relative to it too).
-RAW = "raw"                  # the Kaggle download, untouched (laptop only)
-META = "meta"                # official label and metadata files
-IMAGES = "images"            # the cleaned images (laptop only)
-PROCESSED = "processed"      # the cleaned, de-duplicated and split cases, and the tables made with them
-VIEWS_DIR = "views"          # one folder per view: cases.csv and the question files
-CORPUS = "corpus"            # the knowledge corpus for RAG
-MASTER = f"{PROCESSED}/master_clean.csv"
+RAW = "raw"                           # the Kaggle download, untouched (laptop only)
+OFFICIAL_LABELS = "official_labels"   # the official ISIC 2019, HAM10000 and ISIC Archive label and metadata files
+PROCESSED_IMAGES = "processed_images" # the cleaned, standardised images (laptop only)
+PROCESSED_CASES = "processed_cases"   # the cleaned, de-duplicated and split cases, and the tables made with them
+VIEWS_DIR = "views"                   # one folder per view: cases.csv and the question files
+KNOWLEDGE_CORPUS = "knowledge_corpus" # the medical text library for RAG
+ALL_CASES = f"{PROCESSED_CASES}/all_cases.csv"
+
+
+def image_path(isic_id):
+    """Where a cleaned image is, relative to the data folder, with "/" on every system (never "\\" from Windows)."""
+    return f"{PROCESSED_IMAGES}/{isic_id}.jpg"
 
 
 def view_table(view):
@@ -44,7 +49,7 @@ def view_table(view):
 
 
 def question_file(view, split):
-    return f"{VIEWS_DIR}/{view}/qa_{split}.jsonl"
+    return f"{VIEWS_DIR}/{view}/questions_{split}.jsonl"
 
 
 @contextlib.contextmanager

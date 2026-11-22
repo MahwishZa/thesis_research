@@ -16,16 +16,15 @@ What it does (in order):
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
   8. Splits         - lesion-grouped, stratified 70/15/15 + 5 CV folds.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
- 10. Outputs        - OUT_DIR/images/ (the cleaned images) and OUT_DIR/processed/: master_clean.csv (every kept case),
-                      original_files_audit.csv, near_duplicate_pairs.csv, label_map.json, normalization.json,
-                      class_balance.json, the balanced training lists, and preprocess.log.
-                      The three views are made from master_clean.csv by the next step, src/build_views.py.
+ 10. Outputs        - OUT_DIR/processed_images/ (the cleaned images) and OUT_DIR/processed_cases/: all_cases.csv (every kept case),
+                      raw_files_audit.csv, near_duplicates.csv, classes.json, normalization.json,
+                      class_weights.json, the balanced training lists, and preprocess.log.
+                      The three views are made from all_cases.csv by the next step, src/build_views.py.
 
 Usage (this repository):
-  python src/preprocess.py --raw data/raw --meta data/meta --out data [--no-colour-constancy]
+  python src/preprocess.py --raw data/raw --meta data/official_labels --out data [--no-colour-constancy]
 
-RAW_DIR holds the Kaggle download in either layout: "Train/<class>" and "Test/<class>" (the unpacked dataset), or
-"Train_1/Train 1", "Train_2/Train 2" and "Test/Test" (the parts of the Kaggle zips).
+RAW_DIR (data/raw) holds the Kaggle download as unpacked: "Train/<class folder>" and "Test/<class folder>".
 META_DIR must contain ISIC_2019_Training_GroundTruth.csv, ISIC_2019_Training_Metadata.csv,
 HAM10000_metadata.csv and isic_archive_api_441.csv.
 """
@@ -40,7 +39,8 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
-from common import CLASS_NAMES, CLASSES, IMAGES, PROCESSED, SEED, atomic_path, get_logger, write_json
+from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, atomic_path, \
+    get_logger, image_path, write_json
 
 META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
               "isic_archive_api_441.csv")
@@ -50,17 +50,11 @@ FOLDER_TO_CODE = {
     "seborrheic keratosis": "SK", "dermatofibroma": "DF",
     "vascular lesion": "VASC", "squamous cell carcinoma": "SCC",
 }
-SOURCE_DIRS = [("Train", "Train_1/Train 1"), ("Train", "Train_2/Train 2"), ("Test", "Test/Test")]
-PLAIN_DIRS = [("Train", "Train"), ("Test", "Test")]
+SOURCE_DIRS = [("Train", "Train"), ("Test", "Test")]   # (original split, folder in RAW_DIR)
 OUT_W, OUT_H = 600, 450
 
 
 # ----------------------------------------------------------------------------- helpers
-def source_dirs(raw):
-    """The (original split, folder) pairs of the Kaggle download: the plain layout when RAW_DIR/Train exists, else the zip parts."""
-    return PLAIN_DIRS if os.path.isdir(os.path.join(raw, "Train")) else SOURCE_DIRS
-
-
 GENERIC_SITES = {"trunk", "head and neck", "head/neck", "upper extremity", "lower extremity", "anogenital region",
                  "oral/genital", "palms/soles"}
 
@@ -92,7 +86,7 @@ def audit_table(raw, kept, same_picture_as, official_label):
 
 def image_rel_path(isic_id):
     """Where a cleaned image is, relative to the output folder, with "/" on every system (never "\\" from Windows)."""
-    return f"images/{isic_id}.jpg"
+    return image_path(isic_id)
 
 
 def md5(path):
@@ -102,7 +96,7 @@ def md5(path):
 
 def check_inputs(raw, meta):
     """Stops with a clear message when an input folder or file is missing, before any work is done."""
-    missing = [os.path.join(raw, sub) for _, sub in source_dirs(raw) if not os.path.isdir(os.path.join(raw, sub))]
+    missing = [os.path.join(raw, sub) for _, sub in SOURCE_DIRS if not os.path.isdir(os.path.join(raw, sub))]
     missing += [os.path.join(meta, f) for f in META_FILES if not os.path.isfile(os.path.join(meta, f))]
     if missing:
         raise SystemExit("missing input(s):\n  " + "\n  ".join(missing))
@@ -212,17 +206,17 @@ class UnionFind:
 # ----------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--raw", required=True)
-    ap.add_argument("--meta", required=True)
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--raw", default=os.path.join("data", RAW), help="the Kaggle download")
+    ap.add_argument("--meta", default=os.path.join("data", OFFICIAL_LABELS), help="the official label files")
+    ap.add_argument("--out", default="data", help="the data folder; writes processed_images/ and processed_cases/ in it")
     ap.add_argument("--no-colour-constancy", action="store_true")
     # Visual audit: pHash distance <=3 = same lesion (re-photographed / re-uploaded);
     # 4-6 produced false matches between different lesions in dermoscopy, so 3 is the default.
     ap.add_argument("--near-dup-threshold", type=int, default=3)
     a = ap.parse_args()
     check_inputs(a.raw, a.meta)
-    proc = os.path.join(a.out, PROCESSED)
-    os.makedirs(os.path.join(a.out, IMAGES), exist_ok=True)
+    proc = os.path.join(a.out, PROCESSED_CASES)
+    os.makedirs(os.path.join(a.out, PROCESSED_IMAGES), exist_ok=True)
     os.makedirs(proc, exist_ok=True)
     log = get_logger("preprocess", os.path.join(proc, "preprocess.log"))
     log.info(f"preprocess: raw={a.raw} meta={a.meta} out={a.out} colour_constancy={not a.no_colour_constancy}")
@@ -230,7 +224,7 @@ def main():
 
     # 1. inventory -------------------------------------------------------------
     rows = []
-    for split, sub in source_dirs(a.raw):
+    for split, sub in SOURCE_DIRS:
         d = os.path.join(a.raw, sub)
         for folder in sorted(os.listdir(d)):
             for f in sorted(os.listdir(os.path.join(d, folder))):
@@ -361,12 +355,12 @@ def main():
     drop = npairs[(npairs.phash_distance == 0) & (npairs.label_a == npairs.label_b)]
     npairs["action"] = np.where(npairs.index.isin(drop.index), "removed isic_id_b (same image, same label)",
                                 "kept both; grouped into same split")
-    save_csv(npairs, os.path.join(proc, "near_duplicate_pairs.csv"))
+    save_csv(npairs, os.path.join(proc, "near_duplicates.csv"))
     removed = set(drop.isic_id_b)
     conflict = npairs[(npairs.phash_distance == 0) & (npairs.label_a != npairs.label_b)]
     assert conflict.empty, f"identical images with different official labels: {conflict}"
     for x in removed:
-        os.remove(os.path.join(a.out, IMAGES, f"{x}.jpg"))
+        os.remove(os.path.join(a.out, PROCESSED_IMAGES, f"{x}.jpg"))
     u = u[~u.isic_id.isin(removed)].copy()
     u["group_size"] = u.groupby("group_id").isic_id.transform("size")
     log.info(f"[4] near-duplicate pairs: {len(npairs)}; removed as duplicates: {len(removed)}; "
@@ -431,14 +425,14 @@ def main():
                           "dark_corner_frac", "hair_frac", "flag_blurry", "flag_exposure",
                           "flag_dermoscope_vignette", "flag_heavy_hair", "image_path", "clinical_text"] + meta_feats
     u = u.sort_values(["split", "label", "isic_id"])
-    save_csv(u[master_cols], os.path.join(proc, "master_clean.csv"))
-    save_csv(audit_table(raw, u, dict(zip(drop.isic_id_b, drop.isic_id_a)), lab), os.path.join(proc, "original_files_audit.csv"))
+    save_csv(u[master_cols], os.path.join(proc, "all_cases.csv"))
+    save_csv(audit_table(raw, u, dict(zip(drop.isic_id_b, drop.isic_id_a)), lab), os.path.join(proc, "raw_files_audit.csv"))
 
     # balancing helpers (TRAIN only)
     tr = u[u.split == "train"]
     cnt = tr.label.value_counts().reindex(CLASSES)
     w = (len(tr) / (len(CLASSES) * cnt)).round(4)
-    write_json(os.path.join(proc, "class_balance.json"),
+    write_json(os.path.join(proc, "class_weights.json"),
                dict(class_counts_train=cnt.astype(int).to_dict(), class_weights_balanced=w.to_dict(),
                     class_weights_effective_number_beta_0_999=
                     ((1 - 0.999) / (1 - 0.999 ** cnt) / ((1 - 0.999) / (1 - 0.999 ** cnt)).mean()).round(4).to_dict(),
@@ -449,10 +443,10 @@ def main():
         over += list(ids_c) + list(rng.choice(ids_c, cnt.max() - len(ids_c), replace=True))
         under += list(rng.choice(ids_c, cnt.min(), replace=False))
     save_csv(pd.DataFrame({"isic_id": over}).merge(tr[["isic_id", "label"]], on="isic_id"),
-             os.path.join(proc, "train_oversampled_index.csv"))
+             os.path.join(proc, "train_oversampled.csv"))
     save_csv(pd.DataFrame({"isic_id": under}).merge(tr[["isic_id", "label"]], on="isic_id"),
-             os.path.join(proc, "train_undersampled_index.csv"))
-    write_json(os.path.join(proc, "label_map.json"), {c: dict(idx=i, name=CLASS_NAMES[c]) for i, c in enumerate(CLASSES)})
+             os.path.join(proc, "train_undersampled.csv"))
+    write_json(os.path.join(proc, "classes.json"), {c: dict(idx=i, name=CLASS_NAMES[c]) for i, c in enumerate(CLASSES)})
     log.info(f"[10] done: {proc}. Next: python src/build_views.py --data {a.out}")
 
 

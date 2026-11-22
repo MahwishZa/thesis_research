@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 2 of the data pipeline: turns the cleaned cases (data/processed/master_clean.csv) into the three views of the same cases.
+Step 2 of the data pipeline: turns the cleaned cases (data/processed_cases/all_cases.csv) into the three views of the same cases.
 
   data/views/image_only/   the image only
   data/views/text_only/    the patient's recorded facts only (age, sex, body site in one fixed sentence)
@@ -8,7 +8,7 @@ Step 2 of the data pipeline: turns the cleaned cases (data/processed/master_clea
 
 Each view folder holds
   cases.csv                one row per case: id, split, fold, lesion group, label, and only the inputs of that view
-  qa_train.jsonl, qa_val.jsonl, qa_test.jsonl
+  questions_train.jsonl, questions_val.jsonl, questions_test.jsonl
                            one 8-option multiple-choice question per case (MedQA style) for the LLM and RAG systems
 
 The questions use one fixed template and real data only; nothing is generated. The 8 options are shuffled for each case with a
@@ -21,7 +21,7 @@ import argparse
 import os
 import random
 
-from common import CLASSES, LETTERS, MASTER, OPTION_TEXT, SEED, SPLITS, VIEWS, get_logger, question_file, read_csv, \
+from common import CLASSES, LETTERS, ALL_CASES, OPTION_TEXT, SEED, SPLITS, VIEWS, get_logger, question_file, read_csv, \
     view_table, write_csv, write_jsonl
 
 OPTION_SEED = SEED
@@ -54,10 +54,10 @@ def question(case, view):
 
 
 def build(data):
-    cases = read_csv(os.path.join(data, MASTER))
+    cases = read_csv(os.path.join(data, ALL_CASES))
     unknown = sorted({c["label"] for c in cases} - set(CLASSES))
     if unknown:
-        raise ValueError(f"{MASTER} holds classes that are not among the 8: {unknown}")
+        raise ValueError(f"{ALL_CASES} holds classes that are not among the 8: {unknown}")
     counts = {}
     for view in VIEWS:
         write_csv(os.path.join(data, view_table(view)), cases, CORE + VIEW_INPUTS[view])

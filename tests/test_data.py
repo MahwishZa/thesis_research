@@ -1,4 +1,4 @@
-"""Checks of the dataset tables and question files in data/ (no images needed): data/processed/ (the cleaned, split cases) and
+"""Checks of the dataset tables and question files in data/ (no images needed): data/processed_cases/ (the cleaned, split cases) and
 data/views/ (the three views). They skip until the tables are in data/. Set THESIS_DATA to check another copy of the folder."""
 
 import csv
@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from common import MASTER, PROCESSED, SPLITS, VIEWS, question_file, view_table  # noqa: E402
+from common import ALL_CASES, PROCESSED_CASES, SPLITS, VIEWS, question_file, view_table  # noqa: E402
 
 DATA = Path(os.environ.get("THESIS_DATA", ROOT / "data"))
 LEAKY = ("confirm_type", "diagnosis_detail", "source", "label_source", "folder_labels", "orig_width", "orig_height", "orig_kb")
@@ -27,15 +27,15 @@ def jsonl(name: str) -> list[dict]:
     return [json.loads(line) for line in (DATA / name).read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-@unittest.skipUnless((DATA / MASTER).is_file(), "the dataset tables are not in data/ yet")
+@unittest.skipUnless((DATA / ALL_CASES).is_file(), "the dataset tables are not in data/ yet")
 class DataTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.master = {r["isic_id"]: r for r in rows(MASTER)}
-        cls.labels = json.loads((DATA / PROCESSED / "label_map.json").read_text(encoding="utf-8"))
+        cls.master = {r["isic_id"]: r for r in rows(ALL_CASES)}
+        cls.labels = json.loads((DATA / PROCESSED_CASES / "classes.json").read_text(encoding="utf-8"))
 
     def test_every_case_is_once_in_one_split_with_a_known_label(self):
-        ids = [r["isic_id"] for r in rows(MASTER)]
+        ids = [r["isic_id"] for r in rows(ALL_CASES)]
         self.assertEqual(len(ids), len(set(ids)), "a case is listed twice")
         for r in self.master.values():
             self.assertIn(r["split"], SPLITS)
@@ -74,42 +74,42 @@ class DataTests(unittest.TestCase):
 
     def test_the_balanced_lists_use_training_cases_only_with_equal_classes(self):
         train = {i for i, r in self.master.items() if r["split"] == "train"}
-        for name in ("train_oversampled_index.csv", "train_undersampled_index.csv"):
+        for name in ("train_oversampled.csv", "train_undersampled.csv"):
             with self.subTest(name):
-                table = rows(f"{PROCESSED}/{name}")
+                table = rows(f"{PROCESSED_CASES}/{name}")
                 self.assertTrue({r["isic_id"] for r in table} <= train)
                 self.assertTrue(all(r["label"] == self.master[r["isic_id"]]["label"] for r in table))
                 self.assertEqual(len(set(Counter(r["label"] for r in table).values())), 1, "classes are not equal")
 
     def test_the_class_weights_are_from_the_training_counts(self):
         counts = Counter(r["label"] for r in self.master.values() if r["split"] == "train")
-        balance = json.loads((DATA / PROCESSED / "class_balance.json").read_text(encoding="utf-8"))
+        balance = json.loads((DATA / PROCESSED_CASES / "class_weights.json").read_text(encoding="utf-8"))
         self.assertEqual(balance["class_counts_train"], dict(counts))
 
     def test_every_original_file_in_the_audit_is_a_kept_case_or_a_marked_copy_of_one(self):
-        for r in rows(f"{PROCESSED}/original_files_audit.csv"):
+        for r in rows(f"{PROCESSED_CASES}/raw_files_audit.csv"):
             if r["isic_id"] not in self.master:
                 self.assertTrue(r["split"].startswith("removed: same picture as "), r["isic_id"])
                 self.assertIn(r["split"].removeprefix("removed: same picture as "), self.master, r["isic_id"])
 
     def test_the_audit_lists_all_2357_files_of_the_kaggle_download(self):
-        self.assertEqual(len(rows(f"{PROCESSED}/original_files_audit.csv")), 2357)
+        self.assertEqual(len(rows(f"{PROCESSED_CASES}/raw_files_audit.csv")), 2357)
 
     def test_the_answer_options_are_not_in_one_fixed_order(self):
         orders = {json.dumps(q["options"]) for q in jsonl(question_file("image_only", "test"))}
         self.assertGreater(len(orders), 1)
 
-    def test_every_image_path_is_images_slash_the_case_id(self):
-        expected = {i: f"images/{i}.jpg" for i in self.master}
-        for name in (MASTER, view_table("image_only"), view_table("multimodal")):
+    def test_every_image_path_is_processed_images_slash_the_case_id(self):
+        expected = {i: f"processed_images/{i}.jpg" for i in self.master}
+        for name in (ALL_CASES, view_table("image_only"), view_table("multimodal")):
             with self.subTest(name):
                 wrong = [r["isic_id"] for r in rows(name) if r["image_path"] != expected[r["isic_id"]]]
-                self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not images/<id>.jpg")
+                self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not processed_images/<id>.jpg")
         for view in ("image_only", "multimodal"):
             for split in SPLITS:
                 with self.subTest(f"{view} {split}"):
                     wrong = [q["id"] for q in jsonl(question_file(view, split)) if q["image_path"] != expected[q["id"]]]
-                    self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not images/<id>.jpg")
+                    self.assertEqual(wrong[:5], [], f"{len(wrong)} image paths are not processed_images/<id>.jpg")
 
     def test_the_text_only_table_does_not_mention_an_image(self):
         self.assertFalse(any("image" in r["clinical_text"].lower() for r in rows(view_table("text_only"))))
@@ -125,7 +125,7 @@ class DataTests(unittest.TestCase):
                 self.assertFalse(columns & set(LEAKY))
 
     def test_no_table_lies_loose_in_the_data_folder(self):
-        self.assertFalse(list(DATA.glob("*.csv")), "a table lies loose in data/: tables belong in processed/ or views/")
+        self.assertFalse(list(DATA.glob("*.csv")), "a table lies loose in data/: tables belong in processed_cases/ or views/")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """Checks of the shared module (src/common.py) and of step 2 of the data pipeline (src/build_views.py): building the views again
-from data/processed/master_clean.csv gives the committed view files byte for byte."""
+from data/processed_cases/all_cases.csv gives the committed view files byte for byte."""
 
 import filecmp
 import os
@@ -39,18 +39,18 @@ class CommonTests(unittest.TestCase):
 
     def test_the_layout_names(self):
         self.assertEqual(common.view_table("text_only"), "views/text_only/cases.csv")
-        self.assertEqual(common.question_file("multimodal", "test"), "views/multimodal/qa_test.jsonl")
+        self.assertEqual(common.question_file("multimodal", "test"), "views/multimodal/questions_test.jsonl")
         self.assertEqual(len(common.CLASSES), len(common.LETTERS))
         self.assertEqual(set(common.CLASS_NAMES), set(common.CLASSES))
         self.assertEqual(set(common.OPTION_TEXT), set(common.CLASSES))
 
 
-@unittest.skipUnless((DATA / common.MASTER).is_file(), "data/processed/master_clean.csv is not there")
+@unittest.skipUnless((DATA / common.ALL_CASES).is_file(), "data/processed_cases/all_cases.csv is not there")
 class BuildViewsTests(unittest.TestCase):
     def test_building_the_views_again_gives_the_committed_files_byte_for_byte(self):
         with tempfile.TemporaryDirectory() as d:
-            Path(d, common.PROCESSED).mkdir()
-            shutil.copy(DATA / common.MASTER, Path(d, common.MASTER))
+            Path(d, common.PROCESSED_CASES).mkdir()
+            shutil.copy(DATA / common.ALL_CASES, Path(d, common.ALL_CASES))
             build_views.build(d)
             names = [common.view_table(v) for v in common.VIEWS]
             names += [common.question_file(v, s) for v in common.VIEWS for s in common.SPLITS]
@@ -61,9 +61,9 @@ class BuildViewsTests(unittest.TestCase):
 
     def test_an_unknown_class_stops_the_build(self):
         with tempfile.TemporaryDirectory() as d:
-            Path(d, common.PROCESSED).mkdir()
-            text = (DATA / common.MASTER).read_text(encoding="utf-8").replace(",MEL,", ",XYZ,", 1)
-            Path(d, common.MASTER).write_text(text, encoding="utf-8")
+            Path(d, common.PROCESSED_CASES).mkdir()
+            text = (DATA / common.ALL_CASES).read_text(encoding="utf-8").replace(",MEL,", ",XYZ,", 1)
+            Path(d, common.ALL_CASES).write_text(text, encoding="utf-8")
             with self.assertRaises(ValueError):
                 build_views.build(d)
 

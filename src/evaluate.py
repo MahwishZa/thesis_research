@@ -4,39 +4,40 @@ One evaluation script for all systems (LLM only, standard RAG, RAG^2, proposed) 
 image + text).
 
 Inputs
-  --qa      data/views/<view>/qa_<split>.jsonl from build_views.py: the options of each case, the answer letter, the gold class, the lesion group
-  --pred    predictions, one JSON line per question:
+  --questions    data/views/<view>/questions_<split>.jsonl from build_views.py: the options of each case, the answer letter,
+                 the gold class, the lesion group
+  --predictions  one JSON line per question (run_llm_only.py writes this format):
             {"id": "...", "pred": "C",                               # the chosen option letter
              "rationale": "free-text explanation",                  # optional, for the explanation metrics
              "query": "the text the system searched with",          # optional (RAG systems); the question is used if absent
              "contexts": [{"chunk_id": .., "title": .., "text": .., "tags": [..]}, ...]}   # retrieved passages, best first
              optional per line: "tokens_in", "tokens_out", "seconds" (cost and time of the call)
-  --pred-b  (optional) a second system on the same questions, for McNemar's test
-  --cases   (optional) data/processed/master_clean.csv, with --by: accuracy per subgroup (e.g. --by source facts_recorded)
+  --predictions-b  (optional) a second system on the same questions, for McNemar's test
+  --cases   (optional) data/processed_cases/all_cases.csv, with --by: accuracy per subgroup (e.g. --by source facts_recorded)
 
 The options are shuffled for each case, so a letter is first turned into its class with that case's own options.
 A question with no prediction, or with an answer that is not one of its option letters, counts as wrong.
 
 Metrics
   Diagnosis : accuracy (the main score) with a 95% bootstrap interval, macro-F1 with its interval, per-class precision,
-              sensitivity (recall), specificity and F1, melanoma sensitivity, confusion matrix, missing and invalid answers,
+              recall (= sensitivity), specificity and F1, confusion matrix, missing and invalid answers,
               McNemar's exact test against --pred-b. The bootstrap draws whole lesions, so photos of one lesion stay together.
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
   Retrieval : Hit@k, Precision@k, MRR, nDCG@k and context precision. Weak labels: a passage counts as relevant when its
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
   Relevance : how well each retrieved passage fits the query: Jaccard similarity of the content words (free, no model);
               with --relevance-models also the cosine similarity of MedCPT embeddings and the MedCPT cross-encoder score.
-  Text      : semantic similarity (cosine of sentence embeddings, rationale vs a cited reference text), BERTScore F1
-              (optional), RAGAS faithfulness / context relevance / answer relevancy (optional; an LLM judge that costs credit).
+  Text      : semantic similarity (cosine of sentence embeddings, rationale vs a cited reference text), and optionally
+              RAGAS faithfulness / context relevance / answer relevancy (an LLM judge that costs credit).
 
 Sources: McNemar (1947) Psychometrika 12:153-157; Jaccard (1912) New Phytologist 11:37-50; nDCG: Jarvelin & Kekalainen (2002)
 ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651; RAGAS: Es et al. (2024) EACL demos 150-158.
 
 Every report records its input files with their SHA-256, so two reports can be checked to use the same question file.
 
-Usage: python src/evaluate.py --qa data/views/multimodal/qa_test.jsonl --pred preds.jsonl --out report.json
-       [--pred-b preds_other.jsonl] [--relevance-models] [--reference-texts class_reference.json] [--bertscore] [--ragas]
-       [--skip-text] [--cases data/processed/master_clean.csv --by source facts_recorded]
+Usage: python src/evaluate.py --questions data/views/multimodal/questions_test.jsonl --predictions predictions.jsonl
+       --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json] [--ragas]
+       [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
 """
 import argparse
 import hashlib
@@ -83,16 +84,16 @@ def predicted_class(q, p):
 
 
 def per_class(y, p):
-    """Precision, sensitivity (recall), specificity and F1 of each class; an invalid answer is wrong for every class."""
+    """Precision, recall (= sensitivity), specificity and F1 of each class; an invalid answer is wrong for every class."""
     pairs, n, rows = Counter(zip(y, p)), len(y), {}
     for c in CLASSES:
         tp = pairs[(c, c)]
         fn = sum(v for (t, q), v in pairs.items() if t == c and q != c)
         fp = sum(v for (t, q), v in pairs.items() if t != c and q == c)
         tn = n - tp - fn - fp
-        prec, sens = (tp / (tp + fp) if tp + fp else 0.0), (tp / (tp + fn) if tp + fn else 0.0)
-        rows[c] = {"precision": prec, "sensitivity": sens, "specificity": tn / (tn + fp) if tn + fp else 0.0,
-                   "f1": 2 * prec * sens / (prec + sens) if prec + sens else 0.0, "support": tp + fn}
+        prec, rec = (tp / (tp + fp) if tp + fp else 0.0), (tp / (tp + fn) if tp + fn else 0.0)
+        rows[c] = {"precision": prec, "recall": rec, "specificity": tn / (tn + fp) if tn + fp else 0.0,
+                   "f1": 2 * prec * rec / (prec + rec) if prec + rec else 0.0, "support": tp + fn}
     return rows
 
 
@@ -149,7 +150,6 @@ def diagnosis_metrics(qa, pred, pred_b=None):
            "invalid_answers": sum(i in pred and c == INVALID for i, c in zip(ids, p)),
            "accuracy": round(accuracy(y, p), 4), "accuracy_95ci": bootstrap_ci(y, p, groups, accuracy),
            "macro_f1": round(macro_f1(y, p), 4), "macro_f1_95ci": bootstrap_ci(y, p, groups, macro_f1),
-           "melanoma_sensitivity": round(rows["MEL"]["sensitivity"], 4),
            "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
            "confusion_matrix": {"rows_true": CLASSES, "columns_predicted": columns,
                                 "matrix": [[sum(t == r and q == c for t, q in zip(y, p)) for c in columns] for r in CLASSES]}}
@@ -277,7 +277,7 @@ def relevance_metrics(qa, pred, scorers=None, stop_words=None):
     return {**{k: round(mean(v), 4) for k, v in scores.items()}, "n_questions": len(ids), "query_used": dict(source)}
 
 
-def text_metrics(qa, pred, reference_texts, use_bertscore=False, use_ragas=False):
+def text_metrics(qa, pred, reference_texts, use_ragas=False):
     """reference_texts: {gold class: a reference text quoted from a cited source}."""
     ids = [i for i in qa if i in pred and pred[i].get("rationale")]
     out = {}
@@ -288,10 +288,6 @@ def text_metrics(qa, pred, reference_texts, use_bertscore=False, use_ragas=False
         ref = [reference_texts[qa[i]["gold_label"]] for i in ids]
         eh, er = enc.encode(hyp, convert_to_tensor=True), enc.encode(ref, convert_to_tensor=True)
         out["semantic_similarity_cosine"] = round(float(util.cos_sim(eh, er).diag().mean()), 4)
-        if use_bertscore:
-            from bert_score import score
-            _, _, f = score(hyp, ref, lang="en", model_type="microsoft/deberta-xlarge-mnli")
-            out["bertscore_f1"] = round(float(f.mean()), 4)
     ctx_ids = [i for i in qa if i in pred and pred[i].get("contexts")]
     if use_ragas and ctx_ids:
         # LLM-as-judge metrics (needs an LLM API key configured for ragas; costs credit)
@@ -308,7 +304,7 @@ def text_metrics(qa, pred, reference_texts, use_bertscore=False, use_ragas=False
 
 
 def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relevance_models=False, reference_texts=None,
-             bertscore=False, ragas=False, skip_text=False):
+             ragas=False, skip_text=False):
     """The full report of one system on one question file (the same code for every system and every view)."""
     qa, pred = load(qa_path), load(pred_path)
     inputs = {"questions": file_record(qa_path), "predictions": file_record(pred_path)}
@@ -320,7 +316,7 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
            "retrieval": retrieval_metrics(qa, pred)}
     if by:
         if not cases_path:
-            raise ValueError("--by needs --cases (data/processed/master_clean.csv)")
+            raise ValueError("--by needs --cases (data/processed_cases/all_cases.csv)")
         rep["subgroups"] = subgroup_accuracy(qa, pred, {r["isic_id"]: r for r in read_csv(cases_path)}, by)
     if rep["retrieval"]:
         rep["relevance"] = relevance_metrics(qa, pred, medcpt_scorers() if relevance_models else None)
@@ -329,31 +325,30 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
         if reference_texts:
             with open(reference_texts, encoding="utf-8") as f:
                 refs = json.load(f)
-        rep["text"] = text_metrics(qa, pred, refs, bertscore, ragas)
+        rep["text"] = text_metrics(qa, pred, refs, ragas)
     return rep
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Evaluates one system's predictions on one question file.")
-    ap.add_argument("--qa", required=True)
-    ap.add_argument("--pred", required=True)
-    ap.add_argument("--pred-b", default=None)
+    ap.add_argument("--questions", required=True, help="data/views/<view>/questions_<split>.jsonl")
+    ap.add_argument("--predictions", required=True, help="the predictions of one system, one JSON line per question")
+    ap.add_argument("--predictions-b", default=None, help="a second system on the same questions, for McNemar's test")
     ap.add_argument("--out", default="report.json")
-    ap.add_argument("--cases", default=None, help="the case table, for --by (data/processed/master_clean.csv)")
+    ap.add_argument("--cases", default=None, help="the case table, for --by (data/processed_cases/all_cases.csv)")
     ap.add_argument("--by", nargs="*", default=[], help="subgroups: columns of the case table, or facts_recorded")
     ap.add_argument("--relevance-models", action="store_true", help="also score relevance with MedCPT (downloads 3 models)")
     ap.add_argument("--reference-texts", default=None)
-    ap.add_argument("--bertscore", action="store_true")
     ap.add_argument("--ragas", action="store_true")
     ap.add_argument("--skip-text", action="store_true")
     a = ap.parse_args(argv)
-    rep = evaluate(a.qa, a.pred, a.pred_b, a.cases, a.by, a.relevance_models, a.reference_texts, a.bertscore, a.ragas,
+    rep = evaluate(a.questions, a.predictions, a.predictions_b, a.cases, a.by, a.relevance_models, a.reference_texts, a.ragas,
                    a.skip_text)
     write_json(a.out, rep)
     log = get_logger("evaluate")
     d = rep["diagnosis"]
     log.info(f"accuracy {d['accuracy']} (95% CI {d['accuracy_95ci'][0]}-{d['accuracy_95ci'][1]}) | macro-F1 {d['macro_f1']} | "
-             f"melanoma sensitivity {d['melanoma_sensitivity']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']}")
+             f"melanoma recall {d['per_class']['MEL']['recall']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']}")
     if rep["retrieval"]:
         log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr', 'context_precision')} }")
         log.info(f"relevance: {rep['relevance']}")

@@ -11,7 +11,7 @@ It is an analysis of the data, not an evaluation of the LLM/RAG systems: its sco
 8 classes) of small classifiers trained here, so that the 8 classes count the same in an uneven test split.
 
 Usage (this repository): python src/feature_check.py --data data --out results/feature_check
-Reads data/processed/master_clean.csv and the images in data/images/; writes feature_check_results.json and
+Reads data/processed_cases/all_cases.csv and the images in data/processed_images/; writes feature_check_results.json and
 image_handcrafted_features.csv (a cache: when it exists, the image features are not computed again).
 """
 import argparse
@@ -28,7 +28,7 @@ from sklearn.metrics import balanced_accuracy_score, f1_score, roc_auc_score, re
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from common import CLASSES, MASTER, SEED, write_json
+from common import CLASSES, ALL_CASES, SEED, write_json
 
 
 def image_features(path):
@@ -98,7 +98,7 @@ def main():
     a = ap.parse_args()
     out = a.out
     os.makedirs(out, exist_ok=True)
-    m = pd.read_csv(os.path.join(a.data, MASTER))
+    m = pd.read_csv(os.path.join(a.data, ALL_CASES))
     classes = CLASSES
     fpath = os.path.join(out, "image_handcrafted_features.csv")
     if os.path.exists(fpath):

@@ -17,7 +17,7 @@ Rules (all automatic):
   - at most --per-class passages per library and diagnosis, so no diagnosis or library dominates the corpus;
   - a passage is tagged with every diagnosis whose name or synonym appears in it or in its title (weak relevance labels).
 
-Output (in --out, default data/corpus/):
+Output (in --out, default data/knowledge_corpus/):
   passages.jsonl       the passages with their source, link and licence (stays on the laptop; see .gitignore)
   manifest.csv         one row per passage without the text: id, library, document, link, licence, tags, MD5 (committed)
   corpus_card.json     counts per library and diagnosis, what was removed and why, the topic coverage check, settings, date
@@ -26,8 +26,8 @@ No e-mail address is sent. NCBI requests carry the tool name only, and the NCBI 
 is set (optional; it allows more requests per second). Downloads are cached in --cache, so a rerun does not download again.
 
 Usage (on the laptop, with internet):
-  python src/build_knowledge_corpus.py --out data/corpus
-  python src/build_knowledge_corpus.py --out data/corpus --libraries pubmed pmc   # some libraries only
+  python src/build_knowledge_corpus.py --out data/knowledge_corpus
+  python src/build_knowledge_corpus.py --out data/knowledge_corpus --libraries pubmed pmc   # some libraries only
 """
 import argparse
 import datetime
@@ -43,7 +43,7 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from html.parser import HTMLParser
 
-from common import CLASSES, CORPUS, get_logger, write_csv, write_json, write_jsonl
+from common import CLASSES, KNOWLEDGE_CORPUS, get_logger, write_csv, write_json, write_jsonl
 
 log = get_logger("corpus")
 LIBRARIES = ("guidelines", "pmc", "pubmed", "textbook")     # guidelines first, so a guideline paper is not counted again as pmc
@@ -440,7 +440,7 @@ def build(args, fetch, meditron_rows=None):
 
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--out", default=os.path.join("data", CORPUS))
+    ap.add_argument("--out", default=os.path.join("data", KNOWLEDGE_CORPUS))
     ap.add_argument("--cache", default=None, help="download cache (default: <out>/cache)")
     ap.add_argument("--libraries", nargs="+", default=list(LIBRARIES), choices=LIBRARIES)
     ap.add_argument("--per-class", type=int, default=150, help="most passages per library and diagnosis")
