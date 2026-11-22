@@ -1,0 +1,10 @@
+isic_id_a,isic_id_b,phash_distance,label_a,label_b,byte_identical,action
+ISIC_0000279,ISIC_0000280,0,MEL,MEL,True,"removed isic_id_b (same image, same label)"
+ISIC_0000399,ISIC_0001124,0,MEL,MEL,False,"removed isic_id_b (same image, same label)"
+ISIC_0000477,ISIC_0000512,0,NV,NV,True,"removed isic_id_b (same image, same label)"
+ISIC_0000520,ISIC_0010302,0,MEL,MEL,False,"removed isic_id_b (same image, same label)"
+ISIC_0000521,ISIC_0010990,0,MEL,MEL,False,"removed isic_id_b (same image, same label)"
+ISIC_0001134,ISIC_0010137,3,MEL,MEL,False,kept both; grouped into same split
+ISIC_0025434,ISIC_0028165,2,BKL,BKL,False,kept both; grouped into same split
+ISIC_0028197,ISIC_0029831,3,BCC,BCC,False,kept both; grouped into same split
+ISIC_0028346,ISIC_0031344,3,DF,DF,False,kept both; grouped into same split

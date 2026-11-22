@@ -1,0 +1,33 @@
+{
+  "class_counts_train": {
+    "MEL": 322,
+    "NV": 210,
+    "BCC": 280,
+    "AK": 94,
+    "BKL": 341,
+    "DF": 80,
+    "VASC": 101,
+    "SCC": 140
+  },
+  "class_weights_balanced": {
+    "MEL": 0.6087,
+    "NV": 0.9333,
+    "BCC": 0.7,
+    "AK": 2.0851,
+    "BKL": 0.5748,
+    "DF": 2.45,
+    "VASC": 1.9406,
+    "SCC": 1.4
+  },
+  "class_weights_effective_number_beta_0_999": {
+    "MEL": 0.4952,
+    "NV": 0.7197,
+    "BCC": 0.5582,
+    "AK": 1.5195,
+    "BKL": 0.4718,
+    "DF": 1.7731,
+    "VASC": 1.419,
+    "SCC": 1.0435
+  },
+  "imbalance_ratio": 4.26
+}

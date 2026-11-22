@@ -1,0 +1,34 @@
+{
+  "MEL": {
+    "idx": 0,
+    "name": "melanoma"
+  },
+  "NV": {
+    "idx": 1,
+    "name": "melanocytic nevus"
+  },
+  "BCC": {
+    "idx": 2,
+    "name": "basal cell carcinoma"
+  },
+  "AK": {
+    "idx": 3,
+    "name": "actinic keratosis"
+  },
+  "BKL": {
+    "idx": 4,
+    "name": "benign keratosis-like lesion (pigmented benign keratosis)"
+  },
+  "DF": {
+    "idx": 5,
+    "name": "dermatofibroma"
+  },
+  "VASC": {
+    "idx": 6,
+    "name": "vascular lesion"
+  },
+  "SCC": {
+    "idx": 7,
+    "name": "squamous cell carcinoma"
+  }
+}

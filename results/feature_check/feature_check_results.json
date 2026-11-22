@@ -1,0 +1,187 @@
+{
+  "val": {
+    "shortcut_file_properties_only": {
+      "balanced_accuracy": 0.37,
+      "macro_f1": 0.349,
+      "macro_auc_ovr": 0.775,
+      "per_class_recall": {
+        "MEL": 0.78,
+        "NV": 0.83,
+        "BCC": 0.3,
+        "AK": 0.32,
+        "BKL": 0.14,
+        "DF": 0.27,
+        "VASC": 0.2,
+        "SCC": 0.11
+      }
+    },
+    "metadata_only": {
+      "balanced_accuracy": 0.331,
+      "macro_f1": 0.277,
+      "macro_auc_ovr": 0.735,
+      "per_class_recall": {
+        "MEL": 0.06,
+        "NV": 0.43,
+        "BCC": 0.3,
+        "AK": 0.47,
+        "BKL": 0.17,
+        "DF": 0.2,
+        "VASC": 0.4,
+        "SCC": 0.61
+      }
+    },
+    "metadata_only_no_missing_flags": {
+      "balanced_accuracy": 0.343,
+      "macro_f1": 0.288,
+      "macro_auc_ovr": 0.736,
+      "per_class_recall": {
+        "MEL": 0.06,
+        "NV": 0.52,
+        "BCC": 0.3,
+        "AK": 0.47,
+        "BKL": 0.17,
+        "DF": 0.2,
+        "VASC": 0.4,
+        "SCC": 0.61
+      }
+    },
+    "image_handcrafted": {
+      "balanced_accuracy": 0.57,
+      "macro_f1": 0.575,
+      "macro_auc_ovr": 0.887,
+      "per_class_recall": {
+        "MEL": 0.66,
+        "NV": 0.69,
+        "BCC": 0.54,
+        "AK": 0.68,
+        "BKL": 0.68,
+        "DF": 0.27,
+        "VASC": 0.9,
+        "SCC": 0.14
+      }
+    },
+    "image_plus_metadata": {
+      "balanced_accuracy": 0.614,
+      "macro_f1": 0.62,
+      "macro_auc_ovr": 0.913,
+      "per_class_recall": {
+        "MEL": 0.69,
+        "NV": 0.76,
+        "BCC": 0.66,
+        "AK": 0.68,
+        "BKL": 0.67,
+        "DF": 0.4,
+        "VASC": 0.9,
+        "SCC": 0.14
+      }
+    },
+    "image_handcrafted_logreg": {
+      "balanced_accuracy": 0.587,
+      "macro_f1": 0.543,
+      "macro_auc_ovr": 0.881,
+      "per_class_recall": {
+        "MEL": 0.57,
+        "NV": 0.74,
+        "BCC": 0.45,
+        "AK": 0.63,
+        "BKL": 0.42,
+        "DF": 0.6,
+        "VASC": 0.9,
+        "SCC": 0.39
+      }
+    }
+  },
+  "test": {
+    "shortcut_file_properties_only": {
+      "balanced_accuracy": 0.325,
+      "macro_f1": 0.31,
+      "macro_auc_ovr": 0.78,
+      "per_class_recall": {
+        "MEL": 0.68,
+        "NV": 0.83,
+        "BCC": 0.16,
+        "AK": 0.11,
+        "BKL": 0.16,
+        "DF": 0.19,
+        "VASC": 0.19,
+        "SCC": 0.28
+      }
+    },
+    "metadata_only": {
+      "balanced_accuracy": 0.295,
+      "macro_f1": 0.241,
+      "macro_auc_ovr": 0.709,
+      "per_class_recall": {
+        "MEL": 0.08,
+        "NV": 0.52,
+        "BCC": 0.3,
+        "AK": 0.44,
+        "BKL": 0.07,
+        "DF": 0.38,
+        "VASC": 0.43,
+        "SCC": 0.14
+      }
+    },
+    "metadata_only_no_missing_flags": {
+      "balanced_accuracy": 0.284,
+      "macro_f1": 0.233,
+      "macro_auc_ovr": 0.704,
+      "per_class_recall": {
+        "MEL": 0.08,
+        "NV": 0.52,
+        "BCC": 0.3,
+        "AK": 0.44,
+        "BKL": 0.07,
+        "DF": 0.38,
+        "VASC": 0.33,
+        "SCC": 0.14
+      }
+    },
+    "image_handcrafted": {
+      "balanced_accuracy": 0.519,
+      "macro_f1": 0.515,
+      "macro_auc_ovr": 0.874,
+      "per_class_recall": {
+        "MEL": 0.57,
+        "NV": 0.57,
+        "BCC": 0.43,
+        "AK": 0.5,
+        "BKL": 0.75,
+        "DF": 0.31,
+        "VASC": 0.81,
+        "SCC": 0.21
+      }
+    },
+    "image_plus_metadata": {
+      "balanced_accuracy": 0.564,
+      "macro_f1": 0.56,
+      "macro_auc_ovr": 0.894,
+      "per_class_recall": {
+        "MEL": 0.52,
+        "NV": 0.69,
+        "BCC": 0.57,
+        "AK": 0.56,
+        "BKL": 0.79,
+        "DF": 0.31,
+        "VASC": 0.86,
+        "SCC": 0.21
+      }
+    },
+    "image_handcrafted_logreg": {
+      "balanced_accuracy": 0.574,
+      "macro_f1": 0.521,
+      "macro_auc_ovr": 0.885,
+      "per_class_recall": {
+        "MEL": 0.48,
+        "NV": 0.79,
+        "BCC": 0.34,
+        "AK": 0.72,
+        "BKL": 0.53,
+        "DF": 0.5,
+        "VASC": 0.86,
+        "SCC": 0.38
+      }
+    }
+  },
+  "source_detectability_auc_after_standardisation": 0.935
+}

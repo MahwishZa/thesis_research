@@ -1,0 +1,2 @@
+# Store text with LF line endings on every platform, so Windows and Linux checkouts are identical.
+* text=auto eol=lf

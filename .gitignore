@@ -1,0 +1,32 @@
+# Python leftovers, virtual environments and test-coverage data
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# The dataset in data/: the tables, question files, label files and data card are committed; the Kaggle download (data/raw/)
+# and the cleaned images (data/images/) stay on the researcher's laptop. Zip files are never committed (keep them outside the repository).
+/data/raw/
+/data/images/
+*.zip
+
+# The archived Version 2 (archive/v2/) keeps the same rules under its own folder.
+/archive/v2/data/**
+!/archive/v2/data/*/
+!/archive/v2/data/*/*.csv
+!/archive/v2/data/*/*.md
+!/archive/v2/data/*/build/
+!/archive/v2/data/*/build/*.csv
+archive/v2/results/**/val_*/
+
+# Unfinished runs (a run's folder loses the .partial ending when it finishes)
+*.partial/
+
+# Validation runs tune the method; they stay on this computer and are not reported results.
+results/**/val_*/
+
+# API keys (also .env.txt and the like, which Windows editors create by mistake)
+.env
+.env.*
