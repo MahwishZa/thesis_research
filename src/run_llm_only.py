@@ -14,11 +14,13 @@ Llama have none), and every model writes the same short visible rationale before
   llama-4-maverick    OpenRouter, pinned to Parasail (fp8)              key: OPENROUTER_API_KEY
 The keys are read from the .env file in the repository folder (git-ignored) or from the environment, and never written anywhere.
 
-The answer letter is read with one fixed rule (the last "Answer: X"). A reply without one, or a question the host's content
+Each reply ends with "Answer: X, Y, Z" (the three most likely options, most likely first) and "Evidence sufficient: yes/no".
+They are read with one fixed rule (the last "Answer:" line). A reply without a letter, or a question the host's content
 moderation refuses, is saved as an invalid answer (wrong in evaluate.py) and kept so it can be checked.
 
 Output: results/llm_only/<model>/<view>_<split>/
-  predictions.jsonl   one line per question: id, pred (letter or null), valid, rationale, raw_output, finish_reason, served_by,
+  predictions.jsonl   one line per question: id, pred (letter or null), top3, evidence_sufficient, valid, rationale,
+                      raw_output, finish_reason, served_by,
                       tokens_in, tokens_out, seconds, time
   run.json            the model's settings, the prompt, the SHA-256 of the question file, counts, status
   run.log             progress and errors
@@ -44,13 +46,15 @@ import urllib.request
 
 from common import SPLITS, VIEWS, get_logger, question_file, read_jsonl, write_json
 
-PROMPT_VERSION = "llm_only_v1"
+PROMPT_VERSION = "llm_only_v2"
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
           "This is a research benchmark: no decision about a patient depends on your answer.")
+ANSWER_FORMAT = ("\"Answer: <the letters of the three most likely options, most likely first, separated by commas>\" and, "
+                 "on the next line, \"Evidence sufficient: <yes or no>\" (yes if the information given is enough for a "
+                 "confident diagnosis, no if it is not).")
 INSTRUCTIONS = {
-    "rationale": "Explain your reasoning in at most three sentences, then give the final answer on the last line "
-                 "as \"Answer: <letter>\".",
-    "answer_only": "Reply only with the final answer as \"Answer: <letter>\".",
+    "rationale": "Explain your reasoning in at most three sentences, then end with two lines: " + ANSWER_FORMAT,
+    "answer_only": "Reply only with two lines: " + ANSWER_FORMAT,
 }
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODELS = {
@@ -67,7 +71,9 @@ MODELS = {
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
 }
 KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "openrouter": ("OPENROUTER_API_KEY",)}
-ANSWER = re.compile(r"(?i:answer)\W{0,4}\(?([A-H])\)?(?![A-Za-z])")
+ANSWER = re.compile(r"(?i:answer)\**\s*[:\uff1a]\**\s*([^\n]*)")
+LETTER = re.compile(r"(?<![A-Za-z])([A-H])(?![A-Za-z])")
+SUFFICIENT = re.compile(r"(?i)evidence\s+sufficient\W{0,4}(yes|no)\b")
 LONE_LETTER = re.compile(r"^\W*\(?([A-H])\)?[.)]?\W*$")
 RETRY_CODES = {408, 409, 429, 500, 502, 503, 504, 529}
 MODERATION = re.compile(r"moderation|flagged", re.I)
@@ -113,16 +119,24 @@ def user_text(q, style="rationale"):
 
 
 def parse_answer(text, letters="ABCDEFGH"):
-    """(letter or None, rationale). The letter is the last "Answer: X"; a reply that is only a letter also counts."""
+    """The answer of a reply, read with one fixed rule:
+      top3       the option letters on the last "Answer:" line, in order, without repeats, at most three (a reply that is only a
+                 letter also counts); the first is the diagnosis ("pred")
+      sufficient "yes" or "no" from the last "Evidence sufficient:" (None when it is missing)
+      rationale  the text before that "Answer:" line"""
     text = text or ""
-    found = [m for m in ANSWER.finditer(text) if m.group(1) in letters]
-    if found:
-        last = found[-1]
-        return last.group(1), text[:last.start()].strip()
-    lone = LONE_LETTER.match(text.strip())
-    if lone and lone.group(1) in letters:
-        return lone.group(1), ""
-    return None, text.strip()
+    top3, cut = [], None
+    for m in ANSWER.finditer(text):
+        found = [x for x in LETTER.findall(m.group(1)) if x in letters]
+        if found:
+            top3, cut = list(dict.fromkeys(found))[:3], m.start()
+    if not top3:
+        lone = LONE_LETTER.match(text.strip())
+        if lone and lone.group(1) in letters:
+            top3, cut = [lone.group(1)], 0
+    flags = SUFFICIENT.findall(text)
+    return {"pred": top3[0] if top3 else None, "top3": top3, "sufficient": flags[-1].lower() if flags else None,
+            "rationale": text[:cut].rstrip("*_# \n").strip() if cut is not None else text.strip()}
 
 
 def image_b64(data, path):
@@ -289,8 +303,10 @@ def run(args, client, log):
                     reply = client.ask(SYSTEM, user_text(q, args.style), image)
                 except Refused as e:
                     reply = {"text": "", "finish_reason": f"refused by host: {str(e)[:200]}"}
-                letter, rationale = parse_answer(reply["text"], "".join(q["options"]))
-                record = {"id": q["id"], "pred": letter, "valid": letter is not None, "rationale": rationale,
+                answer = parse_answer(reply["text"], "".join(q["options"]))
+                record = {"id": q["id"], "pred": answer["pred"], "top3": answer["top3"],
+                          "evidence_sufficient": answer["sufficient"], "valid": answer["pred"] is not None,
+                          "rationale": answer["rationale"],
                           "raw_output": reply["text"], "finish_reason": reply.get("finish_reason"),
                           "served_by": reply.get("served_by"), "tokens_in": reply.get("tokens_in"),
                           "tokens_out": reply.get("tokens_out"), "seconds": round(time.time() - start, 2),

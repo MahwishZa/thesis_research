@@ -49,7 +49,7 @@ def view_table(view):
 
 
 def question_file(view, split):
-    return f"{VIEWS_DIR}/{view}/questions_{split}.jsonl"
+    return f"{VIEWS_DIR}/{view}/{split}.jsonl"
 
 
 @contextlib.contextmanager

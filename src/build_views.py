@@ -8,7 +8,7 @@ Step 2 of the data pipeline: turns the cleaned cases (data/processed_cases/all_c
 
 Each view folder holds
   cases.csv                one row per case: id, split, fold, lesion group, label, and only the inputs of that view
-  questions_train.jsonl, questions_val.jsonl, questions_test.jsonl
+  train.jsonl, val.jsonl, test.jsonl
                            one 8-option multiple-choice question per case (MedQA style) for the LLM and RAG systems
 
 The questions use one fixed template and real data only; nothing is generated. The 8 options are shuffled for each case with a

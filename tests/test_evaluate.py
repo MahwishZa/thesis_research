@@ -156,6 +156,96 @@ class ReportTests(unittest.TestCase):
                 ev.load(path)
 
 
+class TopKAndSelectiveTests(unittest.TestCase):
+    def setUp(self):
+        self.qs = [question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
+        self.qa = as_dict(self.qs)
+
+    def top(self, q, *codes):
+        return [answer(q, c) for c in codes]
+
+    def test_top3_accuracy_counts_the_true_class_anywhere_in_the_first_three(self):
+        q = self.qs
+        pred = {q[0]["id"]: {"pred": answer(q[0], "MEL"), "top3": self.top(q[0], "MEL", "NV", "DF")},     # first
+                q[1]["id"]: {"pred": answer(q[1], "MEL"), "top3": self.top(q[1], "MEL", "BCC", "NV")},    # third
+                q[2]["id"]: {"pred": answer(q[2], "NV"), "top3": self.top(q[2], "NV", "DF", "SCC")},      # not there
+                q[3]["id"]: {"pred": "Z", "top3": []}}                                                     # invalid
+        d = ev.diagnosis_metrics(self.qa, pred)
+        self.assertEqual((d["accuracy"], d["top3_accuracy"]), (0.25, 0.5))
+        lo, hi = d["top3_accuracy_95ci"]
+        self.assertTrue(lo <= 0.5 <= hi)
+
+    def test_only_the_first_three_count_and_repeats_are_dropped(self):
+        q = self.qs[3]
+        self.assertEqual(ev.predicted_classes(q, {"top3": self.top(q, "NV", "NV", "MEL", "BCC", "AK")}), ["NV", "MEL", "BCC"])
+        self.assertEqual(ev.predicted_classes(q, {"pred": answer(q, "AK")}), ["AK"])   # an answer without a top 3
+        self.assertEqual(ev.predicted_classes(q, None), [])
+
+    def test_coverage_and_selective_risk(self):
+        q = self.qs
+        pred = {q[0]["id"]: {"pred": answer(q[0], "MEL"), "evidence_sufficient": "yes"},   # covered, right
+                q[1]["id"]: {"pred": answer(q[1], "MEL"), "evidence_sufficient": "yes"},   # covered, wrong
+                q[2]["id"]: {"pred": answer(q[2], "BCC"), "evidence_sufficient": "no"},    # abstains
+                q[3]["id"]: {"pred": "Z", "evidence_sufficient": "yes"}}                    # invalid: never covered
+        d = ev.diagnosis_metrics(self.qa, pred)
+        self.assertEqual((d["n_covered"], d["coverage"], d["selective_risk"]), (2, 0.5, 0.5))
+        self.assertEqual(d["evidence_flag_missing"], 0)
+        none = ev.diagnosis_metrics(self.qa, {i: {"pred": "A", "evidence_sufficient": "no"} for i in self.qa})
+        self.assertEqual((none["coverage"], none["selective_risk"]), (0.0, None))
+
+    def test_old_style_predictions_get_no_top3_or_selective_scores(self):
+        d = ev.diagnosis_metrics(self.qa, {i: {"pred": "A"} for i in self.qa})
+        self.assertFalse({"top3_accuracy", "coverage", "selective_risk"} & set(d))
+
+    def test_holm_correction(self):
+        adjusted = ev.holm([0.01, 0.04, 0.03, 0.5])
+        self.assertEqual([round(x, 4) for x in adjusted], [0.04, 0.09, 0.09, 0.5])  # 4x0.01; 3x0.03; max(2x0.04, 0.09); 0.5
+        self.assertEqual(ev.holm([0.6, 0.9]), [1.0, 1.0])                            # capped at 1
+        self.assertEqual(ev.holm([]), [])
+
+
+def bag_of_words(texts):
+    """A fake sentence encoder for the tests: word counts over a small fixed vocabulary."""
+    vocab = ["pigment", "network", "veil", "vessels", "arborizing", "white", "patch", "melanoma", "nevus"]
+    return [[t.lower().split().count(w) for w in vocab] for t in texts]
+
+
+class SemanticSimilarityTests(unittest.TestCase):
+    def setUp(self):
+        self.qs = [question("ISIC_0000001", "MEL", "G1"), question("ISIC_0000002", "MEL", "G2"), question("ISIC_0000003", "BCC", "G3")]
+        self.qa = as_dict(self.qs)
+        self.refs = {"MEL": {"text": "melanoma pigment network veil", "source": "a cited source"}, "BCC": "arborizing vessels"}
+
+    def test_cosine(self):
+        self.assertEqual(ev.cosine([1, 0], [1, 0]), 1.0)
+        self.assertEqual(ev.cosine([1, 0], [0, 1]), 0.0)
+        self.assertEqual(ev.cosine([0, 0], [1, 1]), 0.0)
+
+    def test_each_explanation_is_compared_with_the_reference_of_its_true_class(self):
+        pred = {"ISIC_0000001": {"rationale": "melanoma pigment network veil"},       # same words: 1.0
+                "ISIC_0000002": {"rationale": "white patch"},                           # nothing shared: 0.0
+                "ISIC_0000003": {"rationale": "arborizing vessels"}}                    # same words: 1.0
+        r = ev.semantic_similarity(self.qa, pred, self.refs, bag_of_words)
+        self.assertEqual((r["mean"], r["n_questions_with_rationale"]), (round(2 / 3, 4), 3))
+        self.assertEqual(r["per_class"], {"MEL": 0.5, "BCC": 1.0})
+        lo, hi = r["95ci"]
+        self.assertTrue(0.0 <= lo <= r["mean"] <= hi <= 1.0)
+
+    def test_questions_without_an_explanation_are_left_out_and_a_missing_reference_stops(self):
+        r = ev.semantic_similarity(self.qa, {"ISIC_0000001": {"pred": "A", "rationale": ""}, "ISIC_0000002": {"pred": "B"},
+                                             "ISIC_0000003": {"rationale": "arborizing vessels"}}, self.refs, bag_of_words)
+        self.assertEqual((r["mean"], r["n_questions_with_rationale"]), (1.0, 1))
+        self.assertIsNone(ev.semantic_similarity(self.qa, {}, self.refs, bag_of_words))
+        with self.assertRaises(ValueError):
+            ev.semantic_similarity(self.qa, {"ISIC_0000003": {"rationale": "x"}}, {"MEL": "melanoma"}, bag_of_words)
+
+    def test_text_metrics_reports_it_only_with_reference_texts(self):
+        pred = {"ISIC_0000003": {"rationale": "arborizing vessels"}}
+        self.assertEqual(ev.text_metrics(self.qa, pred, None), {})
+        out = ev.text_metrics(self.qa, pred, self.refs, encode=bag_of_words)
+        self.assertEqual(out["semantic_similarity_cosine"]["mean"], 1.0)
+
+
 class RetrievalTests(unittest.TestCase):
     def setUp(self):
         self.qa = as_dict([question("ISIC_0000001", "BCC")])
@@ -222,7 +312,7 @@ class CommandTests(unittest.TestCase):
 
 class CommittedQuestionTests(unittest.TestCase):
     def test_on_the_committed_test_questions_one_fixed_letter_is_about_chance(self):
-        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "questions_test.jsonl"
+        path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "test.jsonl"
         if not path.is_file():
             self.skipTest("data/views/ is not there")
         qa = ev.load(path)

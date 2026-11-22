@@ -45,7 +45,12 @@ class FakeClient:
         if k == 2:
             return {"text": "I cannot help with that.", "finish_reason": "refusal", "tokens_in": 10, "tokens_out": 5}
         letter = q["answer"] if k % 2 == 0 else next(x for x in q["options"] if x != q["answer"])
-        return {"text": f"Some reasoning.\nAnswer: {letter}", "finish_reason": "stop", "tokens_in": 100, "tokens_out": 20}
+        others = [x for x in q["options"] if x not in (letter, q["answer"])][:2]
+        if k == 1:
+            others = [q["answer"], others[0]]        # wrong first, right second: right in the top 3
+        flag = "yes" if k % 3 else "no"
+        return {"text": f"Some reasoning.\nAnswer: {letter}, {others[0]}, {others[1]}\nEvidence sufficient: {flag}",
+                "finish_reason": "stop", "tokens_in": 100, "tokens_out": 20}
 
 
 class RunTests(unittest.TestCase):
@@ -91,6 +96,8 @@ class RunTests(unittest.TestCase):
         self.assertEqual(info["settings"]["prompt_version"], rl.PROMPT_VERSION)
         refused = next(p for p in preds if p["id"].endswith("002"))
         self.assertEqual((refused["pred"], refused["valid"], refused["finish_reason"]), (None, False, "refusal"))
+        first = preds[0]
+        self.assertEqual((len(first["top3"]), first["pred"], first["evidence_sufficient"]), (3, first["top3"][0], "no"))
 
     def test_the_predictions_go_straight_into_evaluate(self):
         out = self.go(self.args(), FakeClient(self.questions))
@@ -98,6 +105,9 @@ class RunTests(unittest.TestCase):
         pred = ev.load(os.path.join(out, "predictions.jsonl"))
         d = ev.diagnosis_metrics(qa, pred)
         self.assertEqual((d["accuracy"], d["invalid_answers"]), (0.3333, 1))    # ids 0 and 4 right; 2 has no letter
+        self.assertEqual(d["top3_accuracy"], 0.5)                                  # ids 0, 4 first; id 1 second
+        self.assertEqual((d["n_covered"], d["coverage"]), (3, 0.5))                # ids 1, 4, 5 say yes (k % 3); 2 is invalid
+        self.assertEqual(d["selective_risk"], 0.6667)                              # ids 1 and 5 are wrong
 
     def test_an_interrupted_run_continues_where_it_stopped_without_repeating(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
@@ -206,8 +216,15 @@ class PromptAndAnswerTests(unittest.TestCase):
                   "Answer: Z": None}
         for text, letter in cases_.items():
             with self.subTest(text):
-                self.assertEqual(rl.parse_answer(text)[0], letter)
-        self.assertEqual(rl.parse_answer("Pigment network. Answer: A"), ("A", "Pigment network."))
+                self.assertEqual(rl.parse_answer(text)["pred"], letter)
+        self.assertEqual(rl.parse_answer("Pigment network.\n**Answer:** C, A, F\nEvidence sufficient: Yes"),
+                         {"pred": "C", "top3": ["C", "A", "F"], "sufficient": "yes", "rationale": "Pigment network."})
+        self.assertEqual(rl.parse_answer("Answer: B, B, E, H\nEvidence sufficient: no")["top3"], ["B", "E", "H"])  # no repeats
+        self.assertEqual(rl.parse_answer("Answer: C (Melanoma), A, F, H")["top3"], ["C", "A", "F"])           # at most three
+        self.assertIsNone(rl.parse_answer("Answer: C")["sufficient"])
+        self.assertEqual(rl.parse_answer("Evidence sufficient: yes\nOn reflection:\nAnswer: C\nEvidence sufficient: no")["sufficient"],
+                         "no")                                                                    # the last flag counts
+        self.assertEqual(rl.parse_answer("Answer: Z, Q\nEvidence sufficient: yes")["top3"], [])            # no option letter
 
 
 class RequestTests(unittest.TestCase):

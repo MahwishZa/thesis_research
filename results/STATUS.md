@@ -102,6 +102,25 @@ Not checked: the real APIs (no keys or internet here) — the request formats fo
    of the research.
 Checked: 98 tests; 17 deliberate breaks of the run script, each caught. Not checked: the real APIs (no keys or internet here).
 
+## Top-3 accuracy, selective classification, Holm (approved 2026-11-22)
+1. The answer format of the LLM-only runs (prompt `llm_only_v2`): a short explanation, then "Answer: X, Y, Z" (the three most
+   likely options, most likely first) and "Evidence sufficient: yes/no". The first letter is the diagnosis.
+2. `src/evaluate.py` adds top-3 accuracy (Liu et al. 2020), coverage and selective risk (Geifman & El-Yaniv 2017): coverage is
+   the share of questions answered with a valid diagnosis marked "yes"; selective risk is the share of those that are wrong
+   (confident misdiagnoses). Each has a 95% interval over lesions except selective risk (a share of a subset).
+3. `src/compare.py` compares several runs on the same cases: McNemar for every pair, with Holm's correction (Holm 1979).
+Checked: 107 tests; 12 deliberate breaks of the new metrics and the answer rule, each caught. Sources as cited in the archived
+Version 2 method (`archive/v2/docs/method.md`), not re-checked now.
+
+## Question files renamed; semantic similarity completed (2026-11-22)
+1. `data/views/<view>/questions_<split>.jsonl` → `data/views/<view>/<split>.jsonl` (`train`, `val`, `test`), with `git mv`.
+2. Semantic similarity (`src/evaluate.py`): the cosine between the embedding of each model explanation and the embedding of a cited
+   reference text of the true class (sentence encoder `pritamdeka/S-PubMedBert-MS-MARCO`), with its mean, a 95% interval over
+   lesions and the mean per class; a class without a reference stops the evaluation; a reference may carry its source. It applies
+   to the LLM-only runs too (they save an explanation). Context relevance (Jaccard, MedCPT cosine, MedCPT cross-encoder) and
+   retrieval quality (Hit@k, Precision@k, nDCG@k, MRR, context precision) were already in place and tested.
+Checked: 111 tests; 5 deliberate breaks of semantic similarity, each caught. Still missing: the reference texts themselves.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all 315 test cases and again on the 277 with all three facts recorded.

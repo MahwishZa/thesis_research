@@ -4,7 +4,7 @@ One evaluation script for all systems (LLM only, standard RAG, RAG^2, proposed) 
 image + text).
 
 Inputs
-  --questions    data/views/<view>/questions_<split>.jsonl from build_views.py: the options of each case, the answer letter,
+  --questions    data/views/<view>/<split>.jsonl from build_views.py: the options of each case, the answer letter,
                  the gold class, the lesion group
   --predictions  one JSON line per question (run_llm_only.py writes this format):
             {"id": "...", "pred": "C",                               # the chosen option letter
@@ -23,6 +23,10 @@ Metrics
               recall (= sensitivity), specificity and F1, confusion matrix, missing and invalid answers,
               McNemar's exact test against --pred-b. The bootstrap draws whole lesions, so photos of one lesion stay together.
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
+              When the predictions carry them: top-3 accuracy (the true class among the model's three most likely, "top3"),
+              and selective classification from the "evidence_sufficient" flag: coverage (share of all questions answered
+              with a valid diagnosis marked "yes") and selective risk (share of those that are wrong: confident misdiagnoses).
+              Several runs are compared with src/compare.py (McNemar for every pair, Holm's correction).
   Retrieval : Hit@k, Precision@k, MRR, nDCG@k and context precision. Weak labels: a passage counts as relevant when its
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
   Relevance : how well each retrieved passage fits the query: Jaccard similarity of the content words (free, no model);
@@ -31,11 +35,13 @@ Metrics
               RAGAS faithfulness / context relevance / answer relevancy (an LLM judge that costs credit).
 
 Sources: McNemar (1947) Psychometrika 12:153-157; Jaccard (1912) New Phytologist 11:37-50; nDCG: Jarvelin & Kekalainen (2002)
-ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651; RAGAS: Es et al. (2024) EACL demos 150-158.
+ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651; RAGAS: Es et al. (2024) EACL demos 150-158;
+top-k accuracy of a skin-disease differential: Liu et al. (2020) Nature Medicine 26:900-908; coverage and selective risk: Geifman &
+El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70.
 
 Every report records its input files with their SHA-256, so two reports can be checked to use the same question file.
 
-Usage: python src/evaluate.py --questions data/views/multimodal/questions_test.jsonl --predictions predictions.jsonl
+Usage: python src/evaluate.py --questions data/views/multimodal/test.jsonl --predictions predictions.jsonl
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json] [--ragas]
        [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
 """
@@ -126,6 +132,45 @@ def bootstrap_ci(y, p, groups, fn, n=1000, seed=42):
     return [round(percentile(values, 2.5), 4), round(percentile(values, 97.5), 4)]
 
 
+def predicted_classes(q, p, k=3):
+    """The classes of the first k letters of a prediction's "top3" (or of its "pred" alone), in order, without repeats."""
+    letters = (p or {}).get("top3") or ([(p or {}).get("pred")] if (p or {}).get("pred") else [])
+    out = []
+    for letter in letters:
+        c = predicted_class(q, {"pred": letter})
+        if c != INVALID and c not in out:
+            out.append(c)
+    return out[:k]
+
+
+def top_k_accuracy(y, tops):
+    """Share of questions whose true class is among the model's first k diagnoses (an invalid answer counts as wrong)."""
+    return sum(t in top for t, top in zip(y, tops)) / len(y)
+
+
+def coverage(y, answers):
+    """Selective classification: share of all questions answered with a valid diagnosis marked "evidence sufficient: yes"."""
+    return sum(c != INVALID and flag == "yes" for c, flag in answers) / len(y)
+
+
+def selective_risk(y, answers):
+    """Share of wrong diagnoses among the questions marked "evidence sufficient: yes" (None when none is)."""
+    covered = [(t, c) for t, (c, flag) in zip(y, answers) if c != INVALID and flag == "yes"]
+    return sum(t != c for t, c in covered) / len(covered) if covered else None
+
+
+def holm(p_values):
+    """Holm's step-down correction: the i-th smallest of m p-values is multiplied by (m - i + 1), the results are made
+    non-decreasing in that order and capped at 1. Returns the adjusted p-values in the input order."""
+    m = len(p_values)
+    order = sorted(range(m), key=lambda i: p_values[i])
+    adjusted, running = [0.0] * m, 0.0
+    for rank, i in enumerate(order):
+        running = max(running, min(1.0, (m - rank) * p_values[i]))
+        adjusted[i] = running
+    return adjusted
+
+
 def mcnemar_exact(y, pa, pb):
     """McNemar's exact test: a two-sided binomial test (p = 0.5) on the questions that exactly one system got right."""
     b = sum(a == t and c != t for t, a, c in zip(y, pa, pb))
@@ -153,6 +198,18 @@ def diagnosis_metrics(qa, pred, pred_b=None):
            "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
            "confusion_matrix": {"rows_true": CLASSES, "columns_predicted": columns,
                                 "matrix": [[sum(t == r and q == c for t, q in zip(y, p)) for c in columns] for r in CLASSES]}}
+    if any("top3" in (pred.get(i) or {}) for i in ids):
+        tops = [predicted_classes(qa[i], pred.get(i)) for i in ids]
+        out["top3_accuracy"] = round(top_k_accuracy(y, tops), 4)
+        out["top3_accuracy_95ci"] = bootstrap_ci(y, tops, groups, top_k_accuracy)
+    if any("evidence_sufficient" in (pred.get(i) or {}) for i in ids):
+        answers = [(c, (pred.get(i) or {}).get("evidence_sufficient")) for i, c in zip(ids, p)]
+        risk = selective_risk(y, answers)
+        out["coverage"] = round(coverage(y, answers), 4)
+        out["coverage_95ci"] = bootstrap_ci(y, answers, groups, coverage)
+        out["n_covered"] = sum(c != INVALID and f == "yes" for c, f in answers)
+        out["selective_risk"] = None if risk is None else round(risk, 4)
+        out["evidence_flag_missing"] = sum(c != INVALID and f not in ("yes", "no") for c, f in answers)
     out["chosen_letters"] = {k: v for k, v in sorted(Counter(
         (str((pred.get(i) or {}).get("pred") or "").strip().upper() or "none") if c != INVALID else "invalid"
         for i, c in zip(ids, p)).items())}
@@ -277,17 +334,51 @@ def relevance_metrics(qa, pred, scorers=None, stop_words=None):
     return {**{k: round(mean(v), 4) for k, v in scores.items()}, "n_questions": len(ids), "query_used": dict(source)}
 
 
-def text_metrics(qa, pred, reference_texts, use_ragas=False):
-    """reference_texts: {gold class: a reference text quoted from a cited source}."""
-    ids = [i for i in qa if i in pred and pred[i].get("rationale")]
+SIMILARITY_MODEL = "pritamdeka/S-PubMedBert-MS-MARCO"     # a biomedical sentence encoder (PubMedBERT tuned on MS MARCO)
+
+
+def cosine(a, b):
+    na, nb = math.sqrt(sum(x * x for x in a)), math.sqrt(sum(x * x for x in b))
+    return sum(x * y for x, y in zip(a, b)) / (na * nb) if na and nb else 0.0
+
+
+def sentence_encoder(model=SIMILARITY_MODEL):
+    """A function that turns a list of texts into a list of embedding vectors (downloads the model on first use)."""
+    from sentence_transformers import SentenceTransformer
+    enc = SentenceTransformer(model)
+    return lambda texts: enc.encode(list(texts), convert_to_numpy=True).tolist()
+
+
+def semantic_similarity(qa, pred, reference_texts, encode):
+    """Cosine similarity between the embedding of each model explanation ("rationale") and the embedding of the reference text of
+    the question's true class, then the mean over the questions, with a 95% interval over lesions and the mean per class.
+    reference_texts: {class: text} or {class: {"text": ..., "source": ...}}, quoted from a cited source, never written by us."""
+    ids = [i for i in qa if (pred.get(i) or {}).get("rationale")]
+    if not ids:
+        return None
+    refs = {c: (r["text"] if isinstance(r, dict) else r) for c, r in reference_texts.items()}
+    missing = sorted({qa[i]["gold_label"] for i in ids} - set(refs))
+    if missing:
+        raise ValueError(f"no reference text for the classes {missing}")
+    classes = sorted({qa[i]["gold_label"] for i in ids})
+    ref_vec = dict(zip(classes, encode([refs[c] for c in classes])))
+    sims = [cosine(h, ref_vec[qa[i]["gold_label"]]) for i, h in zip(ids, encode([pred[i]["rationale"] for i in ids]))]
+    groups = [qa[i].get("group_id", i) for i in ids]
+    per_class = defaultdict(list)
+    for i, v in zip(ids, sims):
+        per_class[qa[i]["gold_label"]].append(v)
+    return {"mean": round(mean(sims), 4), "95ci": bootstrap_ci(sims, sims, groups, lambda a, b: mean(a)),
+            "per_class": {c: round(mean(per_class[c]), 4) for c in CLASSES if c in per_class},
+            "n_questions_with_rationale": len(ids)}
+
+
+def text_metrics(qa, pred, reference_texts, use_ragas=False, encode=None):
+    """Semantic similarity of the explanations (when reference texts are given) and, optionally, the RAGAS LLM-judge scores."""
     out = {}
-    if reference_texts and ids:
-        from sentence_transformers import SentenceTransformer, util
-        enc = SentenceTransformer("pritamdeka/S-PubMedBert-MS-MARCO")   # biomedical sentence encoder
-        hyp = [pred[i]["rationale"] for i in ids]
-        ref = [reference_texts[qa[i]["gold_label"]] for i in ids]
-        eh, er = enc.encode(hyp, convert_to_tensor=True), enc.encode(ref, convert_to_tensor=True)
-        out["semantic_similarity_cosine"] = round(float(util.cos_sim(eh, er).diag().mean()), 4)
+    if reference_texts:
+        sim = semantic_similarity(qa, pred, reference_texts, encode or sentence_encoder())
+        if sim:
+            out["semantic_similarity_cosine"] = {**sim, "model": SIMILARITY_MODEL if encode is None else "given"}
     ctx_ids = [i for i in qa if i in pred and pred[i].get("contexts")]
     if use_ragas and ctx_ids:
         # LLM-as-judge metrics (needs an LLM API key configured for ragas; costs credit)
@@ -331,7 +422,7 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Evaluates one system's predictions on one question file.")
-    ap.add_argument("--questions", required=True, help="data/views/<view>/questions_<split>.jsonl")
+    ap.add_argument("--questions", required=True, help="data/views/<view>/<split>.jsonl")
     ap.add_argument("--predictions", required=True, help="the predictions of one system, one JSON line per question")
     ap.add_argument("--predictions-b", default=None, help="a second system on the same questions, for McNemar's test")
     ap.add_argument("--out", default="report.json")

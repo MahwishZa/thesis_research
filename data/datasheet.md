@@ -59,7 +59,7 @@ data/knowledge_corpus/                                     the medical text libr
 | `processed_cases/classes.json` | the 8 classes: index and name | yes |
 | `processed_cases/class_weights.json`, `normalization.json`, `train_oversampled.csv`, `train_undersampled.csv` | train counts and class weights; train-only image and age statistics; balanced training lists (for a trained model only) | yes |
 | `views/<view>/cases.csv` | one row per case: id, split, fold, lesion group, label, and only the inputs of that view | yes |
-| `views/<view>/questions_{train,val,test}.jsonl` | one 8-option multiple-choice question per case, for every system (LLM only, standard RAG, RAG², proposed) | yes |
+| `views/<view>/{train,val,test}.jsonl` | one 8-option multiple-choice question per case, for every system (LLM only, standard RAG, RAG², proposed) | yes |
 | `knowledge_corpus/` | `manifest.csv` and `corpus_card.json` (no text); `passages.jsonl` and the download cache stay on the laptop | partly |
 
 Image paths in every table are relative to `data/` (`processed_images/<id>.jpg`).

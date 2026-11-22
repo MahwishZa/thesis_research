@@ -39,7 +39,7 @@ class CommonTests(unittest.TestCase):
 
     def test_the_layout_names(self):
         self.assertEqual(common.view_table("text_only"), "views/text_only/cases.csv")
-        self.assertEqual(common.question_file("multimodal", "test"), "views/multimodal/questions_test.jsonl")
+        self.assertEqual(common.question_file("multimodal", "test"), "views/multimodal/test.jsonl")
         self.assertEqual(len(common.CLASSES), len(common.LETTERS))
         self.assertEqual(set(common.CLASS_NAMES), set(common.CLASSES))
         self.assertEqual(set(common.OPTION_TEXT), set(common.CLASSES))
