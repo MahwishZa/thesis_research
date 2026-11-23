@@ -935,11 +935,7 @@ class FakeClient:
         if k == 2:
             return {"text": "I cannot help with that.", "finish_reason": "refusal", "tokens_in": 10, "tokens_out": 5}
         letter = q["answer"] if k % 2 == 0 else next(x for x in q["options"] if x != q["answer"])
-        others = [x for x in q["options"] if x not in (letter, q["answer"])][:2]
-        if k == 1:
-            others = [q["answer"], others[0]]        # wrong first, right second: right in the top 3
-        flag = "yes" if k % 3 else "no"
-        return {"text": f"Some reasoning.\nAnswer: {letter}, {others[0]}, {others[1]}\nEvidence sufficient: {flag}",
+        return {"text": f"Reasoning and evidence: Some findings of case {k}.\nAnswer: {letter} ({q['options'][letter]})",
                 "finish_reason": "stop", "tokens_in": 100, "tokens_out": 20}
 
 
@@ -984,12 +980,15 @@ class RunTests(unittest.TestCase):
         self.assertEqual(sorted(p["id"] for p in preds), sorted(q["id"] for q in self.questions))
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
         self.assertEqual((info["status"], info["answered"], info["of"]), ("complete", 6, 6))
-        self.assertEqual(info["settings"]["prompt_version"], rl.PROMPT_VERSION)
+        self.assertEqual(info["settings"]["prompt"], "llm_only")
+        self.assertIn("(<the name of that option>)", info["settings"]["instruction"])      # the exact prompt text is saved with the run
         self.assertIn("42:<case id>", info["question_order"])
         refused = next(p for p in preds if p["id"].endswith("002"))
         self.assertEqual((refused["pred"], refused["valid"], refused["finish_reason"]), (None, False, "refusal"))
         first = preds[0]
-        self.assertEqual((len(first["top3"]), first["pred"], first["evidence_sufficient"]), (3, first["top3"][0], "no"))
+        self.assertEqual((first["valid"], first["rationale"]), (True, f"Some findings of case {int(first['id'][-3:])}."))
+        self.assertEqual((first["prompt"], first["model"]), ("llm_only", "gpt-4o"))                  # every answer says which prompt asked it
+        self.assertFalse({"top3", "evidence_sufficient"} & set(first))                         # nothing of the old format is saved
 
     def test_the_predictions_go_straight_into_evaluate(self):
         out = self.go(self.args(), FakeClient(self.questions))
@@ -997,8 +996,9 @@ class RunTests(unittest.TestCase):
         pred = ev.load(os.path.join(out, "predictions.jsonl"))
         d = ev.diagnosis_metrics(qa, pred)
         self.assertEqual((d["accuracy"], d["invalid_answers"]), (0.3333, 1))    # ids 0 and 4 right; 2 has no letter
-        self.assertEqual((d["n_covered"], d["coverage"]), (3, 0.5))                # ids 1, 4, 5 say yes (k % 3); 2 is invalid
-        self.assertEqual(d["selective_risk"], 0.6667)                              # ids 1 and 5 are wrong
+        self.assertFalse({"coverage", "selective_risk", "n_covered"} & set(d))      # no yes/no flag any more, so no such score
+        rationale = [p["rationale"] for p in pred.values() if p["valid"]]
+        self.assertEqual(len(rationale), 5)                                        # the reasoning of every valid answer is kept
 
     def test_the_asking_order_is_fixed_mixed_and_the_same_for_every_view(self):
         qs = [{"id": f"ISIC_{k:07d}", "gold_label": c} for k, c in enumerate(["AK"] * 10 + ["BCC"] * 10 + ["MEL"] * 10)]

@@ -643,18 +643,36 @@ class PromptAndAnswerTests(unittest.TestCase):
     def test_the_answer_rule(self):
         cases_ = {"Reasoning.\nAnswer: C": "C", "**Answer:** (D)": "D", "answer: b": None, "Answer: Actinic keratosis": None,
                   "Answer: A\nWait, Answer: B": "B", "E": "E", "(F).": "F", "The answer is probably G": None, "": None,
-                  "Answer: Z": None}
+                  "Answer: Z": None, "Answer: C, A, F": "C", "Answer: C (Melanoma), A": "C"}
         for text, letter in cases_.items():
             with self.subTest(text):
                 self.assertEqual(rl.parse_answer(text)["pred"], letter)
-        self.assertEqual(rl.parse_answer("Pigment network.\n**Answer:** C, A, F\nEvidence sufficient: Yes"),
-                         {"pred": "C", "top3": ["C", "A", "F"], "sufficient": "yes", "rationale": "Pigment network."})
-        self.assertEqual(rl.parse_answer("Answer: B, B, E, H\nEvidence sufficient: no")["top3"], ["B", "E", "H"])  # no repeats
-        self.assertEqual(rl.parse_answer("Answer: C (Melanoma), A, F, H")["top3"], ["C", "A", "F"])           # at most three
-        self.assertIsNone(rl.parse_answer("Answer: C")["sufficient"])
-        self.assertEqual(rl.parse_answer("Evidence sufficient: yes\nOn reflection:\nAnswer: C\nEvidence sufficient: no")["sufficient"],
-                         "no")                                                                    # the last flag counts
-        self.assertEqual(rl.parse_answer("Answer: Z, Q\nEvidence sufficient: yes")["top3"], [])            # no option letter
+        self.assertEqual(rl.parse_answer("Reasoning and evidence: Asymmetric pigment network and a blue-white veil.\nAnswer: C"),
+                         {"pred": "C", "rationale": "Asymmetric pigment network and a blue-white veil."})
+        self.assertEqual(rl.parse_answer("**Reasoning and evidence:** Irregular borders.\n**Answer:** C (Melanoma)"),
+                         {"pred": "C", "rationale": "Irregular borders."})
+        self.assertEqual(rl.parse_answer("Answer: C (Melanoma).\nReasoning and evidence: The lesion is asymmetric."),
+                         {"pred": "C", "rationale": "The lesion is asymmetric."})              # the answer first: the text after it
+        for reply, letter in (("Answer: C (Melanoma)", "C"), ("**Answer:** C (Melanoma)", "C"),
+                              ("Answer: C (Benign keratosis-like lesion (seborrheic keratosis / solar lentigo))", "C"),
+                              ("Answer: Melanoma (C)", "C"), ("Answer: C (Squamous cell carcinoma)", "C"),   # the letter decides
+                              ("Answer: Option D (Dermatofibroma).", "D")):
+            self.assertEqual(rl.parse_answer(reply)["pred"], letter, reply)
+        self.assertEqual(rl.parse_answer("Reasoning and evidence: Network.\nAnswer: C (Melanoma)"),
+                         {"pred": "C", "rationale": "Network."})                          # the name is not part of the reasoning
+        self.assertEqual(rl.parse_answer("Some reasoning.\nAnswer: B\nWait.\nAnswer: E")["pred"], "E")      # the last answer line counts
+        self.assertEqual(rl.parse_answer("Answer: Z"), {"pred": None, "rationale": "Answer: Z"})
+        self.assertEqual(set(rl.parse_answer("Answer: C")), {"pred", "rationale"})             # no top-3 list and no evidence flag
+
+    def test_the_instruction_asks_for_the_reasoning_and_evidence_and_one_letter_and_nothing_else(self):
+        text = rl.INSTRUCTIONS["rationale"]
+        self.assertIn("Reasoning and evidence: <at most three sentences", text)
+        self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
+        self.assertIn("name the findings of this case, in the image and/or in the patient facts, that support your choice", text)
+        self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", rl.INSTRUCTIONS["answer_only"])
+        for gone in ("three most likely", "Evidence sufficient", "yes or no"):
+            self.assertNotIn(gone, text + rl.INSTRUCTIONS["answer_only"])
+        self.assertEqual(rl.PROMPT_NAME, "llm_only")
 
 
 class RequestTests(unittest.TestCase):

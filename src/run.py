@@ -14,12 +14,15 @@ Llama have none), and every model writes the same short visible rationale before
   llama-4-maverick    OpenRouter, pinned to Parasail (fp8)              key: OPENROUTER_API_KEY
 The keys are read from the .env file in the repository folder (git-ignored) or from the environment, and never written anywhere.
 
-Each reply ends with "Answer: X, Y, Z" (the three most likely options, most likely first) and "Evidence sufficient: yes/no".
-They are read with one fixed rule (the last "Answer:" line). A reply without a letter, or a question the host's content
+Each reply has two lines (prompt llm_only, set 2026-11-23): "Reasoning and evidence: <at most three sentences naming the findings of
+the case that support the choice>" and "Answer: <the letter of the most likely option> (<its name>)", e.g. in the form "Answer: C (Melanoma)"
+for the options of that question. The letter decides: the name is there for the reader and is kept in raw_output. The answer is the first option letter on
+the last "Answer:" line; the reasoning is the text before it (the label is removed). There is no top-3 list (top-k accuracy is
+not reported) and no yes/no evidence flag: the model states the evidence itself, and evaluate.py scores that text. A reply without a letter, or a question the host's content
 moderation refuses, is saved as an invalid answer (wrong in evaluate.py) and kept so it can be checked.
 
 Output: results/llm_only/<model>/<view>_<split>/
-  predictions.jsonl   one line per question: id, pred (letter or null), top3, evidence_sufficient, valid, rationale,
+  predictions.jsonl   one line per question: id, pred (letter or null), valid, rationale (the reasoning and evidence),
                       raw_output, finish_reason, served_by,
                       tokens_in, tokens_out, seconds, time
   run.json            the model's settings, the prompt, the SHA-256 of the question file, counts, status
@@ -49,15 +52,14 @@ import urllib.request
 
 from common import SEED, SPLITS, VIEWS, get_logger, load_env, question_file, read_jsonl, write_json
 
-PROMPT_VERSION = "llm_only_v2"
+PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
           "This is a research benchmark: no decision about a patient depends on your answer.")
-ANSWER_FORMAT = ("\"Answer: <the letters of the three most likely options, most likely first, separated by commas>\" and, "
-                 "on the next line, \"Evidence sufficient: <yes or no>\" (yes if the information given is enough for a "
-                 "confident diagnosis, no if it is not).")
 INSTRUCTIONS = {
-    "rationale": "Explain your reasoning in at most three sentences, then end with two lines: " + ANSWER_FORMAT,
-    "answer_only": "Reply only with two lines: " + ANSWER_FORMAT,
+    "rationale": ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
+                  "this case, in the image and/or in the patient facts, that support your choice>\". Second line: "
+                  "\"Answer: <the letter of the most likely option> (<the name of that option>)\"."),
+    "answer_only": "Reply only with one line: \"Answer: <the letter of the most likely option> (<the name of that option>)\".",
 }
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODELS = {
@@ -76,7 +78,7 @@ MODELS = {
 KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "openrouter": ("OPENROUTER_API_KEY",)}
 ANSWER = re.compile(r"(?i:answer)\**\s*[:\uff1a]\**\s*([^\n]*)")
 LETTER = re.compile(r"(?<![A-Za-z])([A-H])(?![A-Za-z])")
-SUFFICIENT = re.compile(r"(?i)evidence\s+sufficient\W{0,4}(yes|no)\b")
+REASONING_LABEL = re.compile(r"(?i)^[\s*_#>]*reasoning\s+and\s+evidence\s*\**\s*[:\-]\s*\**\s*")
 LONE_LETTER = re.compile(r"^\W*\(?([A-H])\)?[.)]?\W*$")
 RETRY_CODES = {408, 409, 429, 500, 502, 503, 504, 529}
 MODERATION = re.compile(r"moderation|flagged", re.I)
@@ -104,25 +106,29 @@ def user_text(q, style="rationale"):
     return f"{q['question']}\n\nOptions:\n{options}\n\n{INSTRUCTIONS[style]}"
 
 
+def tidy_reasoning(text):
+    """The reasoning without the label "Reasoning and evidence:" and without markdown marks around it."""
+    return REASONING_LABEL.sub("", text.strip("*_# \n"))
+
+
 def parse_answer(text, letters="ABCDEFGH"):
     """The answer of a reply, read with one fixed rule:
-      top3       the option letters on the last "Answer:" line, in order, without repeats, at most three (a reply that is only a
-                 letter also counts); the first is the diagnosis ("pred")
-      sufficient "yes" or "no" from the last "Evidence sufficient:" (None when it is missing)
-      rationale  the text before that "Answer:" line"""
+      pred       the first option letter on the last "Answer:" line (a reply that is only a letter also counts)
+      rationale  the reasoning and evidence: the text before that "Answer:" line, without the label "Reasoning and evidence:";
+                 when nothing comes before the answer line, the text after it"""
     text = text or ""
-    top3, cut = [], None
+    pred, cut, end = None, None, None
     for m in ANSWER.finditer(text):
         found = [x for x in LETTER.findall(m.group(1)) if x in letters]
         if found:
-            top3, cut = list(dict.fromkeys(found))[:3], m.start()
-    if not top3:
+            pred, cut, end = found[0], m.start(), m.end()
+    if pred is None:
         lone = LONE_LETTER.match(text.strip())
         if lone and lone.group(1) in letters:
-            top3, cut = [lone.group(1)], 0
-    flags = SUFFICIENT.findall(text)
-    return {"pred": top3[0] if top3 else None, "top3": top3, "sufficient": flags[-1].lower() if flags else None,
-            "rationale": text[:cut].rstrip("*_# \n").strip() if cut is not None else text.strip()}
+            pred, cut, end = lone.group(1), 0, len(text)
+    if cut is None:
+        return {"pred": None, "rationale": REASONING_LABEL.sub("", text.strip())}
+    return {"pred": pred, "rationale": tidy_reasoning(text[:cut]) or tidy_reasoning(text[end:])}
 
 
 def image_b64(data, path):
@@ -274,7 +280,7 @@ def run(args, client, log):
         qsha = hashlib.sha256(f.read()).hexdigest()
     settings = {"baseline": "llm_only", "model": args.model, "model_settings": MODELS[args.model], "view": args.view,
                 "split": args.split, "questions": qpath.replace("\\", "/"), "questions_sha256": qsha,
-                "prompt_version": PROMPT_VERSION, "style": args.style, "system": SYSTEM, "instruction": INSTRUCTIONS[args.style]}
+                "prompt": PROMPT_NAME, "style": args.style, "system": SYSTEM, "instruction": INSTRUCTIONS[args.style]}
     info_path = os.path.join(partial, "run.json")
     if os.path.exists(info_path):
         with open(info_path, encoding="utf-8") as f:
@@ -299,13 +305,12 @@ def run(args, client, log):
                 except Refused as e:
                     reply = {"text": "", "finish_reason": f"refused by host: {str(e)[:200]}"}
                 answer = parse_answer(reply["text"], "".join(q["options"]))
-                record = {"id": q["id"], "pred": answer["pred"], "top3": answer["top3"],
-                          "evidence_sufficient": answer["sufficient"], "valid": answer["pred"] is not None,
+                record = {"id": q["id"], "pred": answer["pred"], "valid": answer["pred"] is not None,
                           "rationale": answer["rationale"],
                           "raw_output": reply["text"], "finish_reason": reply.get("finish_reason"),
                           "served_by": reply.get("served_by"), "tokens_in": reply.get("tokens_in"),
                           "tokens_out": reply.get("tokens_out"), "seconds": round(time.time() - start, 2),
-                          "model": args.model, "view": args.view, "split": args.split, "prompt_version": PROMPT_VERSION,
+                          "model": args.model, "view": args.view, "split": args.split, "prompt": PROMPT_NAME,
                           "time": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()

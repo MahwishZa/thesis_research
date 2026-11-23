@@ -282,7 +282,8 @@ class PipelineStatusTests(unittest.TestCase):
                               capture_output=True, text=True, cwd=ROOT, timeout=120, env={**os.environ, "OPENROUTER_API_KEY": ""})
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("[user] Patient:", done.stdout)
-        self.assertIn("Answer: <the letters of the three most likely options", done.stdout)
+        self.assertIn("Reasoning and evidence: <at most three sentences", done.stdout)
+        self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", done.stdout)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

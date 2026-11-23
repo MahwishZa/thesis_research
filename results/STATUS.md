@@ -324,6 +324,34 @@ Checked: 6 new tests of the checker.
   corpus build on the laptop (cached except that search), then commit the new card and manifest.
 - The repository's `src/methodology.md` rename was pushed by the researcher.
 
+## Prompt v3: one letter, reasoning and evidence (researcher's request, 2026-11-23)
+- Balanced validation split rerun on the laptop ✔ (output): validation 160 (20 per class), train 1,797, test 240 (unchanged; `test.jsonl`
+  did not change). The new tables are to be committed by the researcher.
+- Top-k accuracy was removed on 2026-11-22, but the prompt still asked for three letters: corrected now. The prompt (`llm_only`)
+  asks for two lines: "Reasoning and evidence: <at most three sentences that name the findings of this case, in the image and/or in the
+  patient facts, that support your choice>" and "Answer: <the letter of the most likely option>". The yes/no "Evidence sufficient" flag is
+  gone. The prediction file no longer has `top3` or `evidence_sufficient`; the reasoning is the `rationale` field that
+  `evaluate.py` already scores (semantic similarity, and the faithfulness metrics proposed).
+- Consequence (open): coverage and selective risk (approved on 2026-11-21) need a yes/no flag, so LLM-only runs no longer produce them.
+  The functions stay in `evaluate.py` and report only when a flag is present. Decision needed: drop both metrics, or take the support
+  signal from somewhere else for the RAG systems (e.g. whether the quoted evidence is found in the retrieved passages).
+- A reasoning that quotes "source text" is only possible for the RAG systems (they have retrieved passages); the LLM-only systems have none, so
+  their evidence is the findings they name. The RAG prompts will add "Evidence: [passage number] "<sentence copied word for word>"" so a
+  quote can be checked automatically against the passage.
+- Tests: the answer rule, the instruction, the run and the dry run were updated; 9 deliberate breaks, 8 caught at first, the 9th (the
+  wording of "findings ... that support your choice") covered by a new assertion.
+
+## Answer format with the option name; prompt named `llm_only` (researcher's request, 2026-11-23)
+- The answer line is now "Answer: <the letter of the most likely option> (<the name of that option>)", e.g. "Answer: C (Melanoma)" for
+  the options of that question (no concrete example is put in the prompt: it would favour that class). The letter decides (a name that
+  does not fit the letter is ignored by the scoring and stays in `raw_output`).
+- The prompt is named `llm_only` (`PROMPT_NAME`; the field is `prompt` in `run.json` and in every answer). No older prompt text is kept
+  in `src/`: `llm_only_v2` existed only as the previous text (Git history); every run saves its exact `system` and `instruction` text in
+  `run.json`, so a changed prompt cannot be mistaken for this one.
+- Coverage and selective risk (option B, the evidence quote as the selection signal): approved by the researcher on the condition that it
+  is verified to be suitable. Verdict: it cannot be fully verified before the RAG systems exist (see the answer given on 2026-11-23);
+  specified as a RAG-only design, to be checked on a free pilot; until then nothing is built or removed.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all test cases and again on those with all three facts recorded (counts change with the balanced test split).

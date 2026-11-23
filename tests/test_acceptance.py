@@ -106,12 +106,14 @@ class ModelAndPromptRequirements(unittest.TestCase):
                     self.assertEqual(len(cfg["route"]), 1, "the provider is pinned")
         self.assertIn("allow_fallbacks", Path(SRC / "run.py").read_text(encoding="utf-8"))
 
-    def test_every_model_gets_the_same_question_and_must_answer_with_three_letters_and_an_evidence_flag(self):
-        """The answer format: "Answer: X, Y, Z" (top 3) and "Evidence sufficient: yes/no"; the prompt is fixed and versioned."""
+    def test_every_model_gets_the_same_question_and_must_give_its_reasoning_and_evidence_and_one_letter(self):
+        """The answer format (researcher's decision, 2026-11-23): "Reasoning and evidence: ..." naming the findings that support the
+        choice, then "Answer: <letter> (<name of that option>)", e.g. "C (Melanoma)" (no top-3 list, no yes/no evidence flag); the prompt is fixed and versioned."""
         text = rl.INSTRUCTIONS["rationale"]
-        self.assertIn("Answer: <the letters of the three most likely options", text)
-        self.assertIn("Evidence sufficient: <yes or no>", text)
-        self.assertEqual(rl.PROMPT_VERSION, "llm_only_v2")
+        self.assertIn("Reasoning and evidence: <at most three sentences", text)
+        self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
+        self.assertNotIn("Evidence sufficient", text)
+        self.assertEqual(rl.PROMPT_NAME, "llm_only")
 
 
 class MetricRequirements(unittest.TestCase):
