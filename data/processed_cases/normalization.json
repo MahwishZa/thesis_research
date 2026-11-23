@@ -1,20 +1,20 @@
 {
   "image_mean_rgb": [
-    0.6574,
-    0.6334,
-    0.623
+    0.6568,
+    0.6327,
+    0.6222
   ],
   "image_std_rgb": [
-    0.1184,
-    0.152,
-    0.1649
+    0.1186,
+    0.1522,
+    0.1653
   ],
   "image_size": [
     600,
     450
   ],
   "colour_constancy": "shades_of_gray_p6",
-  "age_mean": 61.43,
-  "age_std": 16.73,
+  "age_mean": 61.51,
+  "age_std": 16.63,
   "computed_on": "train split only"
 }

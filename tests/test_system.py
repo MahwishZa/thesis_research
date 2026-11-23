@@ -188,6 +188,25 @@ def spec_counts(cs, new):
 
 
 @unittest.skipUnless(TABLE.is_file(), "data/processed_cases/all_cases.csv is not there")
+class BalancedValidationRuleTests(unittest.TestCase):
+    """The rule for the validation split (20 per class), applied to the committed cases after the test split is balanced: it can
+    reach exactly 20 for every class by whole lesions, and it leaves the test split alone."""
+
+    def test_20_validation_images_of_every_class_are_reachable_and_test_is_untouched(self):
+        cs = read_csv(TABLE)
+        new = common.balanced_splits(cs, common.VAL_PER_CLASS, split="val")
+        count = spec_counts(cs, new)
+        labels = sorted({x["label"] for x in cs})
+        self.assertEqual({lab: count[(lab, "val")] for lab in labels}, {lab: 20 for lab in labels})
+        self.assertEqual({x["isic_id"] for x in cs if x["split"] == "test"}, {i for i, v in new.items() if v == "test"})
+        groups = {}
+        for x in cs:
+            groups.setdefault(x["group_id"], set()).add(new[x["isic_id"]])
+        self.assertTrue(all(len(v) == 1 for v in groups.values()))
+        self.assertEqual(Counter(new.values()), {"train": len(cs) - 240 - 160, "val": 160, "test": 240})
+
+
+@unittest.skipUnless(TABLE.is_file(), "data/processed_cases/all_cases.csv is not there")
 class BalancedTestSplitTests(unittest.TestCase):
     def test_the_committed_cases_give_30_test_images_of_every_class(self):
         cs = read_csv(TABLE)

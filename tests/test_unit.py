@@ -154,6 +154,23 @@ class BalanceRuleTests(unittest.TestCase):
         self.assertEqual(kept, sorted(sorted({x["group_id"] for x in cs if x["split"] == "test"},
                                              key=lambda g: common.group_order(42, g))[:4]))
 
+    def test_the_validation_pass_balances_val_from_train_and_never_touches_test(self):
+        cs = (spec_cases([("MEL", "test", 1)] * 5 + [("MEL", "val", 1)] * 6 + [("MEL", "train", 1)] * 6 +
+                         [("DF", "test", 1)] * 3 + [("DF", "val", 1)] * 1 + [("DF", "train", 1)] * 4))
+        after_test = common.balanced_splits(cs, per_class=3, split="test")
+        cs2 = [{**c, "split": after_test[c["isic_id"]]} for c in cs]
+        new = common.balanced_splits(cs2, per_class=4, split="val")
+        c = spec_counts(cs2, new)
+        self.assertEqual((c[("MEL", "val")], c[("DF", "val")]), (4, 4))
+        self.assertEqual((c[("MEL", "test")], c[("DF", "test")]), (3, 3))
+        self.assertTrue(all(new[x["isic_id"]] == "test" for x in cs2 if x["split"] == "test"))      # the second pass leaves test alone
+        self.assertEqual(sum(v == "train" for v in new.values()), len(cs) - 3 * 2 - 4 * 2)           # nothing lost
+        again = common.balanced_splits([{**x, "split": new[x["isic_id"]]} for x in cs2], per_class=4, split="val")
+        self.assertEqual(again, new)                                                                # a second run changes nothing
+        with self.assertRaisesRegex(ValueError, "DF: only 4 val images|VASC|only .* val images"):
+            common.balanced_splits(spec_cases([("DF", "val", 3), ("DF", "train", 3)]), per_class=4, split="val")
+        self.assertEqual(common.VAL_PER_CLASS, 20)
+
     def test_it_stops_when_a_class_cannot_reach_the_target_or_a_group_is_mixed(self):
         with self.assertRaisesRegex(ValueError, "VASC: only 2 test images"):
             common.balanced_splits(spec_cases([("VASC", "test", 1), ("VASC", "train", 1), ("VASC", "val", 5)]), per_class=3)

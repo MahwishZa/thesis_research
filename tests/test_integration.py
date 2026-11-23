@@ -498,6 +498,45 @@ class BuildTests(unittest.TestCase):
             self.assertIn("lines [3] are not NAME=value", out.getvalue())
             self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
 
+    def test_an_empty_search_is_reported_with_the_way_ncbi_read_the_query(self):
+        class Empty(FakeFetcher):
+            def get(self, url, params=None, ncbi=False):
+                if url.endswith("esearch.fcgi") and params["db"] == "pubmed":
+                    return json.dumps({"esearchresult": {"count": "0", "idlist": [], "querytranslation": '"basal cell"[All Fields]',
+                                                         "errorlist": {"phrasesnotfound": ["xyz"]}}})
+                return super().get(url, params, ncbi)
+
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            passages, _ = bd.build_corpus(args(libraries=["pubmed"]), Empty(), meditron_rows=MEDITRON)
+        self.assertEqual(passages, [])
+        text = out.getvalue()
+        self.assertEqual(text.count("pubmed search found nothing"), 8)          # once for each diagnosis
+        self.assertIn("""query as read by NCBI: '"basal cell"[All Fields]'""", text)
+        self.assertIn("phrasesnotfound", text)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            bd.build_corpus(args(libraries=["pubmed"]), FakeFetcher(), meditron_rows=MEDITRON)
+        self.assertNotIn("found nothing", out.getvalue())                        # silent when there are results
+
+        class Dropped(FakeFetcher):                       # results, but a quoted MeSH heading was not found (an OR kept it going)
+            def get(self, url, params=None, ncbi=False):
+                body = super().get(url, params, ncbi)
+                if url.endswith("esearch.fcgi") and params["db"] == "pubmed":
+                    r = json.loads(body)
+                    r["esearchresult"]["warninglist"] = {"quotedphrasesnotfound": ['"old name"[MeSH Terms]']}
+                    return json.dumps(r)
+                return body
+
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            bd.build_corpus(args(libraries=["pubmed"]), Dropped(), meditron_rows=MEDITRON)
+        self.assertIn("""did not find ['"old name"[MeSH Terms]']""", out.getvalue())
+        self.assertNotIn("found nothing", out.getvalue())
+
+    def test_the_basal_cell_query_does_not_depend_on_one_name_of_the_mesh_heading(self):
+        query = bd.PUBMED_QUERIES["BCC"]
+        for part in ('"carcinoma, basal cell"[MeSH Terms]', '"basal cell carcinoma"[MeSH Terms]', '"basal cell carcinoma"[tiab]'):
+            self.assertIn(part, query)
+        self.assertRegex(query, r"^\(.* OR .* OR .*\) AND \(dermoscopy")           # the three names are alternatives, not all required
+
     def test_no_library_gets_more_than_the_cap_per_diagnosis(self):
         passages, _, _ = self.build(per_class=1)
         counts = bd.Counter((p["library"], p["query_class"]) for p in passages)

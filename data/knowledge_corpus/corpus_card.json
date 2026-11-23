@@ -1,0 +1,158 @@
+{
+  "snapshot_date": "2026-11-23",
+  "n_passages": 3444,
+  "n_documents": 994,
+  "passages_per_library_and_class": {
+    "guidelines": {
+      "MEL": 150,
+      "NV": 150,
+      "BCC": 150,
+      "AK": 150,
+      "BKL": 12,
+      "DF": 0,
+      "VASC": 150,
+      "SCC": 150
+    },
+    "pmc": {
+      "MEL": 150,
+      "NV": 150,
+      "BCC": 150,
+      "AK": 150,
+      "BKL": 150,
+      "DF": 150,
+      "VASC": 150,
+      "SCC": 150
+    },
+    "pubmed": {
+      "MEL": 150,
+      "NV": 150,
+      "BCC": 150,
+      "AK": 150,
+      "BKL": 150,
+      "DF": 150,
+      "VASC": 74,
+      "SCC": 150
+    },
+    "textbook": {
+      "MEL": 72,
+      "NV": 47,
+      "BCC": 22,
+      "AK": 11,
+      "BKL": 38,
+      "DF": 10,
+      "VASC": 4,
+      "SCC": 4
+    }
+  },
+  "passages_tagged_per_class": {
+    "MEL": 1123,
+    "NV": 631,
+    "BCC": 576,
+    "AK": 476,
+    "BKL": 368,
+    "DF": 257,
+    "VASC": 279,
+    "SCC": 583
+  },
+  "topic_coverage_per_class": {
+    "MEL": {
+      "appearance": 673,
+      "patients": 386,
+      "differential": 309,
+      "basics": 899
+    },
+    "NV": {
+      "appearance": 429,
+      "patients": 242,
+      "differential": 175,
+      "basics": 470
+    },
+    "BCC": {
+      "appearance": 309,
+      "patients": 213,
+      "differential": 175,
+      "basics": 494
+    },
+    "AK": {
+      "appearance": 153,
+      "patients": 224,
+      "differential": 104,
+      "basics": 317
+    },
+    "BKL": {
+      "appearance": 246,
+      "patients": 163,
+      "differential": 134,
+      "basics": 310
+    },
+    "DF": {
+      "appearance": 102,
+      "patients": 94,
+      "differential": 97,
+      "basics": 221
+    },
+    "VASC": {
+      "appearance": 140,
+      "patients": 94,
+      "differential": 68,
+      "basics": 200
+    },
+    "SCC": {
+      "appearance": 249,
+      "patients": 213,
+      "differential": 188,
+      "basics": 491
+    }
+  },
+  "empty_topic_boxes": [],
+  "licences": {
+    "PubMed abstract (research use; cite PMID)": 1124,
+    "CC BY 4.0": 1091,
+    "CC BY-NC 4.0": 521,
+    "CC BY-NC-SA 4.0": 234,
+    "CC BY-NC-ND 4.0": 191,
+    "CC BY 3.0": 58,
+    "CC BY-NC 3.0": 54,
+    "CC BY 2.0": 46,
+    "Meditron guidelines collection (source: cdc); see the source's terms": 42,
+    "CC BY-NC-SA 3.0": 42,
+    "Meditron guidelines collection (source: pubmed); see the source's terms": 33,
+    "Meditron guidelines collection (source: cco); see the source's terms": 8
+  },
+  "removed": {
+    "guidelines: document already used": 1,
+    "guidelines: passage too short": 304,
+    "guidelines: source nice excluded": 1656,
+    "guidelines: source wikidoc excluded": 33058,
+    "pmc: AI or image-dataset paper": 3,
+    "pmc: document already used": 1,
+    "pmc: duplicate passage": 2,
+    "pmc: full text not available": 6,
+    "pmc: no open licence": 5,
+    "pmc: passage too short": 257,
+    "pubmed: AI or image-dataset paper": 51,
+    "pubmed: document already used": 93,
+    "pubmed: duplicate passage": 4,
+    "pubmed: passage too short": 22,
+    "pubmed: retracted": 1,
+    "textbook: document already used": 1,
+    "textbook: duplicate passage": 39,
+    "textbook: passage too short": 363
+  },
+  "settings": {
+    "libraries": [
+      "guidelines",
+      "pmc",
+      "pubmed",
+      "textbook"
+    ],
+    "per_class": 150,
+    "max_words": 200,
+    "min_words": 30,
+    "pubmed_docs": 300,
+    "pmc_docs": 40,
+    "guideline_docs": 20,
+    "textbook_pages": 15,
+    "no_meditron": false
+  }
+}

@@ -291,6 +291,39 @@ Checked: 6 new tests of the checker.
   unusable `.env` line (no "=", no name, no value) is reported by its line number only, never its content, by `build.py corpus`
   and `run.py llm-only`. 6 more deliberate breaks, all caught; 178 tests.
 
+## Balanced validation split, 20 per class (decided 2026-11-22)
+- Decision: validation holds 20 images of every class (160 images, 126 lesions); train keeps the natural class mix. The rule is the
+  one of the test split (`balanced_splits(..., split="val")` in `src/common.py`, constant `VAL_PER_CLASS = 20`), applied after the
+  test split is balanced; the test split is not touched by it. `preprocess.py` step 8 runs both passes (`--val-per-class`, default 20).
+- Effect ✔ (the rule on the committed table): train 1,643 -> 1,797, validation 314 -> 160, test 240 (unchanged); 160 validation images
+  go to train and 6 train images come to validation, so 154 of today's 314 validation questions stay.
+- The 12 validation trial folders (10 answers each) no longer match the new question files and are to be deleted.
+- Code and tests are committed (unit test of both passes, a test that the committed cases can reach exactly 20 per class and keep the
+  test split, 6 deliberate breaks, all caught). Not yet: the laptop rerun of `preprocess.py` and `build.py views`, and the commit of
+  the new tables. Not tested here: the wiring of the two passes inside `preprocess.py` (pandas is not installed here); the rerun
+  prints "balanced test split ..." and "balanced val split ..." lines. After the tables are committed: assertions on the committed
+  validation split (acceptance and system tests), the pipeline check for an unbalanced validation split, and the data sheet table.
+- Open: whether the prompt asks for one letter (`llm_only_v3`) instead of three.
+
+## Knowledge corpus built on the laptop (2026-11-23) ✔ from `data/knowledge_corpus/corpus_card.json`
+- 3,294 passages from 868 documents (the full run, with the Meditron guidelines: 83 passages from cdc 42, pubmed 33, cco 8). Every
+  class has all four topics (appearance, patients, differential, basics): `empty_topic_boxes` is empty. Licences: CC BY and CC BY-NC
+  variants (PMC), PubMed abstracts (research use; cite the PMID), Meditron sources (terms of the source). The text file
+  `passages.jsonl` stays on the laptop; the manifest and the card are committed.
+- Removed by the rules: WikiDoc 33,058 and NICE 1,656 Meditron articles (excluded sources), 363 + 304 + 257 + 18 passages under
+  30 words, 40 + 3 AI or image-dataset papers, 1 retracted, 5 PMC papers with no open licence, 6 with no full text. The PMC licence
+  lookup through the E-utilities worked at scale.
+- Gaps: PubMed BCC has 0 passages (all other classes 150, VASC 74): the removal counts do not explain it (the search found no
+  documents to remove), so the search result itself is empty ◻; a warning that prints NCBI's reading of the query was added
+  (`esearch`). Guidelines: DF 0 and BKL 12 (few or no open guidelines for these two ◻). Textbook (Dermoscopedia): AK 11, DF 10, VASC 4,
+  SCC 4 (pages are mostly captions: 363 passages under 30 words).
+- PubMed BCC = 0 explained ✔ (the new warning, laptop output): NCBI reported `quotedphrasesnotfound: ["carcinoma, basal cell"[MeSH Terms]]`
+  and "No items found". NLM renamed that MeSH heading for 2026 ("Basal Cell Carcinoma"; one source: NLM Classification 2026 page, not
+  checked on the MeSH Browser ◻). Fix: the BCC query lists both names of the heading and the plain words as alternatives; the search
+  warning now also appears when a quoted heading is not found but other results exist. 3 deliberate breaks, all caught. To redo: the
+  corpus build on the laptop (cached except that search), then commit the new card and manifest.
+- The repository's `src/methodology.md` rename was pushed by the researcher.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all test cases and again on those with all three facts recorded (counts change with the balanced test split).

@@ -101,7 +101,7 @@ ISIC_0031993,Train,actinic keratosis,AK,849fd6c26e92e21ffa357fbb9cfc0921,AK,test
 ISIC_0032135,Train,actinic keratosis,AK,8dc496247822d2e6d3139ab4616f60bd,AK,test
 ISIC_0032199,Train,actinic keratosis,AK,f921c40e6bf38e7c16a3dcd37123878d,AK,train
 ISIC_0032206,Train,actinic keratosis,AK,699dcad57ac694ceaddb381d128493ef,AK,val
-ISIC_0032404,Train,actinic keratosis,AK,bb25ca9e851bf8252e79d580ef24c57f,AK,train
+ISIC_0032404,Train,actinic keratosis,AK,bb25ca9e851bf8252e79d580ef24c57f,AK,val
 ISIC_0032422,Train,actinic keratosis,AK,669509a7e06a8092bf7a84474d5f3c4e,AK,train
 ISIC_0032437,Train,actinic keratosis,AK,0e184afbb6d668499f86f368f15bfc02,AK,train
 ISIC_0032854,Train,actinic keratosis,AK,15ebed1d303dcdddc5b8ebe1855f512a,AK,train
@@ -114,7 +114,7 @@ ISIC_0033705,Train,actinic keratosis,AK,0ac2a8894450780356a91dfa1e8313eb,AK,test
 ISIC_0033811,Train,actinic keratosis,AK,100e192b7588405513b319f011c25bc8,AK,train
 ISIC_0033866,Train,actinic keratosis,AK,761f836de0484c1d72b2b748ac7471f8,AK,train
 ISIC_0024504,Train,basal cell carcinoma,BCC,ea8887b344171ca0f6deaaa5026a5d44,BCC,test
-ISIC_0024515,Train,basal cell carcinoma,BCC,f99db0ae0514ec49f2b0930b803c30af,BCC,val
+ISIC_0024515,Train,basal cell carcinoma,BCC,f99db0ae0514ec49f2b0930b803c30af,BCC,train
 ISIC_0024550,Train,basal cell carcinoma,BCC,67a80617fc72f7b3800919759c161893,BCC,train
 ISIC_0024564,Train,basal cell carcinoma,BCC,bba6c9c2667be64661e936f746177453,BCC,train
 ISIC_0024572,Train,basal cell carcinoma,BCC,de5236f949f9b7003a1d3cbc81f440dc,BCC,train
@@ -134,7 +134,7 @@ ISIC_0024799,Train,basal cell carcinoma,BCC,020252553ff7ffc795f45666b7198682,BCC
 ISIC_0024829,Train,basal cell carcinoma,BCC,cec04daf7de4a30aa60fd71981fce332,BCC,train
 ISIC_0024833,Train,basal cell carcinoma,BCC,b9c2ddf69577917724150243e1d1f736,BCC,train
 ISIC_0024848,Train,basal cell carcinoma,BCC,df1b21688e2f5f12789a783cdfa63555,BCC,train
-ISIC_0024885,Train,basal cell carcinoma,BCC,8f7ad0fb3122541810cb614171efd37a,BCC,val
+ISIC_0024885,Train,basal cell carcinoma,BCC,8f7ad0fb3122541810cb614171efd37a,BCC,train
 ISIC_0024897,Train,basal cell carcinoma,BCC,c49a16cdb2a20726590d74100e1ffa7b,BCC,train
 ISIC_0024931,Train,basal cell carcinoma,BCC,2798cc21093bea082fa75eabc67f1e48,BCC,train
 ISIC_0024949,Train,basal cell carcinoma,BCC,73c7465b01cb7a170f1e1fef9c5ba4cf,BCC,train
@@ -151,12 +151,12 @@ ISIC_0025299,Train,basal cell carcinoma,BCC,9f50c6f9eb6b3ca6993fe8ecdeced812,BCC
 ISIC_0025301,Train,basal cell carcinoma,BCC,20d29f3ec14bcb8ce8fa267b021f1414,BCC,test
 ISIC_0025322,Train,basal cell carcinoma,BCC,9f5eb0a5dd95eaecd8a0d57a5dbf88b6,BCC,train
 ISIC_0025362,Train,basal cell carcinoma,BCC,520293c07372063949100175caa2ff02,BCC,train
-ISIC_0025383,Train,basal cell carcinoma,BCC,b02a88685da98a152c27403cb73d5bf4,BCC,val
+ISIC_0025383,Train,basal cell carcinoma,BCC,b02a88685da98a152c27403cb73d5bf4,BCC,train
 ISIC_0025417,Train,basal cell carcinoma,BCC,0627a94db24b4ab4c29e2a70781fd3af,BCC,train
 ISIC_0025433,Train,basal cell carcinoma,BCC,c039efbfb3c75775bb0c39f9e8c0223d,BCC,train
 ISIC_0025467,Train,basal cell carcinoma,BCC,4c7e85a484740c54e4e75a9472e41b88,BCC,train
-ISIC_0025509,Train,basal cell carcinoma,BCC,30ee2d2e07b5b8f8f85ee402595fc353,BCC,val
-ISIC_0025513,Train,basal cell carcinoma,BCC,c7e2ffc32d680095ec58c3e0856f1c68,BCC,val
+ISIC_0025509,Train,basal cell carcinoma,BCC,30ee2d2e07b5b8f8f85ee402595fc353,BCC,train
+ISIC_0025513,Train,basal cell carcinoma,BCC,c7e2ffc32d680095ec58c3e0856f1c68,BCC,train
 ISIC_0025530,Train,basal cell carcinoma,BCC,d874ebe8842fa9db181a8b5e368cac8f,BCC,val
 ISIC_0025557,Train,basal cell carcinoma,BCC,4f8e8de7d1037adfafce3ab0800403ee,BCC,train
 ISIC_0025576,Train,basal cell carcinoma,BCC,989761c32e187b26c1636f03255467d8,BCC,test
@@ -171,11 +171,11 @@ ISIC_0025711,Train,basal cell carcinoma,BCC,373ce7fdcfdfab59c3fa0964e3905202,BCC
 ISIC_0025718,Train,basal cell carcinoma,BCC,065912cfdadf95ad1303a12542eaa7b1,BCC,train
 ISIC_0025731,Train,basal cell carcinoma,BCC,0337410ce282f12b7127d1f3d1b2b5c6,BCC,train
 ISIC_0025752,Train,basal cell carcinoma,BCC,5d449927a3a0abb9de93eaa256d94b0a,BCC,train
-ISIC_0025793,Train,basal cell carcinoma,BCC,85eea6cf2cb9f3c97d0911e12fea65ac,BCC,val
+ISIC_0025793,Train,basal cell carcinoma,BCC,85eea6cf2cb9f3c97d0911e12fea65ac,BCC,train
 ISIC_0025818,Train,basal cell carcinoma,BCC,83e010e95dad89be325f311a3525fc44,BCC,train
 ISIC_0025824,Train,basal cell carcinoma,BCC,8c2b8d170d08e462c098d90a9b934943,BCC,train
 ISIC_0025826,Train,basal cell carcinoma,BCC,c688f028e98735e01bab769ab76bbe84,BCC,train
-ISIC_0025932,Train,basal cell carcinoma,BCC,edb626c880e9db00bcc818462bc086fa,BCC,val
+ISIC_0025932,Train,basal cell carcinoma,BCC,edb626c880e9db00bcc818462bc086fa,BCC,train
 ISIC_0025940,Train,basal cell carcinoma,BCC,5f53e8e14f55c5a585341aca3d19a183,BCC,test
 ISIC_0025971,Train,basal cell carcinoma,BCC,15c1aa6af8d13a8ec6eba4cb79e12af5,BCC,train
 ISIC_0025975,Train,basal cell carcinoma,BCC,3ea72d3bbb7816f5c0b55a8d623038d2,BCC,train
@@ -190,7 +190,7 @@ ISIC_0026192,Train,basal cell carcinoma,BCC,be20647b3da2ef2f06ff00a7aee0eb98,BCC
 ISIC_0026213,Train,basal cell carcinoma,BCC,b7f125d89d7dc1209d92e4213f810b9f,BCC,train
 ISIC_0026230,Train,basal cell carcinoma,BCC,296437bbc6ba5d6e7ea0bc36a2378758,BCC,test
 ISIC_0026275,Train,basal cell carcinoma,BCC,95aeaaebd501b6e018d10589aa641099,BCC,train
-ISIC_0026282,Train,basal cell carcinoma,BCC,31c48570b341ecaf3a111b77b8bbe0c4,BCC,val
+ISIC_0026282,Train,basal cell carcinoma,BCC,31c48570b341ecaf3a111b77b8bbe0c4,BCC,train
 ISIC_0026321,Train,basal cell carcinoma,BCC,e2114e3d70621edc5a952ee4f4b5d3e1,BCC,train
 ISIC_0026324,Train,basal cell carcinoma,BCC,78f138cf3c6507172d5281d10c62e995,BCC,train
 ISIC_0026337,Train,basal cell carcinoma,BCC,cad379123d48899c4c6d750646820d92,BCC,test
@@ -213,7 +213,7 @@ ISIC_0026716,Train,basal cell carcinoma,BCC,6422557600b637b5f14051272b517fd4,BCC
 ISIC_0026760,Train,basal cell carcinoma,BCC,ab665d1b6ede8f4922ee07b5ba8edaf0,BCC,train
 ISIC_0026766,Train,basal cell carcinoma,BCC,e9fc8e163637adcd497940037e2b9538,BCC,train
 ISIC_0026798,Train,basal cell carcinoma,BCC,625070a2e20a7567586dd19a9c7a5ade,BCC,train
-ISIC_0026829,Train,basal cell carcinoma,BCC,79fa9f2a24aafad324a6474a4267321d,BCC,val
+ISIC_0026829,Train,basal cell carcinoma,BCC,79fa9f2a24aafad324a6474a4267321d,BCC,train
 ISIC_0026831,Train,basal cell carcinoma,BCC,dcfe10982a82f4ec876922fd95ef3c89,BCC,train
 ISIC_0026845,Train,basal cell carcinoma,BCC,f684b0710a6be9bfad4cb6b8d073c236,BCC,train
 ISIC_0026855,Train,basal cell carcinoma,BCC,a7522ef73a1e369531bc8f9669e1cf20,BCC,train
@@ -236,15 +236,15 @@ ISIC_0027093,Train,basal cell carcinoma,BCC,d78f4944cfbc354bfe405c97b0e3493a,BCC
 ISIC_0027117,Train,basal cell carcinoma,BCC,405ceb43b2ee3b224437652c28d42f05,BCC,train
 ISIC_0027120,Train,basal cell carcinoma,BCC,ba58e4da25100d36bd071be8c3f31ebd,BCC,train
 ISIC_0027135,Train,basal cell carcinoma,BCC,06d7460cb17cdbb24abeeac6311ddc32,BCC,train
-ISIC_0027146,Train,basal cell carcinoma,BCC,4567e4468fe2e0a7ae864d6b9b3d3a8f,BCC,val
+ISIC_0027146,Train,basal cell carcinoma,BCC,4567e4468fe2e0a7ae864d6b9b3d3a8f,BCC,train
 ISIC_0027175,Train,basal cell carcinoma,BCC,9865889662049da2ff25671d1ab8dd74,BCC,train
 ISIC_0027189,Train,basal cell carcinoma,BCC,1e2aafcd7bcbc5dbe8b4cd35da18e8b6,BCC,train
 ISIC_0027229,Train,basal cell carcinoma,BCC,f7cba61837ae2c5e0f0808bb785da329,BCC,train
 ISIC_0027281,Train,basal cell carcinoma,BCC,95a23c515cea428b2dbe6062f32afe68,BCC,train
 ISIC_0027291,Train,basal cell carcinoma,BCC,bda65690a85cc30a49fa6d2a241da9ee,BCC,train
 ISIC_0027297,Train,basal cell carcinoma,BCC,b2f5ea371655abc212951570c7f3a8f2,BCC,val
-ISIC_0027337,Train,basal cell carcinoma,BCC,69b10ea14ab9dcd137ca1dbf7fa934b9,BCC,val
-ISIC_0027371,Train,basal cell carcinoma,BCC,23c7c01642e65bbee37f35f8e95f8385,BCC,val
+ISIC_0027337,Train,basal cell carcinoma,BCC,69b10ea14ab9dcd137ca1dbf7fa934b9,BCC,train
+ISIC_0027371,Train,basal cell carcinoma,BCC,23c7c01642e65bbee37f35f8e95f8385,BCC,train
 ISIC_0027425,Train,basal cell carcinoma,BCC,cfcc3e54727fec21ed9fc7e2e93a24b5,BCC,train
 ISIC_0027433,Train,basal cell carcinoma,BCC,7fe0c21366930af7b50eb0928d231967,BCC,train
 ISIC_0027473,Train,basal cell carcinoma,BCC,49f32236578e12aa539188d471eebf34,BCC,train
@@ -264,7 +264,7 @@ ISIC_0027675,Train,basal cell carcinoma,BCC,c9a376cf07e81db5cd7252185069591b,BCC
 ISIC_0027677,Train,basal cell carcinoma,BCC,33692d68c1a1ed527d9a8c4456486378,BCC,train
 ISIC_0027704,Train,basal cell carcinoma,BCC,9d74e740445ee534c0fac7ee8b17ef1c,BCC,train
 ISIC_0027722,Train,basal cell carcinoma,BCC,beafcbf7a16fe5fc2d47202f8bdbba1b,BCC,test
-ISIC_0027744,Train,basal cell carcinoma,BCC,a1bb6cb0a8a06ce02ed0fa267ff126b2,BCC,val
+ISIC_0027744,Train,basal cell carcinoma,BCC,a1bb6cb0a8a06ce02ed0fa267ff126b2,BCC,train
 ISIC_0027759,Train,basal cell carcinoma,BCC,cb8a33e714ec192a4be3435662b39cc7,BCC,train
 ISIC_0027774,Train,basal cell carcinoma,BCC,d2c7e381e1cab880c0cb74bb468b15b7,BCC,test
 ISIC_0027786,Train,basal cell carcinoma,BCC,86fc459176929e8920490c5a97776bde,BCC,test
@@ -282,7 +282,7 @@ ISIC_0027966,Train,basal cell carcinoma,BCC,aa2f3b34ba06b6d9c6bbe3e1180d6cd8,BCC
 ISIC_0027976,Train,basal cell carcinoma,BCC,1ec1957932807eba39a2a0bb488125c3,BCC,train
 ISIC_0027998,Train,basal cell carcinoma,BCC,c3a0d2124ff5084c16fdfdc0c05ee96e,BCC,train
 ISIC_0028035,Train,basal cell carcinoma,BCC,3a9f86adffad48c49a757d321252d47b,BCC,train
-ISIC_0028050,Train,basal cell carcinoma,BCC,db996c6f225104932fccb1aba827ea4a,BCC,val
+ISIC_0028050,Train,basal cell carcinoma,BCC,db996c6f225104932fccb1aba827ea4a,BCC,train
 ISIC_0028059,Train,basal cell carcinoma,BCC,3265bf5b5e289287dcc6ec82d7e2c611,BCC,train
 ISIC_0028079,Train,basal cell carcinoma,BCC,2c0ba089964757acecce9eff9d1ff0c0,BCC,train
 ISIC_0028084,Train,basal cell carcinoma,BCC,e9e128fac1c5e0222c31e18ba173d78c,BCC,train
@@ -295,7 +295,7 @@ ISIC_0028122,Train,basal cell carcinoma,BCC,d0d6a1622c00280550a7693fd1890146,BCC
 ISIC_0028147,Train,basal cell carcinoma,BCC,be1098334c20ad8bdc79dcdc65f21ecd,BCC,train
 ISIC_0028155,Train,basal cell carcinoma,BCC,f467e13d4d9d329a4abaa438a3d5b364,BCC,train
 ISIC_0028168,Train,basal cell carcinoma,BCC,c058281c0f8451c5f2e32958b8c8f486,BCC,train
-ISIC_0028197,Train,basal cell carcinoma,BCC,6ad68f7293da1f3d7a3b86adcf1fb779,BCC,val
+ISIC_0028197,Train,basal cell carcinoma,BCC,6ad68f7293da1f3d7a3b86adcf1fb779,BCC,train
 ISIC_0028238,Train,basal cell carcinoma,BCC,3a9c435577179eba3d2f4d0a3ea0aa5c,BCC,train
 ISIC_0028283,Train,basal cell carcinoma,BCC,1e6eeb33a5507db2b9568a777bd3fd36,BCC,train
 ISIC_0028303,Train,basal cell carcinoma,BCC,b313d4c6e9e2ccb32f51649d2206567f,BCC,train
@@ -305,7 +305,7 @@ ISIC_0028329,Train,basal cell carcinoma,BCC,88b9e7798f1480d5485146cda62b937c,BCC
 ISIC_0028350,Train,basal cell carcinoma,BCC,702f328d66f509549c0c841c39261ae2,BCC,train
 ISIC_0028419,Train,basal cell carcinoma,BCC,76e79b8232be92e97fa7da449c56ddcd,BCC,train
 ISIC_0028457,Train,basal cell carcinoma,BCC,dcf4cdc8c218ce02bc2c53cadc272ab0,BCC,train
-ISIC_0028486,Train,basal cell carcinoma,BCC,45dc4adda532234463b730f11aa51d2b,BCC,val
+ISIC_0028486,Train,basal cell carcinoma,BCC,45dc4adda532234463b730f11aa51d2b,BCC,train
 ISIC_0028495,Train,basal cell carcinoma,BCC,379c8d123d7ebfc5a0a525006189ba06,BCC,train
 ISIC_0028542,Train,basal cell carcinoma,BCC,fa61a07f2017e734abd9ff77dd45f93f,BCC,test
 ISIC_0028556,Train,basal cell carcinoma,BCC,997206fdb524d00f20eed0d02babb96d,BCC,train
@@ -324,7 +324,7 @@ ISIC_0028693,Train,basal cell carcinoma,BCC,1c10e838eab2fceb22d5596ccfe88444,BCC
 ISIC_0028719,Train,basal cell carcinoma,BCC,43116d87ab4c2763ffbad08854fca009,BCC,val
 ISIC_0028728,Train,basal cell carcinoma,BCC,5b1d55e2e30f086a0c0241c783f301db,BCC,train
 ISIC_0028739,Train,basal cell carcinoma,BCC,1210aa6ea0680f5ed41c8593fa5c2e24,BCC,train
-ISIC_0028747,Train,basal cell carcinoma,BCC,afcc8524241f99953ec1d5ac8305e34a,BCC,val
+ISIC_0028747,Train,basal cell carcinoma,BCC,afcc8524241f99953ec1d5ac8305e34a,BCC,train
 ISIC_0028765,Train,basal cell carcinoma,BCC,9c2f971592569b3d0f210d055ebea426,BCC,val
 ISIC_0028807,Train,basal cell carcinoma,BCC,137b402efd9a951127de6a64178620f0,BCC,train
 ISIC_0028814,Train,basal cell carcinoma,BCC,56ee3c69a9f250dc0b65d84b7686f6f8,BCC,train
@@ -344,12 +344,12 @@ ISIC_0028989,Train,basal cell carcinoma,BCC,38edc9bf52e316fb194cfa51a7c69135,BCC
 ISIC_0028994,Train,basal cell carcinoma,BCC,8f286b3e89b9d817fa14c48afb0b00d8,BCC,train
 ISIC_0029020,Train,basal cell carcinoma,BCC,1f26c0806636fa7c2345f93ac1ee4e21,BCC,val
 ISIC_0029034,Train,basal cell carcinoma,BCC,04e91dd980b5a6fa5d4edc8dbca2bd33,BCC,train
-ISIC_0029035,Train,basal cell carcinoma,BCC,033adb2a33d060fbc67d38f50650648f,BCC,val
+ISIC_0029035,Train,basal cell carcinoma,BCC,033adb2a33d060fbc67d38f50650648f,BCC,train
 ISIC_0029053,Train,basal cell carcinoma,BCC,95246fb1bcb51347a2fce7e46c5d0b34,BCC,train
 ISIC_0029082,Train,basal cell carcinoma,BCC,418b0d7a43d0e463d5f47abb9053208e,BCC,train
 ISIC_0029083,Train,basal cell carcinoma,BCC,a77280f67789615e600b15d1f27ca29d,BCC,train
 ISIC_0029123,Train,basal cell carcinoma,BCC,7d7d978859131544d9cee66c35e8366c,BCC,train
-ISIC_0029129,Train,basal cell carcinoma,BCC,ad440c29c2fa3213add9c758a8e5b67b,BCC,val
+ISIC_0029129,Train,basal cell carcinoma,BCC,ad440c29c2fa3213add9c758a8e5b67b,BCC,train
 ISIC_0029192,Train,basal cell carcinoma,BCC,a2cbfc8523c7d5b3b7f1d6bca7f4967f,BCC,train
 ISIC_0029193,Train,basal cell carcinoma,BCC,ac18cf9fc95b90d623fb2b55b01914be,BCC,train
 ISIC_0029201,Train,basal cell carcinoma,BCC,eece9dd2e8558836c945004a5e57657e,BCC,train
@@ -357,12 +357,12 @@ ISIC_0029220,Train,basal cell carcinoma,BCC,5db5cce3550ad026192ebd4ca220c48f,BCC
 ISIC_0029230,Train,basal cell carcinoma,BCC,3741dfc58680e13b5b1d5a372c088785,BCC,train
 ISIC_0029263,Train,basal cell carcinoma,BCC,5cf3c278749e7dbfd83435d7b80e59e4,BCC,train
 ISIC_0029278,Train,basal cell carcinoma,BCC,12f907f5c148168b42ad88c0a4fd78a3,BCC,train
-ISIC_0029323,Train,basal cell carcinoma,BCC,cca56330d5b8f9c77f1817eb2008cbdf,BCC,val
+ISIC_0029323,Train,basal cell carcinoma,BCC,cca56330d5b8f9c77f1817eb2008cbdf,BCC,train
 ISIC_0029331,Train,basal cell carcinoma,BCC,545a9da59eda223d777710a3266a3054,BCC,train
 ISIC_0029337,Train,basal cell carcinoma,BCC,8219a4a153095cca5b88e7a16a7bd176,BCC,val
 ISIC_0029341,Train,basal cell carcinoma,BCC,c79badd4e4a91f69f03450c3ef3e3f75,BCC,train
 ISIC_0029342,Train,basal cell carcinoma,BCC,7e348a682cc2042354acff33d85a8e92,BCC,train
-ISIC_0029352,Train,basal cell carcinoma,BCC,86661a792b0ee0f9b38e1b1669875331,BCC,val
+ISIC_0029352,Train,basal cell carcinoma,BCC,86661a792b0ee0f9b38e1b1669875331,BCC,train
 ISIC_0029372,Train,basal cell carcinoma,BCC,464d7a26960d16a12a71031b2b67a140,BCC,train
 ISIC_0029391,Train,basal cell carcinoma,BCC,6db3fb01de0c732cb4b807e10441cecc,BCC,train
 ISIC_0029392,Train,basal cell carcinoma,BCC,5b93ee97e768ab12fdbbffd9e8a4a5d6,BCC,test
@@ -371,8 +371,8 @@ ISIC_0029466,Train,basal cell carcinoma,BCC,bd1c7a3f8c9ccf6349fac95b3ce20204,BCC
 ISIC_0029489,Train,basal cell carcinoma,BCC,e4088fa5f14885297f36f71b185072b2,BCC,train
 ISIC_0029501,Train,basal cell carcinoma,BCC,fb7b652e9502799db26f7234219931b3,BCC,train
 ISIC_0029515,Train,basal cell carcinoma,BCC,6c01b7d601be7e444e14fd2646edfdf6,BCC,train
-ISIC_0029524,Train,basal cell carcinoma,BCC,3fec0884961a0bc4a7150d58fd339536,BCC,val
-ISIC_0029539,Train,basal cell carcinoma,BCC,4b0c9fbf6aaac56736b8e9609ea159fb,BCC,val
+ISIC_0029524,Train,basal cell carcinoma,BCC,3fec0884961a0bc4a7150d58fd339536,BCC,train
+ISIC_0029539,Train,basal cell carcinoma,BCC,4b0c9fbf6aaac56736b8e9609ea159fb,BCC,train
 ISIC_0029545,Train,basal cell carcinoma,BCC,3f12d2965e6462f8d42579ddc1aeacaa,BCC,train
 ISIC_0029546,Train,basal cell carcinoma,BCC,961f878f51df316cc155f3c277d691a2,BCC,train
 ISIC_0029564,Train,basal cell carcinoma,BCC,6d8bc5a9b9281cdbc389793701b6badb,BCC,train
@@ -388,7 +388,7 @@ ISIC_0029755,Train,basal cell carcinoma,BCC,87bb396f95e7aba47046d98622b7661f,BCC
 ISIC_0029779,Train,basal cell carcinoma,BCC,dfbb4315d055c35371690135656730d6,BCC,train
 ISIC_0029805,Train,basal cell carcinoma,BCC,d90a625b2095291a13c9e61a262bcb27,BCC,train
 ISIC_0029820,Train,basal cell carcinoma,BCC,2fd9afe4f64fdf6b58c3a1a49f3e8854,BCC,train
-ISIC_0029831,Train,basal cell carcinoma,BCC,472c5bd8eb29713e0d690ec8ede9e1d8,BCC,val
+ISIC_0029831,Train,basal cell carcinoma,BCC,472c5bd8eb29713e0d690ec8ede9e1d8,BCC,train
 ISIC_0029847,Train,basal cell carcinoma,BCC,a3f7e3a616bc275e88d829bd890a962e,BCC,train
 ISIC_0029856,Train,basal cell carcinoma,BCC,73286722ea900311b62702ee6c6fbc85,BCC,train
 ISIC_0029857,Train,basal cell carcinoma,BCC,c20bbe6c2443e0db6c50074b880218e9,BCC,train
@@ -399,7 +399,7 @@ ISIC_0029951,Train,basal cell carcinoma,BCC,0f7144b4c363b842df14a8238ea2d578,BCC
 ISIC_0029974,Train,basal cell carcinoma,BCC,8dc553369187625264300b5554911f15,BCC,train
 ISIC_0030010,Train,basal cell carcinoma,BCC,a0ec7298b4ec192df7afa13cd2c35988,BCC,train
 ISIC_0030094,Train,basal cell carcinoma,BCC,a2b8b826bdb918d5fdee7769e38455c5,BCC,train
-ISIC_0030096,Train,basal cell carcinoma,BCC,1addee6dc70ddfd4e142743156864a08,BCC,val
+ISIC_0030096,Train,basal cell carcinoma,BCC,1addee6dc70ddfd4e142743156864a08,BCC,train
 ISIC_0030114,Train,basal cell carcinoma,BCC,c62385a0d7de702d9fb75bcd26469eb9,BCC,train
 ISIC_0030138,Train,basal cell carcinoma,BCC,23dd5f9a38bacde1cc366149ff0abc5e,BCC,train
 ISIC_0030145,Train,basal cell carcinoma,BCC,620d8452d14043b70c10e7ff4d2cd316,BCC,train
@@ -409,10 +409,10 @@ ISIC_0030197,Train,basal cell carcinoma,BCC,3f1b5b52cd2d4fc797bbca089f4bc8ec,BCC
 ISIC_0030230,Train,basal cell carcinoma,BCC,af4c9c6d14674974f277a49e4818500c,BCC,train
 ISIC_0030233,Train,basal cell carcinoma,BCC,af8c56cff7cfa2d980d7c00bca879535,BCC,val
 ISIC_0030249,Train,basal cell carcinoma,BCC,18959968561efad274f0dc0a8e8c263b,BCC,train
-ISIC_0030261,Train,basal cell carcinoma,BCC,90f52e1643f74e5911e4be1b3ccec833,BCC,val
+ISIC_0030261,Train,basal cell carcinoma,BCC,90f52e1643f74e5911e4be1b3ccec833,BCC,train
 ISIC_0030271,Train,basal cell carcinoma,BCC,fb5c2ffcb7a0ef440b1273decf1e1861,BCC,train
 ISIC_0030314,Train,basal cell carcinoma,BCC,b88de08aa792416a31486c3985b6e611,BCC,train
-ISIC_0030335,Train,basal cell carcinoma,BCC,36eaf06da9863e4cacb1ea2c478c4cf4,BCC,val
+ISIC_0030335,Train,basal cell carcinoma,BCC,36eaf06da9863e4cacb1ea2c478c4cf4,BCC,train
 ISIC_0030339,Train,basal cell carcinoma,BCC,dbd3a3fbc1c1c237aba2deb033b825e8,BCC,train
 ISIC_0030349,Train,basal cell carcinoma,BCC,742fa5e3e306340e939b6b6c5d15116f,BCC,train
 ISIC_0030352,Train,basal cell carcinoma,BCC,fb853cf68ea5291928121743f73863ea,BCC,train
@@ -438,7 +438,7 @@ ISIC_0030782,Train,basal cell carcinoma,BCC,c50476f11c414599f3959ab970b12949,BCC
 ISIC_0030800,Train,basal cell carcinoma,BCC,55a02ae710390b42e7a4931fd2670223,BCC,train
 ISIC_0030813,Train,basal cell carcinoma,BCC,c47690415536bbcc8559ca58fb9a390c,BCC,train
 ISIC_0030868,Train,basal cell carcinoma,BCC,a9db8fd96d10cf9ddd3b2047c0c53a10,BCC,train
-ISIC_0030893,Train,basal cell carcinoma,BCC,4b0e127e718fc80d60c40ecfcc8294eb,BCC,val
+ISIC_0030893,Train,basal cell carcinoma,BCC,4b0e127e718fc80d60c40ecfcc8294eb,BCC,train
 ISIC_0030915,Train,basal cell carcinoma,BCC,a38165ac7214f0a4a07ba3fb809c6959,BCC,train
 ISIC_0030954,Train,basal cell carcinoma,BCC,96cfa3a3b087c6d60b10c837a48ab00d,BCC,train
 ISIC_0030964,Train,basal cell carcinoma,BCC,c25d6132f6f95524724413cfdefe73d6,BCC,train
@@ -451,18 +451,18 @@ ISIC_0031057,Train,basal cell carcinoma,BCC,ca6f4b947571f540effedfc3547819dd,BCC
 ISIC_0031062,Train,basal cell carcinoma,BCC,3b46def11021c44fad5d594cac7ab291,BCC,train
 ISIC_0031063,Train,basal cell carcinoma,BCC,4ef22c50dcde2453893a86c45c32b00d,BCC,train
 ISIC_0031095,Train,basal cell carcinoma,BCC,001204ca478b9d67cb2eb85005921a89,BCC,train
-ISIC_0031122,Train,basal cell carcinoma,BCC,3913def4bb87c8d5e80a8b253b0e2695,BCC,val
+ISIC_0031122,Train,basal cell carcinoma,BCC,3913def4bb87c8d5e80a8b253b0e2695,BCC,train
 ISIC_0031140,Train,basal cell carcinoma,BCC,e9f53813f920690b1fc8d6d5daf77873,BCC,val
 ISIC_0031154,Train,basal cell carcinoma,BCC,8cf2692d88aee5da0de0d971023a9383,BCC,train
 ISIC_0031166,Train,basal cell carcinoma,BCC,ac921208db596a5d08926fae1d63ab50,BCC,train
 ISIC_0031169,Train,basal cell carcinoma,BCC,19ce8750066c8519d069e0b7f0608c9f,BCC,train
-ISIC_0031171,Train,basal cell carcinoma,BCC,a19e930d2bda58be18bb01bdbd679823,BCC,val
+ISIC_0031171,Train,basal cell carcinoma,BCC,a19e930d2bda58be18bb01bdbd679823,BCC,train
 ISIC_0031175,Train,basal cell carcinoma,BCC,d82d371b8556032108653cb61d76aa4b,BCC,train
 ISIC_0031225,Train,basal cell carcinoma,BCC,4d724e34764308765bdb0cf0c616f5fe,BCC,train
 ISIC_0031236,Train,basal cell carcinoma,BCC,2d6270feede5a4960dde0e6fa160b861,BCC,test
 ISIC_0031243,Train,basal cell carcinoma,BCC,7dfb3d67862a533b7bf38d1ea5c7c5b6,BCC,train
 ISIC_0031245,Train,basal cell carcinoma,BCC,90c640e43ad85087314a2972fc08b7b8,BCC,train
-ISIC_0031258,Train,basal cell carcinoma,BCC,3b1a20ee57c94ac55d3e3f635b4c1859,BCC,val
+ISIC_0031258,Train,basal cell carcinoma,BCC,3b1a20ee57c94ac55d3e3f635b4c1859,BCC,train
 ISIC_0031266,Train,basal cell carcinoma,BCC,c46c8c9d6fc6450e7525bd971a426429,BCC,train
 ISIC_0031272,Train,basal cell carcinoma,BCC,12d162bd1b856bbc45901d685a73a963,BCC,train
 ISIC_0031284,Train,basal cell carcinoma,BCC,7165e820bf35dad8ccaf9411b70398e9,BCC,train
@@ -476,11 +476,11 @@ ISIC_0031400,Train,basal cell carcinoma,BCC,c60121cd534ccc9dfd598f67aa625291,BCC
 ISIC_0031407,Train,basal cell carcinoma,BCC,08adf4e254872217ff067447b9fbea8f,BCC,train
 ISIC_0031413,Train,basal cell carcinoma,BCC,a935389eab3a0b69c44732f79c02a982,BCC,train
 ISIC_0031442,Train,basal cell carcinoma,BCC,5fbf752464d13b3676995316bdedecac,BCC,train
-ISIC_0031450,Train,basal cell carcinoma,BCC,4f00c2d0064ddfbd5afd2122bba90c3e,BCC,val
+ISIC_0031450,Train,basal cell carcinoma,BCC,4f00c2d0064ddfbd5afd2122bba90c3e,BCC,train
 ISIC_0031470,Train,basal cell carcinoma,BCC,1790065ef27f98ff5baf524878b4e5fc,BCC,val
 ISIC_0031489,Train,basal cell carcinoma,BCC,21f7613838908db7de1b3a5dc066183e,BCC,train
 ISIC_0031513,Train,basal cell carcinoma,BCC,4c9b0819ed1d940953c1454c3761d742,BCC,train
-ISIC_0031520,Train,basal cell carcinoma,BCC,462e47d03ee22d4d4d8521062b92b123,BCC,val
+ISIC_0031520,Train,basal cell carcinoma,BCC,462e47d03ee22d4d4d8521062b92b123,BCC,train
 ISIC_0031526,Train,basal cell carcinoma,BCC,47cad6d478d783e849b9efaabf7f1159,BCC,train
 ISIC_0031531,Train,basal cell carcinoma,BCC,7deca25fc2005ad5ca0f9e30d384bfc3,BCC,test
 ISIC_0031539,Train,basal cell carcinoma,BCC,181872afe27d152a3da53892f6c9b8ce,BCC,train
@@ -506,9 +506,9 @@ ISIC_0026254,Train,dermatofibroma,DF,d9068b9367870399dcfe126f3980f7f2,DF,val
 ISIC_0026313,Train,dermatofibroma,DF,98be580b9a9c74f2e40ef256fde232e0,DF,train
 ISIC_0026417,Train,dermatofibroma,DF,3c6e16e8a9546146ab7095388f4cef71,DF,train
 ISIC_0026471,Train,dermatofibroma,DF,94cad0ca2cff46362c0bcb59a9da32fb,DF,train
-ISIC_0026473,Train,dermatofibroma,DF,734733aa2e791b04ceb720052021c0de,DF,train
+ISIC_0026473,Train,dermatofibroma,DF,734733aa2e791b04ceb720052021c0de,DF,val
 ISIC_0026629,Train,dermatofibroma,DF,f384b79cebac15d8b1191fae26d2c7fb,DF,train
-ISIC_0026789,Train,dermatofibroma,DF,132a17ecef9e26d57eaddded7ecb0bce,DF,train
+ISIC_0026789,Train,dermatofibroma,DF,132a17ecef9e26d57eaddded7ecb0bce,DF,val
 ISIC_0027008,Train,dermatofibroma,DF,09072fdffb73e71d283cefb5a4930385,DF,test
 ISIC_0027044,Train,dermatofibroma,DF,566498d760bcbb7424991204cd838a7e,DF,test
 ISIC_0027107,Train,dermatofibroma,DF,b8aa32264391dbefb193fddf86b4eee4,DF,test
@@ -536,7 +536,7 @@ ISIC_0029297,Train,dermatofibroma,DF,a5c8cb1f661fe17568d6ac91a5af6601,DF,test
 ISIC_0029578,Train,dermatofibroma,DF,c33804e0709a69ab35a42760251d026c,DF,train
 ISIC_0029783,Train,dermatofibroma,DF,9b19a0b3b1eb3e51c96ba9413d35287d,DF,test
 ISIC_0029824,Train,dermatofibroma,DF,51084ed9962df364fd978461d789c4a2,DF,test
-ISIC_0029891,Train,dermatofibroma,DF,69466a75415226a614d7cd6fb0bb8cfc,DF,train
+ISIC_0029891,Train,dermatofibroma,DF,69466a75415226a614d7cd6fb0bb8cfc,DF,val
 ISIC_0029962,Train,dermatofibroma,DF,afde534900ed3deef7ac959862286895,DF,train
 ISIC_0029967,Train,dermatofibroma,DF,fa7253a584418871b4373aa283866203,DF,train
 ISIC_0029973,Train,dermatofibroma,DF,cb5d74eb50e5537ca858471691320eb5,DF,test
@@ -564,7 +564,7 @@ ISIC_0031457,Train,dermatofibroma,DF,393fccae3091b4d3bd72ea9b875c035d,DF,train
 ISIC_0031735,Train,dermatofibroma,DF,60cf22ac737b56b60f8a63c4efa74275,DF,test
 ISIC_0031799,Train,dermatofibroma,DF,f6218460c2486b26be4830f030c6c1dd,DF,test
 ISIC_0031827,Train,dermatofibroma,DF,e1161f7a12342a2c265e37f6b112bbdf,DF,train
-ISIC_0032114,Train,dermatofibroma,DF,cef837853887e0af1c758f6387c21ab3,DF,train
+ISIC_0032114,Train,dermatofibroma,DF,cef837853887e0af1c758f6387c21ab3,DF,val
 ISIC_0032138,Train,dermatofibroma,DF,3049231aae4ed99918fc58109f3b118f,DF,train
 ISIC_0032247,Train,dermatofibroma,DF,36cd4fe326cdc887ee863fd3fb837010,DF,val
 ISIC_0032468,Train,dermatofibroma,DF,9deb3fa47e608558b7b06c852a5aa688,DF,train
@@ -588,10 +588,10 @@ ISIC_0000139,Train,melanoma,MEL,99a175949b811f85dd0b4a43f9ea62f2,MEL,test
 ISIC_0000141,Train,melanoma,MEL,1522569342b4b768a45a15b55561b06d,MEL,train
 ISIC_0000142,Train,melanoma,MEL,eea5e7848d04092c1d8d01fe15c0866b,MEL,train
 ISIC_0000143,Train,melanoma,MEL,17cc34d7de38e205154da60c38b27211,MEL,test
-ISIC_0000144,Train,melanoma,MEL,54d57cc17f5b7a9b9135c5aa0ec22155,MEL,val
+ISIC_0000144,Train,melanoma,MEL,54d57cc17f5b7a9b9135c5aa0ec22155,MEL,train
 ISIC_0000145,Train,melanoma,MEL,ada25e71785a71378b982b8df937d83b,MEL,val
 ISIC_0000146,Train,melanoma,MEL,d347cd0d2adeb25072930c4a18d76144,MEL,train
-ISIC_0000147,Train,melanoma,MEL,f9331e39c34bd930092cda562b8305d6,MEL,val
+ISIC_0000147,Train,melanoma,MEL,f9331e39c34bd930092cda562b8305d6,MEL,train
 ISIC_0000148,Train,melanoma,MEL,045e3b3b721ee6b33d9dc44a60cbf226,MEL,test
 ISIC_0000149,Train,melanoma,MEL,53e52fa86fbde6e42fa0c25f66f5847a,MEL,test
 ISIC_0000150,Train,melanoma,MEL,aee59cae8e12559c06e1b363cc8d65f4,MEL,train
@@ -602,9 +602,9 @@ ISIC_0000154,Train,melanoma,MEL,4e174d0d91160127c3af057716c33cb7,MEL,train
 ISIC_0000155,Train,melanoma,MEL,30501e33f9baff1047aac4c0a64df76c,MEL,train
 ISIC_0000156,Train,melanoma,MEL,ce4c1e1fa051d3836c834775d17b795d,MEL,train
 ISIC_0000157,Train,melanoma,MEL,29426135558628f3a0a375d44a02d76c,MEL,train
-ISIC_0000158,Train,melanoma,MEL,398ae32ba69e25534f6e9de350d23be5,MEL,val
+ISIC_0000158,Train,melanoma,MEL,398ae32ba69e25534f6e9de350d23be5,MEL,train
 ISIC_0000159,Train,melanoma,MEL,484b26717554142a56f77de0584fccf8,MEL,train
-ISIC_0000160,Train,melanoma,MEL,08077dbe2c0cb2aefed9e362af3fac54,MEL,val
+ISIC_0000160,Train,melanoma,MEL,08077dbe2c0cb2aefed9e362af3fac54,MEL,train
 ISIC_0000161,Train,melanoma,MEL,b93c9463f63f066e0838377af3a26c44,MEL,train
 ISIC_0000162,Train,melanoma,MEL,dbbb7ed17854fb2f4e3dc7064190546c,MEL,train
 ISIC_0000163,Train,melanoma,MEL,7f2bba1c28b0e88edc312005dcde4ad2,MEL,train
@@ -633,7 +633,7 @@ ISIC_0000293,Train,melanoma,MEL,0d1bbd4ad92e5f1d00795bae3953cdcb,MEL,train
 ISIC_0000294,Train,melanoma,MEL,22ac2e7dc3c73d35c1d83d43d437ad87,MEL,train
 ISIC_0000295,Train,melanoma,MEL,2c91d5a39ee794ad8228ea1490986a51,MEL,train
 ISIC_0000296,Train,melanoma,MEL,8ba149fc0784ef9b077cd91f06076f6e,MEL,train
-ISIC_0000297,Train,melanoma,MEL,270752686e50209d72bab1711cc3f256,MEL,val
+ISIC_0000297,Train,melanoma,MEL,270752686e50209d72bab1711cc3f256,MEL,train
 ISIC_0000298,Train,melanoma,MEL,f74d2a3c13c5428d8f4da22573fca69b,MEL,train
 ISIC_0000299,Train,melanoma,MEL,05dc756ee61b4bea0ed51609ca45630c,MEL,test
 ISIC_0000300,Train,melanoma,MEL,f41c4913352658e84b91041fa5ba48a7,MEL,train
@@ -655,12 +655,12 @@ ISIC_0000390,Train,melanoma,MEL,e8929cd06c8c6689daad7627ac0bfde4,MEL,val
 ISIC_0000393,Train,melanoma,MEL,7d6bd475f7cadca28054e5a7dde0fb2e,MEL,train
 ISIC_0000394,Train,melanoma,MEL,982f0d098b2bdafbcbacb1bc3b491b17,MEL,train
 ISIC_0000395,Train,melanoma,MEL,0e8d693d8117e4ae2598f5a6c9649a20,MEL,train
-ISIC_0000398,Train,melanoma,MEL,917c5c34284511050714dae549fcec5c,MEL,val
+ISIC_0000398,Train,melanoma,MEL,917c5c34284511050714dae549fcec5c,MEL,train
 ISIC_0000399,Train,melanoma,MEL,de2b087701694989801edd3a581bb1e9,MEL,train
 ISIC_0000400,Train,melanoma,MEL,07dc6a21e4fe105f41cba1b18e659ace,MEL,train
 ISIC_0000401,Train,melanoma,MEL,798a97e6f2bc7161857935f5506a9a54,MEL,train
 ISIC_0000402,Train,melanoma,MEL,35dec4b00872f0f6c15e99c0f53fbef9,MEL,train
-ISIC_0000404,Train,melanoma,MEL,82e54018046b53b418d7cc4260e6e1d1,MEL,val
+ISIC_0000404,Train,melanoma,MEL,82e54018046b53b418d7cc4260e6e1d1,MEL,train
 ISIC_0000405,Train,melanoma,MEL,84200c7914c6de44d17894e1d4c99983,MEL,train
 ISIC_0000406,Train,melanoma,MEL,5ed116d02b7e2127f35d9ec314e0d842,MEL,train
 ISIC_0000410,Train,melanoma,MEL,12d56b6979abf50a2e4a1f4956282eee,MEL,train
@@ -671,20 +671,20 @@ ISIC_0000414,Train,melanoma,MEL,c6a0201b0579203115e6cad3f9e9f8ca,MEL,train
 ISIC_0000415,Train,melanoma,MEL,d0fdfb27eab422536d94140241981fae,MEL,train
 ISIC_0000417,Train,melanoma,MEL,abbfc54d82b67ff11fa5b87ace04890e,MEL,train
 ISIC_0000420,Train,melanoma,MEL,90a790173380e592fb12d5eee441d637,MEL,train
-ISIC_0000428,Train,melanoma,MEL,70d39c3ac3c83f26b6db432454821882,MEL,val
+ISIC_0000428,Train,melanoma,MEL,70d39c3ac3c83f26b6db432454821882,MEL,train
 ISIC_0000432,Train,melanoma,MEL,9182abb7a7f1c143fa56ba49d1726158,MEL,train
 ISIC_0000434,Train,melanoma,MEL,710b3b04793ab1a7dcc0299fae53ebdc,MEL,train
 ISIC_0000440,Train,melanoma,MEL,5b32355f686d3ce5c0aca67982c5d392,MEL,train
 ISIC_0000441,Train,melanoma,MEL,4f26aef830f2206c2d5c1a5ea620defa,MEL,test
 ISIC_0000444,Train,melanoma,MEL,e4bc3f80496c9e2f0f0b731da1f089bf,MEL,train
-ISIC_0000445,Train,melanoma,MEL,fcc40a2171bbd216a4f909bfd20073f9,MEL,val
-ISIC_0000446,Train,melanoma,MEL,abf7c516a62972b9ded1db2077237007,MEL,val
+ISIC_0000445,Train,melanoma,MEL,fcc40a2171bbd216a4f909bfd20073f9,MEL,train
+ISIC_0000446,Train,melanoma,MEL,abf7c516a62972b9ded1db2077237007,MEL,train
 ISIC_0000450,Train,melanoma,MEL,038046aa021d380f42fd464e299717b9,MEL,train
 ISIC_0000459,Train,melanoma,MEL,1e8bad4d6a5a92eea494e65166bf3f95,MEL,train
 ISIC_0000462,Train,melanoma,MEL,54ffd3d7b71ae4b93f855c99915fa5f2,MEL,train
 ISIC_0000463,Train,melanoma,MEL,b3be3f1bcb187e02370337855861f6c0,MEL,train
 ISIC_0000466,Train,melanoma,MEL,90ff4ae41c6506aeb21bfea75e13e18d,MEL,train
-ISIC_0000469,Train,melanoma,MEL,76a152fc3aa9ebd3d8f718554b871fed,MEL,val
+ISIC_0000469,Train,melanoma,MEL,76a152fc3aa9ebd3d8f718554b871fed,MEL,train
 ISIC_0000482,Train,melanoma,MEL,025af2fb44c87e36f58bb7411e9aae4c,MEL,train
 ISIC_0000484,Train,melanoma,MEL,de5ee890bea356aea97ff4adee69e9ce,MEL,train
 ISIC_0000487,Train,melanoma,MEL,ca2a5056623adb7b1a7fd1898e97def3,MEL,train
@@ -698,7 +698,7 @@ ISIC_0000519,Train,melanoma,MEL,0182072256df308937ea83aa8714ba00,MEL,train
 ISIC_0000520,Train,melanoma,MEL,418d94bdc95bb05db11743272471db73,MEL,train
 ISIC_0000521,Train,melanoma,MEL,962d97e347fd99b1c9550f5403614313,MEL,train
 ISIC_0000522,Train,melanoma,MEL,d5c1257bf8523418ecb072932ef82d40,MEL,train
-ISIC_0000526,Train,melanoma,MEL,a10641d5fade75b6f987d84d617becbf,MEL,val
+ISIC_0000526,Train,melanoma,MEL,a10641d5fade75b6f987d84d617becbf,MEL,train
 ISIC_0000531,Train,melanoma,MEL,740d1e3d0e9ef2f505c689b7568968dd,MEL,train
 ISIC_0000533,Train,melanoma,MEL,b37219218394554a0ed7dbf4cf8e65d0,MEL,train
 ISIC_0000547,Train,melanoma,MEL,1831a5a3f860e7d25a0755d1d4441763,MEL,train
@@ -716,7 +716,7 @@ ISIC_0001103,Train,melanoma,MEL,fe4d6b0f706591fd09eb39e595445da7,MEL,test
 ISIC_0001105,Train,melanoma,MEL,e33cfb2150445dbcd235335b37050c37,MEL,train
 ISIC_0001106,Train,melanoma,MEL,12fd12e1ec44c7012e17def4542d166d,MEL,train
 ISIC_0001108,Train,melanoma,MEL,ae348027c917d85bbfc7f5a161657117,MEL,train
-ISIC_0001110,Train,melanoma,MEL,8fa9578fae9cc3f1053b1e3b73e11669,MEL,val
+ISIC_0001110,Train,melanoma,MEL,8fa9578fae9cc3f1053b1e3b73e11669,MEL,train
 ISIC_0001112,Train,melanoma,MEL,92304c5f8b84615982498049d2d4e915,MEL,train
 ISIC_0001116,Train,melanoma,MEL,e59a10af4565319919cd306f829cc243,MEL,train
 ISIC_0001118,Train,melanoma,MEL,3f5232bd184860fa2e54c066fea78267,MEL,test
@@ -724,7 +724,7 @@ ISIC_0001119,Train,melanoma,MEL,0bda0994539b6f4834716c26c7275153,MEL,train
 ISIC_0001121,Train,melanoma,MEL,7f0dfb6888bab9968fbc7809dd748603,MEL,train
 ISIC_0001124,Train,melanoma,MEL,44eef7897a29aba7cb945c2e6809fcfa,MEL,removed: same picture as ISIC_0000399
 ISIC_0001125,Train,melanoma,MEL,d4eaedcaf5ee3c6928585082d1877f24,MEL,train
-ISIC_0001126,Train,melanoma,MEL,faa9fd6b827813217b71b79425edd29a,MEL,val
+ISIC_0001126,Train,melanoma,MEL,faa9fd6b827813217b71b79425edd29a,MEL,train
 ISIC_0001127,Train,melanoma,MEL,f603234363f64a72f42d843cb932818c,MEL,train
 ISIC_0001128,Train,melanoma,MEL,23c948944c05bd9749b4c1ab1ede26cb,MEL,train
 ISIC_0001132,Train,melanoma,MEL,2519fc15e3f8cad009230ee73983f770,MEL,train
@@ -742,12 +742,12 @@ ISIC_0001152,Train,melanoma,MEL,18ba6d253e6795293f9f9318db81eb8f,MEL,train
 ISIC_0001154,Train,melanoma,MEL,4b0f1b9e26db2cc09c7c798a23fd2084,MEL,train
 ISIC_0001157,Train,melanoma,MEL,dd419d7bb8d5606a8aa715087969e485,MEL,train
 ISIC_0009868,Train,melanoma,MEL,d834099dbc09f9a2a37d8719599d7c46,MEL,train
-ISIC_0009882,Train,melanoma,MEL,e5567e1142ff28895735684550bdce4a,MEL,val
+ISIC_0009882,Train,melanoma,MEL,e5567e1142ff28895735684550bdce4a,MEL,train
 ISIC_0009886,Train,melanoma,MEL,c7a302bb48e2f9dfcf3f32c7b756ee7d,MEL,train
 ISIC_0009890,Train,melanoma,MEL,94e5ef4596eb3fd55bae3bca53b82314,MEL,train
 ISIC_0009897,Train,melanoma,MEL,c08d694ceb83b5922d073636faff0ad3,MEL,train
 ISIC_0009898,Train,melanoma,MEL,b942e9cf6f0aaaaa6ecfa9411bfdffa9,MEL,test
-ISIC_0009905,Train,melanoma,MEL,8e13d07703a043de8ea4a3209977cc2f,MEL,val
+ISIC_0009905,Train,melanoma,MEL,8e13d07703a043de8ea4a3209977cc2f,MEL,train
 ISIC_0009908,Train,melanoma,MEL,581810eb27955e0104dc291371e0a49c,MEL,train
 ISIC_0009910,Train,melanoma,MEL,e902790aaa2823a960e27c5898b9da7b,MEL,train
 ISIC_0009913,Train,melanoma,MEL,96d1f4bfe71f2dcc615c0996ad7c900b,MEL,test
@@ -765,7 +765,7 @@ ISIC_0009992,Train,melanoma,MEL,370e3e5b8759d882255b9d897df0aee5,MEL,train
 ISIC_0009993,Train,melanoma,MEL,5b503e1cccb96c8a00f39fd1792da415,MEL,train
 ISIC_0010000,Train,melanoma,MEL,0c59d6396af26ec965c5fa7c6d70f418,MEL,train
 ISIC_0010007,Train,melanoma,MEL,709bd663e7b9ce8db6d5d0675042c8c5,MEL,test
-ISIC_0010011,Train,melanoma,MEL,18250888a118a176c3a3a3daa7dccfca,MEL,val
+ISIC_0010011,Train,melanoma,MEL,18250888a118a176c3a3a3daa7dccfca,MEL,train
 ISIC_0010016,Train,melanoma,MEL,a0965169d7aaeca693f85074dd94889c,MEL,val
 ISIC_0010023,Train,melanoma,MEL,844c2c274de99dca21a7ec27f0efc1dd,MEL,train
 ISIC_0010024,Train,melanoma,MEL,614f4bd5fc371a1505626d1d7de4b4cc,MEL,train
@@ -778,27 +778,27 @@ ISIC_0010050,Train,melanoma,MEL,674e9e7929b00194163344af6b14afe0,MEL,train
 ISIC_0010054,Train,melanoma,MEL,0a9724a09089939da23c06923eafe635,MEL,train
 ISIC_0010056,Train,melanoma,MEL,5d90c58d20b0d55ad15fbc1a9389f127,MEL,train
 ISIC_0010067,Train,melanoma,MEL,51e6a5c0a7a114b2ae01af832c726042,MEL,train
-ISIC_0010080,Train,melanoma,MEL,51ac2786df0544ebbdfefc401e7f26d0,MEL,val
+ISIC_0010080,Train,melanoma,MEL,51ac2786df0544ebbdfefc401e7f26d0,MEL,train
 ISIC_0010081,Train,melanoma,MEL,9c75b5206de4d1a996a4066b5b953b94,MEL,train
 ISIC_0010089,Train,melanoma,MEL,db5da4dbe0c61a19ec17bd056c19977d,MEL,train
 ISIC_0010094,Train,melanoma,MEL,5a65f8c86bceb410c386a98239ca5192,MEL,train
 ISIC_0010106,Train,melanoma,MEL,3053caaecbd6c3293650d60d9b6af0ad,MEL,train
 ISIC_0010119,Train,melanoma,MEL,1595a4b71f71d8e7db679792dd1c0ae8,MEL,train
-ISIC_0010120,Train,melanoma,MEL,99ca4c704ab21d586c699822a75ff539,MEL,val
+ISIC_0010120,Train,melanoma,MEL,99ca4c704ab21d586c699822a75ff539,MEL,train
 ISIC_0010131,Train,melanoma,MEL,4bc08fd80bcb30e3995f60712b387979,MEL,train
 ISIC_0010137,Train,melanoma,MEL,6bf56bdaf7cc3158922a3022765826d5,MEL,train
 ISIC_0010140,Train,melanoma,MEL,f5e9a944b7e3b2e356ea196070f668cc,MEL,train
 ISIC_0010143,Train,melanoma,MEL,6ca8b6fa84d86efd0470ccd56dc0b3c3,MEL,train
 ISIC_0010145,Train,melanoma,MEL,684fa1e6802438f834c9de64d1ea7a1c,MEL,train
 ISIC_0010148,Train,melanoma,MEL,3419e9c962c303eda3d1ec8e8b745678,MEL,train
-ISIC_0010156,Train,melanoma,MEL,47b8c033929b063ff689b2d10a13487c,MEL,val
+ISIC_0010156,Train,melanoma,MEL,47b8c033929b063ff689b2d10a13487c,MEL,train
 ISIC_0010162,Train,melanoma,MEL,cb8e299bb255f90e15f5de2caf56f939,MEL,train
 ISIC_0010164,Train,melanoma,MEL,f2fb873a2bae7be0a0064e2851f63e86,MEL,train
 ISIC_0010165,Train,melanoma,MEL,8970eb81aba59fb2f3e80e90ac995d24,MEL,train
 ISIC_0010171,Train,melanoma,MEL,1d004c6aafe2519cce4178fd4c21a7b5,MEL,train
 ISIC_0010174,Train,melanoma,MEL,47364293c8433d4c917b4c189e67dc19,MEL,train
 ISIC_0010175,Train,melanoma,MEL,2c9dc712fd25c1a6ca683422d0b91997,MEL,train
-ISIC_0010189,Train,melanoma,MEL,2d9922313dffd8491f9966fb2aeeab28,MEL,val
+ISIC_0010189,Train,melanoma,MEL,2d9922313dffd8491f9966fb2aeeab28,MEL,train
 ISIC_0010194,Train,melanoma,MEL,33350147fb7309cf8e9cdecb20061987,MEL,train
 ISIC_0010207,Train,melanoma,MEL,7ffb1463bcdac2d467356210de59b4da,MEL,train
 ISIC_0010208,Train,melanoma,MEL,74283880b5b8afd981e0fd85f2a0a268,MEL,train
@@ -807,7 +807,7 @@ ISIC_0010210,Train,melanoma,MEL,3f4d27bdcdd8e59e6e7a2df41f302cc8,MEL,val
 ISIC_0010217,Train,melanoma,MEL,0267e1ec6543a5b2452397ad638ad685,MEL,train
 ISIC_0010225,Train,melanoma,MEL,aefee41d1a593ef597f3358f5d70790b,MEL,train
 ISIC_0010231,Train,melanoma,MEL,d2614452584b184ff9f33af2c13354b6,MEL,test
-ISIC_0010235,Train,melanoma,MEL,b76b81eb6f80c9a812eba6adae531bf0,MEL,val
+ISIC_0010235,Train,melanoma,MEL,b76b81eb6f80c9a812eba6adae531bf0,MEL,train
 ISIC_0010240,Train,melanoma,MEL,89c2c0b4b036d30452eaccd15ea52783,MEL,train
 ISIC_0010241,Train,melanoma,MEL,58c2aaa4ab944d00fde8aa6d2b08594d,MEL,train
 ISIC_0010245,Train,melanoma,MEL,8770aa0628aba33faf1ea1249dc11fb2,MEL,train
@@ -816,9 +816,9 @@ ISIC_0010265,Train,melanoma,MEL,5a8acf29aa6a81146c3e4bae87bd2604,MEL,train
 ISIC_0010267,Train,melanoma,MEL,a539429a611b8076338586cfd21994fc,MEL,train
 ISIC_0010271,Train,melanoma,MEL,d58bf02aadbcacb78abccd0a3db72f65,MEL,train
 ISIC_0010278,Train,melanoma,MEL,bfa0e46bb7d7c0ec200f0659a8bb2118,MEL,train
-ISIC_0010280,Train,melanoma,MEL,cc1168a2f6a458787d5a1b800857c1ec,MEL,val
+ISIC_0010280,Train,melanoma,MEL,cc1168a2f6a458787d5a1b800857c1ec,MEL,train
 ISIC_0010283,Train,melanoma,MEL,b1cfa45a7ff1a58bced694fff30de90d,MEL,train
-ISIC_0010288,Train,melanoma,MEL,ce7d92d85d5ab6d487a52e1f3d098204,MEL,val
+ISIC_0010288,Train,melanoma,MEL,ce7d92d85d5ab6d487a52e1f3d098204,MEL,train
 ISIC_0010289,Train,melanoma,MEL,3735387977b4b597265cfe2ef33f21d7,MEL,train
 ISIC_0010295,Train,melanoma,MEL,a91db4c185681ad6ea62c1636ed77a7f,MEL,train
 ISIC_0010299,Train,melanoma,MEL,c5fdc5e2d35d051f3757de3bdc094e0a,MEL,train
@@ -826,7 +826,7 @@ ISIC_0010302,Train,melanoma,MEL,cdc4bd1376cb56fc8ca907c7e6c8dd02,MEL,removed: sa
 ISIC_0010313,Train,melanoma,MEL,f71e35a497c49835aa0de9dddc493568,MEL,train
 ISIC_0010319,Train,melanoma,MEL,59836d57a93e44662345817ee4d8ab0c,MEL,train
 ISIC_0010321,Train,melanoma,MEL,487a00fbe29d87a560ff05d436a7c2da,MEL,train
-ISIC_0010322,Train,melanoma,MEL,8e0930d69d8e63568cece52531acd2f7,MEL,val
+ISIC_0010322,Train,melanoma,MEL,8e0930d69d8e63568cece52531acd2f7,MEL,train
 ISIC_0010329,Train,melanoma,MEL,f0f594174bdaeeea43ebd8d49faa035d,MEL,train
 ISIC_0010349,Train,melanoma,MEL,1e7e34b5d9592ef3be1a4091b5d30947,MEL,train
 ISIC_0010350,Train,melanoma,MEL,c19f04c9f4d994d651c06a9e5b1402f1,MEL,train
@@ -836,23 +836,23 @@ ISIC_0010359,Train,melanoma,MEL,d3b5b722ddcc50baf2de1d3bdfe7a86e,MEL,train
 ISIC_0010360,Train,melanoma,MEL,eddfb183829e971721afcfc9c2caadb7,MEL,train
 ISIC_0010364,Train,melanoma,MEL,0f2dfe3205bea1a5b2918ea4b046a650,MEL,train
 ISIC_0010366,Train,melanoma,MEL,a60a9b5bf6a29c956799dfb6ac92374b,MEL,train
-ISIC_0010372,Train,melanoma,MEL,b3d3a9d2a1bb606b6afd0b3fce6b5923,MEL,val
+ISIC_0010372,Train,melanoma,MEL,b3d3a9d2a1bb606b6afd0b3fce6b5923,MEL,train
 ISIC_0010376,Train,melanoma,MEL,ba818f3bc76a3e0217a031fbb007a6aa,MEL,train
 ISIC_0010379,Train,melanoma,MEL,eedfe00d4de512b23b9deefda523b000,MEL,test
 ISIC_0010380,Train,melanoma,MEL,77df6eedba2ffb7c351326928058658f,MEL,train
-ISIC_0010385,Train,melanoma,MEL,30ec500284e450d932be2a49bef8299f,MEL,val
+ISIC_0010385,Train,melanoma,MEL,30ec500284e450d932be2a49bef8299f,MEL,train
 ISIC_0010388,Train,melanoma,MEL,a9c7ef5f18518994ffc12e843f9793fe,MEL,val
 ISIC_0010391,Train,melanoma,MEL,63572a5c15419f7801cab695b1c6a3ad,MEL,train
-ISIC_0010392,Train,melanoma,MEL,b3e527792e74145b4f0533c7831d6832,MEL,val
-ISIC_0010393,Train,melanoma,MEL,e6f6150acaa802c51c2c53800390b399,MEL,val
-ISIC_0010394,Train,melanoma,MEL,56e1bd20a892f274ce6be423c2393f6c,MEL,val
+ISIC_0010392,Train,melanoma,MEL,b3e527792e74145b4f0533c7831d6832,MEL,train
+ISIC_0010393,Train,melanoma,MEL,e6f6150acaa802c51c2c53800390b399,MEL,train
+ISIC_0010394,Train,melanoma,MEL,56e1bd20a892f274ce6be423c2393f6c,MEL,train
 ISIC_0010396,Train,melanoma,MEL,3d9947bbc8cc3d16568f8f0b2b16f316,MEL,train
 ISIC_0010397,Train,melanoma,MEL,617050d74024f0e214f6b988c4a94eef,MEL,train
 ISIC_0010398,Train,melanoma,MEL,9e1b4155274c9aeaa7f4fd23923cace6,MEL,train
 ISIC_0010400,Train,melanoma,MEL,4a4af62b36e79480874da8c40074b970,MEL,train
 ISIC_0010401,Train,melanoma,MEL,019edd4f3133779f1df3e69795a37315,MEL,train
 ISIC_0010402,Train,melanoma,MEL,a9960f729fd04c2ede15b38a22e50cb7,MEL,train
-ISIC_0010407,Train,melanoma,MEL,f456411ff6044697469e16c532f29834,MEL,val
+ISIC_0010407,Train,melanoma,MEL,f456411ff6044697469e16c532f29834,MEL,train
 ISIC_0010410,Train,melanoma,MEL,b537afb2c1d4f3e8aca98ba377e76b07,MEL,train
 ISIC_0010413,Train,melanoma,MEL,11848f32bc26fcfd438fe0f1c40e0185,MEL,train
 ISIC_0010414,Train,melanoma,MEL,2534acf2147d08679ec41870a0263702,MEL,train
@@ -875,7 +875,7 @@ ISIC_0010486,Train,melanoma,MEL,a65f8f1b7661da5c7371dfd97129529c,MEL,train
 ISIC_0010503,Train,melanoma,MEL,a2475673992dc4d569108b6eb586801f,MEL,test
 ISIC_0010514,Train,melanoma,MEL,8fb913081472de826b8dd3a961f92ebd,MEL,train
 ISIC_0010516,Train,melanoma,MEL,29d6faee0ca2cbbc44fd6455f39e5ab2,MEL,train
-ISIC_0010527,Train,melanoma,MEL,583e3849940e70e6696d9ccab359ec6b,MEL,val
+ISIC_0010527,Train,melanoma,MEL,583e3849940e70e6696d9ccab359ec6b,MEL,train
 ISIC_0010532,Train,melanoma,MEL,f20a34a2221372197433ea1f9cb76926,MEL,train
 ISIC_0010533,Train,melanoma,MEL,60b0934520bc4458d1c11d408f623328,MEL,test
 ISIC_0010534,Train,melanoma,MEL,b3fe4d8a411417d35624913181a905af,MEL,test
@@ -885,7 +885,7 @@ ISIC_0010543,Train,melanoma,MEL,4890b81876714618a468d5864c8ea5ed,MEL,train
 ISIC_0010546,Train,melanoma,MEL,cb7dd68830f2497a07e6b620939fa526,MEL,train
 ISIC_0010548,Train,melanoma,MEL,f5e67ac392f19c204ffff3d92a0b4521,MEL,val
 ISIC_0010550,Train,melanoma,MEL,c014ff167e519f7f6ae9c68d14b74ae6,MEL,train
-ISIC_0010551,Train,melanoma,MEL,4e30b8cbbd55fb1b1c6bebc88364cc9a,MEL,val
+ISIC_0010551,Train,melanoma,MEL,4e30b8cbbd55fb1b1c6bebc88364cc9a,MEL,train
 ISIC_0010555,Train,melanoma,MEL,88d5cbf321fedfe42fe5027aeaa0d8d7,MEL,train
 ISIC_0010559,Train,melanoma,MEL,65d3db70040468c5104d10e4be55782b,MEL,train
 ISIC_0010564,Train,melanoma,MEL,e9cb40dda9f8d61b869c309d2b22ab9b,MEL,train
@@ -894,7 +894,7 @@ ISIC_0010579,Train,melanoma,MEL,e40e86bf740c2ede156f6075997870a3,MEL,train
 ISIC_0010580,Train,melanoma,MEL,03de7e3581cc123681a2d0c7f037044d,MEL,train
 ISIC_0010583,Train,melanoma,MEL,99ebdb4e7399e9925269040610a3a8ba,MEL,train
 ISIC_0010587,Train,melanoma,MEL,d36e0157eb5a81967531c7244bed2188,MEL,train
-ISIC_0010591,Train,melanoma,MEL,ab5ead3ca187b8843206d86559b7b63c,MEL,val
+ISIC_0010591,Train,melanoma,MEL,ab5ead3ca187b8843206d86559b7b63c,MEL,train
 ISIC_0010596,Train,melanoma,MEL,2744b6ea87d38bc0c018597d79dd27f9,MEL,test
 ISIC_0010597,Train,melanoma,MEL,35b9c2d5d0d678c5c45beece399f5be0,MEL,train
 ISIC_0010608,Train,melanoma,MEL,7a8738f742ea29f2c7042f7571b711e3,MEL,train
@@ -903,7 +903,7 @@ ISIC_0010610,Train,melanoma,MEL,f4e832a8f7e6b40c9bcb12037b55524c,MEL,train
 ISIC_0010611,Train,melanoma,MEL,e9c5f7512e99b05d860efc39eb65b360,MEL,val
 ISIC_0010629,Train,melanoma,MEL,d16ad92617021253dcebc1678c226b52,MEL,train
 ISIC_0010630,Train,melanoma,MEL,7785ed787815d6266aa50ace8175772e,MEL,train
-ISIC_0010631,Train,melanoma,MEL,8e702cb23b8fa889a522317aae583204,MEL,val
+ISIC_0010631,Train,melanoma,MEL,8e702cb23b8fa889a522317aae583204,MEL,train
 ISIC_0010644,Train,melanoma,MEL,b18c2a0965e8341a88247efd096b73bd,MEL,train
 ISIC_0010648,Train,melanoma,MEL,e041c02a86d4eb4221c1f9b7a567f5c3,MEL,train
 ISIC_0010652,Train,melanoma,MEL,36650aec874470124b182bfd375b4b1c,MEL,train
@@ -918,10 +918,10 @@ ISIC_0010723,Train,melanoma,MEL,ab6378483ffd7c3e770fc583063c0a7b,MEL,train
 ISIC_0010728,Train,melanoma,MEL,ac63499d9edab50b75728ab5c5cbd482,MEL,train
 ISIC_0010729,Train,melanoma,MEL,193e4194f1aa5bb8cdcd000624b6594f,MEL,train
 ISIC_0010730,Train,melanoma,MEL,e21dbcae9d4a454a6068c4c06d081824,MEL,train
-ISIC_0010737,Train,melanoma,MEL,ad4f3242335984a98ba33b3d286de300,MEL,val
+ISIC_0010737,Train,melanoma,MEL,ad4f3242335984a98ba33b3d286de300,MEL,train
 ISIC_0010741,Train,melanoma,MEL,999000fba4f4db6b7d00955cae367532,MEL,train
 ISIC_0010746,Train,melanoma,MEL,e9deee73e3d4ffc913218ec679aff2ff,MEL,train
-ISIC_0010749,Train,melanoma,MEL,a89fb44646bc64e34adcc7ca44d31178,MEL,val
+ISIC_0010749,Train,melanoma,MEL,a89fb44646bc64e34adcc7ca44d31178,MEL,train
 ISIC_0010750,Train,melanoma,MEL,155a20ac970cb1169a2cde1530ecacd9,MEL,train
 ISIC_0010754,Train,melanoma,MEL,cee78ad350bdd05eb3c80851e209616e,MEL,train
 ISIC_0010757,Train,melanoma,MEL,223445ef61324d68fd602d0eda9664e9,MEL,train
@@ -929,10 +929,10 @@ ISIC_0010759,Train,melanoma,MEL,b1e8daa40f44b48306fac75fc5f8fe45,MEL,train
 ISIC_0010765,Train,melanoma,MEL,860358985b09e464697e2afb96205cab,MEL,train
 ISIC_0010766,Train,melanoma,MEL,cedb5a3dd88fbb5f3a23a7a8bac67db1,MEL,train
 ISIC_0010767,Train,melanoma,MEL,1cfda39b3620784d3a30d6898bfd9d3c,MEL,train
-ISIC_0010770,Train,melanoma,MEL,63154c094ab1adb787c73701ea0c13d1,MEL,val
+ISIC_0010770,Train,melanoma,MEL,63154c094ab1adb787c73701ea0c13d1,MEL,train
 ISIC_0010772,Train,melanoma,MEL,94e784b3d045735faf8bc070e0890a43,MEL,train
 ISIC_0010777,Train,melanoma,MEL,f7922d61fcce081d714dce2f40bd4990,MEL,train
-ISIC_0010778,Train,melanoma,MEL,17b6c5ea79185aea2915caed9c713cbc,MEL,val
+ISIC_0010778,Train,melanoma,MEL,17b6c5ea79185aea2915caed9c713cbc,MEL,train
 ISIC_0010782,Train,melanoma,MEL,d618bd195cd3ae8113d0a690024d041e,MEL,train
 ISIC_0010783,Train,melanoma,MEL,6ca8df73d425e59eefa963fe93a77700,MEL,test
 ISIC_0010784,Train,melanoma,MEL,b5d48bd6faf01787969030ab44210cd4,MEL,train
@@ -986,7 +986,7 @@ ISIC_0011030,Train,melanoma,MEL,9b8ca0b2591f0d3ae3a4f1a09cd15673,MEL,train
 ISIC_0011031,Train,melanoma,MEL,a33f0110fc128688e46ba1e3beff2a60,MEL,test
 ISIC_0011032,Train,melanoma,MEL,6d08d14dba0327cba260324a124068ae,MEL,train
 ISIC_0011039,Train,melanoma,MEL,a61104433dad20a335fb5f289dd77621,MEL,train
-ISIC_0011040,Train,melanoma,MEL,51ad46c34f3fd120b4cc362fd33f2c6c,MEL,val
+ISIC_0011040,Train,melanoma,MEL,51ad46c34f3fd120b4cc362fd33f2c6c,MEL,train
 ISIC_0011042,Train,melanoma,MEL,3de9021bacd936a8de201435b312e056,MEL,train
 ISIC_0011043,Train,melanoma,MEL,e9a8ddb5fa798259bb7a902b1b1faabf,MEL,test
 ISIC_0011045,Train,melanoma,MEL,64e1d4c8a28de6fd8be9a42026056da3,MEL,train
@@ -998,25 +998,25 @@ ISIC_0011094,Train,melanoma,MEL,b09d672af8b127256c6479c500d5e191,MEL,val
 ISIC_0011095,Train,melanoma,MEL,ae3daeb598c9aeb3b0124b6fb69257e4,MEL,train
 ISIC_0011099,Train,melanoma,MEL,f5041d7a60ae22f485e3ebc239c248fb,MEL,train
 ISIC_0011112,Train,melanoma,MEL,2512a5ed173df2637254804b111ed34d,MEL,train
-ISIC_0011121,Train,melanoma,MEL,c97cb8a7f1c244fef28a6cc4ab87adbd,MEL,val
+ISIC_0011121,Train,melanoma,MEL,c97cb8a7f1c244fef28a6cc4ab87adbd,MEL,train
 ISIC_0011125,Train,melanoma,MEL,100b10c91cf01153f1d25d8955f14340,MEL,train
 ISIC_0011128,Train,melanoma,MEL,298981c01f56f9ac3fd699fd45933845,MEL,test
 ISIC_0011130,Train,melanoma,MEL,9c64b4e0bc400bc8d2edf64fe5685a2c,MEL,val
 ISIC_0011132,Train,melanoma,MEL,7fa42b433951b3faf01a671e6bb2355a,MEL,train
 ISIC_0011135,Train,melanoma,MEL,dce38eefbf80983e62312efc99f82907,MEL,train
 ISIC_0011136,Train,melanoma,MEL,0931ce2176fe447f890a67c3db5c3b1e,MEL,train
-ISIC_0011137,Train,melanoma,MEL,37d004627aecf530ea55ca75f3016c55,MEL,val
-ISIC_0011138,Train,melanoma,MEL,2a820468dc7e600f35311b35b62c3d3d,MEL,val
+ISIC_0011137,Train,melanoma,MEL,37d004627aecf530ea55ca75f3016c55,MEL,train
+ISIC_0011138,Train,melanoma,MEL,2a820468dc7e600f35311b35b62c3d3d,MEL,train
 ISIC_0011139,Train,melanoma,MEL,a22296d84093e9c8a00d9f91f79f8f52,MEL,train
 ISIC_0011140,Train,melanoma,MEL,8d295e7a202395cdf46be926f107b27d,MEL,train
 ISIC_0011151,Train,melanoma,MEL,578ec49707828246ac060be71213c9ca,MEL,train
 ISIC_0011158,Train,melanoma,MEL,795f69c6fbddbdaebac4efcd29a2fcdf,MEL,train
 ISIC_0011161,Train,melanoma,MEL,70bbd3d798e42182860180b8dff96f66,MEL,train
-ISIC_0011163,Train,melanoma,MEL,b72b9e87d8ac6870fe46eea2b1209d01,MEL,val
+ISIC_0011163,Train,melanoma,MEL,b72b9e87d8ac6870fe46eea2b1209d01,MEL,train
 ISIC_0011166,Train,melanoma,MEL,5286f0d6aa444711949c607a43a79969,MEL,train
 ISIC_0011169,Train,melanoma,MEL,9912bfb44e7530954d39433078ca1c88,MEL,train
 ISIC_0011174,Train,melanoma,MEL,b743844c484701c0459b65d224ee84f7,MEL,train
-ISIC_0011176,Train,melanoma,MEL,5a2a943757f49591dcb7b53b87d9e66c,MEL,val
+ISIC_0011176,Train,melanoma,MEL,5a2a943757f49591dcb7b53b87d9e66c,MEL,train
 ISIC_0011178,Train,melanoma,MEL,76c31695ef57d86759c99e9ef1991342,MEL,train
 ISIC_0011181,Train,melanoma,MEL,a5233bb520eb260d2289640ee533a946,MEL,test
 ISIC_0011185,Train,melanoma,MEL,6638e66d39709c9d56f3f4f026cf8089,MEL,train
@@ -1034,11 +1034,11 @@ ISIC_0000032,Train,nevus,NV,fb94352ba6e50d8a192741d42b863929,NV,train
 ISIC_0000033,Train,nevus,NV,ecacfcbf0ecba666d02a0122637357fd,NV,val
 ISIC_0000034,Train,nevus,NV,e1b72c6566adffa4c69f27bd6a19f5fd,NV,train
 ISIC_0000037,Train,nevus,NV,1858584cc2ec2d01f6118e4b83adc1ef,NV,train
-ISIC_0000038,Train,nevus,NV,1ab52d16d0b8ccfc21ade1cde667bafc,NV,val
+ISIC_0000038,Train,nevus,NV,1ab52d16d0b8ccfc21ade1cde667bafc,NV,train
 ISIC_0000039,Train,nevus,NV,465f27b23c3f432503ad4f647d47af02,NV,train
 ISIC_0000041,Train,nevus,NV,b284819ae645b9f130381609f94245be,NV,train
 ISIC_0000042,Train,nevus,NV,55a84646752af5ecbaed388796711136,NV,train
-ISIC_0000047,Train,nevus,NV,d4f29dec56426653814dc54729da0207,NV,val
+ISIC_0000047,Train,nevus,NV,d4f29dec56426653814dc54729da0207,NV,train
 ISIC_0000050,Train,nevus,NV,5327f2d016f7d31ec50c06cda51aa822,NV,train
 ISIC_0000051,Train,nevus,NV,05af36a9a8ffada4ce0d6a5846a11085,NV,train
 ISIC_0000052,Train,nevus,NV,318a3625d5c9eb0c02ddfa4e36bc0d5f,NV,train
@@ -1065,7 +1065,7 @@ ISIC_0000083,Train,nevus,NV,31bef8be970c76552501650d6a8ffc2e,NV,train
 ISIC_0000084,Train,nevus,NV,d791c11dd8f3a745c98b997050968010,NV,train
 ISIC_0000085,Train,nevus,NV,391c2f83eaa261fdbbb865dd5af7052f,NV,train
 ISIC_0000086,Train,nevus,NV,f6be73a5addda6a5ff3b09a763a3797f,NV,train
-ISIC_0000087,Train,nevus,NV,9c497167c76d59412058e55b2393892c,NV,val
+ISIC_0000087,Train,nevus,NV,9c497167c76d59412058e55b2393892c,NV,train
 ISIC_0000088,Train,nevus,NV,6bb913f6db98595b8f39dc6fda7161e8,NV,train
 ISIC_0000089,Train,nevus,NV,164b3fe68bccb7a592d13b3df76bd940,NV,train
 ISIC_0000091,Train,nevus,NV,8a472d312b7a3eafd0526c9045c2714d,NV,train
@@ -1083,7 +1083,7 @@ ISIC_0000222,Train,nevus,NV,4b36ed4b2810ae12dd1d9ad27d586cd2,NV,train
 ISIC_0000223,Train,nevus,NV,c1e1890bb4ed1753898c7ba8c582fffc,NV,test
 ISIC_0000224,Train,nevus,NV,b756cae9c59d7dab5ca0a11a92b36a43,NV,val
 ISIC_0000225,Train,nevus,NV,086d760ec3cfe789103c7650c2b3a751,NV,test
-ISIC_0000226,Train,nevus,NV,03780db1ff6eadb1fa9200be54626bb1,NV,val
+ISIC_0000226,Train,nevus,NV,03780db1ff6eadb1fa9200be54626bb1,NV,train
 ISIC_0000227,Train,nevus,NV,4f58543efeb5dd85073e29071d60c0eb,NV,train
 ISIC_0000228,Train,nevus,NV,9753d02f56ee191acb3e3516c4993387,NV,train
 ISIC_0000229,Train,nevus,NV,9bbaeebcfd304e3ece009d3f114f3c55,NV,train
@@ -1095,7 +1095,7 @@ ISIC_0000234,Train,nevus,NV,1dedab4a640ecd5ed61cfddf7ffed7c7,NV,train
 ISIC_0000235,Train,nevus,NV,84933fa200182de5ef3b153050c72df2,NV,train
 ISIC_0000236,Train,nevus,NV,2bfafea8fcd0688e1f715c5355bf7001,NV,train
 ISIC_0000237,Train,nevus,NV,2588bda04f3bdd78b30ea6ab70a738cd,NV,train
-ISIC_0000238,Train,nevus,NV,f02979a1c7b727136c61dded03fc4704,NV,val
+ISIC_0000238,Train,nevus,NV,f02979a1c7b727136c61dded03fc4704,NV,train
 ISIC_0000239,Train,nevus,NV,e100c5fcbefd38696b6c0cfb5d941a65,NV,train
 ISIC_0000240,Train,nevus,NV,e599b970a7139986ce2be88f9bb1656d,NV,val
 ISIC_0000241,Train,nevus,NV,3cb1d309ff21a9659470a1e6ae0a0ee5,NV,train
@@ -1103,7 +1103,7 @@ ISIC_0000243,Train,nevus,NV,50369123be116ec50e7a5d9a864842be,NV,train
 ISIC_0000244,Train,nevus,NV,76bb0d3e551d34bba34c47755d2ead29,NV,train
 ISIC_0000245,Train,nevus,NV,95065e29b3c951a09686abc560602715,NV,train
 ISIC_0000246,Train,nevus,NV,d524a8f1e4f446b8be86f76f46ac55cf,NV,train
-ISIC_0000248,Train,nevus,NV,0458cc8897a7e5e9def0bc0ea0c90b75,NV,val
+ISIC_0000248,Train,nevus,NV,0458cc8897a7e5e9def0bc0ea0c90b75,NV,train
 ISIC_0000250,Train,nevus,NV,ef284a7e2f4a2a87a04586972134cba8,NV,train
 ISIC_0000256,Train,nevus,NV,6709782dba84ea0146676610d5773622,NV,train
 ISIC_0000258,Train,nevus,NV,14000eb39d28a4576a8c51d569cfa89b,NV,train
@@ -1152,10 +1152,10 @@ ISIC_0000342,Train,nevus,NV,132b9abd03f886dd8258c469d5a3c323,NV,train
 ISIC_0000343,Train,nevus,NV,9220d0c0fac746e5916e74927560345c,NV,train
 ISIC_0000344,Train,nevus,NV,ee381cbec75fad143f4043b9eaa85568,NV,train
 ISIC_0000345,Train,nevus,NV,79e6684fc48628c004404d0b9068ffb8,NV,val
-ISIC_0000346,Train,nevus,NV,acc5f88e2cc9388d4d05a96a96c9435c,NV,val
-ISIC_0000347,Train,nevus,NV,a26ce0ba060de4d46d254347b0b5e216,NV,val
+ISIC_0000346,Train,nevus,NV,acc5f88e2cc9388d4d05a96a96c9435c,NV,train
+ISIC_0000347,Train,nevus,NV,a26ce0ba060de4d46d254347b0b5e216,NV,train
 ISIC_0000348,Train,nevus,NV,aa506246807537f96e40e275cc173f0e,NV,train
-ISIC_0000349,Train,nevus,NV,5681e7ceba58a7936a783d675982ecda,NV,val
+ISIC_0000349,Train,nevus,NV,5681e7ceba58a7936a783d675982ecda,NV,train
 ISIC_0000350,Train,nevus,NV,f47a61e25a20b27a1370d345d4d15fbf,NV,val
 ISIC_0000351,Train,nevus,NV,89bd7977744b6fd264640f4547e2e1c6,NV,train
 ISIC_0000352,Train,nevus,NV,3c382604753d234ba0097708fcd93226,NV,train
@@ -1169,7 +1169,7 @@ ISIC_0000359,Train,nevus,NV,1c6426eb35a8ee0675acc29255bcf1ab,NV,train
 ISIC_0000360,Train,nevus,NV,d64450b54c43758da80aa6c64a987d36,NV,train
 ISIC_0000361,Train,nevus,NV,7b1efa343fcd7e87120b6cf116a8d6bd,NV,test
 ISIC_0000362,Train,nevus,NV,f94c15608362b1bd346accf45a502798,NV,train
-ISIC_0000363,Train,nevus,NV,655055992720e955d391d995de433ddb,NV,val
+ISIC_0000363,Train,nevus,NV,655055992720e955d391d995de433ddb,NV,train
 ISIC_0000364,Train,nevus,NV,9744529133aed181c6207efd82ade75a,NV,train
 ISIC_0000365,Train,nevus,NV,90f0cadad0f476c6dbfbcae66575eb18,NV,train
 ISIC_0000366,Train,nevus,NV,49360d16bad68fd58ba551b44c5419d8,NV,val
@@ -1179,7 +1179,7 @@ ISIC_0000369,Train,nevus,NV,69c8c76d95d9d5b8ec65d5715628e4ac,NV,train
 ISIC_0000370,Train,nevus,NV,933fd1ac3952f4d70daabdeaee6c2e0d,NV,train
 ISIC_0000371,Train,nevus,NV,a407f47d0af2020b32edaed68c6f3b15,NV,train
 ISIC_0000372,Train,nevus,NV,3604175cb6c5f5a28e7e632364f8898e,NV,train
-ISIC_0000373,Train,nevus,NV,27b07a3859adc93f2096a61170312386,NV,val
+ISIC_0000373,Train,nevus,NV,27b07a3859adc93f2096a61170312386,NV,train
 ISIC_0000374,Train,nevus,NV,221b0d4d899fb2aa79f8519a6a9f392a,NV,test
 ISIC_0000375,Train,nevus,NV,5fb90e596f94056adbb5b4aa03eab708,NV,test
 ISIC_0000376,Train,nevus,NV,b142a31e52ff89fec8e76e310c7a198e,NV,train
@@ -1199,11 +1199,11 @@ ISIC_0000389,Train,nevus,NV,934339da1096c50d490abb0e1c93d3f8,NV,train
 ISIC_0000391,Train,nevus,NV,9058422ab36b8210052dc081e963990e,NV,train
 ISIC_0000392,Train,nevus,NV,6a2afcd5ea95097f0f07762755e0ad64,NV,test
 ISIC_0000396,Train,nevus,NV,1eeb64b1ad0312976dc3515b53e521f9,NV,train
-ISIC_0000397,Train,nevus,NV,98a25dfe9a04ebc315af7594afc8e564,NV,val
+ISIC_0000397,Train,nevus,NV,98a25dfe9a04ebc315af7594afc8e564,NV,train
 ISIC_0000403,Train,nevus,NV,bfb224c318cb4afce6f124732f8e1f1c,NV,train
 ISIC_0000407,Train,nevus,NV,571a3c54a1522c966d2d96d0186b0fc7,NV,train
 ISIC_0000408,Train,nevus,NV,0a6551aff8470f58d01b5beb17af8dc1,NV,test
-ISIC_0000409,Train,nevus,NV,e6912dd12953cbf544e8b779e0139ead,NV,val
+ISIC_0000409,Train,nevus,NV,e6912dd12953cbf544e8b779e0139ead,NV,train
 ISIC_0000416,Train,nevus,NV,8426343593f6c959b66eb8467a7ca9cf,NV,train
 ISIC_0000418,Train,nevus,NV,3027a3937823bca76505a833fd42ea35,NV,train
 ISIC_0000419,Train,nevus,NV,81550da0015faf0cb4f760d944271d67,NV,train
@@ -1236,11 +1236,11 @@ ISIC_0000458,Train,nevus,NV,fecc178df3da4cd45ae37067be2fce44,NV,train
 ISIC_0000460,Train,nevus,NV,1d438e306003b1cca8d04adec07f67eb,NV,train
 ISIC_0000461,Train,nevus,NV,367cb281ef16e455a1fa3993b75a670d,NV,train
 ISIC_0000464,Train,nevus,NV,6b1a59bf21ebdd89f5df3ded9cd562aa,NV,train
-ISIC_0000465,Train,nevus,NV,cca3b2978fa2f0e0911473e7c8b83231,NV,val
+ISIC_0000465,Train,nevus,NV,cca3b2978fa2f0e0911473e7c8b83231,NV,train
 ISIC_0000467,Train,nevus,NV,9b0b31c409175d14ea9a6f5fbc3fe882,NV,train
 ISIC_0000468,Train,nevus,NV,c6bdc87332ef0eb5873f9a945f5b2346,NV,train
 ISIC_0000470,Train,nevus,NV,fc9dc360a6e1dbdf6a954ce46d627e4d,NV,train
-ISIC_0000471,Train,nevus,NV,0b952fb8214f5d935bc7fc0bdcdce3e5,NV,val
+ISIC_0000471,Train,nevus,NV,0b952fb8214f5d935bc7fc0bdcdce3e5,NV,train
 ISIC_0000472,Train,nevus,NV,8ac73221ef90894c5022b6e343a56a9d,NV,train
 ISIC_0000473,Train,nevus,NV,0bbaf182fc3936796eab87dfe29ed807,NV,train
 ISIC_0000474,Train,nevus,NV,fec1feabfec036d9118ecca3946ab345,NV,train
@@ -1270,7 +1270,7 @@ ISIC_0000500,Train,nevus,NV,d10c5483653fcce140e61c8920f1c1a9,NV,train
 ISIC_0000501,Train,nevus,NV,ca306c91854272b89848dfe5a7dbbd4e,NV,train
 ISIC_0000503,Train,nevus,NV,3a5edfede8af3071af73ecbd9c8f4c5d,NV,train
 ISIC_0000504,Train,nevus,NV,f7b5355b08ca2381dc72b878b1954444,NV,train
-ISIC_0000505,Train,nevus,NV,6dfa7a7ecfe73ce47c6580b9158422a3,NV,val
+ISIC_0000505,Train,nevus,NV,6dfa7a7ecfe73ce47c6580b9158422a3,NV,train
 ISIC_0000506,Train,nevus,NV,56d18429bef17da2da1cc4ef5ffdf6e6,NV,val
 ISIC_0000507,Train,nevus,NV,f787694d7c585d727a2f74652f1df1b8,NV,train
 ISIC_0000508,Train,nevus,NV,9b339564229950af21e39526b675f427,NV,train
@@ -1291,14 +1291,14 @@ ISIC_0000534,Train,nevus,NV,34cd0498ddbf359543e66b35c67cba35,NV,train
 ISIC_0000535,Train,nevus,NV,d7db1f6d406060043457ed7f78bf0642,NV,train
 ISIC_0000536,Train,nevus,NV,be722f01be377a28f38977470557cd97,NV,train
 ISIC_0000537,Train,nevus,NV,5553b8db54241c6ec5f0158b63be65ca,NV,train
-ISIC_0000538,Train,nevus,NV,82f9b85adb5c6a33a7989f088fb3116e,NV,val
+ISIC_0000538,Train,nevus,NV,82f9b85adb5c6a33a7989f088fb3116e,NV,train
 ISIC_0000539,Train,nevus,NV,beef129db18ca4af256a2a1d6de377b9,NV,train
 ISIC_0000540,Train,nevus,NV,3dc8554b165becf9583bb994da00ab7b,NV,train
 ISIC_0000541,Train,nevus,NV,1021e2f18f5db4e30086244989aa7e4c,NV,train
 ISIC_0000542,Train,nevus,NV,d64d1dc6512a78bb0d830166b26c87e9,NV,train
 ISIC_0000543,Train,nevus,NV,ae388ddb6ef3a25c5aef7ca2c2bc43d0,NV,train
 ISIC_0000544,Train,nevus,NV,2aacdeb072c23a3e4ba6aeab9d25e739,NV,train
-ISIC_0000545,Train,nevus,NV,55c6e165b497455791f9af39cd0d5bee,NV,val
+ISIC_0000545,Train,nevus,NV,55c6e165b497455791f9af39cd0d5bee,NV,train
 ISIC_0000546,Train,nevus,NV,f157fbdebc435ddcc67ea51abd4f6e95,NV,train
 ISIC_0000556,Train,nevus,NV,57d437e400e40e476f20b60e15492a6d,NV,train
 ISIC_0010512,Train,nevus,NV,b500d2d87e69796d5334825569879120,AK,train
@@ -1386,7 +1386,7 @@ ISIC_0024453,Train,pigmented benign keratosis,BKL,9d9e19751fcb8027e03ebd26aad5c8
 ISIC_0024471,Train,pigmented benign keratosis,BKL,d984072eff60f4f631de05cfc7dc623a,BKL,train
 ISIC_0024477,Train,pigmented benign keratosis,BKL,8201ffc4026cb6e014889cb09528a644,BKL,train
 ISIC_0024489,Train,pigmented benign keratosis,BKL,fc9a3796bb10e8e63ce5df86fb779761,BKL,train
-ISIC_0024490,Train,pigmented benign keratosis,BKL,672c1af816806d906079ebca78067929,BKL,val
+ISIC_0024490,Train,pigmented benign keratosis,BKL,672c1af816806d906079ebca78067929,BKL,train
 ISIC_0024494,Train,pigmented benign keratosis,BKL,cd2b97a538a283f80f49d77ed4dde9f4,BKL,train
 ISIC_0024495,Train,pigmented benign keratosis,BKL,e29d6f65cea185a29dda0aaae96e0a45,BKL,train
 ISIC_0024498,Train,pigmented benign keratosis,BKL,984bffe0e6feb4399470d35ac8615e48,BKL,train
@@ -1404,7 +1404,7 @@ ISIC_0024672,Train,pigmented benign keratosis,BKL,ce7a2f8db423a451b03bda5828bd96
 ISIC_0024676,Train,pigmented benign keratosis,BKL,68d7a0783dd49cc5b395b969d5e79349,BKL,train
 ISIC_0024696,Train,pigmented benign keratosis,BKL,4379e1aa15195bda3b0affcfd67f8343,BKL,val
 ISIC_0024705,Train,pigmented benign keratosis,BKL,63f9a7f8306b2c7f9a3432af8b9f2d85,BKL,test
-ISIC_0024708,Train,pigmented benign keratosis,BKL,181fa92b1d522127d6e8d892baada22f,BKL,val
+ISIC_0024708,Train,pigmented benign keratosis,BKL,181fa92b1d522127d6e8d892baada22f,BKL,train
 ISIC_0024709,Train,pigmented benign keratosis,BKL,c7b285e759ddf4f6bdc14a6332da2aea,BKL,train
 ISIC_0024711,Train,pigmented benign keratosis,BKL,3bb9039fa50bbd7a8f729e03b63ed2c0,BKL,train
 ISIC_0024726,Train,pigmented benign keratosis,BKL,f0dbda4a2171111396e08aace37497f1,BKL,train
@@ -1423,8 +1423,8 @@ ISIC_0024786,Train,pigmented benign keratosis,BKL,615c521c1d1aa9f57b56dcfba8150a
 ISIC_0024814,Train,pigmented benign keratosis,BKL,da0c152fd3b1fb5d810afd4ab08c389f,BKL,train
 ISIC_0024825,Train,pigmented benign keratosis,BKL,4aaf720a056ad23849a9174bc9522d15,BKL,train
 ISIC_0024839,Train,pigmented benign keratosis,BKL,4dc7b9170c12fa3dde925762e16e2fbc,BKL,val
-ISIC_0024850,Train,pigmented benign keratosis,BKL,840aadca4f82d45578a80b3fc20b63bc,BKL,val
-ISIC_0024851,Train,pigmented benign keratosis,BKL,959e131ddd52caf015eed2e1a79484f1,BKL,val
+ISIC_0024850,Train,pigmented benign keratosis,BKL,840aadca4f82d45578a80b3fc20b63bc,BKL,train
+ISIC_0024851,Train,pigmented benign keratosis,BKL,959e131ddd52caf015eed2e1a79484f1,BKL,train
 ISIC_0024871,Train,pigmented benign keratosis,BKL,fdda54ef1b7e488247ef084469f0eb8a,BKL,train
 ISIC_0024877,Train,pigmented benign keratosis,BKL,b80205c83b236f2413e3e230d760c479,BKL,test
 ISIC_0024880,Train,pigmented benign keratosis,BKL,506339696e1fa3e5482ba401e3064e3e,BKL,train
@@ -1433,8 +1433,8 @@ ISIC_0024883,Train,pigmented benign keratosis,BKL,fe05c724df92109d172f160c7057ae
 ISIC_0024890,Train,pigmented benign keratosis,BKL,c6032261b7c835a4d73070a42ffcd085,BKL,train
 ISIC_0024909,Train,pigmented benign keratosis,BKL,a805dc0e3a7d4c31c6200f58043a9f2e,BKL,train
 ISIC_0024910,Train,pigmented benign keratosis,BKL,75512ca105a2d3a9059c5c9c3b9d0f11,BKL,train
-ISIC_0024915,Train,pigmented benign keratosis,BKL,5ff80342613da979acbee92035b0ca35,BKL,val
-ISIC_0024943,Train,pigmented benign keratosis,BKL,b1c8dde79e7f5dbf98652f2b72544044,BKL,val
+ISIC_0024915,Train,pigmented benign keratosis,BKL,5ff80342613da979acbee92035b0ca35,BKL,train
+ISIC_0024943,Train,pigmented benign keratosis,BKL,b1c8dde79e7f5dbf98652f2b72544044,BKL,train
 ISIC_0024947,Train,pigmented benign keratosis,BKL,1aed008e4d4c9424f9a2947c6537c648,BKL,train
 ISIC_0024970,Train,pigmented benign keratosis,BKL,0507cfba437c3ed03762b3c07879a63c,BKL,train
 ISIC_0024971,Train,pigmented benign keratosis,BKL,2082bad10d5965c08870009b042a9451,BKL,train
@@ -1454,7 +1454,7 @@ ISIC_0025066,Train,pigmented benign keratosis,BKL,cf61e867be6bc160967a060e36f4bd
 ISIC_0025068,Train,pigmented benign keratosis,BKL,3e92f3c00b9f5345b9c15af9e09f4802,BKL,train
 ISIC_0025075,Train,pigmented benign keratosis,BKL,5bfc59627a70521f4e9f4601aa640158,BKL,train
 ISIC_0025076,Train,pigmented benign keratosis,BKL,5ebf543fc1f01a2b79e98fcf365011ed,BKL,train
-ISIC_0025083,Train,pigmented benign keratosis,BKL,39a0ef0f65dfd97c9860672d0722f380,BKL,val
+ISIC_0025083,Train,pigmented benign keratosis,BKL,39a0ef0f65dfd97c9860672d0722f380,BKL,train
 ISIC_0025086,Train,pigmented benign keratosis,BKL,4cb53a2bd1c911df0a645d5297dbad76,BKL,train
 ISIC_0025099,Train,pigmented benign keratosis,BKL,7413fbe95373d1c82f4fef26702903c8,BKL,test
 ISIC_0025103,Train,pigmented benign keratosis,BKL,84afb99702075adcee6a3a34f512979f,BKL,train
@@ -1463,7 +1463,7 @@ ISIC_0025131,Train,pigmented benign keratosis,BKL,d0850cc5810f8325b218ea5a9742ee
 ISIC_0025136,Train,pigmented benign keratosis,BKL,0d203886bdbe55f6f25292e97b74d031,BKL,train
 ISIC_0025140,Train,pigmented benign keratosis,BKL,6f34b507126e299e489149d55806b881,BKL,train
 ISIC_0025157,Train,pigmented benign keratosis,BKL,9d5554ba80719baf3ddbd55f8c5b39a7,BKL,train
-ISIC_0025180,Train,pigmented benign keratosis,BKL,29b2d1f30821f7f74110cfa5d8f42c35,BKL,val
+ISIC_0025180,Train,pigmented benign keratosis,BKL,29b2d1f30821f7f74110cfa5d8f42c35,BKL,train
 ISIC_0025199,Train,pigmented benign keratosis,BKL,57ef7bb5779148ff9f4298378871e0d4,BKL,train
 ISIC_0025209,Train,pigmented benign keratosis,BKL,5a394bb1010cd24b2967e330ae82b494,BKL,test
 ISIC_0025222,Train,pigmented benign keratosis,BKL,a149eb694c961723c7b928f4acea50f0,BKL,train
@@ -1479,13 +1479,13 @@ ISIC_0025337,Train,pigmented benign keratosis,BKL,d1b74516b48c9099358ec686b2ae15
 ISIC_0025339,Train,pigmented benign keratosis,BKL,64a4efac31fbf05b98cc9fa274b4da8e,BKL,train
 ISIC_0025345,Train,pigmented benign keratosis,BKL,d5fcb03579a93d7c584c2989c162de67,BKL,train
 ISIC_0025351,Train,pigmented benign keratosis,BKL,588576f3f14292db0cbe9b30dc68ca1c,BKL,train
-ISIC_0025366,Train,pigmented benign keratosis,BKL,8ec0efb939419841040bc878dff3977f,BKL,val
+ISIC_0025366,Train,pigmented benign keratosis,BKL,8ec0efb939419841040bc878dff3977f,BKL,train
 ISIC_0025374,Train,pigmented benign keratosis,BKL,d56eab7034b4c46b8fa6db116ac68fef,BKL,train
 ISIC_0025376,Train,pigmented benign keratosis,BKL,cf61256ea69dbed43f7749708822cdef,BKL,test
 ISIC_0025378,Train,pigmented benign keratosis,BKL,f178a7db912979f041c977f1861d3e9b,BKL,train
 ISIC_0025387,Train,pigmented benign keratosis,BKL,fce86d506ab0f87ee14c2c6fa0fa9ae1,BKL,train
 ISIC_0025388,Train,pigmented benign keratosis,BKL,f22cc1be8c92c004ab834742953f54be,BKL,train
-ISIC_0025389,Train,pigmented benign keratosis,BKL,8564b6e9416bcbf1f0c3f0c7122a0430,BKL,val
+ISIC_0025389,Train,pigmented benign keratosis,BKL,8564b6e9416bcbf1f0c3f0c7122a0430,BKL,train
 ISIC_0025392,Train,pigmented benign keratosis,BKL,6226076effe2eda235e948826550616e,BKL,train
 ISIC_0025419,Train,pigmented benign keratosis,BKL,234f6c5771f9bfd1301510833af1a4b9,BKL,train
 ISIC_0025431,Train,pigmented benign keratosis,BKL,f9ca38803f5c427bf13d6aed89725099,BKL,train
@@ -1506,20 +1506,20 @@ ISIC_0025548,Train,pigmented benign keratosis,BKL,7cc444cd30fbac2f261a733822aec6
 ISIC_0025554,Train,pigmented benign keratosis,BKL,735f6e0a5ea66b4c87cd5f12f02732a1,BKL,train
 ISIC_0025567,Train,pigmented benign keratosis,BKL,e816c30b1f89ceb009a12b56194d8728,BKL,train
 ISIC_0025575,Train,pigmented benign keratosis,BKL,1a015e91f821c94ea4405d674d62ccd8,BKL,train
-ISIC_0025583,Train,pigmented benign keratosis,BKL,ce90cbb23810a10ede01bf4de6028348,BKL,val
+ISIC_0025583,Train,pigmented benign keratosis,BKL,ce90cbb23810a10ede01bf4de6028348,BKL,train
 ISIC_0025623,Train,pigmented benign keratosis,BKL,c2cbd428ec39c6b16c1e6b5da53f6197,BKL,train
 ISIC_0025627,Train,pigmented benign keratosis,BKL,5b5a8a3dbd4cc95b22fef86c7389ea4f,BKL,train
 ISIC_0025642,Train,pigmented benign keratosis,BKL,edc9895805bda66b99d0af2418f6e8bc,BKL,train
-ISIC_0025654,Train,pigmented benign keratosis,BKL,1d417a222e2e5ab5f68611079cda1de0,BKL,val
+ISIC_0025654,Train,pigmented benign keratosis,BKL,1d417a222e2e5ab5f68611079cda1de0,BKL,train
 ISIC_0025656,Train,pigmented benign keratosis,BKL,40fe495b2c2e2c6a23f6ad56f43f9e5b,BKL,train
 ISIC_0025659,Train,pigmented benign keratosis,BKL,8ebfe8598491fc1f8b4da9da434fdeec,BKL,train
 ISIC_0025661,Train,pigmented benign keratosis,BKL,13f02c90f73721533bffe68db5027da5,BKL,train
 ISIC_0025693,Train,pigmented benign keratosis,BKL,c77c423a83c688c290614ac372e0648b,BKL,train
 ISIC_0025699,Train,pigmented benign keratosis,BKL,159c36234eddd7ccad0028c123944d41,BKL,train
-ISIC_0025703,Train,pigmented benign keratosis,BKL,b42cda2c155783128613e35ed4533f5d,BKL,val
+ISIC_0025703,Train,pigmented benign keratosis,BKL,b42cda2c155783128613e35ed4533f5d,BKL,train
 ISIC_0025710,Train,pigmented benign keratosis,BKL,d2d71704919dd357bec3b76d2d58efc6,BKL,train
-ISIC_0025716,Train,pigmented benign keratosis,BKL,23ddf0fec8fced3cd7cd31c9769d515f,BKL,val
-ISIC_0025719,Train,pigmented benign keratosis,BKL,229c494fc2ccf87a843435fc68d44a32,BKL,val
+ISIC_0025716,Train,pigmented benign keratosis,BKL,23ddf0fec8fced3cd7cd31c9769d515f,BKL,train
+ISIC_0025719,Train,pigmented benign keratosis,BKL,229c494fc2ccf87a843435fc68d44a32,BKL,train
 ISIC_0025743,Train,pigmented benign keratosis,BKL,3c7f948912c855e4a437f6490f16c569,BKL,train
 ISIC_0025746,Train,pigmented benign keratosis,BKL,ba168baa96e8b2b44e47c4a74935f100,BKL,train
 ISIC_0025753,Train,pigmented benign keratosis,BKL,4b7e0f072dfa7a162e3c9740cdb7a7e2,BKL,train
@@ -1527,7 +1527,7 @@ ISIC_0025758,Train,pigmented benign keratosis,BKL,970b64f79930d242efe90b2b12a427
 ISIC_0025767,Train,pigmented benign keratosis,BKL,cf57837f897edd5055c45e6e0a67e005,BKL,test
 ISIC_0025777,Train,pigmented benign keratosis,BKL,3802ca2c762499855c46026567623e19,BKL,train
 ISIC_0025781,Train,pigmented benign keratosis,BKL,eb86a1f163e239d6e043d7cc8c4f5d00,BKL,train
-ISIC_0025799,Train,pigmented benign keratosis,BKL,ca247f4c63593ac4ff3f2d322f36f203,BKL,val
+ISIC_0025799,Train,pigmented benign keratosis,BKL,ca247f4c63593ac4ff3f2d322f36f203,BKL,train
 ISIC_0025804,Train,pigmented benign keratosis,BKL,f28c561089a67e0b9d0148dbea94b526,BKL,train
 ISIC_0025805,Train,pigmented benign keratosis,BKL,a198dc286bc4a50e1a397cd6a940e272,BKL,train
 ISIC_0025810,Train,pigmented benign keratosis,BKL,786bf7ec1ab5eef50cc179e7c7e3bca6,BKL,train
@@ -1537,7 +1537,7 @@ ISIC_0025837,Train,pigmented benign keratosis,BKL,eecb4fe312ee7b1a4c019aa352fc4c
 ISIC_0025838,Train,pigmented benign keratosis,BKL,364fd2d6628c7db46b747db8c1d61aa5,BKL,train
 ISIC_0025842,Train,pigmented benign keratosis,BKL,97352134725af7e2af82723c3038dd1a,BKL,train
 ISIC_0025851,Train,pigmented benign keratosis,BKL,4290b909b91a42452c85b22170a1f7b0,BKL,train
-ISIC_0025856,Train,pigmented benign keratosis,BKL,d9402707e31ec1645719df26d582369b,BKL,val
+ISIC_0025856,Train,pigmented benign keratosis,BKL,d9402707e31ec1645719df26d582369b,BKL,train
 ISIC_0025867,Train,pigmented benign keratosis,BKL,e966ed8b80a5481c229b3af277a0d767,BKL,train
 ISIC_0025874,Train,pigmented benign keratosis,BKL,eaad9d7604d08d2bb54ca111e4c339ca,BKL,train
 ISIC_0025876,Train,pigmented benign keratosis,BKL,bad99bda630d9eca891ed5f3d5241696,BKL,train
@@ -1551,11 +1551,11 @@ ISIC_0025937,Train,pigmented benign keratosis,BKL,3d7cf1339c7eeddef202a741eb2c92
 ISIC_0025939,Train,pigmented benign keratosis,BKL,8108cb364d5c0a45d6c83c089ad148c7,BKL,train
 ISIC_0025973,Train,pigmented benign keratosis,BKL,cea9ff46d2c5f4981775b27587ff40bb,BKL,train
 ISIC_0025982,Train,pigmented benign keratosis,BKL,5bef2c844f407da7e9e93493d506f99e,BKL,train
-ISIC_0025984,Train,pigmented benign keratosis,BKL,d17fc9e7a2524c435bf4f765d757fbc6,BKL,val
+ISIC_0025984,Train,pigmented benign keratosis,BKL,d17fc9e7a2524c435bf4f765d757fbc6,BKL,train
 ISIC_0025985,Train,pigmented benign keratosis,BKL,bb0d4054248617fdb29f8de7075333b1,BKL,train
 ISIC_0025986,Train,pigmented benign keratosis,BKL,7db95fdfebc3db75f9cc5c7aaa161943,BKL,train
 ISIC_0026015,Train,pigmented benign keratosis,BKL,6717b08be37103959a59b4092229c129,BKL,train
-ISIC_0026016,Train,pigmented benign keratosis,BKL,72338b9f93cac746b149ba4a0dd2a418,BKL,val
+ISIC_0026016,Train,pigmented benign keratosis,BKL,72338b9f93cac746b149ba4a0dd2a418,BKL,train
 ISIC_0026018,Train,pigmented benign keratosis,BKL,5439438b49bbfd7142c480f1ff7410cf,BKL,train
 ISIC_0026042,Train,pigmented benign keratosis,BKL,9db5e8039c5a5d8f9207d50d25bb2ec5,BKL,train
 ISIC_0026044,Train,pigmented benign keratosis,BKL,2a5afae2e25dd6d67a755420a5865c9e,BKL,train
@@ -1566,15 +1566,15 @@ ISIC_0026070,Train,pigmented benign keratosis,BKL,9973219dbd477f1da364f765fb2ff4
 ISIC_0026072,Train,pigmented benign keratosis,BKL,99ee606afd8bea483db0a6977bc0c039,BKL,train
 ISIC_0026085,Train,pigmented benign keratosis,BKL,bb60984c8435e0f2966906775862d6c7,BKL,train
 ISIC_0026104,Train,pigmented benign keratosis,BKL,a088a6155177312aabd8bbadc3c20105,BKL,train
-ISIC_0026107,Train,pigmented benign keratosis,BKL,274c0471fbe14bc66ecef4230ddf5fdb,BKL,val
+ISIC_0026107,Train,pigmented benign keratosis,BKL,274c0471fbe14bc66ecef4230ddf5fdb,BKL,train
 ISIC_0026135,Train,pigmented benign keratosis,BKL,e5a2e202da1f37268dd72c6d2168e9dc,BKL,train
 ISIC_0026139,Train,pigmented benign keratosis,BKL,553a849dec5566285a6d3fa2c84d6cbb,BKL,test
 ISIC_0026142,Train,pigmented benign keratosis,BKL,9bd9366684837215210d02edbb4dae7c,BKL,train
 ISIC_0026153,Train,pigmented benign keratosis,BKL,8effb0dd5794e6c621b616dc9a78e19e,BKL,train
 ISIC_0026159,Train,pigmented benign keratosis,BKL,ea8345d26e245efc2cfba198627d42e5,BKL,train
 ISIC_0026174,Train,pigmented benign keratosis,BKL,397d162266e202482b54171443a6c0f0,BKL,train
-ISIC_0026205,Train,pigmented benign keratosis,BKL,44a5bb1d5102a821105025748ef0eae9,BKL,val
-ISIC_0026219,Train,pigmented benign keratosis,BKL,82fceb4ca975619559610e2b92b5f880,BKL,val
+ISIC_0026205,Train,pigmented benign keratosis,BKL,44a5bb1d5102a821105025748ef0eae9,BKL,train
+ISIC_0026219,Train,pigmented benign keratosis,BKL,82fceb4ca975619559610e2b92b5f880,BKL,train
 ISIC_0026245,Train,pigmented benign keratosis,BKL,124fef2a2d726b853331733ddec852b3,BKL,train
 ISIC_0026248,Train,pigmented benign keratosis,BKL,43ee3d6363ea6da9ea261711a8be9962,BKL,train
 ISIC_0026249,Train,pigmented benign keratosis,BKL,3e6c72c02a59ea20e76e92114defc04d,BKL,train
@@ -1607,11 +1607,11 @@ ISIC_0026477,Train,pigmented benign keratosis,BKL,778daa4073a43fff432081be5aec4e
 ISIC_0026493,Train,pigmented benign keratosis,BKL,64e2b12e1ae29fe280c58b6c148bc63b,BKL,train
 ISIC_0026511,Train,pigmented benign keratosis,BKL,a034aa23cc8637fdca15935ecc6a0167,BKL,train
 ISIC_0026514,Train,pigmented benign keratosis,BKL,8bc5f246049325acd7a1036b75763109,BKL,train
-ISIC_0026523,Train,pigmented benign keratosis,BKL,e31b7939625e6df37495b8070e426453,BKL,val
+ISIC_0026523,Train,pigmented benign keratosis,BKL,e31b7939625e6df37495b8070e426453,BKL,train
 ISIC_0026524,Train,pigmented benign keratosis,BKL,d230df4f66c5318d863a91d0814b36d1,BKL,train
-ISIC_0026526,Train,pigmented benign keratosis,BKL,aab43fafb812ab47755e91e783d1912b,BKL,val
+ISIC_0026526,Train,pigmented benign keratosis,BKL,aab43fafb812ab47755e91e783d1912b,BKL,train
 ISIC_0026530,Train,pigmented benign keratosis,BKL,e1b85245061ef09e7e007e905196541c,BKL,train
-ISIC_0026532,Train,pigmented benign keratosis,BKL,ccf0bc0b63a6c5b7015ed4fe98553bcf,BKL,val
+ISIC_0026532,Train,pigmented benign keratosis,BKL,ccf0bc0b63a6c5b7015ed4fe98553bcf,BKL,train
 ISIC_0026538,Train,pigmented benign keratosis,BKL,8deb8f86c952a355e5df56cbca185d20,BKL,val
 ISIC_0026539,Train,pigmented benign keratosis,BKL,c8fdae17b3cf9d5f611a41aaddcb4ea6,BKL,train
 ISIC_0026553,Train,pigmented benign keratosis,BKL,3b07ad4f1bd34b7b5db2d9faa2168884,BKL,val
@@ -1624,7 +1624,7 @@ ISIC_0026606,Train,pigmented benign keratosis,BKL,22fdef9e133a4674cf4d888f5a2794
 ISIC_0026607,Train,pigmented benign keratosis,BKL,e8517285d4ab31952ce0a461a1520401,BKL,train
 ISIC_0026614,Train,pigmented benign keratosis,BKL,3f2fc4f53650edcf13c2c60697c5960d,BKL,train
 ISIC_0026623,Train,pigmented benign keratosis,BKL,1665d25d99ae41fdbcddca388bfe3027,BKL,train
-ISIC_0026631,Train,pigmented benign keratosis,BKL,36297b12d58718fbe2088929e3a52504,BKL,val
+ISIC_0026631,Train,pigmented benign keratosis,BKL,36297b12d58718fbe2088929e3a52504,BKL,train
 ISIC_0026634,Train,pigmented benign keratosis,BKL,fa702078915d68d297a555f7f5de010e,BKL,train
 ISIC_0026637,Train,pigmented benign keratosis,BKL,80745a10048b3624a2d81965ccc76f41,BKL,train
 ISIC_0026644,Train,pigmented benign keratosis,BKL,1c4cfa0c01ea6f62667990a423790f83,BKL,train
@@ -1632,7 +1632,7 @@ ISIC_0026661,Train,pigmented benign keratosis,BKL,57652544074dec2a29bb9f14ed5dcd
 ISIC_0026663,Train,pigmented benign keratosis,BKL,e0c4898c165af35117621feb3e12d176,BKL,train
 ISIC_0026675,Train,pigmented benign keratosis,BKL,f907f80ba10221255942224e87696e28,BKL,val
 ISIC_0026679,Train,pigmented benign keratosis,BKL,91c7e2479a8299674f38d65482142db6,BKL,train
-ISIC_0026704,Train,pigmented benign keratosis,BKL,046e18a2b5265692c301b790099112c4,BKL,val
+ISIC_0026704,Train,pigmented benign keratosis,BKL,046e18a2b5265692c301b790099112c4,BKL,train
 ISIC_0026714,Train,pigmented benign keratosis,BKL,a1183b480d67b755769963c0a018257f,BKL,train
 ISIC_0026717,Train,pigmented benign keratosis,BKL,5a6fd6d2b9b990667dc952b09c5d9599,BKL,train
 ISIC_0026728,Train,pigmented benign keratosis,BKL,c54107a999326ac219d90c0a7554f3c5,BKL,train
@@ -1641,7 +1641,7 @@ ISIC_0026744,Train,pigmented benign keratosis,BKL,3c086f648ed7ffc8f7bd0631afb43c
 ISIC_0026769,Train,pigmented benign keratosis,BKL,ea51681e53078794b96b231f18e628c9,BKL,train
 ISIC_0026775,Train,pigmented benign keratosis,BKL,302b29c7710366e7750c15ea4aabdc48,BKL,train
 ISIC_0026783,Train,pigmented benign keratosis,BKL,f6c068581c17c621b2216acda0684f06,BKL,train
-ISIC_0026787,Train,pigmented benign keratosis,BKL,2620e17ec8327e8634ab9a967ca5c409,BKL,val
+ISIC_0026787,Train,pigmented benign keratosis,BKL,2620e17ec8327e8634ab9a967ca5c409,BKL,train
 ISIC_0026790,Train,pigmented benign keratosis,BKL,8cc5408b63e9dd2ce8e0106d766e7ab5,BKL,train
 ISIC_0026794,Train,pigmented benign keratosis,BKL,86dc8921a79e0e436f5356993e0564d7,BKL,train
 ISIC_0026803,Train,pigmented benign keratosis,BKL,82d6ee718dabd23483d6a8f40a04e25c,BKL,test
@@ -1662,7 +1662,7 @@ ISIC_0026912,Train,pigmented benign keratosis,BKL,48ad7d613bf06982b4a12bda74723d
 ISIC_0026923,Train,pigmented benign keratosis,BKL,8cb87332d3b16ec42df837552f08e642,BKL,train
 ISIC_0026941,Train,pigmented benign keratosis,BKL,e057c0233eddf603cef375fe2105f019,BKL,train
 ISIC_0026947,Train,pigmented benign keratosis,BKL,335f2b26329e94e91e581aaf69f4ff76,BKL,val
-ISIC_0026955,Train,pigmented benign keratosis,BKL,363727188321c118d8c4f8f94ef56201,BKL,val
+ISIC_0026955,Train,pigmented benign keratosis,BKL,363727188321c118d8c4f8f94ef56201,BKL,train
 ISIC_0026958,Train,pigmented benign keratosis,BKL,756e2a5561bd5c6c9eff9aef4011da21,BKL,train
 ISIC_0026959,Train,pigmented benign keratosis,BKL,3c10d2f0462e3579ce069b9fe696b9eb,BKL,train
 ISIC_0026961,Train,pigmented benign keratosis,BKL,e5c573ae7041d355cb61e6246a6cef83,BKL,train
@@ -1682,7 +1682,7 @@ ISIC_0027064,Train,pigmented benign keratosis,BKL,b96de08eb86c31e84080e0c2478116
 ISIC_0027068,Train,pigmented benign keratosis,BKL,7ed0120b916c89595812041d1b734b3c,BKL,train
 ISIC_0027083,Train,pigmented benign keratosis,BKL,4a8e7d2049e061e46005434a19ea1529,BKL,train
 ISIC_0027094,Train,pigmented benign keratosis,BKL,13662d9dee3e39f28d770301c43889ca,BKL,train
-ISIC_0027139,Train,pigmented benign keratosis,BKL,2f736597f249f6e66930cec7c88be3a4,BKL,val
+ISIC_0027139,Train,pigmented benign keratosis,BKL,2f736597f249f6e66930cec7c88be3a4,BKL,train
 ISIC_0027142,Train,pigmented benign keratosis,BKL,2a4cbf495e848106fa9ea412c1a18035,BKL,train
 ISIC_0027151,Train,pigmented benign keratosis,BKL,972e2c71f586c76b00851505e84989d9,BKL,train
 ISIC_0027154,Train,pigmented benign keratosis,BKL,c8c58c19484a7b6753e1474937594d95,BKL,train
@@ -1692,7 +1692,7 @@ ISIC_0027192,Train,pigmented benign keratosis,BKL,79e7531760e20ff9367d929da42607
 ISIC_0027194,Train,pigmented benign keratosis,BKL,7ccc180e3d7447785a9fe42888bba2c9,BKL,train
 ISIC_0027202,Train,pigmented benign keratosis,BKL,6d48f0fb58d41aae271354546c432eb8,BKL,test
 ISIC_0027218,Train,pigmented benign keratosis,BKL,52d41f58f953c250448d04e3dfe3f9c4,BKL,train
-ISIC_0027219,Train,pigmented benign keratosis,BKL,fb64f2d71f7c3ca57bfd389c78bec3eb,BKL,val
+ISIC_0027219,Train,pigmented benign keratosis,BKL,fb64f2d71f7c3ca57bfd389c78bec3eb,BKL,train
 ISIC_0027239,Train,pigmented benign keratosis,BKL,db88be15a3f7565a2f461a5225c89167,BKL,train
 ISIC_0027270,Train,pigmented benign keratosis,BKL,248a9cbe202e702d119b595f559d7a57,BKL,train
 ISIC_0027275,Train,pigmented benign keratosis,BKL,7bf0c5c59f072d4b4ee5550de7275395,BKL,train
@@ -1712,7 +1712,7 @@ ISIC_0027370,Train,pigmented benign keratosis,BKL,6c362743b3bb846b4d17fc87325e12
 ISIC_0027374,Train,pigmented benign keratosis,BKL,f2e38f793a4343c3904ff3b42e20ff1f,BKL,train
 ISIC_0027388,Train,pigmented benign keratosis,BKL,428266a1900b907d6510f82dee410179,BKL,val
 ISIC_0027392,Train,pigmented benign keratosis,BKL,909c2f241846b46ca606eaf31568a7b1,BKL,train
-ISIC_0027394,Train,pigmented benign keratosis,BKL,c42fb05bf2c6e95352e30919b3eae748,BKL,val
+ISIC_0027394,Train,pigmented benign keratosis,BKL,c42fb05bf2c6e95352e30919b3eae748,BKL,train
 ISIC_0027419,Train,pigmented benign keratosis,BKL,b22180267ada671388161cd0b226ee2c,BKL,train
 ISIC_0027428,Train,pigmented benign keratosis,BKL,f772810f8f72b5ccc551a13c791973eb,BKL,train
 ISIC_0027435,Train,pigmented benign keratosis,BKL,0ff06ae62f0c5781faf1888c194c07d6,BKL,train
@@ -1736,7 +1736,7 @@ ISIC_0027649,Train,pigmented benign keratosis,BKL,faedc84b47f6d4cf9cf7ed7cc2d3fa
 ISIC_0027652,Train,pigmented benign keratosis,BKL,2c6703425f83535884599b71f3552f1a,BKL,val
 ISIC_0027680,Train,pigmented benign keratosis,BKL,e8f905e08fa35507026f0fd059841b4f,BKL,train
 ISIC_0027681,Train,pigmented benign keratosis,BKL,229b0593b92cb50efe4a7bdcbf2fdd9e,BKL,train
-ISIC_0027706,Train,pigmented benign keratosis,BKL,8b4e7b69978dff269981a54f945a49b2,BKL,val
+ISIC_0027706,Train,pigmented benign keratosis,BKL,8b4e7b69978dff269981a54f945a49b2,BKL,train
 ISIC_0027710,Train,pigmented benign keratosis,BKL,a6677a3e543632da6ea5acfdb0cb5bcb,BKL,train
 ISIC_0027713,Train,pigmented benign keratosis,BKL,da4ce0d35b684e73079e9a2bac4e2f16,BKL,train
 ISIC_0027735,Train,pigmented benign keratosis,BKL,7db42b328d9a40332996d51f8278fb3d,BKL,train
@@ -1755,18 +1755,18 @@ ISIC_0027806,Train,pigmented benign keratosis,BKL,a92956f33ae521ba170727c4dd3a41
 ISIC_0027811,Train,pigmented benign keratosis,BKL,c0373b21af568b155bd98aa351553d47,BKL,train
 ISIC_0027820,Train,pigmented benign keratosis,BKL,58ef1c8940ad954aab03909439b9dc90,BKL,train
 ISIC_0027826,Train,pigmented benign keratosis,BKL,579c4d589d5457124a7f69bb07124864,BKL,train
-ISIC_0027828,Train,pigmented benign keratosis,BKL,4a8dc3d98dbe0567492fd0ec44b51895,BKL,val
+ISIC_0027828,Train,pigmented benign keratosis,BKL,4a8dc3d98dbe0567492fd0ec44b51895,BKL,train
 ISIC_0027831,Train,pigmented benign keratosis,BKL,3d4fbf98e479c34609d18ef01e5f68fc,BKL,train
 ISIC_0027850,Train,pigmented benign keratosis,BKL,e086f6e4a06b2fecbfbbba2505c0fb36,BKL,train
 ISIC_0027859,Train,pigmented benign keratosis,BKL,42b7d32b9616fa64c607db5c6fee6ce0,BKL,train
 ISIC_0027875,Train,pigmented benign keratosis,BKL,2f7594bd0ee78a98eb9bdbb821e6733e,BKL,train
 ISIC_0027893,Train,pigmented benign keratosis,BKL,0dc09ef56dc79357929bfdfc9ebee6bf,BKL,train
-ISIC_0027905,Train,pigmented benign keratosis,BKL,bf73807217bd45f4f9e82cc5ae7f8a2c,BKL,val
+ISIC_0027905,Train,pigmented benign keratosis,BKL,bf73807217bd45f4f9e82cc5ae7f8a2c,BKL,train
 ISIC_0027916,Train,pigmented benign keratosis,BKL,568cb64696d945a090e4880c8a4df148,BKL,train
 ISIC_0027953,Train,pigmented benign keratosis,BKL,c5c67c00428ccef118cb82ad78527e3b,BKL,train
 ISIC_0027954,Train,pigmented benign keratosis,BKL,d9406bb3e2c71d40093e06a6d4177e49,BKL,train
-ISIC_0027957,Train,pigmented benign keratosis,BKL,73a7d9798977012615e530f75cd60ed3,BKL,val
-ISIC_0027960,Train,pigmented benign keratosis,BKL,c558d61db6bbd07e3d6a30ba80092936,BKL,val
+ISIC_0027957,Train,pigmented benign keratosis,BKL,73a7d9798977012615e530f75cd60ed3,BKL,train
+ISIC_0027960,Train,pigmented benign keratosis,BKL,c558d61db6bbd07e3d6a30ba80092936,BKL,train
 ISIC_0027967,Train,pigmented benign keratosis,BKL,7bcd5d4bebd3f990b11bde38e3a0e2f8,BKL,test
 ISIC_0027969,Train,pigmented benign keratosis,BKL,418b196c4b6956e93b7df3eb56c4a1d1,BKL,val
 ISIC_0027973,Train,pigmented benign keratosis,BKL,292c4e5905a71ba35d90a9d5266e9675,BKL,train
@@ -1800,8 +1800,8 @@ ISIC_0028254,Train,pigmented benign keratosis,BKL,590520f5e06bedb1a9e3d7f8cb35a7
 ISIC_0028258,Train,pigmented benign keratosis,BKL,7c95ee1942e77ba292b8c566c69408c8,BKL,train
 ISIC_0028264,Train,pigmented benign keratosis,BKL,56de35b436632f85d30a340e6005ed40,BKL,val
 ISIC_0028294,Train,pigmented benign keratosis,BKL,7ebfdb2704e5f09917be759ae33a259e,BKL,train
-ISIC_0028308,Train,pigmented benign keratosis,BKL,a20393745c5b8031cbfdf94fea03ee98,BKL,val
-ISIC_0028309,Train,pigmented benign keratosis,BKL,c1209f288389b63e0b721e7d3976f2d3,BKL,val
+ISIC_0028308,Train,pigmented benign keratosis,BKL,a20393745c5b8031cbfdf94fea03ee98,BKL,train
+ISIC_0028309,Train,pigmented benign keratosis,BKL,c1209f288389b63e0b721e7d3976f2d3,BKL,train
 ISIC_0028331,Train,pigmented benign keratosis,BKL,9ca190781bcbfc07ed5444fe91c35c2f,BKL,train
 ISIC_0028336,Train,pigmented benign keratosis,BKL,b2dc6326321cefea56323f0f070c568f,BKL,train
 ISIC_0028343,Train,pigmented benign keratosis,BKL,bf080588297e9081cb59b5ad3c6eb04a,BKL,train
@@ -1813,10 +1813,10 @@ ISIC_0028388,Train,pigmented benign keratosis,BKL,47c8890ca955ab3409ac2e4ef83d99
 ISIC_0028389,Train,pigmented benign keratosis,BKL,dc4e20bd25cc16cad201493154655183,BKL,train
 ISIC_0028404,Train,pigmented benign keratosis,BKL,d2884c86ef5bd85cd36a7d94bc752281,BKL,train
 ISIC_0028411,Train,pigmented benign keratosis,BKL,562e96be81089f783a27e38b4f6a8847,BKL,test
-ISIC_0028414,Train,pigmented benign keratosis,BKL,efcdc1d28e95fcd2eea8047748ae6f48,BKL,val
+ISIC_0028414,Train,pigmented benign keratosis,BKL,efcdc1d28e95fcd2eea8047748ae6f48,BKL,train
 ISIC_0028448,Train,pigmented benign keratosis,BKL,07f24ea16d6412336590a5549f110765,BKL,train
 ISIC_0028449,Train,pigmented benign keratosis,BKL,0bb22e993e991ca5f75abc00eb99c900,BKL,train
-ISIC_0028451,Train,pigmented benign keratosis,BKL,67abaa05ec5de2e4e3f0ca68fdc328d1,BKL,val
+ISIC_0028451,Train,pigmented benign keratosis,BKL,67abaa05ec5de2e4e3f0ca68fdc328d1,BKL,train
 ISIC_0028473,Train,pigmented benign keratosis,BKL,8ee02f3bc285bf5c4d8ff48b669e8006,BKL,train
 ISIC_0028479,Train,pigmented benign keratosis,BKL,1cae155cb1dd1e30b229e044e5875038,BKL,train
 ISIC_0028490,Train,pigmented benign keratosis,BKL,5497a65a453d82b330446b90ddb7789b,BKL,train
@@ -1828,16 +1828,16 @@ ISIC_0028525,Train,pigmented benign keratosis,BKL,12dd71fc01bd5152181a9767373c62
 ISIC_0028550,Train,pigmented benign keratosis,BKL,0c084ec6dc337cd5610da52575376c90,BKL,train
 ISIC_0028555,Train,pigmented benign keratosis,BKL,d3638ba9dd064a944a7deab867b66818,BKL,train
 ISIC_0028560,Train,pigmented benign keratosis,BKL,16258003cc58bdf12e957983feae0834,BKL,train
-ISIC_0028587,Train,pigmented benign keratosis,BKL,35abbb6b1d7538e3d5133a0c427afa0f,BKL,val
+ISIC_0028587,Train,pigmented benign keratosis,BKL,35abbb6b1d7538e3d5133a0c427afa0f,BKL,train
 ISIC_0028593,Train,pigmented benign keratosis,BKL,885cf626cdba4f82f1f50c9a961bee9e,BKL,test
 ISIC_0028607,Train,pigmented benign keratosis,BKL,b49e4a55beca04d9d760e9a4707cead8,BKL,train
 ISIC_0028611,Train,pigmented benign keratosis,BKL,0eb1b8da69a753cce20d860c9a57cb3a,BKL,train
 ISIC_0028615,Train,pigmented benign keratosis,BKL,606ba568043711ccc248c3ad4ac96dd2,BKL,train
 ISIC_0028622,Train,pigmented benign keratosis,BKL,222d0263aea5fada8ff5848f3d793c2d,BKL,val
 ISIC_0028623,Train,pigmented benign keratosis,BKL,fb38011d46616a2de1637c365c70047e,BKL,train
-ISIC_0028628,Train,pigmented benign keratosis,BKL,f69a9401182c8d5b00faa59bbdb4076d,BKL,val
+ISIC_0028628,Train,pigmented benign keratosis,BKL,f69a9401182c8d5b00faa59bbdb4076d,BKL,train
 ISIC_0028640,Train,pigmented benign keratosis,BKL,7f513ee584432bd776bb7781eb53e6b3,BKL,train
-ISIC_0028646,Train,pigmented benign keratosis,BKL,4662a4d342c89a715ffced2fb7c0d245,BKL,val
+ISIC_0028646,Train,pigmented benign keratosis,BKL,4662a4d342c89a715ffced2fb7c0d245,BKL,train
 ISIC_0028650,Train,pigmented benign keratosis,BKL,53e6ea9f028991936494ec047e0cda27,BKL,train
 ISIC_0028656,Train,pigmented benign keratosis,BKL,e33292d770d55993218e3073ad57cae1,BKL,test
 ISIC_0028662,Train,pigmented benign keratosis,BKL,39eb74a67583e4ac944445993e157b78,BKL,train
@@ -1880,7 +1880,7 @@ ISIC_0011030,Train,seborrheic keratosis,SK,9b8ca0b2591f0d3ae3a4f1a09cd15673,MEL,
 ISIC_0011031,Train,seborrheic keratosis,SK,a33f0110fc128688e46ba1e3beff2a60,MEL,test
 ISIC_0011032,Train,seborrheic keratosis,SK,6d08d14dba0327cba260324a124068ae,MEL,train
 ISIC_0011039,Train,seborrheic keratosis,SK,a61104433dad20a335fb5f289dd77621,MEL,train
-ISIC_0011040,Train,seborrheic keratosis,SK,51ad46c34f3fd120b4cc362fd33f2c6c,MEL,val
+ISIC_0011040,Train,seborrheic keratosis,SK,51ad46c34f3fd120b4cc362fd33f2c6c,MEL,train
 ISIC_0011042,Train,seborrheic keratosis,SK,3de9021bacd936a8de201435b312e056,MEL,train
 ISIC_0011043,Train,seborrheic keratosis,SK,e9a8ddb5fa798259bb7a902b1b1faabf,MEL,test
 ISIC_0011045,Train,seborrheic keratosis,SK,64e1d4c8a28de6fd8be9a42026056da3,MEL,train
@@ -1893,7 +1893,7 @@ ISIC_0011095,Train,seborrheic keratosis,SK,ae3daeb598c9aeb3b0124b6fb69257e4,MEL,
 ISIC_0011099,Train,seborrheic keratosis,SK,f5041d7a60ae22f485e3ebc239c248fb,MEL,train
 ISIC_0011112,Train,seborrheic keratosis,SK,2512a5ed173df2637254804b111ed34d,MEL,train
 ISIC_0011118,Train,seborrheic keratosis,SK,e1131a6292bc0e7e5ff4da1611d3f5a3,MEL,train
-ISIC_0011121,Train,seborrheic keratosis,SK,c97cb8a7f1c244fef28a6cc4ab87adbd,MEL,val
+ISIC_0011121,Train,seborrheic keratosis,SK,c97cb8a7f1c244fef28a6cc4ab87adbd,MEL,train
 ISIC_0011125,Train,seborrheic keratosis,SK,100b10c91cf01153f1d25d8955f14340,MEL,train
 ISIC_0011126,Train,seborrheic keratosis,SK,5ef6e5cb4fb0be29efa77c6d5c8a3958,MEL,train
 ISIC_0011128,Train,seborrheic keratosis,SK,298981c01f56f9ac3fd699fd45933845,MEL,test
@@ -1901,18 +1901,18 @@ ISIC_0011130,Train,seborrheic keratosis,SK,9c64b4e0bc400bc8d2edf64fe5685a2c,MEL,
 ISIC_0011132,Train,seborrheic keratosis,SK,7fa42b433951b3faf01a671e6bb2355a,MEL,train
 ISIC_0011135,Train,seborrheic keratosis,SK,dce38eefbf80983e62312efc99f82907,MEL,train
 ISIC_0011136,Train,seborrheic keratosis,SK,0931ce2176fe447f890a67c3db5c3b1e,MEL,train
-ISIC_0011137,Train,seborrheic keratosis,SK,37d004627aecf530ea55ca75f3016c55,MEL,val
-ISIC_0011138,Train,seborrheic keratosis,SK,2a820468dc7e600f35311b35b62c3d3d,MEL,val
+ISIC_0011137,Train,seborrheic keratosis,SK,37d004627aecf530ea55ca75f3016c55,MEL,train
+ISIC_0011138,Train,seborrheic keratosis,SK,2a820468dc7e600f35311b35b62c3d3d,MEL,train
 ISIC_0011139,Train,seborrheic keratosis,SK,a22296d84093e9c8a00d9f91f79f8f52,MEL,train
 ISIC_0011140,Train,seborrheic keratosis,SK,8d295e7a202395cdf46be926f107b27d,MEL,train
 ISIC_0011151,Train,seborrheic keratosis,SK,578ec49707828246ac060be71213c9ca,MEL,train
 ISIC_0011158,Train,seborrheic keratosis,SK,795f69c6fbddbdaebac4efcd29a2fcdf,MEL,train
 ISIC_0011161,Train,seborrheic keratosis,SK,70bbd3d798e42182860180b8dff96f66,MEL,train
-ISIC_0011163,Train,seborrheic keratosis,SK,b72b9e87d8ac6870fe46eea2b1209d01,MEL,val
+ISIC_0011163,Train,seborrheic keratosis,SK,b72b9e87d8ac6870fe46eea2b1209d01,MEL,train
 ISIC_0011166,Train,seborrheic keratosis,SK,5286f0d6aa444711949c607a43a79969,MEL,train
 ISIC_0011169,Train,seborrheic keratosis,SK,9912bfb44e7530954d39433078ca1c88,MEL,train
 ISIC_0011174,Train,seborrheic keratosis,SK,b743844c484701c0459b65d224ee84f7,MEL,train
-ISIC_0011176,Train,seborrheic keratosis,SK,5a2a943757f49591dcb7b53b87d9e66c,MEL,val
+ISIC_0011176,Train,seborrheic keratosis,SK,5a2a943757f49591dcb7b53b87d9e66c,MEL,train
 ISIC_0011178,Train,seborrheic keratosis,SK,76c31695ef57d86759c99e9ef1991342,MEL,train
 ISIC_0011181,Train,seborrheic keratosis,SK,a5233bb520eb260d2289640ee533a946,MEL,test
 ISIC_0011185,Train,seborrheic keratosis,SK,6638e66d39709c9d56f3f4f026cf8089,MEL,train
@@ -1948,7 +1948,7 @@ ISIC_0025811,Train,squamous cell carcinoma,SCC,8d76825ca6045b0a2daa05fe261e1953,
 ISIC_0025831,Train,squamous cell carcinoma,SCC,d9602765d9cf8db792484e5b1f70fbe8,SCC,train
 ISIC_0025948,Train,squamous cell carcinoma,SCC,ddce63692568b70ed94d3f5588fec5c5,SCC,train
 ISIC_0026083,Train,squamous cell carcinoma,SCC,9c0551076074b8163df007b517e67083,SCC,train
-ISIC_0026100,Train,squamous cell carcinoma,SCC,61094d297f60ba3e2c93b44f7430d5f0,SCC,val
+ISIC_0026100,Train,squamous cell carcinoma,SCC,61094d297f60ba3e2c93b44f7430d5f0,SCC,train
 ISIC_0026132,Train,squamous cell carcinoma,SCC,c53f73376c3e0a5750010930a9d14f66,SCC,train
 ISIC_0026138,Train,squamous cell carcinoma,SCC,ebfda46692fe5d65dd455f9fb74f7fc4,SCC,train
 ISIC_0026152,Train,squamous cell carcinoma,SCC,a2681438bdf48d8ad3166cecba66d3be,SCC,train
@@ -1982,7 +1982,7 @@ ISIC_0027506,Train,squamous cell carcinoma,SCC,3a29e06fb3642c39d298dc16ae6606a3,
 ISIC_0027529,Train,squamous cell carcinoma,SCC,220e3bc416e43629e28e3f3d086caa19,SCC,train
 ISIC_0027550,Train,squamous cell carcinoma,SCC,c3814c8ed60fa5f9ca1b517b3b6d6883,SCC,train
 ISIC_0027577,Train,squamous cell carcinoma,SCC,6908ccc9021e1d1687fe0df1cc19c5c5,SCC,train
-ISIC_0027678,Train,squamous cell carcinoma,SCC,eb827a03a3128ff8165000db6f31c39a,SCC,val
+ISIC_0027678,Train,squamous cell carcinoma,SCC,eb827a03a3128ff8165000db6f31c39a,SCC,train
 ISIC_0027700,Train,squamous cell carcinoma,SCC,50679dd5aaee5f5cabd01952593b7b84,SCC,train
 ISIC_0027708,Train,squamous cell carcinoma,SCC,c535c5d6f2b332e00a283e1c437f033b,SCC,train
 ISIC_0027719,Train,squamous cell carcinoma,SCC,14d8ce652c371aca333a129a3d6893bd,SCC,train
@@ -2012,7 +2012,7 @@ ISIC_0029059,Train,squamous cell carcinoma,SCC,5009b20f51357d966e913e1f300ee597,
 ISIC_0029067,Train,squamous cell carcinoma,SCC,86b607e33e1251e010128bb86f07750a,SCC,train
 ISIC_0029268,Train,squamous cell carcinoma,SCC,b19f18e5bb47b1f03a4939094a6a86a9,SCC,train
 ISIC_0029279,Train,squamous cell carcinoma,SCC,83aeaa1140c1759fac314e330e6c6d25,SCC,train
-ISIC_0029315,Train,squamous cell carcinoma,SCC,0417dd471f63af26b673d29718901611,SCC,val
+ISIC_0029315,Train,squamous cell carcinoma,SCC,0417dd471f63af26b673d29718901611,SCC,train
 ISIC_0029362,Train,squamous cell carcinoma,SCC,32a6cf70c1a2ca906e176532b592d304,SCC,train
 ISIC_0029371,Train,squamous cell carcinoma,SCC,ed14605b262cfa29ed49a773f95b9a93,SCC,train
 ISIC_0029462,Train,squamous cell carcinoma,SCC,8c2b6fd71a3e6df9687241180dab8213,SCC,test
@@ -2020,7 +2020,7 @@ ISIC_0029533,Train,squamous cell carcinoma,SCC,45457f7b8ace56f3243de78cca8f0e32,
 ISIC_0029541,Train,squamous cell carcinoma,SCC,7b572fe851ca736fe2479d311a17568d,SCC,train
 ISIC_0029549,Train,squamous cell carcinoma,SCC,0861d93e5b92f7962b09f7e8c73af190,SCC,train
 ISIC_0029563,Train,squamous cell carcinoma,SCC,f3d6ed3346a5335dc4a9133ee8c3e82c,SCC,train
-ISIC_0029567,Train,squamous cell carcinoma,SCC,36f1077125198f0a53d85b2745967d15,SCC,val
+ISIC_0029567,Train,squamous cell carcinoma,SCC,36f1077125198f0a53d85b2745967d15,SCC,train
 ISIC_0029573,Train,squamous cell carcinoma,SCC,59f1a47a9019c066d2d448c13203605f,SCC,train
 ISIC_0029582,Train,squamous cell carcinoma,SCC,3b7722565208e8f74b1d0b1b5782fed0,SCC,train
 ISIC_0029598,Train,squamous cell carcinoma,SCC,76a07a3baeb1a9dd27eb3a7629191976,SCC,test
@@ -2036,7 +2036,7 @@ ISIC_0030076,Train,squamous cell carcinoma,SCC,7cacf0b7fc68a436c45bc598f39d7c84,
 ISIC_0030158,Train,squamous cell carcinoma,SCC,6d9fb9f45697ebbca06fc2f21e8d18be,SCC,test
 ISIC_0030175,Train,squamous cell carcinoma,SCC,ebf4f9a4cc6f7df5378fa8d319a56f42,SCC,train
 ISIC_0030191,Train,squamous cell carcinoma,SCC,3f2712bdd29cdf648d9e62a6533b9d1e,SCC,train
-ISIC_0030245,Train,squamous cell carcinoma,SCC,e9751a7beaa514d781d73d15cf03c247,SCC,val
+ISIC_0030245,Train,squamous cell carcinoma,SCC,e9751a7beaa514d781d73d15cf03c247,SCC,train
 ISIC_0030280,Train,squamous cell carcinoma,SCC,335f3300d35847e002eb927c9fbf360f,SCC,train
 ISIC_0030297,Train,squamous cell carcinoma,SCC,667a5d7eeaf05da55fabd0aaae6f6e7e,SCC,train
 ISIC_0030341,Train,squamous cell carcinoma,SCC,85ac3792a6dfe9f324a8e6410c5ee0e4,SCC,train
@@ -2045,9 +2045,9 @@ ISIC_0030387,Train,squamous cell carcinoma,SCC,e087411cd267b9b8ee767041d90aace1,
 ISIC_0030487,Train,squamous cell carcinoma,SCC,869467ec020257e47c78f502d33fe1d7,SCC,val
 ISIC_0030549,Train,squamous cell carcinoma,SCC,1cbd3a7fc0247e11288007f1cb22d4c9,SCC,val
 ISIC_0030591,Train,squamous cell carcinoma,SCC,38a4bc3bdda4e240b90cde6eed92b392,SCC,train
-ISIC_0030602,Train,squamous cell carcinoma,SCC,a62fbad574732f7bc4c1bfdae097f885,SCC,val
+ISIC_0030602,Train,squamous cell carcinoma,SCC,a62fbad574732f7bc4c1bfdae097f885,SCC,train
 ISIC_0030707,Train,squamous cell carcinoma,SCC,7b3469e08e90d3bd9354cbbf29df857a,SCC,train
-ISIC_0030714,Train,squamous cell carcinoma,SCC,69eda4d9c652605adf9c2980b3d79599,SCC,val
+ISIC_0030714,Train,squamous cell carcinoma,SCC,69eda4d9c652605adf9c2980b3d79599,SCC,train
 ISIC_0030785,Train,squamous cell carcinoma,SCC,17bce4b9ec2f1909ae5a4755a50907b2,SCC,test
 ISIC_0030794,Train,squamous cell carcinoma,SCC,14dd61c2183b490fbf537cca8664dcf1,SCC,train
 ISIC_0030803,Train,squamous cell carcinoma,SCC,0a2b56a5c39730f8e55433a8807f2543,SCC,train
@@ -2077,7 +2077,7 @@ ISIC_0031743,Train,squamous cell carcinoma,SCC,0a51966f04b4a65c7bf6f7beb33441a4,
 ISIC_0031852,Train,squamous cell carcinoma,SCC,fdd76e126252210198ed55adb90a6279,SCC,train
 ISIC_0031874,Train,squamous cell carcinoma,SCC,0fc8320b759e557e12b730efa08fed70,SCC,test
 ISIC_0031918,Train,squamous cell carcinoma,SCC,d49c35cc5241ef1516fe5e38512edf14,SCC,train
-ISIC_0031927,Train,squamous cell carcinoma,SCC,5e25f7db35bf64f7f9aa1e1c4fd75789,SCC,val
+ISIC_0031927,Train,squamous cell carcinoma,SCC,5e25f7db35bf64f7f9aa1e1c4fd75789,SCC,train
 ISIC_0031929,Train,squamous cell carcinoma,SCC,c3fcda75afeffbf424eb345401582f59,SCC,train
 ISIC_0031940,Train,squamous cell carcinoma,SCC,faf7758f4b1ef6d2a39dc10ed9d322f0,SCC,train
 ISIC_0032014,Train,squamous cell carcinoma,SCC,773446b4b6b76ebebe9cc6bf4cd3b515,SCC,test
@@ -2258,14 +2258,14 @@ ISIC_0024331,Test,basal cell carcinoma,BCC,7472ae9776c53b073d24998b028d243d,BCC,
 ISIC_0024332,Test,basal cell carcinoma,BCC,9848910ba2bcf7bcad13108a2c870bdc,BCC,test
 ISIC_0024345,Test,basal cell carcinoma,BCC,678fa27da78419063bd3924e44182f7c,BCC,train
 ISIC_0024360,Test,basal cell carcinoma,BCC,0b0f8bf9e4134d821022e6c37de7e3d2,BCC,train
-ISIC_0024403,Test,basal cell carcinoma,BCC,8a1422318979f33cc3bed43d54ad2ff5,BCC,val
+ISIC_0024403,Test,basal cell carcinoma,BCC,8a1422318979f33cc3bed43d54ad2ff5,BCC,train
 ISIC_0024411,Test,basal cell carcinoma,BCC,a7804275e3cc1a9b72f2f6c539899e33,BCC,train
 ISIC_0024431,Test,basal cell carcinoma,BCC,2cd1b059898c6303356ab00c4bbbaf15,BCC,train
 ISIC_0024432,Test,basal cell carcinoma,BCC,808c7c422f14ac74e4fd864615a0f15b,BCC,train
 ISIC_0024436,Test,basal cell carcinoma,BCC,198bdef8dc623511a8a9181ae2b29a7f,BCC,train
-ISIC_0024443,Test,basal cell carcinoma,BCC,3337f55eb3c57e62033f5a34e1bdfee7,BCC,val
+ISIC_0024443,Test,basal cell carcinoma,BCC,3337f55eb3c57e62033f5a34e1bdfee7,BCC,train
 ISIC_0024448,Test,basal cell carcinoma,BCC,0b902d52b4de81abb2cfbec7bdf35bc7,BCC,train
-ISIC_0024452,Test,basal cell carcinoma,BCC,1e3453c073ef05d8ce43a5a8bfa13e56,BCC,val
+ISIC_0024452,Test,basal cell carcinoma,BCC,1e3453c073ef05d8ce43a5a8bfa13e56,BCC,train
 ISIC_0024454,Test,basal cell carcinoma,BCC,c6afe0e8cc032ae515694dee8ad092fa,BCC,val
 ISIC_0024457,Test,basal cell carcinoma,BCC,82679910d86267e429557f31bbdc2357,BCC,test
 ISIC_0024461,Test,basal cell carcinoma,BCC,8a89182e22a201f0de014a7aebf77cb5,BCC,val
@@ -2283,7 +2283,7 @@ ISIC_0024386,Test,dermatofibroma,DF,1e671589fd385edcdd7b28533166ab0f,DF,train
 ISIC_0024396,Test,dermatofibroma,DF,886c032096a6834b8bab7643a74a4ddf,DF,train
 ISIC_0024553,Test,dermatofibroma,DF,d65415a1812a41ab79740a553cafacb9,DF,train
 ISIC_0024845,Test,dermatofibroma,DF,f6945058ae687a49fc07481cb9e2d382,DF,train
-ISIC_0024973,Test,dermatofibroma,DF,fcc84eeec7bcfa8cad5f9c449ed6f50a,DF,train
+ISIC_0024973,Test,dermatofibroma,DF,fcc84eeec7bcfa8cad5f9c449ed6f50a,DF,val
 ISIC_0024994,Test,dermatofibroma,DF,e5ef26dafb9cfce7901c759c6bf5b6e0,DF,train
 ISIC_0025154,Test,dermatofibroma,DF,e44991bfb196315bd7eecfb90329d312,DF,test
 ISIC_0000002,Test,melanoma,MEL,6cbc699279bcdee56513eb84fc367986,MEL,train
@@ -2303,36 +2303,36 @@ ISIC_0000049,Test,melanoma,MEL,28d5f2155bb273be1cd7cdb2a565896d,MEL,train
 ISIC_0000054,Test,melanoma,MEL,116a0edd0a24f88e94c006e514b4d583,MEL,train
 ISIC_0000056,Test,melanoma,MEL,e4954c2189e1aa964345fad7c45b87a1,MEL,train
 ISIC_0000000,Test,nevus,NV,e39cabee9351f04c659dd97edd3dfaae,NV,train
-ISIC_0000001,Test,nevus,NV,8972b2e13a5a84c941147451722c7c26,NV,val
+ISIC_0000001,Test,nevus,NV,8972b2e13a5a84c941147451722c7c26,NV,train
 ISIC_0000003,Test,nevus,NV,53f5f19ad60d8a09cd280393b07ceaf9,NV,train
 ISIC_0000005,Test,nevus,NV,5a5aab7639f5f0442866ce35fb860e95,NV,train
-ISIC_0000006,Test,nevus,NV,7921fea48bf3a5849fbf63b2c3647f31,NV,val
+ISIC_0000006,Test,nevus,NV,7921fea48bf3a5849fbf63b2c3647f31,NV,train
 ISIC_0000007,Test,nevus,NV,fa812e030c224b1c3ae48824faf54336,NV,train
 ISIC_0000008,Test,nevus,NV,f8570e8beb69060632aa0e539749207e,NV,val
 ISIC_0000009,Test,nevus,NV,03b99f521299005e1bc14cc7559160b8,NV,train
 ISIC_0000010,Test,nevus,NV,571dfe40a6a7b62027629dad61756102,NV,train
 ISIC_0000011,Test,nevus,NV,b193fb43f0d706e09a3f2111e0d0055a,NV,val
 ISIC_0000012,Test,nevus,NV,606131251f6b88c296eae96081e50543,NV,train
-ISIC_0000014,Test,nevus,NV,d4db89e09d6b1a2ad5249963a1802455,NV,val
+ISIC_0000014,Test,nevus,NV,d4db89e09d6b1a2ad5249963a1802455,NV,train
 ISIC_0000015,Test,nevus,NV,467365774d3f17cb9010538b279d138c,NV,train
-ISIC_0000016,Test,nevus,NV,30a0f2e451badf92e4dd3c8acbf62117,NV,val
+ISIC_0000016,Test,nevus,NV,30a0f2e451badf92e4dd3c8acbf62117,NV,train
 ISIC_0000017,Test,nevus,NV,ae8c9f534970257121566443aefd2427,NV,train
 ISIC_0000018,Test,nevus,NV,9d3e78a1c12f38c8ab62e7faa5f0b70f,NV,val
-ISIC_0024312,Test,pigmented benign keratosis,BKL,336ff4db6eb4e9c1c55c02f4018192b7,BKL,val
+ISIC_0024312,Test,pigmented benign keratosis,BKL,336ff4db6eb4e9c1c55c02f4018192b7,BKL,train
 ISIC_0024324,Test,pigmented benign keratosis,BKL,5649d1aacf3cada92c5f57cc49bf80e7,BKL,train
 ISIC_0024336,Test,pigmented benign keratosis,BKL,8da3cf5477060b9d38235d4e08857388,BKL,train
 ISIC_0024337,Test,pigmented benign keratosis,BKL,d6bfce109527bb179d6ca13eac53c08c,BKL,train
 ISIC_0024338,Test,pigmented benign keratosis,BKL,d85a94063c1aa6be02004bbde51879ff,BKL,test
 ISIC_0024358,Test,pigmented benign keratosis,BKL,b68a1fcc5c9c20d0fe23244183d67d63,BKL,train
 ISIC_0024371,Test,pigmented benign keratosis,BKL,1e402c4680ceac6946a67be285e4350e,BKL,train
-ISIC_0024381,Test,pigmented benign keratosis,BKL,1c583a7f607583dee3f3dc0ccd81487c,BKL,val
-ISIC_0024382,Test,pigmented benign keratosis,BKL,117d306e033d16e25288396910a0c4ff,BKL,val
+ISIC_0024381,Test,pigmented benign keratosis,BKL,1c583a7f607583dee3f3dc0ccd81487c,BKL,train
+ISIC_0024382,Test,pigmented benign keratosis,BKL,117d306e033d16e25288396910a0c4ff,BKL,train
 ISIC_0024383,Test,pigmented benign keratosis,BKL,3c9fe0d120a313570b83427063174c95,BKL,train
 ISIC_0024408,Test,pigmented benign keratosis,BKL,97f3d241f3053230d67c9a81205b496c,BKL,train
 ISIC_0024409,Test,pigmented benign keratosis,BKL,0658018fd5a0dac068c83b0158d82de0,BKL,train
 ISIC_0024412,Test,pigmented benign keratosis,BKL,41eb124ebdbbc029feca584d2289c8b4,BKL,train
-ISIC_0024420,Test,pigmented benign keratosis,BKL,a6015d9761558bb1486f16bd7ed18ca7,BKL,val
-ISIC_0024422,Test,pigmented benign keratosis,BKL,942aa6f152e4a4f669082610f19a816c,BKL,val
+ISIC_0024420,Test,pigmented benign keratosis,BKL,a6015d9761558bb1486f16bd7ed18ca7,BKL,train
+ISIC_0024422,Test,pigmented benign keratosis,BKL,942aa6f152e4a4f669082610f19a816c,BKL,train
 ISIC_0024426,Test,pigmented benign keratosis,BKL,8bff3e47f96ab8f4ec15ebd911ad4bc8,BKL,train
 ISIC_0010803,Test,seborrheic keratosis,SK,b0ef69632a1b5080a6bdc17d69f7b801,MEL,train
 ISIC_0010808,Test,seborrheic keratosis,SK,532aa4a187d39bfc9aac2c88ddcecca4,MEL,train

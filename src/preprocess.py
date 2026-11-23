@@ -15,7 +15,8 @@ What it does (in order):
                       colour constancy, sRGB JPEG q=95.
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
   8. Splits         - lesion-grouped, stratified 70/15/15; then the test split is balanced to 30 images per class by
-                      whole lesion groups (balanced_splits in src/common.py; validation unchanged); then 5 CV folds over train+val.
+                      whole lesion groups, then the validation split to 20 images per class the same way (balanced_splits in
+                      src/common.py; train keeps the natural class mix); then 5 CV folds over train+val.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
  10. Outputs        - OUT_DIR/processed_images/ (the cleaned images) and OUT_DIR/processed_cases/: all_cases.csv (every kept case),
                       raw_files_audit.csv, near_duplicates.csv, classes.json, normalization.json,
@@ -40,8 +41,8 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
-from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, TEST_PER_CLASS, atomic_path, \
-    balanced_splits, get_logger, image_path, images_not_in_table, write_json
+from common import CLASS_NAMES, CLASSES, PROCESSED_CASES, PROCESSED_IMAGES, RAW, OFFICIAL_LABELS, SEED, TEST_PER_CLASS, VAL_PER_CLASS, \
+    atomic_path, balanced_splits, get_logger, image_path, images_not_in_table, write_json
 
 META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
               "isic_archive_api_441.csv")
@@ -215,6 +216,7 @@ def main():
     # 4-6 produced false matches between different lesions in dermoscopy, so 3 is the default.
     ap.add_argument("--near-dup-threshold", type=int, default=3)
     ap.add_argument("--test-per-class", type=int, default=TEST_PER_CLASS, help="images of each class in the balanced test split")
+    ap.add_argument("--val-per-class", type=int, default=VAL_PER_CLASS, help="images of each class in the balanced validation split")
     a = ap.parse_args()
     check_inputs(a.raw, a.meta)
     proc = os.path.join(a.out, PROCESSED_CASES)
@@ -378,20 +380,23 @@ def main():
     sgkf2 = StratifiedGroupKFold(n_splits=6, shuffle=True, random_state=SEED)
     tr_i, va_i = next(sgkf2.split(tv, tv.label.values, tv.group_id.values))
     u.loc[tv.index[va_i], "split"] = "val"
-    # balanced test split: the same number of images per class, by whole lesion groups (validation unchanged)
-    before = u.split.copy()
-    u["split"] = u.isic_id.map(balanced_splits(u[["isic_id", "group_id", "label", "split"]].to_dict("records"),
-                                               a.test_per_class))
-    log.info(f"[8] balanced test split: {a.test_per_class} images per class; moved test->train "
-             f"{((before == 'test') & (u.split == 'train')).sum()}, train->test {((before == 'train') & (u.split == 'test')).sum()}")
+    # balanced test split, then balanced validation split (the test split is not touched by the second pass): the same number of
+    # images of every class in each, by whole lesion groups; train keeps the natural class mix
+    for name, per_class in (("test", a.test_per_class), ("val", a.val_per_class)):
+        before = u.split.copy()
+        u["split"] = u.isic_id.map(balanced_splits(u[["isic_id", "group_id", "label", "split"]].to_dict("records"),
+                                                   per_class, split=name))
+        log.info(f"[8] balanced {name} split: {per_class} images per class; moved {name}->train "
+                 f"{((before == name) & (u.split == 'train')).sum()}, train->{name} {((before == 'train') & (u.split == name)).sum()}")
     # 5-fold CV over train+val (test kept untouched)
     u["cv_fold"] = -1
     tv = u[u.split != "test"]
     for k, (_, vi) in enumerate(StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=SEED)
                                 .split(tv, tv.label.values, tv.group_id.values)):
         u.loc[tv.index[vi], "cv_fold"] = k
-    leak = set(u[u.split == "train"].group_id) & set(u[u.split == "test"].group_id)
-    assert not leak, "group leakage between train and test"
+    for one, other in (("train", "test"), ("train", "val"), ("val", "test")):
+        leak = set(u[u.split == one].group_id) & set(u[u.split == other].group_id)
+        assert not leak, f"group leakage between {one} and {other}"
     log.info("[8] split counts\n" + str(pd.crosstab(u.label, u.split, margins=True)))
 
     # 9. normalisation (TRAIN only) ------------------------------------------------

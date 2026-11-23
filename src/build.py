@@ -150,7 +150,10 @@ SYNONYMS = {
 PUBMED_QUERIES = {
     "MEL": '"melanoma"[MeSH Terms] AND "skin neoplasms"[MeSH Terms] AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
     "NV": '"nevus, pigmented"[MeSH Terms] AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
-    "BCC": '"carcinoma, basal cell"[MeSH Terms] AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
+    # NLM renamed this MeSH heading for 2026 ("Carcinoma, Basal Cell" -> "Basal Cell Carcinoma"): a quoted heading that is not found
+    # makes the whole AND query empty, so both names and the plain words are listed
+    "BCC": '("carcinoma, basal cell"[MeSH Terms] OR "basal cell carcinoma"[MeSH Terms] OR "basal cell carcinoma"[tiab]) '
+           'AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
     "AK": '"keratosis, actinic"[MeSH Terms] AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
     "BKL": '("keratosis, seborrheic"[MeSH Terms] OR "solar lentigo"[tiab] OR "lichen planus-like keratosis"[tiab]) '
            'AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
@@ -393,8 +396,13 @@ class Fetcher:
 
 def esearch(fetch, db, term, n):
     r = json.loads(fetch.get(NCBI + "esearch.fcgi", {"db": db, "term": term, "retmax": n, "retmode": "json", "sort": "relevance"},
-                             ncbi=True))
-    return r["esearchresult"]["idlist"]
+                             ncbi=True))["esearchresult"]
+    missing = (r.get("warninglist") or {}).get("quotedphrasesnotfound")
+    if not r["idlist"] or missing:                          # say why, with PubMed's own reading of the query (no secret in it)
+        what = "found nothing" if not r["idlist"] else f"did not find {missing}"
+        log.warning(f"{db} search {what} (count {r.get('count')}); query as read by NCBI: {r.get('querytranslation')!r}; "
+                    f"errors: {r.get('errorlist')}; warnings: {r.get('warninglist')}")
+    return r["idlist"]
 
 
 def pubmed_docs(fetch, cls, n):
