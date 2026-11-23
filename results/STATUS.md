@@ -382,6 +382,26 @@ Checked: 6 new tests of the checker.
 - Not built: the RAG prompts and runner (they will ask for `Evidence: [passage number] "<sentence copied word for word>"` or `Evidence: none`).
 - Tests: 14 for the evidence code, 22 deliberate breaks of it, 21 caught at first, the 22nd (a score exactly at the threshold) by a new test; 199 tests.
 
+## 2026-11-24: decisions on the evaluation metrics (researcher's approvals)
+- **Support check failed twice, NLI support removed.** Second run (8-way top rule, 400 passages): top-1 accuracy 0.50 (pass mark 0.70, no class
+  under 0.50): MEL .62, NV .16, BCC .38, AK .38, BKL .56, DF .76, VASC .60, SCC .54. Removed from the code: the NLI scorer, the statements, the
+  `support-check` command and the `--support-*` options. Kept, no model needed: quote accuracy (word for word in the cited passage), coverage and
+  selective risk with a verified quote, supported accuracy (right and quote verified), negative rejection. Limit to state: a real quote is not proof
+  that it supports the diagnosis.
+- **RAGAS removed** (and `--ragas`, and `ragas` from requirements.txt): an LLM judge costs credit and is not exactly reproducible.
+- **Approved main metrics:** accuracy (top-1 only; one version), macro-F1 with per-class F1, McNemar exact with Holm; retrieval: Hit@k,
+  Recall@k, Precision@k, MRR, nDCG@k. Exact Match is not reported (it equals accuracy for a letter answer).
+- **Recall@k added** (`--passages data/knowledge_corpus/passages.jsonl`): the share of all the corpus passages tagged with the true class that are
+  found in the top k. Low in absolute terms because the corpus is large; read it as a comparison between systems.
+- **Context relevance:** option A approved (MedCPT cross-encoder, `--relevance-models`; the same quantity RAGAS and ARES call context relevance).
+  Option B (similarity of the rationale to the cited passage) was not approved yet: it repeats the existing semantic similarity method and is
+  high by construction when the quote is copied from the passage; recommendation is to drop it.
+- **Decided 2026-11-24:** option B (similarity of the rationale to the cited passage) is dropped (it was never built); Jaccard is dropped
+  (code, tests and source line removed). Context relevance is now MedCPT only (`--relevance-models`), the same quantity RAGAS and ARES call
+  context relevance. Semantic similarity stays (rationale against the class reference texts). A test checks that Jaccard stays gone.
+- Supervisor remark (user's report): a low LLM-only score helps to justify the proposed method. We report what we get and tune nothing to it.
+- Tests: 199 pass (7 skipped); 5 deliberate breaks of the new code, all caught.
+
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text
    results on all test cases and again on those with all three facts recorded (counts change with the balanced test split).

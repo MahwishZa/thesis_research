@@ -65,13 +65,13 @@ The thesis compares LLM-only, standard RAG, RAG² and a proposed RAG on 8-class 
 | Paired McNemar, Holm; cases fixed or broken by retrieval | McNemar, Holm, RAGChecker idea | **Core** | The comparison between systems |
 | Hit@k, Precision@k, nDCG@k | BEIR, KILT, surveys | **Core (RAG)** | Retrieval quality with weak labels from the corpus tags |
 | Quote accuracy (the quote is in the cited passage) | extractive check | **Core (RAG)** | Cheap, exact; turns a made-up quote into a countable event |
-| **Support of the answer by the cited passage** | NLI of the answer statement against the passage: Chen 2021, ALCE, AlignScore | **Core (RAG), after a validity check** | The "supports the diagnosis" check. First validity check failed (0.83 pairwise; BKL 0.51); redesigned as "answered diagnosis scores highest of 8 statements" and to be re-run (pass mark: 0.70 overall, no class under 0.50). Meaning: topic-level support only |
+| ~~Support of the answer by the cited passage (NLI)~~ | Chen 2021, ALCE | **Removed 2026-11-24** | Failed its pre-set pass mark twice (0.83 pairwise, 0.50 top-1); only the exact quote check remains |
 | Supported accuracy (correct and supported) | KILT-AC | **Core (RAG)** | A correct answer without evidence does not count |
 | Coverage, selective risk with verified evidence | selective classification | **Core (RAG)** | The hallucination-at-answer-level view |
 | Negative rejection | RGB | **Core (RAG)** | The model should say "none" when nothing relevant is retrieved |
 | Semantic similarity to the reference texts | embeddings | Supporting | Says whether the reasoning talks about the right disease, not whether it is true |
 | Context relevance (MedCPT cross-encoder) | MedCPT | Supporting | Measures the retriever with a trained biomedical model |
-| RAGAS faithfulness on a small sample | RAGAS | Supporting | A cross-check of the NLI support score; LLM judge, costs credit |
+| RAGAS faithfulness on a small sample | RAGAS | **Removed 2026-11-24** | LLM judge, costs credit, not exactly reproducible |
 | Noise and misleading-passage test | RGB, MedRGB | **Add as an experiment** | Shows whether RAG reduces or adds hallucination |
 | CRAG score (+1 / 0 / -1) | CRAG | Optional | One number combining coverage and risk |
 | Refusals and other invalid answers | - | Core | Already reported |

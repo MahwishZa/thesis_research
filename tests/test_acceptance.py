@@ -3,6 +3,8 @@ where the requirement comes from (.claude/CLAUDE.md or a decision of the researc
 does what the researcher asked, whatever the other tests say. They skip when the part they check is not in the folder.
 Run: python -m unittest discover -s tests"""
 
+import contextlib
+import io
 import json
 import os
 import re
@@ -150,25 +152,26 @@ class MetricRequirements(unittest.TestCase):
 
     def test_an_answer_counts_as_supported_only_when_its_evidence_is_verified(self):
         """Option B (researcher's decision, 2026-11-23): for RAG answers the evidence replaces the yes/no flag. A correct answer with a
-        quote that is not in the passage, or with a passage that does not support the diagnosis, is not counted as supported."""
+        quote that is not in the passage is not counted as supported (an NLI support step was removed on 2026-11-24)."""
         passage = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric."
         good = {i: {"pred": q["answer"], "contexts": [{"chunk_id": "c", "text": passage, "tags": [q["gold_label"]]}],
                     "evidence": {"chunk_id": "c", "quote": "Melanomas show asymmetry and irregular borders here"}}
                 for i, q in self.qa.items()}
         invented = {i: {**p, "evidence": {"chunk_id": "c", "quote": "this sentence is not in the passage at all"}} for i, p in good.items()}
-        yes, no = (lambda premises, hypotheses: [0.9] * len(premises)), (lambda premises, hypotheses: [0.1] * len(premises))
-        rule = {"rule": "threshold"}
-        self.assertEqual(ev.evidence_metrics(self.qa, good, yes, **rule)["supported_accuracy"], 1.0)
-        self.assertEqual(ev.evidence_metrics(self.qa, invented, yes, **rule)["supported_accuracy"], 0.0)
-        self.assertEqual(ev.evidence_metrics(self.qa, good, no, **rule)["supported_accuracy"], 0.0)
-        self.assertEqual(ev.evidence_metrics(self.qa, good, yes)["supported_accuracy"], 0.0)   # rule "top": 8 equal scores, no winner
+        self.assertEqual(ev.evidence_metrics(self.qa, good)["supported_accuracy"], 1.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, invented)["supported_accuracy"], 0.0)
         self.assertIsNone(ev.evidence_metrics(self.qa, self.pred))                 # the LLM-only answers have no evidence to check
+
+    def test_no_llm_judge_metric_is_offered(self):
+        """Removed on the researcher's decision (2026-11-24): no RAGAS and no other LLM judge that costs credit."""
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            ev.report_main(["--questions", "q", "--predictions", "p", "--ragas"])
+        self.assertFalse(any("ragas" in n.lower() for n in dir(ev)))
 
     def test_every_metric_family_names_its_source_in_evaluate_py(self):
         """Only established, correctly named metrics, each with its source (.claude/CLAUDE.md)."""
         doc = ev.__doc__
-        for source in ("McNemar (1947)", "Holm (1979)", "Geifman", "Jarvelin", "MedCPT", "Jaccard (1912)",
-                       "Es et al."):
+        for source in ("McNemar (1947)", "Holm (1979)", "Geifman", "Jarvelin", "MedCPT"):
             self.assertIn(source, doc)
 
 

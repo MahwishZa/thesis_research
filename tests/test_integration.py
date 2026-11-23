@@ -1155,12 +1155,11 @@ class EvidenceCommandTests(unittest.TestCase):
         write_jsonl(paths["pred"], preds)
         return paths
 
-    def run_report(self, extra, scorer=None):
+    def run_report(self, extra):
         with tempfile.TemporaryDirectory() as d:
             paths = self.files(d)
             out = os.path.join(d, "report.json")
-            with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(ev, "nli_support_scorer", lambda name: scorer), \
-                    mock.patch.object(ev, "relevance_metrics", lambda *a, **k: {}):       # the stop words need scikit-learn
+            with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(ev, "relevance_metrics", lambda *a, **k: {}):
                 ev.main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text", *extra])
             return json.loads(Path(out).read_text(encoding="utf-8"))
 
@@ -1169,41 +1168,17 @@ class EvidenceCommandTests(unittest.TestCase):
         e = rep["evidence"]
         self.assertEqual((e["evidence_given"], e["quote_found"], e["quote_accuracy"]), (4, 2, 0.5))
         self.assertEqual((e["n_covered"], e["selective_risk_verified"], e["supported_accuracy"]), (2, 0.0, 0.5))
-        self.assertIsNone(e["support_model"])
 
-    def test_with_a_support_model_the_cited_passage_must_support_the_answered_diagnosis(self):
-        def scorer(premises, hypotheses):
-            scorer.seen.extend(hypotheses)
-            return [0.9 if "melanoma" in h else 0.1 for h in hypotheses]       # a passage about melanoma only
+    def test_the_report_has_recall_at_k_when_the_corpus_is_given(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "passages.jsonl"), [{"tags": ["MEL"]}] * 4 + [{"tags": ["NV"]}] * 4)
+            rep = self.run_report(["--passages", os.path.join(d, "passages.jsonl")])
+        self.assertEqual(rep["retrieval"]["recall@1"], 0.125)        # 4 questions; MEL and NV each find 1 of 4: (.25 + .25 + 0 + 0) / 4
+        self.assertNotIn("recall@1", self.run_report([])["retrieval"])
 
-        scorer.seen = []
-        scorer.model_name = "fake-nli"
-        rep = self.run_report(["--support-model"], scorer)
-        e = rep["evidence"]
-        self.assertEqual((e["support_model"], e["support_rule"], e["supported"], e["n_covered"]), ("fake-nli", "top", 1, 1))
-        self.assertEqual(e["coverage_verified"], 0.25)                         # the nevus answer is refused: melanoma scores higher
-        self.assertEqual(len(scorer.seen), 2 * 8)                              # two found quotes, each against all 8 statements
-        self.assertIn("The diagnosis is melanoma.", scorer.seen)
-
-    def test_the_support_check_command_writes_its_result(self):
-        names = {"MEL": "melanoma", "NV": "nevus", "BCC": "basal cell", "AK": "actinic", "BKL": "keratosis", "DF": "dermatofibroma",
-                 "VASC": "vascular", "SCC": "squamous"}
-        passages = [{"passage_id": f"p{k}", "query_class": c, "tags": [c], "text": f"The {names[c]} lesion appears with signs {k}."}
-                    for k, c in enumerate(bd.CLASSES * 2)]
-        by_statement = {ev.diagnosis_statement(c): c for c in bd.CLASSES}
-
-        def scorer(premises, hypotheses):
-            return [0.9 if names[by_statement[h]] in p else 0.1 for p, h in zip(premises, hypotheses)]
-
-        scorer.model_name = "fake-nli"
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(ev, "nli_support_scorer", lambda name: scorer), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            write_jsonl(os.path.join(d, "passages.jsonl"), passages)
-            ev.main(["support-check", "--passages", os.path.join(d, "passages.jsonl"), "--out", os.path.join(d, "r.json"),
-                     "--per-class", "2"])
-            result = json.loads(Path(d, "r.json").read_text(encoding="utf-8"))
-        self.assertEqual((result["n_passages"], result["top1_accuracy"], result["passed"]), (16, 1.0, True))
-        self.assertIn("highest of the 8", out.getvalue())
+    def test_the_support_check_command_and_the_nli_options_are_gone(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            ev.main(["--questions", "q", "--predictions", "p", "--support-model"])
 
 
 class CommandTests(unittest.TestCase):
