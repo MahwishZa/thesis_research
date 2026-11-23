@@ -26,7 +26,7 @@ import check as cp  # noqa: E402
 import common  # noqa: E402
 import evaluate as ev  # noqa: E402
 import run as rl  # noqa: E402
-from common import CLASSES, OPTION_TEXT, write_jsonl  # noqa: E402
+from common import CLASSES, OPTION_TEXT, VIEWS, write_jsonl  # noqa: E402
 from build import options_for  # noqa: E402
 
 HAVE = all(importlib.util.find_spec(p) for p in ("pandas", "numpy", "cv2", "PIL", "sklearn"))
@@ -521,6 +521,44 @@ class RecallTests(unittest.TestCase):
         self.assertEqual(res["recall@1"], 0.0)
 
 
+class ImageClaimTests(unittest.TestCase):
+    CLAIMS = ["Dermoscopy reveals a classic central white scar-like patch surrounded by a delicate, faint peripheral pigment network.",
+              "The image shows an asymmetric pigmented lesion.",
+              "A 60-year-old with a head lesion: dermoscopic examination shows a strawberry pattern.",
+              "On dermatoscopy, a blue-white veil is seen.",
+              "The patient is young. In this photograph the border is irregular."]
+    NOT_CLAIMS = ["In the absence of clinical information, anatomical site, or visual dermatoscopic features, a nevus is most frequent.",
+                  "The patient's age and the lesion on the lower extremity suggest a dermatofibroma.",
+                  "No image is provided, so I rely on the age and the site.",
+                  "Dermatofibromas are firm nodules; dermoscopy would show a central white patch.",
+                  "I can't see an image, so the answer rests on the patient facts.",
+                  "Without dermoscopy the diagnosis is uncertain.", ""]
+
+    def test_the_word_list_flags_a_described_image_and_skips_denials_and_hypotheses(self):
+        for t in self.CLAIMS:
+            self.assertTrue(ev.claims_an_image(t), t)
+        for t in self.NOT_CLAIMS:
+            self.assertFalse(ev.claims_an_image(t), t)
+        self.assertFalse(ev.claims_an_image(None))
+
+    def test_a_claim_in_one_sentence_counts_even_when_another_sentence_denies(self):
+        self.assertTrue(ev.claims_an_image("No history was given. Dermoscopy reveals a pigment network."))
+        self.assertFalse(ev.claims_an_image("Dermoscopy reveals a pigment network, but not here."))   # the denial is in the same sentence
+
+    def test_the_rate_is_over_text_only_reasonings_and_lists_the_ids(self):
+        qa = as_dict([question(f"ISIC_{i:07d}", c, group=f"L{i}") for i, c in enumerate(["MEL", "NV", "BCC", "AK", "DF"], start=1)])
+        pred = {"ISIC_0000001": {"pred": "A", "view": "text_only", "rationale": self.CLAIMS[0]},
+                "ISIC_0000002": {"pred": "A", "view": "text_only", "rationale": self.NOT_CLAIMS[1]},
+                "ISIC_0000003": {"pred": "A", "view": "text_only", "rationale": "  "},          # no reasoning: not counted
+                "ISIC_0000004": {"pred": "A", "view": "multimodal", "rationale": self.CLAIMS[0]},   # image view: never checked
+                "ISIC_0000005": {"pred": "A", "rationale": self.CLAIMS[1]}}                      # no view recorded: not checked
+        m = ev.image_claim_metrics(qa, pred)
+        self.assertEqual((m["n_text_only_with_reasoning"], m["n_claiming_an_image"], m["rate"]), (2, 1, 0.5))
+        self.assertEqual(m["ids_claiming_an_image"], ["ISIC_0000001"])
+        self.assertEqual(len(m["rate_95ci"]), 2)
+        self.assertIsNone(ev.image_claim_metrics(qa, {"ISIC_0000004": pred["ISIC_0000004"]}))
+
+
 class SelectiveTests(unittest.TestCase):
     def setUp(self):
         self.qs = [question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
@@ -728,7 +766,7 @@ class PromptAndAnswerTests(unittest.TestCase):
         self.assertTrue(text.startswith(q["question"]))
         for letter, option in q["options"].items():
             self.assertIn(f"\n{letter}. {option}", text)
-        self.assertTrue(text.endswith(rl.INSTRUCTIONS["rationale"]))
+        self.assertTrue(text.endswith(rl.instruction("rationale", "multimodal")))
         self.assertNotIn(q["gold_label"], text.replace(q["options"][q["answer"]], ""))   # the code of the class is not shown
 
     def test_the_answer_rule(self):
@@ -755,11 +793,25 @@ class PromptAndAnswerTests(unittest.TestCase):
         self.assertEqual(rl.parse_answer("Answer: Z"), {"pred": None, "rationale": "Answer: Z"})
         self.assertEqual(set(rl.parse_answer("Answer: C")), {"pred", "rationale"})             # no top-3 list and no evidence flag
 
+    def test_the_model_is_never_told_to_cite_an_image_it_was_not_given(self):
+        """2026-11-24: Gemini invented dermoscopic findings for a text-only question; the old wording asked for "the image and/or the
+        patient facts" in every view."""
+        q = bd.question(run_cases(1, False)[0], "text_only")
+        text, image, both = (rl.user_text(q, view=v) for v in ("text_only", "image_only", "multimodal"))
+        self.assertIn("name the findings of this case, in the patient facts, that support your choice", text)
+        self.assertNotIn("image", text.lower())
+        self.assertIn("name the findings of this case, in the image, that support your choice", image)
+        self.assertNotIn("patient facts", image)
+        self.assertIn("in the image and/or in the patient facts", both)
+        self.assertNotIn("{", text + image + both)
+        self.assertEqual(set(rl.FINDINGS_IN), set(VIEWS))
+        self.assertEqual(rl.instruction("answer_only", "text_only"), rl.INSTRUCTIONS["answer_only"])
+
     def test_the_instruction_asks_for_the_reasoning_and_evidence_and_one_letter_and_nothing_else(self):
         text = rl.INSTRUCTIONS["rationale"]
         self.assertIn("Reasoning and evidence: <at most three sentences", text)
         self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
-        self.assertIn("name the findings of this case, in the image and/or in the patient facts, that support your choice", text)
+        self.assertIn("name the findings of this case, {findings}, that support your choice", text)
         self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", rl.INSTRUCTIONS["answer_only"])
         for gone in ("three most likely", "Evidence sufficient", "yes or no"):
             self.assertNotIn(gone, text + rl.INSTRUCTIONS["answer_only"])

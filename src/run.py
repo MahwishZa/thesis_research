@@ -55,9 +55,12 @@ from common import SEED, SPLITS, VIEWS, get_logger, load_env, question_file, rea
 PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
           "This is a research benchmark: no decision about a patient depends on your answer.")
+# What the model may name as findings depends on the view: it must never be told to cite an image it was not given (2026-11-24).
+FINDINGS_IN = {"text_only": "in the patient facts", "image_only": "in the image",
+               "multimodal": "in the image and/or in the patient facts"}
 INSTRUCTIONS = {
     "rationale": ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
-                  "this case, in the image and/or in the patient facts, that support your choice>\". Second line: "
+                  "this case, {findings}, that support your choice>\". Second line: "
                   "\"Answer: <the letter of the most likely option> (<the name of that option>)\"."),
     "answer_only": "Reply only with one line: \"Answer: <the letter of the most likely option> (<the name of that option>)\".",
 }
@@ -101,9 +104,14 @@ def api_key(api):
 
 
 # ---- prompt and answer (no internet) ------------------------------------------------------------------------------------
-def user_text(q, style="rationale"):
+def instruction(style, view):
+    """The instruction of a style for one view (the words about where the findings may come from change with the view)."""
+    return INSTRUCTIONS[style].replace("{findings}", FINDINGS_IN[view])
+
+
+def user_text(q, style="rationale", view="multimodal"):
     options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
-    return f"{q['question']}\n\nOptions:\n{options}\n\n{INSTRUCTIONS[style]}"
+    return f"{q['question']}\n\nOptions:\n{options}\n\n{instruction(style, view)}"
 
 
 def tidy_reasoning(text):
@@ -271,7 +279,7 @@ def run(args, client, log):
             raise SystemExit(f"{len(missing)} images are missing, e.g. {os.path.join(args.data, missing[0])}")
     if args.dry_run:
         for q in asking_order(questions)[:args.limit or 3]:
-            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[user] {user_text(q, args.style)}")
+            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[user] {user_text(q, args.style, args.view)}")
         return None
     os.makedirs(partial, exist_ok=True)
     out = os.path.join(partial, "predictions.jsonl")
@@ -280,7 +288,7 @@ def run(args, client, log):
         qsha = hashlib.sha256(f.read()).hexdigest()
     settings = {"baseline": "llm_only", "model": args.model, "model_settings": MODELS[args.model], "view": args.view,
                 "split": args.split, "questions": qpath.replace("\\", "/"), "questions_sha256": qsha,
-                "prompt": PROMPT_NAME, "style": args.style, "system": SYSTEM, "instruction": INSTRUCTIONS[args.style]}
+                "prompt": PROMPT_NAME, "style": args.style, "system": SYSTEM, "instruction": instruction(args.style, args.view)}
     info_path = os.path.join(partial, "run.json")
     if os.path.exists(info_path):
         with open(info_path, encoding="utf-8") as f:
@@ -301,7 +309,7 @@ def run(args, client, log):
                 image = image_b64(args.data, q["image_path"]) if args.view != "text_only" else None
                 start = time.time()
                 try:
-                    reply = client.ask(SYSTEM, user_text(q, args.style), image)
+                    reply = client.ask(SYSTEM, user_text(q, args.style, args.view), image)
                 except Refused as e:
                     reply = {"text": "", "finish_reason": f"refused by host: {str(e)[:200]}"}
                 answer = parse_answer(reply["text"], "".join(q["options"]))

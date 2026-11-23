@@ -935,11 +935,12 @@ def run_cases(n, view_has_image):
 class FakeClient:
     """Answers right for every second question, wrong for the others, with no letter for the third, and can fail on demand."""
     def __init__(self, questions, fail_at=None, refuse_at=None):
-        self.by_text = {rl.user_text(q): q for q in questions}
-        self.calls, self.images, self.fail_at, self.refuse_at = 0, [], fail_at, refuse_at
+        self.by_text = {rl.user_text(q, view=v): q for q in questions for v in rl.FINDINGS_IN}
+        self.calls, self.images, self.texts, self.fail_at, self.refuse_at = 0, [], [], fail_at, refuse_at
 
     def ask(self, system, text, image):
         self.calls += 1
+        self.texts.append(text)
         if self.fail_at and self.calls == self.fail_at:
             raise rl.ApiError("HTTP 402: no credit")
         if self.refuse_at and self.calls == self.refuse_at:
@@ -1082,6 +1083,20 @@ class RunTests(unittest.TestCase):
         self.go(self.args(view="multimodal"), client)
         self.assertTrue(all(img and img.startswith("/9j") for img in client.images))   # base64 of a JPEG start
 
+    def test_each_view_sends_and_records_its_own_wording_about_where_findings_may_come_from(self):
+        for view, wording, absent in (("text_only", "in the patient facts, that support", "image"),
+                                      ("image_only", "in the image, that support", "patient facts"),
+                                      ("multimodal", "in the image and/or in the patient facts", None)):
+            with self.subTest(view):
+                self.make(view, 2)
+                client = FakeClient(self.questions)
+                self.go(self.args(view=view), client)
+                self.assertTrue(client.texts and all(wording in t for t in client.texts))
+                if absent:
+                    self.assertFalse(any(absent in t.split("Reply in exactly this form")[1] for t in client.texts))
+                info = json.loads(Path(self.folder(view), "run.json").read_text(encoding="utf-8"))
+                self.assertIn(wording, info["settings"]["instruction"])      # the saved settings show what was really asked
+
     def test_missing_images_stop_the_run_before_any_question(self):
         self.make("image_only", 3, images=False)
         client = FakeClient(self.questions)
@@ -1199,6 +1214,38 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((rep["diagnosis"]["accuracy"], rep["diagnosis"]["missing_predictions"]), (0.5, 4))
         self.assertIsNone(rep["retrieval"])
         self.assertEqual(rep["inputs"]["questions"]["sha256"], sha)  # the report says which question file it used
+
+    def test_the_report_counts_text_only_reasonings_that_describe_an_image(self):
+        qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES)]
+        said = ["Dermoscopy reveals a pigment network.", "The patient is 45 years old.", "The image shows a scar-like patch."]
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "qa.jsonl"), qs)
+            write_jsonl(os.path.join(d, "pred.jsonl"), [{"id": q["id"], "pred": q["answer"], "view": "text_only", "rationale": r}
+                                                        for q, r in zip(qs, said)])
+            out = os.path.join(d, "r.json")
+            with contextlib.redirect_stdout(io.StringIO()):
+                ev.main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"), "--out", out,
+                         "--skip-text", "--answered-only"])
+            claims = json.loads(Path(out).read_text(encoding="utf-8"))["text_only_image_claims"]
+        self.assertEqual((claims["n_text_only_with_reasoning"], claims["n_claiming_an_image"]), (3, 2))
+
+    def test_answered_only_scores_a_trial_on_the_questions_that_were_asked(self):
+        qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES)]
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "qa.jsonl"), qs)
+            write_jsonl(os.path.join(d, "pred.jsonl"), [{"id": q["id"], "pred": q["answer"]} for q in qs[:3]])
+            reports = {}
+            for name, extra in (("all", []), ("trial", ["--answered-only"])):
+                out = os.path.join(d, f"{name}.json")
+                with contextlib.redirect_stdout(io.StringIO()):
+                    ev.main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"),
+                             "--out", out, "--skip-text", *extra])
+                reports[name] = json.loads(Path(out).read_text(encoding="utf-8"))
+        self.assertEqual((reports["all"]["diagnosis"]["accuracy"], reports["all"]["trial_answered_only"]), (0.375, False))
+        trial = reports["trial"]
+        self.assertEqual((trial["diagnosis"]["accuracy"], trial["diagnosis"]["n_questions"], trial["diagnosis"]["missing_predictions"]),
+                         (1.0, 3, 0))
+        self.assertTrue(trial["trial_answered_only"])                  # the report is marked, so a trial is never read as a result
 
 
 if __name__ == "__main__":

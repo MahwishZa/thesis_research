@@ -40,6 +40,9 @@ Metrics
               cross-encoder and the cosine of MedCPT embeddings (Jaccard was dropped on the researcher's decision, 2026-11-24).
   Text      : semantic similarity (cosine of sentence embeddings, rationale vs the cited reference texts of the true class, the
               best-matching one kept). No LLM-judge metric (RAGAS) is used: removed on the researcher's decision, 2026-11-24.
+  Image claims in the text-only view : the share of reasonings that describe an image or a dermoscopy for the case although no image was
+              given (a word list, sentences that deny or hypothesise are skipped). An approximate lower bound, decided 2026-11-24; it
+              is never applied to the image views, where a described finding cannot be checked.
 
 Sources: McNemar (1947) Psychometrika 12:153-157; nDCG: Jarvelin & Kekalainen (2002)
 ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651;
@@ -490,6 +493,39 @@ def evidence_metrics(qa, pred):
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------------------
+# Image claims in the text-only view (researcher's decision, 2026-11-24). In that view the model gets no picture, so a reasoning that
+# says "dermoscopy reveals ..." or "the image shows ..." describes something that does not exist. Found by a word list, so it is a
+# lower bound (a paraphrase is missed) and it can flag a harmless sentence: report it as approximate, never as "the hallucination rate".
+# ---------------------------------------------------------------------------------------------------------------------------
+IMAGE_CLAIM = re.compile(
+    r"\bdermos?cop\w*|\bdermatos?cop\w*|\btrichoscop\w*"                                    # dermoscopy, dermoscopic, dermatoscopic
+    r"|\b(?:the|this|these|an?|given|provided|attached|dermoscopic|clinical)\s+(?:images?|pictures?|photos?|photographs?)\b"
+    r"|\b(?:images?|pictures?|photos?|photographs?)\s+(?:shows?|reveals?|displays?|demonstrates?|depicts?|exhibits?)\b", re.I)
+NOT_A_CLAIM = re.compile(r"\b(?:no|not|without|absence|absent|lack(?:s|ing)?|unavailable|cannot|can['’]?t|unable|never|neither|nor|"
+                         r"if|would|could|unless|needs?|needed|requires?|required|limited)\b|n['’]t\b", re.I)
+
+
+def claims_an_image(text):
+    """True when a sentence of the text describes an image or a dermoscopy and does not deny or hypothesise it."""
+    sentences = re.split(r"(?<=[.!?;:])\s+|\n+", text or "")
+    return any(IMAGE_CLAIM.search(x) and not NOT_A_CLAIM.search(x) for x in sentences)
+
+
+def image_claim_metrics(qa, pred):
+    """The share of text-only reasonings that claim an image. A record counts when it says "view": "text_only" (run.py writes it) and has a
+    reasoning. Returns None when there is no such record."""
+    ids = [i for i in qa if i in pred and pred[i].get("view") == "text_only" and (pred[i].get("rationale") or "").strip()]
+    if not ids:
+        return None
+    flags = [1.0 if claims_an_image(pred[i]["rationale"]) else 0.0 for i in ids]
+    groups = [qa[i].get("group_id", i) for i in ids]
+    return {"n_text_only_with_reasoning": len(ids), "n_claiming_an_image": int(sum(flags)), "rate": round(mean(flags), 4),
+            "rate_95ci": bootstrap_ci(flags, flags, groups, lambda a, b: mean(a)),
+            "ids_claiming_an_image": [i for i, f in zip(ids, flags) if f],
+            "method": "word list; approximate lower bound"}
+
+
 def text_metrics(qa, pred, reference_texts, encode=None):
     """Semantic similarity of the explanations (when reference texts are given)."""
     out = {}
@@ -501,13 +537,15 @@ def text_metrics(qa, pred, reference_texts, encode=None):
 
 
 def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relevance_models=False, reference_texts=None,
-             skip_text=False, passages_path=None):
+             skip_text=False, passages_path=None, answered_only=False):
     """The full report of one system on one question file (the same code for every system and every view)."""
     qa, pred = load(qa_path), load(pred_path)
+    if answered_only:      # a trial run (--limit): score only the questions that were asked; the report says so
+        qa = {i: q for i, q in qa.items() if i in pred}
     inputs = {"questions": file_record(qa_path), "predictions": file_record(pred_path)}
     if pred_b_path:
         inputs["predictions_b"] = file_record(pred_b_path)
-    rep = {"inputs": inputs,
+    rep = {"inputs": inputs, "trial_answered_only": bool(answered_only),
            "diagnosis": diagnosis_metrics(qa, pred, load(pred_b_path) if pred_b_path else None),
            "usage": usage_summary(qa, pred),
            "retrieval": retrieval_metrics(qa, pred, n_relevant=relevant_counts(read_jsonl(passages_path)) if passages_path else None)}
@@ -525,6 +563,7 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
             with open(reference_texts, encoding="utf-8") as f:
                 refs = json.load(f)
         rep["text"] = text_metrics(qa, pred, refs)
+    rep["text_only_image_claims"] = image_claim_metrics(qa, pred)
     return rep
 
 
@@ -539,17 +578,23 @@ def report_main(argv=None):
     ap.add_argument("--relevance-models", action="store_true", help="also score relevance with MedCPT (downloads 3 models)")
     ap.add_argument("--reference-texts", default=None)
     ap.add_argument("--skip-text", action="store_true")
+    ap.add_argument("--answered-only", action="store_true",
+                    help="trial runs: score only the questions that have a prediction (without it, an unasked question counts as wrong)")
     ap.add_argument("--passages", default=None,
                     help="the corpus (data/knowledge_corpus/passages.jsonl): with it Recall@k is reported, as the share of all the "
                          "corpus passages tagged with the true class that are found in the top k")
     a = ap.parse_args(argv)
     rep = evaluate(a.questions, a.predictions, a.predictions_b, a.cases, a.by, a.relevance_models, a.reference_texts,
-                   a.skip_text, a.passages)
+                   a.skip_text, a.passages, a.answered_only)
     write_json(a.out, rep)
     log = get_logger("evaluate")
     d = rep["diagnosis"]
     log.info(f"accuracy {d['accuracy']} (95% CI {d['accuracy_95ci'][0]}-{d['accuracy_95ci'][1]}) | macro-F1 {d['macro_f1']} | "
              f"melanoma recall {d['per_class']['MEL']['recall']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']} (refusals {d['invalid_answers_by_cause']['refusals']})")
+    if rep["text_only_image_claims"]:
+        c = rep["text_only_image_claims"]
+        log.info(f"text-only reasonings that describe an image: {c['n_claiming_an_image']} of {c['n_text_only_with_reasoning']} "
+                 f"(approximate; ids in the report)")
     if rep["retrieval"]:
         log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr', 'context_precision')} }")
         if "relevance" in rep:

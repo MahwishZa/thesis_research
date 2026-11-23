@@ -422,3 +422,14 @@ Checked: 6 new tests of the checker.
 
 ## 2026-11-24: feature check
 - `check.py features` now prints and saves `accuracy` instead of balanced accuracy (the same number on the balanced validation and test splits). The laptop run on the new splits (✔ researcher's output): test accuracy shortcut features (original size) 0.317, age/sex/site 0.304, image features 0.525, image + metadata 0.554 (chance 0.125); source detectable from the standardised image features, AUC 0.953. A test keeps "balanced accuracy" out of `check.py`.
+
+## 2026-11-24: first model trials (8 validation questions, text_only; format checks only, no result reported)
+- gpt-4o and gemini-3.8-flash: 8 of 8 answered, 0 invalid, 0 refusals; "Answer: C (Name)" parsed; served_by names the model; finish_reason stop.
+  Tokens for 8 calls: gpt-4o in 1,726 / out 655; gemini in 1,665 / out 2,269 (about 284 out per call).
+- Finding: Gemini wrote dermoscopic findings ("central white scar-like patch") for a text-only question that has no image. The old wording asked for
+  findings "in the image and/or in the patient facts" in every view. Approved fix: the wording now depends on the view (text_only: "in the
+  patient facts"; image_only: "in the image"; multimodal: both). The saved run.json records the wording used. Tests: 202 pass (7 skipped);
+  two deliberate breaks first missed, now caught.
+- The two trial folders on the laptop used the old wording; delete them before the next trial (run.py refuses to continue a run with other settings).
+- Under discussion: a metric for image claims in the text-only view (word list; approximate). Not built.
+- 2026-11-24: image claims in the text-only view are now reported (`text_only_image_claims` in the report): the share of text-only reasonings that describe an image or a dermoscopy (word list; sentences with a denial or a hypothesis are skipped; the ids are listed). Approximate lower bound; never applied to the image views. Tests: 206 pass (7 skipped); deliberate breaks of the rule, the view filter, the rate and the id list are caught.
