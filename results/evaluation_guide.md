@@ -1,5 +1,7 @@
 # Evaluation guide (plain English)
 
+Scores are written as percentages here and in the screen output (25.4% = 61 of 240 right). The JSON and CSV files keep fractions (0.2542) so that programs can read them; p-values and the semantic-similarity cosine are not percentages.
+
 What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluate.py`.
 Marks: ✔ = checked in this repository (a test, or a recomputation by hand); ◻ = from the literature, check the paper before citing it.
 "Research question" means my reading of your objectives (README, "Objectives"): please confirm or correct it.
@@ -18,7 +20,7 @@ Marks: ✔ = checked in this repository (a test, or a recomputation by hand); �
 
 | Metric | In words | Calculation | Read it as | Question it helps answer |
 |---|---|---|---|---|
-| Accuracy | Share of questions answered with the right class | right / all questions. A missing or invalid answer counts as wrong | 0.125 is chance (8 classes, balanced). Higher is better | Does retrieval improve the answer? |
+| Accuracy | Share of questions answered with the right class | right / all questions. A missing or invalid answer counts as wrong | 12.5% is chance (8 classes, balanced). Higher is better | Does retrieval improve the answer? |
 | 95% interval | How much the number could move by chance | 1,000 resamples of whole lesions (photos of one lesion stay together); the 2.5th and 97.5th percentiles | If two intervals overlap a lot, the difference may be luck | How sure are we? |
 | Macro-F1 | Accuracy that gives every class the same weight | F1 of each class = 2·TP / (2·TP + FP + FN); the mean over the 8 classes | Low macro-F1 with fair accuracy means some classes are ignored | Does the model fail on rare or hard classes? |
 | Precision, recall, specificity, F1 per class | Per-class detail | precision = TP/(TP+FP); recall = TP/(TP+FN); specificity = TN/(TN+FP) | Recall of MEL is the share of melanomas found | Which diseases are confused? |
@@ -60,7 +62,7 @@ The model must end with "Evidence: [passage number] "<sentence copied word for w
 | Negative rejection | Does it say "none" when nothing relevant was retrieved? | "Evidence: none" among questions where no retrieved passage is tagged with the true class (RGB, Chen et al. 2024) | Uses the true class to know when nothing relevant exists, so it is an evaluation-only number |
 | Image claims in the text-only view | Does the reasoning describe a picture that was never given? | a word list (dermoscopy, "the image shows"…); a sentence with a denial or "if/would" is skipped | A lower bound: a paraphrase is missed. Not a published metric. Not used for image views |
 
-An NLI model (a language model that decides whether a passage supports a statement) was tried to test "the passage supports the diagnosis". It failed its pre-set pass mark twice (0.83 pairwise; 0.50 top-1 over 8 classes, chance 0.125), so it was removed ✔ (`results/STATUS.md`).
+An NLI model (a language model that decides whether a passage supports a statement) was tried to test "the passage supports the diagnosis". It failed its pre-set pass mark twice (83% pairwise; 50% top-1 over 8 classes, chance 12.5%), so it was removed ✔ (`results/STATUS.md`).
 **Honest limit:** no published metric measures "this reasoning is false" without an expert. All hallucination numbers here are proxies.
 
 ### D. Explanation quality and cost

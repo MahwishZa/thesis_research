@@ -1,0 +1,113 @@
+{
+  "inputs": {
+    "claude": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/claude-sonnet-5-5/text_only_test/predictions.jsonl",
+        "sha256": "088cdc1515957bf23d3794e4c01c912bfb678de21300d4401b9630f79b36f4f3"
+      }
+    },
+    "gpt-4o": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/gpt-4o/text_only_test/predictions.jsonl",
+        "sha256": "735a23e87b3c9b16ff54f0fab36fd0c250a4b573af83cc2c26715529df7611e6"
+      }
+    },
+    "llama": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/llama-4-maverick/text_only_test/predictions.jsonl",
+        "sha256": "6fa3c6f9368b7152897485ad5cde48d111572626296c34657830390eff0faf35"
+      }
+    },
+    "gemini": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/gemini-3.8-flash/text_only_test/predictions.jsonl",
+        "sha256": "47b3d23216df69e0be4c3cd0cb832caadaa1e99e676ee125fd9bbfd6908469c0"
+      }
+    }
+  },
+  "n_questions": 240,
+  "accuracy": {
+    "claude": 0.2542,
+    "gpt-4o": 0.2,
+    "llama": 0.2167,
+    "gemini": 0.2083
+  },
+  "pairs": [
+    {
+      "a": "claude",
+      "b": "gpt-4o",
+      "accuracy_a": 0.2542,
+      "accuracy_b": 0.2,
+      "a_right_b_wrong": 27,
+      "a_wrong_b_right": 14,
+      "p_value": 0.059584,
+      "p_holm": 0.29792
+    },
+    {
+      "a": "claude",
+      "b": "llama",
+      "accuracy_a": 0.2542,
+      "accuracy_b": 0.2167,
+      "a_right_b_wrong": 27,
+      "a_wrong_b_right": 18,
+      "p_value": 0.232693,
+      "p_holm": 0.930772
+    },
+    {
+      "a": "claude",
+      "b": "gemini",
+      "accuracy_a": 0.2542,
+      "accuracy_b": 0.2083,
+      "a_right_b_wrong": 13,
+      "a_wrong_b_right": 2,
+      "p_value": 0.007385,
+      "p_holm": 0.04431
+    },
+    {
+      "a": "gpt-4o",
+      "b": "llama",
+      "accuracy_a": 0.2,
+      "accuracy_b": 0.2167,
+      "a_right_b_wrong": 25,
+      "a_wrong_b_right": 29,
+      "p_value": 0.683489,
+      "p_holm": 1.0
+    },
+    {
+      "a": "gpt-4o",
+      "b": "gemini",
+      "accuracy_a": 0.2,
+      "accuracy_b": 0.2083,
+      "a_right_b_wrong": 20,
+      "a_wrong_b_right": 22,
+      "p_value": 0.877614,
+      "p_holm": 1.0
+    },
+    {
+      "a": "llama",
+      "b": "gemini",
+      "accuracy_a": 0.2167,
+      "accuracy_b": 0.2083,
+      "a_right_b_wrong": 24,
+      "a_wrong_b_right": 22,
+      "p_value": 0.882996,
+      "p_holm": 1.0
+    }
+  ]
+}

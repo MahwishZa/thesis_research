@@ -54,6 +54,7 @@ Usage: python src/evaluate.py --questions data/views/multimodal/test.jsonl --pre
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json]
        [--passages data/knowledge_corpus/passages.jsonl]
        [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
+       python src/evaluate.py similarity-check             (is the semantic similarity informative? finished runs + reference texts)
        python src/evaluate.py collect                      (a report.json for every finished run and the table results/summary.csv)
        python src/evaluate.py compare --run name=questions,predictions --run name=questions,predictions --out compare.json
        (several runs on the same cases: McNemar's exact test for every pair, Holm-corrected; see the end of this file)
@@ -224,6 +225,11 @@ def diagnosis_metrics(qa, pred, pred_b=None):
     if pred_b is not None:
         out["mcnemar_vs_system_b"] = mcnemar_exact(y, p, [predicted_class(qa[i], pred_b.get(i)) for i in ids])
     return out
+
+
+def pct(x, digits=1):
+    """A fraction as a percentage for the screen (0.2542 -> "25.4%"); the files keep fractions."""
+    return "n/a" if x is None else f"{100 * x:.{digits}f}%"
 
 
 def mean(values):
@@ -484,6 +490,80 @@ def evidence_metrics(qa, pred):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
+# similarity-check (researcher's approval, 2026-11-24): does the semantic similarity carry information at all? The first LLM-only
+# results gave 0.921 to 0.932 for four models with intervals of +-0.002, which looks flat. A reasoning argues for the disease the model
+# answered, so if the measure is valid it should resemble the reference texts of the ANSWERED disease more than those of the other seven.
+# The reasoning is compared with the reference texts of all 8 diseases; it is "identified" when the answered disease has the single
+# highest similarity (a tie is a miss). Chance is 1 in 8 = 0.125. Pass mark, set on 2026-11-24 before the first run of this check:
+# identified in at least 0.50 of the answers overall, and in at least 0.25 of the answers of every answered disease that has 10 or more
+# answers. (My proposal, not a published standard.) It uses no label of the question: only the answer and the reasoning.
+#   python src/evaluate.py similarity-check [--results results] [--out results/similarity_check.json]
+# ---------------------------------------------------------------------------------------------------------------------------
+SIMILARITY_PASS = "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers"
+
+
+def similarity_check(qa, pred, reference_texts, encode):
+    ids = [i for i in qa if (pred.get(i) or {}).get("rationale") and predicted_class(qa[i], pred[i]) != INVALID]
+    if not ids:
+        return None
+    refs = reference_lists(reference_texts)
+    flat = [(c, t) for c in CLASSES for t in refs[c]]
+    ref_vec = defaultdict(list)
+    for (c, _), v in zip(flat, encode([t for _, t in flat])):
+        ref_vec[c].append(v)
+    vectors = encode([pred[i]["rationale"] for i in ids])
+    hits, per_answered = [], defaultdict(list)
+    confusion = {c: {d: 0 for d in [*CLASSES, "tie"]} for c in CLASSES}
+    own, others, true_right, true_wrong = [], [], [], []
+    for i, h in zip(ids, vectors):
+        answered, gold = predicted_class(qa[i], pred[i]), gold_class(qa[i])
+        sims = {c: max(cosine(h, r) for r in ref_vec[c]) for c in CLASSES}
+        best = max(sims.values())
+        winners = [c for c, v in sims.items() if v == best]
+        guess = winners[0] if len(winners) == 1 else "tie"
+        hits.append(1.0 if guess == answered else 0.0)
+        per_answered[answered].append(hits[-1])
+        confusion[answered][guess] += 1
+        own.append(sims[answered])
+        others.append(mean([v for c, v in sims.items() if c != answered]))
+        (true_right if answered == gold else true_wrong).append(sims[gold])
+    per = {c: {"n": len(v), "identified": round(mean(v), 4)} for c, v in per_answered.items()}
+    rate = mean(hits)
+    floors_ok = all(v["identified"] >= 0.25 for v in per.values() if v["n"] >= 10)
+    return {"n_answers": len(ids), "identified": round(rate, 4), "chance": 0.125,
+            "per_answered_class": {c: per[c] for c in CLASSES if c in per},
+            "confusion_answered_vs_best_match": confusion,
+            "mean_similarity_to_answered_class": round(mean(own), 4), "mean_similarity_to_the_other_seven": round(mean(others), 4),
+            "mean_similarity_to_true_class_when_right": round(mean(true_right), 4) if true_right else None,
+            "mean_similarity_to_true_class_when_wrong": round(mean(true_wrong), 4) if true_wrong else None,
+            "pass_mark": SIMILARITY_PASS, "passed": bool(rate >= 0.50 and floors_ok)}
+
+
+def similarity_check_main(argv=None):
+    ap = argparse.ArgumentParser(prog="evaluate.py similarity-check",
+                                 description="Does the semantic similarity carry information? Uses finished runs and the reference texts only.")
+    ap.add_argument("--results", default="results")
+    ap.add_argument("--root", default=".")
+    ap.add_argument("--reference-texts", default="data/knowledge_corpus/reference_texts.json")
+    ap.add_argument("--out", default="results/similarity_check.json")
+    a = ap.parse_args(argv)
+    with open(a.reference_texts, encoding="utf-8") as f:
+        refs = json.load(f)
+    encode = sentence_encoder()
+    out, log = {"model": SIMILARITY_MODEL, "runs": {}}, get_logger("similarity_check")
+    for system, model, run, folder, info in finished_runs(a.results):
+        qa = load(os.path.join(a.root, info["settings"]["questions"]))
+        res = similarity_check(qa, load(os.path.join(folder, "predictions.jsonl")), refs, encode)
+        out["runs"][f"{system}/{model}/{run}"] = res
+        if res:
+            log.info(f"{model} {run}: the answered disease has the highest similarity in {pct(res['identified'])} of {res['n_answers']} answers "
+                     f"(chance 12.5%); answered {res['mean_similarity_to_answered_class']} vs the other seven "
+                     f"{res['mean_similarity_to_the_other_seven']}; {'PASSED' if res['passed'] else 'NOT PASSED'} ({SIMILARITY_PASS})")
+    write_json(a.out, out)
+    return out
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
 # Image claims in the text-only view (researcher's decision, 2026-11-24). In that view the model gets no picture, so a reasoning that
 # says "dermoscopy reveals ..." or "the image shows ..." describes something that does not exist. Found by a word list, so it is a
 # lower bound (a paraphrase is missed) and it can flag a harmless sentence: report it as approximate, never as "the hallucination rate".
@@ -590,8 +670,8 @@ def report_main(argv=None):
     write_json(a.out, rep)
     log = get_logger("evaluate")
     d = rep["diagnosis"]
-    log.info(f"accuracy {d['accuracy']} (95% CI {d['accuracy_95ci'][0]}-{d['accuracy_95ci'][1]}) | macro-F1 {d['macro_f1']} | "
-             f"melanoma recall {d['per_class']['MEL']['recall']} | missing {d['missing_predictions']}, invalid {d['invalid_answers']} (refusals {d['invalid_answers_by_cause']['refusals']})")
+    log.info(f"accuracy {pct(d['accuracy'])} (95% CI {pct(d['accuracy_95ci'][0])} to {pct(d['accuracy_95ci'][1])}) | macro-F1 {pct(d['macro_f1'])} | "
+             f"melanoma recall {pct(d['per_class']['MEL']['recall'])} | missing {d['missing_predictions']}, invalid {d['invalid_answers']} (refusals {d['invalid_answers_by_cause']['refusals']})")
     if rep["text_only_image_claims"]:
         c = rep["text_only_image_claims"]
         log.info(f"text-only reasonings that describe an image: {c['n_claiming_an_image']} of {c['n_text_only_with_reasoning']} "
@@ -662,7 +742,7 @@ def compare_main(argv=None):
     write_json(a.out, rep)
     log = get_logger("compare")
     for p in rep["pairs"]:
-        log.info(f"{p['a']} {p['accuracy_a']} vs {p['b']} {p['accuracy_b']}: only a right {p['a_right_b_wrong']}, only b right "
+        log.info(f"{p['a']} {pct(p['accuracy_a'])} vs {p['b']} {pct(p['accuracy_b'])}: only a right {p['a_right_b_wrong']}, only b right "
                  f"{p['a_wrong_b_right']}, p = {p['p_value']}, Holm p = {p['p_holm']}")
     return rep
 
@@ -751,8 +831,8 @@ def collect_main(argv=None):
     log = get_logger("collect")
     log.info(f"{len(rows)} finished runs -> {a.out}")
     for r in rows:
-        log.info(f"{r['system']} {r['model']} {r['view']} {r['split']}: accuracy {r['accuracy']} ({r['accuracy_ci_low']}-{r['accuracy_ci_high']}), "
-                 f"macro-F1 {r['macro_f1']}, invalid {r['invalid']}")
+        log.info(f"{r['system']} {r['model']} {r['view']} {r['split']}: accuracy {pct(r['accuracy'])} ({pct(r['accuracy_ci_low'])} to {pct(r['accuracy_ci_high'])}), "
+                 f"macro-F1 {pct(r['macro_f1'])}, invalid {r['invalid']}, refusals {r['refusals']}")
     return rows
 
 
@@ -762,6 +842,8 @@ def main(argv=None):
         return compare_main(argv[1:])
     if argv and argv[0] == "collect":
         return collect_main(argv[1:])
+    if argv and argv[0] == "similarity-check":
+        return similarity_check_main(argv[1:])
     return report_main(argv)
 
 

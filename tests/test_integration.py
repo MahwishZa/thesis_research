@@ -1275,6 +1275,24 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(len(Path(out).read_text(encoding="utf-8").splitlines()), 1)
 
+    def test_the_similarity_check_command_reads_finished_runs(self):
+        SIM_WORD = {"MEL": "melanoma", "NV": "nevus", "BCC": "basal", "AK": "actinic", "BKL": "seborrheic", "DF": "dermatofibroma",
+                    "VASC": "vascular", "SCC": "squamous"}
+
+        def class_word_encoder(texts):
+            return [[t.lower().split().count(SIM_WORD[c]) for c in CLASSES] for t in texts]
+        self.run_folder("gpt-4o", "text_only_val")
+        self.run_folder("gemini-3.8-flash", "text_only_val.partial")                  # a trial: not read
+        refs = os.path.join(self.root, "refs.json")
+        Path(refs).write_text(json.dumps({c: f"typical {w} appearance" for c, w in SIM_WORD.items()}), encoding="utf-8")
+        out = os.path.join(self.root, "sim.json")
+        with mock.patch.object(ev, "sentence_encoder", lambda *a, **k: class_word_encoder), contextlib.redirect_stdout(io.StringIO()):
+            res = ev.main(["similarity-check", "--results", os.path.join(self.root, "results"), "--root", self.root,
+                           "--reference-texts", refs, "--out", out])
+        self.assertEqual(list(res["runs"]), ["llm_only/gpt-4o/text_only_val"])
+        self.assertEqual(json.loads(Path(out).read_text(encoding="utf-8"))["runs"], res["runs"])
+        self.assertFalse(res["runs"]["llm_only/gpt-4o/text_only_val"]["passed"])      # the made-up reasoning "Patient facts only." names no disease
+
     def test_the_command_runs_from_main(self):
         self.run_folder("gpt-4o", "text_only_val")
         with contextlib.redirect_stdout(io.StringIO()):

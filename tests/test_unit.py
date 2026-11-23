@@ -590,6 +590,117 @@ def bag_of_words(texts):
     return [[t.lower().split().count(w) for w in vocab] for t in texts]
 
 
+SIM_WORD = {"MEL": "melanoma", "NV": "nevus", "BCC": "basal", "AK": "actinic", "BKL": "seborrheic", "DF": "dermatofibroma",
+            "VASC": "vascular", "SCC": "squamous"}
+
+
+def class_word_encoder(texts):
+    """A fake sentence encoder: one dimension per disease, counting its word."""
+    return [[t.lower().split().count(SIM_WORD[c]) for c in CLASSES] for t in texts]
+
+
+class PercentageTests(unittest.TestCase):
+    def test_a_fraction_is_shown_as_a_percentage_with_one_decimal(self):
+        self.assertEqual((ev.pct(0.2542), ev.pct(0.125), ev.pct(0), ev.pct(1), ev.pct(None)), ("25.4%", "12.5%", "0.0%", "100.0%", "n/a"))
+        self.assertEqual(ev.pct(0.12345, 2), "12.35%")
+
+
+class SimilarityCheckTests(unittest.TestCase):
+    """similarity-check: does the reasoning resemble the reference texts of the ANSWERED disease? (approved 2026-11-24)"""
+    REFS = {c: f"typical {w} appearance" for c, w in SIM_WORD.items()}
+
+    def build(self, per_class=10, wrong_for=(), tie_for=()):
+        """per_class answers for every disease; the reasoning names the answered disease, a rival one (wrong_for) or two (tie_for)."""
+        qs, pred, k = [], {}, 0
+        for c in CLASSES:
+            for _ in range(per_class):
+                k += 1
+                q = question(f"ISIC_{k:07d}", c, f"G{k}")
+                text = f"{SIM_WORD[c]} is likely"
+                if c in wrong_for:
+                    text = f"{SIM_WORD['MEL' if c != 'MEL' else 'NV']} is likely"
+                if c in tie_for:
+                    text = f"{SIM_WORD[c]} and {SIM_WORD['MEL' if c != 'MEL' else 'NV']} are likely"
+                qs.append(q)
+                pred[q["id"]] = {"pred": answer(q, c), "rationale": text}
+        return as_dict(qs), pred
+
+    def test_a_reasoning_that_names_its_answered_disease_is_identified(self):
+        qa, pred = self.build()
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual((r["n_answers"], r["identified"], r["passed"], r["chance"]), (80, 1.0, True, 0.125))
+        self.assertTrue(all(v["identified"] == 1.0 and v["n"] == 10 for v in r["per_answered_class"].values()))
+        self.assertGreater(r["mean_similarity_to_answered_class"], r["mean_similarity_to_the_other_seven"])
+        self.assertEqual(r["confusion_answered_vs_best_match"]["BCC"]["BCC"], 10)
+
+    def test_a_flat_measure_fails(self):
+        qa, pred = self.build()
+        flat = lambda texts: [[1.0] * 8 for _ in texts]          # noqa: E731  every text looks alike: every disease ties
+        r = ev.similarity_check(qa, pred, self.REFS, flat)
+        self.assertEqual((r["identified"], r["passed"]), (0.0, False))                      # a tie is a miss
+        self.assertEqual(r["confusion_answered_vs_best_match"]["MEL"]["tie"], 10)
+
+    def test_one_class_that_is_never_identified_fails_the_pass_mark_whatever_the_rest(self):
+        qa, pred = self.build(wrong_for=("SCC",))
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual(r["identified"], 0.875)                                            # 7 of 8 diseases fully identified
+        self.assertEqual((r["per_answered_class"]["SCC"]["identified"], r["passed"]), (0.0, False))
+
+    def test_the_overall_bar_is_one_half(self):
+        qa, pred = self.build(wrong_for=("SCC", "VASC", "DF", "BKL", "AK"))               # 3 of 8 identified: 0.375
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual((r["identified"], r["passed"]), (0.375, False))
+        qa, pred = self.build(wrong_for=("SCC", "VASC", "DF", "BKL"))                      # 4 of 8: exactly 0.5 passes if no floor fails
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual(r["identified"], 0.5)
+        self.assertFalse(r["passed"])                                                      # but four classes sit at 0.0, below 0.25
+
+    def test_the_overall_bar_alone_can_fail_when_every_class_clears_its_floor(self):
+        qa, pred = self.build()
+        for k, i in enumerate(pred):
+            if k % 10 >= 4:                                                                # 4 of every 10 answers per disease stay right
+                q = qa[i]
+                pred[i]["rationale"] = f"{SIM_WORD['MEL' if q['gold_label'] != 'MEL' else 'NV']} is likely"
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual(r["identified"], 0.4)
+        self.assertTrue(all(v["identified"] >= 0.25 for v in r["per_answered_class"].values()))
+        self.assertFalse(r["passed"])                                                      # every floor is met, the overall 0.5 is not
+
+    def test_the_comparison_is_with_the_answered_disease_not_the_true_one(self):
+        """A wrong answer argued for its own (wrong) disease is identified: the check never reads the true class."""
+        qa = as_dict([question(f"ISIC_{i:07d}", "MEL", f"G{i}") for i in range(1, 11)])
+        pred = {i: {"pred": answer(q, "NV"), "rationale": "nevus is likely"} for i, q in qa.items()}      # all wrong, all consistent
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual((r["identified"], r["per_answered_class"]["NV"]["identified"]), (1.0, 1.0))
+
+    def test_a_class_with_fewer_than_ten_answers_does_not_set_the_floor(self):
+        qa, pred = self.build(per_class=9, wrong_for=("SCC",))
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual((r["per_answered_class"]["SCC"]["n"], r["passed"]), (9, True))     # 9 answers, so no floor; overall 0.875
+
+    def test_invalid_answers_and_missing_reasoning_are_left_out_and_the_true_class_is_not_used_for_the_test(self):
+        qa, pred = self.build(per_class=10)
+        some = list(pred)[:5]
+        for i in some[:2]:
+            pred[i]["pred"] = "Z"                                                          # invalid
+        for i in some[2:]:
+            pred[i]["rationale"] = ""                                                      # no reasoning
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertEqual(r["n_answers"], 75)
+        wrong_truth = {i: question(i, "SCC" if q["gold_label"] != "SCC" else "MEL", q["group_id"]) for i, q in qa.items()}
+        same = ev.similarity_check(wrong_truth, {i: {**p, "pred": answer(qa[i], ev.predicted_class(qa[i], p))} if p["pred"] != "Z" else p
+                                                 for i, p in pred.items()}, self.REFS, class_word_encoder)
+        self.assertIsNotNone(same)
+        self.assertIsNone(ev.similarity_check(qa, {}, self.REFS, class_word_encoder))
+
+    def test_the_similarity_to_the_true_class_is_reported_for_right_and_wrong_answers(self):
+        qa = as_dict([question("ISIC_0000001", "MEL", "G1"), question("ISIC_0000002", "MEL", "G2")])
+        pred = {"ISIC_0000001": {"pred": answer(qa["ISIC_0000001"], "MEL"), "rationale": "melanoma is likely"},
+                "ISIC_0000002": {"pred": answer(qa["ISIC_0000002"], "NV"), "rationale": "nevus is likely"}}
+        r = ev.similarity_check(qa, pred, self.REFS, class_word_encoder)
+        self.assertGreater(r["mean_similarity_to_true_class_when_right"], r["mean_similarity_to_true_class_when_wrong"])
+
+
 class SemanticSimilarityTests(unittest.TestCase):
     def setUp(self):
         self.qs = [question("ISIC_0000001", "MEL", "G1"), question("ISIC_0000002", "MEL", "G2"), question("ISIC_0000003", "BCC", "G3")]
