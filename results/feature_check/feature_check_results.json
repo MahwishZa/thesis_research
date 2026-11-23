@@ -1,0 +1,187 @@
+{
+  "val": {
+    "shortcut_file_properties_only": {
+      "accuracy": 0.319,
+      "macro_f1": 0.317,
+      "macro_auc_ovr": 0.745,
+      "per_class_recall": {
+        "MEL": 0.75,
+        "NV": 0.8,
+        "BCC": 0.2,
+        "AK": 0.3,
+        "BKL": 0.05,
+        "DF": 0.2,
+        "VASC": 0.15,
+        "SCC": 0.1
+      }
+    },
+    "metadata_only": {
+      "accuracy": 0.338,
+      "macro_f1": 0.323,
+      "macro_auc_ovr": 0.746,
+      "per_class_recall": {
+        "MEL": 0.05,
+        "NV": 0.45,
+        "BCC": 0.35,
+        "AK": 0.5,
+        "BKL": 0.15,
+        "DF": 0.25,
+        "VASC": 0.4,
+        "SCC": 0.55
+      }
+    },
+    "metadata_only_no_missing_flags": {
+      "accuracy": 0.344,
+      "macro_f1": 0.329,
+      "macro_auc_ovr": 0.747,
+      "per_class_recall": {
+        "MEL": 0.05,
+        "NV": 0.5,
+        "BCC": 0.35,
+        "AK": 0.5,
+        "BKL": 0.15,
+        "DF": 0.25,
+        "VASC": 0.4,
+        "SCC": 0.55
+      }
+    },
+    "image_handcrafted": {
+      "accuracy": 0.55,
+      "macro_f1": 0.546,
+      "macro_auc_ovr": 0.875,
+      "per_class_recall": {
+        "MEL": 0.6,
+        "NV": 0.7,
+        "BCC": 0.55,
+        "AK": 0.55,
+        "BKL": 0.75,
+        "DF": 0.3,
+        "VASC": 0.8,
+        "SCC": 0.15
+      }
+    },
+    "image_plus_metadata": {
+      "accuracy": 0.606,
+      "macro_f1": 0.594,
+      "macro_auc_ovr": 0.896,
+      "per_class_recall": {
+        "MEL": 0.65,
+        "NV": 0.75,
+        "BCC": 0.75,
+        "AK": 0.7,
+        "BKL": 0.7,
+        "DF": 0.3,
+        "VASC": 0.85,
+        "SCC": 0.15
+      }
+    },
+    "image_handcrafted_logreg": {
+      "accuracy": 0.594,
+      "macro_f1": 0.595,
+      "macro_auc_ovr": 0.863,
+      "per_class_recall": {
+        "MEL": 0.6,
+        "NV": 0.75,
+        "BCC": 0.5,
+        "AK": 0.65,
+        "BKL": 0.45,
+        "DF": 0.5,
+        "VASC": 0.9,
+        "SCC": 0.4
+      }
+    }
+  },
+  "test": {
+    "shortcut_file_properties_only": {
+      "accuracy": 0.317,
+      "macro_f1": 0.312,
+      "macro_auc_ovr": 0.731,
+      "per_class_recall": {
+        "MEL": 0.63,
+        "NV": 0.8,
+        "BCC": 0.03,
+        "AK": 0.13,
+        "BKL": 0.13,
+        "DF": 0.27,
+        "VASC": 0.27,
+        "SCC": 0.27
+      }
+    },
+    "metadata_only": {
+      "accuracy": 0.304,
+      "macro_f1": 0.293,
+      "macro_auc_ovr": 0.748,
+      "per_class_recall": {
+        "MEL": 0.1,
+        "NV": 0.6,
+        "BCC": 0.23,
+        "AK": 0.57,
+        "BKL": 0.07,
+        "DF": 0.4,
+        "VASC": 0.37,
+        "SCC": 0.1
+      }
+    },
+    "metadata_only_no_missing_flags": {
+      "accuracy": 0.296,
+      "macro_f1": 0.284,
+      "macro_auc_ovr": 0.739,
+      "per_class_recall": {
+        "MEL": 0.1,
+        "NV": 0.6,
+        "BCC": 0.23,
+        "AK": 0.57,
+        "BKL": 0.07,
+        "DF": 0.4,
+        "VASC": 0.3,
+        "SCC": 0.1
+      }
+    },
+    "image_handcrafted": {
+      "accuracy": 0.525,
+      "macro_f1": 0.52,
+      "macro_auc_ovr": 0.869,
+      "per_class_recall": {
+        "MEL": 0.67,
+        "NV": 0.63,
+        "BCC": 0.4,
+        "AK": 0.37,
+        "BKL": 0.83,
+        "DF": 0.27,
+        "VASC": 0.8,
+        "SCC": 0.23
+      }
+    },
+    "image_plus_metadata": {
+      "accuracy": 0.554,
+      "macro_f1": 0.548,
+      "macro_auc_ovr": 0.892,
+      "per_class_recall": {
+        "MEL": 0.63,
+        "NV": 0.67,
+        "BCC": 0.53,
+        "AK": 0.33,
+        "BKL": 0.9,
+        "DF": 0.23,
+        "VASC": 0.77,
+        "SCC": 0.37
+      }
+    },
+    "image_handcrafted_logreg": {
+      "accuracy": 0.504,
+      "macro_f1": 0.498,
+      "macro_auc_ovr": 0.868,
+      "per_class_recall": {
+        "MEL": 0.47,
+        "NV": 0.7,
+        "BCC": 0.23,
+        "AK": 0.53,
+        "BKL": 0.5,
+        "DF": 0.4,
+        "VASC": 0.9,
+        "SCC": 0.3
+      }
+    }
+  },
+  "source_detectability_auc_after_standardisation": 0.953
+}

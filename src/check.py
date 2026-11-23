@@ -202,8 +202,8 @@ def status_main(argv=None):
 #   2. Do simple image features (colour, texture, shape) carry signal?
 #   3. Can a model "cheat" by recognising the image SOURCE / file properties instead of the lesion?
 #
-# It is an analysis of the data, not an evaluation of the LLM/RAG systems: its score is balanced accuracy (the mean recall over the
-# 8 classes) of small classifiers trained here, so that the 8 classes count the same in an uneven test split.
+# It is an analysis of the data, not an evaluation of the LLM/RAG systems: its score is the accuracy of small classifiers
+# trained here (validation and test are balanced, so the 8 classes count the same).
 #
 # Usage (this repository): python src/check.py features --data data --out results/feature_check
 # Reads data/processed_cases/all_cases.csv and the images in data/processed_images/; writes feature_check_results.json and
@@ -267,15 +267,15 @@ def image_features(path):
 
 
 def score_model(name, model, Xtr, ytr, Xev, yev, classes):
-    from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score
+    from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score
     model.fit(Xtr, ytr)
     pr = model.predict(Xev)
     pp = model.predict_proba(Xev)
-    out = dict(balanced_accuracy=round(balanced_accuracy_score(yev, pr), 3),
+    out = dict(accuracy=round(accuracy_score(yev, pr), 3),
                macro_f1=round(f1_score(yev, pr, average="macro"), 3),
                macro_auc_ovr=round(roc_auc_score(yev, pp, multi_class="ovr", labels=model.classes_), 3),
                per_class_recall={c: round(r, 2) for c, r in zip(classes, recall_score(yev, pr, labels=classes, average=None))})
-    print(f"{name:55s} bal_acc={out['balanced_accuracy']:.3f}  macroF1={out['macro_f1']:.3f}  AUC={out['macro_auc_ovr']:.3f}")
+    print(f"{name:55s} accuracy={out['accuracy']:.3f}  macroF1={out['macro_f1']:.3f}  AUC={out['macro_auc_ovr']:.3f}")
     return out
 
 
@@ -318,7 +318,7 @@ def features_main(argv=None):
         return make_pipeline(StandardScaler(), LogisticRegression(max_iter=3000, class_weight="balanced", C=0.5))
 
     res = {}
-    print("chance level balanced accuracy = 0.125 (8 classes)")
+    print("chance level accuracy = 0.125 (8 classes)")
     for split, E in ev.items():
         print(f"\n=== evaluated on {split} (n={len(E)}) ===")
         r = {}

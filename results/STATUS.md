@@ -419,3 +419,6 @@ Checked: 6 new tests of the checker.
 - The other baselines (standard RAG, RAG², proposed) on the three views.
 - Tests for `src/feature_check.py` (the patient text, the options, the raw layout and the audit are tested in `tests/test_scripts.py`; the evaluation code in `tests/test_evaluate.py`; the corpus builder in `tests/test_corpus.py`).
 - A first run of the MedCPT relevance scorers on the laptop (`--relevance-models`).
+
+## 2026-11-24: feature check
+- `check.py features` now prints and saves `accuracy` instead of balanced accuracy (the same number on the balanced validation and test splits). The laptop run on the new splits (✔ researcher's output): test accuracy shortcut features (original size) 0.317, age/sex/site 0.304, image features 0.525, image + metadata 0.554 (chance 0.125); source detectable from the standardised image features, AUC 0.953. A test keeps "balanced accuracy" out of `check.py`.

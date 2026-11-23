@@ -150,6 +150,14 @@ class MetricRequirements(unittest.TestCase):
         for banned in ("top3", "top_k", "topk", "balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
             self.assertNotIn(banned, text)
 
+    def test_the_feature_check_reports_accuracy_not_balanced_accuracy(self):
+        """Renamed 2026-11-24: the splits are balanced, so the plain accuracy is the one number."""
+        source = (Path(__file__).resolve().parents[1] / "src" / "check.py").read_text(encoding="utf-8")
+        self.assertIn("accuracy_score", source)
+        self.assertNotIn("balanced_accuracy", source)
+        self.assertNotIn("bal_acc", source)
+        self.assertNotIn("balanced accuracy", source)
+
     def test_an_answer_counts_as_supported_only_when_its_evidence_is_verified(self):
         """Option B (researcher's decision, 2026-11-23): for RAG answers the evidence replaces the yes/no flag. A correct answer with a
         quote that is not in the passage is not counted as supported (an NLI support step was removed on 2026-11-24)."""
