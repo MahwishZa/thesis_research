@@ -713,9 +713,9 @@ class SemanticSimilarityTests(unittest.TestCase):
         self.assertEqual(ev.cosine([0, 0], [1, 1]), 0.0)
 
     def test_each_explanation_is_compared_with_the_reference_of_its_true_class(self):
-        pred = {"ISIC_0000001": {"rationale": "melanoma pigment network veil"},       # same words: 1.0
-                "ISIC_0000002": {"rationale": "white patch"},                           # nothing shared: 0.0
-                "ISIC_0000003": {"rationale": "arborizing vessels"}}                    # same words: 1.0
+        pred = {"ISIC_0000001": {"pred": "A", "rationale": "melanoma pigment network veil"},       # same words: 1.0
+                "ISIC_0000002": {"pred": "A", "rationale": "white patch"},                           # nothing shared: 0.0
+                "ISIC_0000003": {"pred": "A", "rationale": "arborizing vessels"}}                    # same words: 1.0
         r = ev.semantic_similarity(self.qa, pred, self.refs, bag_of_words)
         self.assertEqual((r["mean"], r["n_questions_with_rationale"]), (round(2 / 3, 4), 3))
         self.assertEqual(r["per_class"], {"MEL": 0.5, "BCC": 1.0})
@@ -724,18 +724,26 @@ class SemanticSimilarityTests(unittest.TestCase):
 
     def test_questions_without_an_explanation_are_left_out_and_a_missing_reference_stops(self):
         r = ev.semantic_similarity(self.qa, {"ISIC_0000001": {"pred": "A", "rationale": ""}, "ISIC_0000002": {"pred": "B"},
-                                             "ISIC_0000003": {"rationale": "arborizing vessels"}}, self.refs, bag_of_words)
+                                             "ISIC_0000003": {"pred": "A", "rationale": "arborizing vessels"}}, self.refs, bag_of_words)
         self.assertEqual((r["mean"], r["n_questions_with_rationale"]), (1.0, 1))
         self.assertIsNone(ev.semantic_similarity(self.qa, {}, self.refs, bag_of_words))
         with self.assertRaises(ValueError):
-            ev.semantic_similarity(self.qa, {"ISIC_0000003": {"rationale": "x"}}, {"MEL": "melanoma"}, bag_of_words)
+            ev.semantic_similarity(self.qa, {"ISIC_0000003": {"pred": "A", "rationale": "x"}}, {"MEL": "melanoma"}, bag_of_words)
+
+    def test_a_refusal_or_an_answer_without_a_letter_is_not_scored_as_reasoning(self):
+        """Corrected 2026-11-24: GPT-4o's "I'm sorry, I can't help" lines were embedded and pulled its mean down."""
+        pred = {"ISIC_0000001": {"pred": None, "rationale": "I'm sorry, I can't help with that."},
+                "ISIC_0000002": {"pred": "Z", "rationale": "melanoma pigment network veil"},      # no such option: invalid
+                "ISIC_0000003": {"pred": "A", "rationale": "arborizing vessels"}}
+        r = ev.semantic_similarity(self.qa, pred, self.refs, bag_of_words)
+        self.assertEqual((r["mean"], r["n_questions_with_rationale"]), (1.0, 1))
 
     def test_the_best_matching_reference_text_of_the_true_class_counts(self):
         refs = {"MEL": {"texts": [{"text": "pigment network"}, {"text": "melanoma veil"}]},
                 "BCC": {"texts": [{"text": "arborizing vessels"}]}}
-        pred = {"ISIC_0000001": {"rationale": "melanoma veil"},          # the second MEL text: 1.0
-                "ISIC_0000002": {"rationale": "pigment network"},        # the first MEL text: 1.0
-                "ISIC_0000003": {"rationale": "melanoma veil"}}          # nothing shared with the BCC text: 0.0
+        pred = {"ISIC_0000001": {"pred": "A", "rationale": "melanoma veil"},          # the second MEL text: 1.0
+                "ISIC_0000002": {"pred": "A", "rationale": "pigment network"},        # the first MEL text: 1.0
+                "ISIC_0000003": {"pred": "A", "rationale": "melanoma veil"}}          # nothing shared with the BCC text: 0.0
         r = ev.semantic_similarity(self.qa, pred, refs, bag_of_words)
         self.assertEqual(r["per_class"], {"MEL": 1.0, "BCC": 0.0})
         self.assertEqual(r["n_reference_texts"], {"BCC": 1, "MEL": 2})
@@ -750,12 +758,12 @@ class SemanticSimilarityTests(unittest.TestCase):
             return bag_of_words(texts)
         encode.max_tokens, encode.n_tokens = 2, lambda t: len(t.split())
         refs = {"MEL": {"texts": [{"text": "pigment network veil"}, {"text": "veil"}]}, "BCC": "arborizing vessels"}
-        pred = {"ISIC_0000001": {"rationale": "melanoma pigment network veil"}, "ISIC_0000003": {"rationale": "vessels"}}
+        pred = {"ISIC_0000001": {"pred": "A", "rationale": "melanoma pigment network veil"}, "ISIC_0000003": {"pred": "A", "rationale": "vessels"}}
         r = ev.semantic_similarity(self.qa, pred, refs, encode)
         self.assertEqual(r["longer_than_the_model_reads"], {"max_tokens": 2, "reference_texts": 1, "rationales": 1})
 
     def test_text_metrics_reports_it_only_with_reference_texts(self):
-        pred = {"ISIC_0000003": {"rationale": "arborizing vessels"}}
+        pred = {"ISIC_0000003": {"pred": "A", "rationale": "arborizing vessels"}}
         self.assertEqual(ev.text_metrics(self.qa, pred, None), {})
         out = ev.text_metrics(self.qa, pred, self.refs, encode=bag_of_words)
         self.assertEqual(out["semantic_similarity_cosine"]["mean"], 1.0)

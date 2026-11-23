@@ -452,3 +452,11 @@ Checked: 6 new tests of the checker.
 - `src/methodology.md` rewritten as a code guide (design rules, data flow, every command, the run folder, the prompt, model settings, tests, limits).
 - `results/evaluation_guide.md`: document header, group table, similarity validity check, open points and a reference list. `results/metric_survey.md` and `results/repository_audit.md` marked as dated snapshots with their later outcomes.
 - `README.md` was not changed: a test (`tests/test_system.py`) keeps it to "Overview" and "Objectives" (the researcher's decision).
+
+## 2026-11-24 (night): all 12 LLM-only test runs finished; one correction to the semantic similarity
+- All four models were run on the test split in the three views (12 runs, 240 questions each) and committed. Pairwise tests between the models for each view, and between the views for each model (`compare_views_<model>.json`), are in `results/llm_only/`.
+- **Correction.** The semantic similarity also scored answers with no usable letter, so GPT-4o's refusal sentences ("I'm sorry, I can't help...": 28 image-only and 12 multimodal answers) were embedded as reasoning and pulled its mean down (240 answers counted instead of 212 and 228). Answers without a usable letter are now left out, as in the similarity check. A test covers it. The reports must be recomputed with `python src/evaluate.py collect --force`.
+
+## 2026-11-24 (night): results written for all three views
+- `results/llm_only_results.md` replaces `results/llm_only_text_only_results.md`: 12 runs (4 models × 3 views), every metric with its table, the McNemar tests between models (per view) and between views (per model), the semantic-similarity validity check, cost, and an interpretation with its limits. `results/STATUS.md`, `results/README.md` and `results/evaluation_guide.md` updated to match.
+- The validity check of the semantic similarity (run on all 12 runs): the answered disease is identified in 39.2% to 91.0% of answers (chance 12.5%); the pass mark is met in 6 of 12 runs. An earlier chat message said "5 of 6 image runs"; the correct count is all 6 image runs of GPT-4o, Gemini and Llama.

@@ -1,0 +1,72 @@
+{
+  "inputs": {
+    "text": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/llama-4-maverick/text_only_test/predictions.jsonl",
+        "sha256": "534258a61d73f8404ba0ad9ed2c69c06c55ff52bfea75cbb3e33d79506d81091"
+      }
+    },
+    "image": {
+      "questions": {
+        "path": "data/views/image_only/test.jsonl",
+        "sha256": "cbde816fdb76a4b1fcc9129010f8dd97db19cbf4a4141aeb62334917606c7856"
+      },
+      "predictions": {
+        "path": "results/llm_only/llama-4-maverick/image_only_test/predictions.jsonl",
+        "sha256": "451e0d753d91aef8155f5c6055f01ff91c22a4ea8045f04457d2c001f4186e4a"
+      }
+    },
+    "image+text": {
+      "questions": {
+        "path": "data/views/multimodal/test.jsonl",
+        "sha256": "1cb061d7137e30f2df03e2e92b965916add0ad09af3ea659d081d602ab499ffd"
+      },
+      "predictions": {
+        "path": "results/llm_only/llama-4-maverick/multimodal_test/predictions.jsonl",
+        "sha256": "b50c0bdcba75e7c10955f6f5b2c3ce79c0cf203ab0494f987380ef8648d719d8"
+      }
+    }
+  },
+  "n_questions": 240,
+  "accuracy": {
+    "text": 0.2167,
+    "image": 0.3667,
+    "image+text": 0.3583
+  },
+  "pairs": [
+    {
+      "a": "text",
+      "b": "image",
+      "accuracy_a": 0.2167,
+      "accuracy_b": 0.3667,
+      "a_right_b_wrong": 28,
+      "a_wrong_b_right": 64,
+      "p_value": 0.000223,
+      "p_holm": 0.000447
+    },
+    {
+      "a": "text",
+      "b": "image+text",
+      "accuracy_a": 0.2167,
+      "accuracy_b": 0.3583,
+      "a_right_b_wrong": 22,
+      "a_wrong_b_right": 56,
+      "p_value": 0.000149,
+      "p_holm": 0.000447
+    },
+    {
+      "a": "image",
+      "b": "image+text",
+      "accuracy_a": 0.3667,
+      "accuracy_b": 0.3583,
+      "a_right_b_wrong": 15,
+      "a_wrong_b_right": 13,
+      "p_value": 0.850554,
+      "p_holm": 0.850554
+    }
+  ]
+}

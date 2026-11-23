@@ -78,7 +78,7 @@ python src/run.py llm-only --model gpt-4o --view text_only --split val --dry-run
 python src/run.py llm-only --model gpt-4o --view text_only --split val --limit 10            # a small paid trial
 python src/run.py llm-only --model gpt-4o --view text_only --split test                      # the final run (240 questions; resumable)
 
-python src/evaluate.py collect                             # report.json for each finished run and results/summary.csv
+python src/evaluate.py collect                             # report.json for each finished run and results/summary.csv (--force recomputes every report)
 python src/evaluate.py compare --out results/llm_only/compare_text_only_test.json `
     --run claude=data/views/text_only/test.jsonl,results/llm_only/claude-sonnet-5-5/text_only_test/predictions.jsonl `
     --run gpt-4o=data/views/text_only/test.jsonl,results/llm_only/gpt-4o/text_only_test/predictions.jsonl
@@ -119,7 +119,7 @@ Each model is pinned to one host (`allow_fallbacks` off), so the answers come fr
 
 ## 7. Tests (`tests/`)
 
-Run with `python -m unittest discover -s tests`: 222 tests, 7 skipped where pandas or scikit-learn are missing (last run 2026-11-24).
+Run with `python -m unittest discover -s tests`: 223 tests, 7 skipped where pandas or scikit-learn are missing (last run 2026-11-24).
 
 | File | Level | What it checks | Needs |
 |---|---|---|---|

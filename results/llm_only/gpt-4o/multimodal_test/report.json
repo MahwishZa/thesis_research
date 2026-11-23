@@ -247,22 +247,22 @@
   "evidence": null,
   "text": {
     "semantic_similarity_cosine": {
-      "mean": 0.9443,
+      "mean": 0.9482,
       "95ci": [
-        0.9413,
-        0.9472
+        0.9464,
+        0.9499
       ],
       "per_class": {
-        "MEL": 0.9431,
-        "NV": 0.9543,
-        "BCC": 0.9417,
-        "AK": 0.9406,
-        "BKL": 0.9462,
-        "DF": 0.9438,
+        "MEL": 0.9474,
+        "NV": 0.9563,
+        "BCC": 0.9479,
+        "AK": 0.9437,
+        "BKL": 0.9479,
+        "DF": 0.9523,
         "VASC": 0.9475,
-        "SCC": 0.9371
+        "SCC": 0.9427
       },
-      "n_questions_with_rationale": 240,
+      "n_questions_with_rationale": 228,
       "n_reference_texts": {
         "AK": 4,
         "BCC": 8,

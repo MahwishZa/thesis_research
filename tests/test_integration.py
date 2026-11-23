@@ -894,9 +894,9 @@ class ReferenceBuildTests(unittest.TestCase):
         self.assertTrue(len(vasc) > 1 and set(vasc) == {"(introduction)"})          # a long introduction: several texts
 
     def test_the_file_is_what_the_semantic_similarity_reads(self):
-        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g"}
+        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g", "options": {"A": bd.OPTION_TEXT["BCC"]}}
         second = self.refs["BCC"]["texts"][1]["text"]
-        r = ev.semantic_similarity({"ISIC_0000001": q}, {"ISIC_0000001": {"rationale": second}}, self.refs,
+        r = ev.semantic_similarity({"ISIC_0000001": q}, {"ISIC_0000001": {"pred": "A", "rationale": second}}, self.refs,
                                    lambda texts: [[len(t), t.count("Arborizing")] for t in texts])
         self.assertEqual(r["mean"], 1.0)                      # the best match is the second text
         self.assertEqual(r["n_reference_texts"], {"BCC": 2})

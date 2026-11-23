@@ -385,7 +385,9 @@ def semantic_similarity(qa, pred, reference_texts, encode):
     the question's true class, keeping the highest (the best-matching reference, as in multi-reference scoring); then the mean
     over the questions, with a 95% interval over lesions and the mean per class.
     reference_texts: see reference_lists; the texts are quoted from a cited source, never written by us."""
-    ids = [i for i in qa if (pred.get(i) or {}).get("rationale")]
+    # Only answers with a usable letter: a refusal ("I'm sorry, I can't help") or a cut-off reply has no reasoning to compare
+    # (corrected 2026-11-24: the first image runs scored GPT-4o's refusal sentences as reasoning).
+    ids = [i for i in qa if (pred.get(i) or {}).get("rationale") and predicted_class(qa[i], pred[i]) != INVALID]
     if not ids:
         return None
     refs = reference_lists(reference_texts)

@@ -263,22 +263,22 @@
   "evidence": null,
   "text": {
     "semantic_similarity_cosine": {
-      "mean": 0.9364,
+      "mean": 0.9439,
       "95ci": [
-        0.9328,
-        0.94
+        0.9416,
+        0.9462
       ],
       "per_class": {
-        "MEL": 0.9265,
-        "NV": 0.9506,
-        "BCC": 0.9336,
-        "AK": 0.932,
-        "BKL": 0.9421,
-        "DF": 0.9364,
-        "VASC": 0.9405,
-        "SCC": 0.9297
+        "MEL": 0.9329,
+        "NV": 0.9545,
+        "BCC": 0.9466,
+        "AK": 0.9339,
+        "BKL": 0.9445,
+        "DF": 0.9511,
+        "VASC": 0.9526,
+        "SCC": 0.9366
       },
-      "n_questions_with_rationale": 240,
+      "n_questions_with_rationale": 212,
       "n_reference_texts": {
         "AK": 4,
         "BCC": 8,

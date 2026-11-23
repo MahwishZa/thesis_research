@@ -11,7 +11,7 @@
 | Question | Document |
 |---|---|
 | Where does the research stand now? | `STATUS.md` |
-| What are the results so far, and how should they be read? | `llm_only_text_only_results.md` (LLM-only, text-only view, test split) |
+| What are the results so far, and how should they be read? | `llm_only_results.md` (LLM-only, all three views, test split) |
 | What does each metric measure, and why was it chosen? | `evaluation_guide.md` |
 | What does the literature say about RAG evaluation? | `metric_survey.md` |
 | Was the repository checked, and what was found? | `repository_audit.md` (a dated snapshot) |
@@ -19,7 +19,7 @@
 | How is the data built and described? | `../data/datasheet.md` |
 | How is the code run and tested? | `../src/methodology.md` |
 
-Suggested reading order for the supervisor: `STATUS.md`, then `llm_only_text_only_results.md`, then `evaluation_guide.md`.
+Suggested reading order for the supervisor: `STATUS.md`, then `llm_only_results.md`, then `evaluation_guide.md`.
 
 ## 2. Folder layout
 
@@ -31,13 +31,14 @@ results/
   evaluation_guide.md             the metrics, in plain English
   metric_survey.md                the literature survey (snapshot 2026-11-23)
   repository_audit.md             the audit (snapshot 2026-11-24)
-  llm_only_text_only_results.md   results and their interpretation
+  llm_only_results.md             results of the LLM-only baseline and their interpretation
   summary.csv                     one row per finished run (written by `evaluate.py collect`)
   similarity_check.json           the semantic-similarity validity check (when it has been run)
   feature_check/                  the shortcut analysis of the data (`check.py features`)
   llm_only/
     <model>/<view>_<split>/       one finished run: predictions.jsonl, run.json, report.json
     compare_<view>_<split>.json   McNemar tests between models (`evaluate.py compare`)
+    compare_views_<model>.json    McNemar tests between the three views of one model
 ```
 
 Each system gets a folder of its own beside `llm_only/` when it is built (for example `standard_rag/`), with the same layout, so `evaluate.py collect` finds every finished run.

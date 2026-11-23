@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Updated | 2026-11-24 |
+| Updated | 2026-11-24 (all 12 LLM-only test runs finished) |
 | What this file is | The current state: what is done, what is running, what is decided, what is open. History is in `results/CHANGELOG.md`. |
 | Marks | ✔ checked against a file or a run; ◻ assumed or not yet checked |
 | Freeze | **Nothing is frozen.** The dataset, splits, metrics, prompt and models are frozen only after the research is final and the supervisor agrees (researcher's decision, 2026-11-24). |
@@ -17,7 +17,7 @@
 | The metrics: definitions, sources, how to read | `results/evaluation_guide.md` |
 | The literature survey behind the metric choice | `results/metric_survey.md` |
 | The audit of the repository (2026-11-24) | `results/repository_audit.md` |
-| Results so far | `results/llm_only_text_only_results.md`, `results/summary.csv`, `results/README.md` (how the results folder is organised) |
+| Results so far | `results/llm_only_results.md` (all three views), `results/summary.csv`, `results/README.md` (how the results folder is organised) |
 | History of decisions and changes | `results/CHANGELOG.md` |
 
 ## 2. The experiment grid
@@ -26,26 +26,29 @@ Four systems × three views × four models, on the test split (240 questions, 30
 
 | System | Text only | Image only | Image + text | Notes |
 |---|---|---|---|---|
-| **LLM-only** | **done** (4 models, test) ✔ | validated (10 questions per model) ✔; test not run | validated (10 questions per model) ✔; test not run | the prompt is `llm_only`; the same for every model and view |
+| **LLM-only** | **done** (4 models) ✔ | **done** (4 models) ✔ | **done** (4 models) ✔ | 12 runs; the prompt is `llm_only`; the same for every model and view |
 | **Standard RAG** | not built | not built | not built | design approved: MedCPT encoders, top 3 passages, "Evidence: [n] "quote"" or "Evidence: none" |
 | **RAG²** (Sohn et al., NAACL 2025) | not built | not built | not built | waits for the researcher's decision (full reproduction or a "RAG²-style" system without retriever training) |
 | **Proposed RAG** | not built | not built | not built | the design is not finalized |
 
-## 3. Results so far: LLM-only, text-only view, test split ✔
+## 3. Results so far: LLM-only, test split ✔
 
-Source: `results/llm_only_text_only_results.md` (all numbers from the committed run files). 240 questions per model; no invalid answers and no refusals.
+Source: `results/llm_only_results.md` (all numbers from the committed run files). 240 questions per run. Accuracy (95% interval):
 
-| Model | Accuracy | 95% interval | Macro-F1 |
+| Model | Text only | Image only | Image + text |
 |---|---|---|---|
-| Claude Sonnet 5.5 | 25.4% | 19.3% to 31.9% | 19.4% |
-| Llama 4 Maverick | 21.7% | 15.5% to 27.8% | 17.2% |
-| Gemini 3.8 Flash | 20.8% | 15.1% to 26.5% | 15.1% |
-| GPT-4o | 20.0% | 14.5% to 25.7% | 19.3% |
+| Claude Sonnet 5.5 | 25.4% (19.3% to 31.9%) | 47.1% (39.2% to 54.6%) | **54.6%** (47.7% to 62.0%) |
+| Gemini 3.8 Flash | 20.8% (15.1% to 26.5%) | **50.8%** (43.6% to 58.3%) | 53.3% (45.7% to 61.0%) |
+| GPT-4o | 20.0% (14.5% to 25.7%) | 36.2% (29.4% to 42.9%) | 41.2% (34.4% to 47.8%) |
+| Llama 4 Maverick | 21.7% (15.5% to 27.8%) | 36.7% (29.9% to 43.4%) | 35.8% (28.9% to 43.2%) |
 
-- All four are above chance (12.5%) but low: in this view the model sees only age, sex and body site.
-- McNemar with Holm correction: only Claude against Gemini differs (Holm p = 0.044); the other five pairs do not.
-- No model identifies melanoma (0 of 30 each).
+- The image carries the diagnosis: every model gains 15 to 30 points from text only to image only (all Holm p ≤ 0.0004).
+- In both image views Claude and Gemini are above GPT-4o and Llama (Holm p ≤ 0.014); within each pair the models cannot be separated.
+- Adding the patient facts to the image helps only Claude (+7.5 points, Holm p = 0.0014).
+- No model identifies melanoma from text alone (0 of 30 each); with the image, melanoma recall is 26.7% to 56.7%.
+- GPT-4o refuses 28 of 240 image-only questions (11.7%) and 12 image + text questions (5.0%); refusals count as wrong.
 - Image claims in the text-only view (a word-list proxy for one kind of hallucination): 0 of 240 for every model.
+- The semantic-similarity validity check passes in 6 of 12 runs (all GPT-4o, Gemini and Llama image runs); it fails in all text-only runs and for Claude in the image views.
 - These numbers are the baseline for the RAG systems. They say nothing about retrieval.
 
 ## 4. Validation trials (format and cost checks; no result reported)
@@ -73,16 +76,15 @@ Source: `results/llm_only_text_only_results.md` (all numbers from the committed 
 |---|---|---|
 | 1 | The proposed RAG: its design | researcher and supervisor |
 | 2 | RAG²: reproduce fully, or a RAG²-style system; the paper itself must be read first | researcher, supervisor, then me |
-| 3 | The image-only and multimodal LLM-only test runs (about 1,920 paid calls; about 1.7 million tokens in and 0.38 million out, from the trials; no price was looked up ◻) | researcher (budget) |
-| 4 | The semantic-similarity validity check: run `python src/evaluate.py similarity-check` after the test runs | researcher |
-| 5 | Whether the ethics committee must register or exempt the study ◻ | supervisor |
-| 6 | The supervisor's agreement to freeze the dataset, splits, metrics, prompt and models | supervisor, after the research is final |
+| 3 | The semantic similarity needs more or better reference texts for melanoma and BCC before it is used to compare systems (the validity check failed on those classes); not decided | researcher |
+| 4 | Whether the ethics committee must register or exempt the study ◻ | supervisor |
+| 5 | The supervisor's agreement to freeze the dataset, splits, metrics, prompt and models | supervisor, after the research is final |
 
 ## 6. Known issues and limits
 
 1. **Missing patient facts hint at the class.** Missing age, sex or site occurs mostly in NV and MEL (28 test cases, 15 of them NV). Report text-only results on all cases and on the cases with all facts (`--by facts_recorded`).
 2. **Source confound.** All MEL and NV come from the older ISIC archive; the source is detectable from the images (AUC 0.953). Report results per source.
-3. **The semantic similarity looks flat** (cosine score 0.921 to 0.932 for the four models, intervals about ±0.002; not a percentage); its validity is not yet tested.
+3. **The semantic similarity does not separate models** (cosine 0.921 to 0.950, differences of 0.006 or less between models in the image views; not a percentage). The validity check shows it carries information (the answered disease is identified in 39.2% to 91.0% of answers, chance 12.5%) but it fails for classes with thin reference texts (melanoma, BCC).
 4. **Hallucination is only approximated.** No published metric measures a false statement about a skin photograph without an expert. The image-claim check is a lower bound; the quote metrics (RAG runs) show only that a quote exists in a passage.
 5. **Claude's sampling is not fixed** (the API takes no temperature), so a rerun may differ; the other three models use temperature 0 and a seed, pinned to one host each.
 6. **The corpus is not balanced across classes** (melanoma-tagged passages are about 4 times as many as dermatofibroma-tagged ones), and its tags partly come from class names.
@@ -90,7 +92,6 @@ Source: `results/llm_only_text_only_results.md` (all numbers from the committed 
 
 ## 7. Next actions
 
-1. Researcher: the image-only and multimodal LLM-only test runs (commands in `src/methodology.md`, section 4), then `collect`, `similarity-check` and a commit of the results.
-2. Me: write the results of those runs in the same form as `results/llm_only_text_only_results.md`.
-3. Me: build standard RAG (retrieval, the RAG prompt, a runner, tests; a dry run is free) and then ask for approval of a small validation run before any test run.
-4. Researcher and supervisor: the proposed system and the RAG² scope.
+1. Me: build standard RAG (retrieval with the MedCPT encoders, the RAG prompt, a runner, tests; a dry run is free), then ask for approval of a small validation run before any test run.
+2. Researcher and supervisor: the proposed system and the RAG² scope.
+3. Researcher: decide whether to add reference texts for melanoma and BCC (for the semantic similarity), and whether GPT-4o's refusals should be reported per class.

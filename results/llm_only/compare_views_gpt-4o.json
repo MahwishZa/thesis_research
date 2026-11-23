@@ -1,0 +1,72 @@
+{
+  "inputs": {
+    "text": {
+      "questions": {
+        "path": "data/views/text_only/test.jsonl",
+        "sha256": "ed08a96b00a3429fb4c5c07ceda62f6930681bbb0cb93589cb697c03198e3aa3"
+      },
+      "predictions": {
+        "path": "results/llm_only/gpt-4o/text_only_test/predictions.jsonl",
+        "sha256": "00c6caf453d5094cccf1ef25c1a67e59c3938ccc6a036fa89b26fa71ddf3865d"
+      }
+    },
+    "image": {
+      "questions": {
+        "path": "data/views/image_only/test.jsonl",
+        "sha256": "cbde816fdb76a4b1fcc9129010f8dd97db19cbf4a4141aeb62334917606c7856"
+      },
+      "predictions": {
+        "path": "results/llm_only/gpt-4o/image_only_test/predictions.jsonl",
+        "sha256": "ec25b93972b04ed53745b8ac7c5411e369f6ed1dea0d9558d72fd706e3f60025"
+      }
+    },
+    "image+text": {
+      "questions": {
+        "path": "data/views/multimodal/test.jsonl",
+        "sha256": "1cb061d7137e30f2df03e2e92b965916add0ad09af3ea659d081d602ab499ffd"
+      },
+      "predictions": {
+        "path": "results/llm_only/gpt-4o/multimodal_test/predictions.jsonl",
+        "sha256": "9e64ff280935f3bc40563cd1f6ba99cfe7eb49a229b0951db42c2737ff4207df"
+      }
+    }
+  },
+  "n_questions": 240,
+  "accuracy": {
+    "text": 0.2,
+    "image": 0.3625,
+    "image+text": 0.4125
+  },
+  "pairs": [
+    {
+      "a": "text",
+      "b": "image",
+      "accuracy_a": 0.2,
+      "accuracy_b": 0.3625,
+      "a_right_b_wrong": 30,
+      "a_wrong_b_right": 69,
+      "p_value": 0.000111,
+      "p_holm": 0.000222
+    },
+    {
+      "a": "text",
+      "b": "image+text",
+      "accuracy_a": 0.2,
+      "accuracy_b": 0.4125,
+      "a_right_b_wrong": 18,
+      "a_wrong_b_right": 69,
+      "p_value": 0.0,
+      "p_holm": 0.0
+    },
+    {
+      "a": "image",
+      "b": "image+text",
+      "accuracy_a": 0.3625,
+      "accuracy_b": 0.4125,
+      "a_right_b_wrong": 16,
+      "a_wrong_b_right": 28,
+      "p_value": 0.096142,
+      "p_holm": 0.096142
+    }
+  ]
+}
