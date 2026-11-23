@@ -18,27 +18,28 @@ Processed: 22 Nov 2026 with `src/preprocess.py` (seed 42). Everything here is re
 | Images | Centre-cropped to 4:3, resized to 600×450, Shades-of-Gray colour constancy (p=6), JPEG q=95 |
 | Normalisation | RGB mean/std and age mean/std from **train only** (`processed_cases/normalization.json`) |
 
-## Final split (lesion-grouped; balanced test split; 5 CV folds on train+val)
+## Final split (lesion-grouped; balanced test and validation splits; 5 CV folds on train+val)
 
-First a stratified, lesion-grouped 70/15/15 split (seed 42); then the test split is balanced to **30 images of every class** by
-moving whole lesion groups between test and train in a fixed order (`balanced_splits` in `src/common.py`, decided 2026-11-22); validation is not
-changed. The numbers below are the rule applied to the cases ✔ (checked on the committed table); the laptop rerun of
-`preprocess.py` writes them into the tables.
+First a stratified, lesion-grouped 70/15/15 split (seed 42); then the test split is balanced to **30 images of every class** and the
+validation split to **20 images of every class** by moving whole lesion groups to or from train in a fixed order (`balanced_splits` in
+`src/common.py`, decided 2026-11-22; the test split is balanced first and is not touched by the validation pass). Train keeps the
+natural class mix: the imbalance is handled when a model is trained (class weights, the oversampled and undersampled lists). Numbers
+from the committed tables ✔ (laptop rerun of 2026-11-23):
 
 | Class | Train | Val | Test | Total |
 |---|---|---|---|---|
-| MEL melanoma | 357 | 65 | 30 | 452 |
-| NV melanocytic nevus | 222 | 42 | 30 | 294 |
-| BCC basal cell carcinoma | 306 | 56 | 30 | 392 |
-| AK actinic keratosis | 82 | 19 | 30 | 131 |
-| BKL benign keratosis-like | 379 | 69 | 30 | 478 |
-| DF dermatofibroma | 66 | 15 | 30 | 111 |
+| MEL melanoma | 402 | 20 | 30 | 452 |
+| NV melanocytic nevus | 244 | 20 | 30 | 294 |
+| BCC basal cell carcinoma | 342 | 20 | 30 | 392 |
+| AK actinic keratosis | 81 | 20 | 30 | 131 |
+| BKL benign keratosis-like | 428 | 20 | 30 | 478 |
+| DF dermatofibroma | 61 | 20 | 30 | 111 |
 | VASC vascular lesion | 92 | 20 | 30 | 142 |
-| SCC squamous cell carcinoma | 139 | 28 | 30 | 197 |
-| **Total** | **1,643** | **314** | **240** | **2,197** |
+| SCC squamous cell carcinoma | 147 | 20 | 30 | 197 |
+| **Total (lesions)** | **1,797 (1,504)** | **160 (126)** | **240 (190)** | **2,197** |
 
-Test: 240 images from 190 lesions. Imbalance ratio (train): 379 / 66 = **5.74 : 1**. Class weights are in
-`processed_cases/class_weights.json`.
+Imbalance ratio (train): 428 / 61 = **7.02 : 1**. Class weights are in `processed_cases/class_weights.json`. A balanced split does not
+reflect how often each disease occurs in a clinic, so its precision is not a clinic's precision (accuracy equals macro-recall).
 
 ## The pipeline and the folders
 

@@ -6,6 +6,7 @@ request formats of run.py. Run: python -m unittest discover -s tests"""
 import contextlib
 import importlib.util
 import io
+import itertools
 import json
 import math
 import os
@@ -423,6 +424,194 @@ class ReportTests(unittest.TestCase):
             Path(path).write_text(json.dumps(q) + "\n" + json.dumps(q) + "\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 ev.load(path)
+
+
+EVIDENCE_IDS = itertools.count(1)
+KEYWORD = {"MEL": "melanoma", "NV": "nevi", "BCC": "basal cell carcinoma", "AK": "actinic keratosis", "BKL": "seborrheic keratosis",
+           "DF": "dermatofibroma", "VASC": "hemangioma", "SCC": "squamous cell carcinoma"}
+MEL_TEXT = "Melanomas show asymmetry, and irregular borders here. Other text follows."
+
+
+def keyword_scorer(weights=None, record=None):
+    """A stand-in for the NLI model: a statement scores high when its diagnosis is named in the passage."""
+    by_statement = {ev.diagnosis_statement(c): c for c in CLASSES}
+
+    def scorer(premises, hypotheses):
+        if record is not None:
+            record.extend(hypotheses)
+        return [(weights or {}).get(by_statement[h], 0.9) if KEYWORD[by_statement[h]] in p.lower() else 0.1
+                for p, h in zip(premises, hypotheses)]
+    scorer.model_name = "fake-nli"
+    return scorer
+
+
+def evidence_case(code, gold, chunk="c1", quote="Melanomas show asymmetry and irregular borders here", text=MEL_TEXT, tags=None,
+                  none=False):
+    """One answered question with evidence: (question, prediction). `code` is the answered class, `gold` the true class."""
+    q = question(f"ISIC_{next(EVIDENCE_IDS):07d}", gold)
+    p = {"pred": answer(q, code) if code else "Z", "contexts": [{"chunk_id": "c1", "text": text, "tags": tags if tags is not None else [gold]}],
+         "evidence": None if none else {"chunk_id": chunk, "quote": quote}}
+    return q, p
+
+
+class EvidenceTests(unittest.TestCase):
+    def setUp(self):
+        cases_ = [evidence_case("MEL", "MEL"),                                                       # 0 covered, right
+                  evidence_case("MEL", "NV"),                                                        # 1 covered, wrong
+                  evidence_case("MEL", "MEL", quote="Melanomas always grow into the deep layers of skin."),   # 2 made-up quote
+                  evidence_case("MEL", "MEL", none=True, tags=["NV"]),                                # 3 "Evidence: none", nothing relevant
+                  evidence_case("BCC", "BCC"),                                  # 4 quote found, but the passage is about melanoma
+                  evidence_case(None, "MEL")]                                                         # 5 no valid answer
+        self.qa = {q["id"]: q for q, _ in cases_}
+        self.pred = {q["id"]: p for q, p in cases_}
+        self.ids = [q["id"] for q, _ in cases_]
+
+    def test_the_quote_must_be_in_the_cited_passage_word_for_word(self):
+        passage = "Melanomas show Asymmetry, and irregular borders here. Blue-gray areas may appear."
+        self.assertTrue(ev.quote_in_passage("melanomas show asymmetry and irregular borders here", passage))   # case and comma
+        self.assertTrue(ev.quote_in_passage("“Blue gray areas may appear”", passage + " x"))                # quote marks, hyphen
+        self.assertTrue(ev.quote_in_passage("Melanomas show ... irregular borders here. Blue-gray areas", passage))   # an ellipsis
+        self.assertFalse(ev.quote_in_passage("Blue-gray areas ... Melanomas show asymmetry and irregular", passage))  # order
+        self.assertFalse(ev.quote_in_passage("Melanomas show asymmetry and borders here", passage))             # a word missing
+        self.assertFalse(ev.quote_in_passage("elanomas show asymmetry and irregular borders", passage))        # not inside a word
+        self.assertFalse(ev.quote_in_passage("irregular borders", "irregular borders"))                         # too short to count
+        self.assertFalse(ev.quote_in_passage("", passage))
+        self.assertFalse(ev.quote_in_passage("some words that are not there", ""))
+
+    def test_each_diagnosis_has_a_statement_in_the_words_of_the_literature(self):
+        self.assertEqual(ev.diagnosis_statement("MEL"), "The diagnosis is melanoma.")
+        self.assertEqual(len({ev.diagnosis_statement(c) for c in CLASSES}), 8)
+        self.assertEqual(set(ev.SUPPORT_STATEMENTS), set(CLASSES))
+        for word in ("seborrheic keratosis", "solar lentigo", "lichen planus-like keratosis"):
+            self.assertIn(word, ev.diagnosis_statement("BKL"))                   # the dataset's umbrella name is not enough
+        self.assertIn("hemangioma", ev.diagnosis_statement("VASC"))
+
+    def test_coverage_risk_and_supported_accuracy_use_only_verified_evidence(self):
+        seen = []
+        m = ev.evidence_metrics(self.qa, self.pred, keyword_scorer(record=seen))
+        self.assertEqual((m["n_questions"], m["valid_answers"]), (6, 5))
+        self.assertEqual((m["evidence_given"], m["evidence_none"], m["quote_found"]), (4, 1, 3))
+        self.assertEqual(m["quote_accuracy"], 0.75)                       # 3 of the 4 given quotes are in their passage
+        self.assertEqual((m["supported"], m["support_rate"]), (2, round(2 / 3, 4)))       # the basal cell answer is not supported
+        self.assertEqual((m["n_covered"], m["coverage_verified"]), (2, round(2 / 6, 4)))
+        self.assertEqual(m["selective_risk_verified"], 0.5)               # of the 2 covered answers one is wrong
+        self.assertEqual(m["supported_accuracy"], round(1 / 6, 4))        # right and covered: only the first
+        self.assertEqual((m["support_model"], m["support_rule"], m["support_threshold"]), ("fake-nli", "top", None))
+        self.assertEqual(len(m["coverage_verified_95ci"]), 2)
+        self.assertEqual(len(seen), 3 * 8)                                # every found quote is scored against all 8 statements
+
+    def test_the_answered_diagnosis_must_score_highest_and_a_tie_is_not_support(self):
+        flat = lambda premises, hypotheses: [0.5] * len(premises)          # noqa: E731
+        self.assertEqual(ev.evidence_metrics(self.qa, self.pred, flat)["n_covered"], 0)          # all 8 equal: nothing is supported
+        statements = {ev.diagnosis_statement(c): c for c in CLASSES}
+        rival = lambda premises, hyps: [0.95 if statements[h] == "BCC" else 0.9 if statements[h] == "MEL" else 0.1   # noqa: E731
+                                        for h in hyps]
+        self.assertEqual(ev.evidence_metrics(self.qa, self.pred, rival)["supported"], 1)    # BCC beats MEL: only the BCC answer is supported
+        tied = lambda premises, hyps: [0.9 if statements[h] in ("BCC", "MEL") else 0.1 for h in hyps]   # noqa: E731
+        self.assertEqual(ev.evidence_metrics(self.qa, self.pred, tied)["supported"], 0)     # a tie at the top is not support
+
+    def test_the_threshold_rule_scores_only_the_answered_diagnosis(self):
+        seen = []
+        m = ev.evidence_metrics(self.qa, self.pred, keyword_scorer(record=seen), rule="threshold")
+        self.assertEqual((m["n_covered"], m["support_rule"], m["support_threshold"]), (2, "threshold", 0.5))
+        self.assertEqual(len(seen), 3)
+        edge = ev.evidence_metrics(self.qa, self.pred, lambda p, h: [0.5] * len(p), rule="threshold")
+        self.assertEqual(edge["n_covered"], 3)                             # a score exactly at the threshold counts as supported
+        self.assertEqual(ev.evidence_metrics(self.qa, self.pred, keyword_scorer(), threshold=0.95, rule="threshold")["n_covered"], 0)
+        with self.assertRaises(ValueError):
+            ev.evidence_metrics(self.qa, self.pred, keyword_scorer(), rule="nonsense")
+
+    def test_without_a_support_model_only_the_quote_is_checked(self):
+        m = ev.evidence_metrics(self.qa, self.pred)
+        self.assertEqual((m["n_covered"], m["supported"], m["support_rate"], m["support_model"], m["support_rule"]),
+                         (3, None, None, None, None))
+        self.assertEqual(m["selective_risk_verified"], round(1 / 3, 4))
+
+    def test_negative_rejection_counts_none_when_no_retrieved_passage_is_tagged_with_the_true_class(self):
+        m = ev.evidence_metrics(self.qa, self.pred, keyword_scorer())
+        self.assertEqual(m["n_without_relevant_passage"], 1)              # only case 3 has no passage tagged with its true class
+        self.assertEqual(m["negative_rejection"], 1.0)
+        self.pred[self.ids[3]]["evidence"] = {"chunk_id": "c1", "quote": "made up words that are not in the passage"}
+        self.assertEqual(ev.evidence_metrics(self.qa, self.pred, keyword_scorer())["negative_rejection"], 0.0)
+
+    def test_the_selection_never_looks_at_the_true_class(self):
+        same = ev.evidence_metrics(self.qa, self.pred, keyword_scorer())
+        swapped = {i: question(i, "SCC" if q["gold_label"] != "SCC" else "MEL") for i, q in self.qa.items()}   # same options, other truth
+        other = ev.evidence_metrics(swapped, self.pred, keyword_scorer())
+        for key in ("n_covered", "coverage_verified", "quote_found", "supported", "evidence_given"):
+            self.assertEqual(same[key], other[key], key)
+        self.assertNotEqual(same["selective_risk_verified"], other["selective_risk_verified"])   # only the errors depend on it
+
+    def test_predictions_without_an_evidence_field_have_no_evidence_metrics(self):
+        self.assertIsNone(ev.evidence_metrics(self.qa, {i: {"pred": "A"} for i in self.qa}))
+        self.assertIsNone(ev.evidence_metrics(self.qa, {}))
+
+    def test_a_citation_of_a_passage_that_was_not_retrieved_does_not_count(self):
+        q, p = evidence_case("MEL", "MEL", chunk="c9")
+        m = ev.evidence_metrics({q["id"]: q}, {q["id"]: p}, keyword_scorer())
+        self.assertEqual((m["evidence_given"], m["quote_found"], m["n_covered"]), (1, 0, 0))
+
+    def test_the_nli_scorer_reads_the_entailment_probability_whatever_the_label_order(self):
+        for labels, rows, expected in (({0: "contradiction", 1: "entailment", 2: "neutral"}, [[0.0, 2.0, 0.0], [3.0, 0.0, 0.0]], 0.787),
+                                       ({0: "ENTAILMENT", 1: "neutral", 2: "contradiction"}, [[2.0, 0.0, 0.0]], 0.787)):
+            class Model:
+                config = types.SimpleNamespace(id2label=labels)
+
+                def __init__(self, name):
+                    self.name = name
+
+                def predict(self, pairs):
+                    return rows[:len(pairs)]
+
+            module = types.ModuleType("sentence_transformers")
+            module.CrossEncoder = Model
+            with mock.patch.dict(sys.modules, {"sentence_transformers": module}):
+                score = ev.nli_support_scorer("any-model")
+                probs = score(["p"] * len(rows), ["h"] * len(rows))
+            self.assertAlmostEqual(probs[0], expected, places=3)
+            self.assertEqual(score.model_name, "any-model")
+        self.assertLess(probs[0], 1.0)
+
+    def test_the_support_check_asks_whether_a_passage_scores_highest_for_its_own_diagnosis(self):
+        passages = [{"passage_id": f"p{k}", "query_class": c, "tags": [c], "text": f"{KEYWORD[c]} appears with typical signs {k}."}
+                    for k, c in enumerate(CLASSES * 3)]
+        passages.append({"passage_id": "two", "query_class": "MEL", "tags": ["MEL", "NV"], "text": "melanoma and nevi are compared"})
+        good = ev.support_check(passages, keyword_scorer(), per_class=3)
+        self.assertEqual(good["n_passages"], 24)                           # a passage with two tags is not used
+        self.assertEqual((good["top1_accuracy"], good["passed"]), (1.0, True))
+        self.assertEqual(set(good["per_class"]), set(CLASSES))
+        self.assertTrue(all(good["confusion"][c][c] == 3 for c in CLASSES))
+        self.assertGreater(good["mean_score_own_statement"], good["mean_score_other_statements"])
+        useless = ev.support_check(passages, lambda p, h: [0.5] * len(p), per_class=3)
+        self.assertEqual((useless["top1_accuracy"], useless["passed"]), (0.0, False))          # all equal: ties are wrong
+        statements = {ev.diagnosis_statement(c): c for c in CLASSES}
+        confused = ev.support_check(passages, lambda p, h: [0.9 if statements[x] in ("BCC", "SCC") else 0.1 for x in h], per_class=3)
+        self.assertLess(confused["top1_accuracy"], 1.0)
+        self.assertFalse(confused["passed"])
+        self.assertIsNone(ev.support_check([], keyword_scorer()))
+
+    def test_the_pass_mark_needs_070_overall_and_050_in_every_class(self):
+        passages = [{"passage_id": f"p{k}", "query_class": c, "tags": [c], "text": f"{KEYWORD[c]} appears with typical signs {k}."}
+                    for k, c in enumerate(CLASSES * 3)]
+        right = keyword_scorer()
+
+        def wrong_for(blind_class):
+            """The model never recognises one class: overall 0.875, but that class scores 0."""
+            def scorer(premises, hyps):
+                return [0.5 if KEYWORD[blind_class] in p else r for p, r in zip(premises, right(premises, hyps))]
+            return scorer
+
+        def wrong_for_a_third(premises, hyps):
+            """Each class is right 2 times out of 3 (0.667 overall, 0.667 per class)."""
+            third = [int(p.rstrip(".").split()[-1]) >= 16 for p in premises]
+            return [0.5 if t else r for t, r in zip(third, right(premises, hyps))]
+
+        one_blind = ev.support_check(passages, wrong_for("SCC"), per_class=3)
+        self.assertEqual(one_blind["top1_accuracy"], 0.875)
+        self.assertEqual((one_blind["per_class"]["SCC"], one_blind["passed"]), (0.0, False))
+        low = ev.support_check(passages, wrong_for_a_third, per_class=3)
+        self.assertEqual((low["top1_accuracy"], low["passed"]), (0.6667, False))
+        self.assertTrue(min(low["per_class"].values()) >= 0.5)
 
 
 class SelectiveTests(unittest.TestCase):

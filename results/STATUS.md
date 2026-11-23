@@ -304,6 +304,7 @@ Checked: 6 new tests of the checker.
   prints "balanced test split ..." and "balanced val split ..." lines. After the tables are committed: assertions on the committed
   validation split (acceptance and system tests), the pipeline check for an unbalanced validation split, and the data sheet table.
 - Open: whether the prompt asks for one letter (`llm_only_v3`) instead of three.
+- Done 2026-11-23 ✔: the researcher committed the new tables (validation 160 = 20 per class, train 1,797, test 240); the pipeline check, the system and acceptance tests and the data sheet now assert the balanced validation split.
 
 ## Knowledge corpus built on the laptop (2026-11-23) ✔ from `data/knowledge_corpus/corpus_card.json`
 - 3,294 passages from 868 documents (the full run, with the Meditron guidelines: 83 passages from cdc 42, pubmed 33, cco 8). Every
@@ -351,6 +352,35 @@ Checked: 6 new tests of the checker.
 - Coverage and selective risk (option B, the evidence quote as the selection signal): approved by the researcher on the condition that it
   is verified to be suitable. Verdict: it cannot be fully verified before the RAG systems exist (see the answer given on 2026-11-23);
   specified as a RAG-only design, to be checked on a free pilot; until then nothing is built or removed.
+
+## Metric survey and option B built (researcher's request, 2026-11-23)
+- Survey of RAG papers and benchmarks and what they measure: `results/metric_survey.md` (what the field measures, paper by paper,
+  fit for this thesis, limits). It comes from search summaries only (the pages could not be opened here): ✔ and ◻ mark what was and was not seen.
+- Option B built in `src/evaluate.py` (RAG answers only; nothing for LLM-only): a prediction may carry `"evidence": {"chunk_id", "quote"}`
+  or `null` ("Evidence: none") and its `contexts`. The report gets an `evidence` section: quote accuracy (the quote is word for word in
+  the cited passage: lower case, no punctuation, whole words, "..." allowed, at least 5 words), support (the cited passage entails
+  "The diagnosis is <answered class>.", an NLI model, `--support-model`; default `cross-encoder/nli-deberta-v3-base`, threshold 0.5), coverage and
+  selective risk with verified evidence (an answer is covered when its quote is found and supported), supported accuracy (right and
+  covered, after KILT-AC), negative rejection (after RGB: "none" when no retrieved passage is tagged with the true class). The selection never
+  uses the true class (a test). The old yes/no flag metrics stay in the code but need a flag, which no prompt produces now.
+- `evaluate.py support-check` tests the support scorer on the corpus tags alone (no case, no label): does the statement of a passage's own
+  diagnosis score higher than the statement of another one? First version (pairwise) is described below; it failed.
+- **First support-check failed its pass mark (2026-11-23, laptop run, pairwise version).** 800 passages: the right statement scored higher
+  in 0.83 (mean 0.0571 against 0.0011). Per class: MEL .92, NV .88, BCC .80, AK .91, BKL .51, DF .93, VASC .91, SCC .78. The pass mark
+  (0.90 overall, no class under 0.80) was not met. Reading: the ranking works, but the raw entailment probabilities are tiny, so a fixed
+  0.5 threshold cannot be used; the BKL statement was too narrow; BCC and SCC are confused. Change (not yet re-run): (1) the default rule
+  is now "top": the passage is scored against the statements of all 8 diagnoses, and the answered diagnosis must have the single highest
+  score (a tie is not support); the "threshold" rule stays as an option; (2) statements in the wording of the literature (BKL names
+  seborrheic keratosis, solar lentigo and lichen planus-like keratosis; VASC names hemangioma or angioma); (3) `support-check` is now an
+  8-way zero-shot classification of single-tag passages. New pass mark, set before the run: top-1 accuracy at least 0.70 overall and no
+  class under 0.50 (chance 0.125). What "top" means: the passage is about the answered diagnosis, not that it entails this case's
+  findings. The passage tags come from class names, so the check is partly lexical. Image claims are never verified.
+  Tests: 201 pass (7 skipped, no pandas or sklearn here); 9 deliberate breaks of the new code, 7 caught at first; the two missed ones
+  (the per-class floor and the 0.70 overall bar of the pass mark) now have a test each.
+- Expected weakness ◻: a general NLI model may rate "Melanomas show asymmetry ..." as neutral to "The diagnosis is melanoma"; the
+  support-check shows it before any RAG run. Fallbacks: AlignScore (ACL 2023), a different statement, or the quote check alone.
+- Not built: the RAG prompts and runner (they will ask for `Evidence: [passage number] "<sentence copied word for word>"` or `Evidence: none`).
+- Tests: 14 for the evidence code, 22 deliberate breaks of it, 21 caught at first, the 22nd (a score exactly at the threshold) by a new test; 199 tests.
 
 ## Known issues
 1. Missing age, sex or site is common for melanoma and nevus only, so "not recorded" hints at the class. Decision: report the text

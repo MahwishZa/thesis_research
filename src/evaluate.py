@@ -28,6 +28,12 @@ Metrics
               When the predictions carry them: selective classification from the "evidence_sufficient" flag: coverage (share of all questions answered
               with a valid diagnosis marked "yes") and selective risk (share of those that are wrong: confident misdiagnoses).
               Several runs are compared with src/evaluate.py compare (McNemar for every pair, Holm's correction).
+  Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (or null = "Evidence: none"). Quote accuracy (the quote is
+              word for word in the cited passage), support (an NLI model scores the cited passage against the statements of all 8 diagnoses and the
+              answered one must score highest, --support-model; or its own score must reach --support-threshold, --support-rule threshold), coverage and selective risk with verified evidence (an answer is covered when its
+              quote is found and, with --support-model, supported; these replace the yes/no flag), supported accuracy (correct and
+              covered, after KILT-AC), and negative rejection (the share of "Evidence: none" when no retrieved passage is tagged with
+              the true class, after RGB). `evaluate.py support-check` tests the support score on the corpus tags first.
   Retrieval : Hit@k, Precision@k, MRR, nDCG@k and context precision. Weak labels: a passage counts as relevant when its
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
   Relevance : how well each retrieved passage fits the query: Jaccard similarity of the content words (free, no model);
@@ -38,7 +44,10 @@ Metrics
 
 Sources: McNemar (1947) Psychometrika 12:153-157; Jaccard (1912) New Phytologist 11:37-50; nDCG: Jarvelin & Kekalainen (2002)
 ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651; RAGAS: Es et al. (2024) EACL demos 150-158;
-coverage and selective risk: Geifman & El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70.
+coverage and selective risk: Geifman & El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70;
+answer counted only with right evidence: KILT-AC, Petroni et al. (2021) NAACL; negative rejection: RGB, Chen et al. (2024) AAAI
+38:17754-17762; citation support by entailment: ALCE, Gao et al. (2023) EMNLP 6465-6488; a QA answer verified as a statement by
+NLI: Chen, Choi & Durrett (2021) Findings of EMNLP 3841-3854.
 
 Every report records its input files with their SHA-256, so two reports can be checked to use the same question file.
 
@@ -47,6 +56,7 @@ Usage: python src/evaluate.py --questions data/views/multimodal/test.jsonl --pre
        [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
        python src/evaluate.py compare --run name=questions,predictions --run name=questions,predictions --out compare.json
        (several runs on the same cases: McNemar's exact test for every pair, Holm-corrected; see the end of this file)
+       python src/evaluate.py support-check --passages data/knowledge_corpus/passages.jsonl     (is the support score valid? corpus tags only)
 """
 import argparse
 import hashlib
@@ -56,9 +66,10 @@ import math
 import random
 import re
 import sys
+import unicodedata
 from collections import Counter, defaultdict
 
-from common import CLASSES, OPTION_TEXT, get_logger, read_csv, read_jsonl, write_json
+from common import CLASSES, OPTION_TEXT, SEED, get_logger, read_csv, read_jsonl, write_json
 
 TEXT_TO_CLASS = {text: code for code, text in OPTION_TEXT.items()}
 INVALID = "invalid"
@@ -409,6 +420,187 @@ def semantic_similarity(qa, pred, reference_texts, encode):
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------------------
+# Evidence (RAG systems): the quoted sentence, whether it is really in the cited passage, and whether the passage supports the
+# diagnosis. Decided 2026-11-23 (option B): the answer is "covered" only if its evidence is verified, instead of a yes/no flag.
+# ---------------------------------------------------------------------------------------------------------------------------
+SUPPORT_MODEL = "cross-encoder/nli-deberta-v3-base"      # a general NLI model (trained on SNLI and MultiNLI); its validity for this
+SUPPORT_THRESHOLD = 0.5                                  # task is checked first with `evaluate.py support-check`; the threshold is a default
+SUPPORT_RULE = "top"                                     # "top": the answered diagnosis scores highest of the 8; "threshold": its score >= threshold
+MIN_QUOTE_WORDS = 5                                      # a shorter "quote" is too easy to find by chance
+
+
+def normalise_quote(text):
+    """The words of a text in lower case: every run of other characters (punctuation, quote marks, dashes, spaces) becomes one space, so
+    a quote that drops a comma or writes "blue gray" for "blue-gray" is still the same words."""
+    return re.sub(r"[\W_]+", " ", unicodedata.normalize("NFKC", text or "").lower()).strip()
+
+
+def quote_in_passage(quote, passage):
+    """True when the quote is in the passage word for word (after normalise_quote). A quote with "..." or an ellipsis is checked
+    piece by piece, the pieces in order; the words of all pieces together must be at least MIN_QUOTE_WORDS."""
+    pieces = [normalise_quote(x) for x in re.split(r"\[?\.\.\.\]?|\u2026", quote or "")]
+    pieces = [x for x in pieces if x]
+    if not pieces or sum(len(x.split()) for x in pieces) < MIN_QUOTE_WORDS:
+        return False
+    text, at = f" {normalise_quote(passage)} ", 0
+    for piece in pieces:
+        found = text.find(f" {piece} ", at)                    # whole words only: no match inside a longer word
+        if found < 0:
+            return False
+        at = found + len(piece) + 1
+    return True
+
+
+SUPPORT_STATEMENTS = {
+    "MEL": "The diagnosis is melanoma.",
+    "NV": "The diagnosis is a melanocytic nevus (a common mole).",
+    "BCC": "The diagnosis is basal cell carcinoma.",
+    "AK": "The diagnosis is actinic keratosis.",
+    # the dataset's umbrella name does not occur in the literature: its three members do
+    "BKL": "The diagnosis is a benign keratosis-like lesion: seborrheic keratosis, solar lentigo or lichen planus-like keratosis.",
+    "DF": "The diagnosis is dermatofibroma.",
+    "VASC": "The diagnosis is a vascular lesion such as a hemangioma or angioma.",
+    "SCC": "The diagnosis is squamous cell carcinoma.",
+}
+
+
+def diagnosis_statement(code):
+    """The diagnosis as a statement a passage can be tested against (the form used to verify a QA answer with NLI: Chen, Choi &
+    Durrett 2021). The wording of each class uses the words the medical literature uses for it."""
+    return SUPPORT_STATEMENTS[code]
+
+
+def nli_support_scorer(model_name=SUPPORT_MODEL):
+    """A function (premises, hypotheses) -> probabilities that each premise entails its hypothesis, from a cross-encoder NLI model
+    (downloads the model on first use)."""
+    from sentence_transformers import CrossEncoder
+    model = CrossEncoder(model_name)
+    config = getattr(model, "config", None) or model.model.config
+    labels = [str(v).lower() for _, v in sorted((int(k), v) for k, v in config.id2label.items())]
+    entail = next((k for k, v in enumerate(labels) if "entail" in v), 1)       # the order of these models: contradiction, entailment, neutral
+
+    def score(premises, hypotheses):
+        rows = model.predict(list(zip(premises, hypotheses)))
+        out = []
+        for row in rows.tolist() if hasattr(rows, "tolist") else rows:
+            top = max(row)
+            e = [math.exp(x - top) for x in row]
+            out.append(e[entail] / sum(e))
+        return out
+    score.model_name = model_name
+    return score
+
+
+def cited_passage(p):
+    """The text of the passage a prediction cites in its evidence, or None."""
+    ev = p.get("evidence") or {}
+    for c in p.get("contexts") or []:
+        if ev.get("chunk_id") is not None and str(c.get("chunk_id")) == str(ev["chunk_id"]):
+            return c.get("text")
+    return None
+
+
+def evidence_metrics(qa, pred, scorer=None, threshold=SUPPORT_THRESHOLD, rule=SUPPORT_RULE):
+    """RAG answers that carry an "evidence" field: {"chunk_id": ..., "quote": "..."}, or null for "Evidence: none".
+    An answer is covered when it has a valid diagnosis, a quote that is word for word in the cited passage and, when a scorer is
+    given, a cited passage that supports the diagnosis (probability of entailment >= threshold). Nothing here uses the true class,
+    except negative rejection and the errors counted among the covered answers."""
+    ids = [i for i in qa if i in pred and "evidence" in pred[i]]
+    if not ids:
+        return None
+    y = [gold_class(qa[i]) for i in ids]
+    groups = [qa[i].get("group_id", i) for i in ids]
+    if rule not in ("top", "threshold"):
+        raise ValueError(f"unknown support rule {rule!r}")
+    given, found, covered, answers, wanted = [], [], [], [], {}
+    for k, i in enumerate(ids):
+        p = pred[i]
+        code = predicted_class(qa[i], p)
+        quote = ((p.get("evidence") or {}).get("quote") or "").strip()
+        passage = cited_passage(p)
+        g = code != INVALID and bool(quote)
+        f = g and passage is not None and quote_in_passage(quote, passage)
+        given.append(g)
+        found.append(f)
+        if f and scorer:
+            wanted[k] = (passage, code)
+    support = {}
+    if wanted:
+        # "top": the passage is scored against the statements of all 8 diagnoses; "threshold": against the answered one only
+        pairs = [(k, c) for k, (passage, code) in wanted.items() for c in (CLASSES if rule == "top" else [code])]
+        probs = scorer([wanted[k][0] for k, _ in pairs], [diagnosis_statement(c) for _, c in pairs])
+        by_question = defaultdict(dict)
+        for (k, c), prob in zip(pairs, probs):
+            by_question[k][c] = prob
+        for k, (passage, code) in wanted.items():
+            scores = by_question[k]
+            if rule == "top":
+                best = max(scores.values())
+                support[k] = scores[code] == best and sum(v == best for v in scores.values()) == 1
+            else:
+                support[k] = scores[code] >= threshold
+    for k, i in enumerate(ids):
+        ok = bool(found[k] and (not scorer or support.get(k, False)))
+        covered.append(ok)
+        answers.append((predicted_class(qa[i], pred[i]), "yes" if ok else "no"))
+    n, valid = len(ids), sum(predicted_class(qa[i], pred[i]) != INVALID for i in ids)
+    right_and_covered = sum(c and t == a[0] for c, t, a in zip(covered, y, answers))
+    risk = selective_risk(y, answers)
+    irrelevant = [k for k, i in enumerate(ids) if not any(y[k] in (c.get("tags") or []) for c in pred[i].get("contexts") or [])]
+    out = {"n_questions": n, "valid_answers": valid,
+           "evidence_given": sum(given), "evidence_none": sum(1 for i in ids if not (pred[i].get("evidence") or {}).get("quote")),
+           "quote_found": sum(found), "quote_accuracy": round(sum(found) / sum(given), 4) if sum(given) else None,
+           "support_model": getattr(scorer, "model_name", None) if scorer else None,
+           "support_rule": rule if scorer else None, "support_threshold": threshold if scorer and rule == "threshold" else None,
+           "supported": sum(bool(c) for c in covered) if scorer else None,
+           "support_rate": round(sum(bool(c) for c in covered) / sum(found), 4) if scorer and sum(found) else None,
+           "coverage_verified": round(coverage(y, answers), 4), "coverage_verified_95ci": bootstrap_ci(y, answers, groups, coverage),
+           "n_covered": sum(covered), "selective_risk_verified": None if risk is None else round(risk, 4),
+           "supported_accuracy": round(right_and_covered / n, 4),
+           "negative_rejection": None, "n_without_relevant_passage": len(irrelevant)}
+    if irrelevant:
+        out["negative_rejection"] = round(sum(not (pred[ids[k]].get("evidence") or {}).get("quote") for k in irrelevant)
+                                          / len(irrelevant), 4)
+    return out
+
+
+def support_check(passages, scorer, per_class=50, seed=SEED, threshold=SUPPORT_THRESHOLD):
+    """Is the support scorer valid for this task? The passages of the corpus that are tagged with exactly one diagnosis are scored
+    against the statements of all 8 diagnoses (zero-shot classification by NLI, Yin, Hay & Roth 2019); the statement of the passage's own
+    diagnosis should score highest. It uses only the corpus tags: no case and no label. Returns the share of passages where it does
+    (top-1 accuracy; chance is 0.125), per class, the confusion between classes, and the mean scores. Pass mark set on 2026-11-23, before the
+    first run of this version: top-1 accuracy of at least 0.70 overall and no class under 0.50."""
+    rows = []
+    for cls in CLASSES:
+        mine = [p for p in passages if p.get("tags") == [cls]]
+        mine.sort(key=lambda p: hashlib.sha256(f"{seed}:{p['passage_id']}".encode("utf-8")).hexdigest())
+        rows += [(p, cls) for p in mine[:per_class]]
+    if not rows:
+        return None
+    pairs = [(p["text"], c) for p, _ in rows for c in CLASSES]
+    flat = scorer([t for t, _ in pairs], [diagnosis_statement(c) for _, c in pairs])
+    per_passage = [dict(zip(CLASSES, flat[k * len(CLASSES):(k + 1) * len(CLASSES)])) for k in range(len(rows))]
+    confusion = {c: {d: 0 for d in CLASSES} for c in CLASSES}
+    hit, own, other = [], [], []
+    for (p, cls), scores in zip(rows, per_passage):
+        best = max(scores.values())
+        winners = [c for c, v in scores.items() if v == best]
+        guess = winners[0] if len(winners) == 1 else None            # a tie is wrong
+        hit.append(guess == cls)
+        if guess:
+            confusion[cls][guess] += 1
+        own.append(scores[cls])
+        other += [v for c, v in scores.items() if c != cls]
+    per = {c: round(mean([h for (_, k), h in zip(rows, hit) if k == c]), 4) for c in CLASSES if any(k == c for _, k in rows)}
+    return {"n_passages": len(rows), "support_model": getattr(scorer, "model_name", None), "per_class_cap": per_class,
+            "top1_accuracy": round(mean(hit), 4), "per_class": per, "confusion": confusion,
+            "pass_mark": "top-1 accuracy >= 0.70 overall and no class under 0.50",
+            "passed": bool(mean(hit) >= 0.70 and per and min(per.values()) >= 0.50),
+            "mean_score_own_statement": round(mean(own), 4), "mean_score_other_statements": round(mean(other), 4),
+            "share_own_above_threshold": round(sum(x >= threshold for x in own) / len(rows), 4), "threshold": threshold}
+
+
 def text_metrics(qa, pred, reference_texts, use_ragas=False, encode=None):
     """Semantic similarity of the explanations (when reference texts are given) and, optionally, the RAGAS LLM-judge scores."""
     out = {}
@@ -432,7 +624,7 @@ def text_metrics(qa, pred, reference_texts, use_ragas=False, encode=None):
 
 
 def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relevance_models=False, reference_texts=None,
-             ragas=False, skip_text=False):
+             ragas=False, skip_text=False, support_model=None, support_threshold=SUPPORT_THRESHOLD, support_rule=SUPPORT_RULE):
     """The full report of one system on one question file (the same code for every system and every view)."""
     qa, pred = load(qa_path), load(pred_path)
     inputs = {"questions": file_record(qa_path), "predictions": file_record(pred_path)}
@@ -448,6 +640,9 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
         rep["subgroups"] = subgroup_accuracy(qa, pred, {r["isic_id"]: r for r in read_csv(cases_path)}, by)
     if rep["retrieval"]:
         rep["relevance"] = relevance_metrics(qa, pred, medcpt_scorers() if relevance_models else None)
+    has_evidence = any("evidence" in p for p in pred.values())
+    rep["evidence"] = evidence_metrics(qa, pred, nli_support_scorer(support_model) if has_evidence and support_model else None,
+                                       support_threshold, support_rule) if has_evidence else None
     if not skip_text:
         refs = None
         if reference_texts:
@@ -469,9 +664,16 @@ def report_main(argv=None):
     ap.add_argument("--reference-texts", default=None)
     ap.add_argument("--ragas", action="store_true")
     ap.add_argument("--skip-text", action="store_true")
+    ap.add_argument("--support-model", nargs="?", const=SUPPORT_MODEL, default=None,
+                    help="also test that the cited passage supports the diagnosis with this NLI model (default model: "
+                         + SUPPORT_MODEL + "); without it only the quote is checked")
+    ap.add_argument("--support-rule", choices=("top", "threshold"), default=SUPPORT_RULE,
+                    help="top: the answered diagnosis must score highest of the 8 statements; threshold: its score must be at least "
+                         "--support-threshold")
+    ap.add_argument("--support-threshold", type=float, default=SUPPORT_THRESHOLD)
     a = ap.parse_args(argv)
     rep = evaluate(a.questions, a.predictions, a.predictions_b, a.cases, a.by, a.relevance_models, a.reference_texts, a.ragas,
-                   a.skip_text)
+                   a.skip_text, a.support_model, a.support_threshold, a.support_rule)
     write_json(a.out, rep)
     log = get_logger("evaluate")
     d = rep["diagnosis"]
@@ -547,10 +749,30 @@ def compare_main(argv=None):
     return rep
 
 
+def support_check_main(argv=None):
+    ap = argparse.ArgumentParser(prog="evaluate.py support-check",
+                                 description="Is the NLI support score valid for this task? Uses only the corpus tags (no case, no label).")
+    ap.add_argument("--passages", default="data/knowledge_corpus/passages.jsonl")
+    ap.add_argument("--support-model", default=SUPPORT_MODEL)
+    ap.add_argument("--per-class", type=int, default=50)
+    ap.add_argument("--threshold", type=float, default=SUPPORT_THRESHOLD)
+    ap.add_argument("--out", default="results/support_check.json")
+    a = ap.parse_args(argv)
+    result = support_check(read_jsonl(a.passages), nli_support_scorer(a.support_model), a.per_class, threshold=a.threshold)
+    write_json(a.out, result)
+    log = get_logger("support_check")
+    log.info(f"{result['n_passages']} passages: the statement of the passage's own diagnosis scores highest of the 8 in "
+             f"{result['top1_accuracy']} (chance 0.125; per class {result['per_class']}); pass mark ({result['pass_mark']}): "
+             f"{'PASSED' if result['passed'] else 'NOT PASSED'}")
+    return result
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "compare":
         return compare_main(argv[1:])
+    if argv and argv[0] == "support-check":
+        return support_check_main(argv[1:])
     return report_main(argv)
 
 

@@ -76,19 +76,34 @@ class CheckTests(unittest.TestCase):
         self.assertIn("not balanced to 30 per class", note)
         self.assertIn("DF 31", note)
 
+    def test_an_unbalanced_validation_split_is_a_problem(self):
+        cases = self.data / PROCESSED_CASES
+        cases.mkdir(parents=True)
+        for f in cp.PROCESSED_FILES:
+            (cases / f).write_text("isic_id\n", encoding="utf-8")
+        rows = "".join(f"T_{c}_{k},{c},test\n" for c in CLASSES for k in range(30))
+        rows += "".join(f"V_{c}_{k},{c},val\n" for c in CLASSES for k in range(19 if c == "AK" else 20))
+        (self.data / ALL_CASES).write_text("isic_id,label,split\n" + rows, encoding="utf-8")
+        status, note = cp.step_clean(str(self.data))
+        self.assertEqual(status, cp.PROBLEM)
+        self.assertIn("the val split is not balanced to 20 per class", note)
+        self.assertIn("AK 19", note)
+
     def test_missing_and_left_over_images_are_named(self):
         cases = self.data / PROCESSED_CASES
         cases.mkdir(parents=True)
         for f in cp.PROCESSED_FILES:
             (cases / f).write_text("isic_id,image_path\n", encoding="utf-8")
         test_rows = "".join(f"T_{c}_{k},{c},test,processed_images/T_{c}_{k}.jpg\n" for c in CLASSES for k in range(30))
+        val_rows = "".join(f"V_{c}_{k},{c},val,processed_images/V_{c}_{k}.jpg\n" for c in CLASSES for k in range(20))
         (self.data / ALL_CASES).write_text("isic_id,label,split,image_path\nISIC_1,MEL,train,processed_images/ISIC_1.jpg\n"
-                                           "ISIC_2,NV,val,processed_images/ISIC_2.jpg\n" + test_rows, encoding="utf-8")
+                                           + val_rows + test_rows, encoding="utf-8")
         images = self.data / "processed_images"
         images.mkdir()
-        for name in ["ISIC_1.jpg", "ISIC_2.jpg"] + [f"T_{c}_{k}.jpg" for c in CLASSES for k in range(30)]:
+        for name in (["ISIC_1.jpg"] + [f"T_{c}_{k}.jpg" for c in CLASSES for k in range(30)]
+                     + [f"V_{c}_{k}.jpg" for c in CLASSES for k in range(20)]):
             (images / name).write_bytes(b"")
-        self.assertEqual(cp.step_clean(str(self.data)), (cp.DONE, "242 cases, 30 test images per class, every image present"))
+        self.assertEqual(cp.step_clean(str(self.data)), (cp.DONE, "401 cases, 30 test and 20 validation images per class, every image present"))
         (images / "ISIC_9.jpg").write_bytes(b"")
         (images / "notes.txt").write_text("not an image", encoding="utf-8")
         status, note = cp.step_clean(str(self.data))
@@ -96,10 +111,10 @@ class CheckTests(unittest.TestCase):
         self.assertIn("1 images not in the case table", note)
         self.assertIn("ISIC_9.jpg", note)
         self.assertNotIn("missing", note)
-        (images / "ISIC_2.jpg").unlink()
+        (images / "V_NV_3.jpg").unlink()
         status, note = cp.step_clean(str(self.data))
         self.assertIn("1 images missing", note)
-        self.assertIn("ISIC_2", note)
+        self.assertIn("V_NV_3", note)
         self.assertIn("ISIC_9.jpg", note)
 
     @unittest.skipUnless((DATA / ALL_CASES).is_file(), "data/processed_cases/all_cases.csv is not there")
@@ -1119,6 +1134,76 @@ def make_question(case_id, gold):
     options, letter = options_for(case_id)
     return {"id": case_id, "options": options, "answer": letter[gold], "gold_label": gold, "group_id": case_id,
             "question": f"Question {case_id}"}
+
+
+class EvidenceCommandTests(unittest.TestCase):
+    """A RAG run's predictions go through evaluate.py with evidence, with and without a support model."""
+
+    def files(self, d):
+        qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
+        letter = {q["id"]: next(k for k, v in q["options"].items() if v == bd.OPTION_TEXT[q["gold_label"]]) for q in qs}
+        text = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric and evenly coloured overall."
+        preds = []
+        for k, q in enumerate(qs):
+            quote = ("Melanomas show asymmetry and irregular borders here" if k < 2 else
+                     "Nothing in the passage says this at all")
+            preds.append({"id": q["id"], "pred": letter[q["id"]], "contexts": [{"chunk_id": "c1", "text": text,
+                                                                               "tags": [q["gold_label"]]}],
+                          "evidence": {"chunk_id": "c1", "quote": quote}})
+        paths = {k: os.path.join(d, f"{k}.jsonl") for k in ("qa", "pred")}
+        write_jsonl(paths["qa"], qs)
+        write_jsonl(paths["pred"], preds)
+        return paths
+
+    def run_report(self, extra, scorer=None):
+        with tempfile.TemporaryDirectory() as d:
+            paths = self.files(d)
+            out = os.path.join(d, "report.json")
+            with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(ev, "nli_support_scorer", lambda name: scorer), \
+                    mock.patch.object(ev, "relevance_metrics", lambda *a, **k: {}):       # the stop words need scikit-learn
+                ev.main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text", *extra])
+            return json.loads(Path(out).read_text(encoding="utf-8"))
+
+    def test_the_report_has_an_evidence_section_with_the_quote_check(self):
+        rep = self.run_report([])
+        e = rep["evidence"]
+        self.assertEqual((e["evidence_given"], e["quote_found"], e["quote_accuracy"]), (4, 2, 0.5))
+        self.assertEqual((e["n_covered"], e["selective_risk_verified"], e["supported_accuracy"]), (2, 0.0, 0.5))
+        self.assertIsNone(e["support_model"])
+
+    def test_with_a_support_model_the_cited_passage_must_support_the_answered_diagnosis(self):
+        def scorer(premises, hypotheses):
+            scorer.seen.extend(hypotheses)
+            return [0.9 if "melanoma" in h else 0.1 for h in hypotheses]       # a passage about melanoma only
+
+        scorer.seen = []
+        scorer.model_name = "fake-nli"
+        rep = self.run_report(["--support-model"], scorer)
+        e = rep["evidence"]
+        self.assertEqual((e["support_model"], e["support_rule"], e["supported"], e["n_covered"]), ("fake-nli", "top", 1, 1))
+        self.assertEqual(e["coverage_verified"], 0.25)                         # the nevus answer is refused: melanoma scores higher
+        self.assertEqual(len(scorer.seen), 2 * 8)                              # two found quotes, each against all 8 statements
+        self.assertIn("The diagnosis is melanoma.", scorer.seen)
+
+    def test_the_support_check_command_writes_its_result(self):
+        names = {"MEL": "melanoma", "NV": "nevus", "BCC": "basal cell", "AK": "actinic", "BKL": "keratosis", "DF": "dermatofibroma",
+                 "VASC": "vascular", "SCC": "squamous"}
+        passages = [{"passage_id": f"p{k}", "query_class": c, "tags": [c], "text": f"The {names[c]} lesion appears with signs {k}."}
+                    for k, c in enumerate(bd.CLASSES * 2)]
+        by_statement = {ev.diagnosis_statement(c): c for c in bd.CLASSES}
+
+        def scorer(premises, hypotheses):
+            return [0.9 if names[by_statement[h]] in p else 0.1 for p, h in zip(premises, hypotheses)]
+
+        scorer.model_name = "fake-nli"
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(ev, "nli_support_scorer", lambda name: scorer), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            write_jsonl(os.path.join(d, "passages.jsonl"), passages)
+            ev.main(["support-check", "--passages", os.path.join(d, "passages.jsonl"), "--out", os.path.join(d, "r.json"),
+                     "--per-class", "2"])
+            result = json.loads(Path(d, "r.json").read_text(encoding="utf-8"))
+        self.assertEqual((result["n_passages"], result["top1_accuracy"], result["passed"]), (16, 1.0, True))
+        self.assertIn("highest of the 8", out.getvalue())
 
 
 class CommandTests(unittest.TestCase):

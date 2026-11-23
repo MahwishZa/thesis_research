@@ -18,7 +18,7 @@ SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 import evaluate as ev  # noqa: E402
 import run as rl  # noqa: E402
-from common import ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, PROCESSED_CASES, SPLITS, TEST_PER_CLASS, VIEWS, question_file  # noqa: E402
+from common import ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, PROCESSED_CASES, SPLITS, TEST_PER_CLASS, VAL_PER_CLASS, VIEWS, question_file  # noqa: E402
 
 DATA = Path(os.environ.get("THESIS_DATA", ROOT / "data"))
 HAVE_GIT = bool(shutil.which("git")) and (ROOT / ".git").exists()
@@ -60,10 +60,14 @@ class DatasetRequirements(unittest.TestCase):
         self.assertEqual(sorted({c["label"] for c in self.cases}), sorted(CLASSES))
         self.assertEqual(len(CLASSES), 8)
 
-    def test_the_test_split_is_balanced_and_no_lesion_is_in_two_splits(self):
-        """Decided 2026-11-22: 30 test images of every class; lesion groups never cross splits (no leakage)."""
-        per_class = Counter(c["label"] for c in self.cases if c["split"] == "test")
-        self.assertEqual(dict(per_class), {c: TEST_PER_CLASS for c in CLASSES})
+    def test_the_test_and_validation_splits_are_balanced_and_no_lesion_is_in_two_splits(self):
+        """Decided 2026-11-22: 30 test images and 20 validation images of every class; train keeps the natural mix; lesion groups
+        never cross splits (no leakage)."""
+        for split, size in (("test", TEST_PER_CLASS), ("val", VAL_PER_CLASS)):
+            per_class = Counter(c["label"] for c in self.cases if c["split"] == split)
+            self.assertEqual(dict(per_class), {c: size for c in CLASSES}, split)
+        train = Counter(c["label"] for c in self.cases if c["split"] == "train")
+        self.assertGreater(max(train.values()) / min(train.values()), 3)                 # train is not balanced by removal
         splits = defaultdict(set)
         for c in self.cases:
             splits[c["group_id"]].add(c["split"])
@@ -143,6 +147,22 @@ class MetricRequirements(unittest.TestCase):
         text = json.dumps(ev.diagnosis_metrics(self.qa, self.pred)).lower()
         for banned in ("top3", "top_k", "topk", "balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
             self.assertNotIn(banned, text)
+
+    def test_an_answer_counts_as_supported_only_when_its_evidence_is_verified(self):
+        """Option B (researcher's decision, 2026-11-23): for RAG answers the evidence replaces the yes/no flag. A correct answer with a
+        quote that is not in the passage, or with a passage that does not support the diagnosis, is not counted as supported."""
+        passage = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric."
+        good = {i: {"pred": q["answer"], "contexts": [{"chunk_id": "c", "text": passage, "tags": [q["gold_label"]]}],
+                    "evidence": {"chunk_id": "c", "quote": "Melanomas show asymmetry and irregular borders here"}}
+                for i, q in self.qa.items()}
+        invented = {i: {**p, "evidence": {"chunk_id": "c", "quote": "this sentence is not in the passage at all"}} for i, p in good.items()}
+        yes, no = (lambda premises, hypotheses: [0.9] * len(premises)), (lambda premises, hypotheses: [0.1] * len(premises))
+        rule = {"rule": "threshold"}
+        self.assertEqual(ev.evidence_metrics(self.qa, good, yes, **rule)["supported_accuracy"], 1.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, invented, yes, **rule)["supported_accuracy"], 0.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, good, no, **rule)["supported_accuracy"], 0.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, good, yes)["supported_accuracy"], 0.0)   # rule "top": 8 equal scores, no winner
+        self.assertIsNone(ev.evidence_metrics(self.qa, self.pred))                 # the LLM-only answers have no evidence to check
 
     def test_every_metric_family_names_its_source_in_evaluate_py(self):
         """Only established, correctly named metrics, each with its source (.claude/CLAUDE.md)."""

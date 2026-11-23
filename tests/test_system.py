@@ -204,6 +204,7 @@ class BalancedValidationRuleTests(unittest.TestCase):
             groups.setdefault(x["group_id"], set()).add(new[x["isic_id"]])
         self.assertTrue(all(len(v) == 1 for v in groups.values()))
         self.assertEqual(Counter(new.values()), {"train": len(cs) - 240 - 160, "val": 160, "test": 240})
+        self.assertEqual({i: v for i, v in new.items()}, {x["isic_id"]: x["split"] for x in cs})     # the committed tables already are this result
 
 
 @unittest.skipUnless(TABLE.is_file(), "data/processed_cases/all_cases.csv is not there")
