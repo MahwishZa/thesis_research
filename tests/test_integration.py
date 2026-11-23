@@ -1196,6 +1196,93 @@ class EvidenceCommandTests(unittest.TestCase):
             ev.main(["--questions", "q", "--predictions", "p", "--support-model"])
 
 
+class CollectTests(unittest.TestCase):
+    """collect: a report for every finished run and one table of all runs (decided 2026-11-24)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = self.tmp.name
+        self.qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES)]
+        self.qpath = os.path.join(self.root, "data", "val.jsonl")
+        write_jsonl(self.qpath, self.qs)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_folder(self, model, name, status="complete", right=4, view="text_only"):
+        folder = os.path.join(self.root, "results", "llm_only", model, name)
+        write_jsonl(os.path.join(folder, "predictions.jsonl"),
+                    [{"id": q["id"], "pred": q["answer"] if k < right else "Z", "view": view, "rationale": "Patient facts only.",
+                      "tokens_in": 100, "tokens_out": 20, "seconds": 1.5, "served_by": f"{model}@host"} for k, q in enumerate(self.qs)])
+        Path(folder, "run.json").write_text(json.dumps({"settings": {"baseline": "llm_only", "model": model, "view": view, "split": "val",
+                                                                    "questions": "data/val.jsonl", "questions_sha256": "abc",
+                                                                    "model_settings": {"id": f"vendor/{model}"}},
+                                                       "status": status, "answered": 8, "of": 8}), encoding="utf-8")
+        return folder
+
+    def collect(self, **kw):
+        out = os.path.join(self.root, "results", "summary.csv")
+        with contextlib.redirect_stdout(io.StringIO()):
+            return ev.collect(os.path.join(self.root, "results"), out, self.root, skip_text=True, **kw), out
+
+    def test_a_row_for_every_finished_run_and_none_for_trials_or_unfinished_runs(self):
+        done = self.run_folder("gpt-4o", "text_only_val")
+        self.run_folder("gemini-3.8-flash", "text_only_val.partial")                  # a trial
+        self.run_folder("llama-4-maverick", "text_only_val", status="stopped")         # unfinished
+        rows, out = self.collect()
+        self.assertEqual([(r["model"], r["view"], r["split"]) for r in rows], [("gpt-4o", "text_only", "val")])
+        r = rows[0]
+        self.assertEqual((r["accuracy"], r["questions"], r["invalid"], r["served_by"], r["model_id"]),
+                         (0.5, 8, 4, "gpt-4o@host", "vendor/gpt-4o"))
+        self.assertEqual((r["tokens_in"], r["tokens_out"], r["seconds"]), (800.0, 160.0, 12.0))
+        self.assertTrue(os.path.isfile(os.path.join(done, "report.json")))
+        self.assertEqual(r["text_only_image_claim_rate"], 0.0)
+        table = Path(out).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(table[0].split(",")[:4], ["system", "model", "model_id", "view"])
+        self.assertEqual(len(table), 2)
+        self.assertLess(r["accuracy_ci_low"], r["accuracy"])
+        self.assertGreater(r["accuracy_ci_high"], r["accuracy"])                      # the two ends of the interval are the right way round
+        self.assertEqual(r["refusals"], 0)
+        refused = self.run_folder("claude-sonnet-5-5", "text_only_val", right=6)
+        lines = [json.loads(x) for x in Path(refused, "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+        lines[7].update({"pred": None, "finish_reason": "refusal", "raw_output": "I cannot help with that."})
+        write_jsonl(os.path.join(refused, "predictions.jsonl"), lines)
+        by_model = {x["model"]: x for x in self.collect(force=True)[0]}
+        self.assertEqual((by_model["claude-sonnet-5-5"]["refusals"], by_model["claude-sonnet-5-5"]["invalid"]), (1, 2))
+
+    def test_the_report_is_reused_until_the_predictions_change(self):
+        done = self.run_folder("gpt-4o", "text_only_val", right=4)
+        self.collect()
+        report = os.path.join(done, "report.json")
+        first = Path(report).read_text(encoding="utf-8")
+        before = os.path.getmtime(report)
+        self.collect()
+        self.assertEqual(os.path.getmtime(report), before)                            # nothing changed: not written again
+        self.run_folder("gpt-4o", "text_only_val", right=6)
+        rows, _ = self.collect()
+        self.assertEqual(rows[0]["accuracy"], 0.75)
+        self.assertNotEqual(Path(report).read_text(encoding="utf-8"), first)
+        self.assertEqual(self.collect(force=True)[0][0]["accuracy"], 0.75)
+
+    def test_a_missing_question_file_stops_the_collection(self):
+        self.run_folder("gpt-4o", "text_only_val")
+        os.remove(self.qpath)
+        with self.assertRaises(FileNotFoundError):
+            self.collect()
+
+    def test_no_results_folder_gives_an_empty_table(self):
+        rows, out = self.collect()
+        self.assertEqual(rows, [])
+        self.assertEqual(len(Path(out).read_text(encoding="utf-8").splitlines()), 1)
+
+    def test_the_command_runs_from_main(self):
+        self.run_folder("gpt-4o", "text_only_val")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rows = ev.main(["collect", "--results", os.path.join(self.root, "results"), "--out", os.path.join(self.root, "s.csv"),
+                            "--root", self.root, "--skip-text"])
+        self.assertEqual(len(rows), 1)
+
+
 class CommandTests(unittest.TestCase):
     def test_the_command_writes_a_report(self):
         qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES)]

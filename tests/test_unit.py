@@ -532,7 +532,11 @@ class ImageClaimTests(unittest.TestCase):
                   "No image is provided, so I rely on the age and the site.",
                   "Dermatofibromas are firm nodules; dermoscopy would show a central white patch.",
                   "I can't see an image, so the answer rests on the patient facts.",
-                  "Without dermoscopy the diagnosis is uncertain.", ""]
+                  "Without dermoscopy the diagnosis is uncertain.", "",
+                  # the false positive of the claude trial (2026-11-24): general knowledge about datasets, not this case
+                  "In this age group and location, the most common lesions are benign keratosis-like lesions, which are the most frequent "
+                  "diagnosis overall in dermoscopic datasets, though BCC, AK and lentigo maligna are also plausible.",
+                  "Basal cell carcinoma has typical dermoscopic features such as arborizing vessels."]
 
     def test_the_word_list_flags_a_described_image_and_skips_denials_and_hypotheses(self):
         for t in self.CLAIMS:
@@ -555,6 +559,7 @@ class ImageClaimTests(unittest.TestCase):
         m = ev.image_claim_metrics(qa, pred)
         self.assertEqual((m["n_text_only_with_reasoning"], m["n_claiming_an_image"], m["rate"]), (2, 1, 0.5))
         self.assertEqual(m["ids_claiming_an_image"], ["ISIC_0000001"])
+        self.assertEqual(m["flagged_sentences"], {"ISIC_0000001": self.CLAIMS[0]})          # the sentence that was flagged, for a check by eye
         self.assertEqual(len(m["rate_95ci"]), 2)
         self.assertIsNone(ev.image_claim_metrics(qa, {"ISIC_0000004": pred["ISIC_0000004"]}))
 
@@ -564,24 +569,12 @@ class SelectiveTests(unittest.TestCase):
         self.qs = [question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
         self.qa = as_dict(self.qs)
 
-    def test_coverage_and_selective_risk(self):
-        q = self.qs
-        pred = {q[0]["id"]: {"pred": answer(q[0], "MEL"), "evidence_sufficient": "yes"},   # covered, right
-                q[1]["id"]: {"pred": answer(q[1], "MEL"), "evidence_sufficient": "yes"},   # covered, wrong
-                q[2]["id"]: {"pred": answer(q[2], "BCC"), "evidence_sufficient": "no"},    # abstains
-                q[3]["id"]: {"pred": "Z", "evidence_sufficient": "yes"}}                    # invalid: never covered
-        d = ev.diagnosis_metrics(self.qa, pred)
-        self.assertEqual((d["n_covered"], d["coverage"], d["selective_risk"]), (2, 0.5, 0.5))
-        self.assertEqual(d["evidence_flag_missing"], 0)
-        none = ev.diagnosis_metrics(self.qa, {i: {"pred": "A", "evidence_sufficient": "no"} for i in self.qa})
-        self.assertEqual((none["coverage"], none["selective_risk"]), (0.0, None))
-
-    def test_predictions_without_the_flag_get_no_selective_scores_and_no_top_k_accuracy_is_ever_reported(self):
-        d = ev.diagnosis_metrics(self.qa, {i: {"pred": "A"} for i in self.qa})
-        self.assertFalse({"coverage", "selective_risk"} & set(d))
-        full = ev.diagnosis_metrics(self.qa, {i: {"pred": q["answer"], "top3": [q["answer"], "A", "B"], "evidence_sufficient": "yes"}
-                                              for i, q in self.qa.items()})
-        self.assertFalse([k for k in full if "top" in k])                      # the extra letters of a reply are not scored
+    def test_the_diagnosis_report_has_no_flag_based_selective_scores_and_no_top_k_accuracy(self):
+        """The yes/no "evidence_sufficient" flag was removed (2026-11-24): a prediction that still carries it is not scored on it."""
+        d = ev.diagnosis_metrics(self.qa, {i: {"pred": q["answer"], "top3": [q["answer"], "A", "B"], "evidence_sufficient": "yes"}
+                                           for i, q in self.qa.items()})
+        self.assertFalse({"coverage", "selective_risk", "n_covered", "evidence_flag_missing"} & set(d))
+        self.assertFalse([k for k in d if "top" in k])                         # the extra letters of a reply are not scored
         self.assertFalse(hasattr(ev, "top_k_accuracy"))
 
     def test_holm_correction(self):
@@ -664,12 +657,12 @@ class RetrievalTests(unittest.TestCase):
     def contexts(self, tags):
         return {"ISIC_0000001": {"pred": "A", "contexts": [{"text": f"passage {j}", "tags": t} for j, t in enumerate(tags)]}}
 
-    def test_hit_precision_mrr_and_context_precision(self):
+    def test_hit_precision_and_mrr(self):
         r = ev.retrieval_metrics(self.qa, self.contexts([["MEL"], ["BCC"], [], ["BCC", "SCC"], ["NV"]]))
         self.assertEqual((r["hit@1"], r["hit@3"]), (0.0, 1.0))
         self.assertAlmostEqual(r["precision@5"], 0.4)
         self.assertEqual(r["mrr"], 0.5)
-        self.assertAlmostEqual(r["context_precision"], round((1 / 2 + 2 / 4) / 2, 4))
+        self.assertNotIn("context_precision", r)                  # dropped 2026-11-24: it repeats Precision@k and MRR in part
         self.assertNotIn("hit_recall@1", r)
 
     def test_ndcg_does_not_reward_returning_fewer_passages(self):
@@ -792,6 +785,10 @@ class PromptAndAnswerTests(unittest.TestCase):
         self.assertEqual(rl.parse_answer("Some reasoning.\nAnswer: B\nWait.\nAnswer: E")["pred"], "E")      # the last answer line counts
         self.assertEqual(rl.parse_answer("Answer: Z"), {"pred": None, "rationale": "Answer: Z"})
         self.assertEqual(set(rl.parse_answer("Answer: C")), {"pred", "rationale"})             # no top-3 list and no evidence flag
+
+    def test_gemini_has_room_for_its_hidden_reasoning(self):
+        """Validation trial 2026-11-24: with max_tokens 2048 one image answer was cut off (finish: length) before its answer letter."""
+        self.assertGreaterEqual(rl.MODELS["gemini-3.8-flash"]["max_tokens"], 4096)
 
     def test_the_model_is_never_told_to_cite_an_image_it_was_not_given(self):
         """2026-11-24: Gemini invented dermoscopic findings for a text-only question; the old wording asked for "the image and/or the

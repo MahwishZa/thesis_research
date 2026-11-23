@@ -11,7 +11,8 @@ Six files, each with one job. A script with several jobs has commands; the comma
 | `build.py` | `references` | **Step 3b.** Quoted reference texts per disease, for semantic similarity | Dermoscopedia (internet) | `data/knowledge_corpus/reference_texts.json` | internet; `--token-check` needs sentence-transformers |
 | `run.py` | `llm-only` | **Step 4.** The LLM-only baseline: one model, one view, one split (the other baselines are added here later) | `data/views/<view>/<split>.jsonl` (+ images) | `results/llm_only/<model>/<view>_<split>/` | keys in `.env`; costs credit |
 | `evaluate.py` | – | **Step 5.** One report for one run: all metrics | a question file and a prediction file | one `report.json` | Python only (optional metrics need models) |
-| `evaluate.py` | `compare` | **Step 6.** Several runs on the same cases: McNemar for every pair, Holm-corrected | several runs | one `compare.json` | Python only |
+| `evaluate.py` | `collect` | **Step 6.** A report for every finished run (`report.json` next to its predictions) and one table of all runs | `results/<system>/<model>/<view>_<split>/` | `results/summary.csv` | Python only (semantic similarity needs the sentence model; `--skip-text` leaves it out) |
+| `evaluate.py` | `compare` | **Step 7.** Several runs on the same cases: McNemar for every pair, Holm-corrected | several runs | one `compare.json` | Python only |
 | `check.py` | – | Where the pipeline stands: each step done / not run / problem, and why (reads only) | everything above | a table on the screen | Python only |
 | `check.py` | `features` | The feature and shortcut check of the cleaned data (an analysis, not an experiment) | `data/processed_cases/all_cases.csv`, `data/processed_images/` | `results/feature_check/` | the image packages |
 
@@ -30,11 +31,13 @@ python src/run.py llm-only --model gpt-4o --view text_only --split val --limit 5
 # models: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings fixed in MODELS in run.py)
 python src/evaluate.py --questions data/views/text_only/test.jsonl --predictions <predictions.jsonl> --out <report.json> `
     --cases data/processed_cases/all_cases.csv --by source facts_recorded
+python src/evaluate.py --questions data/views/text_only/val.jsonl --predictions results/llm_only/<model>/text_only_val.partial/predictions.jsonl --answered-only --out <report.json>   # a trial: only the asked questions are scored
+python src/evaluate.py collect                                            # all finished runs: report.json for each and results/summary.csv
 python -m unittest discover -s tests                                      # the checks
 ```
 
 A prediction line (written by `run.py llm-only`, read by `evaluate.py`): `{"id": "ISIC_0024948", "pred": "C"}`; optional
-`"rationale"`, `"tokens_in"`, `"tokens_out"`, `"seconds"`, and for RAG systems `"query"` and `"contexts"`.
+`"rationale"`, `"view"` (the text-only image-claim check needs it), `"tokens_in"`, `"tokens_out"`, `"seconds"`, and for RAG systems `"query"` and `"contexts"`.
 
 ## Tests (`tests/`)
 

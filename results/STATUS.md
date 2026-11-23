@@ -1,6 +1,6 @@
 # Status of the research
 
-Updated 2026-11-22. Done = present and checked; in progress = started, not finished; pending = not started. Every item names its files.
+Updated 2026-11-24 (see the dated sections below and `results/repository_audit.md`; the audit and the metric guide are `results/repository_audit.md` and `results/evaluation_guide.md`). Done = present and checked; in progress = started, not finished; pending = not started. Every item names its files.
 
 ## Where things are
 - Data: `data/datasheet.md` (the pipeline, every folder and file, the three views, the limitations).
@@ -433,3 +433,14 @@ Checked: 6 new tests of the checker.
 - The two trial folders on the laptop used the old wording; delete them before the next trial (run.py refuses to continue a run with other settings).
 - Under discussion: a metric for image claims in the text-only view (word list; approximate). Not built.
 - 2026-11-24: image claims in the text-only view are now reported (`text_only_image_claims` in the report): the share of text-only reasonings that describe an image or a dermoscopy (word list; sentences with a denial or a hypothesis are skipped; the ids are listed). Approximate lower bound; never applied to the image views. Tests: 206 pass (7 skipped); deliberate breaks of the rule, the view filter, the rate and the id list are caught.
+
+## 2026-11-24 (evening): approvals after the audit (`results/repository_audit.md`)
+- Approved and built: `evaluate.py collect` (a `report.json` next to each finished run's predictions and `results/summary.csv`); context precision dropped; the dormant yes/no flag code removed. Documentation names: `results/repository_audit.md`, `results/evaluation_guide.md`, `results/metric_survey.md`, `src/methodology.md` (updated for `collect` and `--answered-only`).
+- Scope for now (researcher): the LLM-only baseline first, then standard RAG (k = 3, MedCPT encoders, quote or "Evidence: none"); the proposed system is still being designed; RAG² waits.
+- Tests: 210 pass (7 skipped); deliberate breaks of `collect` all caught after two extra assertions.
+
+## 2026-11-24 (night): validation trials of the four models (10 questions each; format checks only, no result reported)
+- text_only: claude-sonnet-5-5, gpt-4o, llama-4-maverick, gemini-3.8-flash: 10 of 10 answered, no invalid answers or refusals. Image-claim check: 0, 0, 0 (gemini 0 earlier) and 1 for claude; the flagged sentence was "...the most frequent diagnosis overall in dermoscopic datasets", a **false positive** (general knowledge about datasets). The word list was narrowed to phrases that describe this case ("on dermoscopy", "dermoscopy reveals", "the image shows"); a test holds the sentence.
+- multimodal (image + text): claude 10 of 10, llama 10 of 10. gpt-4o: 2 of 10 **refusals** ("I'm sorry, I can't help with that."; "I'm sorry, I can't determine the diagnosis from the image."): a real behaviour of the model, counted as refusals and as wrong answers; no change to the prompt. gemini: 1 of 10 cut off at 2,048 tokens (finish: length, 2,044 tokens out, mostly hidden reasoning): `max_tokens` raised to 8192 (a test keeps it at 4096 or more).
+- Tokens per question (multimodal): claude 712 in / 173 out; gpt-4o 651 / 47; llama 953 / 105; gemini 1,282 / 499 (measured before the Gemini change).
+- The trial folders (`results/llm_only/*.partial`, `trial_*.json`) are not kept; they are ignored by git.

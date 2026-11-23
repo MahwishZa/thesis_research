@@ -72,9 +72,10 @@ MODELS = {
     # A dated snapshot: the plain name "gpt-4o" moves to newer versions.
     "gpt-4o": {"api": "openrouter", "id": "openai/gpt-4o-2024-08-06", "route": ["openai"], "temperature": 0.0, "seed": 0,
                "max_tokens": 1024, "image_detail": "high"},
-    # Hidden reasoning may count toward max_tokens, hence the larger limit.
+    # Hidden reasoning counts toward max_tokens: with 2048 one image question (of 10) was cut off before its answer letter
+    # (finish: length, 2,044 tokens out; validation trial 2026-11-24), hence the larger limit. Only the tokens used are paid for.
     "gemini-3.8-flash": {"api": "openrouter", "id": "google/gemini-3.8-flash", "route": ["google-ai-studio"],
-                         "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 2048},
+                         "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 8192},
     "llama-4-maverick": {"api": "openrouter", "id": "meta-llama/llama-4-maverick", "route": ["parasail/fp8"],
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
 }

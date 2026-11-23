@@ -8,7 +8,7 @@ pandas==3.1.1
 numpy==2.4.6
 pillow==13.0.0
 opencv-python==5.1.0.95
-scikit-learn==1.9.1           # also the stop-word list of the Jaccard relevance score in src/evaluate.py
+scikit-learn==1.9.1
 scikit-image==0.26.0
 
 # The knowledge corpus (src/build.py corpus): the Meditron guideline collection on Hugging Face

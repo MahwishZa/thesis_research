@@ -25,8 +25,6 @@ Metrics
               McNemar's exact test against --pred-b. The bootstrap draws whole lesions, so photos of one lesion stay together.
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
               Accuracy is top-1 accuracy (the chosen option is the true class); no top-k accuracy is reported (decided 2026-11-22).
-              When the predictions carry them: selective classification from the "evidence_sufficient" flag: coverage (share of all questions answered
-              with a valid diagnosis marked "yes") and selective risk (share of those that are wrong: confident misdiagnoses).
               Several runs are compared with src/evaluate.py compare (McNemar for every pair, Holm's correction).
   Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (or null = "Evidence: none"). Quote accuracy (the quote is
               word for word in the cited passage), coverage and selective risk with verified evidence (an answer is covered when its
@@ -34,7 +32,7 @@ Metrics
               KILT-AC), and negative rejection (the share of "Evidence: none" when no retrieved passage is tagged with the true
               class, after RGB). Whether the quote really supports the diagnosis is NOT tested: an NLI check was tried on
               2026-11-23, failed its pre-set pass mark twice (0.83 pairwise, then 0.50 top-1) and was removed on the researcher's decision.
-  Retrieval : Hit@k, Recall@k (with --passages), Precision@k, MRR, nDCG@k and context precision. Weak labels: a passage counts as relevant when its
+  Retrieval : Hit@k, Recall@k (with --passages), Precision@k, MRR and nDCG@k (context precision was dropped, 2026-11-24). Weak labels: a passage counts as relevant when its
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
   Relevance : context relevance: how well each retrieved passage fits the query, scored with --relevance-models by the MedCPT
               cross-encoder and the cosine of MedCPT embeddings (Jaccard was dropped on the researcher's decision, 2026-11-24).
@@ -56,6 +54,7 @@ Usage: python src/evaluate.py --questions data/views/multimodal/test.jsonl --pre
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json]
        [--passages data/knowledge_corpus/passages.jsonl]
        [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
+       python src/evaluate.py collect                      (a report.json for every finished run and the table results/summary.csv)
        python src/evaluate.py compare --run name=questions,predictions --run name=questions,predictions --out compare.json
        (several runs on the same cases: McNemar's exact test for every pair, Holm-corrected; see the end of this file)
 """
@@ -64,13 +63,14 @@ import hashlib
 import itertools
 import json
 import math
+import os
 import random
 import re
 import sys
 import unicodedata
 from collections import Counter, defaultdict
 
-from common import CLASSES, OPTION_TEXT, get_logger, read_csv, read_jsonl, write_json
+from common import CLASSES, OPTION_TEXT, get_logger, read_csv, read_jsonl, write_csv, write_json
 
 TEXT_TO_CLASS = {text: code for code, text in OPTION_TEXT.items()}
 INVALID = "invalid"
@@ -168,12 +168,12 @@ def bootstrap_ci(y, p, groups, fn, n=1000, seed=42):
 
 
 def coverage(y, answers):
-    """Selective classification: share of all questions answered with a valid diagnosis marked "evidence sufficient: yes"."""
+    """Selective classification: share of all questions answered with a valid diagnosis marked "yes" (here: with a verified quote)."""
     return sum(c != INVALID and flag == "yes" for c, flag in answers) / len(y)
 
 
 def selective_risk(y, answers):
-    """Share of wrong diagnoses among the questions marked "evidence sufficient: yes" (None when none is)."""
+    """Share of wrong diagnoses among the questions marked "yes" (None when none is)."""
     covered = [(t, c) for t, (c, flag) in zip(y, answers) if c != INVALID and flag == "yes"]
     return sum(t != c for t, c in covered) / len(covered) if covered else None
 
@@ -218,14 +218,6 @@ def diagnosis_metrics(qa, pred, pred_b=None):
            "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
            "confusion_matrix": {"rows_true": CLASSES, "columns_predicted": columns,
                                 "matrix": [[sum(t == r and q == c for t, q in zip(y, p)) for c in columns] for r in CLASSES]}}
-    if any("evidence_sufficient" in (pred.get(i) or {}) for i in ids):
-        answers = [(c, (pred.get(i) or {}).get("evidence_sufficient")) for i, c in zip(ids, p)]
-        risk = selective_risk(y, answers)
-        out["coverage"] = round(coverage(y, answers), 4)
-        out["coverage_95ci"] = bootstrap_ci(y, answers, groups, coverage)
-        out["n_covered"] = sum(c != INVALID and f == "yes" for c, f in answers)
-        out["selective_risk"] = None if risk is None else round(risk, 4)
-        out["evidence_flag_missing"] = sum(c != INVALID and f not in ("yes", "no") for c, f in answers)
     out["chosen_letters"] = {k: v for k, v in sorted(Counter(
         (str((pred.get(i) or {}).get("pred") or "").strip().upper() or "none") if c != INVALID else "invalid"
         for i, c in zip(ids, p)).items())}
@@ -294,13 +286,11 @@ def retrieval_metrics(qa, pred, ks=(1, 3, 5, 10), n_relevant=None):
         res[f"hit@{k}"], res[f"precision@{k}"], res[f"ndcg@{k}"] = (round(mean(v), 4) for v in (hit, prec, nd))
         if n_relevant:
             res[f"recall@{k}"] = round(mean(rec), 4)
-    mrr, cp = [], []
+    mrr = []
     for g, ctx in rows:
         rel = [1 if g in c.get("tags", []) else 0 for c in ctx]
         mrr.append(next((1 / (j + 1) for j, r in enumerate(rel) if r), 0.0))
-        # context precision: the mean of precision@j over the positions j that hold a relevant passage
-        cp.append(mean([sum(rel[:j + 1]) / (j + 1) for j, r in enumerate(rel) if r]))
-    res["mrr"], res["context_precision"] = round(mean(mrr), 4), round(mean(cp), 4)
+    res["mrr"] = round(mean(mrr), 4)
     res["n_questions_with_contexts"] = len(rows)
     return res
 
@@ -498,18 +488,28 @@ def evidence_metrics(qa, pred):
 # says "dermoscopy reveals ..." or "the image shows ..." describes something that does not exist. Found by a word list, so it is a
 # lower bound (a paraphrase is missed) and it can flag a harmless sentence: report it as approximate, never as "the hallucination rate".
 # ---------------------------------------------------------------------------------------------------------------------------
+_SCOPE = r"(?:dermos?cop\w*|dermatos?cop\w*|trichoscop\w*)"                    # dermoscopy, dermoscopic, dermatoscopic, trichoscopy
 IMAGE_CLAIM = re.compile(
-    r"\bdermos?cop\w*|\bdermatos?cop\w*|\btrichoscop\w*"                                    # dermoscopy, dermoscopic, dermatoscopic
+    rf"\b(?:on|under|upon)\s+{_SCOPE}"                                                # "on dermoscopy"
+    rf"|\b{_SCOPE}\s+(?:reveals?|shows?|displays?|demonstrates?|exhibits?|depicts?|images?|examination|view)\b"   # "dermoscopy reveals"
     r"|\b(?:the|this|these|an?|given|provided|attached|dermoscopic|clinical)\s+(?:images?|pictures?|photos?|photographs?)\b"
     r"|\b(?:images?|pictures?|photos?|photographs?)\s+(?:shows?|reveals?|displays?|demonstrates?|depicts?|exhibits?)\b", re.I)
+# "dermoscopic datasets" or "dermoscopic features of BCC" are general knowledge, not a claim about this case: they are not matched
 NOT_A_CLAIM = re.compile(r"\b(?:no|not|without|absence|absent|lack(?:s|ing)?|unavailable|cannot|can['’]?t|unable|never|neither|nor|"
                          r"if|would|could|unless|needs?|needed|requires?|required|limited)\b|n['’]t\b", re.I)
 
 
+def image_claim_sentence(text):
+    """The first sentence of the text that describes an image or a dermoscopy without denying or hypothesising it, or None."""
+    for x in re.split(r"(?<=[.!?;:])\s+|\n+", text or ""):
+        if IMAGE_CLAIM.search(x) and not NOT_A_CLAIM.search(x):
+            return x.strip()
+    return None
+
+
 def claims_an_image(text):
     """True when a sentence of the text describes an image or a dermoscopy and does not deny or hypothesise it."""
-    sentences = re.split(r"(?<=[.!?;:])\s+|\n+", text or "")
-    return any(IMAGE_CLAIM.search(x) and not NOT_A_CLAIM.search(x) for x in sentences)
+    return image_claim_sentence(text) is not None
 
 
 def image_claim_metrics(qa, pred):
@@ -523,6 +523,7 @@ def image_claim_metrics(qa, pred):
     return {"n_text_only_with_reasoning": len(ids), "n_claiming_an_image": int(sum(flags)), "rate": round(mean(flags), 4),
             "rate_95ci": bootstrap_ci(flags, flags, groups, lambda a, b: mean(a)),
             "ids_claiming_an_image": [i for i, f in zip(ids, flags) if f],
+            "flagged_sentences": {i: image_claim_sentence(pred[i]["rationale"]) for i, f in zip(ids, flags) if f},   # to check by eye
             "method": "word list; approximate lower bound"}
 
 
@@ -596,7 +597,7 @@ def report_main(argv=None):
         log.info(f"text-only reasonings that describe an image: {c['n_claiming_an_image']} of {c['n_text_only_with_reasoning']} "
                  f"(approximate; ids in the report)")
     if rep["retrieval"]:
-        log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr', 'context_precision')} }")
+        log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr')} }")
         if "relevance" in rep:
             log.info(f"relevance: {rep['relevance']}")
     return rep
@@ -666,10 +667,101 @@ def compare_main(argv=None):
     return rep
 
 
+# ---------------------------------------------------------------------------------------------------------------------------
+# collect: one report per finished run and one table of all runs (decided 2026-11-24).
+# A finished run is a folder results/<system>/<model>/<view>_<split>/ (no ".partial" ending) whose run.json says "complete". The report
+# goes next to its predictions as report.json (it is written again when the predictions or the code settings changed); the table
+# results/summary.csv has one row per run, so a thesis table is never copied by hand. Trial runs (.partial) are never collected.
+#   python src/evaluate.py collect [--results results] [--out results/summary.csv] [--skip-text] [--force]
+# ---------------------------------------------------------------------------------------------------------------------------
+SUMMARY_COLUMNS = ["system", "model", "model_id", "view", "split", "status", "questions", "answered", "accuracy", "accuracy_ci_low",
+                   "accuracy_ci_high", "macro_f1", "missing", "invalid", "refusals", "semantic_similarity", "text_only_image_claim_rate",
+                   "tokens_in", "tokens_out", "seconds", "served_by", "questions_sha256", "folder"]
+
+
+def finished_runs(results_dir):
+    """The run folders (system/model/view_split) that are complete, sorted."""
+    found = []
+    for system in sorted(os.listdir(results_dir)) if os.path.isdir(results_dir) else []:
+        for model in sorted(os.listdir(os.path.join(results_dir, system))) if os.path.isdir(os.path.join(results_dir, system)) else []:
+            mdir = os.path.join(results_dir, system, model)
+            for run in sorted(os.listdir(mdir)) if os.path.isdir(mdir) else []:
+                folder = os.path.join(mdir, run)
+                if run.endswith(".partial") or not os.path.isfile(os.path.join(folder, "run.json")):
+                    continue
+                with open(os.path.join(folder, "run.json"), encoding="utf-8") as f:
+                    info = json.load(f)
+                if info.get("status") == "complete":
+                    found.append((system, model, run, folder, info))
+    return found
+
+
+def collect(results_dir="results", out="results/summary.csv", root=".", skip_text=False, reference_texts=None, force=False,
+            passages_path=None, relevance_models=False):
+    rows = []
+    for system, model, run, folder, info in finished_runs(results_dir):
+        settings = info["settings"]
+        qpath, ppath = os.path.join(root, settings["questions"]), os.path.join(folder, "predictions.jsonl")
+        if not os.path.isfile(qpath):
+            raise FileNotFoundError(f"{folder}: the question file {qpath} is not there (use --root)")
+        rpath = os.path.join(folder, "report.json")
+        report = None
+        if os.path.isfile(rpath) and not force:
+            with open(rpath, encoding="utf-8") as f:
+                report = json.load(f)
+            if report["inputs"]["predictions"]["sha256"] != file_record(ppath)["sha256"] or report.get("skip_text") != skip_text:
+                report = None
+        if report is None:
+            report = evaluate(qpath, ppath, reference_texts=reference_texts, skip_text=skip_text, passages_path=passages_path,
+                              relevance_models=relevance_models)
+            report["skip_text"] = skip_text
+            write_json(rpath, report)
+        d, usage = report["diagnosis"], report.get("usage") or {}
+        sim = ((report.get("text") or {}).get("semantic_similarity_cosine") or {}).get("mean")
+        claims = report.get("text_only_image_claims") or {}
+        served = sorted({r.get("served_by") for r in read_jsonl(ppath) if r.get("served_by")})
+        view, _, split = run.rpartition("_")
+        rows.append({"system": settings.get("baseline", system), "model": settings.get("model", model),
+                     "model_id": (settings.get("model_settings") or {}).get("id", ""), "view": settings.get("view", view),
+                     "split": settings.get("split", split), "status": info["status"], "questions": d["n_questions"],
+                     "answered": info.get("answered", ""), "accuracy": d["accuracy"], "accuracy_ci_low": d["accuracy_95ci"][0],
+                     "accuracy_ci_high": d["accuracy_95ci"][1], "macro_f1": d["macro_f1"], "missing": d["missing_predictions"],
+                     "invalid": d["invalid_answers"], "refusals": d["invalid_answers_by_cause"]["refusals"],
+                     "semantic_similarity": "" if sim is None else sim, "text_only_image_claim_rate": claims.get("rate", ""),
+                     "tokens_in": (usage.get("tokens_in") or {}).get("total", ""), "tokens_out": (usage.get("tokens_out") or {}).get("total", ""),
+                     "seconds": (usage.get("seconds") or {}).get("total", ""), "served_by": " | ".join(served),
+                     "questions_sha256": settings.get("questions_sha256", ""), "folder": folder.replace("\\", "/")})
+    write_csv(out, rows, SUMMARY_COLUMNS)
+    return rows
+
+
+def collect_main(argv=None):
+    ap = argparse.ArgumentParser(prog="evaluate.py collect", description="A report for every finished run and one table of all runs.")
+    ap.add_argument("--results", default="results")
+    ap.add_argument("--out", default="results/summary.csv")
+    ap.add_argument("--root", default=".", help="the folder the question paths in run.json are relative to")
+    ap.add_argument("--reference-texts", default="data/knowledge_corpus/reference_texts.json")
+    ap.add_argument("--skip-text", action="store_true", help="no semantic similarity (no sentence model needed)")
+    ap.add_argument("--passages", default=None)
+    ap.add_argument("--relevance-models", action="store_true")
+    ap.add_argument("--force", action="store_true", help="compute every report again")
+    a = ap.parse_args(argv)
+    refs = a.reference_texts if not a.skip_text and os.path.isfile(a.reference_texts) else None
+    rows = collect(a.results, a.out, a.root, a.skip_text, refs, a.force, a.passages, a.relevance_models)
+    log = get_logger("collect")
+    log.info(f"{len(rows)} finished runs -> {a.out}")
+    for r in rows:
+        log.info(f"{r['system']} {r['model']} {r['view']} {r['split']}: accuracy {r['accuracy']} ({r['accuracy_ci_low']}-{r['accuracy_ci_high']}), "
+                 f"macro-F1 {r['macro_f1']}, invalid {r['invalid']}")
+    return rows
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "compare":
         return compare_main(argv[1:])
+    if argv and argv[0] == "collect":
+        return collect_main(argv[1:])
     return report_main(argv)
 
 

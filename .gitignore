@@ -34,6 +34,9 @@ archive/v2/results/**/val_*/
 .*.partial
 *.log
 
+# The reports of small trials (evaluate.py --answered-only): format checks, never results.
+results/**/trial_*.json
+
 # Validation runs tune the method; they stay on this computer and are not reported results (folders <view>_val/).
 results/**/*_val/
 

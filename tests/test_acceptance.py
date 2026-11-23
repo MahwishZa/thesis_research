@@ -129,15 +129,14 @@ class MetricRequirements(unittest.TestCase):
         if not path.is_file():
             raise unittest.SkipTest("data/views/ is not there")
         cls.qa = ev.load(path)
-        cls.pred = {i: {"id": i, "pred": q["answer"], "top3": [q["answer"]], "evidence_sufficient": "yes",
-                        "raw_output": "", "finish_reason": "stop"} for i, q in cls.qa.items()}
+        cls.pred = {i: {"id": i, "pred": q["answer"], "raw_output": "", "finish_reason": "stop"} for i, q in cls.qa.items()}
 
     def test_the_approved_diagnosis_metrics_are_reported(self):
         """Approved: accuracy (top-1) with an interval, macro-F1, per-class precision / recall / specificity / F1, the confusion
-        matrix, coverage and selective risk; refusals apart from other invalid answers."""
+        matrix; refusals apart from other invalid answers."""
         d = ev.diagnosis_metrics(self.qa, self.pred)
-        for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix", "coverage",
-                    "selective_risk", "invalid_answers", "invalid_answers_by_cause", "missing_predictions"):
+        for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix",
+                    "invalid_answers", "invalid_answers_by_cause", "missing_predictions"):
             self.assertIn(key, d)
         for row in d["per_class"].values():
             self.assertTrue({"precision", "recall", "specificity", "f1", "support"} <= set(row))
