@@ -1,0 +1,1605 @@
+{
+  "model": "pritamdeka/S-PubMedBert-MS-MARCO",
+  "runs": {
+    "llm_only/claude-sonnet-5-5/image_only_test": {
+      "n_answers": 240,
+      "identified": 0.45,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 30,
+          "identified": 0.0
+        },
+        "NV": {
+          "n": 16,
+          "identified": 0.9375
+        },
+        "BCC": {
+          "n": 19,
+          "identified": 0.4737
+        },
+        "AK": {
+          "n": 58,
+          "identified": 0.3276
+        },
+        "BKL": {
+          "n": 58,
+          "identified": 0.2241
+        },
+        "DF": {
+          "n": 15,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 34,
+          "identified": 0.7941
+        },
+        "SCC": {
+          "n": 10,
+          "identified": 1.0
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 0,
+          "NV": 25,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 4,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 15,
+          "BCC": 1,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 9,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 8,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 19,
+          "BKL": 0,
+          "DF": 15,
+          "VASC": 0,
+          "SCC": 22,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 0,
+          "NV": 37,
+          "BCC": 0,
+          "AK": 3,
+          "BKL": 13,
+          "DF": 3,
+          "VASC": 0,
+          "SCC": 2,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 15,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 4,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 27,
+          "SCC": 2,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 10,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9517,
+      "mean_similarity_to_the_other_seven": 0.9406,
+      "mean_similarity_to_true_class_when_right": 0.9547,
+      "mean_similarity_to_true_class_when_wrong": 0.9449,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    },
+    "llm_only/claude-sonnet-5-5/multimodal_test": {
+      "n_answers": 240,
+      "identified": 0.3917,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 38,
+          "identified": 0.0263
+        },
+        "NV": {
+          "n": 17,
+          "identified": 0.9412
+        },
+        "BCC": {
+          "n": 22,
+          "identified": 0.4091
+        },
+        "AK": {
+          "n": 52,
+          "identified": 0.2308
+        },
+        "BKL": {
+          "n": 46,
+          "identified": 0.1739
+        },
+        "DF": {
+          "n": 18,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 34,
+          "identified": 0.6176
+        },
+        "SCC": {
+          "n": 13,
+          "identified": 0.6923
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 1,
+          "NV": 27,
+          "BCC": 3,
+          "AK": 0,
+          "BKL": 2,
+          "DF": 4,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 16,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 1,
+          "NV": 3,
+          "BCC": 9,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 8,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 9,
+          "BCC": 0,
+          "AK": 12,
+          "BKL": 1,
+          "DF": 16,
+          "VASC": 0,
+          "SCC": 14,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 1,
+          "NV": 30,
+          "BCC": 0,
+          "AK": 2,
+          "BKL": 8,
+          "DF": 3,
+          "VASC": 0,
+          "SCC": 2,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 18,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 9,
+          "BCC": 1,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 3,
+          "VASC": 21,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 1,
+          "AK": 2,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 9,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9514,
+      "mean_similarity_to_the_other_seven": 0.9425,
+      "mean_similarity_to_true_class_when_right": 0.9539,
+      "mean_similarity_to_true_class_when_wrong": 0.9454,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    },
+    "llm_only/claude-sonnet-5-5/text_only_test": {
+      "n_answers": 240,
+      "identified": 0.4583,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 6,
+          "identified": 0.8333
+        },
+        "NV": {
+          "n": 64,
+          "identified": 0.9062
+        },
+        "BCC": {
+          "n": 40,
+          "identified": 0.0
+        },
+        "AK": {
+          "n": 8,
+          "identified": 0.375
+        },
+        "BKL": {
+          "n": 102,
+          "identified": 0.2843
+        },
+        "DF": {
+          "n": 17,
+          "identified": 0.8235
+        },
+        "SCC": {
+          "n": 3,
+          "identified": 0.3333
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 5,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 5,
+          "NV": 58,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 38,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 3,
+          "BKL": 1,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 3,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 5,
+          "NV": 20,
+          "BCC": 0,
+          "AK": 8,
+          "BKL": 29,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 40,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 3,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 14,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 1,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9358,
+      "mean_similarity_to_the_other_seven": 0.9273,
+      "mean_similarity_to_true_class_when_right": 0.9396,
+      "mean_similarity_to_true_class_when_wrong": 0.9276,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    },
+    "llm_only/gemini-3.8-flash/image_only_test": {
+      "n_answers": 240,
+      "identified": 0.5625,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 24,
+          "identified": 0.3333
+        },
+        "NV": {
+          "n": 18,
+          "identified": 0.8889
+        },
+        "BCC": {
+          "n": 38,
+          "identified": 0.4474
+        },
+        "AK": {
+          "n": 45,
+          "identified": 0.4667
+        },
+        "BKL": {
+          "n": 51,
+          "identified": 0.3529
+        },
+        "DF": {
+          "n": 31,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 30,
+          "identified": 0.7667
+        },
+        "SCC": {
+          "n": 3,
+          "identified": 0.3333
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 8,
+          "NV": 11,
+          "BCC": 1,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 4,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 16,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 2,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 3,
+          "BCC": 17,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 17,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 21,
+          "BKL": 0,
+          "DF": 24,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 1,
+          "NV": 21,
+          "BCC": 0,
+          "AK": 5,
+          "BKL": 18,
+          "DF": 4,
+          "VASC": 0,
+          "SCC": 2,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 31,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 4,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 3,
+          "VASC": 23,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9531,
+      "mean_similarity_to_the_other_seven": 0.9386,
+      "mean_similarity_to_true_class_when_right": 0.9549,
+      "mean_similarity_to_true_class_when_wrong": 0.9411,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/gemini-3.8-flash/multimodal_test": {
+      "n_answers": 240,
+      "identified": 0.5542,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 36,
+          "identified": 0.5278
+        },
+        "NV": {
+          "n": 15,
+          "identified": 1.0
+        },
+        "BCC": {
+          "n": 42,
+          "identified": 0.3571
+        },
+        "AK": {
+          "n": 39,
+          "identified": 0.3846
+        },
+        "BKL": {
+          "n": 48,
+          "identified": 0.2917
+        },
+        "DF": {
+          "n": 27,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 29,
+          "identified": 0.8966
+        },
+        "SCC": {
+          "n": 4,
+          "identified": 0.5
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 19,
+          "NV": 11,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 6,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 15,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 3,
+          "NV": 2,
+          "BCC": 15,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 21,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 15,
+          "BKL": 0,
+          "DF": 23,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 1,
+          "NV": 18,
+          "BCC": 0,
+          "AK": 11,
+          "BKL": 14,
+          "DF": 4,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 27,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 2,
+          "VASC": 26,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 2,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9531,
+      "mean_similarity_to_the_other_seven": 0.9398,
+      "mean_similarity_to_true_class_when_right": 0.9551,
+      "mean_similarity_to_true_class_when_wrong": 0.943,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/gemini-3.8-flash/text_only_test": {
+      "n_answers": 240,
+      "identified": 0.5958,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 10,
+          "identified": 0.8
+        },
+        "NV": {
+          "n": 90,
+          "identified": 1.0
+        },
+        "BCC": {
+          "n": 51,
+          "identified": 0.0
+        },
+        "AK": {
+          "n": 7,
+          "identified": 0.1429
+        },
+        "BKL": {
+          "n": 68,
+          "identified": 0.4412
+        },
+        "DF": {
+          "n": 14,
+          "identified": 1.0
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 8,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 90,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 51,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 6,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 0,
+          "NV": 15,
+          "BCC": 0,
+          "AK": 3,
+          "BKL": 30,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 20,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 14,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9414,
+      "mean_similarity_to_the_other_seven": 0.9282,
+      "mean_similarity_to_true_class_when_right": 0.945,
+      "mean_similarity_to_true_class_when_wrong": 0.9286,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    },
+    "llm_only/gpt-4o/image_only_test": {
+      "n_answers": 212,
+      "identified": 0.9104,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 18,
+          "identified": 0.7222
+        },
+        "NV": {
+          "n": 29,
+          "identified": 1.0
+        },
+        "BCC": {
+          "n": 25,
+          "identified": 0.84
+        },
+        "AK": {
+          "n": 8,
+          "identified": 1.0
+        },
+        "BKL": {
+          "n": 52,
+          "identified": 0.8846
+        },
+        "DF": {
+          "n": 58,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 22,
+          "identified": 0.8182
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 13,
+          "NV": 4,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 29,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 21,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 4,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 8,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 0,
+          "NV": 5,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 46,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 58,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 4,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 18,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9586,
+      "mean_similarity_to_the_other_seven": 0.9318,
+      "mean_similarity_to_true_class_when_right": 0.9583,
+      "mean_similarity_to_true_class_when_wrong": 0.9339,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/gpt-4o/multimodal_test": {
+      "n_answers": 228,
+      "identified": 0.8377,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 26,
+          "identified": 0.9231
+        },
+        "NV": {
+          "n": 19,
+          "identified": 1.0
+        },
+        "BCC": {
+          "n": 38,
+          "identified": 0.6579
+        },
+        "AK": {
+          "n": 28,
+          "identified": 0.7857
+        },
+        "BKL": {
+          "n": 50,
+          "identified": 0.84
+        },
+        "DF": {
+          "n": 46,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 19,
+          "identified": 0.6316
+        },
+        "SCC": {
+          "n": 2,
+          "identified": 0.5
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 24,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 19,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 2,
+          "NV": 6,
+          "BCC": 25,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 5,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 22,
+          "BKL": 5,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 0,
+          "NV": 7,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 42,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 46,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 7,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 12,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 1,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9574,
+      "mean_similarity_to_the_other_seven": 0.9385,
+      "mean_similarity_to_true_class_when_right": 0.9583,
+      "mean_similarity_to_true_class_when_wrong": 0.9404,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/gpt-4o/text_only_test": {
+      "n_answers": 240,
+      "identified": 0.5333,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 7,
+          "identified": 1.0
+        },
+        "NV": {
+          "n": 11,
+          "identified": 1.0
+        },
+        "BCC": {
+          "n": 47,
+          "identified": 0.1489
+        },
+        "AK": {
+          "n": 50,
+          "identified": 0.46
+        },
+        "BKL": {
+          "n": 90,
+          "identified": 0.6556
+        },
+        "DF": {
+          "n": 23,
+          "identified": 0.6957
+        },
+        "VASC": {
+          "n": 2,
+          "identified": 1.0
+        },
+        "SCC": {
+          "n": 10,
+          "identified": 0.3
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 7,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 0,
+          "NV": 11,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 8,
+          "BCC": 7,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 32,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 23,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 27,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 0,
+          "NV": 7,
+          "BCC": 0,
+          "AK": 8,
+          "BKL": 59,
+          "DF": 0,
+          "VASC": 11,
+          "SCC": 5,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 7,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 16,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 2,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 3,
+          "NV": 1,
+          "BCC": 3,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 3,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.934,
+      "mean_similarity_to_the_other_seven": 0.9236,
+      "mean_similarity_to_true_class_when_right": 0.9349,
+      "mean_similarity_to_true_class_when_wrong": 0.9247,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    },
+    "llm_only/llama-4-maverick/image_only_test": {
+      "n_answers": 240,
+      "identified": 0.6958,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 37,
+          "identified": 0.4595
+        },
+        "NV": {
+          "n": 27,
+          "identified": 0.9259
+        },
+        "BCC": {
+          "n": 6,
+          "identified": 0.5
+        },
+        "AK": {
+          "n": 1,
+          "identified": 1.0
+        },
+        "BKL": {
+          "n": 103,
+          "identified": 0.7087
+        },
+        "DF": {
+          "n": 35,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 29,
+          "identified": 0.4138
+        },
+        "SCC": {
+          "n": 2,
+          "identified": 0.5
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 17,
+          "NV": 20,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 1,
+          "NV": 25,
+          "BCC": 1,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 3,
+          "BCC": 3,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 1,
+          "NV": 22,
+          "BCC": 0,
+          "AK": 4,
+          "BKL": 73,
+          "DF": 1,
+          "VASC": 1,
+          "SCC": 1,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 35,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 17,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 12,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 1,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9585,
+      "mean_similarity_to_the_other_seven": 0.9428,
+      "mean_similarity_to_true_class_when_right": 0.9607,
+      "mean_similarity_to_true_class_when_wrong": 0.9434,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/llama-4-maverick/multimodal_test": {
+      "n_answers": 240,
+      "identified": 0.6208,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 37,
+          "identified": 0.4324
+        },
+        "NV": {
+          "n": 24,
+          "identified": 0.9167
+        },
+        "BCC": {
+          "n": 6,
+          "identified": 0.6667
+        },
+        "BKL": {
+          "n": 119,
+          "identified": 0.6639
+        },
+        "DF": {
+          "n": 14,
+          "identified": 1.0
+        },
+        "VASC": {
+          "n": 35,
+          "identified": 0.3714
+        },
+        "SCC": {
+          "n": 5,
+          "identified": 0.2
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 16,
+          "NV": 18,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 3,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 1,
+          "NV": 22,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 1,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 4,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 7,
+          "NV": 24,
+          "BCC": 0,
+          "AK": 8,
+          "BKL": 79,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 0,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 14,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 21,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 13,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 1,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 1,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9577,
+      "mean_similarity_to_the_other_seven": 0.9438,
+      "mean_similarity_to_true_class_when_right": 0.9595,
+      "mean_similarity_to_true_class_when_wrong": 0.945,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": true
+    },
+    "llm_only/llama-4-maverick/text_only_test": {
+      "n_answers": 240,
+      "identified": 0.4792,
+      "chance": 0.125,
+      "per_answered_class": {
+        "MEL": {
+          "n": 2,
+          "identified": 0.0
+        },
+        "NV": {
+          "n": 27,
+          "identified": 0.7037
+        },
+        "BCC": {
+          "n": 17,
+          "identified": 0.0
+        },
+        "AK": {
+          "n": 26,
+          "identified": 0.3077
+        },
+        "BKL": {
+          "n": 159,
+          "identified": 0.5535
+        },
+        "DF": {
+          "n": 2,
+          "identified": 0.0
+        },
+        "VASC": {
+          "n": 5,
+          "identified": 0.0
+        },
+        "SCC": {
+          "n": 2,
+          "identified": 0.0
+        }
+      },
+      "confusion_answered_vs_best_match": {
+        "MEL": {
+          "MEL": 0,
+          "NV": 2,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "NV": {
+          "MEL": 5,
+          "NV": 19,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 1,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "BCC": {
+          "MEL": 0,
+          "NV": 10,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 6,
+          "tie": 0
+        },
+        "AK": {
+          "MEL": 0,
+          "NV": 7,
+          "BCC": 0,
+          "AK": 8,
+          "BKL": 0,
+          "DF": 1,
+          "VASC": 0,
+          "SCC": 10,
+          "tie": 0
+        },
+        "BKL": {
+          "MEL": 11,
+          "NV": 40,
+          "BCC": 0,
+          "AK": 10,
+          "BKL": 88,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 10,
+          "tie": 0
+        },
+        "DF": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "VASC": {
+          "MEL": 0,
+          "NV": 5,
+          "BCC": 0,
+          "AK": 0,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        },
+        "SCC": {
+          "MEL": 0,
+          "NV": 1,
+          "BCC": 0,
+          "AK": 1,
+          "BKL": 0,
+          "DF": 0,
+          "VASC": 0,
+          "SCC": 0,
+          "tie": 0
+        }
+      },
+      "mean_similarity_to_answered_class": 0.9263,
+      "mean_similarity_to_the_other_seven": 0.9192,
+      "mean_similarity_to_true_class_when_right": 0.9284,
+      "mean_similarity_to_true_class_when_wrong": 0.9191,
+      "pass_mark": "identified in >= 0.50 of the answers overall and >= 0.25 for every answered class with 10 or more answers",
+      "passed": false
+    }
+  }
+}

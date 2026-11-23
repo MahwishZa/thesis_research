@@ -1,10 +1,16 @@
-# Evaluation guide (plain English)
+# Evaluation guide: what each metric measures and how to read it
+
+| | |
+|---|---|
+| Document status | Current as of 2026-11-24. Implemented in `src/evaluate.py`. |
+| Audience | The researcher, the supervisor, and readers of the thesis (plain English; scientific accuracy kept). |
+| Related documents | `results/metric_survey.md` (the literature behind the choice), `results/llm_only_text_only_results.md` (the metrics applied), `src/methodology.md` (how to run them). |
 
 Scores are written as percentages here and in the screen output (25.4% = 61 of 240 right). The JSON and CSV files keep fractions (0.2542) so that programs can read them; p-values and the semantic-similarity cosine are not percentages.
 
 What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluate.py`.
 Marks: ✔ = checked in this repository (a test, or a recomputation by hand); ◻ = from the literature, check the paper before citing it.
-"Research question" means my reading of your objectives (README, "Objectives"): please confirm or correct it.
+"Research question" means the author's reading of the objectives in `README.md` ("Objectives"); the researcher is asked to confirm or correct it.
 
 ## 1. The experiment in one page
 
@@ -15,6 +21,13 @@ Marks: ✔ = checked in this repository (a test, or a recomputation by hand); �
 - **Rule:** everything is scored by the computer. No clinician reads a case.
 
 ## 2. Four groups of metrics (kept apart on purpose)
+
+| Group | Question | Used by |
+|---|---|---|
+| A. Diagnosis | Is the final answer right? | every system |
+| B. Retrieval | Did the system find the right passages? | RAG systems only |
+| C. Faithfulness and hallucination | Does the answer rest on the evidence? | RAG systems (and the text-only image-claim check for LLM-only) |
+| D. Explanation quality and cost | Does the reasoning resemble medical text, and what did it cost? | every system |
 
 ### A. Diagnosis: is the final answer right?
 
@@ -31,7 +44,7 @@ Marks: ✔ = checked in this repository (a test, or a recomputation by hand); �
 
 Checked ✔: macro-F1, specificity and McNemar were recomputed from their definitions on 400 random answers and match; Holm matches a hand example.
 Sources: McNemar (1947) Psychometrika 12:153-157; Holm (1979) Scandinavian Journal of Statistics 6:65-70; bootstrap: Efron & Tibshirani (1993) ◻.
-Top-1 accuracy only: top-k accuracy, balanced accuracy and MCC were removed on your decision (on a balanced test set balanced accuracy equals accuracy).
+Top-1 accuracy only: top-k accuracy, balanced accuracy and MCC were removed on the researcher's decision (on a balanced test set balanced accuracy equals accuracy).
 
 ### B. Retrieval: did the system find the right passages? (RAG systems only)
 
@@ -74,6 +87,8 @@ An NLI model (a language model that decides whether a passage supports a stateme
 
 Sentence embeddings: Reimers & Gurevych (2019) EMNLP ◻.
 
+**Validity check (approved 2026-11-24, not yet run).** The first results gave almost the same similarity for every model and class (cosine 0.921 to 0.932), which suggests the score may not discriminate. `python src/evaluate.py similarity-check` tests this: the reasoning is compared with the reference texts of all 8 diseases, and it is "identified" when the disease the model answered has the single highest similarity (chance 12.5%). Pass mark, set before the first run (my proposal, not a published standard): identified in at least 50% of the answers overall and in at least 25% for every answered disease with 10 or more answers. Until it passes, do not rank models by semantic similarity.
+
 ## 3. How to read a result table
 
 1. Start with **accuracy and its interval** for each system (same model, view and split).
@@ -93,7 +108,28 @@ Sentence embeddings: Reimers & Gurevych (2019) EMNLP ◻.
 Validation (160 questions) is for checking the format and the code, not for tuning to a good score. The test split (240 questions) is run once per system, model and view, after the validation checks pass and the settings are fixed. Nothing is changed after a test result is seen.
 Small trials (`--limit 10 --answered-only`) check that the format parses; their accuracy is never reported.
 
-## 6. Questions this guide leaves open (needs your answer)
+## 6. Open points
 
-- The exact **proposed system** and the **RAG² reproduction scope** (see `results/repository_audit.md`, D2 and D3).
-- Your confirmation of the research-question wording above.
+- The exact **proposed system** and the **RAG² reproduction scope** (see `results/STATUS.md`, section 5).
+- The researcher's confirmation of the research-question wording used in this guide.
+- The result of the semantic-similarity validity check (section 2D).
+
+## 7. References
+
+✔ = seen in the project's literature search (`results/metric_survey.md`); ◻ = from memory, check the paper before citing.
+
+- McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions. *Psychometrika* 12:153-157 ◻.
+- Holm, S. (1979). A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics* 6:65-70 ◻.
+- Efron, B., Tibshirani, R. (1993). *An Introduction to the Bootstrap*. Chapman & Hall ◻.
+- Järvelin, K., Kekäläinen, J. (2002). Cumulated gain-based evaluation of IR techniques. *ACM TOIS* 20:422-446 ◻.
+- Thakur, N. et al. (2021). BEIR: a heterogeneous benchmark for zero-shot evaluation of information retrieval models. *NeurIPS Datasets and Benchmarks* ◻.
+- Jin, Q. et al. (2023). MedCPT: contrastive pre-trained transformers with large-scale PubMed search logs. *Bioinformatics* 39(11):btad651 ◻.
+- Geifman, Y., El-Yaniv, R. (2017). Selective classification for deep neural networks. *NeurIPS* ◻.
+- Petroni, F. et al. (2021). KILT: a benchmark for knowledge intensive language tasks. *NAACL* ✔.
+- Chen, J. et al. (2024). Benchmarking large language models in retrieval-augmented generation (RGB). *AAAI* 38:17754-17762 ✔.
+- Gao, T. et al. (2023). Enabling large language models to generate text with citations (ALCE). *EMNLP* 6465-6488 ✔.
+- Es, S. et al. (2024). RAGAs: automated evaluation of retrieval augmented generation. *EACL (demos)* ✔ (named here only to explain "context relevance"; RAGAS is not used).
+- Saad-Falcon, J. et al. (2024). ARES: an automated evaluation framework for RAG systems. *NAACL* ✔ (same note).
+- Xiong, G. et al. (2024). Benchmarking retrieval-augmented generation for medicine (MIRAGE, MedRAG). *ACL Findings* ✔.
+- Sohn, J. et al. (2025). Rationale-guided retrieval augmented generation for medical question answering (RAG²). *NAACL* ✔ (abstract only).
+- Reimers, N., Gurevych, I. (2019). Sentence-BERT. *EMNLP* ◻.

@@ -1,5 +1,11 @@
 # Evaluation metrics of RAG research: what the field measures and what fits this thesis
 
+| | |
+|---|---|
+| Document status | **Literature survey, a snapshot of 2026-11-23.** It informed the choice of metrics; it does not list the metrics in use. |
+| The metrics in use | `results/evaluation_guide.md` |
+| Decisions taken after this survey | Removed: Exact Match, Jaccard, RAGAS, context precision, the NLI support check (failed its own pass mark twice), balanced accuracy and top-k accuracy. Added: Recall@k, an approximate text-only image-claim check, a semantic-similarity validity check. See `results/CHANGELOG.md`. |
+
 Written 2026-11-23, before the evaluation protocol is finalised. Method: web searches (the pages themselves could not be opened from
 this environment, so what is written here comes from search result summaries). ✔ = stated in a result I retrieved; ◻ = from memory or
 not seen: check it in the paper before citing. Nothing here has been run.

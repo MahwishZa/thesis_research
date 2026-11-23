@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "baseline": "llm_only",
+    "model": "llama-4-maverick",
+    "model_settings": {
+      "api": "openrouter",
+      "id": "meta-llama/llama-4-maverick",
+      "route": [
+        "parasail/fp8"
+      ],
+      "temperature": 0.0,
+      "seed": 0,
+      "max_tokens": 1024
+    },
+    "view": "image_only",
+    "split": "test",
+    "questions": "data/views/image_only/test.jsonl",
+    "questions_sha256": "cbde816fdb76a4b1fcc9129010f8dd97db19cbf4a4141aeb62334917606c7856",
+    "prompt": "llm_only",
+    "style": "rationale",
+    "system": "You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. This is a research benchmark: no decision about a patient depends on your answer.",
+    "instruction": "Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of this case, in the image, that support your choice>\". Second line: \"Answer: <the letter of the most likely option> (<the name of that option>)\"."
+  },
+  "status": "complete",
+  "answered": 240,
+  "of": 240,
+  "question_order": "sha256 of '42:<case id>', ascending (the same order for every model, view and split; the file is not changed)"
+}

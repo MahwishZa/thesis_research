@@ -1,0 +1,273 @@
+{
+  "inputs": {
+    "questions": {
+      "path": "./data/views/image_only/test.jsonl",
+      "sha256": "cbde816fdb76a4b1fcc9129010f8dd97db19cbf4a4141aeb62334917606c7856"
+    },
+    "predictions": {
+      "path": "results/llm_only/llama-4-maverick/image_only_test/predictions.jsonl",
+      "sha256": "0b113dd70af04b270ff1dd4e9706b99f6385cec86c632075c543a1ca6fe7b715"
+    }
+  },
+  "trial_answered_only": false,
+  "diagnosis": {
+    "n_questions": 240,
+    "missing_predictions": 0,
+    "invalid_answers": 0,
+    "invalid_answers_by_cause": {
+      "refusals": 0,
+      "other_invalid": 0,
+      "refusal_ids": [],
+      "other_invalid_ids": []
+    },
+    "accuracy": 0.3667,
+    "accuracy_95ci": [
+      0.2987,
+      0.4344
+    ],
+    "macro_f1": 0.3204,
+    "macro_f1_95ci": [
+      0.2653,
+      0.3737
+    ],
+    "per_class": {
+      "MEL": {
+        "precision": 0.27,
+        "recall": 0.333,
+        "specificity": 0.871,
+        "f1": 0.299,
+        "support": 30
+      },
+      "NV": {
+        "precision": 0.556,
+        "recall": 0.5,
+        "specificity": 0.943,
+        "f1": 0.526,
+        "support": 30
+      },
+      "BCC": {
+        "precision": 0.5,
+        "recall": 0.1,
+        "specificity": 0.986,
+        "f1": 0.167,
+        "support": 30
+      },
+      "AK": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "specificity": 0.995,
+        "f1": 0.0,
+        "support": 30
+      },
+      "BKL": {
+        "precision": 0.214,
+        "recall": 0.733,
+        "specificity": 0.614,
+        "f1": 0.331,
+        "support": 30
+      },
+      "DF": {
+        "precision": 0.429,
+        "recall": 0.5,
+        "specificity": 0.905,
+        "f1": 0.462,
+        "support": 30
+      },
+      "VASC": {
+        "precision": 0.793,
+        "recall": 0.767,
+        "specificity": 0.971,
+        "f1": 0.78,
+        "support": 30
+      },
+      "SCC": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "specificity": 0.99,
+        "f1": 0.0,
+        "support": 30
+      }
+    },
+    "confusion_matrix": {
+      "rows_true": [
+        "MEL",
+        "NV",
+        "BCC",
+        "AK",
+        "BKL",
+        "DF",
+        "VASC",
+        "SCC"
+      ],
+      "columns_predicted": [
+        "MEL",
+        "NV",
+        "BCC",
+        "AK",
+        "BKL",
+        "DF",
+        "VASC",
+        "SCC",
+        "invalid"
+      ],
+      "matrix": [
+        [
+          10,
+          5,
+          0,
+          0,
+          14,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          15,
+          0,
+          0,
+          11,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          7,
+          1,
+          3,
+          0,
+          13,
+          3,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          26,
+          3,
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          3,
+          0,
+          1,
+          22,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          2,
+          0,
+          4,
+          15,
+          3,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0,
+          0,
+          1,
+          1,
+          23,
+          0,
+          0
+        ],
+        [
+          6,
+          3,
+          1,
+          0,
+          12,
+          7,
+          1,
+          0,
+          0
+        ]
+      ]
+    },
+    "chosen_letters": {
+      "A": 30,
+      "B": 40,
+      "C": 38,
+      "D": 26,
+      "E": 36,
+      "F": 18,
+      "G": 26,
+      "H": 26
+    }
+  },
+  "usage": {
+    "tokens_in": {
+      "total": 223440.0,
+      "mean": 931.0,
+      "n": 240
+    },
+    "tokens_out": {
+      "total": 24580.0,
+      "mean": 102.42,
+      "n": 240
+    },
+    "seconds": {
+      "total": 1242.09,
+      "mean": 5.18,
+      "n": 240
+    }
+  },
+  "retrieval": null,
+  "evidence": null,
+  "text": {
+    "semantic_similarity_cosine": {
+      "mean": 0.9498,
+      "95ci": [
+        0.9482,
+        0.9514
+      ],
+      "per_class": {
+        "MEL": 0.95,
+        "NV": 0.9594,
+        "BCC": 0.9402,
+        "AK": 0.9411,
+        "BKL": 0.9513,
+        "DF": 0.9584,
+        "VASC": 0.9527,
+        "SCC": 0.945
+      },
+      "n_questions_with_rationale": 240,
+      "n_reference_texts": {
+        "AK": 4,
+        "BCC": 8,
+        "BKL": 8,
+        "DF": 5,
+        "MEL": 2,
+        "NV": 10,
+        "SCC": 2,
+        "VASC": 1
+      },
+      "aggregation": "highest cosine over the reference texts of the true class",
+      "longer_than_the_model_reads": {
+        "max_tokens": 350,
+        "reference_texts": 0,
+        "rationales": 0
+      },
+      "model": "pritamdeka/S-PubMedBert-MS-MARCO"
+    }
+  },
+  "text_only_image_claims": null,
+  "skip_text": false
+}

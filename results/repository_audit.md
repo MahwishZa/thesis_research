@@ -1,6 +1,9 @@
 # Repository audit (2026-11-24)
 
-Update the same day, after your answers: P1 (launcher: `run.py <system>`, one command today, `llm-only`), P2 (`evaluate.py collect`), P3 (context precision dropped) and P4 (flag code removed) are approved; P2, P3 and P4 are built and tested. Standard RAG (P6, k = 3) is approved and not built yet; the proposed system and RAG² wait for your design (D2, D3).
+| | |
+|---|---|
+| Document status | **A dated snapshot** (2026-11-24), written before the LLM-only test runs. Findings that were fixed are marked; the current state is in `results/STATUS.md`. |
+| Update the same day | Proposals P2 (`evaluate.py collect`), P3 (context precision dropped) and P4 (dormant flag code removed) were approved and built. P1 (one launcher): `run.py` takes the system as its first word; today only `llm-only` exists. Standard RAG (P6, k = 3) is approved and not built; the proposed system and RAG² wait for the researcher's design (D2, D3). |
 
 Scope: every file under `src/`, `tests/`, `data/` (tables, views, corpus card), `requirements.txt`, `results/`. `archive/` was not used.
 Marks: ✔ = checked by running something in this session (the check is named); ◻ = assumed or not checked.
@@ -26,7 +29,7 @@ Marks: ✔ = checked by running something in this session (the check is named); 
 | # | Gap | Effect |
 |---|---|---|
 | G1 | **Only the LLM-only stage exists.** `run.py` has one command (`llm-only`). There is no retriever, no index, no RAG prompt, no RAG runner. | Standard RAG, RAG² and the proposed system cannot be run yet |
-| G2 | The "proposed" system is not defined anywhere in the repository (`README.md` is a template: "Existing methods do X…") | I cannot build it without inventing it. It needs your design and your supervisor's agreement |
+| G2 | The "proposed" system is not defined anywhere in the repository (`README.md` is a template: "Existing methods do X…") | I cannot build it without inventing it. It needs the researcher's design and the supervisor's agreement |
 | G3 | RAG² (Sohn et al., NAACL 2025) is not implemented | See section 5: what the paper does and what I can and cannot reproduce |
 | G4 | Claude (`claude-sonnet-5-5`) and llama-4-maverick are not yet tried live | ◻ unverified until the validation trials are done |
 | G5 | No image view has been tried live | ◻ unverified (the code path is tested with fake clients only) |
@@ -44,7 +47,7 @@ Marks: ✔ = checked by running something in this session (the check is named); 
 | I6 | The corpus is not balanced across classes (MEL 1,123 passages, DF 257). A retriever may lean to melanoma | Documented as a limit. The test set is balanced, so accuracy is not affected by prevalence |
 | I7 | Claude is called with no temperature (the API rejects it), so Claude answers are not exactly repeatable. The other three use temperature 0 and a seed | Documented as a limit; each run records its settings |
 | I8 | Llama is pinned to the host `parasail/fp8` (8-bit weights). Results are for that host, not for the model "in general" | Documented as a limit; recorded in each line (`served_by`) |
-| I9 | The README is a template | Not touched (your text). Proposal P5 |
+| I9 | The README is a template | Not touched (the researcher's text; a test keeps it to "Overview" and "Objectives"). Proposal P5 |
 
 No data-leakage defect, no wrong metric formula and no dead code was found.
 
@@ -64,18 +67,18 @@ No data-leakage defect, no wrong metric formula and no dead code was found.
 | Faithfulness | Supported accuracy (right and quote verified) | Follows KILT-AC | Petroni et al. (2021) | Keep |
 | Hallucination | Coverage and selective risk with a verified quote | Selective classification | Geifman & El-Yaniv (2017) | Keep |
 | Hallucination | Negative rejection ("Evidence: none" when nothing relevant was retrieved) | Yes | RGB, Chen et al. (AAAI 2024) | Keep |
-| Hallucination | Image claims in the text-only view (word list) | **Project-specific**, not a published metric | - | Keep as an approximate, labelled check (you approved it) |
+| Hallucination | Image claims in the text-only view (word list) | **Project-specific**, not a published metric | - | Keep as an approximate, labelled check (approved) |
 | Cost | Tokens, seconds | Common | - | Keep |
 
-Removed so far (all on your decisions): top-k accuracy, balanced accuracy, Jaccard, RAGAS, the NLI support check (failed its own pass mark twice: 0.83, then 0.50), Exact Match (never built).
+Removed so far (all on the researcher's decisions): top-k accuracy, balanced accuracy, Jaccard, RAGAS, the NLI support check (failed its own pass mark twice: 0.83, then 0.50), Exact Match (never built).
 
 **Hallucination honesty note:** no published metric measures "this reasoning about a skin photograph is false" without an expert. Every hallucination number in this project is a proxy (a quote that is real, a retrieved passage that is relevant, a described image that does not exist). The thesis should say so.
 
 ## 5. RAG² in one paragraph (what I can state, what I cannot) ◻
 
-Sohn et al. (NAACL 2025) propose RAG² for medical multiple-choice QA: it uses rationales (LLM-generated explanations) to build the retrieval query, a retriever trained with perplexity-based labels (a passage is useful if it makes the LLM more certain of the right answer), and balanced retrieval from several corpora. ✔ the abstract was seen in the literature search; ◻ the training recipe and the exact settings were not read in the paper. To reproduce it fairly I must read the paper itself, and training the retriever needs a labelled training set and GPU time. Whether to reproduce it fully or use its published components without training is your decision with your supervisor (D3 below).
+Sohn et al. (NAACL 2025) propose RAG² for medical multiple-choice QA: it uses rationales (LLM-generated explanations) to build the retrieval query, a retriever trained with perplexity-based labels (a passage is useful if it makes the LLM more certain of the right answer), and balanced retrieval from several corpora. ✔ the abstract was seen in the literature search; ◻ the training recipe and the exact settings were not read in the paper. To reproduce it fairly I must read the paper itself, and training the retriever needs a labelled training set and GPU time. Whether to reproduce it fully or use its published components without training is the researcher's decision with the supervisor (D3 below).
 
-## 6. Proposals (nothing here is built; each needs your answer)
+## 6. Proposals (status in the update at the top)
 
 | ID | Proposal | Why | Cost |
 |---|---|---|---|
@@ -84,13 +87,13 @@ Sohn et al. (NAACL 2025) propose RAG² for medical multiple-choice QA: it uses r
 | P3 | Drop context precision (it repeats Precision@k and MRR in part) | Fewer, clearer metrics | Tiny |
 | P4 | Remove the dormant yes/no flag code and its tests | No prompt produces the flag | Small |
 | P5 | Write `README.md` from the verified facts after the first full runs (I will not write results before they exist) | The README is a template | Small |
-| P6 | Standard RAG: dense retriever (the MedCPT query and article encoders you already download for relevance scoring), top-k passages from `passages.jsonl`, one RAG prompt, the model gives "Evidence: [n] "quote"" or "Evidence: none" | The simplest defensible baseline; no training; the corpus and encoders already exist | Medium |
+| P6 | Standard RAG: dense retriever (the MedCPT query and article encoders, already downloaded for relevance scoring), top-k passages from `passages.jsonl`, one RAG prompt, the model gives "Evidence: [n] "quote"" or "Evidence: none" | The simplest defensible baseline; no training; the corpus and encoders already exist | Medium |
 
-## 7. Decisions needed from you (short)
+## 7. Decisions needed from the researcher (D1 answered; D2 and D3 open)
 
 - **D1.** Approve P1 to P4 (yes or no for each).
-- **D2.** The proposed system: what does it do differently from standard RAG and from RAG²? I cannot design it for you. If it is not decided, the thesis can still report LLM-only and standard RAG first.
-- **D3.** RAG²: reproduce the full method, or only its published retrieval ideas (rationale as query, balanced corpus mix), with no retriever training? I recommend the second given 5 to 7 days and a small budget, stated clearly as "RAG²-style" in the thesis. Your supervisor should confirm this wording.
+- **D2.** The proposed system: what does it do differently from standard RAG and from RAG²? It cannot be designed without the researcher. If it is not decided, the thesis can still report LLM-only and standard RAG first.
+- **D3.** RAG²: reproduce the full method, or only its published retrieval ideas (rationale as query, balanced corpus mix), with no retriever training? I recommend the second given 5 to 7 days and a small budget, stated clearly as "RAG²-style" in the thesis. The supervisor should confirm this wording.
 - **D4.** Standard RAG: approve P6 as the design?
 - **D5.** Number of retrieved passages k (I suggest k = 3, because each passage is up to 200 words and the prompt stays small and cheap).
 
@@ -106,7 +109,7 @@ Sohn et al. (NAACL 2025) propose RAG² for medical multiple-choice QA: it uses r
 | 5-6 | Test runs of RAG systems, evaluation, `collect`, thesis tables | per budget |
 | 6-7 | README results, remaining documentation, final checks | 0 |
 
-I cannot price any of this ◻ (no per-token prices were looked up). Check your budget against: LLM-only text_only about 216 tokens in and 82 to 284 out per question (measured in the trials); a RAG prompt adds about 3 x 200 words of passages (about 800 tokens) per question (my estimate ◻). Images add image tokens (not measured).
+I cannot price any of this ◻ (no per-token prices were looked up). Check the budget against: LLM-only text_only about 216 tokens in and 82 to 284 out per question (measured in the trials); a RAG prompt adds about 3 x 200 words of passages (about 800 tokens) per question (my estimate ◻). Images add image tokens (not measured).
 
 ## 9. What not to claim in the thesis
 
