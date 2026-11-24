@@ -608,12 +608,14 @@ def standard_rag_main(argv=None, rag=None):
 # score, before any paid run; the test split is refused. Image-only questions are not scored: their text query is the same for all.
 def retrieval_eval_args(argv=None):
     ap = argparse.ArgumentParser(prog="run.py retrieval-eval", description="Retrieval metrics of the retrieval modes on validation.")
-    ap.add_argument("--view", default="text_only", choices=("text_only", "multimodal"))
+    ap.add_argument("--view", default="text_only", choices=VIEWS,
+                    help="text_only: the text modes; image_only: the image search; multimodal: text, image and both fused")
     ap.add_argument("--split", default="val", choices=("val",), help="validation only")
     ap.add_argument("--modes", nargs="+", default=list(RETRIEVAL_MODES), choices=RETRIEVAL_MODES)
     ap.add_argument("--data", default="data")
     ap.add_argument("--results", default="results")
     ap.add_argument("--index", default=None)
+    ap.add_argument("--image-encoder", default="biomedclip")
     ap.add_argument("--out", default=None, help="default: results/retrieval_<view>_<split>.json")
     return ap.parse_args(argv)
 
@@ -652,36 +654,71 @@ def random_retrieval(qa, passages, rounds=20, seed=SEED):
     return {k: round(sum(s[k] for s in scores) / rounds, 4) for k in INTERVAL_KEYS}
 
 
-def retrieval_eval_main(argv=None, rag_for=None):
+def load_visual(data, encoder):
+    """The image index and the saved image vectors of the Kaggle images ({file name: vector}), both made by src/build.py visual-index.
+    The query vector of a question is the saved vector of its own image, so no image model is needed here."""
+    folder = os.path.join(data, KNOWLEDGE_CORPUS, "visual")
+    index = read_index(os.path.join(folder, f"index_{encoder}"), os.path.join(folder, "items_final.jsonl"))
+    path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"{path} is not there: run python src/build.py visual-index (in .venv-visual)")
+    with open(path, encoding="utf-8") as f:
+        saved = json.load(f)
+    return index, dict(zip(saved["names"], saved["vectors"]))
+
+
+def image_query_vector(q, vectors):
+    name = os.path.basename(q["image_path"])
+    if name not in vectors:
+        raise KeyError(f"no saved image vector for {name}: run python src/build.py visual-index again")
+    return vectors[name]
+
+
+def retrieval_eval_main(argv=None, rag_for=None, visual=None):
     import evaluate
     args = retrieval_eval_args(argv)
     log = get_logger("retrieval-eval")
     questions = read_jsonl(os.path.join(args.data, question_file(args.view, args.split)))
     qa = {q["id"]: q for q in questions}
-    if rag_for is None:
+    text_modes = list(args.modes) if args.view == "text_only" else (["hybrid-rerank"] if args.view == "multimodal" else [])
+    if rag_for is None and text_modes:
         index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))
         encode = medcpt_encoder(MEDCPT_QUERY, 64)
         bm25 = BM25Index(index.passages)
-        rerank = medcpt_cross_encoder() if "hybrid-rerank" in args.modes else None
+        rerank = medcpt_cross_encoder() if "hybrid-rerank" in text_modes else None
 
         def rag_for(mode):
             return StandardRag(index, encode, 10, mode, bm25=bm25, rerank=rerank)
-    result, intervals = {}, {}
-    for mode in args.modes:
+    rankers, pools = {}, {}
+    for mode in text_modes:
         rag = rag_for(mode)
-        pred = {}
-        for q in questions:
-            hits = rag.retrieve(retrieval_query(q, args.view), 10)
-            pred[q["id"]] = {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p, _ in hits]}
-        result[mode] = evaluate.retrieval_metrics(qa, pred, n_relevant=evaluate.relevant_counts(rag.index.passages))
+        rankers[mode] = (lambda q, rag=rag: [p for p, _ in rag.retrieve(retrieval_query(q, args.view), 10)])
+        pools[mode] = rag.index.passages
+    if args.view != "text_only":
+        vindex, vectors = visual if visual is not None else load_visual(args.data, args.image_encoder)
+        rankers["image"] = lambda q: [p for p, _ in vindex.search(image_query_vector(q, vectors), 10)]
+        pools["image"] = vindex.passages
+        if args.view == "multimodal":
+            text = rankers["hybrid-rerank"]
+            rankers["fused"] = lambda q: [p for p, _ in reciprocal_rank_fusion([text(q), rankers["image"](q)], top=10)]
+            pools["fused"] = pools["hybrid-rerank"] + vindex.passages
+    visual_ids = set() if args.view == "text_only" else {p["passage_id"] for p in pools["image"]}
+    result, intervals, chance, image_share = {}, {}, {}, {}
+    for mode, rank in rankers.items():
+        pred = {q["id"]: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p in rank(q)]} for q in questions}
+        top3 = [c["chunk_id"] for v in pred.values() for c in v["contexts"][:3]]
+        image_share[mode] = round(sum(c in visual_ids for c in top3) / len(top3), 4) if top3 else 0.0
+        result[mode] = evaluate.retrieval_metrics(qa, pred, n_relevant=evaluate.relevant_counts(pools[mode]))
         intervals[mode] = retrieval_intervals(qa, pred)
+        chance[mode] = random_retrieval(qa, pools[mode])
         log.info(f"{mode}: " + ", ".join(f"{k} {100 * result[mode][k]:.1f}% ({100 * lo:.1f} to {100 * hi:.1f})"
                                           for k, (lo, hi) in intervals[mode].items()))
-    chance = random_retrieval(qa, rag.index.passages)
-    log.info("random 10 passages: " + ", ".join(f"{k} {100 * v:.1f}%" for k, v in chance.items()))
+        log.info(f"  random from the same pool ({len(pools[mode])} items): "
+                 + ", ".join(f"{k} {100 * v:.1f}%" for k, v in chance[mode].items()))
     out = args.out or os.path.join(args.results, f"retrieval_{args.view}_{args.split}.json")
     write_json(out, {"view": args.view, "split": args.split, "n_questions": len(questions), "modes": result,
-                     "intervals_95": intervals, "random_passages": chance})
+                     "intervals_95": intervals, "random_from_the_same_pool": chance,
+                     "share_of_top3_from_the_image_library": image_share})
     return result
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Builds what the experiments read from the cleaned cases and from public sources. Eight commands (each has --help):
+Builds what the experiments read from the cleaned cases and from public sources. Nine commands (each has --help):
 
   python src/build.py views        the three views and their question files, from data/processed_cases/all_cases.csv (step 2)
   python src/build.py corpus       the knowledge corpus for RAG: four libraries of real, published text (internet; laptop)
@@ -10,6 +10,7 @@ Builds what the experiments read from the cleaned cases and from public sources.
   python src/build.py visual       the figure list of the visual library: skin-image figures and captions of the corpus papers
   python src/build.py visual-images  the images of those figures (internet; laptop; --probe N first)
   python src/build.py visual-index   the image index, without any image that looks like a Kaggle image (laptop; open_clip_torch)
+  python src/build.py visual-calibrate  how well the look-alike tests separate same-lesion from different-lesion Kaggle photos
 
 The rules of each command are written above its code. The standard library is enough, except for the index (torch and transformers).
 """
@@ -30,8 +31,9 @@ from collections import Counter
 from html.parser import HTMLParser
 
 from common import (ALL_CASES, CLASSES, INDEX_DIR, KNOWLEDGE_CORPUS, LETTERS, MEDCPT_ARTICLE, OPTION_TEXT, SEED, SPLITS, VIEWS,
-                    drop_near_duplicates, file_sha256, get_logger, image_encoder, load_env, max_similarities, medcpt_encoder, question_file, read_csv, read_jsonl, view_table, write_csv,
-                    write_index, write_json, write_jsonl)
+                    dhash_variants, drop_near_duplicates, file_sha256, get_logger, hamming, image_encoder, load_env,
+                    max_similarities, medcpt_encoder, question_file, read_csv, read_jsonl, view_table, write_csv, write_index,
+                    write_json, write_jsonl)
 
 log = get_logger("corpus")
 
@@ -382,6 +384,18 @@ class Fetcher:
             self.pause = 0.12
         os.makedirs(cache_dir, exist_ok=True)
 
+    def cache_path(self, url, params=None, ncbi=False):
+        params = dict(params or {})
+        if ncbi:
+            params["tool"] = TOOL
+        return os.path.join(self.cache, hashlib.md5((url + json.dumps(params, sort_keys=True)).encode()).hexdigest())
+
+    def forget(self, url, params=None, ncbi=False):
+        """Removes a saved answer (one that turned out to be an error message), so that the next request asks again."""
+        path = self.cache_path(url, params, ncbi)
+        if os.path.exists(path):
+            os.remove(path)
+
     def get(self, url, params=None, ncbi=False):
         params = dict(params or {})
         if ncbi:
@@ -410,9 +424,23 @@ class Fetcher:
         return body
 
 
-def esearch(fetch, db, term, n):
-    r = json.loads(fetch.get(NCBI + "esearch.fcgi", {"db": db, "term": term, "retmax": n, "retmode": "json", "sort": "relevance"},
-                             ncbi=True))["esearchresult"]
+def esearch(fetch, db, term, n, attempts=4, wait=15.0):
+    """The ids found by an E-utilities search. An answer without a list of ids is an error message from NCBI (a busy server, a query
+    it could not read): it is not kept in the download cache, the search is asked again after a pause, and if it still fails the search
+    gives no ids and says what NCBI answered, so that one bad search does not stop a whole build."""
+    params = {"db": db, "term": term, "retmax": n, "retmode": "json", "sort": "relevance"}
+    for attempt in range(attempts):
+        body = json.loads(fetch.get(NCBI + "esearch.fcgi", params, ncbi=True))
+        r = body.get("esearchresult") or {}
+        if "idlist" in r:
+            break
+        if hasattr(fetch, "forget"):
+            fetch.forget(NCBI + "esearch.fcgi", params, ncbi=True)
+        log.warning(f"{db} search failed (attempt {attempt + 1} of {attempts}): NCBI answered {str(body)[:300]!r}")
+        if attempt + 1 < attempts:
+            time.sleep(wait * (attempt + 1))
+    else:
+        return []
     missing = (r.get("warninglist") or {}).get("quotedphrasesnotfound")
     if not r["idlist"] or missing:                          # say why, with PubMed's own reading of the query (no secret in it)
         what = "found nothing" if not r["idlist"] else f"did not find {missing}"
@@ -1527,13 +1555,50 @@ def visual_index_args(argv=None):
     ap.add_argument("--data", default="data")
     ap.add_argument("--encoder", default="biomedclip", choices=("biomedclip",))
     ap.add_argument("--threshold", type=float, default=0.95, help="a library image this similar to a Kaggle image is left out")
+    ap.add_argument("--hash-threshold", type=int, default=4,
+                    help="a library image whose 64-bit picture hash (also mirrored or turned) differs from a Kaggle image's in at most "
+                         "this many bits is left out")
     ap.add_argument("--library-threshold", type=float, default=0.98,
                     help="of two library images this similar, the later one is left out (the same picture in two papers)")
     ap.add_argument("--limit", type=int, default=0, help="embed only the first N library images (a trial)")
+    ap.add_argument("--kaggle-limit", type=int, default=0,
+                    help="compare with only the first N Kaggle images (a trial of the command; the check is then NOT complete)")
     return ap.parse_args(argv)
 
 
-def visual_index_main(argv=None, encode=None):
+def kaggle_vectors(encode, names, data, folder, encoder):
+    """The vectors of the Kaggle images, from a saved file when the encoder and the list of images are the same as when it was made
+    (embedding 2,000 images takes minutes, and the check is repeated whenever the library changes)."""
+    path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            saved = json.load(f)
+        if saved.get("names") == names:
+            return saved["vectors"]
+    vectors = encode([os.path.join(data, "processed_images", f) for f in names])
+    write_json(path, {"encoder": encoder, "names": names, "vectors": vectors})
+    return vectors
+
+
+def kaggle_hashes(names, data, folder, hash_fn):
+    """The picture hashes of the Kaggle images (saved, like their vectors, for the same list of images)."""
+    path = os.path.join(folder, "kaggle_hashes.json")
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            saved = json.load(f)
+        if saved.get("names") == names:
+            return saved["hashes"]
+    hashes = [hash_fn(os.path.join(data, "processed_images", f))[0] for f in names]
+    write_json(path, {"names": names, "hashes": hashes})
+    return hashes
+
+
+def nearest_by_hash(variant_hashes, reference_hashes):
+    """(smallest number of different bits, index of that reference image) for one image, over its 4 variants."""
+    return min((hamming(v, h), j) for v in variant_hashes for j, h in enumerate(reference_hashes))
+
+
+def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     a = visual_index_args(argv)
     log = get_logger("visual-index", os.path.join(a.corpus, "build_visual.log"))
     folder = os.path.join(a.corpus, "visual")
@@ -1545,13 +1610,18 @@ def visual_index_main(argv=None, encode=None):
         raise SystemExit("no library images or no Kaggle images: run visual-images first, and check data/processed_images/")
     encode = encode or image_encoder(a.encoder)
     vectors = encode([os.path.join(folder, "images", it["image_file"]) for it in items])
-    reference = encode([os.path.join(a.data, "processed_images", f) for f in kaggle])
+    if a.kaggle_limit:
+        kaggle = kaggle[:a.kaggle_limit]
+        log.warning("--kaggle-limit: only part of the Kaggle images is compared; this index must not be used for results")
+    reference = kaggle_vectors(encode, kaggle, a.data, folder, a.encoder)
     best = max_similarities(vectors, reference)
-    not_kaggle = [i for i, (sim, _) in enumerate(best) if sim < a.threshold]
+    ref_hashes = kaggle_hashes(kaggle, a.data, folder, hash_fn)
+    by_hash = [nearest_by_hash(hash_fn(os.path.join(folder, "images", it["image_file"])), ref_hashes) for it in items]
+    not_kaggle = [i for i, (sim, _) in enumerate(best) if sim < a.threshold and by_hash[i][0] > a.hash_threshold]
     keep_idx, twins = drop_near_duplicates([vectors[i] for i in not_kaggle], a.library_threshold)
     kept = [(items[not_kaggle[i]], vectors[not_kaggle[i]]) for i in keep_idx]
-    dropped = [{"item_id": it["item_id"], "similarity": round(sim, 4), "kaggle_image": kaggle[j]}
-               for it, (sim, j) in zip(items, best) if sim >= a.threshold]
+    dropped = [{"item_id": it["item_id"], "similarity": round(sim, 4), "kaggle_image": kaggle[j], "hash_bits_different": hb[0]}
+               for it, (sim, j), hb in zip(items, best, by_hash) if sim >= a.threshold or hb[0] <= a.hash_threshold]
     sims = sorted(sim for sim, _ in best)
     quantiles = {f"q{q}": round(sims[min(len(sims) - 1, int(len(sims) * q / 100))], 4) for q in (50, 90, 99)} | {"max": round(sims[-1], 4)}
     top = [{"item_id": items[i]["item_id"], "similarity": round(best[i][0], 4), "kaggle_image": kaggle[best[i][1]]}
@@ -1571,6 +1641,10 @@ def visual_index_main(argv=None, encode=None):
             card = json.load(f)
     card.update({"image_encoder": a.encoder, "kaggle_check": {"threshold": a.threshold, "n_kaggle_images": len(kaggle),
                                                               "n_library_images": len(items), "n_dropped": len(dropped),
+                                                              "hash_threshold_bits": a.hash_threshold,
+                                                              "n_dropped_by_embedding": sum(sim >= a.threshold for sim, _ in best),
+                                                              "n_dropped_by_hash": sum(hb[0] <= a.hash_threshold for hb in by_hash),
+                                                              "closest_hashes_bits": sorted(hb[0] for hb in by_hash)[:10],
                                                               "library_threshold": a.library_threshold,
                                                               "n_dropped_as_library_duplicates": len(twins),
                                                               "similarity_quantiles": quantiles, "highest_20": top},
@@ -1582,12 +1656,113 @@ def visual_index_main(argv=None, encode=None):
     return [it for it, _ in kept]
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# visual-calibrate: how well the two look-alike tests separate known cases (python src/build.py visual-calibrate)
+# ----------------------------------------------------------------------------------------------------------------------
+# The thresholds of visual-index (embedding 0.95, hash 4 bits) were chosen before any data was seen. This command measures them on the
+# Kaggle images themselves, using what preprocess.py already knows: images with the same group_id show the SAME LESION in different
+# photos (the hardest kind of look-alike a library figure could be), and images of different groups show different lesions. For both
+# kinds it reports the embedding similarity and the hash distance, and how many of each kind the current thresholds would flag:
+#   caught      - share of same-lesion pairs flagged (higher is safer: a library copy of a test lesion would be caught)
+#   false alarm - share of images whose most similar DIFFERENT lesion would be flagged (the cost: good library images lost)
+# Only the lesion grouping is used, never a diagnosis. The Kaggle vectors and hashes saved by visual-index are reused.
+def quantiles(values, qs=(1, 5, 50, 95, 99)):
+    v = sorted(values)
+    if not v:
+        return {}
+    out = {f"q{q}": round(v[min(len(v) - 1, int(len(v) * q / 100))], 4) for q in qs}
+    return {"min": round(v[0], 4), **out, "max": round(v[-1], 4), "n": len(v)}
+
+
+def guard_calibration(vectors, hashes, groups, threshold, hash_threshold):
+    """The same-lesion and different-lesion numbers described above. vectors and hashes are in the order of groups."""
+    n = len(groups)
+    try:
+        import numpy as np
+        m = np.asarray(vectors, dtype="float32")
+        table = (m @ m.T).tolist()
+    except ImportError:                                                       # small inputs only (the tests)
+        table = [[sum(a * b for a, b in zip(u, v)) for v in vectors] for u in vectors]
+
+    def sim(i, j):
+        return table[i][j]
+    members = {}
+    for i, g in enumerate(groups):
+        members.setdefault(g, []).append(i)
+    same_sim, same_hash, caught = [], [], 0
+    for idx in members.values():
+        for x in range(len(idx)):
+            for y in range(x + 1, len(idx)):
+                i, j = idx[x], idx[y]
+                s_, h_ = sim(i, j), hamming(hashes[i], hashes[j])
+                same_sim.append(s_)
+                same_hash.append(h_)
+                caught += s_ >= threshold or h_ <= hash_threshold
+    diff_sim, diff_hash, alarms = [], [], 0
+    for i in range(n):
+        others = [j for j in range(n) if groups[j] != groups[i]]
+        if not others:
+            continue
+        best_sim = max(sim(i, j) for j in others)
+        best_hash = min(hamming(hashes[i], hashes[j]) for j in others)
+        diff_sim.append(best_sim)
+        diff_hash.append(best_hash)
+        alarms += best_sim >= threshold or best_hash <= hash_threshold
+    return {"thresholds": {"embedding": threshold, "hash_bits": hash_threshold},
+            "same_lesion_pairs": {"n": len(same_sim), "embedding_similarity": quantiles(same_sim),
+                                  "hash_bits_different": quantiles(same_hash),
+                                  "caught": round(caught / len(same_sim), 4) if same_sim else None},
+            "most_similar_different_lesion": {"n": len(diff_sim), "embedding_similarity": quantiles(diff_sim),
+                                              "hash_bits_different": quantiles(diff_hash),
+                                              "false_alarm": round(alarms / len(diff_sim), 4) if diff_sim else None}}
+
+
+def visual_calibrate_main(argv=None):
+    ap = argparse.ArgumentParser(prog="build.py visual-calibrate", description="Measures the look-alike tests on known Kaggle cases.")
+    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--encoder", default="biomedclip")
+    ap.add_argument("--threshold", type=float, default=0.95)
+    ap.add_argument("--hash-threshold", type=int, default=4)
+    a = ap.parse_args(argv)
+    log = get_logger("visual-calibrate", os.path.join(a.corpus, "build_visual.log"))
+    folder = os.path.join(a.corpus, "visual")
+    paths = (os.path.join(folder, f"kaggle_vectors_{a.encoder}.json"), os.path.join(folder, "kaggle_hashes.json"))
+    if not all(os.path.isfile(p) for p in paths):
+        raise SystemExit("run build.py visual-index first (it saves the Kaggle vectors and hashes)")
+    with open(paths[0], encoding="utf-8") as f:
+        vec = json.load(f)
+    with open(paths[1], encoding="utf-8") as f:
+        hsh = json.load(f)
+    if vec["names"] != hsh["names"]:
+        raise SystemExit("the saved Kaggle vectors and hashes are not for the same images: run visual-index again")
+    group_of = {r["isic_id"]: r["group_id"] for r in read_csv(os.path.join(a.data, ALL_CASES))}
+    names = [n for n in vec["names"] if n[:-4] in group_of]
+    keep = [i for i, n in enumerate(vec["names"]) if n[:-4] in group_of]
+    result = guard_calibration([vec["vectors"][i] for i in keep], [hsh["hashes"][i] for i in keep],
+                               [group_of[n[:-4]] for n in names], a.threshold, a.hash_threshold)
+    card_path = os.path.join(a.corpus, "visual_card.json")
+    card = {}
+    if os.path.isfile(card_path):
+        with open(card_path, encoding="utf-8") as f:
+            card = json.load(f)
+    card["guard_calibration"] = result
+    write_json(card_path, card)
+    same, diff = result["same_lesion_pairs"], result["most_similar_different_lesion"]
+    log.info(f"same lesion, other photo ({same['n']} pairs): caught {same['caught']}; similarity {same['embedding_similarity']}; "
+             f"hash bits {same['hash_bits_different']}")
+    log.info(f"most similar different lesion ({diff['n']} images): false alarm {diff['false_alarm']}; similarity "
+             f"{diff['embedding_similarity']}; hash bits {diff['hash_bits_different']}")
+    return result
+
+
 # ---------------------------------------------------------------------------------------------------------------------------
 # The commands
 # ---------------------------------------------------------------------------------------------------------------------------
 COMMANDS = {"views": views_main, "corpus": corpus_main, "references": references_main, "index": index_main,
             "audit": audit_main, "visual": visual_main,
-            "visual-images": visual_images_main, "visual-index": visual_index_main}
+            "visual-images": visual_images_main, "visual-index": visual_index_main,
+            "visual-calibrate": visual_calibrate_main}
 
 
 def main(argv=None):

@@ -301,6 +301,34 @@ def image_encoder(kind):
     return encode
 
 
+def dhash_bits(pixels, size=8):
+    """64 bits from a size x (size + 1) grid of grey values, row by row: one bit per pair of neighbours (left brighter than right)."""
+    bits = 0
+    for r in range(size):
+        for c in range(size):
+            bits = (bits << 1) | int(pixels[r * (size + 1) + c] > pixels[r * (size + 1) + c + 1])
+    return bits
+
+
+def _dhash(img, size=8):
+    """The difference hash of a PIL image: shrunk to 9 x 8 grey pixels."""
+    from PIL import Image
+    return dhash_bits(list(img.convert("L").resize((size + 1, size), Image.LANCZOS).getdata()), size)
+
+
+def dhash_variants(path):
+    """The hash of an image file and of its mirror images and half turn (a figure may be shown flipped): 4 integers."""
+    from PIL import Image
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        return [_dhash(v) for v in (im, im.transpose(Image.FLIP_LEFT_RIGHT), im.transpose(Image.FLIP_TOP_BOTTOM),
+                                    im.transpose(Image.ROTATE_180))]
+
+
+def hamming(a, b):
+    return (a ^ b).bit_count()
+
+
 def max_similarities(vectors, reference_vectors):
     """For each vector, its largest dot product (cosine, as all vectors have unit length) with any reference vector, and which one."""
     try:

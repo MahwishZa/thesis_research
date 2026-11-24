@@ -63,7 +63,15 @@ third party is credited anywhere in the repository.
   use --probe), `visual-index` (BiomedCLIP; needs open_clip_torch and Pillow; the Kaggle look-alike check, threshold 0.95, and a check for the same
   picture twice in the library, threshold 0.98; neither tuned). Real data (laptop, 2026-11-24): the figure list from the 90 PMC papers of the
   text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all 88 downloaded from the PMC
-  open-data bucket; `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
+  open-data bucket; `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead).
+  The image index was tried on the laptop (BiomedCLIP, open_clip_torch 4.2.2 in `.venv-visual`, torch 2.15.0; the main environment keeps
+  torch 2.4.1): it runs. A second Kaggle look-alike test, by a 64-bit picture hash (also mirrored and turned, at most 4 different bits),
+  was added because the embedding alone is not calibrated. NCBI's PMC search was down on 2026-11-24 (SOLR error 500): the extra papers
+  are to be fetched later.
+  Full visual index (laptop, 2026-11-24): 85 of 88 images indexed, 3 dropped as Kaggle look-alikes (2 by embedding, 1 by hash); the
+  closest hash distances were 4 to 8 bits, so both thresholds are near the data: `build.py visual-calibrate` measures them on the 448
+  same-lesion photo pairs of the Kaggle set (known look-alikes) before they are accepted. `run.py retrieval-eval --view image_only` and
+  `--view multimodal` score the image search (and text + image fused) on validation, free. RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.

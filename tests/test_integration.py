@@ -8,6 +8,7 @@ import collections
 import contextlib
 import csv
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -27,8 +28,21 @@ import check as cp  # noqa: E402
 import evaluate as ev  # noqa: E402
 import run as rl  # noqa: E402
 from build import options_for, question  # noqa: E402
-from common import ALL_CASES, CLASSES, PROCESSED_CASES, question_file, write_jsonl  # noqa: E402
+from common import (  # noqa: E402
+    ALL_CASES,
+    CLASSES,
+    PROCESSED_CASES,
+    question_file,
+    write_jsonl,
+)
 from common import read_index as common_read_index
+
+
+def fake_hash(path):
+    """A stand-in for the picture hash in tests whose "images" are text files: four unrelated 64-bit numbers per file name."""
+    name = os.path.basename(path)
+    return [int(hashlib.md5(f"{name}{i}".encode()).hexdigest()[:16], 16) for i in range(4)]
+
 
 DATA = ROOT / "data"
 
@@ -418,6 +432,33 @@ class TextTests(unittest.TestCase):
         self.assertEqual(dict(removed), {"extra paper: no open licence": 1, "extra paper: AI or image-dataset paper": 1,
                                          "extra paper: retracted": 1, "extra paper: not read": 1})
 
+    def test_a_search_answered_with_an_error_is_asked_again_forgotten_and_never_stops_the_build(self):
+        answers = [{"error": "API rate limit exceeded"}, {"esearchresult": {"ERROR": "Search Backend failed"}},
+                   {"esearchresult": {"idlist": ["5"]}}]
+        forgotten = []
+
+        class Fake:
+            def get(self, url, params=None, ncbi=False):
+                return json.dumps(answers.pop(0))
+
+            def forget(self, url, params=None, ncbi=False):
+                forgotten.append(url)
+        self.assertEqual(bd.esearch(Fake(), "pmc", "x", 5, wait=0), ["5"])
+        self.assertEqual(len(forgotten), 2)                                     # the two error answers were not kept
+        answers[:] = [{"error": "busy"}] * 3
+
+        self.assertEqual(bd.esearch(Fake(), "pmc", "x", 5, attempts=3, wait=0), [])         # still failing: no ids, no exception
+
+    def test_the_download_cache_can_forget_an_answer(self):
+        with tempfile.TemporaryDirectory() as d:
+            fetch = bd.Fetcher(d)
+            path = fetch.cache_path("https://x/y", {"a": 1}, ncbi=True)
+            Path(path).write_text("bad", encoding="utf-8")
+            self.assertEqual(fetch.get("https://x/y", {"a": 1}, ncbi=True), "bad")
+            fetch.forget("https://x/y", {"a": 1}, ncbi=True)
+            self.assertFalse(os.path.exists(path))
+            fetch.forget("https://x/y", {"a": 1}, ncbi=True)                      # forgetting twice is harmless
+
     def test_the_visual_command_adds_extra_papers_when_asked_and_not_otherwise(self):
         xml = self.article()
 
@@ -523,6 +564,108 @@ class TextTests(unittest.TestCase):
             self.assertEqual((card["images_downloaded"], card["n_images"], card["n_figures_kept"]), (True, 1, 1))
             self.assertEqual(len(rl.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
 
+    def test_a_picture_that_is_the_same_by_its_hash_is_left_out_even_when_the_embedding_differs(self):
+        def encode(paths):                                 # all vectors far apart: only the hash can catch the copy
+            return [[1.0, 0.0] if "lib" in p else [0.0, 1.0] for p in paths]
+
+        def hash_fn(path):                                 # the hash of an image is written in its file; a flipped copy is one variant
+            h = int(Path(path).read_text())
+            return [h, h ^ 0b1, h ^ 0b11, h ^ 0b111]
+        with tempfile.TemporaryDirectory() as d:
+            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
+            os.makedirs(os.path.join(corpus, "visual", "images"))
+            os.makedirs(os.path.join(data, "processed_images"))
+            items = []
+            for name, h in (("lib_copy", "1000"), ("lib_other", "7")):
+                Path(corpus, "visual", "images", name + ".jpg").write_text(h)
+                items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
+                              "text": "x", "tags": ["MEL"]})
+            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            Path(data, "processed_images", "ISIC_0000001.jpg").write_text(str(1000 ^ 0b1))      # one bit away from a variant
+            with contextlib.redirect_stdout(io.StringIO()):
+                kept = bd.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=hash_fn)
+            self.assertEqual([k["item_id"] for k in kept], ["PMC1#lib_other"])
+            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            self.assertEqual((card["n_dropped_by_hash"], card["n_dropped_by_embedding"]), (1, 0))
+
+    def test_the_hash_bits_follow_the_neighbour_rule_and_hamming_counts_the_different_bits(self):
+        import common as cm
+        rising = [r * 9 + c for r in range(8) for c in range(9)]                     # every pixel darker than its right neighbour
+        falling = [-v for v in rising]                                               # every pixel brighter than its right neighbour
+        self.assertEqual(cm.dhash_bits(rising), 0)
+        self.assertEqual(cm.dhash_bits(falling), 2 ** 64 - 1)
+        self.assertEqual(cm.hamming(0b1011, 0b0001), 2)
+        self.assertEqual(cm.hamming(2 ** 64 - 1, 0), 64)
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL") and importlib.util.find_spec("PIL._imaging"), "Pillow is not usable here")
+    def test_the_picture_hash_is_the_same_for_a_resized_copy_and_far_for_another_picture(self):
+        from PIL import Image, ImageDraw
+
+        import common as cm
+        with tempfile.TemporaryDirectory() as d:
+            img = Image.new("RGB", (200, 150), (200, 100, 60))
+            ImageDraw.Draw(img).ellipse((40, 30, 150, 110), fill=(60, 20, 20))
+            img.save(os.path.join(d, "a.png"))
+            img.resize((100, 75)).save(os.path.join(d, "small.jpg"), quality=70)
+            other = Image.new("RGB", (200, 150), (30, 30, 30))
+            ImageDraw.Draw(other).rectangle((100, 0, 200, 150), fill=(250, 250, 250))
+            other.save(os.path.join(d, "other.png"))
+            a, small, far = (cm.dhash_variants(os.path.join(d, n)) for n in ("a.png", "small.jpg", "other.png"))
+            self.assertLessEqual(cm.hamming(a[0], small[0]), 4)
+            self.assertGreater(min(cm.hamming(x, y) for x in far for y in a), 10)
+            flipped = Image.open(os.path.join(d, "a.png")).transpose(Image.FLIP_LEFT_RIGHT)
+            flipped.save(os.path.join(d, "flip.png"))
+            self.assertEqual(min(cm.hamming(x, a[0]) for x in cm.dhash_variants(os.path.join(d, "flip.png"))), 0)
+
+    def test_the_calibration_counts_caught_same_lesion_pairs_and_false_alarms_on_different_lesions(self):
+        # four photos: g1 has two photos of one lesion (near each other), g2 and g3 are other lesions
+        vectors = [[1.0, 0.0], [0.99, 0.141], [0.0, 1.0], [0.6, 0.8]]
+        hashes = [0b0000, 0b0001, 0b1111_0000, 0b0011]
+        groups = ["g1", "g1", "g2", "g3"]
+        r = bd.guard_calibration(vectors, hashes, groups, threshold=0.95, hash_threshold=1)
+        same, diff = r["same_lesion_pairs"], r["most_similar_different_lesion"]
+        self.assertEqual((same["n"], same["caught"]), (1, 1.0))                        # cosine 0.99 and 1 bit: caught
+        self.assertEqual(diff["n"], 4)
+        # no cosine between different lesions reaches 0.95; by the hash, photo 2 (0b0001) and photo 4 (0b0011) differ in 1 bit, so
+        # both are flagged; photo 1 (0b0000) is 2 bits from photo 4 and photo 3 is 4 or more bits from all: not flagged -> 2 of 4
+        self.assertEqual(diff["false_alarm"], 0.5)
+        self.assertEqual(diff["hash_bits_different"]["min"], 1)
+        r2 = bd.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=0)
+        self.assertEqual(r2["same_lesion_pairs"]["caught"], 0.0)                          # stricter thresholds miss the pair
+        r3 = bd.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=1)
+        self.assertEqual(r3["same_lesion_pairs"]["caught"], 1.0)                          # the hash alone catches it
+
+    def test_the_calibration_command_reads_the_saved_kaggle_numbers_and_writes_the_card(self):
+        with tempfile.TemporaryDirectory() as d:
+            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
+            os.makedirs(os.path.join(corpus, "visual"))
+            os.makedirs(os.path.join(data, "processed_cases"))
+            names = ["ISIC_1.jpg", "ISIC_2.jpg", "ISIC_3.jpg"]
+            Path(corpus, "visual", "kaggle_vectors_biomedclip.json").write_text(
+                json.dumps({"names": names, "vectors": [[1, 0], [1, 0], [0, 1]]}), encoding="utf-8")
+            Path(corpus, "visual", "kaggle_hashes.json").write_text(json.dumps({"names": names, "hashes": [0, 0, 255]}), encoding="utf-8")
+            with open(os.path.join(data, "processed_cases", "all_cases.csv"), "w", encoding="utf-8", newline="") as f:
+                f.write("isic_id,group_id\nISIC_1,a\nISIC_2,a\nISIC_3,b\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                r = bd.visual_calibrate_main(["--corpus", corpus, "--data", data])
+            self.assertEqual(r["same_lesion_pairs"]["caught"], 1.0)
+            self.assertEqual(r["most_similar_different_lesion"]["false_alarm"], 0.0)
+            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))
+            self.assertIn("guard_calibration", card)
+
+    def test_the_kaggle_vectors_are_saved_and_reused_only_for_the_same_images(self):
+        calls = []
+
+        def encode(paths):
+            calls.append(len(paths))
+            return [[1.0, 0.0] for _ in paths]
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(bd.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
+            self.assertEqual(bd.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
+            self.assertEqual(calls, [2])                                                   # the second time nothing was embedded
+            bd.kaggle_vectors(encode, ["a.jpg", "b.jpg", "c.jpg"], d, d, "biomedclip")       # another list of images: embedded again
+            self.assertEqual(calls, [2, 3])
+
     def test_the_same_picture_in_two_papers_is_kept_once(self):
         def encode(paths):
             return [[float(x) for x in Path(p).read_text().split(",")] for p in paths]
@@ -538,7 +681,7 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
             Path(data, "processed_images", "ISIC_0000001.jpg").write_text("0,1")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = bd.visual_index_main(["--corpus", corpus, "--data", data], encode=encode)
+                kept = bd.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=fake_hash)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#a", "PMC1#c"])      # b is the same picture as a (cosine 1.0)
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual(card["n_dropped_as_library_duplicates"], 1)
@@ -560,7 +703,7 @@ class TextTests(unittest.TestCase):
             Path(data, "processed_images", "ISIC_0000002.jpg").write_text("0,1")
             Path(corpus, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode)
+                kept = bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
             # near and far each equal a Kaggle image (cosine 1.0); mid (0.6, 0.8) has cosine 0.8 at most with both
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#mid"])
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
@@ -571,7 +714,7 @@ class TextTests(unittest.TestCase):
             self.assertEqual(json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
                              ["n_dropped_as_library_duplicates"], 0)
             with self.assertRaises(SystemExit):                 # when every image is a look-alike nothing is indexed
-                bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode)
+                bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode, hash_fn=fake_hash)
 
     def test_plural_forms_are_tagged_too(self):
         self.assertEqual(bd.tag("Melanomas show asymmetry."), ["MEL"])
@@ -1668,6 +1811,7 @@ def rag_enc(items):
 
 def make_rag(k=3):
     from array import array
+
     from common import DenseIndex
     flat = array("f")
     for p in RAG_CORPUS:
@@ -1839,9 +1983,42 @@ class StandardRagRunTests(unittest.TestCase):
             lo, hi = saved["intervals_95"][m]["hit@3"]
             self.assertLessEqual(lo, saved["modes"][m]["hit@3"] + 1e-9)
             self.assertGreaterEqual(hi, saved["modes"][m]["hit@3"] - 1e-9)
-        self.assertEqual(set(saved["random_passages"]), set(rl.INTERVAL_KEYS))
+        self.assertEqual(set(saved["random_from_the_same_pool"]["dense"]), set(rl.INTERVAL_KEYS))
         with self.assertRaises(SystemExit):
             rl.retrieval_eval_args(["--split", "test"])
+
+    def test_the_image_views_are_scored_by_image_search_and_by_text_and_image_fused(self):
+        from array import array
+
+        from common import DenseIndex
+        items = [{"passage_id": f"v{i}", "title": "fig", "text": "caption", "tags": [t]} for i, t in enumerate(["MEL", "NV", "BCC"])]
+        flat = array("f", [1, 0, 0, 1, 0.7, 0.7])
+        vindex = DenseIndex(items, flat, 2, {})
+        for view in ("image_only", "multimodal"):
+            self.make(view, 4)
+            vectors = {os.path.basename(q["image_path"]): ([1.0, 0.0] if i % 2 == 0 else [0.0, 1.0]) for i, q in enumerate(self.questions)}
+            flat_t = array("f")
+            for p in RAG_CORPUS:
+                flat_t.extend(rag_vec(p["title"] + " " + p["text"]))
+            index = DenseIndex(list(RAG_CORPUS), flat_t, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"})
+
+            def rag_for(mode, index=index):
+                return rl.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
+            out = os.path.join(self.tmp.name, f"{view}.json")
+            with contextlib.redirect_stdout(io.StringIO()):
+                res = rl.retrieval_eval_main(["--view", view, "--data", self.data, "--out", out], rag_for=rag_for,
+                                             visual=(vindex, vectors))
+            expected = ["image"] if view == "image_only" else ["hybrid-rerank", "image", "fused"]
+            self.assertEqual(list(res), expected)
+            saved = json.loads(Path(out).read_text(encoding="utf-8"))
+            self.assertEqual(set(saved["random_from_the_same_pool"]), set(expected))
+            if view == "multimodal":                                    # the fused list holds text passages too, so it scores differently
+                share = saved["share_of_top3_from_the_image_library"]
+                self.assertEqual((share["image"], share["hybrid-rerank"]), (1.0, 0.0))
+                self.assertTrue(0.0 < share["fused"] < 1.0)                 # both sources reach the top 3
+                self.assertEqual(len(saved["random_from_the_same_pool"]), 3)
+        with self.assertRaises(KeyError):
+            rl.image_query_vector({"image_path": "processed_images/ISIC_9.jpg"}, {})
 
     def test_collect_reports_a_standard_rag_run_beside_an_llm_only_run(self):
         self.make("text_only")
