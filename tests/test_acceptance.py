@@ -157,16 +157,16 @@ class MetricRequirements(unittest.TestCase):
         self.assertNotIn("bal_acc", source)
         self.assertNotIn("balanced accuracy", source)
 
-    def test_an_answer_counts_as_supported_only_when_its_evidence_is_verified(self):
+    def test_an_answer_is_covered_only_when_its_evidence_quote_is_verified(self):
         """Option B (researcher's decision, 2026-11-23): for RAG answers the evidence replaces the yes/no flag. A correct answer with a
-        quote that is not in the passage is not counted as supported (an NLI support step was removed on 2026-11-24)."""
+        quote that is not in the passage is not covered (an NLI support step and supported accuracy were removed on 2026-11-24)."""
         passage = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric."
         good = {i: {"pred": q["answer"], "contexts": [{"chunk_id": "c", "text": passage, "tags": [q["gold_label"]]}],
                     "evidence": {"chunk_id": "c", "quote": "Melanomas show asymmetry and irregular borders here"}}
                 for i, q in self.qa.items()}
         invented = {i: {**p, "evidence": {"chunk_id": "c", "quote": "this sentence is not in the passage at all"}} for i, p in good.items()}
-        self.assertEqual(ev.evidence_metrics(self.qa, good)["supported_accuracy"], 1.0)
-        self.assertEqual(ev.evidence_metrics(self.qa, invented)["supported_accuracy"], 0.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, good)["coverage_verified"], 1.0)
+        self.assertEqual(ev.evidence_metrics(self.qa, invented)["coverage_verified"], 0.0)
         self.assertIsNone(ev.evidence_metrics(self.qa, self.pred))                 # the LLM-only answers have no evidence to check
 
     def test_no_llm_judge_metric_is_offered(self):

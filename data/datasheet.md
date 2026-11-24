@@ -5,7 +5,7 @@
 | Document status | Current. Facts were checked against the committed tables on 2026-11-24 (✔) or are marked ◻ (not yet confirmed). |
 | Last data build | `src/preprocess.py` and `src/build.py views`: laptop rerun of 2026-11-23 (seed 42). Knowledge corpus snapshot: 2026-11-23. |
 | Structure | Follows the headings of "Datasheets for Datasets" (Gebru et al., Communications of the ACM 64(12), 2021 ◻ check the citation) |
-| Related documents | `src/methodology.md` (how the data are built), `results/evaluation_guide.md` (how they are used), `results/CHANGELOG.md` (history) |
+| Related documents | `results/evaluation_guide.md` (how the data are used and scored), `results/results.md` (the results) |
 
 Everything here is real data: no synthetic images and no AI-generated text. Marks: ✔ read from a committed file or recomputed from it; ◻ assumed or not yet confirmed.
 
@@ -184,8 +184,8 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 
 ## 11. Known limitations
 
-1. **Source confound.** All MEL and NV come from the older ISIC archive; the other classes come mostly from HAM10000. Even after standardisation the source is detectable (AUC 0.953), and the original file size alone predicts the class with 31.7% accuracy (chance 12.5%). Only the Kaggle dataset is used, so no images are added: report this as a limitation and give results per source (`--cases data/processed_cases/all_cases.csv --by source`).
-2. **Missing patient facts are not random.** Missing age, sex or site occurs mostly in NV and MEL, so "not recorded" hints at the class (15 of the 28 test cases with a missing fact are NV). Report text and multimodal results on all cases and again on the cases with all three facts (`--by facts_recorded`).
+1. **Source confound.** All MEL and NV come from the older ISIC archive; the other classes come mostly from HAM10000. Even after standardisation the source is detectable (AUC 0.953), and the original file size alone predicts the class with 31.7% accuracy (chance 12.5%). Only the Kaggle dataset is used, so no images are added: state this as a limitation of the image results.
+2. **Missing patient facts are not random.** Missing age, sex or site occurs mostly in NV and MEL, so "not recorded" hints at the class (15 of the 28 test cases with a missing fact are NV). State this as a limitation of the text-only results.
 3. **Small test set.** 240 cases (30 per class, 190 lesions). Always report 95% bootstrap intervals (`src/evaluate.py` draws whole lesions).
 4. **Balanced evaluation splits.** Accuracy and recall are comparable across classes; precision is not a clinic's precision.
 5. **Corpus imbalance and weak labels.** The corpus holds 4 times more melanoma-tagged passages than dermatofibroma-tagged ones, and the tags come partly from class names, so retrieval metrics measure topical relevance, not proof (`results/evaluation_guide.md`).

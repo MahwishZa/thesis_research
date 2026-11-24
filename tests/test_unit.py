@@ -406,16 +406,12 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(u, {"tokens_in": {"total": 100.0, "mean": 100.0, "n": 1}, "seconds": {"total": 1.5, "mean": 1.5, "n": 1}})
         self.assertIsNone(ev.usage_summary(qa, {}))
 
-    def test_accuracy_per_subgroup_and_per_recorded_facts(self):
-        qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(4)]
-        cases = {q["id"]: {"isic_id": q["id"], "source": "HAM10000" if k < 2 else "archive", "age": "50.0", "sex": "male",
-                           "site": "trunk" if k != 3 else ""} for k, q in enumerate(qs)}
-        pred = {qs[0]["id"]: {"pred": qs[0]["answer"]}, qs[2]["id"]: {"pred": qs[2]["answer"]}}
-        g = ev.subgroup_accuracy(as_dict(qs), pred, cases, ["source", "facts_recorded"])
-        self.assertEqual(g["source"], {"HAM10000": {"n": 2, "accuracy": 0.5}, "archive": {"n": 2, "accuracy": 0.5}})
-        self.assertEqual(g["facts_recorded"], {"all": {"n": 3, "accuracy": round(2 / 3, 4)}, "some missing": {"n": 1, "accuracy": 0.0}})
-        with self.assertRaises(ValueError):
-            ev.subgroup_accuracy(as_dict(qs), pred, cases, ["no_such_column"])
+    def test_accuracy_by_subgroup_is_not_offered(self):
+        """Removed on the researcher's decision (2026-11-24): it repeats the accuracy and the per-class scores."""
+        for name in ("subgroup_accuracy", "facts_recorded"):
+            self.assertFalse(hasattr(ev, name), name)
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            ev.main(["--questions", "q", "--predictions", "p", "--by", "source"])
 
     def test_a_repeated_question_id_stops_the_evaluation(self):
         with tempfile.TemporaryDirectory() as d:
@@ -462,16 +458,15 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(ev.quote_in_passage("", passage))
         self.assertFalse(ev.quote_in_passage("some words that are not there", ""))
 
-    def test_coverage_risk_and_supported_accuracy_use_only_verified_quotes(self):
+    def test_coverage_and_risk_use_only_verified_quotes(self):
         m = ev.evidence_metrics(self.qa, self.pred)
         self.assertEqual((m["n_questions"], m["valid_answers"]), (5, 4))
-        self.assertEqual((m["evidence_given"], m["evidence_none"], m["quote_found"]), (3, 1, 2))
-        self.assertEqual(m["quote_accuracy"], round(2 / 3, 4))            # 2 of the 3 given quotes are in their passage
+        self.assertEqual((m["evidence_given"], m["evidence_none"]), (3, 1))
         self.assertEqual((m["n_covered"], m["coverage_verified"]), (2, round(2 / 5, 4)))
         self.assertEqual(m["selective_risk_verified"], 0.5)               # of the 2 covered answers one is wrong
-        self.assertEqual(m["supported_accuracy"], round(1 / 5, 4))        # right and covered: only the first
         self.assertEqual(len(m["coverage_verified_95ci"]), 2)
         self.assertFalse({"support_model", "support_rule", "supported", "support_rate"} & set(m))      # no NLI step any more
+        self.assertFalse({"quote_found", "quote_accuracy", "supported_accuracy"} & set(m))              # removed 2026-11-24 (repetitive)
 
     def test_negative_rejection_counts_none_when_no_retrieved_passage_is_tagged_with_the_true_class(self):
         m = ev.evidence_metrics(self.qa, self.pred)
@@ -484,7 +479,7 @@ class EvidenceTests(unittest.TestCase):
         same = ev.evidence_metrics(self.qa, self.pred)
         swapped = {i: question(i, "SCC" if q["gold_label"] != "SCC" else "MEL") for i, q in self.qa.items()}   # same options, other truth
         other = ev.evidence_metrics(swapped, self.pred)
-        for key in ("n_covered", "coverage_verified", "quote_found", "evidence_given"):
+        for key in ("n_covered", "coverage_verified", "evidence_given"):
             self.assertEqual(same[key], other[key], key)
         self.assertNotEqual(same["selective_risk_verified"], other["selective_risk_verified"])   # only the errors depend on it
 
@@ -495,7 +490,7 @@ class EvidenceTests(unittest.TestCase):
     def test_a_citation_of_a_passage_that_was_not_retrieved_does_not_count(self):
         q, p = evidence_case("MEL", "MEL", chunk="c9")
         m = ev.evidence_metrics({q["id"]: q}, {q["id"]: p})
-        self.assertEqual((m["evidence_given"], m["quote_found"], m["n_covered"]), (1, 0, 0))
+        self.assertEqual((m["evidence_given"], m["n_covered"]), (1, 0))
 
     def test_the_removed_nli_support_step_is_gone(self):
         for name in ("support_check", "nli_support_scorer", "diagnosis_statement", "SUPPORT_STATEMENTS", "SUPPORT_MODEL"):

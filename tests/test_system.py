@@ -1,12 +1,11 @@
 """System tests: the whole committed research folder as it is, with no mock. The cleaned tables and the three views (every case once,
-every question its case, no label in an input, the views rebuilt byte for byte), the balanced test split, the archives, the fixed
+every question its case, no label in an input, the views rebuilt byte for byte), the balanced test split, the fixed
 top-level structure, every command-line script answering --help, and a free dry run of run.py on the committed questions.
 They skip when the tables are not in data/. Set THESIS_DATA to check another copy of the data folder.
 Run: python -m unittest discover -s tests"""
 
 import csv
 import filecmp
-import hashlib
 import importlib.util
 import json
 import os
@@ -288,7 +287,7 @@ class PipelineStatusTests(unittest.TestCase):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# the archives and the fixed top-level structure
+# the fixed top-level structure
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -296,95 +295,17 @@ def git(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, check=False)
 
 
-V1_ARCHIVE = ROOT / "archive" / "v1"
-
-
-V1_COMMIT = "a1c9209"
-
-
-FOLDERS = ("data", "results", "docs", "configs", "prompts")
-
-
-BANNER = ("> **Version 1** (commit `a1c9209`), archived on 2026-11-19: a frozen copy kept for reference. "
-          "It does not bind Version 2 (see `docs/v2_proposal.md` in the repository).")
-
-
-LABELLED = {"data/image/datasheet.md", "data/image_metadata/datasheet.md", "data/text/datasheet.md", "data/cases/datasheet.md",
-            "data/knowledge/datasheet.md", "docs/method.md", "docs/results.md"}
-
-
-def v1_history_available() -> bool:
-    return bool(shutil.which("git")) and (ROOT / ".git").exists() and git("cat-file", "-e", f"{V1_COMMIT}^{{commit}}").returncode == 0
-
-
-def unlabelled(path: str, content: bytes) -> bytes:
-    """A labelled document without its label: the banner line and the blank line after it."""
-    head = (BANNER + "\n\n").encode("utf-8")
-    if path in LABELLED:
-        if not content.startswith(head):
-            raise AssertionError(f"archive/v1/{path} does not start with the Version 1 label")
-        return content[len(head):]
-    return content
-
-
-class ArchiveV1Tests(unittest.TestCase):
-    def test_the_archive_has_its_readme_and_the_labelled_documents(self):
-        self.assertTrue((V1_ARCHIVE / "README.md").is_file())
-        readme = (V1_ARCHIVE / "README.md").read_text(encoding="utf-8")
-        self.assertIn(f"commit `{V1_COMMIT}`", readme)
-        for path in LABELLED:
-            self.assertIn(f"`{path}`", readme)
-            self.assertTrue((V1_ARCHIVE / path).read_text(encoding="utf-8").startswith(BANNER + "\n\n"), path)
-
-    @unittest.skipUnless(v1_history_available(), f"needs a Git checkout that holds commit {V1_COMMIT}")
-    def test_every_archived_file_is_the_file_of_the_version_1_commit(self):
-        listed = git("ls-tree", "-r", "--name-only", V1_COMMIT, "--", *FOLDERS)
-        self.assertEqual(listed.returncode, 0, listed.stderr)
-        expected = sorted(p for p in listed.stdout.decode("utf-8").splitlines() if p)
-        archived = sorted(p.relative_to(V1_ARCHIVE).as_posix() for p in V1_ARCHIVE.rglob("*") if p.is_file() and p != V1_ARCHIVE / "README.md")
-        self.assertEqual(archived, expected, "files missing from the archive, or added to it")
-        for path in expected:
-            with self.subTest(path=path):
-                original = git("show", f"{V1_COMMIT}:{path}")
-                self.assertEqual(original.returncode, 0, original.stderr)
-                self.assertEqual(unlabelled(path, (V1_ARCHIVE / path).read_bytes()), original.stdout,
-                                 f"archive/v1/{path} differs from {path} at commit {V1_COMMIT}")
-
-    def test_a_label_without_its_blank_line_or_an_unlabelled_document_is_caught(self):
-        with self.assertRaises(AssertionError):
-            unlabelled("docs/results.md", b"# Closed-book results\n")
-        with self.assertRaises(AssertionError):
-            unlabelled("docs/results.md", (BANNER + "\n# x\n").encode("utf-8"))
-        self.assertEqual(unlabelled("docs/results.md", (BANNER + "\n\n# x\n").encode("utf-8")), b"# x\n")
-        self.assertEqual(unlabelled("configs/models.toml", b"a = 1\n"), b"a = 1\n")
-
-
-V2_ARCHIVE = ROOT / "archive" / "v2"
-
-
-V2_COMMIT = "95a9506"
-
-
-ADDED = ("ARCHIVE.md", "MANIFEST.sha256", "claude_rules_2026-11-20.md")  # in the archive, not in the commit
-
-
-NOT_ARCHIVED = (".claude/", ".gitignore", ".gitattributes", "archive/")  # stay where they are
-
-
-def v2_history_available() -> bool:
-    return bool(shutil.which("git")) and (ROOT / ".git").exists() and git("cat-file", "-e", f"{V2_COMMIT}^{{commit}}").returncode == 0
-
-
 def tracked(folder: str) -> list[str]:
     return [p for p in git("ls-files", "-z", folder).stdout.decode("utf-8").split("\0") if p]
 
 
-TOP_LEVEL = {".claude", ".gitattributes", ".gitignore", "README.md", "archive", "data", "requirements.txt", "results", "src", "tests"}
+TOP_LEVEL = {".claude", ".gitattributes", ".gitignore", "README.md", "data", "requirements.txt", "results", "src", "tests"}
 
 
 class WorkspaceTests(unittest.TestCase):
     def test_the_top_level_structure_is_the_one_the_researcher_fixed_until_the_research_is_final(self):
-        """Decided 2026-11-20 (.claude/CLAUDE.md): no top-level file or folder is added, renamed or removed; new material goes inside."""
+        """.claude/CLAUDE.md: no top-level file or folder is added, renamed or removed; new material goes inside. The folder archive/ was
+        removed on 2026-11-25 at the researcher's request."""
         if shutil.which("git") and (ROOT / ".git").exists():
             held = {p.split("/")[0] for p in tracked(".")}
             self.assertEqual(sorted(held ^ TOP_LEVEL), [], "the tracked top level differs from the fixed structure")
@@ -396,28 +317,3 @@ class WorkspaceTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"^#{2,3} (.+)$", readme, re.M), ["Overview", "Objectives"])
         self.assertEqual(len(re.findall(r"^\d+\. ", readme, re.M)), 2)  # the two objectives
-
-
-class ArchiveV2Tests(unittest.TestCase):
-    def test_every_file_of_the_archive_is_in_its_manifest_with_the_same_hash_and_nothing_else_is_there(self):
-        listed = {}
-        for line in (V2_ARCHIVE / "MANIFEST.sha256").read_text(encoding="utf-8").splitlines():
-            digest, path = line.split("  ", 1)
-            listed[path] = digest
-        for path, digest in listed.items():
-            with self.subTest(path):
-                self.assertEqual(hashlib.sha256((V2_ARCHIVE / path).read_bytes()).hexdigest(), digest)
-        if shutil.which("git") and (ROOT / ".git").exists():
-            held = {p[len("archive/v2/"):] for p in tracked("archive/v2")} - set(ADDED)
-            self.assertEqual(sorted(held - set(listed)), [], "files in the archive that the manifest does not list")
-            self.assertEqual(sorted(set(listed) - held), [], "files the manifest lists that are not in the archive")
-
-    @unittest.skipUnless(v2_history_available(), "the Git history of the archived commit is not available here")
-    def test_the_archive_is_the_research_of_the_commit_file_for_file(self):
-        names = [n for n in git("ls-tree", "-r", "-z", "--name-only", V2_COMMIT).stdout.decode("utf-8").split("\0") if n]
-        moved = [n for n in names if not n.startswith(NOT_ARCHIVED)]
-        self.assertGreater(len(moved), 200)
-        for name in moved:
-            content = git("show", f"{V2_COMMIT}:{name}").stdout
-            self.assertTrue((V2_ARCHIVE / name).is_file(), f"missing from the archive: {name}")
-            self.assertEqual((V2_ARCHIVE / name).read_bytes(), content, f"differs from the commit: {name}")

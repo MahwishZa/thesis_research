@@ -4,7 +4,7 @@
 |---|---|
 | Document status | Current as of 2026-11-24. Implemented in `src/evaluate.py`. |
 | Audience | The researcher, the supervisor, and readers of the thesis (plain English; scientific accuracy kept). |
-| Related documents | `results/metric_survey.md` (the literature behind the choice), `results/llm_only_results.md` (the metrics applied), `src/methodology.md` (how to run them). |
+| Related documents | `results/results.md` (the metrics applied), `data/datasheet.md` (the data) |
 
 Scores are written as percentages here and in the screen output (25.4% = 61 of 240 right). The JSON and CSV files keep fractions (0.2542) so that programs can read them; p-values and the semantic-similarity cosine are not percentages.
 
@@ -69,13 +69,11 @@ The model must end with "Evidence: [passage number] "<sentence copied word for w
 
 | Metric | In words | Calculation | What it does NOT prove |
 |---|---|---|---|
-| Quote accuracy | Is the quote really in the cited passage? | after lower-casing and removing punctuation, the quote (at least 5 words; "..." pieces in order) must appear as whole words in the cited passage | That the quote supports the diagnosis |
-| Supported accuracy | Right answers whose quote is real | (right and quote found) / all questions. After KILT-AC: an answer counts only with right evidence | Same limit |
-| Coverage, selective risk | How often the system gives a verified answer, and how often those are wrong | coverage = verified answers / all; risk = wrong among verified (Geifman & El-Yaniv 2017) | Same limit |
+| Coverage, selective risk | How often the system gives a verified answer (a valid diagnosis and a quote that is word for word in the cited passage: lower-cased, no punctuation, at least 5 words, "..." pieces in order), and how often those are wrong | coverage = verified answers / all; risk = wrong among verified (Geifman & El-Yaniv 2017) | A real quote is not proof that it supports the diagnosis |
 | Negative rejection | Does it say "none" when nothing relevant was retrieved? | "Evidence: none" among questions where no retrieved passage is tagged with the true class (RGB, Chen et al. 2024) | Uses the true class to know when nothing relevant exists, so it is an evaluation-only number |
 | Image claims in the text-only view | Does the reasoning describe a picture that was never given? | a word list (dermoscopy, "the image shows"…); a sentence with a denial or "if/would" is skipped | A lower bound: a paraphrase is missed. Not a published metric. Not used for image views |
 
-An NLI model (a language model that decides whether a passage supports a statement) was tried to test "the passage supports the diagnosis". It failed its pre-set pass mark twice (83% pairwise; 50% top-1 over 8 classes, chance 12.5%), so it was removed ✔ (`results/STATUS.md`).
+An NLI model (a language model that decides whether a passage supports a statement) was tried to test "the passage supports the diagnosis". It failed its pre-set pass mark twice (83% pairwise; 50% top-1 over 8 classes, chance 12.5%), so it was removed ✔.
 **Honest limit:** no published metric measures "this reasoning is false" without an expert. All hallucination numbers here are proxies.
 
 ### D. Explanation quality and cost
@@ -87,7 +85,7 @@ An NLI model (a language model that decides whether a passage supports a stateme
 
 Sentence embeddings: Reimers & Gurevych (2019) EMNLP ◻.
 
-**Validity check (approved 2026-11-24; run on the 12 LLM-only test runs).** The first results gave almost the same similarity for every model, which suggested the score might not discriminate. `python src/evaluate.py similarity-check` tests this: the reasoning is compared with the reference texts of all 8 diseases, and it is "identified" when the disease the model answered has the single highest similarity (chance 12.5%). Pass mark, set before the first run (my proposal, not a published standard): identified in at least 50% of the answers overall and in at least 25% for every answered disease with 10 or more answers. **Result:** the answered disease is identified in 39.2% to 91.0% of answers in every run (far above chance), so the score carries information; the pass mark is met in 6 of 12 runs and fails where a class matches its reference texts poorly (BCC in text only; melanoma for Claude) or the overall rate is under 50%. Differences between models in the mean score are too small (0.006 or less in the image views) to rank models. Details: `results/llm_only_results.md`, section 4.8.
+**Validity check (approved 2026-11-24; run on the 12 LLM-only test runs).** The first results gave almost the same similarity for every model, which suggested the score might not discriminate. `python src/evaluate.py similarity-check` tests this: the reasoning is compared with the reference texts of all 8 diseases, and it is "identified" when the disease the model answered has the single highest similarity (chance 12.5%). Pass mark, set before the first run (my proposal, not a published standard): identified in at least 50% of the answers overall and in at least 25% for every answered disease with 10 or more answers. **Result:** the answered disease is identified in 39.2% to 91.0% of answers in every run (far above chance), so the score carries information; the pass mark is met in 6 of 12 runs and fails where a class matches its reference texts poorly (BCC in text only; melanoma for Claude) or the overall rate is under 50%. Differences between models in the mean score are too small (0.006 or less in the image views) to rank models. Details: `results/results.md`.
 
 ## 3. How to read a result table
 
@@ -110,13 +108,13 @@ Small trials (`--limit 10 --answered-only`) check that the format parses; their 
 
 ## 6. Open points
 
-- The exact **proposed system** and the **RAG² reproduction scope** (see `results/STATUS.md`, section 5).
+- The exact **proposed system** and the **RAG² reproduction scope** (not yet decided).
 - The researcher's confirmation of the research-question wording used in this guide.
 - Whether to add reference texts for melanoma and BCC, where the validity check failed (section 2D).
 
 ## 7. References
 
-✔ = seen in the project's literature search (`results/metric_survey.md`); ◻ = from memory, check the paper before citing.
+✔ = confirmed in a search result seen during this project; ◻ = from memory, check the paper before citing.
 
 - McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions. *Psychometrika* 12:153-157 ◻.
 - Holm, S. (1979). A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics* 6:65-70 ◻.
@@ -125,7 +123,6 @@ Small trials (`--limit 10 --answered-only`) check that the format parses; their 
 - Thakur, N. et al. (2021). BEIR: a heterogeneous benchmark for zero-shot evaluation of information retrieval models. *NeurIPS Datasets and Benchmarks* ◻.
 - Jin, Q. et al. (2023). MedCPT: contrastive pre-trained transformers with large-scale PubMed search logs. *Bioinformatics* 39(11):btad651 ◻.
 - Geifman, Y., El-Yaniv, R. (2017). Selective classification for deep neural networks. *NeurIPS* ◻.
-- Petroni, F. et al. (2021). KILT: a benchmark for knowledge intensive language tasks. *NAACL* ✔.
 - Chen, J. et al. (2024). Benchmarking large language models in retrieval-augmented generation (RGB). *AAAI* 38:17754-17762 ✔.
 - Gao, T. et al. (2023). Enabling large language models to generate text with citations (ALCE). *EMNLP* 6465-6488 ✔.
 - Es, S. et al. (2024). RAGAs: automated evaluation of retrieval augmented generation. *EACL (demos)* ✔ (named here only to explain "context relevance"; RAGAS is not used).

@@ -13,7 +13,6 @@ Inputs
              "contexts": [{"chunk_id": .., "title": .., "text": .., "tags": [..]}, ...]}   # retrieved passages, best first
              optional per line: "tokens_in", "tokens_out", "seconds" (cost and time of the call)
   --predictions-b  (optional) a second system on the same questions, for McNemar's test
-  --cases   (optional) data/processed_cases/all_cases.csv, with --by: accuracy per subgroup (e.g. --by source facts_recorded)
 
 The options are shuffled for each case, so a letter is first turned into its class with that case's own options.
 A question with no prediction, or with an answer that is not one of its option letters, counts as wrong.
@@ -26,11 +25,11 @@ Metrics
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
               Accuracy is top-1 accuracy (the chosen option is the true class); no top-k accuracy is reported (decided 2026-11-22).
               Several runs are compared with src/evaluate.py compare (McNemar for every pair, Holm's correction).
-  Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (or null = "Evidence: none"). Quote accuracy (the quote is
-              word for word in the cited passage), coverage and selective risk with verified evidence (an answer is covered when its
-              quote is found in the cited passage; this replaces the yes/no flag), supported accuracy (correct and covered, after
-              KILT-AC), and negative rejection (the share of "Evidence: none" when no retrieved passage is tagged with the true
-              class, after RGB). Whether the quote really supports the diagnosis is NOT tested: an NLI check was tried on
+  Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (or null = "Evidence: none"). Coverage and selective
+              risk with verified evidence (an answer is covered when it has a valid diagnosis and its quote is word for word in the
+              cited passage; this replaces the yes/no flag), and negative rejection (the share of "Evidence: none" when no
+              retrieved passage is tagged with the true class, after RGB). Quote accuracy, supported accuracy and accuracy by
+              subgroup were removed on the researcher's decision (2026-11-24: they repeat other metrics). Whether the quote really supports the diagnosis is NOT tested: an NLI check was tried on
               2026-11-23, failed its pre-set pass mark twice (0.83 pairwise, then 0.50 top-1) and was removed on the researcher's decision.
   Retrieval : Hit@k, Recall@k (with --passages), Precision@k, MRR and nDCG@k (context precision was dropped, 2026-11-24). Weak labels: a passage counts as relevant when its
               tags contain the gold class. nDCG@k assumes the corpus holds at least k relevant passages for each class.
@@ -45,7 +44,7 @@ Metrics
 Sources: McNemar (1947) Psychometrika 12:153-157; nDCG: Jarvelin & Kekalainen (2002)
 ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39:btad651;
 coverage and selective risk: Geifman & El-Yaniv (2017) NeurIPS; Holm (1979) Scandinavian Journal of Statistics 6:65-70;
-answer counted only with right evidence: KILT-AC, Petroni et al. (2021) NAACL; negative rejection: RGB, Chen et al. (2024) AAAI
+negative rejection: RGB, Chen et al. (2024) AAAI
 38:17754-17762; recall, precision and ranking of retrieval: BEIR, Thakur et al. (2021) NeurIPS Datasets and Benchmarks.
 
 Every report records its input files with their SHA-256, so two reports can be checked to use the same question file.
@@ -53,7 +52,7 @@ Every report records its input files with their SHA-256, so two reports can be c
 Usage: python src/evaluate.py --questions data/views/multimodal/test.jsonl --predictions predictions.jsonl
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json]
        [--passages data/knowledge_corpus/passages.jsonl]
-       [--skip-text] [--cases data/processed_cases/all_cases.csv --by source facts_recorded]
+       [--skip-text]
        python src/evaluate.py similarity-check             (is the semantic similarity informative? finished runs + reference texts)
        python src/evaluate.py collect                      (a report.json for every finished run and the table results/summary.csv)
        python src/evaluate.py compare --run name=questions,predictions --run name=questions,predictions --out compare.json
@@ -71,7 +70,7 @@ import sys
 import unicodedata
 from collections import Counter, defaultdict
 
-from common import CLASSES, OPTION_TEXT, get_logger, read_csv, read_jsonl, write_csv, write_json
+from common import CLASSES, OPTION_TEXT, get_logger, read_jsonl, write_csv, write_json
 
 TEXT_TO_CLASS = {text: code for code, text in OPTION_TEXT.items()}
 INVALID = "invalid"
@@ -244,28 +243,6 @@ def usage_summary(qa, pred):
         if values:
             out[key] = {"total": round(sum(values), 2), "mean": round(mean(values), 2), "n": len(values)}
     return out or None
-
-
-def facts_recorded(case):
-    """'all' when age, sex and body site are recorded, else 'some missing' (missing facts are common in NV and MEL)."""
-    return "all" if all(case.get(k) for k in ("age", "sex", "site")) else "some missing"
-
-
-def subgroup_accuracy(qa, pred, cases, columns):
-    """Accuracy within each value of each column of the case table (or 'facts_recorded'), with the number of questions."""
-    out = {}
-    for col in columns:
-        groups = defaultdict(list)
-        for i, q in qa.items():
-            case = cases.get(i)
-            if case is None:
-                raise ValueError(f"{i} is not in the case table")
-            if col != "facts_recorded" and col not in case:
-                raise ValueError(f"the case table has no column {col!r}")
-            groups[facts_recorded(case) if col == "facts_recorded" else case[col]].append(
-                predicted_class(q, pred.get(i)) == gold_class(q))
-        out[col] = {g: {"n": len(v), "accuracy": round(mean(v), 4)} for g, v in sorted(groups.items())}
-    return out
 
 
 def relevant_counts(passages):
@@ -475,15 +452,12 @@ def evidence_metrics(qa, pred):
         found.append(f)
         answers.append((code, "yes" if f else "no"))
     n, valid = len(ids), sum(predicted_class(qa[i], pred[i]) != INVALID for i in ids)
-    right_and_covered = sum(f and t == a[0] for f, t, a in zip(found, y, answers))
     risk = selective_risk(y, answers)
     irrelevant = [k for k, i in enumerate(ids) if not any(y[k] in (c.get("tags") or []) for c in pred[i].get("contexts") or [])]
     out = {"n_questions": n, "valid_answers": valid,
            "evidence_given": sum(given), "evidence_none": sum(1 for i in ids if not (pred[i].get("evidence") or {}).get("quote")),
-           "quote_found": sum(found), "quote_accuracy": round(sum(found) / sum(given), 4) if sum(given) else None,
            "coverage_verified": round(coverage(y, answers), 4), "coverage_verified_95ci": bootstrap_ci(y, answers, groups, coverage),
            "n_covered": sum(found), "selective_risk_verified": None if risk is None else round(risk, 4),
-           "supported_accuracy": round(right_and_covered / n, 4),
            "negative_rejection": None, "n_without_relevant_passage": len(irrelevant)}
     if irrelevant:
         out["negative_rejection"] = round(sum(not (pred[ids[k]].get("evidence") or {}).get("quote") for k in irrelevant)
@@ -619,7 +593,7 @@ def text_metrics(qa, pred, reference_texts, encode=None):
     return out
 
 
-def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relevance_models=False, reference_texts=None,
+def evaluate(qa_path, pred_path, pred_b_path=None, relevance_models=False, reference_texts=None,
              skip_text=False, passages_path=None, answered_only=False):
     """The full report of one system on one question file (the same code for every system and every view)."""
     qa, pred = load(qa_path), load(pred_path)
@@ -632,10 +606,6 @@ def evaluate(qa_path, pred_path, pred_b_path=None, cases_path=None, by=(), relev
            "diagnosis": diagnosis_metrics(qa, pred, load(pred_b_path) if pred_b_path else None),
            "usage": usage_summary(qa, pred),
            "retrieval": retrieval_metrics(qa, pred, n_relevant=relevant_counts(read_jsonl(passages_path)) if passages_path else None)}
-    if by:
-        if not cases_path:
-            raise ValueError("--by needs --cases (data/processed_cases/all_cases.csv)")
-        rep["subgroups"] = subgroup_accuracy(qa, pred, {r["isic_id"]: r for r in read_csv(cases_path)}, by)
     if rep["retrieval"] and relevance_models:
         rep["relevance"] = relevance_metrics(qa, pred, medcpt_scorers())
     has_evidence = any("evidence" in p for p in pred.values())
@@ -656,8 +626,6 @@ def report_main(argv=None):
     ap.add_argument("--predictions", required=True, help="the predictions of one system, one JSON line per question")
     ap.add_argument("--predictions-b", default=None, help="a second system on the same questions, for McNemar's test")
     ap.add_argument("--out", default="report.json")
-    ap.add_argument("--cases", default=None, help="the case table, for --by (data/processed_cases/all_cases.csv)")
-    ap.add_argument("--by", nargs="*", default=[], help="subgroups: columns of the case table, or facts_recorded")
     ap.add_argument("--relevance-models", action="store_true", help="also score relevance with MedCPT (downloads 3 models)")
     ap.add_argument("--reference-texts", default=None)
     ap.add_argument("--skip-text", action="store_true")
@@ -667,7 +635,7 @@ def report_main(argv=None):
                     help="the corpus (data/knowledge_corpus/passages.jsonl): with it Recall@k is reported, as the share of all the "
                          "corpus passages tagged with the true class that are found in the top k")
     a = ap.parse_args(argv)
-    rep = evaluate(a.questions, a.predictions, a.predictions_b, a.cases, a.by, a.relevance_models, a.reference_texts,
+    rep = evaluate(a.questions, a.predictions, a.predictions_b, a.relevance_models, a.reference_texts,
                    a.skip_text, a.passages, a.answered_only)
     write_json(a.out, rep)
     log = get_logger("evaluate")

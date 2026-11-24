@@ -1181,8 +1181,8 @@ class EvidenceCommandTests(unittest.TestCase):
     def test_the_report_has_an_evidence_section_with_the_quote_check(self):
         rep = self.run_report([])
         e = rep["evidence"]
-        self.assertEqual((e["evidence_given"], e["quote_found"], e["quote_accuracy"]), (4, 2, 0.5))
-        self.assertEqual((e["n_covered"], e["selective_risk_verified"], e["supported_accuracy"]), (2, 0.0, 0.5))
+        self.assertEqual((e["evidence_given"], e["n_covered"], e["selective_risk_verified"]), (4, 2, 0.0))
+        self.assertEqual(e["coverage_verified"], 0.5)                      # 2 of the 4 answers have a quote that is in its passage
 
     def test_the_report_has_recall_at_k_when_the_corpus_is_given(self):
         with tempfile.TemporaryDirectory() as d:
