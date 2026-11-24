@@ -40,7 +40,7 @@ class DispatchTests(unittest.TestCase):
     """build.py, check.py, evaluate.py and run.py pass the rest of the command line to the right command, and refuse an unknown one."""
 
     def test_build_and_run_pass_the_arguments_after_the_command_name(self):
-        for module, names in ((bd, ("views", "corpus", "references")), (rl, ("llm-only",))):
+        for module, names in ((bd, ("views", "corpus", "references", "index", "audit")), (rl, ("llm-only",))):
             for name in names:
                 with self.subTest(f"{module.__name__} {name}"):
                     fake = mock.Mock(return_value=7)
@@ -474,6 +474,15 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(m["negative_rejection"], 1.0)
         self.pred[self.ids[3]]["evidence"] = {"chunk_id": "c1", "quote": "made up words that are not in the passage"}
         self.assertEqual(ev.evidence_metrics(self.qa, self.pred)["negative_rejection"], 0.0)
+
+    def test_only_an_explicit_none_is_a_rejection_and_an_unreadable_line_is_counted_apart(self):
+        """A reply with no evidence line must not be scored as "Evidence: none" (the rule of run.parse_evidence)."""
+        self.pred[self.ids[3]]["evidence"] = dict(rl.UNPARSED)                 # case 3 has no relevant passage: it should have said none
+        m = ev.evidence_metrics(self.qa, self.pred)
+        self.assertEqual((m["negative_rejection"], m["evidence_none"], m["evidence_unparsed"]), (0.0, 0, 1))
+        self.pred[self.ids[3]]["evidence"] = None
+        m = ev.evidence_metrics(self.qa, self.pred)
+        self.assertEqual((m["negative_rejection"], m["evidence_none"], m["evidence_unparsed"]), (1.0, 1, 0))
 
     def test_the_selection_never_looks_at_the_true_class(self):
         same = ev.evidence_metrics(self.qa, self.pred)
@@ -1069,6 +1078,227 @@ class RequestTests(unittest.TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=moderated), mock.patch("time.sleep"):
             with self.assertRaises(rl.Refused):
                 rl.post_json("https://x", {}, {})
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# standard RAG: the index, the query, the prompt and the evidence line (2026-11-24)
+# ----------------------------------------------------------------------------------------------------------------------
+RAG_VOCAB = ["trunk", "head", "male", "female", "melanoma", "nevus", "vessels", "dermoscopic"]
+
+
+def rag_vector(text):
+    words = text.lower().replace(".", " ").replace(",", " ").split()
+    counts = [words.count(w) for w in RAG_VOCAB]
+    norm = sum(c * c for c in counts) ** 0.5 or 1.0
+    return [c / norm for c in counts]
+
+
+def rag_encode(texts):
+    return [rag_vector(" ".join(t) if isinstance(t, list) else t) for t in texts]
+
+
+RAG_PASSAGES = [
+    {"passage_id": "p0", "title": "Melanoma of the trunk", "text": "Melanoma on the trunk of a male patient is often a nevus-like lesion.",
+     "tags": ["MEL"], "url": "u0"},
+    {"passage_id": "p1", "title": "Head lesions", "text": "Lesions of the head in a female patient.", "tags": ["SCC"], "url": "u1"},
+    {"passage_id": "p2", "title": "", "text": "Vessels seen on dermoscopic images of a nevus.", "tags": ["NV"], "url": "u2"},
+    {"passage_id": "p3", "title": "Trunk nevus", "text": "A nevus on the trunk of a male.", "tags": ["NV"], "url": "u3"},
+]
+
+
+def rag_index(passages=RAG_PASSAGES):
+    from array import array
+    flat = array("f")
+    for p in passages:
+        flat.extend(rag_vector(p["title"] + " " + p["text"]))
+    return common.DenseIndex(list(passages), flat, len(RAG_VOCAB), {"encoder": "fake", "passages_sha256": "abc"})
+
+
+class DenseIndexTests(unittest.TestCase):
+    def test_the_best_passages_come_first_and_a_tie_keeps_the_corpus_order(self):
+        idx = rag_index()
+        hits = idx.search(rag_vector("trunk male nevus"), 3)
+        self.assertEqual([p["passage_id"] for p, _ in hits], ["p3", "p0", "p2"])
+        self.assertTrue(all(a[1] >= b[1] for a, b in zip(hits, hits[1:])))
+        same = [{"passage_id": f"s{i}", "title": "", "text": "trunk"} for i in range(4)]
+        self.assertEqual([p["passage_id"] for p, _ in rag_index(same).search(rag_vector("trunk"), 3)], ["s0", "s1", "s2"])
+
+    def test_a_query_of_the_wrong_size_stops(self):
+        with self.assertRaises(ValueError):
+            rag_index().search([1.0, 0.0], 3)
+
+    def test_an_index_is_saved_and_read_back_and_a_changed_passage_file_is_noticed(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "passages.jsonl")
+            write_jsonl(path, RAG_PASSAGES)
+            vectors = [rag_vector(p["title"] + " " + p["text"]) for p in RAG_PASSAGES]
+            common.write_index(os.path.join(d, "index"), RAG_PASSAGES, vectors, {"passages_sha256": common.file_sha256(path)})
+            idx = common.read_index(os.path.join(d, "index"), path)
+            self.assertEqual([p["passage_id"] for p, _ in idx.search(rag_vector("trunk male nevus"), 2)], ["p3", "p0"])
+            self.assertEqual((idx.dim, len(idx.passages)), (len(RAG_VOCAB), 4))
+            write_jsonl(path, RAG_PASSAGES[:3])                                   # the corpus changed after the index was built
+            with self.assertRaises(ValueError):
+                common.read_index(os.path.join(d, "index"), path)
+            with self.assertRaises(FileNotFoundError):
+                common.read_index(os.path.join(d, "missing"), path)
+
+    def test_an_index_needs_one_vector_per_passage(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(ValueError):
+                common.write_index(d, RAG_PASSAGES, [[1.0, 0.0]], {})
+            with self.assertRaises(ValueError):
+                common.write_index(d, RAG_PASSAGES[:2], [[1.0, 0.0], [1.0]], {})
+
+
+class RagQueryAndPromptTests(unittest.TestCase):
+    def setUp(self):
+        self.cases = run_cases(1, True)
+        self.q = {v: bd.question(self.cases[0], v) for v in VIEWS}
+
+    def test_the_query_is_the_patient_facts_and_an_image_only_question_has_none(self):
+        self.assertEqual(rl.patient_facts(self.q["text_only"]), "Patient: 50-year-old male. Skin lesion on the trunk.")
+        self.assertEqual(rl.patient_facts(self.q["multimodal"]), "Patient: 50-year-old male. Skin lesion on the trunk.")
+        self.assertEqual(rl.patient_facts(self.q["image_only"]), "")
+        self.assertEqual(rl.retrieval_query(self.q["image_only"]), rl.GENERIC_QUERY)
+
+    def test_the_query_never_holds_the_options_the_class_or_a_tag(self):
+        for q in self.q.values():
+            query = rl.retrieval_query(q, "a brown flat area")
+            for text in list(OPTION_TEXT.values()) + CLASSES + [q["gold_label"], "diagnosis"]:
+                self.assertNotIn(text.lower(), query.lower(), text)
+
+    def test_a_description_is_added_to_the_facts(self):
+        self.assertEqual(rl.retrieval_query(self.q["multimodal"], " A brown flat area. "),
+                         "Patient: 50-year-old male. Skin lesion on the trunk. A brown flat area.")
+        self.assertEqual(rl.retrieval_query(self.q["image_only"], "A brown flat area."), "A brown flat area.")
+
+    def test_the_prompt_numbers_the_passages_and_shows_neither_tags_nor_scores(self):
+        contexts = [{"rank": 1, "chunk_id": "p3", "title": "Trunk nevus", "text": "A nevus on the trunk of a male.", "tags": ["NV"], "score": 0.91},
+                    {"rank": 2, "chunk_id": "p2", "title": "", "text": "Vessels seen.", "tags": ["NV"], "score": 0.5}]
+        text = rl.rag_text(self.q["text_only"], "text_only", contexts)
+        self.assertIn("[1] Trunk nevus\nA nevus on the trunk of a male.", text)
+        self.assertIn("[2]\nVessels seen.", text)                                  # a passage without a title has no empty title line
+        self.assertIn(rl.PASSAGES_HEADER, text)
+        self.assertTrue(text.endswith(rl.rag_instruction("text_only", 2)))                 # the numbers in the instruction follow k
+        for hidden in ("0.91", "p3", "p2", "tags", "score", "NV"):
+            self.assertNotIn(hidden, text, hidden)
+        for letter, option in self.q["text_only"]["options"].items():
+            self.assertIn(f"{letter}. {option}", text)
+
+    def test_the_instruction_names_where_findings_may_come_from_and_asks_for_the_evidence_line(self):
+        self.assertIn("in the patient facts, that support", rl.rag_instruction("text_only"))
+        self.assertNotIn("image", rl.rag_instruction("text_only").lower())
+        self.assertIn("in the image, that support", rl.rag_instruction("image_only"))
+        self.assertIn("in the image and/or in the patient facts", rl.rag_instruction("multimodal"))
+        self.assertIn("as [1], [2] or [3] only", rl.rag_instruction("multimodal"))
+        self.assertIn("as [1] only", rl.rag_instruction("multimodal", 1))
+        self.assertIn("as [1], [2], [3], [4] or [5] only", rl.rag_instruction("multimodal", 5))
+        for view in VIEWS:
+            text = rl.rag_instruction(view)
+            self.assertIn('Evidence: [', text)
+            self.assertIn('"Evidence: none"', text)
+            self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
+            self.assertNotIn("{", text)
+
+
+class EvidenceLineTests(unittest.TestCase):
+    CONTEXTS = [{"chunk_id": "p3"}, {"chunk_id": "p0"}, {"chunk_id": "p2"}]
+
+    def parse(self, text):
+        return rl.parse_evidence(text, self.CONTEXTS)
+
+    def test_a_cited_sentence_is_read_with_its_passage(self):
+        self.assertEqual(self.parse('Reasoning and evidence: x [2].\nAnswer: A (Melanoma)\nEvidence: [2] "A nevus on the trunk of a male."'),
+                         {"chunk_id": "p0", "quote": "A nevus on the trunk of a male."})
+        self.assertEqual(self.parse("Evidence: [1] \u201cCurly quotes.\u201d")["quote"], "Curly quotes.")
+        self.assertEqual(self.parse("**Evidence:** [3] 'Single quotes.'")["chunk_id"], "p2")
+        self.assertEqual(self.parse("Evidence: [ 1 ] No quote marks at all")["quote"], "No quote marks at all")
+
+    def test_an_explicit_none_is_a_rejection(self):
+        for text in ("Answer: A\nEvidence: none", "Answer: A\nEvidence: None.", "Answer: A\n**Evidence:** none"):
+            self.assertIsNone(self.parse(text), text)
+
+    def test_a_missing_or_unreadable_line_is_not_a_rejection(self):
+        for text in ("Answer: A (Melanoma)", "Answer: A\nEvidence: it fits", "Answer: A\nEvidence: [2]", "Answer: A\nEvidence:", ""):
+            got = self.parse(text)
+            self.assertEqual((got["chunk_id"], got["quote"], got["unparsed"]), (None, "", True), text)
+
+    def test_a_number_outside_the_list_has_no_passage_and_the_last_line_counts(self):
+        self.assertEqual(self.parse('Evidence: [7] "Some sentence."'), {"chunk_id": None, "quote": "Some sentence."})
+        self.assertEqual(self.parse('Evidence: [0] "Zero."')["chunk_id"], None)
+        self.assertIsNone(self.parse('Evidence: [1] "first"\nEvidence: none'))
+        self.assertEqual(self.parse('Evidence: none\nEvidence: [1] "second"')["quote"], "second")
+
+    def test_the_reasoning_line_is_not_an_evidence_line_and_the_letter_is_still_read(self):
+        text = 'Reasoning and evidence: Flat brown area [1].\nAnswer: C (Basal cell carcinoma)\nEvidence: [1] "Flat brown."'
+        self.assertEqual(rl.parse_answer(text)["pred"], "C")
+        self.assertEqual(rl.parse_answer(text)["rationale"], "Flat brown area [1].")
+        self.assertEqual(self.parse("Reasoning and evidence: Evidence is thin.\nAnswer: A"), dict(rl.UNPARSED))
+
+
+class StandardRagTests(unittest.TestCase):
+    def setUp(self):
+        self.cases = run_cases(1, True)
+        self.q = {v: bd.question(self.cases[0], v) for v in VIEWS}
+
+    def rag(self, mode="question", k=3, passages=RAG_PASSAGES):
+        return rl.StandardRag(rag_index(passages), rag_encode, k, mode)
+
+    def test_the_question_query_retrieves_with_the_patient_facts(self):
+        text, extra, t_in, t_out = self.rag().prepare(self.q["text_only"], "text_only", None, None)
+        self.assertEqual(extra["query"], "Patient: 50-year-old male. Skin lesion on the trunk.")
+        self.assertEqual([c["chunk_id"] for c in extra["contexts"][:2]], ["p0", "p3"])      # equal scores: the corpus order decides
+        self.assertEqual(extra["contexts"][0]["score"], extra["contexts"][1]["score"])
+        self.assertEqual([c["rank"] for c in extra["contexts"]], [1, 2, 3])
+        self.assertEqual((t_in, t_out), (None, None))
+        self.assertIn("[2] Trunk nevus", text)
+        self.assertNotIn("description", extra)
+
+    def test_k_sets_the_number_of_passages(self):
+        for k in (1, 2, 4):
+            self.assertEqual(len(self.rag(k=k).prepare(self.q["text_only"], "text_only", None, None)[1]["contexts"]), k)
+
+    def test_the_corpus_tags_travel_with_the_passage_but_never_change_what_is_retrieved(self):
+        retagged = [{**p, "tags": ["MEL"]} for p in RAG_PASSAGES]
+        a = self.rag().prepare(self.q["text_only"], "text_only", None, None)
+        b = self.rag(passages=retagged).prepare(self.q["text_only"], "text_only", None, None)
+        self.assertEqual([c["chunk_id"] for c in a[1]["contexts"]], [c["chunk_id"] for c in b[1]["contexts"]])
+        self.assertEqual(a[0], b[0])                                                     # and the prompt is the same
+        self.assertEqual((a[1]["contexts"][1]["tags"], b[1]["contexts"][1]["tags"]), (["NV"], ["MEL"]))   # the tags travel with the passage
+
+    def test_an_image_only_question_gets_the_same_passages_whatever_the_case(self):
+        other = bd.question(run_cases(2, True)[1], "image_only")
+        a = self.rag().prepare(self.q["image_only"], "image_only", None, None)[1]
+        b = self.rag().prepare(other, "image_only", None, None)[1]
+        self.assertEqual((a["query"], [c["chunk_id"] for c in a["contexts"]]), (b["query"], [c["chunk_id"] for c in b["contexts"]]))
+
+    def test_the_description_query_asks_the_model_once_and_adds_the_tokens(self):
+        calls = []
+
+        class Client:
+            def ask(self, system, text, image):
+                calls.append((text, image))
+                return {"text": " A brown flat vessels area. ", "tokens_in": 700, "tokens_out": 30}
+        text, extra, t_in, t_out = self.rag("description").prepare(self.q["multimodal"], "multimodal", Client(), "IMG")
+        self.assertEqual(calls, [(rl.DESCRIBE_INSTRUCTION, "IMG")])
+        self.assertEqual((extra["description"], t_in, t_out), ("A brown flat vessels area.", 700, 30))
+        self.assertEqual(extra["query"], "Patient: 50-year-old male. Skin lesion on the trunk. A brown flat vessels area.")
+        calls.clear()
+        self.rag("description").prepare(self.q["text_only"], "text_only", Client(), None)
+        self.assertEqual(calls, [])                                                       # nothing to describe in a text-only question
+
+    def test_a_refused_description_falls_back_to_the_facts(self):
+        class Client:
+            def ask(self, system, text, image):
+                raise rl.Refused("moderation")
+        extra = self.rag("description").prepare(self.q["multimodal"], "multimodal", Client(), "IMG")[1]
+        self.assertEqual((extra["description"], extra["query"]), ("", "Patient: 50-year-old male. Skin lesion on the trunk."))
+
+    def test_an_unknown_query_mode_stops_and_the_settings_name_what_was_used(self):
+        with self.assertRaises(ValueError):
+            self.rag("rationale")
+        s = self.rag().settings()
+        self.assertEqual((s["k"], s["query"], s["query_encoder"], s["index_passages_sha256"]), (3, "question", common.MEDCPT_QUERY, "abc"))
 
 
 if __name__ == "__main__":

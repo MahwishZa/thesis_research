@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Baseline 1, LLM only (no retrieval): asks one of the research models every question of one view and split, and saves its answers.
+Baseline 1, LLM only (no retrieval), and baseline 2, standard RAG: asks one of the research models every question of one view and
+split, and saves its answers.
 The models are used as they are (pre-trained, no fine-tuning), as in RAG^2 (Sohn et al. 2025, section 4: "as-is, without further
 fine-tuning").
 
@@ -33,10 +34,25 @@ Order: the questions are asked in a fixed shuffled order (asking_order), so a --
 classes; the scores do not depend on the order.
 An API error that retrying cannot fix (wrong key, no credit, ...) stops the run; nothing already answered is lost.
 
+Standard RAG (python src/run.py standard-rag, added 2026-11-24): the same models, prompt wording and answer rule, plus retrieval:
+  1. query      "question" (approved: the patient facts of the question; an image-only question has none, so its query is a fixed
+                sentence and every image-only question gets the same passages) or "description" (a proposal, not yet approved: the
+                model first describes what it sees, without naming a diagnosis, and the query is the facts plus that description;
+                one more call per image question). The true class, the options and the corpus tags are never in the query.
+  2. retrieval  the MedCPT query encoder and the index built by `python src/build.py index`; the k = 3 passages with the highest cosine
+                similarity of the whole corpus (no filter by disease).
+  3. prompt     the question, the options, the numbered passages (title and text; tags are not shown) and the instruction: the two lines
+                above and a third line, "Evidence: [<number>] "<one sentence copied word for word from that passage>"" or
+                "Evidence: none". The sentence is checked against the passage by evaluate.py (a quote is never trusted).
+  Output: results/standard_rag/<model>/<view>_<split>/ with the same files as above and, in every line, query, contexts (rank, score,
+  chunk_id, title, text, tags: the tags are for the evaluation only), evidence and, for the "description" query, description.
+  evidence is null for an explicit "Evidence: none"; a missing or unreadable line gives {"chunk_id": null, "quote": "", "unparsed": true}.
+
 Usage (on the laptop):
   python src/run.py llm-only --model gpt-4o --view text_only --split val --dry-run --limit 2     # see the prompt; free
   python src/run.py llm-only --model gpt-4o --view text_only --split val --limit 5              # a small paid trial
   python src/run.py llm-only --model gpt-4o --view text_only --split test                       # a full run
+  python src/run.py standard-rag --model gpt-4o --view text_only --split val --dry-run --limit 2 # prompts with passages; no API call
 """
 import argparse
 import base64
@@ -50,7 +66,8 @@ import time
 import urllib.error
 import urllib.request
 
-from common import SEED, SPLITS, VIEWS, get_logger, load_env, question_file, read_jsonl, write_json
+from common import (INDEX_DIR, KNOWLEDGE_CORPUS, MEDCPT_QUERY, SEED, SPLITS, VIEWS, get_logger, load_env, medcpt_encoder,
+                    question_file, read_index, read_jsonl, write_json)
 
 PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -138,6 +155,110 @@ def parse_answer(text, letters="ABCDEFGH"):
     if cut is None:
         return {"pred": None, "rationale": REASONING_LABEL.sub("", text.strip())}
     return {"pred": pred, "rationale": tidy_reasoning(text[:cut]) or tidy_reasoning(text[end:])}
+
+
+# ---- standard RAG: query, retrieval, prompt and evidence (no internet; the encoder needs torch) ---------------------------
+RAG_PROMPT_NAME = "standard_rag"
+QUERY_MODES = ("question", "description")
+GENERIC_QUERY = "dermoscopic image of a skin lesion"      # the query of an image-only question: it has no patient facts
+DESCRIBE_INSTRUCTION = ("Describe what is visible in this skin-lesion image in at most three sentences: colour, structures, pattern "
+                        "and distribution. Do not name a diagnosis.")
+RAG_INSTRUCTION = ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
+                   "this case, {findings}, that support your choice; mention a passage as {numbers} only if it supports your "
+                   "choice>\". Second line: \"Answer: <the letter of the most likely option> (<the name of that option>)\". Third line: "
+                   "\"Evidence: [<the number of one passage>] <one sentence copied word for word from that passage that supports your "
+                   "answer, between quotation marks>\" or \"Evidence: none\" if no passage supports your answer.")
+PASSAGES_HEADER = "Retrieved passages (from medical sources; they may not be about this case):"
+EVIDENCE_LINE = re.compile(r"(?im)^\W*evidence\s*\**\s*[:\-]\**\s*(.*)$")
+EVIDENCE_CITATION = re.compile(r"\[\s*(\d+)\s*\]\s*[\"\u201c\u2018']?(.*?)[\"\u201d\u2019']?\s*$", re.S)
+UNPARSED = {"chunk_id": None, "quote": "", "unparsed": True}
+
+
+def patient_facts(q):
+    """The patient sentence of a question without the generic question and the words about the image: "" for an image-only question."""
+    text = q["question"]
+    for phrase in ("What is the most likely diagnosis?", "Look at the dermoscopic image of the skin lesion.",
+                   "Look at the dermoscopic image of the lesion."):
+        text = text.replace(phrase, "")
+    return " ".join(text.split())
+
+
+def retrieval_query(q, description=""):
+    """The text the retriever gets: the patient facts and, for the "description" query, the model's description of the image. Never the
+    options, the true class or a tag."""
+    query = " ".join(x for x in (patient_facts(q), (description or "").strip()) if x)
+    return query or GENERIC_QUERY
+
+
+def rag_instruction(view, k=3):
+    """The instruction of the RAG prompt for one view and k passages."""
+    numbers = "[1]" if k == 1 else ", ".join(f"[{i}]" for i in range(1, k)) + f" or [{k}]"
+    return RAG_INSTRUCTION.replace("{findings}", FINDINGS_IN[view]).replace("{numbers}", numbers)
+
+
+def rag_text(q, view, contexts):
+    options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
+    passages = "\n\n".join(f"[{n}] {c['title']}\n{c['text']}" if c.get("title") else f"[{n}]\n{c['text']}"
+                            for n, c in enumerate(contexts, 1))
+    return f"{q['question']}\n\nOptions:\n{options}\n\n{PASSAGES_HEADER}\n{passages}\n\n{rag_instruction(view, len(contexts))}"
+
+
+def parse_evidence(text, contexts):
+    """The evidence line of a reply: None for an explicit "Evidence: none"; {"chunk_id", "quote"} for "Evidence: [2] "...""
+    (chunk_id is the id of passage 2, or None when the number is outside the list, so the quote is not found); UNPARSED when
+    there is no usable line. Whether the quote is really in the passage is checked by evaluate.py, never here."""
+    lines = EVIDENCE_LINE.findall(text or "")
+    if not lines:
+        return dict(UNPARSED)
+    last = lines[-1].strip().strip("*_ ")
+    if re.match(r"(?i)none\b", last):
+        return None
+    m = EVIDENCE_CITATION.match(last)
+    if not m or not m.group(2).strip():
+        return dict(UNPARSED)
+    n = int(m.group(1))
+    return {"chunk_id": contexts[n - 1]["chunk_id"] if 1 <= n <= len(contexts) else None, "quote": m.group(2).strip()}
+
+
+def add_tokens(a, b):
+    return None if a is None and b is None else (a or 0) + (b or 0)
+
+
+class StandardRag:
+    """The retrieval of one run: the index, the query encoder, k and how the query is made."""
+
+    def __init__(self, index, encode_query, k=3, query_mode="question"):
+        if query_mode not in QUERY_MODES:
+            raise ValueError(f"unknown query mode {query_mode!r}")
+        self.index, self.encode_query, self.k, self.query_mode = index, encode_query, k, query_mode
+
+    def settings(self):
+        meta = self.index.meta
+        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": self.query_mode,
+                "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
+                "exclude_reference_pages": meta.get("exclude_reference_pages")}
+
+    def instruction(self, view):
+        return rag_instruction(view, self.k)
+
+    def prepare(self, q, view, client, image):
+        """(the text to send, the fields to add to the record, the tokens in and out of the extra call). In the "description" query an
+        image view first asks the model what it sees; a text-only question has nothing to describe, so its query is the facts."""
+        description, t_in, t_out = "", None, None
+        if self.query_mode == "description" and view != "text_only" and client is not None:
+            try:
+                reply = client.ask(SYSTEM, DESCRIBE_INSTRUCTION, image)
+                description, t_in, t_out = reply["text"].strip(), reply.get("tokens_in"), reply.get("tokens_out")
+            except Refused:
+                description = ""
+        query = retrieval_query(q, description)
+        hits = self.index.search(self.encode_query([query])[0], self.k)
+        contexts = [{"rank": r, "chunk_id": p["passage_id"], "title": p.get("title"), "text": p["text"], "tags": p.get("tags", []),
+                     "score": score} for r, (p, score) in enumerate(hits, 1)]
+        extra = {"query": query, "contexts": contexts}
+        if self.query_mode == "description":
+            extra["description"] = description
+        return rag_text(q, view, contexts), extra, t_in, t_out
 
 
 def image_b64(data, path):
@@ -262,15 +383,18 @@ def asking_order(questions):
     return sorted(questions, key=lambda q: hashlib.sha256(f"{SEED}:{q['id']}".encode("utf-8")).hexdigest())
 
 
-def run_folder(results, model, view, split):
-    final = os.path.join(results, "llm_only", model, f"{view}_{split}")
+def run_folder(results, model, view, split, system="llm_only"):
+    final = os.path.join(results, system, model, f"{view}_{split}")
     return final, final + ".partial"
 
 
-def run(args, client, log):
+def run(args, client, log, rag=None):
+    """One run: every question of one view and split, asked of one model. `rag` (a StandardRag) adds retrieval and evidence."""
+    system = "standard_rag" if rag else "llm_only"
+    style = getattr(args, "style", "rationale")
     qpath = os.path.join(args.data, question_file(args.view, args.split))
     questions = read_jsonl(qpath)
-    final, partial = run_folder(args.results, args.model, args.view, args.split)
+    final, partial = run_folder(args.results, args.model, args.view, args.split, system)
     if os.path.isdir(final) and not args.dry_run:
         log.info(f"already complete: {final}")
         return final
@@ -278,18 +402,30 @@ def run(args, client, log):
         missing = [q["image_path"] for q in questions if not os.path.isfile(os.path.join(args.data, q["image_path"]))]
         if missing:
             raise SystemExit(f"{len(missing)} images are missing, e.g. {os.path.join(args.data, missing[0])}")
+    def build(q, image):
+        if rag is None:
+            return user_text(q, style, args.view), {}, None, None
+        return rag.prepare(q, args.view, client, image)
+
     if args.dry_run:
         for q in asking_order(questions)[:args.limit or 3]:
-            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[user] {user_text(q, args.style, args.view)}")
+            text, extra, _, _ = build(q, None)
+            note = "\n[the description of the image is made by the model in a real run; this query has the patient facts only]" \
+                if rag and rag.query_mode == "description" and args.view != "text_only" else ""
+            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[query] {extra.get('query', '-')}{note}\n"
+                     f"[user] {text}")
         return None
     os.makedirs(partial, exist_ok=True)
     out = os.path.join(partial, "predictions.jsonl")
     done = {r["id"] for r in read_jsonl(out)} if os.path.exists(out) else set()
     with open(qpath, "rb") as f:
         qsha = hashlib.sha256(f.read()).hexdigest()
-    settings = {"baseline": "llm_only", "model": args.model, "model_settings": MODELS[args.model], "view": args.view,
+    settings = {"baseline": system, "model": args.model, "model_settings": MODELS[args.model], "view": args.view,
                 "split": args.split, "questions": qpath.replace("\\", "/"), "questions_sha256": qsha,
-                "prompt": PROMPT_NAME, "style": args.style, "system": SYSTEM, "instruction": instruction(args.style, args.view)}
+                "prompt": RAG_PROMPT_NAME if rag else PROMPT_NAME, "style": style, "system": SYSTEM,
+                "instruction": rag.instruction(args.view) if rag else instruction(style, args.view)}
+    if rag:
+        settings["retrieval"] = rag.settings()
     info_path = os.path.join(partial, "run.json")
     if os.path.exists(info_path):
         with open(info_path, encoding="utf-8") as f:
@@ -309,18 +445,23 @@ def run(args, client, log):
             for k, q in enumerate(todo, 1):
                 image = image_b64(args.data, q["image_path"]) if args.view != "text_only" else None
                 start = time.time()
+                text, extra, extra_in, extra_out = build(q, image)
                 try:
-                    reply = client.ask(SYSTEM, user_text(q, args.style, args.view), image)
+                    reply = client.ask(SYSTEM, text, image)
                 except Refused as e:
                     reply = {"text": "", "finish_reason": f"refused by host: {str(e)[:200]}"}
                 answer = parse_answer(reply["text"], "".join(q["options"]))
                 record = {"id": q["id"], "pred": answer["pred"], "valid": answer["pred"] is not None,
                           "rationale": answer["rationale"],
                           "raw_output": reply["text"], "finish_reason": reply.get("finish_reason"),
-                          "served_by": reply.get("served_by"), "tokens_in": reply.get("tokens_in"),
-                          "tokens_out": reply.get("tokens_out"), "seconds": round(time.time() - start, 2),
-                          "model": args.model, "view": args.view, "split": args.split, "prompt": PROMPT_NAME,
+                          "served_by": reply.get("served_by"), "tokens_in": add_tokens(reply.get("tokens_in"), extra_in),
+                          "tokens_out": add_tokens(reply.get("tokens_out"), extra_out), "seconds": round(time.time() - start, 2),
+                          "model": args.model, "view": args.view, "split": args.split,
+                          "prompt": RAG_PROMPT_NAME if rag else PROMPT_NAME,
                           "time": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
+                if rag:
+                    record.update(extra)
+                    record["evidence"] = parse_evidence(reply["text"], extra["contexts"])
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()
                 os.fsync(f.fileno())
@@ -385,13 +526,51 @@ def llm_only_main(argv=None):
     return run(args, client, log)
 
 
-COMMANDS = {"llm-only": llm_only_main}      # the other baselines (standard RAG, RAG^2, the proposed system) are added here
+def rag_parse_args(argv=None):
+    ap = argparse.ArgumentParser(prog="run.py standard-rag", description="Standard RAG: one model, one view, one split.")
+    ap.add_argument("--model", required=True, choices=sorted(MODELS))
+    ap.add_argument("--view", required=True, choices=VIEWS)
+    ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
+    ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
+    ap.add_argument("--query", default="question", choices=QUERY_MODES,
+                    help="question: the patient facts (approved); description: the model first describes the image (a proposal)")
+    ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
+    ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
+    ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
+    ap.add_argument("--env-file", default=".env", help="the file with the API keys")
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--results", default="results")
+    ap.add_argument("--index", default=None, help=f"the index folder (default: data/{INDEX_DIR})")
+    return ap.parse_args(argv)
+
+
+def standard_rag_main(argv=None, rag=None):
+    args = rag_parse_args(argv)
+    final, partial = run_folder(args.results, args.model, args.view, args.split, "standard_rag")
+    name = f"standard_rag.{args.model}.{args.view}.{args.split}"
+    log, client = get_logger(name), None
+    if os.path.isdir(final) and not args.dry_run:
+        return run(args, None, log, rag)
+    if rag is None:
+        folder = args.index or os.path.join(args.data, INDEX_DIR)
+        index = read_index(folder, os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))      # stops with a clear message
+        rag = StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.query)
+    if not args.dry_run:
+        unusable = load_env(args.env_file)
+        if unusable:
+            log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
+        client = make_client(args.model, log)                       # stops here when the key is missing
+        log = get_logger(name, os.path.join(partial, "run.log"))
+    return run(args, client, log, rag)
+
+
+COMMANDS = {"llm-only": llm_only_main, "standard-rag": standard_rag_main}      # RAG^2 and the proposed system are added here
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if not argv or argv[0] not in COMMANDS:
-        print("usage: python src/run.py llm-only --model <model> --view <view> --split <split> [--limit N] [--dry-run]\n"
+        print("usage: python src/run.py llm-only|standard-rag --model <model> --view <view> --split <split> [--limit N] [--dry-run]\n"
               "commands: " + ", ".join(COMMANDS))
         return 0 if argv in ([], ["-h"], ["--help"]) else 2
     return COMMANDS[argv[0]](argv[1:])

@@ -18,6 +18,7 @@ htmlcov/
 # data/knowledge_corpus/manifest.csv and corpus_card.json (no text) are committed.
 /data/knowledge_corpus/passages.jsonl
 /data/knowledge_corpus/cache/
+/data/knowledge_corpus/index/
 /data/knowledge_corpus_trial/
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes), half-written files and run logs

@@ -16,7 +16,7 @@ Updated 2026-11-24. All numbers come from the committed run files (`results/llm_
 | System | Text only | Image only | Image + text |
 |---|---|---|---|
 | **LLM-only** | done (4 models) ✔ | done (4 models) ✔ | done (4 models) ✔ |
-| Standard RAG | not built | not built | not built |
+| Standard RAG | built, not run | built, not run | built, not run |
 | RAG² | not decided | not decided | not decided |
 | Proposed RAG | not designed | not designed | not designed |
 
@@ -256,7 +256,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | Item | Status |
 |---|---|
-| Standard RAG (MedCPT encoders, top 3 passages) | approved, not built |
+| Standard RAG (MedCPT encoders, top 3 passages) | built and tested; needs `build.py index`, then a validation trial |
 | Proposed RAG and RAG² scope | not decided |
 | Reference texts for melanoma and BCC (semantic similarity) | not decided |
 | GPT-4o refusals per class | not done |

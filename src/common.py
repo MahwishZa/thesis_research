@@ -1,13 +1,17 @@
 """Shared definitions for every script in src/: the classes, the folder layout of data/, safe file writing and logging.
-Only the Python standard library is used here, so every script (and every test) can import it."""
+Only the Python standard library is used here (the encoders import torch and transformers only when they are called), so every
+script and every test can import it."""
 import contextlib
 import csv
 import hashlib
+import heapq
 import json
 import logging
+import operator
 import os
 import sys
 import tempfile
+from array import array
 from collections import defaultdict
 from pathlib import Path
 
@@ -217,3 +221,86 @@ def balanced_splits(cases, per_class=TEST_PER_CLASS, seed=SEED, split="test"):
         if n != per_class:
             raise ValueError(f"{label}: only {n} {split} images can be reached by whole lesion groups, not {per_class}")
     return new
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# Dense retrieval for the RAG systems (standard RAG, 2026-11-24). Passages are embedded once with the MedCPT article encoder, a
+# question is embedded with the MedCPT query encoder (Jin et al. 2023, Bioinformatics 39:btad651), and the passages with the highest
+# cosine similarity come first. The vectors have unit length, so the cosine is a dot product. Nothing here reads a label or a tag.
+# ---------------------------------------------------------------------------------------------------------------------------
+MEDCPT_QUERY = "ncbi/MedCPT-Query-Encoder"
+MEDCPT_ARTICLE = "ncbi/MedCPT-Article-Encoder"
+INDEX_DIR = f"{KNOWLEDGE_CORPUS}/index"
+INDEX_FILES = ("embeddings.f32", "index.json")
+
+
+def medcpt_encoder(model_name, max_length):
+    """A function that turns a list of texts (a list of [title, text] pairs for the article encoder) into unit-length vectors, using the
+    [CLS] embedding of the model. The model is downloaded on first use."""
+    import torch
+    from transformers import AutoModel, AutoTokenizer
+    tok, model = AutoTokenizer.from_pretrained(model_name), AutoModel.from_pretrained(model_name).eval()
+
+    @torch.no_grad()
+    def encode(items, batch=16):
+        out = []
+        for start in range(0, len(items), batch):
+            x = tok(items[start:start + batch], truncation=True, padding=True, return_tensors="pt", max_length=max_length)
+            out += torch.nn.functional.normalize(model(**x).last_hidden_state[:, 0], dim=-1).tolist()
+        return out
+    return encode
+
+
+def file_sha256(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def write_index(folder, passages, vectors, meta):
+    """Saves the vectors (float32, one row per passage, in the order of `passages`) and index.json (the passage ids and how the index
+    was made). The vectors are derived from licensed text, so the folder stays on the laptop (see .gitignore)."""
+    if len(vectors) != len(passages) or not passages:
+        raise ValueError("an index needs one vector per passage, and at least one passage")
+    dim = len(vectors[0])
+    flat = array("f")
+    for v in vectors:
+        if len(v) != dim:
+            raise ValueError("all vectors of an index must have the same length")
+        flat.extend(v)
+    os.makedirs(folder, exist_ok=True)
+    with atomic_path(os.path.join(folder, "embeddings.f32")) as tmp, open(tmp, "wb") as f:
+        flat.tofile(f)
+    write_json(os.path.join(folder, "index.json"),
+               {**meta, "dim": dim, "n_passages": len(passages), "passage_ids": [p["passage_id"] for p in passages]})
+
+
+class DenseIndex:
+    """The passages and their vectors; `search` gives the k best passages for one query vector."""
+
+    def __init__(self, passages, flat, dim, meta=None):
+        self.passages, self.flat, self.dim, self.meta = passages, flat, dim, meta or {}
+        self.rows = memoryview(flat)
+
+    def search(self, query_vector, k):
+        """[(passage, score), ...], best first. A tie is broken by the order of the passages, so a search always gives the same list."""
+        if len(query_vector) != self.dim:
+            raise ValueError(f"the query vector has {len(query_vector)} numbers, the index {self.dim}")
+        scores = (sum(map(operator.mul, query_vector, self.rows[i * self.dim:(i + 1) * self.dim])) for i in range(len(self.passages)))
+        best = heapq.nlargest(k, enumerate(scores), key=lambda t: (t[1], -t[0]))
+        return [(self.passages[i], round(score, 6)) for i, score in best]
+
+
+def read_index(folder, passages_path):
+    """Loads an index written by write_index with the passages it was made from; stops if the passage file has changed since."""
+    meta_path = os.path.join(folder, "index.json")
+    if not os.path.isfile(meta_path) or not os.path.isfile(os.path.join(folder, "embeddings.f32")):
+        raise FileNotFoundError(f"no index in {folder}: run python src/build.py index")
+    with open(meta_path, encoding="utf-8") as f:
+        meta = json.load(f)
+    if meta.get("passages_sha256") != file_sha256(passages_path):
+        raise ValueError(f"{passages_path} has changed since the index was built: run python src/build.py index again")
+    by_id = {p["passage_id"]: p for p in read_jsonl(passages_path)}
+    flat = array("f")
+    with open(os.path.join(folder, "embeddings.f32"), "rb") as f:
+        flat.fromfile(f, meta["n_passages"] * meta["dim"])
+    return DenseIndex([by_id[i] for i in meta["passage_ids"]], flat, meta["dim"], meta)

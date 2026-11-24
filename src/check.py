@@ -21,7 +21,7 @@ import sys
 import tempfile
 
 from build import build_views
-from common import (ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, PROCESSED_CASES, PROCESSED_IMAGES, RAW, SEED, SPLITS, TEST_PER_CLASS, VAL_PER_CLASS,
+from common import (ALL_CASES, CLASSES, INDEX_DIR, KNOWLEDGE_CORPUS, PROCESSED_CASES, PROCESSED_IMAGES, RAW, SEED, SPLITS, TEST_PER_CLASS, VAL_PER_CLASS,
                     VIEWS, images_not_in_table, question_file, read_csv, view_table, write_json)
 
 DONE, NOT_RUN, PROBLEM = "done", "not run", "problem"
@@ -136,14 +136,32 @@ def step_references(data):
     return DONE, f"{sum(len(r['texts']) for r in refs.values())} reference texts ({counts})"
 
 
-def step_runs(data, results, models):
-    """One line per model, view and split that has a run folder; the test split is listed even when missing."""
+def step_index(data):
+    folder = os.path.join(data, INDEX_DIR)
+    meta_path = os.path.join(folder, "index.json")
+    if not os.path.isfile(meta_path):
+        return NOT_RUN, "no index: run build.py index on the laptop (needs passages.jsonl)"
+    with open(meta_path, encoding="utf-8") as f:
+        meta = json.load(f)
+    if not os.path.isfile(os.path.join(folder, "embeddings.f32")):
+        return PROBLEM, "index.json without embeddings.f32: build the index again"
+    if os.path.getsize(os.path.join(folder, "embeddings.f32")) != 4 * meta["n_passages"] * meta["dim"]:
+        return PROBLEM, "embeddings.f32 has the wrong size: build the index again"
+    passages = os.path.join(data, KNOWLEDGE_CORPUS, "passages.jsonl")
+    if os.path.isfile(passages) and sha256(passages) != meta.get("passages_sha256"):
+        return PROBLEM, "passages.jsonl changed after the index was built: run build.py index again"
+    note = f"{meta['n_passages']} passages, {meta['dim']} numbers each ({meta['encoder']})"
+    return DONE, note + ("; reference pages left out" if meta.get("exclude_reference_pages") else "; all passages")
+
+
+def step_runs(data, results, models, systems=("llm_only", "standard_rag")):
+    """One line per system, model, view and split that has a run folder; the test split is listed even when missing."""
     rows = []
-    for model in models:
+    for system, model in [(sy, m) for sy in systems for m in models]:
         for view in VIEWS:
             for split in ("val", "test"):
-                final = os.path.join(results, "llm_only", model, f"{view}_{split}")
-                name = f"llm_only {model} {view} {split}"
+                final = os.path.join(results, system, model, f"{view}_{split}")
+                name = f"{system} {model} {view} {split}"
                 if os.path.isdir(final + ".partial"):
                     with open(os.path.join(final + ".partial", "run.json"), encoding="utf-8") as f:
                         info = json.load(f)
@@ -173,7 +191,8 @@ def check(data="data", results="results"):
     steps = [("1 raw Kaggle download", step_raw(data)), ("1 cleaning (preprocess.py)", step_clean(data)),
              ("2 views (build.py views)", step_views(data)), ("- feature check (check.py features)", step_feature_check(results)),
              ("3 knowledge corpus (build.py corpus)", step_corpus(data)),
-             ("3b reference texts (build.py references)", step_references(data))]
+             ("3b reference texts (build.py references)", step_references(data)),
+             ("4 retrieval index (build.py index)", step_index(data))]
     return [(name, *r) for name, r in steps] + step_runs(data, results, sorted(MODELS))
 
 

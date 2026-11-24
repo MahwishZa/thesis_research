@@ -305,7 +305,7 @@ TOP_LEVEL = {".claude", ".gitattributes", ".gitignore", "README.md", "data", "re
 class WorkspaceTests(unittest.TestCase):
     def test_the_top_level_structure_is_the_one_the_researcher_fixed_until_the_research_is_final(self):
         """.claude/CLAUDE.md: no top-level file or folder is added, renamed or removed; new material goes inside. The folder archive/ was
-        removed on 2026-11-25 at the researcher's request."""
+        removed on 2026-11-24 at the researcher's request."""
         if shutil.which("git") and (ROOT / ".git").exists():
             held = {p.split("/")[0] for p in tracked(".")}
             self.assertEqual(sorted(held ^ TOP_LEVEL), [], "the tracked top level differs from the fixed structure")

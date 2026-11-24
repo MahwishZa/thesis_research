@@ -19,7 +19,7 @@ Everything here is real data: no synthetic images and no AI-generated text. Mark
 | Splits | train 1,797 · validation 160 (20 per class) · test 240 (30 per class); no lesion in two splits ✔ |
 | Views | image only · text only (age, sex, body site) · image + text; one 8-option multiple-choice question per case |
 | Knowledge corpus | 3,444 passages from 994 documents, four libraries (for the RAG systems) |
-| Used by | `src/run.py` (LLM-only runs), `src/evaluate.py` (all metrics), `src/check.py` (pipeline and feature checks) |
+| Used by | `src/run.py` (LLM-only and standard-RAG runs), `src/evaluate.py` (all metrics), `src/check.py` (pipeline and feature checks) |
 
 ## 2. Motivation and intended use
 
@@ -168,6 +168,24 @@ Built by `python src/build.py corpus`; snapshot 2026-11-23; numbers ✔ from `co
 - **Licences of the passages** (✔ counts): PubMed abstracts 1,124 (research use, cite PMID); CC BY 4.0 1,091; CC BY-NC 4.0 521; CC BY-NC-SA 4.0 234; CC BY-NC-ND 4.0 191; other Creative Commons 200; Meditron guideline sources 83 (the source's own terms).
 - **What is kept in Git:** `manifest.csv` (one row per passage: id, library, document, URL, licence, tags, word count, MD5), `corpus_card.json` (counts, removals, settings) and `reference_texts.json`. The passage texts stay on the laptop because of their licences.
 
+### 9.1 The retrieval index (`python src/build.py index`)
+
+Each passage is embedded once as [title, text] with the MedCPT article encoder (Jin et al. 2023), and the unit-length vectors are saved in `data/knowledge_corpus/index/` (`embeddings.f32`, `index.json`; laptop only, because they are derived from licensed text). A question is embedded with the MedCPT query encoder and the passages with the highest cosine similarity are retrieved from the whole corpus, with no filter by disease. Passages are not cut again: the corpus builder already cut them (whole sentences, at most 200 words, one sentence shared with the next). Tags and query classes are never embedded and never used in retrieval; `index.json` records the encoder, the SHA-256 of `passages.jsonl` (a changed corpus is noticed) and whether the reference pages were left out.
+
+### 9.2 Corpus audit (✔ from `manifest.csv`, 2026-11-24)
+
+| Finding | Figure | Consequence |
+|---|---|---|
+| Duplicate passages (same text) or passage ids | 0 | none |
+| Passages shorter than 40 words | 252 of 3,444 (7.3%) | short passages carry little evidence |
+| Passages with no tag | 386 (11.2%): pubmed 247, guidelines 123, pmc 16 | they never count as relevant in Hit@k, Precision@k, Recall@k, MRR and nDCG@k, even when on topic |
+| Passages whose query disease is not among their tags | 557 (16.2%) | the tags come from class names found in the text; they are weak labels |
+| Most passages from one document | 102 (PMC7150662), then 83 and 65 | a few long papers supply many passages |
+| **Textbook passages from the 6 pages that also supply the reference texts** (NV, BCC, AK, BKL, DF, SCC) | **46 of 208** | a RAG answer that quotes such a passage resembles the reference text of its disease almost word for word, which inflates the semantic similarity. `build.py index --exclude-reference-pages` leaves them out; the choice is not yet made |
+| Passages per disease (tags) | MEL 1,123 · NV 631 · BCC 576 · SCC 583 · AK 476 · BKL 368 · VASC 279 · DF 257 | retrieval may lean to melanoma |
+| Gaps | guidelines: DF 0, BKL 12; pubmed: VASC 74; textbook: AK 11, DF 10, VASC 4, SCC 4 | thin evidence for the rarer diseases |
+| Image-associated text (figure captions, dermoscopy criteria) | not in the corpus apart from the Dermoscopedia pages | the retriever has little text about what a lesion looks like |
+
 ## 10. Data quality checks and what they show
 
 `python src/check.py features` trains small classifiers on handcrafted features, to detect shortcuts. It is an analysis of the data, not an experiment on the LLMs. Test split, accuracy (chance 12.5%) and macro AUC ✔ (`results/feature_check/feature_check_results.json`, laptop run of 2026-11-23):
@@ -188,7 +206,7 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 2. **Missing patient facts are not random.** Missing age, sex or site occurs mostly in NV and MEL, so "not recorded" hints at the class (15 of the 28 test cases with a missing fact are NV). State this as a limitation of the text-only results.
 3. **Small test set.** 240 cases (30 per class, 190 lesions). Always report 95% bootstrap intervals (`src/evaluate.py` draws whole lesions).
 4. **Balanced evaluation splits.** Accuracy and recall are comparable across classes; precision is not a clinic's precision.
-5. **Corpus imbalance and weak labels.** The corpus holds 4 times more melanoma-tagged passages than dermatofibroma-tagged ones, and the tags come partly from class names, so retrieval metrics measure topical relevance, not proof (`results/evaluation_guide.md`).
+5. **Corpus imbalance, weak labels and overlap with the reference texts.** The corpus holds 4 times more melanoma-tagged passages than dermatofibroma-tagged ones, 11.2% of the passages have no tag, and the tags come partly from class names, so retrieval metrics measure topical relevance, not proof (`results/evaluation_guide.md`). 46 textbook passages come from the pages that supply the reference texts of the semantic similarity (section 9.2).
 6. **Licence.** ISIC images are mostly CC BY-NC: non-commercial research only.
 
 ## 12. Licences, distribution and research ethics
@@ -223,6 +241,6 @@ python -m unittest discover -s tests   # includes tests/test_system.py: the comm
 
 | Date | Correction |
 |---|---|
-| 2026-11-24 | Restructured under the data-sheet headings. Corrected stale figures: the source-detection AUC (0.935 → 0.953), the shortcut score (33% "balanced accuracy" → 31.7% accuracy), the test-set size ("16 to 68 per class" → 30 per class, 240 cases). Added sections 3.2 to 3.4, 9 and 10 with figures read from the committed files. Added the class-balance record (section 6). |
+| 2026-11-24 | Added the retrieval index and the corpus audit (sections 9.1 and 9.2). Restructured under the data-sheet headings. Corrected stale figures: the source-detection AUC (0.935 → 0.953), the shortcut score (33% "balanced accuracy" → 31.7% accuracy), the test-set size ("16 to 68 per class" → 30 per class, 240 cases). Added sections 3.2 to 3.4, 9 and 10 with figures read from the committed files. Added the class-balance record (section 6). |
 | 2026-11-23 | Split sizes updated after the balanced validation split (160 cases, 20 per class). |
 | 2026-11-22 | First version after the cleaning and the balanced test split. |

@@ -65,7 +65,7 @@ Checked ✔: nDCG@3, MRR, Precision@3, Hit@3, Recall@3 and context precision wer
 
 ### C. Faithfulness and hallucination: does the answer rest on the evidence? (RAG systems)
 
-The model must end with "Evidence: [passage number] "<sentence copied word for word>"" or "Evidence: none". (Not built yet.)
+The model must end with "Evidence: [passage number] "<sentence copied word for word>"" or "Evidence: none". (Built and tested with a fake model; not yet run on the real models.) A reply with no readable evidence line is counted apart (`evidence_unparsed`): it is neither evidence nor a rejection.
 
 | Metric | In words | Calculation | What it does NOT prove |
 |---|---|---|---|

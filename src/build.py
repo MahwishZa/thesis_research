@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Builds what the experiments read from the cleaned cases and from public sources. Three commands (each has --help):
+Builds what the experiments read from the cleaned cases and from public sources. Five commands (each has --help):
 
   python src/build.py views        the three views and their question files, from data/processed_cases/all_cases.csv (step 2)
   python src/build.py corpus       the knowledge corpus for RAG: four libraries of real, published text (internet; laptop)
   python src/build.py references   the reference texts of the 8 diseases for the semantic-similarity score (internet; laptop)
+  python src/build.py index        the dense index of the corpus passages for the RAG systems (MedCPT article encoder; laptop)
+  python src/build.py audit        checks of the corpus text: near-duplicates, copies of the reference texts, tags (no internet)
 
-The rules of each command are written above its code. Only the Python standard library is used.
+The rules of each command are written above its code. The standard library is enough, except for the index (torch and transformers).
 """
 import argparse
 import datetime
@@ -24,8 +26,9 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from html.parser import HTMLParser
 
-from common import (ALL_CASES, CLASSES, KNOWLEDGE_CORPUS, LETTERS, OPTION_TEXT, SEED, SPLITS, VIEWS, get_logger, load_env,
-                    question_file, read_csv, view_table, write_csv, write_json, write_jsonl)
+from common import (ALL_CASES, CLASSES, INDEX_DIR, KNOWLEDGE_CORPUS, LETTERS, MEDCPT_ARTICLE, OPTION_TEXT, SEED, SPLITS, VIEWS,
+                    file_sha256, get_logger, load_env, medcpt_encoder, question_file, read_csv, read_jsonl, view_table, write_csv,
+                    write_index, write_json, write_jsonl)
 
 log = get_logger("corpus")
 
@@ -137,15 +140,16 @@ def views_main(argv=None):
 
 LIBRARIES = ("guidelines", "pmc", "pubmed", "textbook")     # guidelines first, so a guideline paper is not counted again as pmc
 SYNONYMS = {
-    "MEL": ["melanoma", "lentigo maligna", "melanoma in situ"],
+    "MEL": ["melanoma", "lentigo maligna", "melanoma in situ", "cutaneous melanoma"],
     "NV": ["nevus", "naevus", "nevi", "naevi", "melanocytic nevus"],
-    "BCC": ["basal cell carcinoma", "basal-cell carcinoma", "basalioma"],
+    "BCC": ["basal cell carcinoma", "basal-cell carcinoma", "basalioma", "basal cell epithelioma"],
     "AK": ["actinic keratosis", "actinic keratoses", "solar keratosis", "solar keratoses"],
     "BKL": ["seborrheic keratosis", "seborrhoeic keratosis", "seborrheic keratoses", "solar lentigo", "solar lentigines",
             "lichen planus-like keratosis", "benign keratosis"],
     "DF": ["dermatofibroma", "dermatofibromas", "benign fibrous histiocytoma"],
-    "VASC": ["hemangioma", "haemangioma", "cherry angioma", "angiokeratoma", "pyogenic granuloma", "vascular lesion"],
-    "SCC": ["squamous cell carcinoma", "keratoacanthoma", "bowen's disease", "bowen disease"],
+    "VASC": ["hemangioma", "haemangioma", "cherry angioma", "angioma", "angiokeratoma", "pyogenic granuloma", "vascular lesion",
+             "lobular capillary hemangioma"],
+    "SCC": ["squamous cell carcinoma", "squamous-cell carcinoma", "keratoacanthoma", "bowen's disease", "bowen disease"],
 }
 PUBMED_QUERIES = {
     "MEL": '"melanoma"[MeSH Terms] AND "skin neoplasms"[MeSH Terms] AND (dermoscopy[tiab] OR dermatoscopy[tiab] OR diagnosis[sh])',
@@ -238,9 +242,18 @@ def chunk(text, max_words=200, overlap=1):
     return [p for p in out if p]
 
 
+def _synonym_pattern(words):
+    """Whole words, with an optional plural ending: 'melanoma' also finds 'melanomas', 'carcinoma' finds 'carcinomas' (checked
+    2026-11-24: the exact-word rule left such passages untagged)."""
+    return re.compile(r"\b(?:" + "|".join(re.escape(w) for w in words) + r")(?:s|es)?\b")
+
+
+SYNONYM_PATTERNS = {c: _synonym_pattern(words) for c, words in SYNONYMS.items()}
+
+
 def tag(text, title=""):
     t = f"{title} {text}".lower()
-    return sorted(c for c, words in SYNONYMS.items() if any(re.search(r"\b" + re.escape(w) + r"\b", t) for w in words))
+    return sorted(c for c, rx in SYNONYM_PATTERNS.items() if rx.search(t))
 
 
 def is_ai_paper(title, text):
@@ -988,10 +1001,156 @@ def references_main(argv=None):
         token_check(refs, log)
     return refs
 
+# ----------------------------------------------------------------------------------------------------------------------
+# index: the dense index of the corpus for the RAG systems (python src/build.py index)
+# ----------------------------------------------------------------------------------------------------------------------
+# Each passage of data/knowledge_corpus/passages.jsonl is embedded once, as [title, text], with the MedCPT article encoder (Jin et al.
+# 2023), and the unit-length vectors are saved in data/knowledge_corpus/index/ (laptop only: they are derived from licensed text). The
+# corpus is already cut into passages by `build.py corpus` (whole sentences, at most 200 words, one sentence shared with the next
+# passage), so nothing is cut again here. Tags and query classes are not embedded and never used for retrieval.
+#
+# --exclude-reference-pages leaves out the passages of the Dermoscopedia pages that also supply the reference texts of the
+# semantic-similarity score (src/evaluate.py). Without it, a RAG answer that quotes such a passage resembles the reference text of its
+# own disease almost word for word, which inflates that score. The choice is the researcher's; it is recorded in index.json.
+ARTICLE_MAX_TOKENS = 512
+SHINGLE_WORDS = 8          # a passage and a reference text "share a stretch" when they have the same 8 words in a row
+OVERLAP_LIMIT = 0.5        # a passage is a copy of a reference text when half or more of its 8-word stretches are in that text
+
+
+def shingles(text, n=SHINGLE_WORDS):
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {" ".join(words[i:i + n]) for i in range(max(0, len(words) - n + 1))}
+
+
+def reference_shingles(corpus):
+    """The 8-word stretches of every reference text of every class."""
+    path = os.path.join(corpus, "reference_texts.json")
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"{path} is needed for the reference-text checks")
+    with open(path, encoding="utf-8") as f:
+        refs = json.load(f)
+    out = set()
+    for r in refs.values():
+        for t in r["texts"]:
+            out |= shingles(t["text"])
+    return out
+
+
+def overlap_share(text, ref_shingles):
+    """Share of the passage's 8-word stretches that also occur in the reference texts (0 for a passage shorter than 8 words)."""
+    sh = shingles(text)
+    return len(sh & ref_shingles) / len(sh) if sh else 0.0
+
+
+def audit_corpus(passages, ref_shingles=frozenset(), near_duplicate=0.8):
+    """Checks that need the passage text. Returns counts and the ids of what was found; nothing is changed or removed."""
+    sh = {p["passage_id"]: shingles(p["text"]) for p in passages}
+    seen, dup = {}, []
+    for p in passages:                                      # near-duplicates: an inverted index on the 8-word stretches
+        a = sh[p["passage_id"]]
+        cand = {}
+        for g in a:
+            for q in seen.get(g, ()):
+                cand[q] = cand.get(q, 0) + 1
+        for q, n in cand.items():
+            if n / len(a | sh[q]) >= near_duplicate:
+                dup.append([q, p["passage_id"]])
+        for g in a:
+            seen.setdefault(g, []).append(p["passage_id"])
+    over = [p["passage_id"] for p in passages if overlap_share(p["text"], ref_shingles) >= OVERLAP_LIMIT]
+    by_doc = {}
+    for p in passages:
+        by_doc[p["doc_id"]] = by_doc.get(p["doc_id"], 0) + 1
+    top = sorted(by_doc.items(), key=lambda t: (-t[1], t[0]))[:5]
+    lib = {}
+    for p in passages:
+        row = lib.setdefault(p["library"], {"passages": 0, "untagged": 0, "short_under_40_words": 0})
+        row["passages"] += 1
+        row["untagged"] += not p["tags"]
+        row["short_under_40_words"] += p["n_words"] < 40
+    retag = [p["passage_id"] for p in passages if sorted(p["tags"]) != tag(p["text"], p.get("title", ""))]
+    return {"n_passages": len(passages), "by_library": lib, "near_duplicate_pairs": dup, "reference_copies": over,
+            "largest_documents": [{"doc_id": d, "passages": n} for d, n in top], "tags_that_would_change": retag}
+
+
+def audit_main(argv=None):
+    ap = argparse.ArgumentParser(prog="build.py audit", description="Checks the corpus text (no internet, nothing is changed).")
+    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    a = ap.parse_args(argv)
+    get_logger("audit")
+    passages = read_jsonl(os.path.join(a.corpus, "passages.jsonl"))
+    result = audit_corpus(passages, reference_shingles(a.corpus))
+    out = os.path.join(a.corpus, "audit.json")
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=1)
+    log.info(f"{result['n_passages']} passages: {len(result['near_duplicate_pairs'])} near-duplicate pairs, "
+             f"{len(result['reference_copies'])} copies of reference texts, {len(result['tags_that_would_change'])} tags that the "
+             f"current rule would change; details in {out}")
+    for name, row in sorted(result["by_library"].items()):
+        log.info(f"  {name}: {row}")
+    return result
+
+
+def index_args(argv=None):
+    ap = argparse.ArgumentParser(prog="build.py index", description="Embeds the corpus passages for the RAG systems (MedCPT).")
+    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS), help="the folder with passages.jsonl")
+    ap.add_argument("--out", default=os.path.join("data", INDEX_DIR), help="where the index is written")
+    ap.add_argument("--encoder", default=MEDCPT_ARTICLE)
+    ap.add_argument("--exclude-reference-pages", action="store_true",
+                    help="leave out the passages of the pages that supply data/knowledge_corpus/reference_texts.json")
+    ap.add_argument("--exclude-reference-overlap", action="store_true",
+                    help="also leave out any passage that copies a reference text (half or more of its 8-word stretches)")
+    ap.add_argument("--limit", type=int, default=0, help="embed only the first N passages (a trial of the command)")
+    return ap.parse_args(argv)
+
+
+def reference_urls(corpus):
+    path = os.path.join(corpus, "reference_texts.json")
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"{path} is needed for --exclude-reference-pages")
+    with open(path, encoding="utf-8") as f:
+        return sorted({r["url"] for r in json.load(f).values()})
+
+
+def build_index(passages, encode, exclude_urls=(), ref_shingles=None):
+    """(kept passages, their vectors, the passages left out): every kept passage is embedded as [title, text]."""
+    drop = set(exclude_urls)
+
+    def out(p):
+        return p["url"] in drop or (ref_shingles is not None and overlap_share(p["text"], ref_shingles) >= OVERLAP_LIMIT)
+    kept = [p for p in passages if not out(p)]
+    left_out = [p for p in passages if out(p)]
+    vectors = encode([[p.get("title") or "", p["text"]] for p in kept]) if kept else []
+    return kept, vectors, left_out
+
+
+def index_main(argv=None, encode=None):
+    a = index_args(argv)
+    get_logger("index")
+    path = os.path.join(a.corpus, "passages.jsonl")
+    if not os.path.isfile(path):
+        raise SystemExit(f"{path} is not there: run python src/build.py corpus first (on the laptop)")
+    passages = read_jsonl(path)
+    if a.limit:
+        passages = passages[:a.limit]
+    urls = reference_urls(a.corpus) if a.exclude_reference_pages else []
+    encode = encode or medcpt_encoder(a.encoder, ARTICLE_MAX_TOKENS)
+    refs = reference_shingles(a.corpus) if a.exclude_reference_overlap else None
+    kept, vectors, left_out = build_index(passages, encode, urls, refs)
+    write_index(a.out, kept, vectors, {"encoder": a.encoder, "max_tokens": ARTICLE_MAX_TOKENS, "normalised": True,
+                                       "passages_file": path.replace("\\", "/"), "passages_sha256": file_sha256(path),
+                                       "exclude_reference_pages": bool(a.exclude_reference_pages),
+                                       "exclude_reference_overlap": bool(a.exclude_reference_overlap), "excluded_urls": urls,
+                                       "n_excluded_passages": len(left_out), "limit": a.limit})
+    log.info(f"{len(kept)} passages embedded ({len(left_out)} left out) -> {a.out}")
+    return kept
+
+
 # ---------------------------------------------------------------------------------------------------------------------------
 # The commands
 # ---------------------------------------------------------------------------------------------------------------------------
-COMMANDS = {"views": views_main, "corpus": corpus_main, "references": references_main}
+COMMANDS = {"views": views_main, "corpus": corpus_main, "references": references_main, "index": index_main,
+            "audit": audit_main}
 
 
 def main(argv=None):

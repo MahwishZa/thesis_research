@@ -25,7 +25,7 @@ Metrics
               Also: how often each option letter was chosen (a model that prefers one position shows here), and cost/time.
               Accuracy is top-1 accuracy (the chosen option is the true class); no top-k accuracy is reported (decided 2026-11-22).
               Several runs are compared with src/evaluate.py compare (McNemar for every pair, Holm's correction).
-  Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (or null = "Evidence: none"). Coverage and selective
+  Evidence  : RAG answers that carry "evidence": {"chunk_id", "quote"} (null = an explicit "Evidence: none"; a missing or unreadable line has an empty quote and is counted as unparsed, not as a rejection). Coverage and selective
               risk with verified evidence (an answer is covered when it has a valid diagnosis and its quote is word for word in the
               cited passage; this replaces the yes/no flag), and negative rejection (the share of "Evidence: none" when no
               retrieved passage is tagged with the true class, after RGB). Quote accuracy, supported accuracy and accuracy by
@@ -455,13 +455,13 @@ def evidence_metrics(qa, pred):
     risk = selective_risk(y, answers)
     irrelevant = [k for k, i in enumerate(ids) if not any(y[k] in (c.get("tags") or []) for c in pred[i].get("contexts") or [])]
     out = {"n_questions": n, "valid_answers": valid,
-           "evidence_given": sum(given), "evidence_none": sum(1 for i in ids if not (pred[i].get("evidence") or {}).get("quote")),
+           "evidence_given": sum(given), "evidence_none": sum(pred[i]["evidence"] is None for i in ids),
+           "evidence_unparsed": sum(1 for i in ids if pred[i]["evidence"] is not None and not (pred[i]["evidence"].get("quote") or "").strip()),
            "coverage_verified": round(coverage(y, answers), 4), "coverage_verified_95ci": bootstrap_ci(y, answers, groups, coverage),
            "n_covered": sum(found), "selective_risk_verified": None if risk is None else round(risk, 4),
            "negative_rejection": None, "n_without_relevant_passage": len(irrelevant)}
-    if irrelevant:
-        out["negative_rejection"] = round(sum(not (pred[ids[k]].get("evidence") or {}).get("quote") for k in irrelevant)
-                                          / len(irrelevant), 4)
+    if irrelevant:       # a rejection is an explicit "Evidence: none" (evidence null); a missing or unreadable line is not one
+        out["negative_rejection"] = round(sum(pred[ids[k]]["evidence"] is None for k in irrelevant) / len(irrelevant), 4)
     return out
 
 

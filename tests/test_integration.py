@@ -292,6 +292,12 @@ class TextTests(unittest.TestCase):
         self.assertEqual(bd.tag("arborizing vessels", title="Basal cell carcinoma"), ["BCC"])
         self.assertEqual(bd.tag("nevirapine is a drug"), [])    # whole words only ("nevi" is inside "nevirapine")
 
+    def test_plural_forms_are_tagged_too(self):
+        self.assertEqual(bd.tag("Melanomas show asymmetry."), ["MEL"])
+        self.assertEqual(bd.tag("Basal cell carcinomas and squamous cell carcinomas are common."), ["BCC", "SCC"])
+        self.assertEqual(bd.tag("Haemangiomas and keratoacanthomas."), ["SCC", "VASC"])
+        self.assertEqual(bd.tag("Melanomatous change"), [])     # a longer word is not a match
+
     def test_ai_and_image_dataset_papers_are_recognised(self):
         self.assertTrue(bd.is_ai_paper("Deep learning for skin cancer", ""))
         self.assertTrue(bd.is_ai_paper("A study", "We trained on HAM10000 images."))
@@ -1351,6 +1357,308 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((trial["diagnosis"]["accuracy"], trial["diagnosis"]["n_questions"], trial["diagnosis"]["missing_predictions"]),
                          (1.0, 3, 0))
         self.assertTrue(trial["trial_answered_only"])                  # the report is marked, so a trial is never read as a result
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# standard RAG: a whole run with a fake model and a fake index, the index command, and the report on top (2026-11-24)
+# ----------------------------------------------------------------------------------------------------------------------
+RAG_WORDS = ["trunk", "head", "male", "female", "melanoma", "nevus", "vessels", "brown"]
+RAG_CORPUS = [
+    {"passage_id": f"p{i}", "title": t, "text": x, "tags": g, "url": u, "library": "pmc", "doc_id": f"d{i}", "licence": "CC BY 4.0",
+     "query_class": g[0] if g else "MEL", "n_words": len(x.split()), "md5": f"m{i}", "year": "", "topics": []}
+    for i, (t, x, g, u) in enumerate([
+        ("Melanoma of the trunk", "Melanoma on the trunk of a male patient. It is brown.", ["MEL"], "https://x/a"),
+        ("Head lesions", "Lesions of the head in a female patient.", ["SCC"], "https://x/b"),
+        ("Vessels", "Vessels are seen in a nevus. A second sentence follows here.", ["NV"], "https://x/c"),
+        ("Trunk nevus", "A nevus on the trunk of a male. It is brown.", ["NV"], "https://x/d"),
+        ("Brown areas", "A brown area on the trunk is common.", [], "https://x/e")])]
+
+
+def rag_vec(text):
+    words = text.lower().replace(".", " ").replace(",", " ").split()
+    counts = [words.count(w) for w in RAG_WORDS]
+    norm = sum(c * c for c in counts) ** 0.5 or 1.0
+    return [c / norm for c in counts]
+
+
+def rag_enc(items):
+    return [rag_vec(" ".join(x) if isinstance(x, list) else x) for x in items]
+
+
+def make_rag(mode="question", k=3):
+    from array import array
+    from common import DenseIndex
+    flat = array("f")
+    for p in RAG_CORPUS:
+        flat.extend(rag_vec(p["title"] + " " + p["text"]))
+    return rl.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
+                          rag_enc, k, mode)
+
+
+class FakeRagClient:
+    """Answers right for even case numbers. Evidence: the first sentence of passage 1 (case number 0, 4, 8...), none (odd numbers), a
+    sentence that is not in the passage (2, 6, 10...), or no evidence line at all (every case number that ends in 2 or 7)."""
+
+    def __init__(self, questions):
+        self.heads, self.texts, self.images, self.described = {}, [], [], 0
+        for q in questions:
+            options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
+            self.heads[f"{q['question']}\n\nOptions:\n{options}"] = q
+        self.questions = questions
+
+    def ask(self, system, text, image):
+        self.texts.append(text)
+        self.images.append(image)
+        if text == rl.DESCRIBE_INSTRUCTION:
+            self.described += 1
+            return {"text": "A brown area with vessels.", "tokens_in": 700, "tokens_out": 30, "finish_reason": "stop"}
+        q = self.heads[text.split("\n\n" + rl.PASSAGES_HEADER)[0]]
+        k = int(q["id"][-3:])
+        letter = q["answer"] if k % 2 == 0 else next(x for x in q["options"] if x != q["answer"])
+        first = text.split("[1] ", 1)[1].split("\n", 1)[1].split(".")[0] + "."
+        evidence = ('Evidence: none' if k % 2 else
+                    'Evidence: [1] "A sentence that is not in the passage at all."' if k % 4 == 2 else f'Evidence: [1] "{first}"')
+        body = f"Reasoning and evidence: Findings of case {k} [1].\nAnswer: {letter} ({q['options'][letter]})"
+        if k % 10 not in (2, 7):
+            body += "\n" + evidence
+        return {"text": body, "finish_reason": "stop", "tokens_in": 1000, "tokens_out": 60, "served_by": "fake@host"}
+
+
+class StandardRagRunTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.data, self.results = os.path.join(self.tmp.name, "data"), os.path.join(self.tmp.name, "results")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def make(self, view, n=8):
+        self.questions = [question(c, view) for c in run_cases(n, view != "text_only")]
+        write_jsonl(os.path.join(self.data, question_file(view, "val")), self.questions)
+        if view != "text_only":
+            for q in self.questions:
+                Path(self.data, q["image_path"]).parent.mkdir(parents=True, exist_ok=True)
+                Path(self.data, q["image_path"]).write_bytes(b"\xff\xd8\xff fake jpeg")
+
+    def args(self, view="text_only", **kw):
+        base = dict(model="gpt-4o", view=view, split="val", limit=0, sleep=0.0, dry_run=False, data=self.data, results=self.results,
+                    env_file=os.path.join(self.tmp.name, ".env"))
+        base.update(kw)
+        return argparse.Namespace(**base)
+
+    def go(self, args, client, rag):
+        log = rl.get_logger(f"test.rag.{id(self)}.{args.view}")
+        with contextlib.redirect_stdout(io.StringIO()):
+            return rl.run(args, client, log, rag)
+
+    def lines(self, folder):
+        return [json.loads(x) for x in Path(folder, "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
+
+    def test_a_run_saves_the_query_the_passages_and_the_evidence_of_every_answer(self):
+        self.make("text_only")
+        client = FakeRagClient(self.questions)
+        out = self.go(self.args(), client, make_rag())
+        self.assertEqual(os.path.relpath(out, self.results).replace("\\", "/"), "standard_rag/gpt-4o/text_only_val")
+        rows = {r["id"]: r for r in self.lines(out)}
+        self.assertEqual(len(rows), 8)
+        first = rows["ISIC_0000000"]
+        self.assertEqual((first["prompt"], first["view"], first["valid"]), ("standard_rag", "text_only", True))
+        self.assertEqual(first["query"], "Patient: 50-year-old male. Skin lesion on the trunk.")
+        self.assertEqual([c["rank"] for c in first["contexts"]], [1, 2, 3])
+        self.assertTrue(all({"chunk_id", "title", "text", "tags", "score"} <= set(c) for c in first["contexts"]))
+        self.assertEqual(first["evidence"]["chunk_id"], first["contexts"][0]["chunk_id"])
+        self.assertIsNone(rows["ISIC_0000001"]["evidence"])                                 # an explicit "Evidence: none"
+        self.assertEqual(rows["ISIC_0000002"]["evidence"], dict(rl.UNPARSED))               # no evidence line
+        self.assertEqual(rows["ISIC_0000006"]["evidence"]["quote"], "A sentence that is not in the passage at all.")
+        info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
+        self.assertEqual((info["status"], info["settings"]["baseline"], info["settings"]["prompt"]), ("complete", "standard_rag", "standard_rag"))
+        self.assertEqual((info["settings"]["retrieval"]["k"], info["settings"]["retrieval"]["query"]), (3, "question"))
+        self.assertIn("Evidence: none", info["settings"]["instruction"])
+        self.assertTrue(all(i is None for i in client.images))                              # a text-only run sends no image
+
+    def test_the_report_scores_retrieval_and_evidence_on_top_of_the_diagnosis(self):
+        self.make("text_only")
+        out = self.go(self.args(), FakeRagClient(self.questions), make_rag())
+        rep = ev.evaluate(os.path.join(self.data, question_file("text_only", "val")), os.path.join(out, "predictions.jsonl"), skip_text=True)
+        self.assertEqual(rep["diagnosis"]["n_questions"], 8)
+        self.assertEqual(rep["retrieval"]["n_questions_with_contexts"], 8)
+        for key in ("hit@3", "precision@3", "ndcg@3", "mrr"):
+            self.assertIn(key, rep["retrieval"])
+        e = rep["evidence"]
+        # cases 0 and 4 quote their passage; 1, 3, 5 say none (odd); 2 and 7 have no line; 6 quotes a sentence that is not there
+        self.assertEqual((e["n_questions"], e["evidence_none"], e["evidence_unparsed"]), (8, 3, 2))
+        self.assertEqual(e["n_covered"], 2)
+        self.assertEqual(e["coverage_verified"], 0.25)
+
+    def test_an_image_view_sends_the_image_and_the_view_wording(self):
+        self.make("multimodal", 4)
+        client = FakeRagClient(self.questions)
+        out = self.go(self.args(view="multimodal"), client, make_rag())
+        self.assertTrue(client.images and all(i and i.startswith("/9j") for i in client.images))
+        self.assertTrue(all("in the image and/or in the patient facts" in t for t in client.texts))
+        info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
+        self.assertIn("in the image and/or in the patient facts", info["settings"]["instruction"])
+
+    def test_an_image_only_run_retrieves_the_same_passages_for_every_question(self):
+        self.make("image_only", 4)
+        out = self.go(self.args(view="image_only"), FakeRagClient(self.questions), make_rag())
+        rows = self.lines(out)
+        self.assertEqual({r["query"] for r in rows}, {rl.GENERIC_QUERY})
+        self.assertEqual(len({tuple(c["chunk_id"] for c in r["contexts"]) for r in rows}), 1)
+
+    def test_the_description_query_makes_one_more_call_per_image_question_and_adds_its_tokens(self):
+        self.make("multimodal", 4)
+        client = FakeRagClient(self.questions)
+        out = self.go(self.args(view="multimodal"), client, make_rag("description"))
+        self.assertEqual((client.described, len(client.texts)), (4, 8))
+        row = self.lines(out)[0]
+        self.assertEqual(row["description"], "A brown area with vessels.")
+        self.assertTrue(row["query"].endswith("A brown area with vessels."))
+        self.assertEqual((row["tokens_in"], row["tokens_out"]), (1700, 90))                # the answer call plus the description call
+        self.assertEqual(json.loads(Path(out, "run.json").read_text(encoding="utf-8"))["settings"]["retrieval"]["query"], "description")
+
+    def test_a_text_only_run_with_the_description_query_makes_no_extra_call(self):
+        self.make("text_only", 4)
+        client = FakeRagClient(self.questions)
+        self.go(self.args(), client, make_rag("description"))
+        self.assertEqual((client.described, len(client.texts)), (0, 4))
+
+    def test_an_interrupted_run_continues_with_the_same_settings_and_refuses_other_ones(self):
+        self.make("text_only")
+        client = FakeRagClient(self.questions)
+        self.go(self.args(limit=3), client, make_rag())
+        folder = os.path.join(self.results, "standard_rag", "gpt-4o", "text_only_val.partial")
+        self.assertEqual(len(self.lines(folder)), 3)
+        with self.assertRaises(SystemExit):
+            self.go(self.args(), FakeRagClient(self.questions), make_rag(k=2))            # another k: not the same run
+        out = self.go(self.args(), FakeRagClient(self.questions), make_rag())
+        self.assertEqual(len(self.lines(out)), 8)
+        self.assertEqual(len({r["id"] for r in self.lines(out)}), 8)                      # nothing asked twice
+
+    def test_a_dry_run_shows_the_query_and_the_passages_and_writes_nothing(self):
+        self.make("text_only", 4)
+        client = FakeRagClient(self.questions)
+        buf = io.StringIO()
+        log = rl.get_logger("test.rag.dry")
+        with contextlib.redirect_stdout(buf):
+            self.assertIsNone(rl.run(self.args(dry_run=True, limit=2), client, log, make_rag()))
+        shown = buf.getvalue()
+        self.assertIn("[query] Patient: 50-year-old male. Skin lesion on the trunk.", shown)
+        self.assertIn(rl.PASSAGES_HEADER, shown)
+        self.assertEqual(client.texts, [])
+        self.assertFalse(os.path.exists(self.results))
+
+    def test_the_command_stops_with_a_clear_message_when_there_is_no_index(self):
+        self.make("text_only", 2)
+        with self.assertRaises(FileNotFoundError) as caught:
+            rl.standard_rag_main(["--model", "gpt-4o", "--view", "text_only", "--dry-run", "--data", self.data,
+                                  "--results", self.results])
+        self.assertIn("build.py index", str(caught.exception))
+
+    def test_collect_reports_a_standard_rag_run_beside_an_llm_only_run(self):
+        self.make("text_only")
+        self.go(self.args(split="val"), FakeRagClient(self.questions), make_rag())
+        rows = ev.collect(self.results, os.path.join(self.results, "summary.csv"), root=".", skip_text=True)
+        self.assertEqual([(r["system"], r["model"], r["view"]) for r in rows], [("standard_rag", "gpt-4o", "text_only")])
+
+
+class IndexCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.corpus = os.path.join(self.tmp.name, "corpus")
+        write_jsonl(os.path.join(self.corpus, "passages.jsonl"), RAG_CORPUS)
+        self.out = os.path.join(self.tmp.name, "index")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def build(self, *extra):
+        seen = []
+
+        def encode(items):
+            seen.extend(items)
+            return rag_enc(items)
+        with contextlib.redirect_stdout(io.StringIO()):
+            bd.index_main(["--corpus", self.corpus, "--out", self.out, *extra], encode=encode)
+        return seen
+
+    def test_every_passage_is_embedded_as_its_title_and_text_and_the_index_can_be_read(self):
+        seen = self.build()
+        self.assertEqual(seen[0], ["Melanoma of the trunk", "Melanoma on the trunk of a male patient. It is brown."])
+        self.assertEqual(len(seen), 5)
+        from common import read_index
+        idx = read_index(self.out, os.path.join(self.corpus, "passages.jsonl"))
+        self.assertEqual([p["passage_id"] for p, _ in idx.search(rag_vec("trunk male"), 2)], ["p0", "p3"])
+        meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
+        self.assertEqual((meta["n_passages"], meta["exclude_reference_pages"], meta["n_excluded_passages"]), (5, False, 0))
+
+    def test_the_reference_pages_are_left_out_only_when_asked(self):
+        Path(self.corpus, "reference_texts.json").write_text(json.dumps({"NV": {"url": "https://x/c", "texts": []},
+                                                                         "MEL": {"url": "https://x/a", "texts": []}}), encoding="utf-8")
+        seen = self.build("--exclude-reference-pages")
+        self.assertEqual(len(seen), 3)
+        meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
+        self.assertEqual((meta["n_passages"], meta["n_excluded_passages"], meta["exclude_reference_pages"]), (3, 2, True))
+        self.assertEqual(meta["excluded_urls"], ["https://x/a", "https://x/c"])
+        self.assertNotIn("p0", meta["passage_ids"])
+        self.assertEqual(len(self.build()), 5)                                              # without the flag nothing is left out
+
+    def test_passages_that_copy_a_reference_text_are_left_out_only_when_asked(self):
+        copy = "one two three four five six seven eight nine ten eleven twelve"
+        passages = [{"passage_id": "a", "url": "u1", "text": copy, "title": ""},
+                    {"passage_id": "b", "url": "u2", "text": "alpha beta gamma delta epsilon zeta eta theta iota kappa", "title": ""}]
+        refs = bd.shingles(copy + " thirteen fourteen")
+        kept, _, out = bd.build_index(passages, lambda x: [[1.0]] * len(x), (), refs)
+        self.assertEqual(([p["passage_id"] for p in kept], [p["passage_id"] for p in out]), (["b"], ["a"]))
+        kept, _, out = bd.build_index(passages, lambda x: [[1.0]] * len(x))
+        self.assertEqual((len(kept), len(out)), (2, 0))
+
+    def test_the_audit_finds_near_duplicates_reference_copies_and_tags_that_would_change(self):
+        t = "melanomas of the trunk are seen in older men with dermoscopy showing a blue white veil and atypical network"
+        def mk(i, text, tags):
+            return {"passage_id": i, "doc_id": "d" + i, "library": "pmc", "title": "", "text": text,
+                    "n_words": len(text.split()), "tags": tags}
+        ps = [mk("a", t, []), mk("b", t + " too", ["MEL"]), mk("c", "unrelated words about something else entirely "
+                                                           "that has no overlap at all with the rest", [])]
+        r = bd.audit_corpus(ps, bd.shingles(ps[2]["text"]))
+        self.assertEqual(r["near_duplicate_pairs"], [["a", "b"]])
+        self.assertEqual(r["reference_copies"], ["c"])
+        self.assertEqual(r["tags_that_would_change"], ["a"])
+        self.assertEqual(r["by_library"]["pmc"]["untagged"], 2)
+
+    def test_the_tags_and_classes_are_never_embedded(self):
+        seen = self.build()
+        flat = " ".join(" ".join(x) for x in seen).lower()
+        for hidden in ("mel", "scc", "query_class", "tags", "cc by"):
+            self.assertNotIn(hidden, flat.replace("melanoma", "").replace("lesions", ""), hidden)
+
+    def test_a_missing_corpus_stops_with_the_command_to_run(self):
+        os.remove(os.path.join(self.corpus, "passages.jsonl"))
+        with self.assertRaises(SystemExit) as caught:
+            self.build()
+        self.assertIn("build.py corpus", str(caught.exception))
+
+
+class IndexStatusTests(unittest.TestCase):
+    def test_check_py_reports_the_index_and_notices_a_changed_corpus(self):
+        from common import file_sha256, write_index
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(cp.step_index(d)[0], cp.NOT_RUN)
+            corpus = os.path.join(d, "knowledge_corpus")
+            write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
+            sha = file_sha256(os.path.join(corpus, "passages.jsonl"))
+            write_index(os.path.join(d, "knowledge_corpus", "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
+                        {"encoder": "fake", "passages_sha256": sha, "exclude_reference_pages": True})
+            status, note = cp.step_index(d)
+            self.assertEqual(status, cp.DONE)
+            self.assertIn("5 passages", note)
+            self.assertIn("reference pages left out", note)
+            write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS[:3])               # the corpus changed after the index
+            self.assertEqual(cp.step_index(d)[0], cp.PROBLEM)
+            write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
+            with open(os.path.join(corpus, "index", "embeddings.f32"), "ab") as f:
+                f.write(b"\0\0\0\0")                                                           # a damaged file
+            self.assertEqual(cp.step_index(d)[0], cp.PROBLEM)
 
 
 if __name__ == "__main__":

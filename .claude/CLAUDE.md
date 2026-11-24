@@ -40,7 +40,7 @@ third party is credited anywhere in the repository.
 ## Research state (update when it changes)
 - Data: the Kaggle "Skin Cancer ISIC 9 classes" dataset only, 8 classes, 2,197 cases; balanced validation (20 per class) and test (30
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
-- Systems: LLM-only (done, approved), standard RAG (next), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
+- Systems: LLM-only (done, approved), standard RAG (built and tested 2026-11-24, not yet run: `build.py index`, then `run.py standard-rag`), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/run.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
@@ -48,12 +48,11 @@ third party is credited anywhere in the repository.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.
 
-## Pending: removing the archived material from the Git history
-- The folder `archive/` (Versions 1 and 2) was removed from the working tree on 2026-11-25 at the researcher's request. Its commits are
-  still in the history, and the branch `archive-v2-snapshot` still exists on GitHub.
-- Removing it from the history is a rewrite and a force-push of `main`. Do not start it until the researcher confirms the plan. Then use
-  a lease, delete the branch `archive-v2-snapshot` and every other ref to the old commits, check the result, and remind her to re-sync
-  her laptop and that GitHub may keep the old commits for a while.
+## Done: the archived material is out of the Git history
+- On 2026-11-24, with the researcher's approval, `archive/` (Versions 1 and 2) was removed from every commit of `main` (229 commits, all
+  kept, same files and authors; hashes changed) and `main` was force-pushed with a lease. The branch `archive-v2-snapshot` is gone from
+  GitHub. The old pull-request refs (`refs/pull/*`) on GitHub may still hold the old commits until GitHub cleans them up; only GitHub
+  Support can remove them sooner. A laptop copy must be re-synced with `git fetch` and `git reset --hard origin/main`.
 
 ## At the end
 - When the research is final and ready for publication, remove `.claude/` and prune it from the Git history (a history rewrite and
