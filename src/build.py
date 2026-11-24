@@ -511,6 +511,31 @@ def textbook_docs(fetch, cls, n):
 
 
 # ---- from documents to passages (no internet) -------------------------------------------------------------------------------
+# Text that is not about a disease (seen in the laptop corpus on 2026-11-24): a wiki's placeholder text, its page-template lines and
+# literature lists cut into passages. Such a passage is left out; the markup left in a real passage is removed.
+CITATION_START = re.compile(r"^[A-Z][\w'’-]+,?\s(?:[A-Z]\.?){1,3}[,.&]")
+CITATION_MARK = re.compile(r"\bPMID\b|\bdoi\b|\bEpub\b|\bet al\.,|\bJ [A-Z][a-z]+\b|\bBr J\b|\bAm J\b|\b[12]\d{3}[;,.]\s*\d+")
+VOLUME_PAGES = re.compile(r"\b\d+\(\d+\):\d+[-–]\d+")
+MARKUP = re.compile(r"={2,}\s*(.*?)\s*={2,}")
+URL = re.compile(r"https?://\S+")
+
+
+def junk_reason(text):
+    """Why a passage is not useful text about a disease, or None."""
+    if re.search(r"lorem ipsum", text, re.IGNORECASE):
+        return "placeholder text"
+    if TEMPLATE.search(text):
+        return "wiki template line"
+    if BIBLIOGRAPHY.search(text) or VOLUME_PAGES.search(text) or (CITATION_START.search(text) and CITATION_MARK.search(text)):
+        return "reference list entry"
+    return None
+
+
+def strip_markup(text):
+    """Removes wiki heading marks ('===== Title =====') and web addresses from a passage."""
+    return clean(URL.sub(" ", MARKUP.sub(lambda m: m.group(1) + ".", text)))
+
+
 def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
     """Turns documents into passages, applying the rules, until the library has args.per_class passages for this class."""
     out = []
@@ -529,6 +554,11 @@ def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
             for piece in chunk(para, args.max_words):
                 if len(out) >= args.per_class:
                     break
+                piece = strip_markup(piece)
+                junk = junk_reason(piece)
+                if junk:
+                    removed[f"{library}: {junk}"] += 1
+                    continue
                 if len(piece.split()) < args.min_words:
                     removed[f"{library}: passage too short"] += 1
                     continue
@@ -1158,7 +1188,8 @@ def main(argv=None):
     if not argv or argv[0] not in COMMANDS:
         print(__doc__.strip())
         return 0 if argv in ([], ["-h"], ["--help"]) else 2
-    return COMMANDS[argv[0]](argv[1:])
+    result = COMMANDS[argv[0]](argv[1:])
+    return result if isinstance(result, int) else 0      # the command's result (e.g. the kept passages) is not an exit code
 
 
 if __name__ == "__main__":

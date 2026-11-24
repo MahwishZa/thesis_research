@@ -48,6 +48,10 @@ class DispatchTests(unittest.TestCase):
                         self.assertEqual(module.main([name, "--x", "1"]), 7)
                     fake.assert_called_once_with(["--x", "1"])
 
+    def test_a_command_that_returns_data_gives_exit_code_zero(self):
+        with mock.patch.dict(bd.COMMANDS, {"views": mock.Mock(return_value=[{"big": "list"}])}):
+            self.assertEqual(bd.main(["views"]), 0)
+
     def test_an_unknown_or_missing_command_prints_the_help_and_is_refused(self):
         for module in (bd, rl):
             with self.subTest(module.__name__), contextlib.redirect_stdout(io.StringIO()) as out:
@@ -1159,18 +1163,37 @@ class RagQueryAndPromptTests(unittest.TestCase):
         self.assertEqual(rl.patient_facts(self.q["text_only"]), "Patient: 50-year-old male. Skin lesion on the trunk.")
         self.assertEqual(rl.patient_facts(self.q["multimodal"]), "Patient: 50-year-old male. Skin lesion on the trunk.")
         self.assertEqual(rl.patient_facts(self.q["image_only"]), "")
-        self.assertEqual(rl.retrieval_query(self.q["image_only"]), rl.GENERIC_QUERY)
+        self.assertEqual(rl.retrieval_query(self.q["image_only"], "image_only"), rl.GENERIC_QUERY)
 
     def test_the_query_never_holds_the_options_the_class_or_a_tag(self):
         for q in self.q.values():
-            query = rl.retrieval_query(q, "a brown flat area")
+            query = rl.retrieval_query(q)
             for text in list(OPTION_TEXT.values()) + CLASSES + [q["gold_label"], "diagnosis"]:
                 self.assertNotIn(text.lower(), query.lower(), text)
 
-    def test_a_description_is_added_to_the_facts(self):
-        self.assertEqual(rl.retrieval_query(self.q["multimodal"], " A brown flat area. "),
-                         "Patient: 50-year-old male. Skin lesion on the trunk. A brown flat area.")
-        self.assertEqual(rl.retrieval_query(self.q["image_only"], "A brown flat area."), "A brown flat area.")
+    def test_what_is_not_recorded_is_left_out_of_the_query(self):
+        cases = {
+            "Patient: age not recorded, sex not recorded. Lesion site not recorded.": "",
+            "Patient: age not recorded, sex not recorded. Skin lesion on the trunk.": "Skin lesion on the trunk.",
+            "Patient: age not recorded, female. Skin lesion on the lower extremity.": "Patient: female. Skin lesion on the lower extremity.",
+            "Patient: 85-year-old sex not recorded. Lesion site not recorded.": "Patient: 85-year-old.",
+            "Patient: 60-year-old male. Lesion site not recorded.": "Patient: 60-year-old male.",
+            "Patient: 50-year-old male. Skin lesion on the trunk.": "Patient: 50-year-old male. Skin lesion on the trunk."}
+        for text, expected in cases.items():
+            with self.subTest(text):
+                self.assertEqual(rl.recorded_facts(text), expected)
+                self.assertNotIn("not recorded", rl.recorded_facts(text))
+
+    def test_a_question_without_facts_gets_a_fallback_that_fits_its_view(self):
+        nothing = {"question": "Patient: age not recorded, sex not recorded. Lesion site not recorded. What is the most likely diagnosis?"}
+        for view in ("text_only", "multimodal"):
+            self.assertEqual(rl.retrieval_query(nothing, view), rl.GENERIC_TEXT_QUERY)
+        self.assertNotIn("image", rl.GENERIC_TEXT_QUERY.lower())
+        self.assertEqual(rl.retrieval_query(self.q["image_only"], "image_only"), rl.GENERIC_QUERY)
+
+    def test_the_query_is_the_patient_facts_and_never_a_model_text(self):
+        self.assertEqual(rl.retrieval_query(self.q["multimodal"]), "Patient: 50-year-old male. Skin lesion on the trunk.")
+        self.assertEqual(rl.retrieval_query(self.q["image_only"], "image_only"), rl.GENERIC_QUERY)
 
     def test_the_prompt_numbers_the_passages_and_shows_neither_tags_nor_scores(self):
         contexts = [{"rank": 1, "chunk_id": "p3", "title": "Trunk nevus", "text": "A nevus on the trunk of a male.", "tags": ["NV"], "score": 0.91},
@@ -1241,8 +1264,8 @@ class StandardRagTests(unittest.TestCase):
         self.cases = run_cases(1, True)
         self.q = {v: bd.question(self.cases[0], v) for v in VIEWS}
 
-    def rag(self, mode="question", k=3, passages=RAG_PASSAGES):
-        return rl.StandardRag(rag_index(passages), rag_encode, k, mode)
+    def rag(self, k=3, passages=RAG_PASSAGES):
+        return rl.StandardRag(rag_index(passages), rag_encode, k)
 
     def test_the_question_query_retrieves_with_the_patient_facts(self):
         text, extra, t_in, t_out = self.rag().prepare(self.q["text_only"], "text_only", None, None)
@@ -1252,7 +1275,6 @@ class StandardRagTests(unittest.TestCase):
         self.assertEqual([c["rank"] for c in extra["contexts"]], [1, 2, 3])
         self.assertEqual((t_in, t_out), (None, None))
         self.assertIn("[2] Trunk nevus", text)
-        self.assertNotIn("description", extra)
 
     def test_k_sets_the_number_of_passages(self):
         for k in (1, 2, 4):
@@ -1272,31 +1294,7 @@ class StandardRagTests(unittest.TestCase):
         b = self.rag().prepare(other, "image_only", None, None)[1]
         self.assertEqual((a["query"], [c["chunk_id"] for c in a["contexts"]]), (b["query"], [c["chunk_id"] for c in b["contexts"]]))
 
-    def test_the_description_query_asks_the_model_once_and_adds_the_tokens(self):
-        calls = []
-
-        class Client:
-            def ask(self, system, text, image):
-                calls.append((text, image))
-                return {"text": " A brown flat vessels area. ", "tokens_in": 700, "tokens_out": 30}
-        text, extra, t_in, t_out = self.rag("description").prepare(self.q["multimodal"], "multimodal", Client(), "IMG")
-        self.assertEqual(calls, [(rl.DESCRIBE_INSTRUCTION, "IMG")])
-        self.assertEqual((extra["description"], t_in, t_out), ("A brown flat vessels area.", 700, 30))
-        self.assertEqual(extra["query"], "Patient: 50-year-old male. Skin lesion on the trunk. A brown flat vessels area.")
-        calls.clear()
-        self.rag("description").prepare(self.q["text_only"], "text_only", Client(), None)
-        self.assertEqual(calls, [])                                                       # nothing to describe in a text-only question
-
-    def test_a_refused_description_falls_back_to_the_facts(self):
-        class Client:
-            def ask(self, system, text, image):
-                raise rl.Refused("moderation")
-        extra = self.rag("description").prepare(self.q["multimodal"], "multimodal", Client(), "IMG")[1]
-        self.assertEqual((extra["description"], extra["query"]), ("", "Patient: 50-year-old male. Skin lesion on the trunk."))
-
-    def test_an_unknown_query_mode_stops_and_the_settings_name_what_was_used(self):
-        with self.assertRaises(ValueError):
-            self.rag("rationale")
+    def test_the_run_settings_name_what_was_used_and_no_model_text_is_in_the_query(self):
         s = self.rag().settings()
         self.assertEqual((s["k"], s["query"], s["query_encoder"], s["index_passages_sha256"]), (3, "question", common.MEDCPT_QUERY, "abc"))
 

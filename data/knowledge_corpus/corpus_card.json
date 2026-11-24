@@ -1,7 +1,7 @@
 {
-  "snapshot_date": "2026-11-23",
-  "n_passages": 3444,
-  "n_documents": 994,
+  "snapshot_date": "2026-11-24",
+  "n_passages": 3426,
+  "n_documents": 992,
   "passages_per_library_and_class": {
     "guidelines": {
       "MEL": 150,
@@ -34,74 +34,74 @@
       "SCC": 150
     },
     "textbook": {
-      "MEL": 72,
-      "NV": 47,
-      "BCC": 22,
-      "AK": 11,
-      "BKL": 38,
+      "MEL": 67,
+      "NV": 42,
+      "BCC": 21,
+      "AK": 6,
+      "BKL": 37,
       "DF": 10,
-      "VASC": 4,
+      "VASC": 3,
       "SCC": 4
     }
   },
   "passages_tagged_per_class": {
-    "MEL": 1123,
-    "NV": 631,
-    "BCC": 576,
-    "AK": 476,
-    "BKL": 368,
-    "DF": 257,
-    "VASC": 279,
-    "SCC": 583
+    "MEL": 1159,
+    "NV": 628,
+    "BCC": 603,
+    "AK": 470,
+    "BKL": 369,
+    "DF": 256,
+    "VASC": 319,
+    "SCC": 607
   },
   "topic_coverage_per_class": {
     "MEL": {
-      "appearance": 673,
-      "patients": 386,
-      "differential": 309,
-      "basics": 899
+      "appearance": 705,
+      "patients": 407,
+      "differential": 325,
+      "basics": 937
     },
     "NV": {
       "appearance": 429,
-      "patients": 242,
+      "patients": 241,
       "differential": 175,
       "basics": 470
     },
     "BCC": {
-      "appearance": 309,
-      "patients": 213,
-      "differential": 175,
-      "basics": 494
+      "appearance": 323,
+      "patients": 224,
+      "differential": 185,
+      "basics": 520
     },
     "AK": {
-      "appearance": 153,
+      "appearance": 151,
       "patients": 224,
-      "differential": 104,
-      "basics": 317
+      "differential": 103,
+      "basics": 312
     },
     "BKL": {
       "appearance": 246,
       "patients": 163,
       "differential": 134,
-      "basics": 310
+      "basics": 311
     },
     "DF": {
-      "appearance": 102,
-      "patients": 94,
-      "differential": 97,
-      "basics": 221
+      "appearance": 103,
+      "patients": 95,
+      "differential": 95,
+      "basics": 222
     },
     "VASC": {
-      "appearance": 140,
-      "patients": 94,
-      "differential": 68,
-      "basics": 200
+      "appearance": 164,
+      "patients": 111,
+      "differential": 79,
+      "basics": 230
     },
     "SCC": {
-      "appearance": 249,
-      "patients": 213,
-      "differential": 188,
-      "basics": 491
+      "appearance": 255,
+      "patients": 223,
+      "differential": 194,
+      "basics": 513
     }
   },
   "empty_topic_boxes": [],
@@ -109,19 +109,20 @@
     "PubMed abstract (research use; cite PMID)": 1124,
     "CC BY 4.0": 1091,
     "CC BY-NC 4.0": 521,
-    "CC BY-NC-SA 4.0": 234,
+    "CC BY-NC-SA 4.0": 216,
     "CC BY-NC-ND 4.0": 191,
     "CC BY 3.0": 58,
     "CC BY-NC 3.0": 54,
     "CC BY 2.0": 46,
-    "Meditron guidelines collection (source: cdc); see the source's terms": 42,
     "CC BY-NC-SA 3.0": 42,
-    "Meditron guidelines collection (source: pubmed); see the source's terms": 33,
+    "Meditron guidelines collection (source: cdc); see the source's terms": 41,
+    "Meditron guidelines collection (source: pubmed); see the source's terms": 34,
     "Meditron guidelines collection (source: cco); see the source's terms": 8
   },
   "removed": {
     "guidelines: document already used": 1,
-    "guidelines: passage too short": 304,
+    "guidelines: passage too short": 302,
+    "guidelines: reference list entry": 7,
     "guidelines: source nice excluded": 1656,
     "guidelines: source wikidoc excluded": 33058,
     "pmc: AI or image-dataset paper": 3,
@@ -129,15 +130,20 @@
     "pmc: duplicate passage": 2,
     "pmc: full text not available": 6,
     "pmc: no open licence": 5,
-    "pmc: passage too short": 257,
-    "pubmed: AI or image-dataset paper": 51,
+    "pmc: passage too short": 262,
+    "pmc: reference list entry": 4,
+    "pubmed: AI or image-dataset paper": 52,
     "pubmed: document already used": 93,
     "pubmed: duplicate passage": 4,
     "pubmed: passage too short": 22,
+    "pubmed: reference list entry": 8,
     "pubmed: retracted": 1,
     "textbook: document already used": 1,
-    "textbook: duplicate passage": 39,
-    "textbook: passage too short": 363
+    "textbook: duplicate passage": 36,
+    "textbook: passage too short": 298,
+    "textbook: placeholder text": 1,
+    "textbook: reference list entry": 46,
+    "textbook: wiki template line": 39
   },
   "settings": {
     "libraries": [

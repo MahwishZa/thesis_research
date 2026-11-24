@@ -45,6 +45,11 @@ third party is credited anywhere in the repository.
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/run.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
+  The query is made only of the question's own words (patient facts; a fixed sentence for image-only). No model writes or rewrites a
+  query: the "description" query mode was removed on the researcher's decision (2026-11-24), because everything in the research must be
+  non-synthetic.
+  Facts that are "not recorded" are left out of the query; with no fact left, the query is a fixed sentence that fits the view ("skin
+  lesion" for text-only and image + text, "dermoscopic image of a skin lesion" for image-only).
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.
 

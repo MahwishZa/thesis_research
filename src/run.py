@@ -35,17 +35,16 @@ classes; the scores do not depend on the order.
 An API error that retrying cannot fix (wrong key, no credit, ...) stops the run; nothing already answered is lost.
 
 Standard RAG (python src/run.py standard-rag, added 2026-11-24): the same models, prompt wording and answer rule, plus retrieval:
-  1. query      "question" (approved: the patient facts of the question; an image-only question has none, so its query is a fixed
-                sentence and every image-only question gets the same passages) or "description" (a proposal, not yet approved: the
-                model first describes what it sees, without naming a diagnosis, and the query is the facts plus that description;
-                one more call per image question). The true class, the options and the corpus tags are never in the query.
+  1. query      the patient facts of the question (an image-only question has none, so its query is a fixed sentence and every
+                image-only question gets the same passages). Nothing is written by a model: the query is made of the question's own
+                words. The true class, the options and the corpus tags are never in the query.
   2. retrieval  the MedCPT query encoder and the index built by `python src/build.py index`; the k = 3 passages with the highest cosine
                 similarity of the whole corpus (no filter by disease).
   3. prompt     the question, the options, the numbered passages (title and text; tags are not shown) and the instruction: the two lines
                 above and a third line, "Evidence: [<number>] "<one sentence copied word for word from that passage>"" or
                 "Evidence: none". The sentence is checked against the passage by evaluate.py (a quote is never trusted).
   Output: results/standard_rag/<model>/<view>_<split>/ with the same files as above and, in every line, query, contexts (rank, score,
-  chunk_id, title, text, tags: the tags are for the evaluation only), evidence and, for the "description" query, description.
+  chunk_id, title, text, tags: the tags are for the evaluation only) and evidence.
   evidence is null for an explicit "Evidence: none"; a missing or unreadable line gives {"chunk_id": null, "quote": "", "unparsed": true}.
 
 Usage (on the laptop):
@@ -159,10 +158,9 @@ def parse_answer(text, letters="ABCDEFGH"):
 
 # ---- standard RAG: query, retrieval, prompt and evidence (no internet; the encoder needs torch) ---------------------------
 RAG_PROMPT_NAME = "standard_rag"
-QUERY_MODES = ("question", "description")
+
 GENERIC_QUERY = "dermoscopic image of a skin lesion"      # the query of an image-only question: it has no patient facts
-DESCRIBE_INSTRUCTION = ("Describe what is visible in this skin-lesion image in at most three sentences: colour, structures, pattern "
-                        "and distribution. Do not name a diagnosis.")
+GENERIC_TEXT_QUERY = "skin lesion"                      # the query of a text or image + text question with no recorded fact
 RAG_INSTRUCTION = ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
                    "this case, {findings}, that support your choice; mention a passage as {numbers} only if it supports your "
                    "choice>\". Second line: \"Answer: <the letter of the most likely option> (<the name of that option>)\". Third line: "
@@ -183,11 +181,26 @@ def patient_facts(q):
     return " ".join(text.split())
 
 
-def retrieval_query(q, description=""):
-    """The text the retriever gets: the patient facts and, for the "description" query, the model's description of the image. Never the
-    options, the true class or a tag."""
-    query = " ".join(x for x in (patient_facts(q), (description or "").strip()) if x)
-    return query or GENERIC_QUERY
+def recorded_facts(text):
+    """The patient sentence without what is "not recorded": "Patient: age not recorded, female. Skin lesion on the trunk." gives
+    "Patient: female. Skin lesion on the trunk."; "" when nothing is recorded."""
+    text = re.sub(r"\s*Lesion site not recorded\.?", "", text)            # an unknown site
+    text = re.sub(r"\bage not recorded,?\s*", "", text)                   # an unknown age
+    text = re.sub(r",?\s*\bsex not recorded", "", text)                   # an unknown sex
+    text = " ".join(text.split())
+    text = re.sub(r"^Patient:\s*\.\s*", "", text)                        # nothing left of the patient sentence: "Patient: ."
+    if text == "Patient:":
+        return ""
+    return text if text.endswith((".", ")")) or not text else text + "."
+
+
+def retrieval_query(q, view="text_only"):
+    """The text the retriever gets: the recorded patient facts of the question. When there are none, a fixed sentence that fits the
+    view (the image-only view has no facts at all, and a text view has no image). Never the options, the true class or a tag."""
+    facts = recorded_facts(patient_facts(q))
+    if facts:
+        return facts
+    return GENERIC_QUERY if view == "image_only" else GENERIC_TEXT_QUERY
 
 
 def rag_instruction(view, k=3):
@@ -227,14 +240,12 @@ def add_tokens(a, b):
 class StandardRag:
     """The retrieval of one run: the index, the query encoder, k and how the query is made."""
 
-    def __init__(self, index, encode_query, k=3, query_mode="question"):
-        if query_mode not in QUERY_MODES:
-            raise ValueError(f"unknown query mode {query_mode!r}")
-        self.index, self.encode_query, self.k, self.query_mode = index, encode_query, k, query_mode
+    def __init__(self, index, encode_query, k=3):
+        self.index, self.encode_query, self.k = index, encode_query, k
 
     def settings(self):
         meta = self.index.meta
-        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": self.query_mode,
+        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question",
                 "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
                 "exclude_reference_pages": meta.get("exclude_reference_pages")}
 
@@ -242,23 +253,12 @@ class StandardRag:
         return rag_instruction(view, self.k)
 
     def prepare(self, q, view, client, image):
-        """(the text to send, the fields to add to the record, the tokens in and out of the extra call). In the "description" query an
-        image view first asks the model what it sees; a text-only question has nothing to describe, so its query is the facts."""
-        description, t_in, t_out = "", None, None
-        if self.query_mode == "description" and view != "text_only" and client is not None:
-            try:
-                reply = client.ask(SYSTEM, DESCRIBE_INSTRUCTION, image)
-                description, t_in, t_out = reply["text"].strip(), reply.get("tokens_in"), reply.get("tokens_out")
-            except Refused:
-                description = ""
-        query = retrieval_query(q, description)
+        """(the text to send, the fields to add to the record, no extra tokens): one retrieval, no extra model call."""
+        query = retrieval_query(q, view)
         hits = self.index.search(self.encode_query([query])[0], self.k)
         contexts = [{"rank": r, "chunk_id": p["passage_id"], "title": p.get("title"), "text": p["text"], "tags": p.get("tags", []),
                      "score": score} for r, (p, score) in enumerate(hits, 1)]
-        extra = {"query": query, "contexts": contexts}
-        if self.query_mode == "description":
-            extra["description"] = description
-        return rag_text(q, view, contexts), extra, t_in, t_out
+        return rag_text(q, view, contexts), {"query": query, "contexts": contexts}, None, None
 
 
 def image_b64(data, path):
@@ -410,9 +410,7 @@ def run(args, client, log, rag=None):
     if args.dry_run:
         for q in asking_order(questions)[:args.limit or 3]:
             text, extra, _, _ = build(q, None)
-            note = "\n[the description of the image is made by the model in a real run; this query has the patient facts only]" \
-                if rag and rag.query_mode == "description" and args.view != "text_only" else ""
-            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[query] {extra.get('query', '-')}{note}\n"
+            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[query] {extra.get('query', '-')}\n"
                      f"[user] {text}")
         return None
     os.makedirs(partial, exist_ok=True)
@@ -532,8 +530,6 @@ def rag_parse_args(argv=None):
     ap.add_argument("--view", required=True, choices=VIEWS)
     ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
-    ap.add_argument("--query", default="question", choices=QUERY_MODES,
-                    help="question: the patient facts (approved); description: the model first describes the image (a proposal)")
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
@@ -554,7 +550,7 @@ def standard_rag_main(argv=None, rag=None):
     if rag is None:
         folder = args.index or os.path.join(args.data, INDEX_DIR)
         index = read_index(folder, os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))      # stops with a clear message
-        rag = StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.query)
+        rag = StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k)
     if not args.dry_run:
         unusable = load_env(args.env_file)
         if unusable:

@@ -292,6 +292,39 @@ class TextTests(unittest.TestCase):
         self.assertEqual(bd.tag("arborizing vessels", title="Basal cell carcinoma"), ["BCC"])
         self.assertEqual(bd.tag("nevirapine is a drug"), [])    # whole words only ("nevi" is inside "nevirapine")
 
+    def test_passages_that_are_not_text_about_a_disease_are_found(self):
+        bad = {
+            "placeholder text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt.",
+            "wiki template line": "Nevus, Body site Factors that influence nevus pattern - cite! Factors (message) Factors - participate!",
+            "reference list entry": [
+                'Granter SR, McKee PH, Calonje E, Mihm MC. "Melanoma associated with blue nevus". Am. J. Surg. Pathol. 25 (3): PMID 11224601.',
+                "Costa J, Ortiz-Ibanez K, Salerni G. Dermoscopic patterns of melanoma metastases. Br J Dermatol. 2013 Jul;169(1):91-9",
+                "Loghavi 1, Curry J1, Torres-Cabala CA. Melanoma arising in association with blue nevus. Mod Pathol.;27(11):1468-78.",
+                "Kittler, H., Riedl, E., Rosendahl, C. & Cameron, A., 2008, Dermatoscopy of unpigmented lesions of the skin."]}
+        for reason, texts in bad.items():
+            for t in ([texts] if isinstance(texts, str) else texts):
+                with self.subTest(t[:30]):
+                    self.assertEqual(bd.junk_reason(t), reason)
+        for good in ("A 47-year-old man presented with a pigmented lesion on his right upper back. The patient denied malignancies.",
+                     "Dermoscopy can predict the diagnosis of sBCC with a sensitivity of 81.9% and specificity of 81.8%.",
+                     "Smith et al. found arborizing vessels in 66% of nodular BCC (Jin et al., 2017)."):
+            with self.subTest(good[:30]):
+                self.assertIsNone(bd.junk_reason(good))
+
+    def test_wiki_heading_marks_and_web_addresses_are_removed_from_a_passage(self):
+        self.assertEqual(bd.strip_markup("===== Melanoma on sun damaged skin ===== https://dermoscopedia.org/05-Special_locations Identifying"),
+                         "Melanoma on sun damaged skin. Identifying")
+
+    def test_the_corpus_leaves_junk_passages_out_and_counts_them(self):
+        import collections
+        ns = argparse.Namespace(per_class=10, max_words=200, min_words=3)
+        docs = [{"doc_id": "d1", "title": "T", "url": "u", "licence": "x", "paragraphs": [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", "Melanomas show an atypical network on dermoscopy."]}]
+        removed = collections.Counter()
+        out = bd.passages_from(docs, "textbook", "MEL", ns, set(), set(), removed)
+        self.assertEqual([p["text"] for p in out], ["Melanomas show an atypical network on dermoscopy."])
+        self.assertEqual(removed["textbook: placeholder text"], 1)
+
     def test_plural_forms_are_tagged_too(self):
         self.assertEqual(bd.tag("Melanomas show asymmetry."), ["MEL"])
         self.assertEqual(bd.tag("Basal cell carcinomas and squamous cell carcinomas are common."), ["BCC", "SCC"])
@@ -1385,14 +1418,14 @@ def rag_enc(items):
     return [rag_vec(" ".join(x) if isinstance(x, list) else x) for x in items]
 
 
-def make_rag(mode="question", k=3):
+def make_rag(k=3):
     from array import array
     from common import DenseIndex
     flat = array("f")
     for p in RAG_CORPUS:
         flat.extend(rag_vec(p["title"] + " " + p["text"]))
     return rl.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
-                          rag_enc, k, mode)
+                          rag_enc, k)
 
 
 class FakeRagClient:
@@ -1400,7 +1433,7 @@ class FakeRagClient:
     sentence that is not in the passage (2, 6, 10...), or no evidence line at all (every case number that ends in 2 or 7)."""
 
     def __init__(self, questions):
-        self.heads, self.texts, self.images, self.described = {}, [], [], 0
+        self.heads, self.texts, self.images = {}, [], []
         for q in questions:
             options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
             self.heads[f"{q['question']}\n\nOptions:\n{options}"] = q
@@ -1409,9 +1442,6 @@ class FakeRagClient:
     def ask(self, system, text, image):
         self.texts.append(text)
         self.images.append(image)
-        if text == rl.DESCRIBE_INSTRUCTION:
-            self.described += 1
-            return {"text": "A brown area with vessels.", "tokens_in": 700, "tokens_out": 30, "finish_reason": "stop"}
         q = self.heads[text.split("\n\n" + rl.PASSAGES_HEADER)[0]]
         k = int(q["id"][-3:])
         letter = q["answer"] if k % 2 == 0 else next(x for x in q["options"] if x != q["answer"])
@@ -1505,23 +1535,6 @@ class StandardRagRunTests(unittest.TestCase):
         rows = self.lines(out)
         self.assertEqual({r["query"] for r in rows}, {rl.GENERIC_QUERY})
         self.assertEqual(len({tuple(c["chunk_id"] for c in r["contexts"]) for r in rows}), 1)
-
-    def test_the_description_query_makes_one_more_call_per_image_question_and_adds_its_tokens(self):
-        self.make("multimodal", 4)
-        client = FakeRagClient(self.questions)
-        out = self.go(self.args(view="multimodal"), client, make_rag("description"))
-        self.assertEqual((client.described, len(client.texts)), (4, 8))
-        row = self.lines(out)[0]
-        self.assertEqual(row["description"], "A brown area with vessels.")
-        self.assertTrue(row["query"].endswith("A brown area with vessels."))
-        self.assertEqual((row["tokens_in"], row["tokens_out"]), (1700, 90))                # the answer call plus the description call
-        self.assertEqual(json.loads(Path(out, "run.json").read_text(encoding="utf-8"))["settings"]["retrieval"]["query"], "description")
-
-    def test_a_text_only_run_with_the_description_query_makes_no_extra_call(self):
-        self.make("text_only", 4)
-        client = FakeRagClient(self.questions)
-        self.go(self.args(), client, make_rag("description"))
-        self.assertEqual((client.described, len(client.texts)), (0, 4))
 
     def test_an_interrupted_run_continues_with_the_same_settings_and_refuses_other_ones(self):
         self.make("text_only")

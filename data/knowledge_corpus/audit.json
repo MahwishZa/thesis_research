@@ -1,0 +1,112 @@
+{
+ "n_passages": 3426,
+ "by_library": {
+  "guidelines": {
+   "passages": 912,
+   "untagged": 114,
+   "short_under_40_words": 64
+  },
+  "pmc": {
+   "passages": 1200,
+   "untagged": 16,
+   "short_under_40_words": 113
+  },
+  "pubmed": {
+   "passages": 1124,
+   "untagged": 220,
+   "short_under_40_words": 25
+  },
+  "textbook": {
+   "passages": 190,
+   "untagged": 0,
+   "short_under_40_words": 39
+  }
+ },
+ "near_duplicate_pairs": [
+  [
+   "PMC7058877#0",
+   "PMID:31899063#0"
+  ],
+  [
+   "PMC12517799#1",
+   "PMID:41088711#0"
+  ],
+  [
+   "dermoscopedia:03-Seborrheic Keratosis / Lentigos#5",
+   "dermoscopedia:Solar lentigines / seborrheic keratoses / lichen planus-like keratosis (full text)#10"
+  ],
+  [
+   "dermoscopedia:03-Seborrheic Keratosis / Lentigos#7",
+   "dermoscopedia:Solar lentigines / seborrheic keratoses / lichen planus-like keratosis (full text)#11"
+  ]
+ ],
+ "reference_copies": [
+  "dermoscopedia:04-Melanoma#5",
+  "dermoscopedia:04-Melanoma#6",
+  "dermoscopedia:04-Melanoma#7",
+  "dermoscopedia:04-Melanoma#8",
+  "dermoscopedia:04-Melanoma#9",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#1",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#2",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#3",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#4",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#5",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#6",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#7",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#8",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#9",
+  "dermoscopedia:Classification of nevi / benign nevus pattern#10",
+  "dermoscopedia:Basal cell carcinoma#3",
+  "dermoscopedia:Basal cell carcinoma#4",
+  "dermoscopedia:Basal cell carcinoma#5",
+  "dermoscopedia:Basal cell carcinoma#6",
+  "dermoscopedia:Basal cell carcinoma#7",
+  "dermoscopedia:Basal cell carcinoma#8",
+  "dermoscopedia:Basal cell carcinoma#9",
+  "dermoscopedia:Actinic keratosis#1",
+  "dermoscopedia:Actinic keratosis#2",
+  "dermoscopedia:Actinic keratosis#3",
+  "dermoscopedia:Actinic keratosis#4",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#1",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#2",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#3",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#4",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#5",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#6",
+  "dermoscopedia:03-Seborrheic Keratosis / Lentigos#7",
+  "dermoscopedia:Solar lentigines / seborrheic keratoses / lichen planus-like keratosis (full text)#9",
+  "dermoscopedia:Solar lentigines / seborrheic keratoses / lichen planus-like keratosis (full text)#10",
+  "dermoscopedia:Solar lentigines / seborrheic keratoses / lichen planus-like keratosis (full text)#11",
+  "dermoscopedia:03-Dermatofibroma#1",
+  "dermoscopedia:03-Dermatofibroma#2",
+  "dermoscopedia:03-Dermatofibroma#3",
+  "dermoscopedia:03-Dermatofibroma#4",
+  "dermoscopedia:03-Dermatofibroma#5",
+  "dermoscopedia:Squamous cell carcinoma#1",
+  "dermoscopedia:Squamous cell carcinoma#2",
+  "dermoscopedia:Squamous cell carcinoma#3"
+ ],
+ "largest_documents": [
+  {
+   "doc_id": "PMC7150662",
+   "passages": 102
+  },
+  {
+   "doc_id": "PMC11940417",
+   "passages": 83
+  },
+  {
+   "doc_id": "PMC12026269",
+   "passages": 65
+  },
+  {
+   "doc_id": "PMC6704206",
+   "passages": 63
+  },
+  {
+   "doc_id": "PMC13114341",
+   "passages": 61
+  }
+ ],
+ "tags_that_would_change": []
+}
