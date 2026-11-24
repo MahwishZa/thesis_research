@@ -1568,6 +1568,33 @@ class StandardRagRunTests(unittest.TestCase):
                                   "--results", self.results])
         self.assertIn("build.py index", str(caught.exception))
 
+    def test_the_retrieval_comparison_scores_each_mode_on_validation_and_refuses_the_test_split(self):
+        self.make("text_only", 6)
+        from array import array
+
+        from common import DenseIndex
+        flat = array("f")
+        for p in RAG_CORPUS:
+            flat.extend(rag_vec(p["title"] + " " + p["text"]))
+        index = DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"})
+
+        def rag_for(mode):
+            return rl.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
+        out = os.path.join(self.tmp.name, "cmp.json")
+        with contextlib.redirect_stdout(io.StringIO()):
+            res = rl.retrieval_eval_main(["--data", self.data, "--out", out], rag_for=rag_for)
+        self.assertEqual(sorted(res), sorted(rl.RETRIEVAL_MODES))
+        saved = json.loads(Path(out).read_text(encoding="utf-8"))
+        self.assertEqual((saved["view"], saved["split"], saved["n_questions"]), ("text_only", "val", 6))
+        self.assertTrue(all("hit@3" in saved["modes"][m] and "mrr" in saved["modes"][m] for m in rl.RETRIEVAL_MODES))
+        for m in rl.RETRIEVAL_MODES:
+            lo, hi = saved["intervals_95"][m]["hit@3"]
+            self.assertLessEqual(lo, saved["modes"][m]["hit@3"] + 1e-9)
+            self.assertGreaterEqual(hi, saved["modes"][m]["hit@3"] - 1e-9)
+        self.assertEqual(set(saved["random_passages"]), set(rl.INTERVAL_KEYS))
+        with self.assertRaises(SystemExit):
+            rl.retrieval_eval_args(["--split", "test"])
+
     def test_collect_reports_a_standard_rag_run_beside_an_llm_only_run(self):
         self.make("text_only")
         self.go(self.args(split="val"), FakeRagClient(self.questions), make_rag())

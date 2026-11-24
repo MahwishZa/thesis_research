@@ -1154,6 +1154,72 @@ class DenseIndexTests(unittest.TestCase):
                 common.write_index(d, RAG_PASSAGES[:2], [[1.0, 0.0], [1.0]], {})
 
 
+class HybridRetrievalTests(unittest.TestCase):
+    """BM25, rank fusion and the retrieval modes of the standard RAG (no model: fake encoders and a fake re-ranker)."""
+
+    PASSAGES = RAG_PASSAGES + [{"passage_id": "p4", "title": "Arborizing vessels", "text": "Arborizing vessels are typical of carcinoma.",
+                                "tags": ["BCC"], "url": "u4"}]
+
+    def rag(self, mode, k=2, rerank=None):
+        return rl.StandardRag(rag_index(self.PASSAGES), rag_encode, k, mode, rerank=rerank)
+
+    def test_bm25_finds_a_rare_word_that_the_dense_search_cannot_see(self):
+        bm25 = common.BM25Index(self.PASSAGES)
+        self.assertEqual(bm25.search("arborizing", 2)[0][0]["passage_id"], "p4")
+        self.assertEqual(bm25.search("zzz unknown", 3), [])
+        hits = bm25.search("trunk", 5)
+        self.assertEqual(sorted(p["passage_id"] for p, _ in hits), ["p0", "p3"])
+        self.assertEqual([score for _, score in hits], sorted((score for _, score in hits), reverse=True))
+        self.assertEqual(common.BM25Index([]).search("trunk", 3), [])
+
+    def test_bm25_ranks_a_passage_with_more_of_the_word_higher_and_a_rarer_word_counts_more(self):
+        docs = [{"passage_id": "few", "title": "", "text": "trunk alpha beta gamma"},
+                {"passage_id": "many", "title": "", "text": "trunk trunk trunk"},
+                {"passage_id": "rare", "title": "", "text": "zeta beta alpha"}]
+        bm25 = common.BM25Index(docs)
+        self.assertEqual([p["passage_id"] for p, _ in bm25.search("trunk", 3)], ["many", "few"])      # the corpus order is the other way
+        self.assertGreater(bm25.search("zeta", 1)[0][1], bm25.search("beta", 1)[0][1])                # zeta is in 1 passage, beta in 2
+
+    def test_bm25_ties_keep_the_corpus_order(self):
+        same = [{"passage_id": f"s{i}", "title": "", "text": "trunk"} for i in range(3)]
+        self.assertEqual([p["passage_id"] for p, _ in common.BM25Index(same).search("trunk", 3)], ["s0", "s1", "s2"])
+
+    def test_rank_fusion_prefers_a_passage_in_both_lists(self):
+        a, b, c = ({"passage_id": x} for x in "abc")
+        fused = common.reciprocal_rank_fusion([[a, b], [c, b]], top=3)
+        self.assertEqual([p["passage_id"] for p, _ in fused], ["b", "a", "c"])      # b is second twice, a and c first once
+        self.assertAlmostEqual(fused[0][1], 2 / 62, places=5)
+        self.assertEqual(len(common.reciprocal_rank_fusion([[a, b], [c]], top=1)), 1)
+
+    def test_dense_search_misses_the_keyword_passage_that_hybrid_search_finds(self):
+        query = "arborizing"                                  # a word the fake dense encoder does not know: all dense scores are 0
+        dense = [p["passage_id"] for p, _ in self.rag("dense").retrieve(query, 2)]
+        hybrid = [p["passage_id"] for p, _ in self.rag("hybrid").retrieve(query, 2)]
+        self.assertNotIn("p4", dense)
+        self.assertIn("p4", hybrid)
+
+    def test_the_reranker_decides_the_final_order_of_the_pool(self):
+        calls = []
+
+        def rerank(query, texts):
+            calls.append((query, len(texts)))
+            return [10.0 if "Trunk nevus" in t[0] else 0.0 for t in texts]
+        hits = self.rag("hybrid-rerank", k=1, rerank=rerank).retrieve("vessels", 1)
+        self.assertEqual(hits[0][0]["passage_id"], "p3")
+        self.assertEqual(calls[0][0], "vessels")
+        self.assertLessEqual(calls[0][1], rl.POOL)
+
+    def test_a_wrong_mode_or_a_missing_reranker_stops_and_the_settings_name_the_mode(self):
+        with self.assertRaises(ValueError):
+            self.rag("sparse")
+        with self.assertRaises(ValueError):
+            self.rag("hybrid-rerank")
+        s = self.rag("hybrid").settings()
+        self.assertEqual((s["retrieval"], s["pool"]), ("hybrid", rl.POOL))
+        self.assertEqual(self.rag("dense").settings()["pool"], None)
+        self.assertEqual([rl.rag_system(m) for m in rl.RETRIEVAL_MODES], ["standard_rag", "standard_rag_hybrid", "standard_rag_hybrid_rerank"])
+
+
 class RagQueryAndPromptTests(unittest.TestCase):
     def setUp(self):
         self.cases = run_cases(1, True)

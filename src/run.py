@@ -59,14 +59,16 @@ import datetime
 import hashlib
 import json
 import os
+import random
 import re
 import sys
 import time
 import urllib.error
 import urllib.request
 
-from common import (INDEX_DIR, KNOWLEDGE_CORPUS, MEDCPT_QUERY, SEED, SPLITS, VIEWS, get_logger, load_env, medcpt_encoder,
-                    question_file, read_index, read_jsonl, write_json)
+from common import (INDEX_DIR, KNOWLEDGE_CORPUS, MEDCPT_QUERY, SEED, SPLITS, VIEWS, BM25Index, get_logger, load_env,
+                    medcpt_cross_encoder, medcpt_encoder, question_file, read_index, read_jsonl, reciprocal_rank_fusion,
+                    write_json)
 
 PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -237,15 +239,45 @@ def add_tokens(a, b):
     return None if a is None and b is None else (a or 0) + (b or 0)
 
 
-class StandardRag:
-    """The retrieval of one run: the index, the query encoder, k and how the query is made."""
+RETRIEVAL_MODES = ("dense", "hybrid", "hybrid-rerank")
+POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 
-    def __init__(self, index, encode_query, k=3):
-        self.index, self.encode_query, self.k = index, encode_query, k
+
+def rag_system(mode):
+    """The results folder of a standard-RAG run: one per retrieval mode, so a run of one mode never skips or overwrites another."""
+    return "standard_rag" if mode == "dense" else "standard_rag_" + mode.replace("-", "_")
+
+
+class StandardRag:
+    """The retrieval of one run: the index, the query encoder, k, and the retrieval mode.
+    dense: the k passages of highest MedCPT cosine similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank
+    fusion.  hybrid-rerank: the hybrid pool, re-ordered by the MedCPT cross-encoder."""
+
+    def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL):
+        if mode not in RETRIEVAL_MODES:
+            raise ValueError(f"unknown retrieval mode {mode!r}")
+        if mode == "hybrid-rerank" and rerank is None:
+            raise ValueError("hybrid-rerank needs a re-ranker")
+        self.index, self.encode_query, self.k, self.mode, self.rerank, self.pool = index, encode_query, k, mode, rerank, pool
+        self.bm25 = bm25 if bm25 is not None else (BM25Index(index.passages) if mode != "dense" else None)
+
+    def retrieve(self, query, k):
+        """[(passage, score), ...], best first, for one query text."""
+        vector = self.encode_query([query])[0]
+        if self.mode == "dense":
+            return self.index.search(vector, k)
+        pool = max(self.pool, k)
+        fused = reciprocal_rank_fusion([[p for p, _ in self.index.search(vector, pool)], [p for p, _ in self.bm25.search(query, pool)]],
+                                       top=pool)
+        if self.mode == "hybrid":
+            return fused[:k]
+        scores = self.rerank(query, [[p.get("title") or "", p["text"]] for p, _ in fused])
+        order = sorted(range(len(fused)), key=lambda i: (-scores[i], i))
+        return [(fused[i][0], round(scores[i], 6)) for i in order[:k]]
 
     def settings(self):
         meta = self.index.meta
-        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question",
+        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode == "dense" else self.pool,
                 "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
                 "exclude_reference_pages": meta.get("exclude_reference_pages")}
 
@@ -255,7 +287,7 @@ class StandardRag:
     def prepare(self, q, view, client, image):
         """(the text to send, the fields to add to the record, no extra tokens): one retrieval, no extra model call."""
         query = retrieval_query(q, view)
-        hits = self.index.search(self.encode_query([query])[0], self.k)
+        hits = self.retrieve(query, self.k)
         contexts = [{"rank": r, "chunk_id": p["passage_id"], "title": p.get("title"), "text": p["text"], "tags": p.get("tags", []),
                      "score": score} for r, (p, score) in enumerate(hits, 1)]
         return rag_text(q, view, contexts), {"query": query, "contexts": contexts}, None, None
@@ -390,7 +422,7 @@ def run_folder(results, model, view, split, system="llm_only"):
 
 def run(args, client, log, rag=None):
     """One run: every question of one view and split, asked of one model. `rag` (a StandardRag) adds retrieval and evidence."""
-    system = "standard_rag" if rag else "llm_only"
+    system = rag_system(rag.mode) if rag else "llm_only"
     style = getattr(args, "style", "rationale")
     qpath = os.path.join(args.data, question_file(args.view, args.split))
     questions = read_jsonl(qpath)
@@ -530,6 +562,8 @@ def rag_parse_args(argv=None):
     ap.add_argument("--view", required=True, choices=VIEWS)
     ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
+    ap.add_argument("--retrieval", default="dense", choices=RETRIEVAL_MODES,
+                    help="dense (approved); hybrid (dense + BM25, rank fusion); hybrid-rerank (+ MedCPT cross-encoder)")
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
@@ -540,17 +574,24 @@ def rag_parse_args(argv=None):
     return ap.parse_args(argv)
 
 
+def make_rag(args):
+    """The StandardRag of the command line: loads the index and the encoders (laptop: torch and transformers)."""
+    folder = args.index or os.path.join(args.data, INDEX_DIR)
+    index = read_index(folder, os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))      # stops with a clear message
+    rerank = medcpt_cross_encoder() if args.retrieval == "hybrid-rerank" else None
+    return StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.retrieval, rerank=rerank)
+
+
 def standard_rag_main(argv=None, rag=None):
     args = rag_parse_args(argv)
-    final, partial = run_folder(args.results, args.model, args.view, args.split, "standard_rag")
-    name = f"standard_rag.{args.model}.{args.view}.{args.split}"
+    final, partial = run_folder(args.results, args.model, args.view, args.split, rag_system(args.retrieval))
+    name = f"{rag_system(args.retrieval)}.{args.model}.{args.view}.{args.split}"
     log, client = get_logger(name), None
     if os.path.isdir(final) and not args.dry_run:
-        return run(args, None, log, rag)
+        log.info(f"already complete: {final}")
+        return final
     if rag is None:
-        folder = args.index or os.path.join(args.data, INDEX_DIR)
-        index = read_index(folder, os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))      # stops with a clear message
-        rag = StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k)
+        rag = make_rag(args)
     if not args.dry_run:
         unusable = load_env(args.env_file)
         if unusable:
@@ -560,13 +601,98 @@ def standard_rag_main(argv=None, rag=None):
     return run(args, client, log, rag)
 
 
-COMMANDS = {"llm-only": llm_only_main, "standard-rag": standard_rag_main}      # RAG^2 and the proposed system are added here
+# ---- retrieval-only comparison (no model call, no cost) ---------------------------------------------------------------------
+# For the validation questions of a text view, retrieves 10 passages with each retrieval mode and scores them with the retrieval
+# metrics of src/evaluate.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
+# class: the tags are used for this score only, never to retrieve). The choice of the retrieval mode is made on this validation
+# score, before any paid run; the test split is refused. Image-only questions are not scored: their text query is the same for all.
+def retrieval_eval_args(argv=None):
+    ap = argparse.ArgumentParser(prog="run.py retrieval-eval", description="Retrieval metrics of the retrieval modes on validation.")
+    ap.add_argument("--view", default="text_only", choices=("text_only", "multimodal"))
+    ap.add_argument("--split", default="val", choices=("val",), help="validation only")
+    ap.add_argument("--modes", nargs="+", default=list(RETRIEVAL_MODES), choices=RETRIEVAL_MODES)
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--results", default="results")
+    ap.add_argument("--index", default=None)
+    ap.add_argument("--out", default=None, help="default: results/retrieval_<view>_<split>.json")
+    return ap.parse_args(argv)
+
+
+INTERVAL_KEYS = ("hit@3", "precision@3", "ndcg@3", "mrr")
+
+
+def retrieval_intervals(qa, pred, n_boot=1000, seed=42):
+    """95% percentile intervals of the main retrieval scores. Whole lesions are drawn with replacement (photos of one lesion stay
+    together), as in src/evaluate.py."""
+    import evaluate
+    members = {}
+    for i, q in qa.items():
+        members.setdefault(q.get("group_id", i), []).append(i)
+    groups, rng, values = list(members), random.Random(seed), {k: [] for k in INTERVAL_KEYS}
+    for _ in range(n_boot):
+        qa_b, pred_b = {}, {}
+        for g in rng.choices(groups, k=len(groups)):
+            for i in members[g]:
+                key = f"{i}#{len(qa_b)}"
+                qa_b[key], pred_b[key] = qa[i], pred[i]
+        scores = evaluate.retrieval_metrics(qa_b, pred_b, ks=(3,))
+        for k in INTERVAL_KEYS:
+            values[k].append(scores[k])
+    return {k: [round(evaluate.percentile(sorted(v), 2.5), 4), round(evaluate.percentile(sorted(v), 97.5), 4)]
+            for k, v in values.items()}
+
+
+def random_retrieval(qa, passages, rounds=20, seed=SEED):
+    """The reference line: the same scores when 10 passages are drawn at random from the whole corpus (mean of `rounds` draws)."""
+    import evaluate
+    rng, scores = random.Random(seed), []
+    for _ in range(rounds):
+        pred = {i: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p in rng.sample(passages, min(10, len(passages)))]} for i in qa}
+        scores.append(evaluate.retrieval_metrics(qa, pred, ks=(3,)))
+    return {k: round(sum(s[k] for s in scores) / rounds, 4) for k in INTERVAL_KEYS}
+
+
+def retrieval_eval_main(argv=None, rag_for=None):
+    import evaluate
+    args = retrieval_eval_args(argv)
+    log = get_logger("retrieval-eval")
+    questions = read_jsonl(os.path.join(args.data, question_file(args.view, args.split)))
+    qa = {q["id"]: q for q in questions}
+    if rag_for is None:
+        index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))
+        encode = medcpt_encoder(MEDCPT_QUERY, 64)
+        bm25 = BM25Index(index.passages)
+        rerank = medcpt_cross_encoder() if "hybrid-rerank" in args.modes else None
+
+        def rag_for(mode):
+            return StandardRag(index, encode, 10, mode, bm25=bm25, rerank=rerank)
+    result, intervals = {}, {}
+    for mode in args.modes:
+        rag = rag_for(mode)
+        pred = {}
+        for q in questions:
+            hits = rag.retrieve(retrieval_query(q, args.view), 10)
+            pred[q["id"]] = {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p, _ in hits]}
+        result[mode] = evaluate.retrieval_metrics(qa, pred, n_relevant=evaluate.relevant_counts(rag.index.passages))
+        intervals[mode] = retrieval_intervals(qa, pred)
+        log.info(f"{mode}: " + ", ".join(f"{k} {100 * result[mode][k]:.1f}% ({100 * lo:.1f} to {100 * hi:.1f})"
+                                          for k, (lo, hi) in intervals[mode].items()))
+    chance = random_retrieval(qa, rag.index.passages)
+    log.info("random 10 passages: " + ", ".join(f"{k} {100 * v:.1f}%" for k, v in chance.items()))
+    out = args.out or os.path.join(args.results, f"retrieval_{args.view}_{args.split}.json")
+    write_json(out, {"view": args.view, "split": args.split, "n_questions": len(questions), "modes": result,
+                     "intervals_95": intervals, "random_passages": chance})
+    return result
+
+
+COMMANDS = {"llm-only": llm_only_main, "standard-rag": standard_rag_main,      # RAG^2 and the proposed system are added here
+            "retrieval-eval": retrieval_eval_main}
 
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if not argv or argv[0] not in COMMANDS:
-        print("usage: python src/run.py llm-only|standard-rag --model <model> --view <view> --split <split> [--limit N] [--dry-run]\n"
+        print("usage: python src/run.py llm-only|standard-rag|retrieval-eval --model <model> --view <view> --split <split> [--limit N] [--dry-run]\n"
               "commands: " + ", ".join(COMMANDS))
         return 0 if argv in ([], ["-h"], ["--help"]) else 2
     return COMMANDS[argv[0]](argv[1:])

@@ -1,0 +1,129 @@
+{
+  "view": "text_only",
+  "split": "val",
+  "n_questions": 160,
+  "modes": {
+    "dense": {
+      "hit@1": 0.2313,
+      "precision@1": 0.2313,
+      "ndcg@1": 0.2313,
+      "recall@1": 0.0005,
+      "hit@3": 0.4313,
+      "precision@3": 0.2104,
+      "ndcg@3": 0.2124,
+      "recall@3": 0.0016,
+      "hit@5": 0.5,
+      "precision@5": 0.1862,
+      "ndcg@5": 0.1954,
+      "recall@5": 0.0022,
+      "hit@10": 0.7188,
+      "precision@10": 0.1719,
+      "ndcg@10": 0.1824,
+      "recall@10": 0.0041,
+      "mrr": 0.3674,
+      "n_questions_with_contexts": 160
+    },
+    "hybrid": {
+      "hit@1": 0.2188,
+      "precision@1": 0.2188,
+      "ndcg@1": 0.2188,
+      "recall@1": 0.0005,
+      "hit@3": 0.4938,
+      "precision@3": 0.1792,
+      "ndcg@3": 0.1878,
+      "recall@3": 0.0012,
+      "hit@5": 0.7375,
+      "precision@5": 0.1938,
+      "ndcg@5": 0.1961,
+      "recall@5": 0.0023,
+      "hit@10": 0.9062,
+      "precision@10": 0.2156,
+      "ndcg@10": 0.2112,
+      "recall@10": 0.0049,
+      "mrr": 0.4142,
+      "n_questions_with_contexts": 160
+    },
+    "hybrid-rerank": {
+      "hit@1": 0.225,
+      "precision@1": 0.225,
+      "ndcg@1": 0.225,
+      "recall@1": 0.0006,
+      "hit@3": 0.4813,
+      "precision@3": 0.225,
+      "ndcg@3": 0.225,
+      "recall@3": 0.0018,
+      "hit@5": 0.6375,
+      "precision@5": 0.2225,
+      "ndcg@5": 0.2238,
+      "recall@5": 0.0029,
+      "hit@10": 0.8688,
+      "precision@10": 0.2181,
+      "ndcg@10": 0.2195,
+      "recall@10": 0.0054,
+      "mrr": 0.4029,
+      "n_questions_with_contexts": 160
+    }
+  },
+  "intervals_95": {
+    "dense": {
+      "hit@3": [
+        0.3418,
+        0.5247
+      ],
+      "precision@3": [
+        0.1617,
+        0.2624
+      ],
+      "ndcg@3": [
+        0.162,
+        0.2651
+      ],
+      "mrr": [
+        0.2969,
+        0.4388
+      ]
+    },
+    "hybrid": {
+      "hit@3": [
+        0.3961,
+        0.5933
+      ],
+      "precision@3": [
+        0.1394,
+        0.2174
+      ],
+      "ndcg@3": [
+        0.1473,
+        0.2326
+      ],
+      "mrr": [
+        0.3487,
+        0.4811
+      ]
+    },
+    "hybrid-rerank": {
+      "hit@3": [
+        0.3846,
+        0.5732
+      ],
+      "precision@3": [
+        0.1748,
+        0.2739
+      ],
+      "ndcg@3": [
+        0.1728,
+        0.276
+      ],
+      "mrr": [
+        0.3344,
+        0.4688
+      ]
+    }
+  },
+  "random_passages": {
+    "hit@3": 0.3862,
+    "precision@3": 0.1574,
+    "ndcg@3": 0.157,
+    "mrr": 0.3229
+  }
+}

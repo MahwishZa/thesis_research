@@ -50,6 +50,12 @@ third party is credited anywhere in the repository.
   non-synthetic.
   Facts that are "not recorded" are left out of the query; with no fact left, the query is a fixed sentence that fits the view ("skin
   lesion" for text-only and image + text, "dermoscopic image of a skin lesion" for image-only).
+- Standard RAG scope (researcher, 2026-11-24): one library shared by all RAG systems, suitable for every modality (text and image-caption
+  material, real and relevant only, no duplicates, no near-duplicate of any Kaggle image); the standard RAG includes the common techniques
+  that need no model-written text: dense retrieval (done), hybrid BM25 + dense with rank fusion and MedCPT cross-encoder re-ranking
+  (built, tested offline; mode chosen on the validation retrieval score, `run.py retrieval-eval`, before any paid run) and image-aware
+  retrieval (not built). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
+  RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.
 
