@@ -53,8 +53,17 @@ third party is credited anywhere in the repository.
 - Standard RAG scope (researcher, 2026-11-24): one library shared by all RAG systems, suitable for every modality (text and image-caption
   material, real and relevant only, no duplicates, no near-duplicate of any Kaggle image); the standard RAG includes the common techniques
   that need no model-written text: dense retrieval (done), hybrid BM25 + dense with rank fusion and MedCPT cross-encoder re-ranking
-  (built, tested offline; mode chosen on the validation retrieval score, `run.py retrieval-eval`, before any paid run) and image-aware
-  retrieval (not built). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
+  (built and tested; hybrid-rerank approved by the researcher on 2026-11-24 after the validation comparison, `run.py retrieval-eval`:
+  retrieval from the patient facts is only a little better than random, because the query holds little diagnostic information) and
+  image-aware retrieval (in progress: `build.py visual` lists the skin-image figures of the corpus papers; images, the image encoder
+  and the Kaggle near-duplicate guard come next, each after the researcher's go-ahead). Researcher's answers (2026-11-24): the
+  image views search by the image itself (the library holds picture-and-caption records, real captions only) and the text-only view
+  searches the text and caption records with the patient facts; both must first be validated on the validation split, with no paid
+  call. Built, tested offline, not yet run on real data: `build.py visual`, `visual-images` (the download address pattern is unverified:
+  use --probe), `visual-index` (BiomedCLIP; needs open_clip_torch and Pillow; the Kaggle look-alike check, threshold 0.95, and a check for the same
+  picture twice in the library, threshold 0.98; neither tuned). Real data (laptop, 2026-11-24): the figure list from the 90 PMC papers of the
+  text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all 88 downloaded from the PMC
+  open-data bucket; `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.

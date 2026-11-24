@@ -274,6 +274,74 @@ def medcpt_cross_encoder(model_name=MEDCPT_CROSS, max_length=512):
     return score
 
 
+# ---- images: encoder and the check against the Kaggle images --------------------------------------------------------------
+IMAGE_ENCODERS = ("biomedclip",)       # "monet" is added once its loading code is confirmed from its model card
+BIOMEDCLIP = "hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
+
+
+def image_encoder(kind):
+    """A function that turns a list of image file paths into unit-length vectors. BiomedCLIP (Zhang et al. 2023) is loaded the way its
+    model card does (open_clip, `create_model_from_pretrained`); it needs the `open_clip_torch` and `Pillow` packages and downloads
+    the model on first use."""
+    if kind != "biomedclip":
+        raise ValueError(f"unknown image encoder {kind!r}; choose one of {IMAGE_ENCODERS}")
+    import open_clip
+    import torch
+    from PIL import Image
+    model, preprocess = open_clip.create_model_from_pretrained(BIOMEDCLIP)
+    model.eval()
+
+    @torch.no_grad()
+    def encode(paths, batch=16):
+        out = []
+        for start in range(0, len(paths), batch):
+            images = [preprocess(Image.open(p).convert("RGB")) for p in paths[start:start + batch]]
+            out += torch.nn.functional.normalize(model.encode_image(torch.stack(images)), dim=-1).tolist()
+        return out
+    return encode
+
+
+def max_similarities(vectors, reference_vectors):
+    """For each vector, its largest dot product (cosine, as all vectors have unit length) with any reference vector, and which one."""
+    try:
+        import numpy as np
+        sims = np.asarray(vectors, dtype="float32") @ np.asarray(reference_vectors, dtype="float32").T
+        best = sims.argmax(axis=1)
+        return [(float(sims[i, j]), int(j)) for i, j in enumerate(best)]
+    except ImportError:                                     # small inputs only (the tests); the laptop has numpy
+        out = []
+        for v in vectors:
+            scores = [sum(map(operator.mul, v, r)) for r in reference_vectors]
+            j = max(range(len(scores)), key=lambda i: (scores[i], -i))
+            out.append((scores[j], j))
+        return out
+
+
+def drop_near_duplicates(vectors, threshold):
+    """Greedy, in order: a vector is kept unless its cosine with an already kept vector is at least `threshold`.
+    Returns (indices kept, [(index dropped, index of the kept look-alike, similarity), ...])."""
+    kept, dropped = [], []
+    try:
+        import numpy as np
+        matrix = np.asarray(vectors, dtype="float32")
+        for i in range(len(matrix)):
+            if kept:
+                sims = matrix[kept] @ matrix[i]
+                j = int(sims.argmax())
+                if float(sims[j]) >= threshold:
+                    dropped.append((i, kept[j], float(sims[j])))
+                    continue
+            kept.append(i)
+    except ImportError:                                     # small inputs only (the tests); the laptop has numpy
+        for i, v in enumerate(vectors):
+            best = max(((sum(map(operator.mul, v, vectors[j])), j) for j in kept), default=(-2.0, -1))
+            if best[0] >= threshold:
+                dropped.append((i, best[1], best[0]))
+            else:
+                kept.append(i)
+    return kept, dropped
+
+
 # ---- keyword search and rank fusion (standard library only) ---------------------------------------------------------------
 WORD = re.compile(r"[a-z0-9]+")
 

@@ -4,6 +4,7 @@ run.py with a fake model (answers saved, interrupted, resumed, then read by eval
 small folders. Run: python -m unittest discover -s tests"""
 
 import argparse
+import collections
 import contextlib
 import csv
 import hashlib
@@ -15,6 +16,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
+import urllib.parse
 from pathlib import Path
 from unittest import mock
 
@@ -26,6 +28,7 @@ import evaluate as ev  # noqa: E402
 import run as rl  # noqa: E402
 from build import options_for, question  # noqa: E402
 from common import ALL_CASES, CLASSES, PROCESSED_CASES, question_file, write_jsonl  # noqa: E402
+from common import read_index as common_read_index
 
 DATA = ROOT / "data"
 
@@ -324,6 +327,251 @@ class TextTests(unittest.TestCase):
         out = bd.passages_from(docs, "textbook", "MEL", ns, set(), set(), removed)
         self.assertEqual([p["text"] for p in out], ["Melanomas show an atypical network on dermoscopy."])
         self.assertEqual(removed["textbook: placeholder text"], 1)
+
+    JATS = ('''<article xmlns:xlink="http://www.w3.org/1999/xlink"><front><article-meta><title-group>
+      <article-title>Dermoscopy of basal cell carcinoma</article-title></title-group></article-meta></front><body>
+      <fig id="f1"><label>Figure 1</label><caption><title>Dermoscopy of a basal cell carcinoma.</title><p>Arborizing vessels and
+        blue-gray ovoid nests are seen on the dermoscopic image of the lesion.</p></caption><graphic xlink:href="img-001"/></fig>
+      <fig id="f2"><label>Figure 2</label><caption><p>Flow chart of the patients included in the basal cell carcinoma study and
+        the follow-up.</p></caption><graphic xlink:href="img-002"/></fig>
+      <fig id="f3"><label>Figure 3</label><caption><p>Haematoxylin and eosin stain of the basal cell carcinoma, original
+        magnification x 200, showing nests of basaloid cells.</p></caption><graphic xlink:href="img-003"/></fig>
+      <fig id="f4"><label>Figure 4</label><caption><p>Dermoscopy of the lesion.</p></caption><graphic xlink:href="img-004"/></fig>
+      <fig id="f5"><label>Figure 5</label><caption><p>Clinical photograph of a pigmented basal cell carcinoma on the cheek of
+        the patient.</p></caption></fig>
+      <fig id="f6"><label>Figure 6</label><caption><p>Dermoscopy of a basal cell carcinoma. Arborizing vessels and blue-gray ovoid
+        nests are seen on the dermoscopic image of the lesion!</p></caption><graphic xlink:href="img-006"/></fig>
+      <fig id="f7"><label>Figure 7</label><caption><p>Clinical photograph of the lesion on the left forearm of a woman, taken
+        before the visit.</p></caption><graphic xlink:href="img-007"/></fig>
+      <fig id="f8"><label>Figure 8</label><caption><p>Distribution of the patients with basal cell carcinoma by age group and sex
+        in the whole study cohort.</p></caption><graphic xlink:href="img-008"/></fig>
+      </body></article>''')
+
+    def test_the_figures_of_a_paper_are_read_with_label_caption_and_image_file(self):
+        figs = bd.parse_pmc_figures(self.JATS)
+        self.assertEqual(len(figs), 8)
+        self.assertEqual((figs[0]["label"], figs[0]["href"]), ("Figure 1", "img-001"))
+        self.assertTrue(figs[0]["caption"].startswith("Dermoscopy of a basal cell carcinoma. Arborizing vessels"))
+        self.assertIsNone(figs[4]["href"])
+
+    def test_only_real_skin_image_figures_about_one_of_the_diagnoses_are_kept_once(self):
+        removed = collections.Counter()
+        paper = {"doc_id": "PMC1", "title": "Dermoscopy of basal cell carcinoma", "licence": "CC BY 4.0", "query_class": "BCC",
+                 "url": "https://x/PMC1"}
+        items = bd.visual_items([paper], lambda doc_id: self.JATS, removed)
+        self.assertEqual([it["item_id"] for it in items], ["PMC1#fig0", "PMC1#fig6"])
+        self.assertEqual(dict(removed), {"chart, diagram or other imaging method": 1, "caption too short": 1, "no image file": 1,
+                                         "duplicate caption": 1, "not a clinical or dermoscopic image": 2})
+        hist = {"label": "", "href": "a", "caption": "Histology of the lesion (H&E, original magnification x200) showing basaloid nests."}
+        self.assertEqual(bd.figure_reject_reason(hist, "basal cell carcinoma", set()), "histology only")
+        real = {"label": "", "href": "a", "caption": "Traumatized nevi are a good example of the need for clinical-pathological correlation. "
+                                                     "See the panoramic image of a nevus lesion on the thigh of a 44-year-old female patient."}
+        self.assertEqual(bd.figure_reject_reason(real, "Dermoscopy of melanocytic nevi", set()), "histology only")
+        mixed = {"label": "", "href": "a", "caption": "Clinical photograph of the lesion (a) and histology with H&E staining (b) in a case."}
+        self.assertIsNone(bd.figure_reject_reason(mixed, "basal cell carcinoma", set()))
+        self.assertEqual(items[0]["tags"], ["BCC"])
+        self.assertEqual(items[0]["licence"], "CC BY 4.0")
+
+    def test_a_paper_that_cannot_be_read_is_counted_and_does_not_stop_the_list(self):
+        removed = collections.Counter()
+        papers = [{"doc_id": "PMC1", "title": "t", "licence": "x", "query_class": "BCC", "url": "u"},
+                  {"doc_id": "PMC2", "title": "Dermoscopy of basal cell carcinoma", "licence": "CC BY 4.0", "query_class": "BCC", "url": "u"}]
+
+        def fetch_xml(doc_id):
+            if doc_id == "PMC1":
+                raise ValueError("no XML")
+            return self.JATS
+        items = bd.visual_items(papers, fetch_xml, removed)
+        self.assertEqual(len(items), 2)
+        self.assertEqual(removed["paper: figures not read"], 1)
+
+    def test_a_figure_with_no_diagnosis_in_its_caption_or_title_is_left_out(self):
+        fig = {"label": "", "href": "a", "caption": "Clinical photograph of a lesion on the left forearm of a woman, taken at a visit."}
+        self.assertEqual(bd.figure_reject_reason(fig, "A case of itching", set()), "no diagnosis named")
+        self.assertIsNone(bd.figure_reject_reason(fig, "A case of melanoma", set()))
+
+    @staticmethod
+    def article(licence_url="https://creativecommons.org/licenses/by/4.0/", title="Dermoscopy of basal cell carcinoma",
+                extra="", article_type=""):
+        return (f'<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="{article_type}"><front><article-meta><title-group>'
+                f'<article-title>{title}</article-title></title-group><abstract><p>A report.{extra}</p></abstract>'
+                f'<permissions><license xlink:href="{licence_url}"/></permissions></article-meta></front><body>'
+                '<fig><label>Figure 1</label><caption><p>Dermoscopy of a basal cell carcinoma with arborizing vessels in a man.</p></caption>'
+                '<graphic xlink:href="g1"/></fig></body></article>')
+
+    def test_extra_papers_are_taken_from_the_pmc_search_with_the_same_licence_and_topic_rules(self):
+        xmls = {"1": self.article(), "2": self.article(licence_url="https://example.org/closed"),
+                "3": self.article(title="Deep learning for dermoscopy of basal cell carcinoma", extra=" We train a neural network."),
+                "4": self.article(article_type="retraction"), "5": self.article(title="Another dermoscopy of basal cell carcinoma")}
+
+        class Fake:
+            def get(self, url, params=None, ncbi=False):
+                if url.endswith("esearch.fcgi"):
+                    return json.dumps({"esearchresult": {"idlist": ["1", "2", "3", "4", "5", "9"]}})
+                if params["id"] == "9":
+                    raise OSError("no XML")
+                return xmls[params["id"]]
+        removed = collections.Counter()
+        papers = bd.extra_papers(Fake(), 10, {"PMC5"}, removed)                     # PMC5 is already a corpus paper
+        self.assertEqual({p["doc_id"] for p in papers}, {"PMC1"})
+        self.assertEqual(papers[0]["query_class"], "MEL")                           # the first diagnosis searched; later ones skip it
+        self.assertEqual(dict(removed), {"extra paper: no open licence": 1, "extra paper: AI or image-dataset paper": 1,
+                                         "extra paper: retracted": 1, "extra paper: not read": 1})
+
+    def test_the_visual_command_adds_extra_papers_when_asked_and_not_otherwise(self):
+        xml = self.article()
+
+        class Fake:
+            def get(self, url, params=None, ncbi=False):
+                return json.dumps({"esearchresult": {"idlist": ["7"]}}) if url.endswith("esearch.fcgi") else xml
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "passages.jsonl"), [])
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(bd.visual_main(["--corpus", d], fetch_xml=lambda x: xml), [])
+                items = bd.visual_main(["--corpus", d, "--extra-papers", "5"], fetch=Fake())
+            self.assertEqual({it["doc_id"] for it in items}, {"PMC7"})
+
+    def test_the_visual_list_command_writes_the_items_and_a_card_with_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            passage = {"passage_id": "PMC1#0", "doc_id": "PMC1", "title": "Dermoscopy of basal cell carcinoma", "licence": "CC BY 4.0",
+                       "query_class": "BCC", "url": "https://x/PMC1"}
+            write_jsonl(os.path.join(d, "passages.jsonl"), [passage, {**passage, "passage_id": "PMC1#1"},
+                                                            {**passage, "passage_id": "m#0", "doc_id": "meditron:abc"}])
+            with contextlib.redirect_stdout(io.StringIO()):
+                items = bd.visual_main(["--corpus", d], fetch_xml=lambda doc_id: self.JATS)
+            self.assertEqual(len(items), 2)                                  # one paper (the Meditron one is not a PMC paper)
+            card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
+            self.assertEqual((card["n_papers_read"], card["n_figures_kept"], card["figures_per_tag"]["BCC"]), (1, 2, 2))
+            self.assertFalse(card["images_downloaded"])
+            self.assertEqual(len(rl.read_jsonl(os.path.join(d, "visual", "items.jsonl"))), 2)
+
+    JPEG = b"\xff\xd8\xff" + b"x" * 5000
+
+    @staticmethod
+    def bucket(files):
+        """A fake PMC bucket: {key: bytes}. Answers a listing request with the S3 XML and a file request with the bytes."""
+        def get(url):
+            if url.startswith(bd.S3_BUCKET + "?"):
+                q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+                prefix, delimiter = q["prefix"][0], q.get("delimiter", [""])[0]
+                keys = [k for k in files if k.startswith(prefix)]
+                if delimiter:
+                    subs = sorted({k[:k.index(delimiter, len(prefix)) + 1] for k in keys if delimiter in k[len(prefix):]})
+                    body = "".join(f"<CommonPrefixes><Prefix>{x}</Prefix></CommonPrefixes>" for x in subs)
+                else:
+                    body = "".join(f"<Contents><Key>{k}</Key></Contents>" for k in keys)
+                return f'<ListBucketResult xmlns="{bd.S3_NS[1:-1]}">{body}</ListBucketResult>'.encode()
+            if url.startswith(bd.S3_BUCKET) and url[len(bd.S3_BUCKET):] in files:
+                return files[url[len(bd.S3_BUCKET):]]
+            raise OSError("404 " + url)
+        return get
+
+    def test_a_figure_is_found_in_the_newest_version_folder_of_the_bucket_by_its_graphic_name(self):
+        get = self.bucket({"PMC1.1/gr1.jpg": b"old", "PMC1.2/gr1.jpg": self.JPEG, "PMC1.2/gr2.png": b"\x89PNG" + b"x" * 5000,
+                           "PMC1.2/article.xml": b"<xml/>", "PMC10.1/gr1.jpg": b"other article"})
+        data, url = bd.fetch_image("PMC1", "gr1", get)
+        self.assertEqual((data, url), (self.JPEG, bd.S3_BUCKET + "PMC1.2/gr1.jpg"))        # version 2, and PMC1 is not PMC10
+        self.assertEqual(bd.fetch_image("PMC1", "gr2.png", get)[1], bd.S3_BUCKET + "PMC1.2/gr2.png")   # a name with its extension
+        self.assertEqual(bd.fetch_image("PMC1", "gr9", get), (None, None))
+
+    def test_the_older_address_is_tried_last_and_every_failure_is_explained_in_the_trace(self):
+        europe = "https://europepmc.org/articles/PMC1/bin/gr1.jpg"
+        trace = []
+
+        def get(url):
+            if url == europe:
+                return self.JPEG
+            if url.startswith(bd.S3_BUCKET + "?"):
+                raise OSError("403 forbidden")
+            raise OSError("404")
+        self.assertEqual(bd.fetch_image("PMC1", "gr1", get, trace=trace), (self.JPEG, europe))
+        self.assertTrue(any("bucket listing failed" in t and "403" in t for t in trace))
+        trace = []
+        empty_bucket = self.bucket({})
+
+        def get_html(url):
+            return b"<html>sorry</html>" if "europepmc" in url else empty_bucket(url)
+        self.assertEqual(bd.fetch_image("PMC1", "gr1", get_html, trace=trace), (None, None))
+        self.assertTrue(any("not an image file" in t for t in trace))
+        self.assertEqual([bd.image_extension(x) for x in (b"\x89PNGrest", b"GIF89a", b"\xff\xd8\xffx", b"%PDF")],
+                         [".png", ".gif", ".jpg", None])
+
+    def test_images_are_saved_and_tiny_missing_and_identical_ones_are_left_out(self):
+        items = [{"item_id": f"PMC1#fig{i}", "doc_id": "PMC1", "href": f"h{i}"} for i in range(5)]
+        get = self.bucket({"PMC1.1/h0.jpg": self.JPEG, "PMC1.1/h1.jpg": b"\xff\xd8\xff" + b"x" * 100, "PMC1.1/h3.jpg": self.JPEG,
+                           "PMC1.1/h4.jpg": self.JPEG + b"y"})
+        with tempfile.TemporaryDirectory() as d:
+            kept, counts, worked = bd.download_images(items, os.path.join(d, "images"), get, pause=0)
+            self.assertEqual([k["item_id"] for k in kept], ["PMC1#fig0", "PMC1#fig4"])
+            self.assertEqual(dict(counts), {"image too small": 1, "no image at any address": 1, "identical image already kept": 1})
+            self.assertEqual(dict(worked), {"PMC bucket": 2})
+            self.assertEqual(sorted(os.listdir(os.path.join(d, "images"))), ["PMC1_fig0.jpg", "PMC1_fig4.jpg"])
+            self.assertEqual(kept[0]["image_bytes"], len(self.JPEG))
+            probe_kept, _, _ = bd.download_images(items, os.path.join(d, "probe"), get, pause=0, probe=1)
+            self.assertEqual(len(probe_kept), 1)
+            self.assertFalse(os.path.exists(os.path.join(d, "probe", "PMC1_fig0.jpg")))           # a probe saves nothing
+
+    def test_the_image_command_writes_the_list_with_images_and_updates_the_card(self):
+        with tempfile.TemporaryDirectory() as d:
+            folder = os.path.join(d, "visual")
+            write_jsonl(os.path.join(folder, "items.jsonl"), [{"item_id": "PMC1#fig0", "doc_id": "PMC1", "href": "h0"}])
+            Path(d, "visual_card.json").write_text(json.dumps({"n_figures_kept": 1, "images_downloaded": False}), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                kept = bd.visual_images_main(["--corpus", d], get=lambda url: self.JPEG)
+            self.assertEqual(len(kept), 1)
+            card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
+            self.assertEqual((card["images_downloaded"], card["n_images"], card["n_figures_kept"]), (True, 1, 1))
+            self.assertEqual(len(rl.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
+
+    def test_the_same_picture_in_two_papers_is_kept_once(self):
+        def encode(paths):
+            return [[float(x) for x in Path(p).read_text().split(",")] for p in paths]
+        with tempfile.TemporaryDirectory() as d:
+            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
+            os.makedirs(os.path.join(corpus, "visual", "images"))
+            os.makedirs(os.path.join(data, "processed_images"))
+            items = []
+            for name, vec in (("a", "0.6,0.8"), ("b", "0.6,0.8"), ("c", "0.8,0.6")):
+                Path(corpus, "visual", "images", name + ".jpg").write_text(vec)
+                items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
+                              "text": "x", "tags": ["MEL"]})
+            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            Path(data, "processed_images", "ISIC_0000001.jpg").write_text("0,1")
+            with contextlib.redirect_stdout(io.StringIO()):
+                kept = bd.visual_index_main(["--corpus", corpus, "--data", data], encode=encode)
+            self.assertEqual([k["item_id"] for k in kept], ["PMC1#a", "PMC1#c"])      # b is the same picture as a (cosine 1.0)
+            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            self.assertEqual(card["n_dropped_as_library_duplicates"], 1)
+
+    def test_a_library_image_that_looks_like_a_kaggle_image_is_left_out_and_the_card_shows_the_numbers(self):
+        def encode(paths):                                 # a fake encoder: the vector is written in the file
+            return [[float(x) for x in Path(p).read_text().split(",")] for p in paths]
+        with tempfile.TemporaryDirectory() as d:
+            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
+            os.makedirs(os.path.join(corpus, "visual", "images"))
+            os.makedirs(os.path.join(data, "processed_images"))
+            items = []
+            for name, vec in (("near", "1,0"), ("far", "0,1"), ("mid", "0.6,0.8")):
+                Path(corpus, "visual", "images", name + ".jpg").write_text(vec)
+                items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
+                              "text": "x", "tags": ["MEL"]})
+            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            Path(data, "processed_images", "ISIC_0000001.jpg").write_text("1,0")
+            Path(data, "processed_images", "ISIC_0000002.jpg").write_text("0,1")
+            Path(corpus, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                kept = bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode)
+            # near and far each equal a Kaggle image (cosine 1.0); mid (0.6, 0.8) has cosine 0.8 at most with both
+            self.assertEqual([k["item_id"] for k in kept], ["PMC1#mid"])
+            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            self.assertEqual((card["n_dropped"], card["n_kaggle_images"], card["threshold"]), (2, 2, 0.95))
+            self.assertEqual(card["highest_20"][0]["similarity"], 1.0)
+            idx = common_read_index(os.path.join(corpus, "visual", "index_biomedclip"), os.path.join(corpus, "visual", "items_final.jsonl"))
+            self.assertEqual([p["passage_id"] for p, _ in idx.search([0.6, 0.8], 1)], ["PMC1#mid"])
+            self.assertEqual(json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+                             ["n_dropped_as_library_duplicates"], 0)
+            with self.assertRaises(SystemExit):                 # when every image is a look-alike nothing is indexed
+                bd.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode)
 
     def test_plural_forms_are_tagged_too(self):
         self.assertEqual(bd.tag("Melanomas show asymmetry."), ["MEL"])
