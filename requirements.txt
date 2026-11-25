@@ -1,9 +1,9 @@
 # Python 3.11 or newer. Install: python -m pip install -r requirements.txt
-# Versions are pinned to the researcher's laptop environment (pip freeze, 2026-11-22).
-# Every package below is imported by a script in src/; the rest of the code (build.py, common.py, the other commands of check.py and evaluate.py) needs only Python.
-# (The packages of Version 2 are kept in archive/v2/requirements.txt.)
+# Versions are pinned to the researcher's laptop environment, the one .venv (pip freeze, 2026-11-25).
+# Every package below is imported by a module in src/; the rest of the code needs only Python. Run everything from the repository
+# folder as: python -m src.main <command>
 
-# Step 1, cleaning (src/preprocess.py), and the feature check (src/check.py features)
+# Step 1, cleaning (src/data/preprocessing.py), and the feature check (src/data/quality.py)
 pandas==3.1.1
 numpy==2.4.6
 pillow==13.0.0
@@ -11,14 +11,18 @@ opencv-python==5.1.0.95
 scikit-learn==1.9.1
 scikit-image==0.26.0
 
-# The knowledge corpus (src/build.py corpus): the Meditron guideline collection on Hugging Face
+# The knowledge corpus (src/knowledge/): the Meditron guideline collection on Hugging Face
 datasets==5.2.0
 
-# The LLM-only baseline (src/run.py llm-only): Claude through Anthropic's official package; GPT-4o, Gemini and Llama through
+# The systems (src/pipelines/, src/models/llm.py): Claude through Anthropic's official package; GPT-4o, Gemini and Llama through
 # OpenRouter need only Python. API keys go in .env (CLAUDE_API_KEY, OPENROUTER_API_KEY), never here.
 anthropic==2.6.0
 
-# Evaluation (src/evaluate.py): the diagnosis and retrieval metrics need only Python. The optional metrics need:
+# Retrieval and evaluation: MedCPT encoders and cross-encoder (src/models/embeddings.py, src/retrieval/), semantic similarity
+# (src/evaluation/). The diagnosis and retrieval metrics need only Python.
 sentence-transformers==6.3.0  # semantic similarity (rationale vs a cited reference text)
-transformers==5.24.0          # the MedCPT relevance scores (--relevance-models)
-torch==2.15.0                 # the MedCPT relevance scores (--relevance-models)
+transformers==5.24.0          # MedCPT
+torch==2.15.0                 # MedCPT, BiomedCLIP
+
+# The image library (src/retrieval/indexer.py visual-index, src/knowledge/lookalike.py): BiomedCLIP through open_clip.
+open_clip_torch==4.2.2

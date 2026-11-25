@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Document status | Current as of 2026-11-24. Implemented in `src/evaluate.py`. |
+| Document status | Current as of 2026-11-24. Implemented in `src/evaluation/` (run through `python -m src.main`). |
 | Audience | The researcher, the supervisor, and readers of the thesis (plain English; scientific accuracy kept). |
 | Related documents | `results/results.md` (the metrics applied), `data/datasheet.md` (the data) |
 
 Scores are written as percentages here and in the screen output (25.4% = 61 of 240 right). The JSON and CSV files keep fractions (0.2542) so that programs can read them; p-values and the semantic-similarity cosine are not percentages.
 
-What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluate.py`.
+What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluation/` (`statistics.py`, `diagnostic.py`, `retrieval.py`, `hallucination.py`, `evaluator.py`).
 Marks: ✔ = checked in this repository (a test, or a recomputation by hand); ◻ = from the literature, check the paper before citing it.
 "Research question" means the author's reading of the objectives in `README.md` ("Objectives"); the researcher is asked to confirm or correct it.
 
@@ -85,7 +85,7 @@ An NLI model (a language model that decides whether a passage supports a stateme
 
 Sentence embeddings: Reimers & Gurevych (2019) EMNLP ◻.
 
-**Validity check (approved 2026-11-24; run on the 12 LLM-only test runs).** The first results gave almost the same similarity for every model, which suggested the score might not discriminate. `python src/evaluate.py similarity-check` tests this: the reasoning is compared with the reference texts of all 8 diseases, and it is "identified" when the disease the model answered has the single highest similarity (chance 12.5%). Pass mark, set before the first run (my proposal, not a published standard): identified in at least 50% of the answers overall and in at least 25% for every answered disease with 10 or more answers. **Result:** the answered disease is identified in 39.2% to 91.0% of answers in every run (far above chance), so the score carries information; the pass mark is met in 6 of 12 runs and fails where a class matches its reference texts poorly (BCC in text only; melanoma for Claude) or the overall rate is under 50%. Differences between models in the mean score are too small (0.006 or less in the image views) to rank models. Details: `results/results.md`.
+**Validity check (approved 2026-11-24; run on the 12 LLM-only test runs).** The first results gave almost the same similarity for every model, which suggested the score might not discriminate. `python -m src.main similarity-check` tests this: the reasoning is compared with the reference texts of all 8 diseases, and it is "identified" when the disease the model answered has the single highest similarity (chance 12.5%). Pass mark, set before the first run (my proposal, not a published standard): identified in at least 50% of the answers overall and in at least 25% for every answered disease with 10 or more answers. **Result:** the answered disease is identified in 39.2% to 91.0% of answers in every run (far above chance), so the score carries information; the pass mark is met in 6 of 12 runs and fails where a class matches its reference texts poorly (BCC in text only; melanoma for Claude) or the overall rate is under 50%. Differences between models in the mean score are too small (0.006 or less in the image views) to rank models. Details: `results/results.md`.
 
 ## 3. How to read a result table
 
@@ -99,7 +99,7 @@ Sentence embeddings: Reimers & Gurevych (2019) EMNLP ◻.
 
 ## 4. Where the numbers are collected
 
-`python src/evaluate.py collect` writes `report.json` next to the predictions of every finished run and one table, `results/summary.csv`, with one row per system, model, view and split (accuracy and its interval, macro-F1, invalid answers, refusals, semantic similarity, the text-only image-claim rate, tokens, seconds, the host that answered, the question-file hash and the folder). Trials (`.partial` folders) are never collected.
+`python -m src.main collect` writes `report.json` next to the predictions of every finished run and one table, `results/comparisons/summary.csv`, with one row per system, model, view and split (accuracy and its interval, macro-F1, invalid answers, refusals, semantic similarity, the text-only image-claim rate, tokens, seconds, the host that answered, the question-file hash and the folder). Trials (`.partial` folders) are never collected.
 
 ## 5. Validation before test runs
 

@@ -1,6 +1,6 @@
 # Results: LLM-only baseline (test split)
 
-Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/summary.csv`, `results/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: `results/evaluation_guide.md`.
+Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/comparisons/summary.csv`, `results/comparisons/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: `results/evaluation_guide.md`.
 
 ## 1. Setup and status
 
@@ -256,7 +256,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | Item | Status |
 |---|---|
-| Standard RAG (MedCPT encoders, top 3 passages) | built and tested; needs `build.py index`, then a validation trial |
+| Standard RAG (MedCPT encoders, top 3 passages) | built and tested; needs `python -m src.main index`, then a validation trial |
 | Proposed RAG and RAG² scope | not decided |
 | Reference texts for melanoma and BCC (semantic similarity) | not decided |
 | GPT-4o refusals per class | not done |
@@ -266,16 +266,16 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | What | Where |
 |---|---|
-| Predictions, settings, report of each run | `results/llm_only/<model>/<view>_test/{predictions.jsonl, run.json, report.json}` |
-| One row per run | `results/summary.csv` |
-| Tests between models / between views | `results/llm_only/compare_<view>_test.json` / `compare_views_<model>.json` |
-| Validity check | `results/similarity_check.json` |
+| Predictions, settings, report of each run | `results/llm_only/<view>/<model>_test/{predictions.jsonl, run.json, report.json}` (before 2026-11-25: `<model>/<view>_test/`) |
+| One row per run | `results/comparisons/summary.csv` |
+| Tests between models / between views | `results/comparisons/llm_only/compare_<view>_test.json` / `compare_views_<model>.json` |
+| Validity check | `results/comparisons/similarity_check.json` |
 
 ```powershell
-python src/run.py llm-only --model gpt-4o --view image_only --split test   # one run (paid, resumable)
-python src/evaluate.py collect --force                                       # reports and results/summary.csv
-python src/evaluate.py similarity-check                                      # validity check
-python src/evaluate.py compare --out <file> --run claude=<questions>,<predictions> --run gemini=...
+python -m src.main llm-only --model gpt-4o --view image_only --split test   # one run (paid, resumable)
+python -m src.main collect --force                                          # reports and results/comparisons/summary.csv
+python -m src.main similarity-check                                         # validity check
+python -m src.main compare --out <file> --run claude=<questions>,<predictions> --run gemini=...
 ```
 
 ## Appendix A: confusion matrices (rows: true class; columns: class answered; last column: invalid)

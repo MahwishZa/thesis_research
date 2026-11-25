@@ -12,9 +12,22 @@ third party is credited anywhere in the repository.
 - All changes go to `main`. No Git tags until the researcher says the final version is ready.
 - No history rewrite or force-push unless the researcher explicitly asks for it and has confirmed the plan. Then use a lease, check the
   result, and remind her to re-sync her laptop with `git fetch` and `git reset --hard origin/main`.
-- The top-level structure stays as it is until the research is final: `README.md`, `requirements.txt`, `.claude/`, `data/`, `src/`,
-  `results/` and `tests/` (plus the dot files). Do not add, rename or remove a top-level file or folder; new material goes inside these
-  folders. A test in `tests/test_system.py` checks this. `README.md` holds only "Overview" and "Objectives" (also tested).
+- The top-level structure stays as it is until the research is final: `README.md`, `requirements.txt`, `.claude/`, `configs/`, `data/`,
+  `src/`, `results/` and `tests/` (plus the dot files; `configs/` approved 2026-11-25, it appears with its first settings file). Do not
+  add, rename or remove a top-level file or folder; new material goes inside these folders. A test in `tests/system/test_system.py`
+  checks this. `README.md` holds only "Overview" and "Objectives" (also tested).
+- Layout inside (approved 2026-11-25): `data/{raw, processed/{cases,images}, annotations/{official_labels, reference_texts.json},
+  knowledge/corpus, views/<view>/{train,validation,test}.jsonl}`; `src/main.py` is the one entry point (`python -m src.main <command>`),
+  code in `src/{utils, data, knowledge, models, retrieval, pipelines, evaluation}` (`pipelines/base.py` holds what all systems share;
+  `evaluation/statistics.py` the tests and intervals; `knowledge/lookalike.py` the Kaggle look-alike check);
+  `results/<system>/<view>/<model>_<split>/`, `results/comparisons/`, `results/data_quality/`; tests in `tests/{unit, system, integration,
+  acceptance}` (run `python -m unittest discover -s tests -t .`). No stub for the RAG² baseline or the proposed RAG before its design.
+  The move changed only image paths and the validation file names: `data/views/provenance.json` records the SHA-256 before and after.
+- One environment (`.venv`, 2026-11-25): `.venv-visual` was removed; the laptop's `.venv` holds torch 2.15.0, transformers 5.24.0,
+  sentence-transformers 6.3.0 and open_clip_torch 4.2.2 (pip freeze, matches `requirements.txt`). Still to confirm on the laptop:
+  MedCPT, the cross-encoder and BiomedCLIP all run in it (the free validation `retrieval-eval` of each view).
+- File fingerprints (2026-11-25, approved): text files are hashed with LF line endings (`text_sha256`); reports from before, which
+  recorded the Windows (CRLF) form, still match (`text_matches`); every text write in `src/` sets `newline=` (tested).
 
 ## Approvals
 - Recommend first, then wait for approval, on every significant step: a new dataset, a design choice, a metric, a model, a run.
@@ -40,9 +53,9 @@ third party is credited anywhere in the repository.
 ## Research state (update when it changes)
 - Data: the Kaggle "Skin Cancer ISIC 9 classes" dataset only, 8 classes, 2,197 cases; balanced validation (20 per class) and test (30
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
-- Systems: LLM-only (done, approved), standard RAG (built and tested 2026-11-24, not yet run: `build.py index`, then `run.py standard-rag`), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
+- Systems: LLM-only (done, approved), standard RAG (built and tested 2026-11-24, not yet run: `python -m src.main index`, then `standard-rag`), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
-- Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/run.py`).
+- Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
   The query is made only of the question's own words (patient facts; a fixed sentence for image-only). No model writes or rewrites a
@@ -53,24 +66,23 @@ third party is credited anywhere in the repository.
 - Standard RAG scope (researcher, 2026-11-24): one library shared by all RAG systems, suitable for every modality (text and image-caption
   material, real and relevant only, no duplicates, no near-duplicate of any Kaggle image); the standard RAG includes the common techniques
   that need no model-written text: dense retrieval (done), hybrid BM25 + dense with rank fusion and MedCPT cross-encoder re-ranking
-  (built and tested; hybrid-rerank approved by the researcher on 2026-11-24 after the validation comparison, `run.py retrieval-eval`:
+  (built and tested; hybrid-rerank approved by the researcher on 2026-11-24 after the validation comparison, `retrieval-eval`:
   retrieval from the patient facts is only a little better than random, because the query holds little diagnostic information) and
-  image-aware retrieval (in progress: `build.py visual` lists the skin-image figures of the corpus papers; images, the image encoder
+  image-aware retrieval (in progress: `visual` lists the skin-image figures of the corpus papers; images, the image encoder
   and the Kaggle near-duplicate guard come next, each after the researcher's go-ahead). Researcher's answers (2026-11-24): the
   image views search by the image itself (the library holds picture-and-caption records, real captions only) and the text-only view
   searches the text and caption records with the patient facts; both must first be validated on the validation split, with no paid
-  call. Built, tested offline, not yet run on real data: `build.py visual`, `visual-images` (the download address pattern is unverified:
+  call. Built, tested offline, not yet run on real data: `visual`, `visual-images` (the download address pattern is unverified:
   use --probe), `visual-index` (BiomedCLIP; needs open_clip_torch and Pillow; the Kaggle look-alike check, threshold 0.95, and a check for the same
   picture twice in the library, threshold 0.98; neither tuned). Real data (laptop, 2026-11-24): the figure list from the 90 PMC papers of the
   text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all 88 downloaded from the PMC
   open-data bucket; `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead).
-  The image index was tried on the laptop (BiomedCLIP, open_clip_torch 4.2.2 in `.venv-visual`, torch 2.15.0; the main environment keeps
-  torch 2.4.1): it runs. A second Kaggle look-alike test, by a 64-bit picture hash (also mirrored and turned, at most 4 different bits),
+  The image index was tried on the laptop (BiomedCLIP, open_clip_torch 4.2.2, torch 2.15.0; then in `.venv-visual`, now in `.venv`): it runs. A second Kaggle look-alike test, by a 64-bit picture hash (also mirrored and turned, at most 4 different bits),
   was added because the embedding alone is not calibrated. NCBI's PMC search was down on 2026-11-24 (SOLR error 500): the extra papers
   are to be fetched later.
   Full visual index (laptop, 2026-11-24): 85 of 88 images indexed, 3 dropped as Kaggle look-alikes (2 by embedding, 1 by hash); the
-  closest hash distances were 4 to 8 bits, so both thresholds are near the data: `build.py visual-calibrate` measures them on the 448
-  same-lesion photo pairs of the Kaggle set (known look-alikes) before they are accepted. `run.py retrieval-eval --view image_only` and
+  closest hash distances were 4 to 8 bits, so both thresholds are near the data: `visual-calibrate` measures them on the 448
+  same-lesion photo pairs of the Kaggle set (known look-alikes) before they are accepted. `retrieval-eval --view image_only` and
   `--view multimodal` score the image search (and text + image fused) on validation, free. RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,

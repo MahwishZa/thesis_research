@@ -1,0 +1,56 @@
+{
+  "moved": "2026-11-25",
+  "why": "repository restructuring: the cleaned images moved from data/processed_images/ to data/processed/images/ (so the image_path field of every record that has one changed), and the validation question files were renamed from val.jsonl to validation.jsonl. Nothing else in any record changed (tests/acceptance checks this). Runs recorded with the previous SHA-256 still match their questions through this record.",
+  "files": {
+    "views/image_only/train.jsonl": {
+      "previous_path": "views/image_only/train.jsonl",
+      "previous_sha256": "061ca7a3714b2ef7b230b1337ac08d8dca9aecf41e72f2d0d2d91582261feda1",
+      "sha256": "a6c2f41c578b59d4d34d1a7e74e912ec65513137470b6cc31566454efde3a9f8"
+    },
+    "views/image_only/validation.jsonl": {
+      "previous_path": "views/image_only/val.jsonl",
+      "previous_sha256": "907050a8f89ff41b0e6c0783a7ca0308440d49cca2cf06c9566aa1e465115dad",
+      "sha256": "55254d954d8b37650c604fc63ef8fab929380a5017b2e94fbad36aad3d3d17bb"
+    },
+    "views/image_only/test.jsonl": {
+      "previous_path": "views/image_only/test.jsonl",
+      "previous_sha256": "cbde816fdb76a4b1fcc9129010f8dd97db19cbf4a4141aeb62334917606c7856",
+      "sha256": "0faba3319ab72449de28719e2ff2dcb16cc6035266a313e9b56a645321c3fdc6"
+    },
+    "views/image_only/cases.csv": {
+      "previous_path": "views/image_only/cases.csv",
+      "previous_sha256": "be205f239fac18ea1ebfda12906511063209f45be1796a0d96b286f371ec0291",
+      "sha256": "e2bf8371de0cdbc9575fad447f037d994fe81299244dca7effa043565c409c28"
+    },
+    "views/text_only/validation.jsonl": {
+      "previous_path": "views/text_only/val.jsonl",
+      "previous_sha256": "75d8fbcb31efd6765496d0a9df9d0ce7ce3aacb7e9ee7f986d0699999345fe1a",
+      "sha256": "75d8fbcb31efd6765496d0a9df9d0ce7ce3aacb7e9ee7f986d0699999345fe1a"
+    },
+    "views/multimodal/train.jsonl": {
+      "previous_path": "views/multimodal/train.jsonl",
+      "previous_sha256": "b4a50277098dfdaa1c88cfe7899057326a8fde8b2cd22be0ed84720335b39b9b",
+      "sha256": "c34431c9830946e8ffac7a04409d434c1bde22bdf021a133beb54000d3ecdb75"
+    },
+    "views/multimodal/validation.jsonl": {
+      "previous_path": "views/multimodal/val.jsonl",
+      "previous_sha256": "8af404f4068596d9d42a4042a06d5980c01207caca31db64bb7c26e4c4705efa",
+      "sha256": "bc68cef864c66ce8a5a4e5563544ac6880c72066ba1fd7c65a451ccba50e9910"
+    },
+    "views/multimodal/test.jsonl": {
+      "previous_path": "views/multimodal/test.jsonl",
+      "previous_sha256": "1cb061d7137e30f2df03e2e92b965916add0ad09af3ea659d081d602ab499ffd",
+      "sha256": "0e8431d3e356b28928a6a3dceb64338a0a8eabde336deb1931347aad2108c1ac"
+    },
+    "views/multimodal/cases.csv": {
+      "previous_path": "views/multimodal/cases.csv",
+      "previous_sha256": "076dd8f6c3967e8eb37fcdae57169e8b2bfc5e7439ce0bb10a1333d8f8afdf65",
+      "sha256": "85815a85fb443b45d805db029c6385b85a74f20fa6f7ecfcd68d31247d3c19a8"
+    },
+    "processed/cases/all_cases.csv": {
+      "previous_path": "processed_cases/all_cases.csv",
+      "previous_sha256": "2a3c614eaefc58ca9088861536ebb59df54830053d4d27dd2ae2ee667211d490",
+      "sha256": "44a55aeca7e668dfbf7dd71dfa057d3b7f4d56a0a97a210a27d2f0f824d05492"
+    }
+  }
+}
