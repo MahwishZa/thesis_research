@@ -874,6 +874,15 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(sorted(k for k in r if "@" in k), ["hit@1", "hit@3", "ndcg@1", "ndcg@3", "precision@1", "precision@3"])
         self.assertAlmostEqual(r["precision@3"], round((1 / 3 + 1 / 3) / 2, 4))                   # the shorter answer still counts over 3
 
+    def test_a_text_given_twice_reaches_the_model_once(self):
+        """A figure caption can be a corpus passage and a picture-and-caption record: the better-ranked copy is kept."""
+        a = {"passage_id": "PMC1#4", "text": "Dermoscopy shows a blue white veil and an atypical network in this melanoma of the back."}
+        b = {"passage_id": "PMC1#fig1", "text": a["text"].upper() + " (x20)"}                    # the same caption, other spacing and case
+        c = {"passage_id": "PMC2#0", "text": "A different passage about a nevus with a regular network on the arm of a child."}
+        self.assertEqual([p["passage_id"] for p, _ in pipelines_standard_rag.distinct([(a, 3), (b, 2), (c, 1)])], ["PMC1#4", "PMC2#0"])
+        short = {"passage_id": "x", "text": "Short."}
+        self.assertEqual(len(pipelines_standard_rag.distinct([(short, 2), ({**short, "passage_id": "y"}, 1)])), 1)
+
     def test_no_contexts_means_no_retrieval_report(self):
         self.assertIsNone(evaluation_retrieval.retrieval_metrics(self.qa, {"ISIC_0000001": {"pred": "A"}}))
 
@@ -1435,7 +1444,7 @@ class StandardRagTests(unittest.TestCase):
 
     def test_an_image_question_is_searched_by_its_own_image_and_never_by_its_class(self):
         from array import array
-        items = [{"passage_id": f"v{i}", "image_file": f"v{i}.jpg", "title": "Figure", "text": "Caption.", "tags": [t]}
+        items = [{"passage_id": f"v{i}", "image_file": f"v{i}.jpg", "title": "Figure", "text": f"Caption {i}.", "tags": [t]}
                  for i, t in enumerate(["MEL", "NV"])]
         q, other = self.q["image_only"], data_views.question(run_cases(2, True)[1], "image_only")
         vectors = {os.path.basename(q["image_path"]): [1.0, 0.0], os.path.basename(other["image_path"]): [0.0, 1.0]}

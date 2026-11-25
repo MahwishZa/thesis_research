@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Document status | Current. Facts were checked against the committed tables on 2026-11-24 (✔) or are marked ◻ (not yet confirmed). |
-| Last data build | `preprocess` and `views` (`python -m src.main`): laptop rerun of 2026-11-23 (seed 42). Knowledge corpus snapshot: 2026-11-23. |
+| Last data build | `preprocess` and `views` (`python -m src.main`): laptop rerun of 2026-11-23 (seed 42). Knowledge corpus snapshot: 2026-11-24; image library 2026-11-24. |
 | Structure | Follows the headings of "Datasheets for Datasets" (Gebru et al., Communications of the ACM 64(12), 2021 ◻ check the citation) |
 | Related documents | `results/evaluation_guide.md` (how the data are used and scored), `results/results.md` (the results) |
 
@@ -18,7 +18,7 @@ Everything here is real data: no synthetic images and no AI-generated text. Mark
 | Classes | MEL, NV, BCC, AK, BKL, DF, VASC, SCC (ISIC 2019 taxonomy) |
 | Splits | train 1,797 · validation 160 (20 per class) · test 240 (30 per class); no lesion in two splits ✔ |
 | Views | image only · text only (age, sex, body site) · image + text; one 8-option multiple-choice question per case |
-| Knowledge corpus | 3,444 passages from 994 documents, four libraries (for the RAG systems) |
+| Knowledge corpus | 3,426 passages from 992 documents, four libraries, and 85 picture-and-caption records (for the RAG systems) |
 | Used by | `src/pipelines/` (LLM-only and standard-RAG runs), `src/evaluation/` (all metrics), `src/utils/status.py` and `src/data/quality.py` (pipeline and feature checks); one entry point, `python -m src.main <command>` |
 
 ## 2. Motivation and intended use
@@ -156,40 +156,40 @@ data/annotations/reference_texts.json               the reference texts of the s
 
 ## 9. The knowledge corpus (for the RAG systems)
 
-Built by `python -m src.main corpus`; snapshot 2026-11-23; numbers ✔ from `corpus_card.json`.
+Built by `python -m src.main corpus`; snapshot 2026-11-24 (the rebuild after the corpus rules of that day); numbers ✔ from `corpus_card.json` and `manifest.csv`.
 
 | Library | What it is | Passages |
 |---|---|---|
 | `guidelines` | the Meditron guideline collection (Hugging Face); CDC, CCO and PubMed-sourced guidelines; sources "nice" and "wikidoc" are excluded | 912 |
 | `pmc` | open-licence full-text papers from PubMed Central, licence read from each paper's JATS record | 1,200 |
 | `pubmed` | abstracts of PubMed papers, cited by PMID; AI and image-dataset papers and retracted papers removed | 1,124 |
-| `textbook` | Dermoscopedia pages (CC BY-NC-SA 4.0) | 208 |
-| **Total** | 994 documents | **3,444** |
+| `textbook` | Dermoscopedia pages (CC BY-NC-SA 4.0) | 190 |
+| **Total** | 992 documents | **3,426** |
 
 - **Passage size:** 30 to 200 words; at most 150 passages per library and disease.
-- **Tags:** each passage is tagged with the disease(s) it was searched for and the class names found in its text. A passage can carry several tags. Passages tagged per class: MEL 1,123 · NV 631 · BCC 576 · AK 476 · BKL 368 · DF 257 · VASC 279 · SCC 583. The tags are the weak labels for the retrieval metrics (`results/evaluation_guide.md`).
-- **Gaps:** guidelines hold no passage for DF and only 12 for BKL; pubmed holds 74 for VASC; the textbook is thin for AK (11), DF (10), VASC (4) and SCC (4).
+- **Tags:** each passage is tagged with the disease(s) it was searched for and the class names found in its text. A passage can carry several tags. Passages tagged per class: MEL 1,159 · NV 628 · BCC 603 · AK 470 · BKL 369 · DF 256 · VASC 319 · SCC 607. The tags are the weak labels for the retrieval metrics (`results/evaluation_guide.md`).
+- **Gaps:** guidelines hold no passage for DF and only 12 for BKL; pubmed holds 74 for VASC; the textbook is thin for AK (6), DF (10), VASC (3) and SCC (4).
 - **Reference texts:** `reference_texts.json` holds 40 texts quoted word for word from Dermoscopedia (MEL 2, NV 10, BCC 8, AK 4, BKL 8, DF 5, VASC 1, SCC 2), each with its page, link, licence and retrieval date. They are used only for the semantic-similarity metric, never as RAG passages.
-- **Licences of the passages** (✔ counts): PubMed abstracts 1,124 (research use, cite PMID); CC BY 4.0 1,091; CC BY-NC 4.0 521; CC BY-NC-SA 4.0 234; CC BY-NC-ND 4.0 191; other Creative Commons 200; Meditron guideline sources 83 (the source's own terms).
+- **Licences of the passages** (✔ counts): PubMed abstracts 1,124 (research use, cite PMID); CC BY 4.0 1,091; CC BY-NC 4.0 521; CC BY-NC-SA 4.0 216; CC BY-NC-ND 4.0 191; other Creative Commons 200; Meditron guideline sources 83 (the source's own terms).
 - **What is kept in Git:** `manifest.csv` (one row per passage: id, library, document, URL, licence, tags, word count, MD5), `corpus_card.json` (counts, removals, settings) and `reference_texts.json`. The passage texts stay on the laptop because of their licences.
 
 ### 9.1 The retrieval index (`python -m src.main index`)
 
 Each passage is embedded once as [title, text] with the MedCPT article encoder (Jin et al. 2023), and the unit-length vectors are saved in `data/corpus/index/` (`embeddings.f32`, `index.json`; laptop only, because they are derived from licensed text). A question is embedded with the MedCPT query encoder and the passages with the highest cosine similarity are retrieved from the whole corpus, with no filter by disease. Passages are not cut again: the corpus builder already cut them (whole sentences, at most 200 words, one sentence shared with the next). Tags and query classes are never embedded and never used in retrieval; `index.json` records the encoder, the SHA-256 of `passages.jsonl` (a changed corpus is noticed) and whether the reference pages were left out.
 
-### 9.2 Corpus audit (✔ from `manifest.csv`, 2026-11-24)
+### 9.2 Corpus audit (✔ from `manifest.csv` and `audit.json`, corpus of 2026-11-24)
 
 | Finding | Figure | Consequence |
 |---|---|---|
-| Duplicate passages (same text) or passage ids | 0 | none |
-| Passages shorter than 40 words | 252 of 3,444 (7.3%) | short passages carry little evidence |
-| Passages with no tag | 386 (11.2%): pubmed 247, guidelines 123, pmc 16 | they never count as relevant in Hit@k, Precision@k, Recall@k, MRR and nDCG@k, even when on topic |
-| Passages whose query disease is not among their tags | 557 (16.2%) | the tags come from class names found in the text; they are weak labels |
+| Duplicate passages (same text) or passage ids | 0; 4 near-duplicate pairs (2 PMC paper and its PubMed abstract, 2 between two Dermoscopedia pages) | small; kept |
+| Passages shorter than 40 words | 241 of 3,426 (7.0%) | short passages carry little evidence |
+| Passages with no tag | 350 (10.2%): pubmed 220, guidelines 114, pmc 16 | they never count as relevant in Hit@k, Precision@k, Recall@k, MRR and nDCG@k, even when on topic |
+| Passages whose query disease is not among their tags | 515 (15.0%) | the tags come from class names found in the text; they are weak labels |
 | Most passages from one document | 102 (PMC7150662), then 83 and 65 | a few long papers supply many passages |
-| **Textbook passages from the 6 pages that also supply the reference texts** (NV, BCC, AK, BKL, DF, SCC) | **46 of 208** | a RAG answer that quotes such a passage resembles the reference text of its disease almost word for word, which inflates the semantic similarity. `python -m src.main index --exclude-reference-pages` leaves them out; the choice is not yet made |
-| Passages per disease (tags) | MEL 1,123 · NV 631 · BCC 576 · SCC 583 · AK 476 · BKL 368 · VASC 279 · DF 257 | retrieval may lean to melanoma |
-| Gaps | guidelines: DF 0, BKL 12; pubmed: VASC 74; textbook: AK 11, DF 10, VASC 4, SCC 4 | thin evidence for the rarer diseases |
-| Image-associated text (figure captions, dermoscopy criteria) | not in the corpus apart from the Dermoscopedia pages | the retriever has little text about what a lesion looks like |
+| **Textbook passages from the pages that also supply the reference texts** | **44 of 190** | a RAG answer that quotes such a passage resembles the reference text of its disease almost word for word, which inflates the semantic similarity. The laptop index was built with `--exclude-reference-pages`, so they are not retrievable (status: 3,374 of 3,426 passages indexed) |
+| Passages per disease (tags) | MEL 1,159 · NV 628 · BCC 603 · SCC 607 · AK 470 · BKL 369 · VASC 319 · DF 256 | retrieval may lean to melanoma |
+| Gaps | guidelines: DF 0, BKL 12; pubmed: VASC 74; textbook: AK 6, DF 10, VASC 3, SCC 4 | thin evidence for the rarer diseases |
+| Image-associated text | PMC figure captions of 30 words or more are kept as passages (the corpus rules, `src/knowledge/extract.py`); the image library (9.3) adds picture-and-caption records | still little text about what a lesion looks like for the rarer diseases |
 
 ### 9.3 The image library (`visual`, `visual-images`, `visual-index`; ✔ from `corpus/visual_card.json`, snapshot 2026-11-24)
 
@@ -205,11 +205,11 @@ Picture-and-caption records from the open-access PMC papers of the text corpus. 
 
 **The look-alike check is a strict safety step, not a calibrated test** (`visual-calibrate`, on the Kaggle set itself): it flags 64.5% of the 448 same-lesion photo pairs, but also, for 74.7% of the 2,197 images, the most similar image of a different lesion. Dermoscopic pictures look alike to the image model, so the check cannot tell same-lesion from different-lesion photos; it can only remove close copies, at the cost of some images that are not copies (3 of 88). The thresholds were not changed after this measurement.
 
-**Use in the standard RAG (2026-11-25):** an image-only question searches this library with its own image; an image + text question fuses that image search with the text search of its patient facts (reciprocal rank fusion of the top 10 of each). Validation (160 questions, Hit@3, `results/standard_rag/<view>/retrieval_validation.json`): image search 40.0% (random 39.4%); text and image fused 55.0% (random 37.9%).
+**Use in the standard RAG (2026-11-25):** an image-only question searches this library with its own image; an image + text question fuses that image search with the text search of its patient facts (reciprocal rank fusion of the top 10 of each). The text index also holds the caption records (`index`, default; `--no-captions` leaves them out), so the text search of every view can find them; a caption that is already a corpus passage of the same paper (same text, or half or more of its 8-word stretches) is not added twice, and `index.json` lists those left out. When the same text reaches a question twice (a caption as passage and as picture record), only the better-ranked copy is given to the model. The model gets the caption and the paper title of a retrieved figure, never the library picture itself (researcher's decision, 2026-11-25). Laptop index of 2026-11-25 ✔ (`status`): 3,416 records = 3,426 passages − 52 left out (44 from the reference pages, 8 that copy a reference text) + 42 caption records; the other 43 captions were already corpus passages. Validation (160 questions, Hit@3, `results/standard_rag/<view>/retrieval_validation.json`): text search 48.8% (random 38.5%); image search 40.0% (random 39.4%); text and image fused 55.0% (random 38.7%).
 
 ## 10. Data quality checks and what they show
 
-`python -m src.main features` trains small classifiers on handcrafted features, to detect shortcuts. It is an analysis of the data, not an experiment on the LLMs. Test split, accuracy (chance 12.5%) and macro AUC ✔ (`results/data_quality/feature_check/feature_check_results.json`, laptop run of 2026-11-23):
+`python -m src.main features` trains small classifiers on handcrafted features, to detect shortcuts. It is an analysis of the data, not an experiment on the LLMs. Test split, accuracy (chance 12.5%) and macro AUC ✔ (`results/data_quality/feature_check_results.json`, laptop run of 2026-11-23):
 
 | Features | Accuracy | AUC |
 |---|---|---|
@@ -262,6 +262,7 @@ python -m unittest discover -s tests -t .      # includes tests/system/test_syst
 
 | Date | Correction |
 |---|---|
+| 2026-11-25 | Sections 1, 9 and 9.2 brought up to the committed corpus of 2026-11-24 (3,426 passages; they still described the 2026-11-23 build of 3,444). Captions in the text index (9.3). |
 | 2026-11-25 | Section 9.3, the image library, from `visual_card.json` and the validation results. |
 | 2026-11-25 | New folder structure (section 8): paths, commands (`python -m src.main`) and the move record `views/provenance.json`. No data changed. |
 | 2026-11-24 | Added the retrieval index and the corpus audit (sections 9.1 and 9.2). Restructured under the data-sheet headings. Corrected stale figures: the source-detection AUC (0.935 → 0.953), the shortcut score (33% "balanced accuracy" → 31.7% accuracy), the test-set size ("16 to 68 per class" → 30 per class, 240 cases). Added sections 3.2 to 3.4, 9 and 10 with figures read from the committed files. Added the class-balance record (section 6). |

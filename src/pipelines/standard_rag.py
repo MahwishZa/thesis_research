@@ -8,6 +8,7 @@ import random
 from src.data.loaders import question_file
 from src.evaluation.retrieval import relevant_counts, retrieval_metrics
 from src.evaluation.statistics import percentile
+from src.knowledge.references import OVERLAP_LIMIT, overlap_share, shingles
 from src.models.embeddings import MEDCPT_QUERY, medcpt_encoder
 from src.models.llm import MODELS, make_client
 from src.pipelines.base import rag_system, run, run_folder
@@ -31,6 +32,20 @@ from src.utils.reproducibility import SEED
 RETRIEVAL_MODES = ("dense", "hybrid", "hybrid-rerank")
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
+
+
+def distinct(hits):
+    """The hits without a record whose text repeats a better-ranked one (the same text, or half or more of its 8-word stretches):
+    a figure caption can be both a corpus passage and a picture-and-caption record, and the model must not get it twice."""
+    out, seen, seen_sh = [], set(), set()
+    for p, score in hits:
+        text = " ".join(p["text"].lower().split())
+        if text in seen or overlap_share(p["text"], seen_sh) >= OVERLAP_LIMIT:
+            continue
+        out.append((p, score))
+        seen.add(text)
+        seen_sh |= shingles(p["text"])
+    return out
 
 
 class StandardRag:
@@ -76,13 +91,14 @@ class StandardRag:
         """The n best records for a question, best first, as validated with retrieval-eval (researcher's decisions, 2026-11-24/25):
         text only: the text search of the patient facts; image only: the image search by the question's image; image + text: the
         text search and the image search, fused by rank (reciprocal rank fusion of the top FUSION_LIST of each)."""
+        m = max(n, FUSION_LIST)                     # candidates, so that n remain after a repeated text is removed
         if view == "image_only":
-            return self.image_search(q, n)
+            return distinct(self.image_search(q, m))[:n]
         query = retrieval_query(q, view)
         if view == "multimodal":
-            return reciprocal_rank_fusion([[p for p, _ in self.retrieve(query, FUSION_LIST)],
-                                           [p for p, _ in self.image_search(q, FUSION_LIST)]], top=n)
-        return self.retrieve(query, n)
+            return distinct(reciprocal_rank_fusion([[p for p, _ in self.retrieve(query, FUSION_LIST)],
+                                                    [p for p, _ in self.image_search(q, FUSION_LIST)]], top=2 * m))[:n]
+        return distinct(self.retrieve(query, m))[:n]
 
     def settings(self, view="text_only"):
         meta = self.index.meta
@@ -241,18 +257,19 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
     rankers, pools = {}, {}
     for mode in text_modes:
         rag = rag_for(mode)
-        rankers[mode] = (lambda q, rag=rag: [p for p, _ in rag.retrieve(retrieval_query(q, args.view), 10)])
+        rankers[mode] = (lambda q, rag=rag: [p for p, _ in rag.ranked(q, "text_only", 10)])     # the text search (same query in every view)
         pools[mode] = rag.index.passages
     if args.view != "text_only":
         vindex, vectors = visual if visual is not None else load_visual(args.data, args.image_encoder)
-        rankers["image"] = lambda q: [p for p, _ in vindex.search(image_query_vector(q, vectors), 10)]
+        rankers["image"] = lambda q: [p for p, _ in distinct(vindex.search(image_query_vector(q, vectors), 10))]
         pools["image"] = vindex.passages
         if args.view == "multimodal":
             fused = rag_for("hybrid-rerank")
             fused.visual = (vindex, vectors)
             rankers["fused"] = lambda q: [p for p, _ in fused.ranked(q, "multimodal", 10)]      # the same code as the RAG run
             pools["fused"] = pools["hybrid-rerank"] + vindex.passages
-    visual_ids = set() if args.view == "text_only" else {p["passage_id"] for p in pools["image"]}
+    visual_ids = ({p["passage_id"] for p in pools.get("image", [])}                     # the image library: image records, and
+                  | {p["passage_id"] for pool in pools.values() for p in pool if p.get("library") == "visual"})   # captions as text
     result, intervals, chance, image_share = {}, {}, {}, {}
     for mode, rank in rankers.items():
         pred = {q["id"]: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p in rank(q)]} for q in questions}

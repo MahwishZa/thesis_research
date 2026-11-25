@@ -2051,6 +2051,19 @@ class StandardRagRunTests(unittest.TestCase):
         s = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))["settings"]["retrieval"]
         self.assertEqual(s["fusion"], {"method": "reciprocal rank fusion", "k": 60, "list": 10})
 
+    def test_a_caption_found_by_both_searches_reaches_the_model_once(self):
+        from array import array
+
+        from src.retrieval.indexer import DenseIndex
+        rag = make_rag()
+        copy = {**RAG_IMAGES[0], "passage_id": "d0#fig1", "text": RAG_CORPUS[0]["text"]}           # a figure caption that is passage p0
+        rag.visual = (DenseIndex([copy] + RAG_IMAGES[1:], array("f", [1, 0, 0, 1, 0.6, 0.8]), 2, {}), FakeImageVectors())
+        self.make("multimodal", 4)
+        for q in self.questions:
+            texts = [" ".join(p["text"].lower().split()) for p, _ in rag.ranked(q, "multimodal", 3)]
+            self.assertEqual(len(texts), 3)
+            self.assertEqual(len(set(texts)), 3)
+
     def test_an_image_view_without_the_image_index_stops_before_any_question_is_asked(self):
         self.make("image_only", 2)
         client = FakeRagClient(self.questions)
@@ -2122,7 +2135,7 @@ class StandardRagRunTests(unittest.TestCase):
         from array import array
 
         from src.retrieval.indexer import DenseIndex
-        items = [{"passage_id": f"v{i}", "title": "fig", "text": "caption", "tags": [t]} for i, t in enumerate(["MEL", "NV", "BCC"])]
+        items = [{"passage_id": f"v{i}", "title": "fig", "text": f"caption {i}", "tags": [t]} for i, t in enumerate(["MEL", "NV", "BCC"])]
         flat = array("f", [1, 0, 0, 1, 0.7, 0.7])
         vindex = DenseIndex(items, flat, 2, {})
         for view in ("image_only", "multimodal"):
@@ -2175,7 +2188,7 @@ class IndexCommandTests(unittest.TestCase):
             seen.extend(items)
             return rag_enc(items)
         with contextlib.redirect_stdout(io.StringIO()):
-            retrieval_indexer.index_main(["--corpus", self.corpus, "--out", self.out, *extra], encode=encode)
+            retrieval_indexer.index_main(["--corpus", self.corpus, "--out", self.out, *(extra or ["--no-captions"])], encode=encode)
         return seen
 
     def test_every_passage_is_embedded_as_its_title_and_text_and_the_index_can_be_read(self):
@@ -2192,13 +2205,52 @@ class IndexCommandTests(unittest.TestCase):
         refs = os.path.join(self.tmp.name, "reference_texts.json")
         Path(refs).write_text(json.dumps({"NV": {"url": "https://x/c", "texts": []}, "MEL": {"url": "https://x/a", "texts": []}}),
                               encoding="utf-8")
-        seen = self.build("--exclude-reference-pages", "--reference-texts", refs)
+        seen = self.build("--exclude-reference-pages", "--reference-texts", refs, "--no-captions")
         self.assertEqual(len(seen), 3)
         meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
         self.assertEqual((meta["n_passages"], meta["n_excluded_passages"], meta["exclude_reference_pages"]), (3, 2, True))
         self.assertEqual(meta["excluded_urls"], ["https://x/a", "https://x/c"])
         self.assertNotIn("p0", meta["passage_ids"])
-        self.assertEqual(len(self.build()), 5)                                              # without the flag nothing is left out
+        self.assertEqual(len(self.build("--no-captions", "--replace")), 5)                  # without the flag nothing is left out
+
+    def test_the_caption_records_are_searched_as_text_once_and_a_changed_library_is_noticed(self):
+        """Researcher's decision (2026-11-24, built 2026-11-25): the text search covers the picture-and-caption records too; a caption
+        that is already a corpus passage of the same paper is not added twice."""
+        long_caption = RAG_CORPUS[0]["text"] + " Seen on dermoscopy."                    # already passage p0 of paper d0
+        items = [{"item_id": "d0#fig1", "passage_id": "d0#fig1", "doc_id": "d0", "title": "Melanoma of the trunk (Figure 1)",
+                  "text": long_caption, "tags": ["MEL"], "image_file": "d0_fig1.jpg", "url": "https://x/a", "licence": "CC BY 4.0"},
+                 {"item_id": "d9#fig2", "passage_id": "d9#fig2", "doc_id": "d9", "title": "Nevus (Figure 2)",
+                  "text": "Dermoscopy of a brown nevus on the trunk of a female.", "tags": ["NV"], "image_file": "d9_fig2.jpg"}]
+        write_jsonl(os.path.join(self.corpus, "visual", "items_final.jsonl"), items)
+        seen = self.build("--reference-texts", os.path.join(self.tmp.name, "none.json"))
+        self.assertEqual(len(seen), 6)                                                     # 5 passages + 1 new caption
+        self.assertIn(["Nevus (Figure 2)", "Dermoscopy of a brown nevus on the trunk of a female."], seen)
+        meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
+        self.assertEqual((meta["n_captions_indexed"], meta["captions_already_in_the_corpus"], meta["captions_file"]),
+                         (1, ["d0#fig1"], "visual/items_final.jsonl"))
+        from src.retrieval.indexer import read_index
+        idx = read_index(self.out, os.path.join(self.corpus, "passages.jsonl"))
+        record = next(p for p in idx.passages if p["passage_id"] == "d9#fig2")
+        self.assertEqual((record["library"], record["image_file"]), ("visual", "d9_fig2.jpg"))
+        write_jsonl(os.path.join(self.corpus, "visual", "items_final.jsonl"), items[1:])     # the library changed
+        with self.assertRaises(ValueError):
+            read_index(self.out, os.path.join(self.corpus, "passages.jsonl"))
+        os.remove(os.path.join(self.corpus, "visual", "items_final.jsonl"))
+        with self.assertRaises(SystemExit):                                                   # asked for, but not there
+            self.build("--reference-texts", os.path.join(self.tmp.name, "none.json"))
+
+    def test_a_rebuild_with_other_exclusions_is_refused_unless_asked_for(self):
+        """Seen on the laptop (2026-11-25): a rebuild without --exclude-reference-overlap silently dropped that choice."""
+        refs = os.path.join(self.tmp.name, "reference_texts.json")
+        Path(refs).write_text(json.dumps({"NV": {"url": "https://x/c", "texts": [{"text": "unrelated words only here"}]}}), encoding="utf-8")
+        self.build("--exclude-reference-pages", "--exclude-reference-overlap", "--reference-texts", refs, "--no-captions")
+        with self.assertRaises(SystemExit) as caught:
+            self.build("--exclude-reference-pages", "--reference-texts", refs, "--no-captions")
+        self.assertIn("--exclude-reference-overlap was True, now False", str(caught.exception))
+        self.build("--exclude-reference-pages", "--exclude-reference-overlap", "--reference-texts", refs, "--no-captions")   # same: fine
+        self.build("--exclude-reference-pages", "--reference-texts", refs, "--no-captions", "--replace")                     # on purpose
+        meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
+        self.assertFalse(meta["exclude_reference_overlap"])
 
     def test_passages_that_copy_a_reference_text_are_left_out_only_when_asked(self):
         copy = "one two three four five six seven eight nine ten eleven twelve"
@@ -2257,6 +2309,14 @@ class IndexStatusTests(unittest.TestCase):
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
             with open(os.path.join(corpus, "index", "embeddings.f32"), "ab") as f:
                 f.write(b"\0\0\0\0")                                                           # a damaged file
+            self.assertEqual(utils_status.step_index(d)[0], utils_status.PROBLEM)
+            captions = os.path.join(corpus, "visual", "items_final.jsonl")
+            write_jsonl(captions, RAG_IMAGES)
+            write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
+                        {"encoder": "fake", "passages_sha256": sha, "captions_file": "visual/items_final.jsonl",
+                         "captions_sha256": file_sha256(captions), "n_captions_indexed": 3})
+            self.assertEqual(utils_status.step_index(d), (utils_status.DONE, "5 passages, 8 numbers each (fake); with 3 caption records; all passages"))
+            write_jsonl(captions, RAG_IMAGES[:1])                                                # the image library changed
             self.assertEqual(utils_status.step_index(d)[0], utils_status.PROBLEM)
 
 

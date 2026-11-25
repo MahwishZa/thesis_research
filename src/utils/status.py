@@ -107,7 +107,7 @@ def step_views(data):
 
 
 def step_feature_check(results):
-    path = os.path.join(results, "data_quality", "feature_check", "feature_check_results.json")
+    path = os.path.join(results, "data_quality", "feature_check_results.json")
     return (DONE, "results present") if os.path.isfile(path) else (NOT_RUN, "no results")
 
 
@@ -160,8 +160,15 @@ def step_index(data):
     passages = os.path.join(data, CORPUS_DIR, "passages.jsonl")
     if os.path.isfile(passages) and sha256(passages) != meta.get("passages_sha256"):
         return PROBLEM, "passages.jsonl changed after the index was built: run the index command again"
+    if meta.get("captions_file"):
+        captions = os.path.join(data, CORPUS_DIR, meta["captions_file"])
+        if not os.path.isfile(captions) or sha256(captions) != meta.get("captions_sha256"):
+            return PROBLEM, "the image library changed after the index was built: run the index command again"
     note = f"{meta['n_passages']} passages, {meta['dim']} numbers each ({meta['encoder']})"
-    return DONE, note + ("; reference pages left out" if meta.get("exclude_reference_pages") else "; all passages")
+    if meta.get("captions_file"):
+        note += f"; with {meta.get('n_captions_indexed', 0)} caption records"
+    note += "; reference pages left out" if meta.get("exclude_reference_pages") else "; all passages"
+    return DONE, note + ("; reference copies left out" if meta.get("exclude_reference_overlap") else "")
 
 
 def step_runs(data, results, models, systems=("llm_only", "standard_rag")):

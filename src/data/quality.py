@@ -20,7 +20,7 @@ from src.utils.reproducibility import SEED
 # It is an analysis of the data, not an evaluation of the LLM/RAG systems: its score is the accuracy of small classifiers
 # trained here (validation and test are balanced, so the 8 classes count the same).
 #
-# Usage (this repository): python -m src.main features --data data --out results/data_quality/feature_check
+# Usage (this repository): python -m src.main features --data data --out results/data_quality
 # Reads data/processed/cases/all_cases.csv and the images in data/processed/images/; writes feature_check_results.json and
 # image_handcrafted_features.csv (a cache: when it exists, the image features are not computed again).
 # The image packages are imported only when this command runs, so the pipeline check needs the Python standard library only.
@@ -104,7 +104,7 @@ def features_main(argv=None):
     from sklearn.preprocessing import StandardScaler
     ap = argparse.ArgumentParser(prog="python -m src.main features")
     ap.add_argument("--data", default="data")
-    ap.add_argument("--out", default=os.path.join("results", "data_quality", "feature_check"))
+    ap.add_argument("--out", default=os.path.join("results", "data_quality"))
     a = ap.parse_args(argv)
     out = a.out
     os.makedirs(out, exist_ok=True)

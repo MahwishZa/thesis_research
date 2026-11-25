@@ -121,7 +121,7 @@ def run(args, client, log, rag=None):
     if args.dry_run:
         for q in asking_order(questions)[:args.limit or 3]:
             text, extra, _, _ = build(q, None)
-            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[query] {extra.get('query', '-')}\n"
+            log.info(f"--- {q['id']} (image: {q.get('image_path', 'none')})\n[system] {SYSTEM}\n[query] {extra.get('query') or 'the image ' + extra.get('query_image', '-')}\n"
                      f"[user] {text}")
         return None
     os.makedirs(partial, exist_ok=True)

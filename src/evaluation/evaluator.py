@@ -209,7 +209,7 @@ def report_main(argv=None):
 # answer is wrong.
 #
 # Usage:
-#   python -m src.main compare --out results/comparisons/llm_only/compare_text_only_test.json       --run claude=data/views/text_only/test.jsonl,results/llm_only/claude-sonnet-5-5/text_only_test/predictions.jsonl       --run gpt-4o=data/views/text_only/test.jsonl,results/llm_only/gpt-4o/text_only_test/predictions.jsonl
+#   python -m src.main compare --out results/llm_only/compare_text_only_test.json       --run claude=data/views/text_only/test.jsonl,results/llm_only/text_only/claude-sonnet-5-5_test/predictions.jsonl       --run gpt-4o=data/views/text_only/test.jsonl,results/llm_only/text_only/gpt-4o_test/predictions.jsonl
 
 def correct_by_id(questions, predictions):
     unknown = set(predictions) - set(questions)

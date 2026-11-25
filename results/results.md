@@ -268,7 +268,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 |---|---|
 | Predictions, settings, report of each run | `results/llm_only/<view>/<model>_test/{predictions.jsonl, run.json, report.json}` (before 2026-11-25: `<model>/<view>_test/`) |
 | One row per run | `results/comparisons/summary.csv` |
-| Tests between models / between views | `results/comparisons/llm_only/compare_<view>_test.json` / `compare_views_<model>.json` |
+| Tests between models / between views | `results/llm_only/compare_<view>_test.json` / `compare_views_<model>.json` |
 | Validity check | `results/comparisons/similarity_check.json` |
 
 ```powershell

@@ -15,7 +15,12 @@ from src.knowledge.lookalike import (
     max_similarities,
     nearest_by_hash,
 )
-from src.knowledge.references import OVERLAP_LIMIT, overlap_share, reference_shingles
+from src.knowledge.references import (
+    OVERLAP_LIMIT,
+    overlap_share,
+    reference_shingles,
+    shingles,
+)
 from src.models.embeddings import MEDCPT_ARTICLE, image_encoder, medcpt_encoder
 from src.utils.common import (
     CORPUS_DIR,
@@ -74,6 +79,11 @@ def read_index(folder, passages_path):
     if meta.get("passages_sha256") != file_sha256(passages_path):
         raise ValueError(f"{passages_path} has changed since the index was built: run python -m src.main index again")
     by_id = {p["passage_id"]: p for p in read_jsonl(passages_path)}
+    if meta.get("captions_file"):                     # the picture-and-caption records searched as text (see caption_records)
+        captions = os.path.join(os.path.dirname(passages_path), meta["captions_file"])
+        if not os.path.isfile(captions) or meta.get("captions_sha256") != file_sha256(captions):
+            raise ValueError(f"{captions} has changed since the index was built: run python -m src.main index again")
+        by_id |= {r["passage_id"]: r for r in caption_records(read_jsonl(captions))}
     flat = array("f")
     with open(os.path.join(folder, "embeddings.f32"), "rb") as f:
         flat.fromfile(f, meta["n_passages"] * meta["dim"])
@@ -91,7 +101,33 @@ def read_index(folder, passages_path):
 # --exclude-reference-pages leaves out the passages of the Dermoscopedia pages that also supply the reference texts of the
 # semantic-similarity score (src/evaluation/hallucination.py). Without it, a RAG answer that quotes such a passage resembles the reference text of its
 # own disease almost word for word, which inflates that score. The choice is the researcher's; it is recorded in index.json.
+#
+# The picture-and-caption records of the image library (visual/items_final.jsonl, made by visual-index) are searched as text too
+# (researcher's decision, 2026-11-24: the text-only view searches the text and caption records), so they are embedded the same way,
+# [title, caption]. A caption that is already a passage of the corpus (the PMC papers keep their figure captions as text when they
+# are long enough) is not added again: it is left out when half or more of its 8-word stretches are in a passage of the same paper,
+# or its text is the same. --no-captions builds the index of the text corpus alone.
 ARTICLE_MAX_TOKENS = 512
+CAPTIONS_FILE = "visual/items_final.jsonl"
+
+
+def caption_records(items):
+    """The image-library records as text records: the caption is the text; the image file stays with the record."""
+    return [{"passage_id": it["passage_id"], "library": "visual", "doc_id": it["doc_id"], "title": it.get("title") or "",
+             "text": it["text"], "url": it.get("url", ""), "licence": it.get("licence", ""), "tags": it.get("tags", []),
+             "image_file": it.get("image_file")} for it in items]
+
+
+def new_captions(records, passages):
+    """(captions to add, captions left out because the corpus already holds their text)."""
+    by_doc, seen = {}, {" ".join(p["text"].lower().split()) for p in passages}
+    for p in passages:
+        by_doc.setdefault(p.get("doc_id"), set()).update(shingles(p["text"]))
+    add, dup = [], []
+    for r in records:
+        same = " ".join(r["text"].lower().split()) in seen or overlap_share(r["text"], by_doc.get(r["doc_id"], set())) >= OVERLAP_LIMIT
+        (dup if same else add).append(r)
+    return add, dup
 
 
 def index_args(argv=None):
@@ -105,7 +141,24 @@ def index_args(argv=None):
     ap.add_argument("--exclude-reference-overlap", action="store_true",
                     help="also leave out any passage that copies a reference text (half or more of its 8-word stretches)")
     ap.add_argument("--limit", type=int, default=0, help="embed only the first N passages (a trial of the command)")
+    ap.add_argument("--no-captions", action="store_true", help=f"leave out the caption records ({CAPTIONS_FILE}); default: added")
+    ap.add_argument("--replace", action="store_true",
+                    help="allow replacing an index that was built with other exclusion or caption settings")
     return ap.parse_args(argv)
+
+
+GUARDED = ("exclude_reference_pages", "exclude_reference_overlap")
+
+
+def changed_settings(out, a):
+    """The settings that differ from the index already in `out` ({name: (before, now)}), so a rebuild never drops a choice silently."""
+    path = os.path.join(out, "index.json")
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        before = json.load(f)
+    now = {k: bool(getattr(a, k)) for k in GUARDED}
+    return {k: (bool(before.get(k)), now[k]) for k in GUARDED if bool(before.get(k)) != now[k]}
 
 
 def reference_urls(path):
@@ -133,19 +186,36 @@ def index_main(argv=None, encode=None):
     path = os.path.join(a.corpus, "passages.jsonl")
     if not os.path.isfile(path):
         raise SystemExit(f"{path} is not there: run python -m src.main corpus first (on the laptop)")
+    changed = changed_settings(a.out, a)
+    if changed and not a.replace:
+        raise SystemExit(f"the index in {a.out} was built with other settings: "
+                         + ", ".join(f"--{k.replace('_', '-')} was {b}, now {n}" for k, (b, n) in changed.items())
+                         + ". Give the same options, or add --replace to change them on purpose.")
     passages = read_jsonl(path)
     if a.limit:
         passages = passages[:a.limit]
     urls = reference_urls(a.reference_texts) if a.exclude_reference_pages else []
     encode = encode or medcpt_encoder(a.encoder, ARTICLE_MAX_TOKENS)
     refs = reference_shingles(a.reference_texts) if a.exclude_reference_overlap else None
+    caption_meta, dup = {}, []
+    captions_path = os.path.join(a.corpus, CAPTIONS_FILE)
+    if not a.no_captions:
+        if not os.path.isfile(captions_path):
+            raise SystemExit(f"{captions_path} is not there: run python -m src.main visual-index first, or use --no-captions")
+        add, dup = new_captions(caption_records(read_jsonl(captions_path)), passages)
+        passages = passages + add
+        caption_meta = {"captions_file": CAPTIONS_FILE, "captions_sha256": file_sha256(captions_path),
+                        "n_caption_records": len(add) + len(dup), "n_captions_already_in_the_corpus": len(dup)}
     kept, vectors, left_out = build_index(passages, encode, urls, refs)
     write_index(a.out, kept, vectors, {"encoder": a.encoder, "max_tokens": ARTICLE_MAX_TOKENS, "normalised": True,
                                        "passages_file": path.replace("\\", "/"), "passages_sha256": file_sha256(path),
                                        "exclude_reference_pages": bool(a.exclude_reference_pages),
                                        "exclude_reference_overlap": bool(a.exclude_reference_overlap), "excluded_urls": urls,
-                                       "n_excluded_passages": len(left_out), "limit": a.limit})
-    log.info(f"{len(kept)} passages embedded ({len(left_out)} left out) -> {a.out}")
+                                       "n_excluded_passages": len(left_out), "limit": a.limit,
+                                       "n_captions_indexed": sum(1 for p in kept if p.get("library") == "visual"),
+                                       "captions_already_in_the_corpus": [r["passage_id"] for r in dup]} | caption_meta)
+    log.info(f"{len(kept)} passages embedded ({len(left_out)} left out; caption records: "
+             f"{sum(1 for p in kept if p.get('library') == 'visual')} added, {len(dup)} already in the corpus) -> {a.out}")
     return kept
 
 

@@ -364,6 +364,18 @@ class WorkspaceTests(unittest.TestCase):
             self.assertTrue((ROOT / "data" / getattr(utils_common, constant)).is_dir(), constant)
         self.assertTrue((ROOT / "data" / utils_common.REFERENCE_TEXTS).is_file())
 
+    def test_the_results_folder_is_flat_where_it_can_be(self):
+        """Researcher's request (2026-11-25): no needless nesting. Runs: results/<system>/<view>/<model>_<split>/; a system's own
+        comparisons and retrieval checks beside its views; tables across systems in comparisons/; data checks in data_quality/."""
+        if not (shutil.which("git") and (ROOT / ".git").exists()):
+            self.skipTest("git is not available")
+        files = tracked("results")
+        self.assertEqual(sorted({p.split("/")[1] for p in files}),
+                         ["comparisons", "data_quality", "evaluation_guide.md", "llm_only", "results.md", "standard_rag"])
+        for folder in ("comparisons", "data_quality"):
+            self.assertEqual([p for p in files if p.startswith(f"results/{folder}/") and p.count("/") > 2], [], folder)
+        self.assertEqual([p for p in files if p.count("/") > 4], [])                             # nothing below a run folder
+
     def test_the_readme_holds_only_the_overview_and_the_objectives(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"^#{2,3} (.+)$", readme, re.M), ["Overview", "Objectives"])

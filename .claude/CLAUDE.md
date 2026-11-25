@@ -21,12 +21,14 @@ third party is credited anywhere in the repository.
   are preferred); `src/main.py` is the one entry point (`python -m src.main <command>`),
   code in `src/{utils, data, knowledge, models, retrieval, pipelines, evaluation}` (`pipelines/base.py` holds what all systems share;
   `evaluation/statistics.py` the tests and intervals; `knowledge/lookalike.py` the Kaggle look-alike check);
-  `results/<system>/<view>/<model>_<split>/`, `results/comparisons/`, `results/data_quality/`; tests in `tests/{unit, system, integration,
+  `results/<system>/<view>/<model>_<split>/` (a system's own comparisons and retrieval checks beside its views), `results/comparisons/`
+  (tables across systems), `results/data_quality/` (flat); tests in `tests/{unit, system, integration,
   acceptance}` (run `python -m unittest discover -s tests -t .`). No stub for the RAG² baseline or the proposed RAG before its design.
   The move changed only image paths and the validation file names: `data/views/provenance.json` records the SHA-256 before and after.
 - One environment (`.venv`, 2026-11-25): `.venv-visual` was removed; the laptop's `.venv` holds torch 2.15.0, transformers 5.24.0,
-  sentence-transformers 6.3.0 and open_clip_torch 4.2.2 (pip freeze, matches `requirements.txt`). Still to confirm on the laptop:
-  MedCPT, the cross-encoder and BiomedCLIP all run in it (the free validation `retrieval-eval` of each view).
+  sentence-transformers 6.3.0 and open_clip_torch 4.2.2 (pip freeze, matches `requirements.txt`); run commands with
+  `.venv\Scripts\python.exe` (the global Python is not the project environment). Confirmed:
+  MedCPT, the cross-encoder and BiomedCLIP all run in it ✔ (laptop, 2026-11-25: tests and `retrieval-eval` of each view in `.venv`).
 - File fingerprints (2026-11-25, approved): text files are hashed with LF line endings (`text_sha256`); reports from before, which
   recorded the Windows (CRLF) form, still match (`text_matches`); every text write in `src/` sets `newline=` (tested).
 
@@ -89,8 +91,13 @@ third party is credited anywhere in the repository.
   `--view multimodal` score the image search (and text + image fused) on validation, free.
   Laptop validation (2026-11-25, 160 questions, Hit@3): text hybrid-rerank 48.1% (random 38.6%), image search 40.0% (random 39.4%),
   fused 55.0% (random 37.9%). visual-calibrate: the look-alike check flags 64.5% of same-lesion pairs and 74.7% of nearest
-  different-lesion images, so it is a strict copy filter, not a calibrated test (kept unchanged; recommended to report as such).
-  Still open: the text-only view does not yet search the 85 caption records (needs a caption-aware text index, validated first). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
+  different-lesion images, so it is a strict copy filter, not a calibrated test (kept unchanged: researcher's approval, 2026-11-25; report it as such).
+  Caption records in the text index (built 2026-11-25, researcher's approval; laptop index rebuilt the same day: 3,416 records,
+  42 captions added, 43 already in the corpus; validation Hit@3: text hybrid-rerank 48.8% (random 38.5%), image 40.0% (39.4%),
+  fused 55.0% (38.7%)): `index` adds the picture-and-caption records to the MedCPT/BM25 text index, except captions already in the corpus;
+  repeated texts are removed before the model sees them. The text index is built with --exclude-reference-pages and
+  --exclude-reference-overlap (as on the laptop since 2026-11-24; `index` refuses other settings unless --replace). The model gets captions only, never the library picture (researcher,
+  2026-11-25). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.
