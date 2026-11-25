@@ -41,12 +41,14 @@ from sklearn.model_selection import StratifiedGroupKFold
 from src.data.dataset import TEST_PER_CLASS, VAL_PER_CLASS, balanced_splits
 from src.data.loaders import image_path, images_not_in_table
 from src.utils.common import (
+    ALL_CASES,
     CLASS_NAMES,
     CLASSES,
     OFFICIAL_LABELS,
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     RAW,
+    hamming,
 )
 from src.utils.io import atomic_path, write_json
 from src.utils.logging import get_logger
@@ -127,17 +129,15 @@ def phash(gray):
     return int("".join("1" if b else "0" for b in bits), 2)
 
 
-def hamming(a, b):
-    return bin(a ^ b).count("1")
-
-
 def centre_crop_4x3(img):
     h, w = img.shape[:2]
     target = 4 / 3
     if w / h > target:            # too wide
-        nw = int(round(h * target)); x0 = (w - nw) // 2
+        nw = int(round(h * target))
+        x0 = (w - nw) // 2
         return img[:, x0:x0 + nw]
-    nh = int(round(w / target)); y0 = (h - nh) // 2
+    nh = int(round(w / target))
+    y0 = (h - nh) // 2
     return img[y0:y0 + nh, :]
 
 
@@ -191,15 +191,24 @@ def harmonise_site(x):
 def api_to_code(d1, d3):
     d3 = "" if pd.isna(d3) else str(d3).lower()
     d1 = "" if pd.isna(d1) else str(d1).lower()
-    if "melanoma" in d3: return "MEL"
-    if "nevus" in d3: return "NV"
-    if "actinic" in d3: return "AK"
-    if "dermatofibroma" in d3: return "DF"
-    if "squamous" in d3: return "SCC"
-    if "basal" in d3: return "BCC"
-    if "seborrheic" in d3 or "lentigo" in d3 or "lichen" in d3: return "BKL"
-    if "hemangioma" in d3 or "angioma" in d3 or "vascular" in d3: return "VASC"
-    if d3 == "" and d1 == "malignant": return "MEL"  # melanocytic malignant with blank subtype
+    if "melanoma" in d3:
+        return "MEL"
+    if "nevus" in d3:
+        return "NV"
+    if "actinic" in d3:
+        return "AK"
+    if "dermatofibroma" in d3:
+        return "DF"
+    if "squamous" in d3:
+        return "SCC"
+    if "basal" in d3:
+        return "BCC"
+    if "seborrheic" in d3 or "lentigo" in d3 or "lichen" in d3:
+        return "BKL"
+    if "hemangioma" in d3 or "angioma" in d3 or "vascular" in d3:
+        return "VASC"
+    if d3 == "" and d1 == "malignant":  # melanocytic malignant with blank subtype
+        return "MEL"
     return None
 
 
@@ -209,7 +218,8 @@ class UnionFind:
     def find(self, x):
         self.p.setdefault(x, x)
         while self.p[x] != x:
-            self.p[x] = self.p[self.p[x]]; x = self.p[x]
+            self.p[x] = self.p[self.p[x]]
+            x = self.p[x]
         return x
 
     def union(self, a, b): self.p[self.find(a)] = self.find(b)
@@ -362,7 +372,8 @@ def preprocess_main(argv=None):
     u["group_id"] = [uf.find(x) for x in u.isic_id]
     npairs = pd.DataFrame(near_pairs, columns=["isic_id_a", "isic_id_b", "phash_distance"])
     lab = u.set_index("isic_id").label
-    npairs["label_a"] = npairs.isic_id_a.map(lab); npairs["label_b"] = npairs.isic_id_b.map(lab)
+    npairs["label_a"] = npairs.isic_id_a.map(lab)
+    npairs["label_b"] = npairs.isic_id_b.map(lab)
     md5s = u.set_index("isic_id").md5
     npairs["byte_identical"] = npairs.isic_id_a.map(md5s) == npairs.isic_id_b.map(md5s)
     # same picture uploaded under two ISIC ids (distance 0) -> keep the lower id, drop the other
@@ -381,7 +392,8 @@ def preprocess_main(argv=None):
           f"groups with >1 image: {(u.groupby('group_id').size() > 1).sum()}")
 
     # 8. splits -------------------------------------------------------------------
-    y = u.label.values; g = u.group_id.values
+    y = u.label.values
+    g = u.group_id.values
     sgkf = StratifiedGroupKFold(n_splits=7, shuffle=True, random_state=SEED)
     tv_idx, te_idx = next(sgkf.split(u, y, g))
     u["split"] = "train"
@@ -411,11 +423,16 @@ def preprocess_main(argv=None):
 
     # 9. normalisation (TRAIN only) ------------------------------------------------
     tr = u[u.split == "train"]
-    s = np.zeros(3); s2 = np.zeros(3); npx = 0
+    s = np.zeros(3)
+    s2 = np.zeros(3)
+    npx = 0
     for p in tr.image_path:
         im = np.asarray(Image.open(os.path.join(a.out, p)), dtype=np.float64) / 255.0
-        s += im.sum((0, 1)); s2 += (im ** 2).sum((0, 1)); npx += im.shape[0] * im.shape[1]
-    mean = s / npx; std = np.sqrt(s2 / npx - mean ** 2)
+        s += im.sum((0, 1))
+        s2 += (im ** 2).sum((0, 1))
+        npx += im.shape[0] * im.shape[1]
+    mean = s / npx
+    std = np.sqrt(s2 / npx - mean ** 2)
     age_mu, age_sd = float(tr.age.mean()), float(tr.age.std())
     norm = dict(image_mean_rgb=[round(x, 4) for x in mean], image_std_rgb=[round(x, 4) for x in std],
                 image_size=[OUT_W, OUT_H], colour_constancy="shades_of_gray_p6" if cc else "none",
@@ -475,3 +492,150 @@ def preprocess_main(argv=None):
         log.warning(f"[10] {len(extra)} images in {os.path.join(a.out, PROCESSED_IMAGES)} are not in the case table (left from an "
                     f"earlier run; not deleted, delete them by hand): {', '.join(extra)}")
     log.info(f"[10] done: {proc}. Next: python -m src.main views --data {a.out}")
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# features: the feature sufficiency and shortcut check (python -m src.main features)
+# ---------------------------------------------------------------------------------------------------------------------------
+# Feature sufficiency + shortcut check (CPU only, no deep learning).
+#
+# Answers three questions on the cleaned dataset:
+#   1. Do the metadata (text) features carry diagnostic signal on their own?
+#   2. Do simple image features (colour, texture, shape) carry signal?
+#   3. Can a model "cheat" by recognising the image SOURCE / file properties instead of the lesion?
+#
+# It is an analysis of the data, not an evaluation of the LLM/RAG systems: its score is the accuracy of small classifiers
+# trained here (validation and test are balanced, so the 8 classes count the same).
+#
+# Usage (this repository): python -m src.main features --data data --out results/data_quality
+# Reads data/processed/cases/all_cases.csv and the images in data/processed/images/; writes feature_check_results.json and
+# image_handcrafted_features.csv (a cache: when it exists, the image features are not computed again).
+# The image packages are imported only when this command runs, so the pipeline check needs the Python standard library only.
+def image_features(path):
+    import cv2
+    import numpy as np
+    from skimage.feature import graycomatrix, graycoprops, local_binary_pattern
+    from skimage.measure import label as cc_label
+    from skimage.measure import regionprops
+    img = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (300, 225), interpolation=cv2.INTER_AREA)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    f = {}
+    # lesion mask: Otsu on blurred gray, keep the largest component near the centre
+    _, th = cv2.threshold(cv2.GaussianBlur(gray, (7, 7), 0), 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    lab_cc = cc_label(th > 0)
+    props = sorted(regionprops(lab_cc), key=lambda p: -p.area)
+    mask = np.zeros_like(gray, bool)
+    if props:
+        mask = lab_cc == props[0].label
+        p = props[0]
+        f.update(area_frac=p.area / mask.size, eccentricity=p.eccentricity, solidity=p.solidity,
+                 extent=p.extent, perimeter_ratio=p.perimeter ** 2 / (4 * np.pi * p.area + 1e-6))
+        # asymmetry: overlap with flipped mask about centroid axes
+        cy, cx = map(int, p.centroid)
+        m = np.roll(np.roll(mask, mask.shape[0] // 2 - cy, 0), mask.shape[1] // 2 - cx, 1)
+        f["asym_lr"] = 1 - (m & m[:, ::-1]).sum() / (m.sum() + 1e-6)
+        f["asym_ud"] = 1 - (m & m[::-1, :]).sum() / (m.sum() + 1e-6)
+    else:
+        f.update(area_frac=0, eccentricity=0, solidity=0, extent=0, perimeter_ratio=0, asym_lr=0, asym_ud=0)
+    if mask.sum() < 50:
+        mask = np.zeros_like(gray, bool)
+        mask[56:169, 75:225] = True
+    skin = ~mask
+    for name, sp in (("rgb", img), ("hsv", hsv), ("lab", lab)):
+        for c in range(3):
+            les, bg = sp[..., c][mask].astype(float), sp[..., c][skin].astype(float)
+            f[f"{name}{c}_les_mean"] = les.mean()
+            f[f"{name}{c}_les_std"] = les.std()
+            f[f"{name}{c}_les_p10"] = np.percentile(les, 10)
+            f[f"{name}{c}_les_p90"] = np.percentile(les, 90)
+            f[f"{name}{c}_contrast"] = les.mean() - (bg.mean() if bg.size else 0)
+    # colour variety: number of occupied coarse HSV bins inside lesion
+    hq = (hsv[..., 0][mask] // 30) * 16 + (hsv[..., 1][mask] // 64) * 4 + hsv[..., 2][mask] // 64
+    f["n_colours"] = len(np.unique(hq))
+    f["colour_entropy"] = float(
+        -(lambda p: (p * np.log2(p + 1e-12)).sum())(np.bincount(hq, minlength=96) / max(len(hq), 1)))
+    # texture: GLCM + LBP on gray
+    g8 = (gray // 8).astype(np.uint8)
+    glcm = graycomatrix(g8, [1, 3], [0, np.pi / 2], levels=32, symmetric=True, normed=True)
+    for prop in ("contrast", "homogeneity", "energy", "correlation", "dissimilarity"):
+        f[f"glcm_{prop}"] = graycoprops(glcm, prop).mean()
+    lbp = local_binary_pattern(gray, 8, 1, "uniform")
+    hist = np.bincount(lbp[mask].astype(int), minlength=10) / max(mask.sum(), 1)
+    for i, v in enumerate(hist):
+        f[f"lbp_{i}"] = v
+    return f
+
+
+def score_model(name, model, Xtr, ytr, Xev, yev, classes):
+    from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score
+    model.fit(Xtr, ytr)
+    pr = model.predict(Xev)
+    pp = model.predict_proba(Xev)
+    out = dict(accuracy=round(accuracy_score(yev, pr), 3),
+               macro_f1=round(f1_score(yev, pr, average="macro"), 3),
+               macro_auc_ovr=round(roc_auc_score(yev, pp, multi_class="ovr", labels=model.classes_), 3),
+               per_class_recall={c: round(r, 2) for c, r in zip(classes, recall_score(yev, pr, labels=classes, average=None))})
+    print(f"{name:55s} accuracy={out['accuracy']:.3f}  macroF1={out['macro_f1']:.3f}  AUC={out['macro_auc_ovr']:.3f}")
+    return out
+
+
+def features_main(argv=None):
+    import pandas as pd
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    ap = argparse.ArgumentParser(prog="python -m src.main features")
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--out", default=os.path.join("results", "data_quality"))
+    a = ap.parse_args(argv)
+    out = a.out
+    os.makedirs(out, exist_ok=True)
+    m = pd.read_csv(os.path.join(a.data, ALL_CASES))
+    classes = CLASSES
+    fpath = os.path.join(out, "image_handcrafted_features.csv")
+    if os.path.exists(fpath):
+        F = pd.read_csv(fpath)
+    else:
+        F = pd.DataFrame([dict(isic_id=i, **image_features(os.path.join(a.data, p)))
+                          for i, p in zip(m.isic_id, m.image_path)])
+        F.to_csv(fpath, index=False, lineterminator="\n")       # LF on Windows too
+    m = m.merge(F, on="isic_id")
+    img_cols = [c for c in F.columns if c != "isic_id"]
+    meta_cols = ["age_z", "age_missing", "sex_male", "sex_missing", "site_missing", "site_head_neck", "site_trunk",
+                 "site_upper_extremity", "site_lower_extremity", "site_palms_soles", "site_oral_genital"]
+    meta_nomiss = ["age_z", "sex_male", "site_head_neck", "site_trunk", "site_upper_extremity",
+                   "site_lower_extremity", "site_palms_soles", "site_oral_genital"]
+    file_cols = ["orig_width", "orig_height", "orig_kb"]
+    tr = m[m.split == "train"]
+    ev = {"val": m[m.split == "val"], "test": m[m.split == "test"]}
+
+    def gb():
+        return HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05, class_weight="balanced", random_state=SEED)
+
+    def lr():
+        return make_pipeline(StandardScaler(), LogisticRegression(max_iter=3000, class_weight="balanced", C=0.5))
+
+    res = {}
+    print("chance level accuracy = 0.125 (8 classes)")
+    for split, E in ev.items():
+        print(f"\n=== evaluated on {split} (n={len(E)}) ===")
+        r = {}
+        r["shortcut_file_properties_only"] = score_model("SHORTCUT: original width/height/file size only", gb(), tr[file_cols], tr.label, E[file_cols], E.label, classes)
+        r["metadata_only"] = score_model("TEXT/METADATA: age, sex, site (+missing flags)", gb(), tr[meta_cols], tr.label, E[meta_cols], E.label, classes)
+        r["metadata_only_no_missing_flags"] = score_model("TEXT/METADATA without missing-value flags", gb(), tr[meta_nomiss], tr.label, E[meta_nomiss], E.label, classes)
+        r["image_handcrafted"] = score_model("IMAGE: colour/texture/shape features", gb(), tr[img_cols], tr.label, E[img_cols], E.label, classes)
+        r["image_plus_metadata"] = score_model("MULTIMODAL: image features + metadata", gb(), tr[img_cols + meta_cols], tr.label, E[img_cols + meta_cols], E.label, classes)
+        r["image_handcrafted_logreg"] = score_model("IMAGE (logistic regression)", lr(), tr[img_cols], tr.label, E[img_cols], E.label, classes)
+        res[split] = r
+    # residual source signal after standardisation: can image features tell HAM vs archive apart?
+    src = (m.source == "HAM10000").astype(int)
+    clf = gb().fit(tr[img_cols], src[tr.index])
+    auc = roc_auc_score(src[ev["test"].index], clf.predict_proba(ev["test"][img_cols])[:, 1])
+    print(f"\nSource detectable from STANDARDISED image features: AUC={auc:.3f} (0.5 = not detectable)")
+    res["source_detectability_auc_after_standardisation"] = round(auc, 3)
+    write_json(os.path.join(out, "feature_check_results.json"), res)

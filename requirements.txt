@@ -3,7 +3,7 @@
 # Every package below is imported by a module in src/; the rest of the code needs only Python. Run everything from the repository
 # folder as: python -m src.main <command>
 
-# Step 1, cleaning (src/data/preprocessing.py), and the feature check (src/data/quality.py)
+# Step 1, cleaning, and the feature check (src/data/preprocessing.py)
 pandas==3.1.1
 numpy==2.4.6
 pillow==13.0.0
@@ -11,18 +11,18 @@ opencv-python==5.1.0.95
 scikit-learn==1.9.1
 scikit-image==0.26.0
 
-# The knowledge corpus (src/knowledge/): the Meditron guideline collection on Hugging Face
+# The knowledge corpus (src/retrieval/corpus.py): the Meditron guideline collection on Hugging Face
 datasets==5.2.0
 
 # The systems (src/pipelines/, src/models/llm.py): Claude through Anthropic's official package; GPT-4o, Gemini and Llama through
 # OpenRouter need only Python. API keys go in .env (CLAUDE_API_KEY, OPENROUTER_API_KEY), never here.
 anthropic==2.6.0
 
-# Retrieval and evaluation: MedCPT encoders and cross-encoder (src/models/embeddings.py, src/retrieval/), semantic similarity
-# (src/evaluation/). The diagnosis and retrieval metrics need only Python.
+# Retrieval and evaluation: MedCPT encoders and cross-encoder (src/models/embeddings.py, src/retrieval/reranker.py), semantic similarity
+# (src/evaluation/metrics.py). The diagnosis and retrieval metrics need only Python.
 sentence-transformers==6.3.0  # semantic similarity (rationale vs a cited reference text)
 transformers==5.24.0          # MedCPT
 torch==2.15.0                 # MedCPT, BiomedCLIP
 
-# The image library (src/retrieval/indexer.py visual-index, src/knowledge/lookalike.py): BiomedCLIP through open_clip.
+# The image library (src/retrieval/images.py, the look-alike check; src/retrieval/indexer.py, visual-index): BiomedCLIP through open_clip.
 open_clip_torch==4.2.2

@@ -24,7 +24,7 @@ VIEWS = ("image_only", "text_only", "multimodal")
 
 # Layout of data/ (all paths relative to the data folder; image paths in the tables are relative to it too).
 RAW = "raw"                           # the Kaggle download, untouched (laptop only)
-OFFICIAL_LABELS = "annotations/official_labels"   # the official ISIC 2019, HAM10000 and ISIC Archive label and metadata files
+OFFICIAL_LABELS = "annotations"            # the official ISIC 2019, HAM10000 and ISIC Archive label and metadata files
 PROCESSED_IMAGES = "processed/images"            # the cleaned, standardised images (laptop only)
 PROCESSED_CASES = "processed/cases"              # the cleaned, de-duplicated and split cases, and the tables made with them
 VIEWS_DIR = "views"                              # one folder per view: cases.csv and the question files
@@ -57,3 +57,8 @@ def load_env(path=".env"):
 
 
 INDEX_DIR = f"{CORPUS_DIR}/index"           # the text index (embeddings.f32, index.json), laptop only
+
+
+def hamming(a, b):
+    """The number of bits in which two picture hashes differ."""
+    return (a ^ b).bit_count()

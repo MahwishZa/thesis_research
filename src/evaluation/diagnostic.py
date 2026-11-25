@@ -1,12 +1,17 @@
-"""Diagnosis metrics: is the final answer right? (accuracy, macro-F1, per-class recall, coverage, selective risk)."""
+"""Diagnosis metrics: accuracy, macro-F1, per-class scores, invalid answers and refusals, tokens and time."""
 import re
 from collections import Counter
 
-from src.evaluation.statistics import bootstrap_ci, mcnemar_exact, mean
-from src.utils.common import CLASSES, OPTION_TEXT
+from src.evaluation.metrics import (
+    INVALID,
+    bootstrap_ci,
+    gold_class,
+    mcnemar_exact,
+    mean,
+    predicted_class,
+)
+from src.utils.common import CLASSES
 
-TEXT_TO_CLASS = {text: code for code, text in OPTION_TEXT.items()}
-INVALID = "invalid"
 # A refusal: the host flagged it (finish_reason "refusal...") or the reply says so in one of these fixed phrases (set on 2026-11-22
 # from a real reply: "I'm sorry, I can't help with identifying or diagnosing images of skin lesions."). Only an invalid answer
 # (no usable letter) is checked, so a valid answer that apologises is never counted.
@@ -26,20 +31,6 @@ def invalid_causes(ids, classes, pred):
         out["refusals" if refused else "other"].append(i)
     return {"refusals": len(out["refusals"]), "other_invalid": len(out["other"]), "refusal_ids": out["refusals"],
             "other_invalid_ids": out["other"]}
-
-
-def gold_class(q):
-    """The gold class of a question; stops if the answer letter does not point to it (a broken question file)."""
-    code = TEXT_TO_CLASS[q["options"][q["answer"]]]
-    if code != q["gold_label"]:
-        raise ValueError(f"{q['id']}: answer {q['answer']} is {code}, gold label is {q['gold_label']}")
-    return code
-
-
-def predicted_class(q, p):
-    """The class a prediction chose, read with this case's options; 'invalid' when there is no usable option letter."""
-    letter = str((p or {}).get("pred") or "").strip().upper()
-    return TEXT_TO_CLASS[q["options"][letter]] if letter in q["options"] else INVALID
 
 
 def per_class(y, p):
@@ -63,17 +54,6 @@ def accuracy(y, p):
 def macro_f1(y, p):
     """The mean F1 over the eight classes (every class weighs the same)."""
     return sum(r["f1"] for r in per_class(y, p).values()) / len(CLASSES)
-
-
-def coverage(y, answers):
-    """Selective classification: share of all questions answered with a valid diagnosis marked "yes" (here: with a verified quote)."""
-    return sum(c != INVALID and flag == "yes" for c, flag in answers) / len(y)
-
-
-def selective_risk(y, answers):
-    """Share of wrong diagnoses among the questions marked "yes" (None when none is)."""
-    covered = [(t, c) for t, (c, flag) in zip(y, answers) if c != INVALID and flag == "yes"]
-    return sum(t != c for t, c in covered) / len(covered) if covered else None
 
 
 def diagnosis_metrics(qa, pred, pred_b=None):

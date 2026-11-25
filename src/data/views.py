@@ -4,7 +4,14 @@ import os
 import random
 
 from src.data.loaders import question_file, view_table
-from src.utils.common import ALL_CASES, CLASSES, LETTERS, OPTION_TEXT, SPLITS, VIEWS
+from src.utils.common import (
+    ALL_CASES,
+    CLASSES,
+    LETTERS,
+    OPTION_TEXT,
+    SPLITS,
+    VIEWS,
+)
 from src.utils.io import read_csv, write_csv, write_jsonl
 from src.utils.logging import get_logger
 from src.utils.reproducibility import SEED

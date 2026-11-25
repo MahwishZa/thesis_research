@@ -1,7 +1,7 @@
 """User acceptance tests: the researcher's own requirements, one test for each, checked on what is committed. Each docstring says
 where the requirement comes from (.claude/CLAUDE.md or a decision of the researcher). If one of these fails, the research no longer
 does what the researcher asked, whatever the other tests say. They skip when the part they check is not in the folder.
-Run: python -m unittest discover -s tests -t ."""
+Run: python -m unittest"""
 
 import contextlib
 import hashlib
@@ -16,19 +16,18 @@ import unittest
 from collections import Counter, defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
+import src.evaluation.diagnostic
+import src.evaluation.evaluator
+import src.evaluation.metrics
+import src.evaluation.retrieval
+import src.models.llm
+import src.pipelines.base
 from src.data.dataset import TEST_PER_CLASS, VAL_PER_CLASS
 from src.data.loaders import question_file
-from src.evaluation import diagnostic as evaluation_diagnostic
-from src.evaluation import evaluator as evaluation_evaluator
-from src.evaluation import hallucination as evaluation_hallucination
-from src.evaluation import retrieval as evaluation_retrieval
-from src.evaluation import statistics as evaluation_statistics
-from src.models import llm as models_llm
-from src.pipelines import prompts as pipelines_prompts
 from src.utils.common import (
     ALL_CASES,
     CLASSES,
@@ -38,8 +37,8 @@ from src.utils.common import (
     VIEWS,
 )
 
-EVALUATION_MODULES = (evaluation_diagnostic, evaluation_evaluator, evaluation_hallucination, evaluation_statistics,
-                      evaluation_retrieval)   # what evaluate.py held before the 2026-11-25 move
+EVALUATION_MODULES = (src.evaluation.metrics, src.evaluation.diagnostic, src.evaluation.retrieval,
+                      src.evaluation.evaluator)   # what evaluate.py held before the 2026-11-25 move
 
 DATA = Path(os.environ.get("THESIS_DATA", ROOT / "data"))
 HAVE_GIT = bool(shutil.which("git")) and (ROOT / ".git").exists()
@@ -142,8 +141,8 @@ class ModelAndPromptRequirements(unittest.TestCase):
     def test_the_four_research_models_are_used_as_they_are_through_pinned_providers(self):
         """Claude Sonnet 5.5, Llama 4 Maverick, Gemini 3.8 Flash and GPT-4o; pre-trained, no fine-tuning; the provider is pinned and
         never replaced by another one (a changed provider would be a different model)."""
-        self.assertEqual(sorted(models_llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
-        for name, cfg in models_llm.MODELS.items():
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
+        for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 self.assertNotIn("fine_tuned", json.dumps(cfg).lower())
                 if cfg["api"] == "openrouter":
@@ -153,11 +152,11 @@ class ModelAndPromptRequirements(unittest.TestCase):
     def test_every_model_gets_the_same_question_and_must_give_its_reasoning_and_evidence_and_one_letter(self):
         """The answer format (researcher's decision, 2026-11-23): "Reasoning and evidence: ..." naming the findings that support the
         choice, then "Answer: <letter> (<name of that option>)", e.g. "C (Melanoma)" (no top-3 list, no yes/no evidence flag); the prompt is fixed and versioned."""
-        text = pipelines_prompts.INSTRUCTIONS["rationale"]
+        text = src.pipelines.base.INSTRUCTIONS["rationale"]
         self.assertIn("Reasoning and evidence: <at most three sentences", text)
         self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
         self.assertNotIn("Evidence sufficient", text)
-        self.assertEqual(pipelines_prompts.PROMPT_NAME, "llm_only")
+        self.assertEqual(src.pipelines.base.PROMPT_NAME, "llm_only")
 
 
 class MetricRequirements(unittest.TestCase):
@@ -166,13 +165,13 @@ class MetricRequirements(unittest.TestCase):
         path = DATA / question_file("multimodal", "test")
         if not path.is_file():
             raise unittest.SkipTest("data/views/ is not there")
-        cls.qa = evaluation_evaluator.load(path)
+        cls.qa = src.evaluation.evaluator.load(path)
         cls.pred = {i: {"id": i, "pred": q["answer"], "raw_output": "", "finish_reason": "stop"} for i, q in cls.qa.items()}
 
     def test_the_approved_diagnosis_metrics_are_reported(self):
         """Approved: accuracy (top-1) with an interval, macro-F1, per-class precision / recall / specificity / F1, the confusion
         matrix; refusals apart from other invalid answers."""
-        d = evaluation_diagnostic.diagnosis_metrics(self.qa, self.pred)
+        d = src.evaluation.diagnostic.diagnosis_metrics(self.qa, self.pred)
         for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix",
                     "invalid_answers", "invalid_answers_by_cause", "missing_predictions"):
             self.assertIn(key, d)
@@ -183,13 +182,13 @@ class MetricRequirements(unittest.TestCase):
     def test_the_metrics_the_researcher_did_not_approve_are_not_reported(self):
         """Not approved: top-k accuracy (removed 2026-11-22: standard top-1 accuracy only), balanced accuracy and macro-recall (the
         same number on a balanced test split), BERTScore, a separate melanoma sensitivity, a score on seen questions."""
-        text = json.dumps(evaluation_diagnostic.diagnosis_metrics(self.qa, self.pred)).lower()
+        text = json.dumps(src.evaluation.diagnostic.diagnosis_metrics(self.qa, self.pred)).lower()
         for banned in ("top3", "top_k", "topk", "balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
             self.assertNotIn(banned, text)
 
     def test_the_feature_check_reports_accuracy_not_balanced_accuracy(self):
         """Renamed 2026-11-24: the splits are balanced, so the plain accuracy is the one number."""
-        source = (SRC / "data" / "quality.py").read_text(encoding="utf-8")
+        source = (SRC / "data" / "preprocessing.py").read_text(encoding="utf-8")
         self.assertIn("accuracy_score", source)
         self.assertNotIn("balanced_accuracy", source)
         self.assertNotIn("bal_acc", source)
@@ -203,19 +202,19 @@ class MetricRequirements(unittest.TestCase):
                     "evidence": {"chunk_id": "c", "quote": "Melanomas show asymmetry and irregular borders here"}}
                 for i, q in self.qa.items()}
         invented = {i: {**p, "evidence": {"chunk_id": "c", "quote": "this sentence is not in the passage at all"}} for i, p in good.items()}
-        self.assertEqual(evaluation_hallucination.evidence_metrics(self.qa, good)["coverage_verified"], 1.0)
-        self.assertEqual(evaluation_hallucination.evidence_metrics(self.qa, invented)["coverage_verified"], 0.0)
-        self.assertIsNone(evaluation_hallucination.evidence_metrics(self.qa, self.pred))                 # the LLM-only answers have no evidence to check
+        self.assertEqual(src.evaluation.metrics.evidence_metrics(self.qa, good)["coverage_verified"], 1.0)
+        self.assertEqual(src.evaluation.metrics.evidence_metrics(self.qa, invented)["coverage_verified"], 0.0)
+        self.assertIsNone(src.evaluation.metrics.evidence_metrics(self.qa, self.pred))                 # the LLM-only answers have no evidence to check
 
     def test_no_llm_judge_metric_is_offered(self):
         """Removed on the researcher's decision (2026-11-24): no RAGAS and no other LLM judge that costs credit."""
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            evaluation_evaluator.report_main(["--questions", "q", "--predictions", "p", "--ragas"])
+            src.evaluation.evaluator.report_main(["--questions", "q", "--predictions", "p", "--ragas"])
         self.assertFalse(any("ragas" in n.lower() for m in EVALUATION_MODULES for n in dir(m)))
 
     def test_every_metric_family_names_its_source_in_evaluate_py(self):
         """Only established, correctly named metrics, each with its source (.claude/CLAUDE.md)."""
-        doc = evaluation_evaluator.__doc__
+        doc = src.evaluation.evaluator.__doc__
         for source in ("McNemar (1947)", "Holm (1979)", "Geifman", "Jarvelin", "MedCPT"):
             self.assertIn(source, doc)
 

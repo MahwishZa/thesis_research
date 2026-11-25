@@ -1,7 +1,7 @@
 """Integration tests: several parts working together, on made-up folders and made-up answers of the outside services (no network,
 no API call, no image needed). The corpus builder with fake downloads, the reference-text builder with a fake wiki, a whole run of
 the run of a system with a fake model (answers saved, interrupted, resumed, then evaluated), the evaluate command, and status on
-small folders. Run: python -m unittest discover -s tests -t ."""
+small folders. Run: python -m unittest"""
 
 import argparse
 import collections
@@ -21,37 +21,30 @@ import urllib.parse
 from pathlib import Path
 from unittest import mock
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
-from src import main as src_main
+import src.evaluation.diagnostic
+import src.evaluation.evaluator
+import src.evaluation.metrics
+import src.evaluation.references
+import src.main
+import src.models.llm
+import src.pipelines.base
+import src.pipelines.llm_only
+import src.pipelines.standard_rag
+import src.retrieval.corpus
+import src.retrieval.images
+import src.retrieval.indexer
+import src.retrieval.retriever
+import src.utils.common
+import src.utils.io
+import src.utils.logging
+import src.utils.reproducibility
 from src.data.loaders import question_file
 from src.data.views import options_for, question
-from src.evaluation import diagnostic as evaluation_diagnostic
-from src.evaluation import evaluator as evaluation_evaluator
-from src.evaluation import hallucination as evaluation_hallucination
-from src.knowledge import chunking as knowledge_chunking
-from src.knowledge import collect as knowledge_collect
-from src.knowledge import corpus as knowledge_corpus
-from src.knowledge import extract as knowledge_extract
-from src.knowledge import images as knowledge_images
-from src.knowledge import lookalike as knowledge_lookalike
-from src.knowledge import metadata as knowledge_metadata
-from src.knowledge import references as knowledge_references
-from src.models import llm as models_llm
-from src.pipelines import base as pipelines_base
-from src.pipelines import llm_only as pipelines_llm_only
-from src.pipelines import prompts as pipelines_prompts
-from src.pipelines import standard_rag as pipelines_standard_rag
-from src.retrieval import indexer as retrieval_indexer
-from src.retrieval import query as retrieval_query
 from src.retrieval.indexer import read_index as common_read_index
 from src.retrieval.retriever import reciprocal_rank_fusion
-from src.utils import common as utils_common
-from src.utils import io as utils_io
-from src.utils import logging as utils_logging
-from src.utils import reproducibility as utils_reproducibility
-from src.utils import status as utils_status
 from src.utils.common import (
     ALL_CASES,
     CLASSES,
@@ -86,55 +79,55 @@ class CheckTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_an_empty_workspace_is_all_not_run(self):
-        rows = {name: status for name, status, _ in utils_status.check(str(self.data), str(self.results))}
-        self.assertEqual(set(rows.values()), {utils_status.NOT_RUN})
+        rows = {name: status for name, status, _ in src.main.check(str(self.data), str(self.results))}
+        self.assertEqual(set(rows.values()), {src.main.NOT_RUN})
 
     def test_reference_texts_old_form_or_empty_are_a_problem(self):
         path = self.data / REFERENCE_TEXTS
         path.parent.mkdir(parents=True)
         good = {"texts": [{"section": "Dermoscopic criteria", "text": "x", "n_words": 120}]}
         path.write_text(json.dumps({**{c: good for c in CLASSES}, "BCC": {"texts": good["texts"] * 3}}), encoding="utf-8")
-        status, note = utils_status.step_references(str(self.data))
-        self.assertEqual(status, utils_status.DONE)
+        status, note = src.main.step_references(str(self.data))
+        self.assertEqual(status, src.main.DONE)
         self.assertEqual(note, "10 reference texts (MEL 1, NV 1, BCC 3, AK 1, BKL 1, DF 1, VASC 1, SCC 1)")
         path.write_text(json.dumps({**{c: good for c in CLASSES}, "NV": {"texts": []}}), encoding="utf-8")
-        self.assertEqual(utils_status.step_references(str(self.data)), (utils_status.PROBLEM, "no text: ['NV']"))
+        self.assertEqual(src.main.step_references(str(self.data)), (src.main.PROBLEM, "no text: ['NV']"))
         path.write_text(json.dumps({c: good for c in CLASSES if c != "DF"}), encoding="utf-8")
-        self.assertEqual(utils_status.step_references(str(self.data)), (utils_status.PROBLEM, "missing ['DF']"))
+        self.assertEqual(src.main.step_references(str(self.data)), (src.main.PROBLEM, "missing ['DF']"))
         path.write_text(json.dumps({c: {"text": "x", "n_words": 120} for c in CLASSES}), encoding="utf-8")
-        status, note = utils_status.step_references(str(self.data))
-        self.assertEqual(status, utils_status.PROBLEM)
+        status, note = src.main.step_references(str(self.data))
+        self.assertEqual(status, src.main.PROBLEM)
         self.assertIn("old form", note)
 
     def test_an_unbalanced_test_split_is_a_problem(self):
         cases = self.data / PROCESSED_CASES
         cases.mkdir(parents=True)
-        for f in utils_status.PROCESSED_FILES:
+        for f in src.main.PROCESSED_FILES:
             (cases / f).write_text("isic_id\n", encoding="utf-8")
         rows = "".join(f"T_{c}_{k},{c},test\n" for c in CLASSES for k in range(31 if c == "DF" else 30))
         (self.data / ALL_CASES).write_text("isic_id,label,split\n" + rows, encoding="utf-8")
-        status, note = utils_status.step_clean(str(self.data))
-        self.assertEqual(status, utils_status.PROBLEM)
+        status, note = src.main.step_clean(str(self.data))
+        self.assertEqual(status, src.main.PROBLEM)
         self.assertIn("not balanced to 30 per class", note)
         self.assertIn("DF 31", note)
 
     def test_an_unbalanced_validation_split_is_a_problem(self):
         cases = self.data / PROCESSED_CASES
         cases.mkdir(parents=True)
-        for f in utils_status.PROCESSED_FILES:
+        for f in src.main.PROCESSED_FILES:
             (cases / f).write_text("isic_id\n", encoding="utf-8")
         rows = "".join(f"T_{c}_{k},{c},test\n" for c in CLASSES for k in range(30))
         rows += "".join(f"V_{c}_{k},{c},val\n" for c in CLASSES for k in range(19 if c == "AK" else 20))
         (self.data / ALL_CASES).write_text("isic_id,label,split\n" + rows, encoding="utf-8")
-        status, note = utils_status.step_clean(str(self.data))
-        self.assertEqual(status, utils_status.PROBLEM)
+        status, note = src.main.step_clean(str(self.data))
+        self.assertEqual(status, src.main.PROBLEM)
         self.assertIn("the val split is not balanced to 20 per class", note)
         self.assertIn("AK 19", note)
 
     def test_missing_and_left_over_images_are_named(self):
         cases = self.data / PROCESSED_CASES
         cases.mkdir(parents=True)
-        for f in utils_status.PROCESSED_FILES:
+        for f in src.main.PROCESSED_FILES:
             (cases / f).write_text("isic_id,image_path\n", encoding="utf-8")
         test_rows = "".join(f"T_{c}_{k},{c},test,processed/images/T_{c}_{k}.jpg\n" for c in CLASSES for k in range(30))
         val_rows = "".join(f"V_{c}_{k},{c},val,processed/images/V_{c}_{k}.jpg\n" for c in CLASSES for k in range(20))
@@ -145,16 +138,16 @@ class CheckTests(unittest.TestCase):
         for name in (["ISIC_1.jpg"] + [f"T_{c}_{k}.jpg" for c in CLASSES for k in range(30)]
                      + [f"V_{c}_{k}.jpg" for c in CLASSES for k in range(20)]):
             (images / name).write_bytes(b"")
-        self.assertEqual(utils_status.step_clean(str(self.data)), (utils_status.DONE, "401 cases, 30 test and 20 validation images per class, every image present"))
+        self.assertEqual(src.main.step_clean(str(self.data)), (src.main.DONE, "401 cases, 30 test and 20 validation images per class, every image present"))
         (images / "ISIC_9.jpg").write_bytes(b"")
         (images / "notes.txt").write_text("not an image", encoding="utf-8")
-        status, note = utils_status.step_clean(str(self.data))
-        self.assertEqual(status, utils_status.PROBLEM)
+        status, note = src.main.step_clean(str(self.data))
+        self.assertEqual(status, src.main.PROBLEM)
         self.assertIn("1 images not in the case table", note)
         self.assertIn("ISIC_9.jpg", note)
         self.assertNotIn("missing", note)
         (images / "V_NV_3.jpg").unlink()
-        status, note = utils_status.step_clean(str(self.data))
+        status, note = src.main.step_clean(str(self.data))
         self.assertIn("1 images missing", note)
         self.assertIn("V_NV_3", note)
         self.assertIn("ISIC_9.jpg", note)
@@ -163,10 +156,10 @@ class CheckTests(unittest.TestCase):
     def test_views_that_differ_from_a_fresh_build_are_a_problem(self):
         shutil.copytree(DATA / PROCESSED_CASES, self.data / PROCESSED_CASES)
         shutil.copytree(DATA / "views", self.data / "views")
-        self.assertEqual(utils_status.step_views(str(self.data))[0], utils_status.DONE)
+        self.assertEqual(src.main.step_views(str(self.data))[0], src.main.DONE)
         with open(self.data / question_file("text_only", "test"), "a", encoding="utf-8") as f:
             f.write("\n")
-        self.assertEqual(utils_status.step_views(str(self.data))[0], utils_status.PROBLEM)
+        self.assertEqual(src.main.step_views(str(self.data))[0], src.main.PROBLEM)
 
     def run_folder(self, partial=False, sha="x", report=False):
         folder = self.results / "llm_only" / "text_only" / ("gpt-4o_test" + (".partial" if partial else ""))
@@ -178,18 +171,18 @@ class CheckTests(unittest.TestCase):
         return folder
 
     def runs(self):
-        return {n: (s, note) for n, s, note in utils_status.step_runs(str(self.data), str(self.results), ["gpt-4o"])}
+        return {n: (s, note) for n, s, note in src.main.step_runs(str(self.data), str(self.results), ["gpt-4o"])}
 
     def write_questions(self):
         q = self.data / question_file("text_only", "test")
         q.parent.mkdir(parents=True, exist_ok=True)
         q.write_bytes(b'{"id": "a"}\n')                          # bytes: the same file on Windows and Linux
-        return utils_reproducibility.text_sha256(q)
+        return src.utils.reproducibility.text_sha256(q)
 
     def test_an_unfinished_run_is_a_problem_with_its_progress(self):
         self.run_folder(partial=True)
         status, note = self.runs()["llm_only gpt-4o text_only test"]
-        self.assertEqual(status, utils_status.PROBLEM)
+        self.assertEqual(status, src.main.PROBLEM)
         self.assertIn("3/315", note)
 
     def test_a_run_on_old_questions_or_without_a_report_is_a_problem(self):
@@ -200,7 +193,7 @@ class CheckTests(unittest.TestCase):
         folder = self.run_folder(sha=sha)
         self.assertIn("not evaluated", self.runs()["llm_only gpt-4o text_only test"][1])
         (folder / "report.json").write_text("{}", encoding="utf-8")
-        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], utils_status.DONE)
+        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], src.main.DONE)
 
     def test_a_run_on_questions_that_only_moved_matches_through_the_provenance_record(self):
         sha = self.write_questions()
@@ -209,16 +202,16 @@ class CheckTests(unittest.TestCase):
         record = self.data / "views" / "provenance.json"
         name = question_file("text_only", "test").replace("\\", "/")
         record.write_text(json.dumps({"files": {name: {"previous_sha256": "before-the-move", "sha256": sha}}}), encoding="utf-8")
-        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], utils_status.DONE)
+        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], src.main.DONE)
         record.write_text(json.dumps({"files": {name: {"previous_sha256": "before-the-move", "sha256": "another"}}}), encoding="utf-8")
-        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], utils_status.PROBLEM)    # the file changed after the move
+        self.assertEqual(self.runs()["llm_only gpt-4o text_only test"][0], src.main.PROBLEM)    # the file changed after the move
         self.assertTrue(folder.is_dir())
 
     def test_the_exit_code_is_1_only_when_a_step_has_a_problem(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(src_main.main(["status", "--data", str(self.data), "--results", str(self.results)]), 0)
+            self.assertEqual(src.main.main(["status", "--data", str(self.data), "--results", str(self.results)]), 0)
             self.run_folder(partial=True)
-            self.assertEqual(src_main.main(["status", "--data", str(self.data), "--results", str(self.results)]), 1)
+            self.assertEqual(src.main.main(["status", "--data", str(self.data), "--results", str(self.results)]), 1)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -296,7 +289,7 @@ class FakeFetcher:
             return PUBMED_XML
         if "BioC_json" in url:
             return json.dumps(BIOC_AK if "PMC13" in url else BIOC)
-        if url == knowledge_collect.DERMOSCOPEDIA_APIS[0]:
+        if url == src.retrieval.corpus.DERMOSCOPEDIA_APIS[0]:
             if params.get("meta") == "siteinfo":
                 return "{}"
             if params.get("list") == "search":
@@ -316,7 +309,7 @@ MEDITRON = [
 
 
 def args(**kw):
-    base = dict(libraries=list(knowledge_metadata.LIBRARIES), per_class=50, max_words=200, min_words=5, pubmed_docs=10, pmc_docs=5,
+    base = dict(libraries=list(src.retrieval.corpus.LIBRARIES), per_class=50, max_words=200, min_words=5, pubmed_docs=10, pmc_docs=5,
                 guideline_docs=5, textbook_pages=3)
     base.update(kw)
     return argparse.Namespace(**base)
@@ -325,26 +318,26 @@ def args(**kw):
 class TextTests(unittest.TestCase):
     def test_passages_are_whole_sentences_within_the_word_limit_with_one_sentence_overlap(self):
         text = "One two three four. Five six seven eight. Nine ten eleven twelve. Thirteen fourteen."
-        parts = knowledge_chunking.chunk(text, max_words=8)
+        parts = src.retrieval.corpus.chunk(text, max_words=8)
         self.assertEqual(parts, ["One two three four. Five six seven eight.", "Five six seven eight. Nine ten eleven twelve.",
                                  "Nine ten eleven twelve. Thirteen fourteen."])
         self.assertTrue(all(len(p.split()) <= 8 for p in parts))
 
     def test_a_sentence_longer_than_the_limit_is_cut_and_nothing_is_lost(self):
         words = [f"w{i}" for i in range(25)]
-        parts = knowledge_chunking.chunk(" ".join(words), max_words=10)
+        parts = src.retrieval.corpus.chunk(" ".join(words), max_words=10)
         self.assertEqual([len(p.split()) for p in parts], [10, 10, 5])
         self.assertEqual(" ".join(parts).split(), words)
 
     def test_a_short_text_is_one_passage_and_empty_text_is_none(self):
-        self.assertEqual(knowledge_chunking.chunk("Dermatofibroma is benign.", 200), ["Dermatofibroma is benign."])
-        self.assertEqual(knowledge_chunking.chunk("   ", 200), [])
+        self.assertEqual(src.retrieval.corpus.chunk("Dermatofibroma is benign.", 200), ["Dermatofibroma is benign."])
+        self.assertEqual(src.retrieval.corpus.chunk("   ", 200), [])
 
     def test_tags_name_the_diagnoses_a_passage_talks_about(self):
-        self.assertEqual(knowledge_metadata.tag("A seborrhoeic keratosis can mimic melanoma."), ["BKL", "MEL"])
-        self.assertEqual(knowledge_metadata.tag("Bowen's disease is squamous cell carcinoma in situ."), ["SCC"])
-        self.assertEqual(knowledge_metadata.tag("arborizing vessels", title="Basal cell carcinoma"), ["BCC"])
-        self.assertEqual(knowledge_metadata.tag("nevirapine is a drug"), [])    # whole words only ("nevi" is inside "nevirapine")
+        self.assertEqual(src.retrieval.corpus.tag("A seborrhoeic keratosis can mimic melanoma."), ["BKL", "MEL"])
+        self.assertEqual(src.retrieval.corpus.tag("Bowen's disease is squamous cell carcinoma in situ."), ["SCC"])
+        self.assertEqual(src.retrieval.corpus.tag("arborizing vessels", title="Basal cell carcinoma"), ["BCC"])
+        self.assertEqual(src.retrieval.corpus.tag("nevirapine is a drug"), [])    # whole words only ("nevi" is inside "nevirapine")
 
     def test_passages_that_are_not_text_about_a_disease_are_found(self):
         bad = {
@@ -358,15 +351,15 @@ class TextTests(unittest.TestCase):
         for reason, texts in bad.items():
             for t in ([texts] if isinstance(texts, str) else texts):
                 with self.subTest(t[:30]):
-                    self.assertEqual(knowledge_extract.junk_reason(t), reason)
+                    self.assertEqual(src.retrieval.corpus.junk_reason(t), reason)
         for good in ("A 47-year-old man presented with a pigmented lesion on his right upper back. The patient denied malignancies.",
                      "Dermoscopy can predict the diagnosis of sBCC with a sensitivity of 81.9% and specificity of 81.8%.",
                      "Smith et al. found arborizing vessels in 66% of nodular BCC (Jin et al., 2017)."):
             with self.subTest(good[:30]):
-                self.assertIsNone(knowledge_extract.junk_reason(good))
+                self.assertIsNone(src.retrieval.corpus.junk_reason(good))
 
     def test_wiki_heading_marks_and_web_addresses_are_removed_from_a_passage(self):
-        self.assertEqual(knowledge_extract.strip_markup("===== Melanoma on sun damaged skin ===== https://dermoscopedia.org/05-Special_locations Identifying"),
+        self.assertEqual(src.retrieval.corpus.strip_markup("===== Melanoma on sun damaged skin ===== https://dermoscopedia.org/05-Special_locations Identifying"),
                          "Melanoma on sun damaged skin. Identifying")
 
     def test_the_corpus_leaves_junk_passages_out_and_counts_them(self):
@@ -375,7 +368,7 @@ class TextTests(unittest.TestCase):
         docs = [{"doc_id": "d1", "title": "T", "url": "u", "licence": "x", "paragraphs": [
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", "Melanomas show an atypical network on dermoscopy."]}]
         removed = collections.Counter()
-        out = knowledge_corpus.passages_from(docs, "textbook", "MEL", ns, set(), set(), removed)
+        out = src.retrieval.corpus.passages_from(docs, "textbook", "MEL", ns, set(), set(), removed)
         self.assertEqual([p["text"] for p in out], ["Melanomas show an atypical network on dermoscopy."])
         self.assertEqual(removed["textbook: placeholder text"], 1)
 
@@ -399,7 +392,7 @@ class TextTests(unittest.TestCase):
       </body></article>''')
 
     def test_the_figures_of_a_paper_are_read_with_label_caption_and_image_file(self):
-        figs = knowledge_images.parse_pmc_figures(self.JATS)
+        figs = src.retrieval.images.parse_pmc_figures(self.JATS)
         self.assertEqual(len(figs), 8)
         self.assertEqual((figs[0]["label"], figs[0]["href"]), ("Figure 1", "img-001"))
         self.assertTrue(figs[0]["caption"].startswith("Dermoscopy of a basal cell carcinoma. Arborizing vessels"))
@@ -409,17 +402,17 @@ class TextTests(unittest.TestCase):
         removed = collections.Counter()
         paper = {"doc_id": "PMC1", "title": "Dermoscopy of basal cell carcinoma", "licence": "CC BY 4.0", "query_class": "BCC",
                  "url": "https://x/PMC1"}
-        items = knowledge_images.visual_items([paper], lambda doc_id: self.JATS, removed)
+        items = src.retrieval.images.visual_items([paper], lambda doc_id: self.JATS, removed)
         self.assertEqual([it["item_id"] for it in items], ["PMC1#fig0", "PMC1#fig6"])
         self.assertEqual(dict(removed), {"chart, diagram or other imaging method": 1, "caption too short": 1, "no image file": 1,
                                          "duplicate caption": 1, "not a clinical or dermoscopic image": 2})
         hist = {"label": "", "href": "a", "caption": "Histology of the lesion (H&E, original magnification x200) showing basaloid nests."}
-        self.assertEqual(knowledge_images.figure_reject_reason(hist, "basal cell carcinoma", set()), "histology only")
+        self.assertEqual(src.retrieval.images.figure_reject_reason(hist, "basal cell carcinoma", set()), "histology only")
         real = {"label": "", "href": "a", "caption": "Traumatized nevi are a good example of the need for clinical-pathological correlation. "
                                                      "See the panoramic image of a nevus lesion on the thigh of a 44-year-old female patient."}
-        self.assertEqual(knowledge_images.figure_reject_reason(real, "Dermoscopy of melanocytic nevi", set()), "histology only")
+        self.assertEqual(src.retrieval.images.figure_reject_reason(real, "Dermoscopy of melanocytic nevi", set()), "histology only")
         mixed = {"label": "", "href": "a", "caption": "Clinical photograph of the lesion (a) and histology with H&E staining (b) in a case."}
-        self.assertIsNone(knowledge_images.figure_reject_reason(mixed, "basal cell carcinoma", set()))
+        self.assertIsNone(src.retrieval.images.figure_reject_reason(mixed, "basal cell carcinoma", set()))
         self.assertEqual(items[0]["tags"], ["BCC"])
         self.assertEqual(items[0]["licence"], "CC BY 4.0")
 
@@ -433,14 +426,14 @@ class TextTests(unittest.TestCase):
                 raise ValueError("no XML")
             return self.JATS
         with contextlib.redirect_stdout(io.StringIO()):                          # the expected message about PMC1
-            items = knowledge_images.visual_items(papers, fetch_xml, removed)
+            items = src.retrieval.images.visual_items(papers, fetch_xml, removed)
         self.assertEqual(len(items), 2)
         self.assertEqual(removed["paper: figures not read"], 1)
 
     def test_a_figure_with_no_diagnosis_in_its_caption_or_title_is_left_out(self):
         fig = {"label": "", "href": "a", "caption": "Clinical photograph of a lesion on the left forearm of a woman, taken at a visit."}
-        self.assertEqual(knowledge_images.figure_reject_reason(fig, "A case of itching", set()), "no diagnosis named")
-        self.assertIsNone(knowledge_images.figure_reject_reason(fig, "A case of melanoma", set()))
+        self.assertEqual(src.retrieval.images.figure_reject_reason(fig, "A case of itching", set()), "no diagnosis named")
+        self.assertIsNone(src.retrieval.images.figure_reject_reason(fig, "A case of melanoma", set()))
 
     @staticmethod
     def article(licence_url="https://creativecommons.org/licenses/by/4.0/", title="Dermoscopy of basal cell carcinoma",
@@ -465,7 +458,7 @@ class TextTests(unittest.TestCase):
                 return xmls[params["id"]]
         removed = collections.Counter()
         with contextlib.redirect_stdout(io.StringIO()):                          # the expected message about PMC9
-            papers = knowledge_images.extra_papers(Fake(), 10, {"PMC5"}, removed)                 # PMC5 is already a corpus paper
+            papers = src.retrieval.images.extra_papers(Fake(), 10, {"PMC5"}, removed)                 # PMC5 is already a corpus paper
         self.assertEqual({p["doc_id"] for p in papers}, {"PMC1"})
         self.assertEqual(papers[0]["query_class"], "MEL")                           # the first diagnosis searched; later ones skip it
         self.assertEqual(dict(removed), {"extra paper: no open licence": 1, "extra paper: AI or image-dataset paper": 1,
@@ -483,16 +476,16 @@ class TextTests(unittest.TestCase):
             def forget(self, url, params=None, ncbi=False):
                 forgotten.append(url)
         with contextlib.redirect_stdout(io.StringIO()):                          # the expected retry messages
-            self.assertEqual(knowledge_collect.esearch(Fake(), "pmc", "x", 5, wait=0), ["5"])
+            self.assertEqual(src.retrieval.corpus.esearch(Fake(), "pmc", "x", 5, wait=0), ["5"])
         self.assertEqual(len(forgotten), 2)                                     # the two error answers were not kept
         answers[:] = [{"error": "busy"}] * 3
 
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(knowledge_collect.esearch(Fake(), "pmc", "x", 5, attempts=3, wait=0), [])     # still failing: no ids, no exception
+            self.assertEqual(src.retrieval.corpus.esearch(Fake(), "pmc", "x", 5, attempts=3, wait=0), [])     # still failing: no ids, no exception
 
     def test_the_download_cache_can_forget_an_answer(self):
         with tempfile.TemporaryDirectory() as d:
-            fetch = knowledge_collect.Fetcher(d)
+            fetch = src.retrieval.corpus.Fetcher(d)
             path = fetch.cache_path("https://x/y", {"a": 1}, ncbi=True)
             Path(path).write_text("bad", encoding="utf-8")
             self.assertEqual(fetch.get("https://x/y", {"a": 1}, ncbi=True), "bad")
@@ -509,8 +502,8 @@ class TextTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             write_jsonl(os.path.join(d, "passages.jsonl"), [])
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(knowledge_images.visual_main(["--corpus", d], fetch_xml=lambda x: xml), [])
-                items = knowledge_images.visual_main(["--corpus", d, "--extra-papers", "5"], fetch=Fake())
+                self.assertEqual(src.retrieval.images.visual_main(["--corpus", d], fetch_xml=lambda x: xml), [])
+                items = src.retrieval.images.visual_main(["--corpus", d, "--extra-papers", "5"], fetch=Fake())
             self.assertEqual({it["doc_id"] for it in items}, {"PMC7"})
 
     def test_the_visual_list_command_writes_the_items_and_a_card_with_counts(self):
@@ -520,12 +513,12 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(d, "passages.jsonl"), [passage, {**passage, "passage_id": "PMC1#1"},
                                                             {**passage, "passage_id": "m#0", "doc_id": "meditron:abc"}])
             with contextlib.redirect_stdout(io.StringIO()):
-                items = knowledge_images.visual_main(["--corpus", d], fetch_xml=lambda doc_id: self.JATS)
+                items = src.retrieval.images.visual_main(["--corpus", d], fetch_xml=lambda doc_id: self.JATS)
             self.assertEqual(len(items), 2)                                  # one paper (the Meditron one is not a PMC paper)
             card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
             self.assertEqual((card["n_papers_read"], card["n_figures_kept"], card["figures_per_tag"]["BCC"]), (1, 2, 2))
             self.assertFalse(card["images_downloaded"])
-            self.assertEqual(len(utils_io.read_jsonl(os.path.join(d, "visual", "items.jsonl"))), 2)
+            self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(d, "visual", "items.jsonl"))), 2)
 
     JPEG = b"\xff\xd8\xff" + b"x" * 5000
 
@@ -533,7 +526,7 @@ class TextTests(unittest.TestCase):
     def bucket(files):
         """A fake PMC bucket: {key: bytes}. Answers a listing request with the S3 XML and a file request with the bytes."""
         def get(url):
-            if url.startswith(knowledge_images.S3_BUCKET + "?"):
+            if url.startswith(src.retrieval.images.S3_BUCKET + "?"):
                 q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
                 prefix, delimiter = q["prefix"][0], q.get("delimiter", [""])[0]
                 keys = [k for k in files if k.startswith(prefix)]
@@ -542,19 +535,19 @@ class TextTests(unittest.TestCase):
                     body = "".join(f"<CommonPrefixes><Prefix>{x}</Prefix></CommonPrefixes>" for x in subs)
                 else:
                     body = "".join(f"<Contents><Key>{k}</Key></Contents>" for k in keys)
-                return f'<ListBucketResult xmlns="{knowledge_images.S3_NS[1:-1]}">{body}</ListBucketResult>'.encode()
-            if url.startswith(knowledge_images.S3_BUCKET) and url[len(knowledge_images.S3_BUCKET):] in files:
-                return files[url[len(knowledge_images.S3_BUCKET):]]
+                return f'<ListBucketResult xmlns="{src.retrieval.images.S3_NS[1:-1]}">{body}</ListBucketResult>'.encode()
+            if url.startswith(src.retrieval.images.S3_BUCKET) and url[len(src.retrieval.images.S3_BUCKET):] in files:
+                return files[url[len(src.retrieval.images.S3_BUCKET):]]
             raise OSError("404 " + url)
         return get
 
     def test_a_figure_is_found_in_the_newest_version_folder_of_the_bucket_by_its_graphic_name(self):
         get = self.bucket({"PMC1.1/gr1.jpg": b"old", "PMC1.2/gr1.jpg": self.JPEG, "PMC1.2/gr2.png": b"\x89PNG" + b"x" * 5000,
                            "PMC1.2/article.xml": b"<xml/>", "PMC10.1/gr1.jpg": b"other article"})
-        data, url = knowledge_images.fetch_image("PMC1", "gr1", get)
-        self.assertEqual((data, url), (self.JPEG, knowledge_images.S3_BUCKET + "PMC1.2/gr1.jpg"))        # version 2, and PMC1 is not PMC10
-        self.assertEqual(knowledge_images.fetch_image("PMC1", "gr2.png", get)[1], knowledge_images.S3_BUCKET + "PMC1.2/gr2.png")   # a name with its extension
-        self.assertEqual(knowledge_images.fetch_image("PMC1", "gr9", get), (None, None))
+        data, url = src.retrieval.images.fetch_image("PMC1", "gr1", get)
+        self.assertEqual((data, url), (self.JPEG, src.retrieval.images.S3_BUCKET + "PMC1.2/gr1.jpg"))        # version 2, and PMC1 is not PMC10
+        self.assertEqual(src.retrieval.images.fetch_image("PMC1", "gr2.png", get)[1], src.retrieval.images.S3_BUCKET + "PMC1.2/gr2.png")   # a name with its extension
+        self.assertEqual(src.retrieval.images.fetch_image("PMC1", "gr9", get), (None, None))
 
     def test_the_older_address_is_tried_last_and_every_failure_is_explained_in_the_trace(self):
         europe = "https://europepmc.org/articles/PMC1/bin/gr1.jpg"
@@ -563,19 +556,19 @@ class TextTests(unittest.TestCase):
         def get(url):
             if url == europe:
                 return self.JPEG
-            if url.startswith(knowledge_images.S3_BUCKET + "?"):
+            if url.startswith(src.retrieval.images.S3_BUCKET + "?"):
                 raise OSError("403 forbidden")
             raise OSError("404")
-        self.assertEqual(knowledge_images.fetch_image("PMC1", "gr1", get, trace=trace), (self.JPEG, europe))
+        self.assertEqual(src.retrieval.images.fetch_image("PMC1", "gr1", get, trace=trace), (self.JPEG, europe))
         self.assertTrue(any("bucket listing failed" in t and "403" in t for t in trace))
         trace = []
         empty_bucket = self.bucket({})
 
         def get_html(url):
             return b"<html>sorry</html>" if "europepmc" in url else empty_bucket(url)
-        self.assertEqual(knowledge_images.fetch_image("PMC1", "gr1", get_html, trace=trace), (None, None))
+        self.assertEqual(src.retrieval.images.fetch_image("PMC1", "gr1", get_html, trace=trace), (None, None))
         self.assertTrue(any("not an image file" in t for t in trace))
-        self.assertEqual([knowledge_images.image_extension(x) for x in (b"\x89PNGrest", b"GIF89a", b"\xff\xd8\xffx", b"%PDF")],
+        self.assertEqual([src.retrieval.images.image_extension(x) for x in (b"\x89PNGrest", b"GIF89a", b"\xff\xd8\xffx", b"%PDF")],
                          [".png", ".gif", ".jpg", None])
 
     def test_images_are_saved_and_tiny_missing_and_identical_ones_are_left_out(self):
@@ -583,13 +576,13 @@ class TextTests(unittest.TestCase):
         get = self.bucket({"PMC1.1/h0.jpg": self.JPEG, "PMC1.1/h1.jpg": b"\xff\xd8\xff" + b"x" * 100, "PMC1.1/h3.jpg": self.JPEG,
                            "PMC1.1/h4.jpg": self.JPEG + b"y"})
         with tempfile.TemporaryDirectory() as d:
-            kept, counts, worked = knowledge_images.download_images(items, os.path.join(d, "images"), get, pause=0)
+            kept, counts, worked = src.retrieval.images.download_images(items, os.path.join(d, "images"), get, pause=0)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#fig0", "PMC1#fig4"])
             self.assertEqual(dict(counts), {"image too small": 1, "no image at any address": 1, "identical image already kept": 1})
             self.assertEqual(dict(worked), {"PMC bucket": 2})
             self.assertEqual(sorted(os.listdir(os.path.join(d, "images"))), ["PMC1_fig0.jpg", "PMC1_fig4.jpg"])
             self.assertEqual(kept[0]["image_bytes"], len(self.JPEG))
-            probe_kept, _, _ = knowledge_images.download_images(items, os.path.join(d, "probe"), get, pause=0, probe=1)
+            probe_kept, _, _ = src.retrieval.images.download_images(items, os.path.join(d, "probe"), get, pause=0, probe=1)
             self.assertEqual(len(probe_kept), 1)
             self.assertFalse(os.path.exists(os.path.join(d, "probe", "PMC1_fig0.jpg")))           # a probe saves nothing
 
@@ -599,11 +592,11 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(folder, "items.jsonl"), [{"item_id": "PMC1#fig0", "doc_id": "PMC1", "href": "h0"}])
             Path(d, "visual_card.json").write_text(json.dumps({"n_figures_kept": 1, "images_downloaded": False}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = knowledge_images.visual_images_main(["--corpus", d], get=lambda url: self.JPEG)
+                kept = src.retrieval.images.visual_images_main(["--corpus", d], get=lambda url: self.JPEG)
             self.assertEqual(len(kept), 1)
             card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
             self.assertEqual((card["images_downloaded"], card["n_images"], card["n_figures_kept"]), (True, 1, 1))
-            self.assertEqual(len(utils_io.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
+            self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
 
     def test_a_picture_that_is_the_same_by_its_hash_is_left_out_even_when_the_embedding_differs(self):
         def encode(paths):                                 # all vectors far apart: only the hash can catch the copy
@@ -624,13 +617,13 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text(str(1000 ^ 0b1))      # one bit away from a variant
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = retrieval_indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=hash_fn)
+                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=hash_fn)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#lib_other"])
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual((card["n_dropped_by_hash"], card["n_dropped_by_embedding"]), (1, 0))
 
     def test_the_hash_bits_follow_the_neighbour_rule_and_hamming_counts_the_different_bits(self):
-        from src.knowledge import lookalike as cm
+        from src.retrieval import images as cm
         rising = [r * 9 + c for r in range(8) for c in range(9)]                     # every pixel darker than its right neighbour
         falling = [-v for v in rising]                                               # every pixel brighter than its right neighbour
         self.assertEqual(cm.dhash_bits(rising), 0)
@@ -642,7 +635,7 @@ class TextTests(unittest.TestCase):
     def test_the_picture_hash_is_the_same_for_a_resized_copy_and_far_for_another_picture(self):
         from PIL import Image, ImageDraw
 
-        from src.knowledge import lookalike as cm
+        from src.retrieval import images as cm
         with tempfile.TemporaryDirectory() as d:
             img = Image.new("RGB", (200, 150), (200, 100, 60))
             ImageDraw.Draw(img).ellipse((40, 30, 150, 110), fill=(60, 20, 20))
@@ -663,7 +656,7 @@ class TextTests(unittest.TestCase):
         vectors = [[1.0, 0.0], [0.99, 0.141], [0.0, 1.0], [0.6, 0.8]]
         hashes = [0b0000, 0b0001, 0b1111_0000, 0b0011]
         groups = ["g1", "g1", "g2", "g3"]
-        r = knowledge_lookalike.guard_calibration(vectors, hashes, groups, threshold=0.95, hash_threshold=1)
+        r = src.retrieval.images.guard_calibration(vectors, hashes, groups, threshold=0.95, hash_threshold=1)
         same, diff = r["same_lesion_pairs"], r["most_similar_different_lesion"]
         self.assertEqual((same["n"], same["caught"]), (1, 1.0))                        # cosine 0.99 and 1 bit: caught
         self.assertEqual(diff["n"], 4)
@@ -671,9 +664,9 @@ class TextTests(unittest.TestCase):
         # both are flagged; photo 1 (0b0000) is 2 bits from photo 4 and photo 3 is 4 or more bits from all: not flagged -> 2 of 4
         self.assertEqual(diff["false_alarm"], 0.5)
         self.assertEqual(diff["hash_bits_different"]["min"], 1)
-        r2 = knowledge_lookalike.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=0)
+        r2 = src.retrieval.images.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=0)
         self.assertEqual(r2["same_lesion_pairs"]["caught"], 0.0)                          # stricter thresholds miss the pair
-        r3 = knowledge_lookalike.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=1)
+        r3 = src.retrieval.images.guard_calibration(vectors, hashes, groups, threshold=0.995, hash_threshold=1)
         self.assertEqual(r3["same_lesion_pairs"]["caught"], 1.0)                          # the hash alone catches it
 
     def test_the_calibration_command_reads_the_saved_kaggle_numbers_and_writes_the_card(self):
@@ -688,7 +681,7 @@ class TextTests(unittest.TestCase):
             with open(os.path.join(data, ALL_CASES), "w", encoding="utf-8", newline="") as f:
                 f.write("isic_id,group_id\nISIC_1,a\nISIC_2,a\nISIC_3,b\n")
             with contextlib.redirect_stdout(io.StringIO()):
-                r = knowledge_lookalike.visual_calibrate_main(["--corpus", corpus, "--data", data])
+                r = src.retrieval.images.visual_calibrate_main(["--corpus", corpus, "--data", data])
             self.assertEqual(r["same_lesion_pairs"]["caught"], 1.0)
             self.assertEqual(r["most_similar_different_lesion"]["false_alarm"], 0.0)
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))
@@ -701,10 +694,10 @@ class TextTests(unittest.TestCase):
             calls.append(len(paths))
             return [[1.0, 0.0] for _ in paths]
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(knowledge_lookalike.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
-            self.assertEqual(knowledge_lookalike.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
+            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
+            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
             self.assertEqual(calls, [2])                                                   # the second time nothing was embedded
-            knowledge_lookalike.kaggle_vectors(encode, ["a.jpg", "b.jpg", "c.jpg"], d, d, "biomedclip")       # another list of images: embedded again
+            src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg", "c.jpg"], d, d, "biomedclip")       # another list of images: embedded again
             self.assertEqual(calls, [2, 3])
 
     def test_the_same_picture_in_two_papers_is_kept_once(self):
@@ -722,7 +715,7 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text("0,1")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = retrieval_indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=fake_hash)
+                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=fake_hash)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#a", "PMC1#c"])      # b is the same picture as a (cosine 1.0)
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual(card["n_dropped_as_library_duplicates"], 1)
@@ -744,7 +737,7 @@ class TextTests(unittest.TestCase):
             Path(data, PROCESSED_IMAGES, "ISIC_0000002.jpg").write_text("0,1")
             Path(corpus, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = retrieval_indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
+                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
             # near and far each equal a Kaggle image (cosine 1.0); mid (0.6, 0.8) has cosine 0.8 at most with both
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#mid"])
             card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
@@ -755,31 +748,31 @@ class TextTests(unittest.TestCase):
             self.assertEqual(json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
                              ["n_dropped_as_library_duplicates"], 0)
             with self.assertRaises(SystemExit):                 # when every image is a look-alike nothing is indexed
-                retrieval_indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode, hash_fn=fake_hash)
+                src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode, hash_fn=fake_hash)
 
     def test_plural_forms_are_tagged_too(self):
-        self.assertEqual(knowledge_metadata.tag("Melanomas show asymmetry."), ["MEL"])
-        self.assertEqual(knowledge_metadata.tag("Basal cell carcinomas and squamous cell carcinomas are common."), ["BCC", "SCC"])
-        self.assertEqual(knowledge_metadata.tag("Haemangiomas and keratoacanthomas."), ["SCC", "VASC"])
-        self.assertEqual(knowledge_metadata.tag("Melanomatous change"), [])     # a longer word is not a match
+        self.assertEqual(src.retrieval.corpus.tag("Melanomas show asymmetry."), ["MEL"])
+        self.assertEqual(src.retrieval.corpus.tag("Basal cell carcinomas and squamous cell carcinomas are common."), ["BCC", "SCC"])
+        self.assertEqual(src.retrieval.corpus.tag("Haemangiomas and keratoacanthomas."), ["SCC", "VASC"])
+        self.assertEqual(src.retrieval.corpus.tag("Melanomatous change"), [])     # a longer word is not a match
 
     def test_ai_and_image_dataset_papers_are_recognised(self):
-        self.assertTrue(knowledge_extract.is_ai_paper("Deep learning for skin cancer", ""))
-        self.assertTrue(knowledge_extract.is_ai_paper("A study", "We trained on HAM10000 images."))
-        self.assertFalse(knowledge_extract.is_ai_paper("Dermoscopy of basal cell carcinoma", LONG))
+        self.assertTrue(src.retrieval.corpus.is_ai_paper("Deep learning for skin cancer", ""))
+        self.assertTrue(src.retrieval.corpus.is_ai_paper("A study", "We trained on HAM10000 images."))
+        self.assertFalse(src.retrieval.corpus.is_ai_paper("Dermoscopy of basal cell carcinoma", LONG))
 
     def test_only_creative_commons_licences_count_as_open(self):
         for licence in ("CC BY", "CC0", "CC BY-NC-ND", "cc by-sa"):
-            self.assertTrue(knowledge_extract.open_licence(licence), licence)
+            self.assertTrue(src.retrieval.corpus.open_licence(licence), licence)
         for licence in ("NO-CC CODE", "", None, "CC BY-XYZ"):
-            self.assertFalse(knowledge_extract.open_licence(licence), licence)
+            self.assertFalse(src.retrieval.corpus.open_licence(licence), licence)
 
     def test_topics_of_a_passage(self):
-        self.assertEqual(knowledge_metadata.topics(LONG), ["appearance", "basics", "differential", "patients"])
-        self.assertEqual(knowledge_metadata.topics("Nothing here."), [])
+        self.assertEqual(src.retrieval.corpus.topics(LONG), ["appearance", "basics", "differential", "patients"])
+        self.assertEqual(src.retrieval.corpus.topics("Nothing here."), [])
 
     def test_wiki_html_keeps_paragraphs_and_list_items_only(self):
-        paras = knowledge_extract.html_paragraphs(WIKI_PAGE + "<ul><li>first<br/>line</li></ul>")
+        paras = src.retrieval.corpus.html_paragraphs(WIKI_PAGE + "<ul><li>first<br/>line</li></ul>")
         self.assertEqual(len(paras), 2)
         self.assertNotIn("[1]", paras[0])
         self.assertNotIn("table text", " ".join(paras))
@@ -788,7 +781,7 @@ class TextTests(unittest.TestCase):
 
 class ParserTests(unittest.TestCase):
     def test_pubmed_xml(self):
-        docs = knowledge_extract.parse_pubmed_xml(PUBMED_XML)
+        docs = src.retrieval.corpus.parse_pubmed_xml(PUBMED_XML)
         self.assertEqual([d["doc_id"] for d in docs], ["PMID:101", "PMID:102", "PMID:103", "PMID:104"])
         self.assertEqual((docs[0]["year"], docs[0]["url"]), ("2020", "https://pubmed.ncbi.nlm.nih.gov/101/"))
         self.assertEqual([d["retracted"] for d in docs], [False, False, True, False])
@@ -804,29 +797,29 @@ class ParserTests(unittest.TestCase):
                           ("http://creativecommons.org/licenses/by-nc-sa/3.0/", "CC BY-NC-SA 3.0"),
                           ("https://creativecommons.org/publicdomain/zero/1.0/", "CC0 1.0"),
                           ("https://creativecommons.org/licenses/by-nd/4.0", "CC BY-ND 4.0")):
-            self.assertEqual(knowledge_extract.parse_pmc_licence(jats(lic(url))), (name, False), url)
-            self.assertTrue(knowledge_extract.open_licence(name))
-        self.assertEqual(knowledge_extract.parse_pmc_licence(jats()), (None, False))                                  # no licence element
-        self.assertEqual(knowledge_extract.parse_pmc_licence(jats('<license><license-p>All rights reserved.</license-p></license>')), (None, False))
-        self.assertEqual(knowledge_extract.parse_pmc_licence(jats(lic("", "see https://creativecommons.org/licenses/by/4.0/ for terms"))),
+            self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats(lic(url))), (name, False), url)
+            self.assertTrue(src.retrieval.corpus.open_licence(name))
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats()), (None, False))                                  # no licence element
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats('<license><license-p>All rights reserved.</license-p></license>')), (None, False))
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats(lic("", "see https://creativecommons.org/licenses/by/4.0/ for terms"))),
                          ("CC BY 4.0", False))                                                         # the link in the text
-        self.assertEqual(knowledge_extract.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), "retraction")
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), "retraction")
                                               .replace("research-article", "retraction"))[1], True)    # a retraction notice
         related = '<related-article related-article-type="retracted-article" xlink:href="x"/>'
-        self.assertEqual(knowledge_extract.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), related=related)),
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence(jats(lic("https://creativecommons.org/licenses/by/4.0/"), related=related)),
                          ("CC BY 4.0", True))
-        self.assertEqual(knowledge_extract.parse_pmc_licence("<article/>"), (None, False))
-        self.assertEqual(knowledge_extract.parse_pmc_licence("<pmc-articleset/>"), (None, False))
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence("<article/>"), (None, False))
+        self.assertEqual(src.retrieval.corpus.parse_pmc_licence("<pmc-articleset/>"), (None, False))
 
     def test_bioc_keeps_text_sections_and_drops_references_and_tables(self):
         for answer in (BIOC, BIOC[0]):                        # a list of collections, or one collection
-            title, year, paras = knowledge_extract.parse_bioc(answer)
+            title, year, paras = src.retrieval.corpus.parse_bioc(answer)
             self.assertEqual((title, year, len(paras)), ("Basal cell carcinoma: a review", "2021", 2))
             self.assertFalse([p for p in paras if "reference" in p or "table" in p])
 
     def test_meditron_guidelines_without_wikidoc_nice_and_unrelated_topics(self):
         removed = collections.Counter()
-        docs = list(knowledge_collect.meditron_guideline_docs(removed, MEDITRON))
+        docs = list(src.retrieval.corpus.meditron_guideline_docs(removed, MEDITRON))
         self.assertEqual([d["doc_id"] for d in docs], ["meditron:g1"])
         self.assertEqual(len(docs[0]["paragraphs"]), 3)
         self.assertEqual(removed, {"guidelines: source wikidoc excluded": 1, "guidelines: source nice excluded": 1})
@@ -840,15 +833,15 @@ class MeditronCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             cache = os.path.join(d, "meditron_skin_cancer.json")
             first = collections.Counter()
-            docs = knowledge_collect.meditron_guideline_docs(first, cache=cache, load=lambda: MEDITRON)
+            docs = src.retrieval.corpus.meditron_guideline_docs(first, cache=cache, load=lambda: MEDITRON)
             self.assertEqual([x["doc_id"] for x in docs], ["meditron:g1"])
             self.assertTrue(os.path.isfile(cache))
             again = collections.Counter()
-            self.assertEqual(knowledge_collect.meditron_guideline_docs(again, cache=cache, load=refuse), docs)
+            self.assertEqual(src.retrieval.corpus.meditron_guideline_docs(again, cache=cache, load=refuse), docs)
             self.assertEqual(again, first)                                   # the removal counts come back with it
             self.assertEqual(first, {"guidelines: source wikidoc excluded": 1, "guidelines: source nice excluded": 1})
             other = os.path.join(d, "not_written.json")
-            knowledge_collect.meditron_guideline_docs(collections.Counter(), MEDITRON, cache=other)       # rows given by a caller: no cache is written
+            src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), MEDITRON, cache=other)       # rows given by a caller: no cache is written
             self.assertFalse(os.path.exists(other))
 
     def test_an_interrupted_pass_saves_nothing(self):
@@ -859,16 +852,16 @@ class MeditronCacheTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             cache = os.path.join(d, "meditron_skin_cancer.json")
             with self.assertRaises(KeyboardInterrupt):
-                knowledge_collect.meditron_guideline_docs(collections.Counter(), cache=cache, load=broken)
+                src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), cache=cache, load=broken)
             self.assertEqual(os.listdir(d), [])
 
     def test_the_hugging_face_library_gets_a_longer_timeout_and_no_symlink_warning(self):
         with mock.patch.dict(os.environ, {}, clear=False), mock.patch.dict(sys.modules, {"datasets": mock.Mock()}):
             os.environ.pop("HF_HUB_DOWNLOAD_TIMEOUT", None)
-            knowledge_collect.meditron_rows_from_hub()
+            src.retrieval.corpus.meditron_rows_from_hub()
             self.assertEqual(os.environ["HF_HUB_DOWNLOAD_TIMEOUT"], "60")
             os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "5"
-            knowledge_collect.meditron_rows_from_hub()
+            src.retrieval.corpus.meditron_rows_from_hub()
             self.assertEqual(os.environ["HF_HUB_DOWNLOAD_TIMEOUT"], "5")        # a value the researcher set is kept
             del os.environ["HF_HUB_DOWNLOAD_TIMEOUT"]
 
@@ -877,12 +870,12 @@ class BuildTests(unittest.TestCase):
     def build(self, **kw):
         fetch = FakeFetcher()
         with contextlib.redirect_stdout(io.StringIO()):
-            passages, removed = knowledge_corpus.build_corpus(args(**kw), fetch, meditron_rows=MEDITRON)
+            passages, removed = src.retrieval.corpus.build_corpus(args(**kw), fetch, meditron_rows=MEDITRON)
         return passages, removed, fetch
 
     def test_every_library_contributes_and_every_passage_can_be_cited(self):
         passages, removed, _ = self.build()
-        self.assertEqual({p["library"] for p in passages}, set(knowledge_metadata.LIBRARIES))
+        self.assertEqual({p["library"] for p in passages}, set(src.retrieval.corpus.LIBRARIES))
         for p in passages:
             self.assertTrue(p["url"] and p["licence"] and p["doc_id"] and p["text"], p["passage_id"])
         self.assertEqual(len({p["passage_id"] for p in passages}), len(passages))
@@ -910,7 +903,7 @@ class BuildTests(unittest.TestCase):
                 return super().get(url, params, ncbi)
 
         with contextlib.redirect_stdout(io.StringIO()):
-            passages, removed = knowledge_corpus.build_corpus(args(), Failing(), meditron_rows=MEDITRON)
+            passages, removed = src.retrieval.corpus.build_corpus(args(), Failing(), meditron_rows=MEDITRON)
         self.assertGreater(removed["pmc: licence lookup failed"], 0)
         self.assertEqual(removed["pmc: no open licence"], 0)
         self.assertEqual({p["library"] for p in passages} & {"pubmed", "textbook"}, {"pubmed", "textbook"})   # the rest goes on
@@ -922,21 +915,21 @@ class BuildTests(unittest.TestCase):
         asked = [(u, p) for u, p, _ in fetch.calls if u.endswith("efetch.fcgi") and p.get("db") == "pmc"]
         self.assertTrue(asked)
         self.assertFalse([u for u, _, _ in fetch.calls if "oa.fcgi" in u])
-        self.assertFalse(any(hasattr(m, "PMC_OA") for m in (knowledge_collect, knowledge_extract)))
+        self.assertFalse(any(hasattr(m, "PMC_OA") for m in (src.retrieval.corpus,)))
 
     def test_no_meditron_skips_the_large_download_and_the_cached_download_is_used_by_the_build(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            with_it, _ = knowledge_corpus.build_corpus(args(libraries=["guidelines"]), FakeFetcher(), meditron_rows=MEDITRON)
-            without, _ = knowledge_corpus.build_corpus(args(libraries=["guidelines"], no_meditron=True), FakeFetcher(), meditron_rows=MEDITRON)
+            with_it, _ = src.retrieval.corpus.build_corpus(args(libraries=["guidelines"]), FakeFetcher(), meditron_rows=MEDITRON)
+            without, _ = src.retrieval.corpus.build_corpus(args(libraries=["guidelines"], no_meditron=True), FakeFetcher(), meditron_rows=MEDITRON)
         self.assertTrue([p for p in with_it if p["doc_id"].startswith("meditron:")])
         self.assertFalse([p for p in without if p["doc_id"].startswith("meditron:")])
         with tempfile.TemporaryDirectory() as d:
             fetch = FakeFetcher()
             fetch.cache = d
-            utils_io.write_json(os.path.join(d, "meditron_skin_cancer.json"),
-                          {"docs": knowledge_collect.meditron_guideline_docs(collections.Counter(), MEDITRON), "removed": {}})
+            src.utils.io.write_json(os.path.join(d, "meditron_skin_cancer.json"),
+                          {"docs": src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), MEDITRON), "removed": {}})
             with contextlib.redirect_stdout(io.StringIO()):
-                passages, _ = knowledge_corpus.build_corpus(args(libraries=["guidelines"]), fetch)       # no rows given: the cache answers
+                passages, _ = src.retrieval.corpus.build_corpus(args(libraries=["guidelines"]), fetch)       # no rows given: the cache answers
         self.assertTrue([p for p in passages if p["doc_id"].startswith("meditron:")])
 
     def test_the_keys_come_from_the_env_file_and_are_never_printed(self):
@@ -950,11 +943,11 @@ class BuildTests(unittest.TestCase):
                 seen["token"] = os.environ.get("HF_TOKEN")
                 return [], collections.Counter()
 
-            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(knowledge_corpus, "build_corpus", build), \
+            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(src.retrieval.corpus, "build_corpus", build), \
                     contextlib.redirect_stdout(io.StringIO()) as out:
                 os.environ.pop("HF_TOKEN", None)
                 os.environ.pop("NCBI_API_KEY", None)
-                knowledge_corpus.corpus_main(argv)
+                src.retrieval.corpus.corpus_main(argv)
                 os.environ.pop("HF_TOKEN", None)
             log_text = out.getvalue() + Path(d, "corpus", "build_corpus.log").read_text(encoding="utf-8")
             card = Path(d, "corpus", "corpus_card.json").read_text(encoding="utf-8")
@@ -968,18 +961,18 @@ class BuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             env = os.path.join(d, ".env")
             Path(env).write_text("# keys\nHF_TOKEN=hf_ok\nsk-or-a-value-without-a-name\n", encoding="utf-8")
-            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(knowledge_corpus, "build_corpus", lambda a, f: ([], collections.Counter())), \
+            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(src.retrieval.corpus, "build_corpus", lambda a, f: ([], collections.Counter())), \
                     contextlib.redirect_stdout(io.StringIO()) as out:
                 os.environ.pop("HF_TOKEN", None)
-                knowledge_corpus.corpus_main(["--out", os.path.join(d, "corpus"), "--env-file", env])
+                src.retrieval.corpus.corpus_main(["--out", os.path.join(d, "corpus"), "--env-file", env])
                 os.environ.pop("HF_TOKEN", None)
             self.assertIn("lines [3] are not NAME=value", out.getvalue())
             self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
             questions = os.path.join(d, "data", question_file("text_only", "val"))
             write_jsonl(questions, [])
-            with mock.patch.object(pipelines_llm_only, "make_client", lambda model, log: object()), mock.patch.object(pipelines_llm_only, "run", lambda *a: "done"), \
+            with mock.patch.object(src.pipelines.llm_only, "make_client", lambda model, log: object()), mock.patch.object(src.pipelines.llm_only, "run", lambda *a: "done"), \
                     contextlib.redirect_stdout(io.StringIO()) as out:
-                pipelines_llm_only.llm_only_main(["--model", "gpt-4o", "--view", "text_only", "--split", "val", "--env-file", env,
+                src.pipelines.llm_only.llm_only_main(["--model", "gpt-4o", "--view", "text_only", "--split", "val", "--env-file", env,
                                   "--data", os.path.join(d, "data"), "--results", os.path.join(d, "results")])
             self.assertIn("lines [3] are not NAME=value", out.getvalue())
             self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
@@ -993,14 +986,14 @@ class BuildTests(unittest.TestCase):
                 return super().get(url, params, ncbi)
 
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            passages, _ = knowledge_corpus.build_corpus(args(libraries=["pubmed"]), Empty(), meditron_rows=MEDITRON)
+            passages, _ = src.retrieval.corpus.build_corpus(args(libraries=["pubmed"]), Empty(), meditron_rows=MEDITRON)
         self.assertEqual(passages, [])
         text = out.getvalue()
         self.assertEqual(text.count("pubmed search found nothing"), 8)          # once for each diagnosis
         self.assertIn("""query as read by NCBI: '"basal cell"[All Fields]'""", text)
         self.assertIn("phrasesnotfound", text)
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            knowledge_corpus.build_corpus(args(libraries=["pubmed"]), FakeFetcher(), meditron_rows=MEDITRON)
+            src.retrieval.corpus.build_corpus(args(libraries=["pubmed"]), FakeFetcher(), meditron_rows=MEDITRON)
         self.assertNotIn("found nothing", out.getvalue())                        # silent when there are results
 
         class Dropped(FakeFetcher):                       # results, but a quoted MeSH heading was not found (an OR kept it going)
@@ -1013,12 +1006,12 @@ class BuildTests(unittest.TestCase):
                 return body
 
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            knowledge_corpus.build_corpus(args(libraries=["pubmed"]), Dropped(), meditron_rows=MEDITRON)
+            src.retrieval.corpus.build_corpus(args(libraries=["pubmed"]), Dropped(), meditron_rows=MEDITRON)
         self.assertIn("""did not find ['"old name"[MeSH Terms]']""", out.getvalue())
         self.assertNotIn("found nothing", out.getvalue())
 
     def test_the_basal_cell_query_does_not_depend_on_one_name_of_the_mesh_heading(self):
-        query = knowledge_collect.PUBMED_QUERIES["BCC"]
+        query = src.retrieval.corpus.PUBMED_QUERIES["BCC"]
         for part in ('"carcinoma, basal cell"[MeSH Terms]', '"basal cell carcinoma"[MeSH Terms]', '"basal cell carcinoma"[tiab]'):
             self.assertIn(part, query)
         self.assertRegex(query, r"^\(.* OR .* OR .*\) AND \(dermoscopy")           # the three names are alternatives, not all required
@@ -1038,17 +1031,17 @@ class BuildTests(unittest.TestCase):
         ncbi = [c for c in fetch.calls if c[2]]
         self.assertTrue(ncbi)
         self.assertFalse([c for c in fetch.calls if "email" in c[1]])
-        self.assertNotIn("--email", " ".join(knowledge_corpus.corpus_args([]).__dict__))
+        self.assertNotIn("--email", " ".join(src.retrieval.corpus.corpus_args([]).__dict__))
 
     def test_the_card_counts_and_the_manifest_has_no_text(self):
         passages, removed, _ = self.build()
-        card = knowledge_metadata.corpus_card(passages, removed, args(out="x", cache="y"), "2026-11-22")
+        card = src.retrieval.corpus.corpus_card(passages, removed, args(out="x", cache="y"), "2026-11-22")
         self.assertEqual(card["n_passages"], len(passages))
         self.assertEqual(sum(sum(v.values()) for v in card["passages_per_library_and_class"].values()), len(passages))
         self.assertIn("VASC/appearance", card["empty_topic_boxes"])   # no made-up text is about vascular lesions
         self.assertNotIn("out", card["settings"])
         with tempfile.TemporaryDirectory() as d:
-            knowledge_corpus.write_outputs(passages, card, d)
+            src.retrieval.corpus.write_outputs(passages, card, d)
             with open(os.path.join(d, "manifest.csv"), encoding="utf-8") as f:
                 rows = list(csv.DictReader(f))
             with open(os.path.join(d, "passages.jsonl"), encoding="utf-8") as f:
@@ -1065,7 +1058,7 @@ class BuildTests(unittest.TestCase):
             def __iter__(self):
                 raise RuntimeError("gated dataset")
         with contextlib.redirect_stdout(io.StringIO()):
-            passages, removed = knowledge_corpus.build_corpus(args(libraries=["guidelines"]), FakeFetcher(), meditron_rows=Broken())
+            passages, removed = src.retrieval.corpus.build_corpus(args(libraries=["guidelines"]), FakeFetcher(), meditron_rows=Broken())
         self.assertEqual(removed["guidelines: Meditron collection not available"], 1)
         self.assertTrue(passages)                             # the PMC guideline papers are still used
 
@@ -1090,13 +1083,13 @@ class FetcherTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"NCBI_API_KEY": "SECRET123"}), \
                 mock.patch("urllib.request.urlopen", fake_open), mock.patch("time.sleep"):
-            f = knowledge_collect.Fetcher(d)
-            self.assertEqual(f.get(knowledge_collect.NCBI + "esearch.fcgi", {"db": "pubmed"}, ncbi=True), '{"ok": 1}')
-            self.assertEqual(f.get(knowledge_collect.NCBI + "esearch.fcgi", {"db": "pubmed"}, ncbi=True), '{"ok": 1}')
+            f = src.retrieval.corpus.Fetcher(d)
+            self.assertEqual(f.get(src.retrieval.corpus.NCBI + "esearch.fcgi", {"db": "pubmed"}, ncbi=True), '{"ok": 1}')
+            self.assertEqual(f.get(src.retrieval.corpus.NCBI + "esearch.fcgi", {"db": "pubmed"}, ncbi=True), '{"ok": 1}')
             stored = [Path(d, n).read_text(encoding="utf-8") + n for n in os.listdir(d)]
         self.assertEqual(len(seen), 1)                        # the second answer came from the cache
         self.assertIn("api_key=SECRET123", seen[0])
-        self.assertIn("tool=" + knowledge_collect.TOOL, seen[0])
+        self.assertIn("tool=" + src.retrieval.corpus.TOOL, seen[0])
         self.assertNotIn("email", seen[0])
         self.assertFalse([s for s in stored if "SECRET123" in s])
 
@@ -1117,9 +1110,9 @@ class FetcherTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d, mock.patch("time.sleep"):
             with mock.patch.dict(os.environ, {"NCBI_API_KEY": "SECRET123"}), \
                     mock.patch("urllib.request.urlopen", lambda req, timeout: Answer()):
-                knowledge_collect.Fetcher(d).get(knowledge_collect.NCBI + "efetch.fcgi", {"id": "1"}, ncbi=True)
+                src.retrieval.corpus.Fetcher(d).get(src.retrieval.corpus.NCBI + "efetch.fcgi", {"id": "1"}, ncbi=True)
             with mock.patch.dict(os.environ, {}, clear=True), mock.patch("urllib.request.urlopen", no_internet):
-                self.assertEqual(knowledge_collect.Fetcher(d).get(knowledge_collect.NCBI + "efetch.fcgi", {"id": "1"}, ncbi=True), "cached answer")
+                self.assertEqual(src.retrieval.corpus.Fetcher(d).get(src.retrieval.corpus.NCBI + "efetch.fcgi", {"id": "1"}, ncbi=True), "cached answer")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1193,7 +1186,7 @@ class FakeWiki:
             html = p["intro"]
         else:
             heading = next(s["line"] for s in p["sections"] if s["index"] == index)
-            body = p["texts"].get(heading, f"<p>{params['page']} / {knowledge_references.clean_heading(heading)} text. {WORDS}</p>")
+            body = p["texts"].get(heading, f"<p>{params['page']} / {src.evaluation.references.clean_heading(heading)} text. {WORDS}</p>")
             html = f"<h2>{heading}</h2><p>{params['page']} – cite!</p>{body}<table><tr><td><p>table text</p></td></tr></table>"
             sub = p["sections"][p["sections"].index(next(s for s in p["sections"] if s["index"] == index)) + 1:]
             if p["texts"].get("nested") == heading and sub:      # the wiki returns a section with its subsections
@@ -1205,69 +1198,69 @@ class FakeWiki:
 
 
 def build_references(max_words=200, min_words=20):
-    with tempfile.TemporaryDirectory() as d, mock.patch.object(knowledge_references, "Fetcher", FakeWiki), \
+    with tempfile.TemporaryDirectory() as d, mock.patch.object(src.evaluation.references, "Fetcher", FakeWiki), \
             contextlib.redirect_stdout(io.StringIO()):
         out = os.path.join(d, "reference_texts.json")
-        knowledge_references.references_main(["--out", out, "--cache", os.path.join(d, "cache"), "--max-words", str(max_words), "--min-words", str(min_words)])
+        src.evaluation.references.references_main(["--out", out, "--cache", os.path.join(d, "cache"), "--max-words", str(max_words), "--min-words", str(min_words)])
         return json.loads(Path(out).read_text(encoding="utf-8"))
 
 
 class ReferenceRuleTests(unittest.TestCase):
     def test_the_first_term_with_results_decides_and_an_equal_title_wins_within_it(self):
-        self.assertEqual(knowledge_references.choose_page([("nevus", ["Nevi of the face", "Nevus"])]), ("Nevus", "title equals 'nevus'"))
-        self.assertEqual(knowledge_references.choose_page([("a", []), ("b", ["B page", "Other"])]), ("B page", "first result for 'b'"))
-        self.assertEqual(knowledge_references.choose_page([("a", ["A page"]), ("b", ["b"])]), ("A page", "first result for 'a'"))
-        self.assertEqual(knowledge_references.choose_page([("a", [])]), (None, "no page found"))
+        self.assertEqual(src.evaluation.references.choose_page([("nevus", ["Nevi of the face", "Nevus"])]), ("Nevus", "title equals 'nevus'"))
+        self.assertEqual(src.evaluation.references.choose_page([("a", []), ("b", ["B page", "Other"])]), ("B page", "first result for 'b'"))
+        self.assertEqual(src.evaluation.references.choose_page([("a", ["A page"]), ("b", ["b"])]), ("A page", "first result for 'a'"))
+        self.assertEqual(src.evaluation.references.choose_page([("a", [])]), (None, "no page found"))
 
     def test_sections_from_the_dermoscopy_heading_else_all_else_the_introduction(self):
         sections = [{"index": "1", "line": "History"}, {"index": "2", "line": "<b>Dermatoscopic</b> features"},
                     {"index": "3", "line": "Milia-like cysts"}]
-        self.assertEqual(knowledge_references.choose_sections(sections), (["2", "3"], "from 'Dermatoscopic features'"))
-        self.assertEqual(knowledge_references.choose_sections([{"index": "1", "line": "Large nests:"}])[0], ["1"])
-        self.assertEqual(knowledge_references.choose_sections([]), ([0], "(introduction)"))
+        self.assertEqual(src.evaluation.references.choose_sections(sections), (["2", "3"], "from 'Dermatoscopic features'"))
+        self.assertEqual(src.evaluation.references.choose_sections([{"index": "1", "line": "Large nests:"}])[0], ["1"])
+        self.assertEqual(src.evaluation.references.choose_sections([]), ([0], "(introduction)"))
 
     def test_headings_and_template_lines_are_cleaned(self):
-        self.assertEqual(knowledge_references.clean_heading("Dermoscopy features &#91;1&#93; &#91;2&#93;"), "Dermoscopy features")
-        self.assertEqual(knowledge_references.text_paragraphs("<p>Nevus – cite!</p><p>Nevus (message)</p><p>A nevus is benign.</p>"),
+        self.assertEqual(src.evaluation.references.clean_heading("Dermoscopy features &#91;1&#93; &#91;2&#93;"), "Dermoscopy features")
+        self.assertEqual(src.evaluation.references.text_paragraphs("<p>Nevus – cite!</p><p>Nevus (message)</p><p>A nevus is benign.</p>"),
                          ["A nevus is benign."])
 
     def test_texts_of_whole_sentences_up_to_the_word_limit_and_short_ones_left_out(self):
         paragraphs = ["One two three. Four five six seven. Eight nine."]
-        self.assertEqual(knowledge_references.split_texts(paragraphs, 7, 1), (["One two three. Four five six seven.", "Eight nine."], []))
-        self.assertEqual(knowledge_references.split_texts(paragraphs, 7, 3), (["One two three. Four five six seven."], [2]))
-        self.assertEqual(knowledge_references.split_texts(["One two three four five."], 2, 1)[0][0], "One two")   # a too long sentence is cut
-        self.assertEqual(knowledge_references.split_texts([], 10, 1), ([], []))
+        self.assertEqual(src.evaluation.references.split_texts(paragraphs, 7, 1), (["One two three. Four five six seven.", "Eight nine."], []))
+        self.assertEqual(src.evaluation.references.split_texts(paragraphs, 7, 3), (["One two three. Four five six seven."], [2]))
+        self.assertEqual(src.evaluation.references.split_texts(["One two three four five."], 2, 1)[0][0], "One two")   # a too long sentence is cut
+        self.assertEqual(src.evaluation.references.split_texts([], 10, 1), ([], []))
 
     def test_a_section_is_read_without_its_subsections(self):
         section = "<h2>Criteria</h2><p>own</p><h3>Sub</h3><p>sub</p>"
-        self.assertEqual(knowledge_references.own_html(section), "<h2>Criteria</h2><p>own</p>")
-        self.assertEqual(knowledge_references.own_html("<p>no heading</p>"), "<p>no heading</p>")
+        self.assertEqual(src.evaluation.references.own_html(section), "<h2>Criteria</h2><p>own</p>")
+        self.assertEqual(src.evaluation.references.own_html("<p>no heading</p>"), "<p>no heading</p>")
 
     def test_sections_not_about_the_disease_are_left_out(self):
         sections = [{"index": "1", "line": "Dermoscopy"}, {"index": "2", "line": "Differential diagnosis"},
                     {"index": "3", "line": "Vessels"}, {"index": "4", "line": "References"}, {"index": "5", "line": "See also"}]
-        self.assertEqual(knowledge_references.choose_sections(sections)[0], ["1", "3"])
+        self.assertEqual(src.evaluation.references.choose_sections(sections)[0], ["1", "3"])
 
     def test_a_reference_list_is_cut_from_its_first_entry_and_a_citation_in_a_sentence_is_kept(self):
         text = ["Pigmented SCC shows blue structures (Kittler et al., 2008). Vessels are not seen.",
                 "Argenziano, G., Zalaudek, I., 2004, Vascular structures. Arch Dermatol, 140, 1485–9.",
                 "Kreusch, J. & Koch, F., 1996, Gefassmuster. Hautarzt, 47, 264–72."]
-        self.assertEqual(knowledge_references.without_bibliography(text),
+        self.assertEqual(src.evaluation.references.without_bibliography(text),
                          (["Pigmented SCC shows blue structures (Kittler et al., 2008). Vessels are not seen."], 21))
-        self.assertEqual(knowledge_references.without_bibliography(["An Atlas of Dermoscopy, 2nd edition. Text after it."]), ([], 9))
-        self.assertEqual(knowledge_references.without_bibliography(["Plain text. No list."]), (["Plain text. No list."], 0))
-        self.assertTrue(knowledge_extract.BIBLIOGRAPHY.search("Kreusch, J.F., 2002, Vascular patterns."))
-        self.assertTrue(knowledge_extract.BIBLIOGRAPHY.search("Kreusch, J. & Koch, F., 1996, Gefassmuster."))
-        self.assertFalse(knowledge_extract.BIBLIOGRAPHY.search("Types A. & B. are rare."))           # an author needs the comma
-        self.assertFalse(knowledge_extract.BIBLIOGRAPHY.search("Erythema: Structureless pale-red areas, as in AK."))
-        self.assertFalse(knowledge_extract.BIBLIOGRAPHY.search("Blue nevi, also known as Jadassohn-Tieche nevi, are common."))
+        self.assertEqual(src.evaluation.references.without_bibliography(["An Atlas of Dermoscopy, 2nd edition. Text after it."]), ([], 9))
+        self.assertEqual(src.evaluation.references.without_bibliography(["Plain text. No list."]), (["Plain text. No list."], 0))
+        self.assertTrue(src.retrieval.corpus.BIBLIOGRAPHY.search("Kreusch, J.F., 2002, Vascular patterns."))
+        self.assertTrue(src.retrieval.corpus.BIBLIOGRAPHY.search("Kreusch, J. & Koch, F., 1996, Gefassmuster."))
+        self.assertFalse(src.retrieval.corpus.BIBLIOGRAPHY.search("Types A. & B. are rare."))           # an author needs the comma
+        self.assertFalse(src.retrieval.corpus.BIBLIOGRAPHY.search("Erythema: Structureless pale-red areas, as in AK."))
+        self.assertFalse(src.retrieval.corpus.BIBLIOGRAPHY.search("Blue nevi, also known as Jadassohn-Tieche nevi, are common."))
 
     def test_the_text_of_each_table_of_a_section_without_its_subsections(self):
         section = ("<h2>Criteria</h2><p>prose</p><table><tr><td>Atypical network</td><td>Blue-white veil</td></tr>"
                    "<tr><td><table><tr><td>nested</td></tr></table></td></tr></table><p>more</p>"
                    "<table><tr><th>Regression</th></tr></table><h3>Sub</h3><table><tr><td>sub table</td></tr></table>")
-        self.assertEqual(knowledge_references.table_texts(section), ["Atypical network Blue-white veil nested", "Regression"])
-        self.assertEqual(knowledge_references.table_texts("<p>no table</p>"), [])
+        self.assertEqual(src.evaluation.references.table_texts(section), ["Atypical network Blue-white veil nested", "Regression"])
+        self.assertEqual(src.evaluation.references.table_texts("<p>no table</p>"), [])
 
     def test_the_text_left_out_other_than_tables(self):
         section = ('<h2><span class="mw-headline">Criteria</span><span class="mw-editsection">edit</span></h2>'
@@ -1275,25 +1268,25 @@ class ReferenceRuleTests(unittest.TestCase):
                    '<div class="thumb"><img alt="Atypical network" src="x.jpg"><div class="thumbcaption">Blue-white veil'
                    '<br>and regression</div></div><dl><dd>Irregular dots</dd></dl>loose text'
                    '<h3>Sub</h3><div>sub div</div>')
-        self.assertEqual(knowledge_references.skipped_texts(section), [("img alt", "Atypical network"),
+        self.assertEqual(src.evaluation.references.skipped_texts(section), [("img alt", "Atypical network"),
                                                      ("div.thumbcaption", "Blue-white veil and regression"),
                                                      ("dd", "Irregular dots"), ("(no element)", "loose text")])
-        self.assertEqual(knowledge_references.skipped_texts("<p>only a paragraph</p>"), [])
-        self.assertEqual(knowledge_references.skipped_texts('<div class="x">caption<span class="mw-editsection">[edit]</span></div>before'
+        self.assertEqual(src.evaluation.references.skipped_texts("<p>only a paragraph</p>"), [])
+        self.assertEqual(src.evaluation.references.skipped_texts('<div class="x">caption<span class="mw-editsection">[edit]</span></div>before'
                                           '<div>after</div>'), [("div.x", "caption"), ("(no element)", "before"), ("div", "after")])
 
     def test_show_skipped_prints_and_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(knowledge_references, "Fetcher", FakeWiki), \
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(src.evaluation.references, "Fetcher", FakeWiki), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertIsNone(knowledge_references.references_main(["--show-skipped", "--cache", os.path.join(d, "cache"), "--out", os.path.join(d, "r.json")]))
+            self.assertIsNone(src.evaluation.references.references_main(["--show-skipped", "--cache", os.path.join(d, "cache"), "--out", os.path.join(d, "r.json")]))
             self.assertFalse(os.path.exists(os.path.join(d, "r.json")))
         self.assertIn("===== MEL: Superficial Spreading Melanoma / from 'Dermoscopic criteria': 0 pieces of text left out",
                       out.getvalue())
 
     def test_show_tables_prints_the_tables_of_the_chosen_sections_and_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(knowledge_references, "Fetcher", FakeWiki), \
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(src.evaluation.references, "Fetcher", FakeWiki), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertIsNone(knowledge_references.references_main(["--show-tables", "--cache", os.path.join(d, "cache"), "--out", os.path.join(d, "r.json")]))
+            self.assertIsNone(src.evaluation.references.references_main(["--show-tables", "--cache", os.path.join(d, "cache"), "--out", os.path.join(d, "r.json")]))
             self.assertFalse(os.path.exists(os.path.join(d, "r.json")))
         text = out.getvalue()
         self.assertIn("===== MEL: Superficial Spreading Melanoma / from 'Dermoscopic criteria': 1 tables", text)
@@ -1301,7 +1294,7 @@ class ReferenceRuleTests(unittest.TestCase):
         self.assertIn("===== VASC: Angioma / (introduction): 0 tables", text)
 
     def test_empty_figure_references_are_removed(self):
-        self.assertEqual(knowledge_references.text_paragraphs("<p>Blue dots (Figure ). This is BCC. . Then (see fig. ) more.</p>"),
+        self.assertEqual(src.evaluation.references.text_paragraphs("<p>Blue dots (Figure ). This is BCC. . Then (see fig. ) more.</p>"),
                          ["Blue dots. This is BCC. Then more."])
 
 
@@ -1365,9 +1358,9 @@ class ReferenceBuildTests(unittest.TestCase):
         self.assertTrue(len(vasc) > 1 and set(vasc) == {"(introduction)"})          # a long introduction: several texts
 
     def test_the_file_is_what_the_semantic_similarity_reads(self):
-        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g", "options": {"A": utils_common.OPTION_TEXT["BCC"]}}
+        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g", "options": {"A": src.utils.common.OPTION_TEXT["BCC"]}}
         second = self.refs["BCC"]["texts"][1]["text"]
-        r = evaluation_hallucination.semantic_similarity({"ISIC_0000001": q}, {"ISIC_0000001": {"pred": "A", "rationale": second}}, self.refs,
+        r = src.evaluation.metrics.semantic_similarity({"ISIC_0000001": q}, {"ISIC_0000001": {"pred": "A", "rationale": second}}, self.refs,
                                    lambda texts: [[len(t), t.count("Arborizing")] for t in texts])
         self.assertEqual(r["mean"], 1.0)                      # the best match is the second text
         self.assertEqual(r["n_reference_texts"], {"BCC": 2})
@@ -1381,13 +1374,13 @@ class ReferenceBuildTests(unittest.TestCase):
         fake = type(sys)("sentence_transformers")
         fake.SentenceTransformer = Model
         with mock.patch.dict(sys.modules, {"sentence_transformers": fake}), contextlib.redirect_stdout(io.StringIO()) as out:
-            longest, limit = knowledge_references.token_check({"MEL": {"texts": [{"text": "a b c"}, {"text": " ".join("x" * 13)}]}},
-                                            utils_logging.get_logger("reference_texts"))
+            longest, limit = src.evaluation.references.token_check({"MEL": {"texts": [{"text": "a b c"}, {"text": " ".join("x" * 13)}]}},
+                                            src.utils.logging.get_logger("reference_texts"))
         self.assertEqual((longest, limit), (13, 12))
         self.assertIn("1 texts are longer", out.getvalue())
         self.assertIn("rebuild with a lower --max-words", out.getvalue())
         with mock.patch.dict(sys.modules, {"sentence_transformers": fake}), contextlib.redirect_stdout(io.StringIO()) as out:
-            knowledge_references.token_check({"MEL": {"texts": [{"text": "a b c"}]}}, utils_logging.get_logger("reference_texts"))
+            src.evaluation.references.token_check({"MEL": {"texts": [{"text": "a b c"}]}}, src.utils.logging.get_logger("reference_texts"))
         self.assertNotIn("rebuild", out.getvalue())
 
 
@@ -1406,16 +1399,16 @@ def run_cases(n, view_has_image):
 class FakeClient:
     """Answers right for every second question, wrong for the others, with no letter for the third, and can fail on demand."""
     def __init__(self, questions, fail_at=None, refuse_at=None):
-        self.by_text = {pipelines_prompts.user_text(q, view=v): q for q in questions for v in pipelines_prompts.FINDINGS_IN}
+        self.by_text = {src.pipelines.base.user_text(q, view=v): q for q in questions for v in src.pipelines.base.FINDINGS_IN}
         self.calls, self.images, self.texts, self.fail_at, self.refuse_at = 0, [], [], fail_at, refuse_at
 
     def ask(self, system, text, image):
         self.calls += 1
         self.texts.append(text)
         if self.fail_at and self.calls == self.fail_at:
-            raise models_llm.ApiError("HTTP 402: no credit")
+            raise src.models.llm.ApiError("HTTP 402: no credit")
         if self.refuse_at and self.calls == self.refuse_at:
-            raise models_llm.Refused("refused by the host's content moderation")
+            raise src.models.llm.Refused("refused by the host's content moderation")
         self.images.append(image)
         q = self.by_text[text]
         k = int(q["id"][-3:])
@@ -1450,9 +1443,9 @@ class RunTests(unittest.TestCase):
         return argparse.Namespace(**base)
 
     def go(self, args, client):
-        log = utils_logging.get_logger(f"test.{id(self)}.{args.view}")
+        log = src.utils.logging.get_logger(f"test.{id(self)}.{args.view}")
         with contextlib.redirect_stdout(io.StringIO()):               # keep the test output quiet
-            return pipelines_base.run(args, client, log)
+            return src.pipelines.base.run(args, client, log)
 
     def folder(self, view="text_only", partial=False):
         final = os.path.join(self.results, "llm_only", view, "gpt-4o_val")
@@ -1462,8 +1455,8 @@ class RunTests(unittest.TestCase):
         out = self.go(self.args(), FakeClient(self.questions))
         self.assertEqual(out, self.folder())
         self.assertFalse(os.path.exists(self.folder(partial=True)))
-        preds = utils_io.read_jsonl(os.path.join(out, "predictions.jsonl"))
-        self.assertEqual([p["id"] for p in preds], [q["id"] for q in pipelines_base.asking_order(self.questions)])
+        preds = src.utils.io.read_jsonl(os.path.join(out, "predictions.jsonl"))
+        self.assertEqual([p["id"] for p in preds], [q["id"] for q in src.pipelines.base.asking_order(self.questions)])
         self.assertEqual(sorted(p["id"] for p in preds), sorted(q["id"] for q in self.questions))
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
         self.assertEqual((info["status"], info["answered"], info["of"]), ("complete", 6, 6))
@@ -1480,8 +1473,8 @@ class RunTests(unittest.TestCase):
     def test_the_predictions_go_straight_into_evaluate(self):
         out = self.go(self.args(), FakeClient(self.questions))
         qa = {q["id"]: q for q in self.questions}
-        pred = evaluation_evaluator.load(os.path.join(out, "predictions.jsonl"))
-        d = evaluation_diagnostic.diagnosis_metrics(qa, pred)
+        pred = src.evaluation.evaluator.load(os.path.join(out, "predictions.jsonl"))
+        d = src.evaluation.diagnostic.diagnosis_metrics(qa, pred)
         self.assertEqual((d["accuracy"], d["invalid_answers"]), (0.3333, 1))    # ids 0 and 4 right; 2 has no letter
         self.assertFalse({"coverage", "selective_risk", "n_covered"} & set(d))      # no yes/no flag any more, so no such score
         rationale = [p["rationale"] for p in pred.values() if p["valid"]]
@@ -1489,20 +1482,20 @@ class RunTests(unittest.TestCase):
 
     def test_the_asking_order_is_fixed_mixed_and_the_same_for_every_view(self):
         qs = [{"id": f"ISIC_{k:07d}", "gold_label": c} for k, c in enumerate(["AK"] * 10 + ["BCC"] * 10 + ["MEL"] * 10)]
-        order = [q["id"] for q in pipelines_base.asking_order(qs)]
-        self.assertEqual(order, [q["id"] for q in pipelines_base.asking_order(list(reversed(qs)))])    # the file order does not matter
+        order = [q["id"] for q in src.pipelines.base.asking_order(qs)]
+        self.assertEqual(order, [q["id"] for q in src.pipelines.base.asking_order(list(reversed(qs)))])    # the file order does not matter
         self.assertEqual(sorted(order), [q["id"] for q in qs])                              # every question once
         self.assertNotEqual(order, [q["id"] for q in qs])
-        first = {q["gold_label"] for q in pipelines_base.asking_order(qs)[:5]}
+        first = {q["gold_label"] for q in src.pipelines.base.asking_order(qs)[:5]}
         self.assertGreater(len(first), 1)                                                   # a trial of 5 is not one class
         self.assertEqual(order[:3], ["ISIC_0000003", "ISIC_0000026", "ISIC_0000015"])        # fixed: seed 42
 
     def test_a_limited_run_asks_the_first_questions_of_the_asking_order(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
-        preds = utils_io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
-        self.assertEqual([p["id"] for p in preds], [q["id"] for q in pipelines_base.asking_order(self.questions)[:2]])
+        preds = src.utils.io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
+        self.assertEqual([p["id"] for p in preds], [q["id"] for q in src.pipelines.base.asking_order(self.questions)[:2]])
         info = json.loads(Path(self.folder(partial=True), "run.json").read_text(encoding="utf-8"))
-        self.assertEqual(info["question_order"], pipelines_base.ORDER)
+        self.assertEqual(info["question_order"], src.pipelines.base.ORDER)
 
     def test_an_interrupted_run_continues_where_it_stopped_without_repeating(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
@@ -1512,19 +1505,19 @@ class RunTests(unittest.TestCase):
         client = FakeClient(self.questions)
         self.go(self.args(), client)
         self.assertEqual(client.calls, 4)                                       # only the 4 left
-        preds = utils_io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
+        preds = src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
         self.assertEqual(len(preds), 6)
         self.assertEqual(len({p["id"] for p in preds}), 6)
 
     def test_an_api_error_stops_the_run_and_keeps_what_was_answered(self):
         with self.assertRaises(SystemExit):
             self.go(self.args(), FakeClient(self.questions, fail_at=4))
-        preds = utils_io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
+        preds = src.utils.io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
         self.assertEqual(len(preds), 3)
         info = json.loads(Path(self.folder(partial=True), "run.json").read_text(encoding="utf-8"))
         self.assertEqual(info["status"], "stopped")
         self.go(self.args(), FakeClient(self.questions))
-        self.assertEqual(len(utils_io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))), 6)
+        self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))), 6)
 
     def test_an_unfinished_run_is_not_continued_with_other_settings(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
@@ -1533,7 +1526,7 @@ class RunTests(unittest.TestCase):
 
     def test_a_question_refused_by_the_host_is_saved_as_invalid_and_the_run_goes_on(self):
         self.go(self.args(), FakeClient(self.questions, refuse_at=2))
-        preds = utils_io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
+        preds = src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
         self.assertEqual(len(preds), 6)
         refused = [p for p in preds if str(p["finish_reason"]).startswith("refused by host")]
         self.assertEqual(len(refused), 1)
@@ -1586,7 +1579,7 @@ class RunTests(unittest.TestCase):
                 "--env-file", os.path.join(self.tmp.name, ".env")]
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit), \
                 contextlib.redirect_stdout(io.StringIO()):
-            pipelines_llm_only.llm_only_main(argv)
+            src.pipelines.llm_only.llm_only_main(argv)
         self.assertFalse(os.path.exists(self.results))                  # nothing is left behind
         Path(self.tmp.name, ".env").write_text("# keys\nOPENROUTER_API_KEY = 'SECRET123'\n", encoding="utf-8")
         fake = FakeClient(self.questions)
@@ -1596,9 +1589,9 @@ class RunTests(unittest.TestCase):
             made.append(key)
             return fake
 
-        with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(models_llm, "OpenRouterClient", client), \
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(src.models.llm, "OpenRouterClient", client), \
                 contextlib.redirect_stdout(io.StringIO()):
-            pipelines_llm_only.llm_only_main(argv)
+            src.pipelines.llm_only.llm_only_main(argv)
         self.assertEqual(made, ["SECRET123"])                         # read from .env, quotes removed
         written = "".join(p.read_text(encoding="utf-8") for p in Path(self.results).rglob("*") if p.is_file())
         self.assertIn("gpt-4o", written)
@@ -1606,9 +1599,9 @@ class RunTests(unittest.TestCase):
 
     def test_claude_takes_its_key_from_either_name(self):
         with mock.patch.dict(os.environ, {"CLAUDE_API_KEY": "K1"}, clear=True):
-            self.assertEqual(models_llm.api_key("anthropic"), "K1")
+            self.assertEqual(src.models.llm.api_key("anthropic"), "K1")
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "K2", "CLAUDE_API_KEY": "K1"}, clear=True):
-            self.assertEqual(models_llm.api_key("anthropic"), "K2")
+            self.assertEqual(src.models.llm.api_key("anthropic"), "K2")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1627,7 +1620,7 @@ class EvidenceCommandTests(unittest.TestCase):
 
     def files(self, d):
         qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
-        letter = {q["id"]: next(k for k, v in q["options"].items() if v == utils_common.OPTION_TEXT[q["gold_label"]]) for q in qs}
+        letter = {q["id"]: next(k for k, v in q["options"].items() if v == src.utils.common.OPTION_TEXT[q["gold_label"]]) for q in qs}
         text = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric and evenly coloured overall."
         preds = []
         for k, q in enumerate(qs):
@@ -1645,8 +1638,8 @@ class EvidenceCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             paths = self.files(d)
             out = os.path.join(d, "report.json")
-            with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(evaluation_evaluator, "relevance_metrics", lambda *a, **k: {}):
-                evaluation_evaluator.report_main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text", *extra])
+            with contextlib.redirect_stdout(io.StringIO()), mock.patch.object(src.evaluation.evaluator, "relevance_metrics", lambda *a, **k: {}):
+                src.evaluation.evaluator.report_main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text", *extra])
             return json.loads(Path(out).read_text(encoding="utf-8"))
 
     def test_the_report_has_an_evidence_section_with_the_quote_check(self):
@@ -1664,7 +1657,7 @@ class EvidenceCommandTests(unittest.TestCase):
 
     def test_the_support_check_command_and_the_nli_options_are_gone(self):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            evaluation_evaluator.report_main(["--questions", "q", "--predictions", "p", "--support-model"])
+            src.evaluation.evaluator.report_main(["--questions", "q", "--predictions", "p", "--support-model"])
 
 
 class CollectTests(unittest.TestCase):
@@ -1695,7 +1688,7 @@ class CollectTests(unittest.TestCase):
     def collect(self, **kw):
         out = os.path.join(self.root, "results", "summary.csv")
         with contextlib.redirect_stdout(io.StringIO()):
-            return evaluation_evaluator.collect(os.path.join(self.root, "results"), out, self.root, skip_text=True, **kw), out
+            return src.evaluation.evaluator.collect(os.path.join(self.root, "results"), out, self.root, skip_text=True, **kw), out
 
     def test_a_report_made_on_windows_is_reused_and_a_changed_answer_is_scored_again(self):
         folder = self.run_folder("gpt-4o", "text_only_val")
@@ -1703,15 +1696,15 @@ class CollectTests(unittest.TestCase):
         Path(ppath).write_bytes(Path(ppath).read_bytes().replace(b"\n", b"\r\n"))             # as Windows saved it
         self.collect()
         report = Path(folder, "report.json")
-        crlf_sha = utils_reproducibility.file_sha256(ppath)
+        crlf_sha = src.utils.reproducibility.file_sha256(ppath)
         self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["inputs"]["predictions"]["sha256"],
-                         utils_reproducibility.text_sha256(ppath))                              # recorded with LF endings now
+                         src.utils.reproducibility.text_sha256(ppath))                              # recorded with LF endings now
         saved = json.loads(report.read_text(encoding="utf-8"))
         saved["inputs"]["predictions"]["sha256"] = crlf_sha                                     # a report from before 2026-11-25
         saved["marker"] = "kept"
         report.write_text(json.dumps(saved), encoding="utf-8")
         Path(ppath).write_bytes(Path(ppath).read_bytes().replace(b"\r\n", b"\n"))             # the same file from Git (LF)
-        with mock.patch.object(evaluation_evaluator, "evaluate", side_effect=AssertionError("scored again")):
+        with mock.patch.object(src.evaluation.evaluator, "evaluate", side_effect=AssertionError("scored again")):
             self.collect()
         self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["marker"], "kept")
         rows = read_jsonl(ppath)
@@ -1744,6 +1737,12 @@ class CollectTests(unittest.TestCase):
         write_jsonl(os.path.join(refused, "predictions.jsonl"), lines)
         by_model = {x["model"]: x for x in self.collect(force=True)[0]}
         self.assertEqual((by_model["claude-sonnet-5-5"]["refusals"], by_model["claude-sonnet-5-5"]["invalid"]), (1, 2))
+        long = src.utils.io.read_csv(os.path.join(os.path.dirname(out), "metrics.csv"))       # every number of the report, one row each
+        acc = [r for r in long if r["metric"] == "diagnosis.accuracy"]
+        self.assertEqual([(r["model"], r["view"], r["split"], float(r["value"])) for r in acc], [("claude-sonnet-5-5", "text_only", "val", 0.75), ("gpt-4o", "text_only", "val", 0.5)])
+        self.assertTrue(any(r["metric"] == "diagnosis.accuracy_ci_low" for r in long))
+        self.assertTrue(any(r["metric"].startswith("diagnosis.per_class.MEL.") for r in long))
+        self.assertFalse(any("ids" in r["metric"] or "confusion" in r["metric"] or "inputs" in r["metric"] for r in long))
 
     def test_the_report_is_reused_until_the_predictions_change(self):
         done = self.run_folder("gpt-4o", "text_only_val", right=4)
@@ -1781,8 +1780,8 @@ class CollectTests(unittest.TestCase):
         refs = os.path.join(self.root, "refs.json")
         Path(refs).write_text(json.dumps({c: f"typical {w} appearance" for c, w in SIM_WORD.items()}), encoding="utf-8")
         out = os.path.join(self.root, "sim.json")
-        with mock.patch.object(evaluation_evaluator, "sentence_encoder", lambda *a, **k: class_word_encoder), contextlib.redirect_stdout(io.StringIO()):
-            res = evaluation_evaluator.similarity_check_main(["--results", os.path.join(self.root, "results"), "--root", self.root,
+        with mock.patch.object(src.evaluation.evaluator, "sentence_encoder", lambda *a, **k: class_word_encoder), contextlib.redirect_stdout(io.StringIO()):
+            res = src.evaluation.evaluator.similarity_check_main(["--results", os.path.join(self.root, "results"), "--root", self.root,
                            "--reference-texts", refs, "--out", out])
         self.assertEqual(list(res["runs"]), ["llm_only/gpt-4o/text_only_val"])
         self.assertEqual(json.loads(Path(out).read_text(encoding="utf-8"))["runs"], res["runs"])
@@ -1806,7 +1805,7 @@ class CollectTests(unittest.TestCase):
     def test_the_command_runs_from_main(self):
         self.run_folder("gpt-4o", "text_only_val")
         with contextlib.redirect_stdout(io.StringIO()):
-            rows = evaluation_evaluator.collect_main(["--results", os.path.join(self.root, "results"), "--out", os.path.join(self.root, "s.csv"),
+            rows = src.evaluation.evaluator.collect_main(["--results", os.path.join(self.root, "results"), "--out", os.path.join(self.root, "s.csv"),
                             "--root", self.root, "--skip-text"])
         self.assertEqual(len(rows), 1)
 
@@ -1822,10 +1821,10 @@ class CommandTests(unittest.TestCase):
                 f.write("\n".join(json.dumps({"id": q["id"], "pred": q["answer"]}) for q in qs[:4]))
             out = os.path.join(d, "report.json")
             with contextlib.redirect_stdout(io.StringIO()):
-                evaluation_evaluator.report_main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text"])
+                src.evaluation.evaluator.report_main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text"])
             with open(out, encoding="utf-8") as f:
                 rep = json.load(f)
-            sha = utils_reproducibility.text_sha256(paths["qa"])          # LF endings, also on Windows
+            sha = src.utils.reproducibility.text_sha256(paths["qa"])          # LF endings, also on Windows
         self.assertEqual((rep["diagnosis"]["accuracy"], rep["diagnosis"]["missing_predictions"]), (0.5, 4))
         self.assertIsNone(rep["retrieval"])
         self.assertEqual(rep["inputs"]["questions"]["sha256"], sha)  # the report says which question file it used
@@ -1839,7 +1838,7 @@ class CommandTests(unittest.TestCase):
                                                         for q, r in zip(qs, said)])
             out = os.path.join(d, "r.json")
             with contextlib.redirect_stdout(io.StringIO()):
-                evaluation_evaluator.report_main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"), "--out", out,
+                src.evaluation.evaluator.report_main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"), "--out", out,
                          "--skip-text", "--answered-only"])
             claims = json.loads(Path(out).read_text(encoding="utf-8"))["text_only_image_claims"]
         self.assertEqual((claims["n_text_only_with_reasoning"], claims["n_claiming_an_image"]), (3, 2))
@@ -1853,7 +1852,7 @@ class CommandTests(unittest.TestCase):
             for name, extra in (("all", []), ("trial", ["--answered-only"])):
                 out = os.path.join(d, f"{name}.json")
                 with contextlib.redirect_stdout(io.StringIO()):
-                    evaluation_evaluator.report_main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"),
+                    src.evaluation.evaluator.report_main(["--questions", os.path.join(d, "qa.jsonl"), "--predictions", os.path.join(d, "pred.jsonl"),
                              "--out", out, "--skip-text", *extra])
                 reports[name] = json.loads(Path(out).read_text(encoding="utf-8"))
         self.assertEqual((reports["all"]["diagnosis"]["accuracy"], reports["all"]["trial_answered_only"]), (0.375, False))
@@ -1919,7 +1918,7 @@ def make_rag(k=3, visual=True):
     flat = array("f")
     for p in RAG_CORPUS:
         flat.extend(rag_vec(p["title"] + " " + p["text"]))
-    return pipelines_standard_rag.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
+    return src.pipelines.standard_rag.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
                           rag_enc, k, "hybrid-rerank", rerank=lambda q, t: [float(-i) for i in range(len(t))],
                           visual=fake_visual() if visual else None)
 
@@ -1938,7 +1937,7 @@ class FakeRagClient:
     def ask(self, system, text, image):
         self.texts.append(text)
         self.images.append(image)
-        q = self.heads[text.split("\n\n" + pipelines_prompts.PASSAGES_HEADER)[0]]
+        q = self.heads[text.split("\n\n" + src.pipelines.base.PASSAGES_HEADER)[0]]
         k = int(q["id"][-3:])
         letter = q["answer"] if k % 2 == 0 else next(x for x in q["options"] if x != q["answer"])
         first = text.split("[1] ", 1)[1].split("\n", 1)[1].split(".")[0] + "."
@@ -1973,9 +1972,9 @@ class StandardRagRunTests(unittest.TestCase):
         return argparse.Namespace(**base)
 
     def go(self, args, client, rag):
-        log = utils_logging.get_logger(f"test.rag.{id(self)}.{args.view}")
+        log = src.utils.logging.get_logger(f"test.rag.{id(self)}.{args.view}")
         with contextlib.redirect_stdout(io.StringIO()):
-            return pipelines_base.run(args, client, log, rag)
+            return src.pipelines.base.run(args, client, log, rag)
 
     def lines(self, folder):
         return [json.loads(x) for x in Path(folder, "predictions.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -1994,7 +1993,7 @@ class StandardRagRunTests(unittest.TestCase):
         self.assertTrue(all({"chunk_id", "title", "text", "tags", "score"} <= set(c) for c in first["contexts"]))
         self.assertEqual(first["evidence"]["chunk_id"], first["contexts"][0]["chunk_id"])
         self.assertIsNone(rows["ISIC_0000001"]["evidence"])                                 # an explicit "Evidence: none"
-        self.assertEqual(rows["ISIC_0000002"]["evidence"], dict(pipelines_prompts.UNPARSED))               # no evidence line
+        self.assertEqual(rows["ISIC_0000002"]["evidence"], dict(src.pipelines.base.UNPARSED))               # no evidence line
         self.assertEqual(rows["ISIC_0000006"]["evidence"]["quote"], "A sentence that is not in the passage at all.")
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
         self.assertEqual((info["status"], info["settings"]["baseline"], info["settings"]["prompt"]), ("complete", "standard_rag", "standard_rag"))
@@ -2005,7 +2004,7 @@ class StandardRagRunTests(unittest.TestCase):
     def test_the_report_scores_retrieval_and_evidence_on_top_of_the_diagnosis(self):
         self.make("text_only")
         out = self.go(self.args(), FakeRagClient(self.questions), make_rag())
-        rep = evaluation_evaluator.evaluate(os.path.join(self.data, question_file("text_only", "val")), os.path.join(out, "predictions.jsonl"), skip_text=True)
+        rep = src.evaluation.evaluator.evaluate(os.path.join(self.data, question_file("text_only", "val")), os.path.join(out, "predictions.jsonl"), skip_text=True)
         self.assertEqual(rep["diagnosis"]["n_questions"], 8)
         self.assertEqual(rep["retrieval"]["n_questions_with_contexts"], 8)
         for key in ("hit@3", "precision@3", "ndcg@3", "mrr"):
@@ -2043,8 +2042,8 @@ class StandardRagRunTests(unittest.TestCase):
         out = self.go(self.args(view="multimodal"), FakeRagClient(self.questions), rag)
         for r in self.lines(out):
             q = next(x for x in self.questions if x["id"] == r["id"])
-            text = [p for p, _ in rag.retrieve(r["query"], pipelines_standard_rag.FUSION_LIST)]
-            image = [p for p, _ in rag.image_search(q, pipelines_standard_rag.FUSION_LIST)]
+            text = [p for p, _ in rag.retrieve(r["query"], src.pipelines.standard_rag.FUSION_LIST)]
+            image = [p for p, _ in rag.image_search(q, src.pipelines.standard_rag.FUSION_LIST)]
             expected = [p["passage_id"] for p, _ in reciprocal_rank_fusion([text, image], top=3)]
             self.assertEqual([c["chunk_id"] for c in r["contexts"]], expected)
             self.assertEqual({c["chunk_id"][0] for c in r["contexts"]}, {"p", "v"})                # both libraries reach the top 3
@@ -2088,19 +2087,19 @@ class StandardRagRunTests(unittest.TestCase):
         self.make("text_only", 4)
         client = FakeRagClient(self.questions)
         buf = io.StringIO()
-        log = utils_logging.get_logger("test.rag.dry")
+        log = src.utils.logging.get_logger("test.rag.dry")
         with contextlib.redirect_stdout(buf):
-            self.assertIsNone(pipelines_base.run(self.args(dry_run=True, limit=2), client, log, make_rag()))
+            self.assertIsNone(src.pipelines.base.run(self.args(dry_run=True, limit=2), client, log, make_rag()))
         shown = buf.getvalue()
         self.assertIn("[query] Patient: 50-year-old male. Skin lesion on the trunk.", shown)
-        self.assertIn(pipelines_prompts.PASSAGES_HEADER, shown)
+        self.assertIn(src.pipelines.base.PASSAGES_HEADER, shown)
         self.assertEqual(client.texts, [])
         self.assertFalse(os.path.exists(self.results))
 
     def test_the_command_stops_with_a_clear_message_when_there_is_no_index(self):
         self.make("text_only", 2)
         with self.assertRaises(FileNotFoundError) as caught:
-            pipelines_standard_rag.standard_rag_main(["--model", "gpt-4o", "--view", "text_only", "--dry-run", "--data", self.data,
+            src.pipelines.standard_rag.standard_rag_main(["--model", "gpt-4o", "--view", "text_only", "--dry-run", "--data", self.data,
                                   "--results", self.results])
         self.assertIn("python -m src.main index", str(caught.exception))
 
@@ -2115,21 +2114,21 @@ class StandardRagRunTests(unittest.TestCase):
         index = DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"})
 
         def rag_for(mode):
-            return pipelines_standard_rag.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
+            return src.pipelines.standard_rag.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
         out = os.path.join(self.tmp.name, "cmp.json")
         with contextlib.redirect_stdout(io.StringIO()):
-            res = pipelines_standard_rag.retrieval_eval_main(["--data", self.data, "--out", out], rag_for=rag_for)
-        self.assertEqual(sorted(res), sorted(pipelines_standard_rag.RETRIEVAL_MODES))
+            res = src.pipelines.standard_rag.retrieval_eval_main(["--data", self.data, "--out", out], rag_for=rag_for)
+        self.assertEqual(sorted(res), sorted(src.pipelines.standard_rag.RETRIEVAL_MODES))
         saved = json.loads(Path(out).read_text(encoding="utf-8"))
         self.assertEqual((saved["view"], saved["split"], saved["n_questions"]), ("text_only", "val", 6))
-        self.assertTrue(all("hit@3" in saved["modes"][m] and "mrr" in saved["modes"][m] for m in pipelines_standard_rag.RETRIEVAL_MODES))
-        for m in pipelines_standard_rag.RETRIEVAL_MODES:
+        self.assertTrue(all("hit@3" in saved["modes"][m] and "mrr" in saved["modes"][m] for m in src.pipelines.standard_rag.RETRIEVAL_MODES))
+        for m in src.pipelines.standard_rag.RETRIEVAL_MODES:
             lo, hi = saved["intervals_95"][m]["hit@3"]
             self.assertLessEqual(lo, saved["modes"][m]["hit@3"] + 1e-9)
             self.assertGreaterEqual(hi, saved["modes"][m]["hit@3"] - 1e-9)
-        self.assertEqual(set(saved["random_from_the_same_pool"]["dense"]), set(pipelines_standard_rag.INTERVAL_KEYS))
+        self.assertEqual(set(saved["random_from_the_same_pool"]["dense"]), set(src.pipelines.standard_rag.INTERVAL_KEYS))
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            pipelines_standard_rag.retrieval_eval_args(["--split", "test"])
+            src.pipelines.standard_rag.retrieval_eval_args(["--split", "test"])
 
     def test_the_image_views_are_scored_by_image_search_and_by_text_and_image_fused(self):
         from array import array
@@ -2147,10 +2146,10 @@ class StandardRagRunTests(unittest.TestCase):
             index = DenseIndex(list(RAG_CORPUS), flat_t, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"})
 
             def rag_for(mode, index=index):
-                return pipelines_standard_rag.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
+                return src.pipelines.standard_rag.StandardRag(index, rag_enc, 10, mode, rerank=lambda q, t: [float(-i) for i in range(len(t))])
             out = os.path.join(self.tmp.name, f"{view}.json")
             with contextlib.redirect_stdout(io.StringIO()):
-                res = pipelines_standard_rag.retrieval_eval_main(["--view", view, "--data", self.data, "--out", out], rag_for=rag_for,
+                res = src.pipelines.standard_rag.retrieval_eval_main(["--view", view, "--data", self.data, "--out", out], rag_for=rag_for,
                                              visual=(vindex, vectors))
             expected = ["image"] if view == "image_only" else ["hybrid-rerank", "image", "fused"]
             self.assertEqual(list(res), expected)
@@ -2162,12 +2161,12 @@ class StandardRagRunTests(unittest.TestCase):
                 self.assertTrue(0.0 < share["fused"] < 1.0)                 # both sources reach the top 3
                 self.assertEqual(len(saved["random_from_the_same_pool"]), 3)
         with self.assertRaises(KeyError):
-            retrieval_query.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
+            src.retrieval.retriever.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
 
     def test_collect_reports_a_standard_rag_run_beside_an_llm_only_run(self):
         self.make("text_only")
         self.go(self.args(split="val"), FakeRagClient(self.questions), make_rag())
-        rows = evaluation_evaluator.collect(self.results, os.path.join(self.results, "summary.csv"), root=".", skip_text=True)
+        rows = src.evaluation.evaluator.collect(self.results, os.path.join(self.results, "summary.csv"), root=".", skip_text=True)
         self.assertEqual([(r["system"], r["model"], r["view"]) for r in rows], [("standard_rag", "gpt-4o", "text_only")])
 
 
@@ -2188,7 +2187,7 @@ class IndexCommandTests(unittest.TestCase):
             seen.extend(items)
             return rag_enc(items)
         with contextlib.redirect_stdout(io.StringIO()):
-            retrieval_indexer.index_main(["--corpus", self.corpus, "--out", self.out, *(extra or ["--no-captions"])], encode=encode)
+            src.retrieval.indexer.index_main(["--corpus", self.corpus, "--out", self.out, *(extra or ["--no-captions"])], encode=encode)
         return seen
 
     def test_every_passage_is_embedded_as_its_title_and_text_and_the_index_can_be_read(self):
@@ -2256,10 +2255,10 @@ class IndexCommandTests(unittest.TestCase):
         copy = "one two three four five six seven eight nine ten eleven twelve"
         passages = [{"passage_id": "a", "url": "u1", "text": copy, "title": ""},
                     {"passage_id": "b", "url": "u2", "text": "alpha beta gamma delta epsilon zeta eta theta iota kappa", "title": ""}]
-        refs = knowledge_references.shingles(copy + " thirteen fourteen")
-        kept, _, out = retrieval_indexer.build_index(passages, lambda x: [[1.0]] * len(x), (), refs)
+        refs = src.retrieval.corpus.shingles(copy + " thirteen fourteen")
+        kept, _, out = src.retrieval.indexer.build_index(passages, lambda x: [[1.0]] * len(x), (), refs)
         self.assertEqual(([p["passage_id"] for p in kept], [p["passage_id"] for p in out]), (["b"], ["a"]))
-        kept, _, out = retrieval_indexer.build_index(passages, lambda x: [[1.0]] * len(x))
+        kept, _, out = src.retrieval.indexer.build_index(passages, lambda x: [[1.0]] * len(x))
         self.assertEqual((len(kept), len(out)), (2, 0))
 
     def test_the_audit_finds_near_duplicates_reference_copies_and_tags_that_would_change(self):
@@ -2270,7 +2269,7 @@ class IndexCommandTests(unittest.TestCase):
                     "n_words": len(text.split()), "tags": tags}
         ps = [mk("a", t, []), mk("b", t + " too", ["MEL"]), mk("c", "unrelated words about something else entirely "
                                                            "that has no overlap at all with the rest", [])]
-        r = knowledge_corpus.audit_corpus(ps, knowledge_references.shingles(ps[2]["text"]))
+        r = src.retrieval.corpus.audit_corpus(ps, src.retrieval.corpus.shingles(ps[2]["text"]))
         self.assertEqual(r["near_duplicate_pairs"], [["a", "b"]])
         self.assertEqual(r["reference_copies"], ["c"])
         self.assertEqual(r["tags_that_would_change"], ["a"])
@@ -2294,30 +2293,30 @@ class IndexStatusTests(unittest.TestCase):
         from src.retrieval.indexer import write_index
         from src.utils.reproducibility import file_sha256
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(utils_status.step_index(d)[0], utils_status.NOT_RUN)
+            self.assertEqual(src.main.step_index(d)[0], src.main.NOT_RUN)
             corpus = os.path.join(d, CORPUS_DIR)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
             sha = file_sha256(os.path.join(corpus, "passages.jsonl"))
             write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
                         {"encoder": "fake", "passages_sha256": sha, "exclude_reference_pages": True})
-            status, note = utils_status.step_index(d)
-            self.assertEqual(status, utils_status.DONE)
+            status, note = src.main.step_index(d)
+            self.assertEqual(status, src.main.DONE)
             self.assertIn("5 passages", note)
             self.assertIn("reference pages left out", note)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS[:3])               # the corpus changed after the index
-            self.assertEqual(utils_status.step_index(d)[0], utils_status.PROBLEM)
+            self.assertEqual(src.main.step_index(d)[0], src.main.PROBLEM)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
             with open(os.path.join(corpus, "index", "embeddings.f32"), "ab") as f:
                 f.write(b"\0\0\0\0")                                                           # a damaged file
-            self.assertEqual(utils_status.step_index(d)[0], utils_status.PROBLEM)
+            self.assertEqual(src.main.step_index(d)[0], src.main.PROBLEM)
             captions = os.path.join(corpus, "visual", "items_final.jsonl")
             write_jsonl(captions, RAG_IMAGES)
             write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
                         {"encoder": "fake", "passages_sha256": sha, "captions_file": "visual/items_final.jsonl",
                          "captions_sha256": file_sha256(captions), "n_captions_indexed": 3})
-            self.assertEqual(utils_status.step_index(d), (utils_status.DONE, "5 passages, 8 numbers each (fake); with 3 caption records; all passages"))
+            self.assertEqual(src.main.step_index(d), (src.main.DONE, "5 passages, 8 numbers each (fake); with 3 caption records; all passages"))
             write_jsonl(captions, RAG_IMAGES[:1])                                                # the image library changed
-            self.assertEqual(utils_status.step_index(d)[0], utils_status.PROBLEM)
+            self.assertEqual(src.main.step_index(d)[0], src.main.PROBLEM)
 
 
 if __name__ == "__main__":

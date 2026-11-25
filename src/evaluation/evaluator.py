@@ -61,17 +61,17 @@ import json
 import os
 
 from src.data.loaders import recorded_question_path
-from src.evaluation.diagnostic import (
-    diagnosis_metrics,
-    gold_class,
-    predicted_class,
-    usage_summary,
-)
-from src.evaluation.hallucination import (
+from src.evaluation.diagnostic import diagnosis_metrics, usage_summary
+from src.evaluation.metrics import (
     SIMILARITY_MODEL,
     SIMILARITY_PASS,
     evidence_metrics,
+    gold_class,
+    holm,
     image_claim_metrics,
+    mcnemar_exact,
+    pct,
+    predicted_class,
     semantic_similarity,
     sentence_encoder,
     similarity_check,
@@ -82,7 +82,6 @@ from src.evaluation.retrieval import (
     relevant_counts,
     retrieval_metrics,
 )
-from src.evaluation.statistics import holm, mcnemar_exact, pct
 from src.utils.common import REFERENCE_TEXTS
 from src.utils.io import read_jsonl, write_csv, write_json
 from src.utils.logging import get_logger
@@ -108,7 +107,7 @@ def similarity_check_main(argv=None):
     ap.add_argument("--results", default="results")
     ap.add_argument("--root", default=".")
     ap.add_argument("--reference-texts", default=os.path.join("data", REFERENCE_TEXTS))
-    ap.add_argument("--out", default="results/comparisons/similarity_check.json")
+    ap.add_argument("--out", default="results/comparisons/tables/similarity_check.json")
     a = ap.parse_args(argv)
     with open(a.reference_texts, encoding="utf-8") as f:
         refs = json.load(f)
@@ -209,7 +208,7 @@ def report_main(argv=None):
 # answer is wrong.
 #
 # Usage:
-#   python -m src.main compare --out results/llm_only/compare_text_only_test.json       --run claude=data/views/text_only/test.jsonl,results/llm_only/text_only/claude-sonnet-5-5_test/predictions.jsonl       --run gpt-4o=data/views/text_only/test.jsonl,results/llm_only/text_only/gpt-4o_test/predictions.jsonl
+#   python -m src.main compare --out results/comparisons/tables/llm_only_models_text_only.json       --run claude=data/views/text_only/test.jsonl,results/llm_only/text_only/claude-sonnet-5-5_test/predictions.jsonl       --run gpt-4o=data/views/text_only/test.jsonl,results/llm_only/text_only/gpt-4o_test/predictions.jsonl
 
 def correct_by_id(questions, predictions):
     unknown = set(predictions) - set(questions)
@@ -291,9 +290,28 @@ def finished_runs(results_dir):
     return found
 
 
+METRICS_COLUMNS = ["system", "model", "view", "split", "metric", "value"]
+
+
+def report_metrics(report, prefix=""):
+    """Every number of a report as (metric, value), e.g. ("diagnosis.per_class.MEL.recall", 0.3); a 95% interval [a, b] gives two
+    rows, "..._ci_low" and "..._ci_high". Text, yes/no flags and lists (case ids, the confusion matrix) stay in report.json only."""
+    out = []
+    for key, value in report.items():
+        name = f"{prefix}{key}"
+        if isinstance(value, dict):
+            out += report_metrics(value, name + ".")
+        elif isinstance(value, list) and len(value) == 2 and key.endswith("95ci") and all(isinstance(v, (int, float)) for v in value):
+            out += [(name[:-len("_95ci")] + "_ci_low", value[0]), (name[:-len("_95ci")] + "_ci_high", value[1])]
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            out.append((name, value))
+    return out
+
+
 def collect(results_dir="results", out="results/comparisons/summary.csv", root=".", skip_text=False, reference_texts=None, force=False,
             passages_path=None, relevance_models=False):
-    rows = []
+    """One row per finished run in summary.csv, and every number of every run's report in metrics.csv (beside it)."""
+    rows, long_rows = [], []
     for system, model, run, folder, info in finished_runs(results_dir):
         settings = info["settings"]
         qpath, ppath = recorded_question_path(root, settings["questions"]), os.path.join(folder, "predictions.jsonl")
@@ -326,7 +344,10 @@ def collect(results_dir="results", out="results/comparisons/summary.csv", root="
                      "tokens_in": (usage.get("tokens_in") or {}).get("total", ""), "tokens_out": (usage.get("tokens_out") or {}).get("total", ""),
                      "seconds": (usage.get("seconds") or {}).get("total", ""), "served_by": " | ".join(served),
                      "questions_sha256": settings.get("questions_sha256", ""), "folder": folder.replace("\\", "/")})
+        key = {c: rows[-1][c] for c in ("system", "model", "view", "split")}
+        long_rows += [{**key, "metric": m, "value": v} for m, v in report_metrics(report)]
     write_csv(out, rows, SUMMARY_COLUMNS)
+    write_csv(os.path.join(os.path.dirname(out), "metrics.csv"), long_rows, METRICS_COLUMNS)
     return rows
 
 

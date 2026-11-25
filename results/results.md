@@ -1,6 +1,6 @@
 # Results: LLM-only baseline (test split)
 
-Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/comparisons/summary.csv`, `results/comparisons/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: `results/evaluation_guide.md`.
+Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/comparisons/summary.csv`, `results/comparisons/tables/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: `results/evaluation_guide.md`.
 
 ## 1. Setup and status
 
@@ -268,8 +268,9 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 |---|---|
 | Predictions, settings, report of each run | `results/llm_only/<view>/<model>_test/{predictions.jsonl, run.json, report.json}` (before 2026-11-25: `<model>/<view>_test/`) |
 | One row per run | `results/comparisons/summary.csv` |
-| Tests between models / between views | `results/llm_only/compare_<view>_test.json` / `compare_views_<model>.json` |
-| Validity check | `results/comparisons/similarity_check.json` |
+| Every number of every run's report, one per row | `results/comparisons/metrics.csv` |
+| Tests between models / between views | `results/comparisons/tables/llm_only_models_<view>.json` / `llm_only_views_<model>.json` |
+| Validity check | `results/comparisons/tables/similarity_check.json` |
 
 ```powershell
 python -m src.main llm-only --model gpt-4o --view image_only --split test   # one run (paid, resumable)

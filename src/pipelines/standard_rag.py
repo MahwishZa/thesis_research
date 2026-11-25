@@ -6,30 +6,26 @@ import os
 import random
 
 from src.data.loaders import question_file
+from src.evaluation.metrics import percentile
 from src.evaluation.retrieval import relevant_counts, retrieval_metrics
-from src.evaluation.statistics import percentile
-from src.knowledge.references import OVERLAP_LIMIT, overlap_share, shingles
 from src.models.embeddings import MEDCPT_QUERY, medcpt_encoder
 from src.models.llm import MODELS, make_client
-from src.pipelines.base import rag_system, run, run_folder
-from src.pipelines.prompts import rag_instruction, rag_text
+from src.pipelines.base import rag_instruction, rag_system, rag_text, run, run_folder
+from src.retrieval.corpus import OVERLAP_LIMIT, overlap_share, shingles
 from src.retrieval.indexer import read_index
-from src.retrieval.query import image_query_vector, retrieval_query
 from src.retrieval.reranker import medcpt_cross_encoder
-from src.retrieval.retriever import BM25Index, reciprocal_rank_fusion
-from src.utils.common import (
-    CORPUS_DIR,
-    INDEX_DIR,
-    SPLIT_FILES,
-    SPLITS,
-    VIEWS,
-    load_env,
+from src.retrieval.retriever import (
+    BM25Index,
+    image_query_vector,
+    reciprocal_rank_fusion,
+    retrieval_query,
 )
+from src.utils.common import CORPUS_DIR, INDEX_DIR, SPLIT_FILES, SPLITS, VIEWS, load_env
 from src.utils.io import read_jsonl, write_json
 from src.utils.logging import get_logger
 from src.utils.reproducibility import SEED
 
-RETRIEVAL_MODES = ("dense", "hybrid", "hybrid-rerank")
+RETRIEVAL_MODES = ("bm25", "dense", "hybrid", "hybrid-rerank")     # bm25 and dense alone: comparisons and trials
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
 
@@ -50,7 +46,8 @@ def distinct(hits):
 
 class StandardRag:
     """The retrieval of one run: the index, the query encoder, k, and the retrieval mode.
-    dense: the k passages of highest MedCPT cosine similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank
+    bm25: the k passages of highest BM25 keyword score (Robertson & Zaragoza 2009).  dense: the k passages of highest MedCPT cosine
+    similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank
     fusion.  hybrid-rerank: the hybrid pool, re-ordered by the MedCPT cross-encoder."""
 
     def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL, visual=None):
@@ -64,6 +61,8 @@ class StandardRag:
 
     def retrieve(self, query, k):
         """[(passage, score), ...], best first, for one query text."""
+        if self.mode == "bm25":
+            return self.bm25.search(query, k)
         vector = self.encode_query([query])[0]
         if self.mode == "dense":
             return self.index.search(vector, k)
@@ -102,7 +101,7 @@ class StandardRag:
 
     def settings(self, view="text_only"):
         meta = self.index.meta
-        s = {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode == "dense" else self.pool,
+        s = {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode in ("bm25", "dense") else self.pool,
              "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
              "exclude_reference_pages": meta.get("exclude_reference_pages")}
         if view != "text_only":
@@ -159,7 +158,7 @@ def make_rag(args):
 
 def standard_rag_main(argv=None, rag=None):
     args = rag_parse_args(argv)
-    final, partial = run_folder(args.results, args.model, args.view, args.split, rag_system(args.retrieval))
+    final, _ = run_folder(args.results, args.model, args.view, args.split, rag_system(args.retrieval))
     name = f"{rag_system(args.retrieval)}.{args.model}.{args.view}.{args.split}"
     log, client = get_logger(name), None
     if os.path.isdir(final) and not args.dry_run:
@@ -172,13 +171,12 @@ def standard_rag_main(argv=None, rag=None):
         if unusable:
             log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
         client = make_client(args.model, log)                       # stops here when the key is missing
-        log = get_logger(name, os.path.join(partial, "run.log"))
     return run(args, client, log, rag)
 
 
 # ---- retrieval-only comparison (no model call, no cost) ---------------------------------------------------------------------
 # For the validation questions of a text view, retrieves 10 passages with each retrieval mode and scores them with the retrieval
-# metrics of src/evaluation/retrieval.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
+# metrics of src/metrics.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
 # class: the tags are used for this score only, never to retrieve). The choice of the retrieval mode is made on this validation
 # score, before any paid run; the test split is refused. Image-only questions are not scored: their text query is the same for all.
 def retrieval_eval_args(argv=None):
@@ -200,7 +198,7 @@ INTERVAL_KEYS = ("hit@3", "precision@3", "ndcg@3", "mrr")
 
 def retrieval_intervals(qa, pred, n_boot=1000, seed=42):
     """95% percentile intervals of the main retrieval scores. Whole lesions are drawn with replacement (photos of one lesion stay
-    together), as in src/evaluation/statistics.py."""
+    together), as in src/metrics.py."""
     members = {}
     for i, q in qa.items():
         members.setdefault(q.get("group_id", i), []).append(i)

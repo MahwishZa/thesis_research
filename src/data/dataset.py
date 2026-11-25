@@ -10,7 +10,7 @@ VAL_PER_CLASS = 20                    # images of each class in the balanced val
 
 # ---- the balanced test and validation splits (used by data/preprocessing.py step 8, checked by utils/status.py) -----------------------------
 # The balanced splits (test decided 2026-11-22: 30 per class; validation decided 2026-11-22: 20 per class): the split holds exactly
-# the same number of images of every class, so every class weighs the same in its accuracy. Used by src/data/preprocessing.py (step 8)
+# the same number of images of every class, so every class weighs the same in its accuracy. Used by src/preprocess.py (step 8)
 # after the lesion-grouped split: first for "test", then for "val" (the test split is not touched by the second pass). Train keeps
 # the natural class mix (the imbalance is handled when a model is trained: class weights, the oversampled and undersampled lists).
 #

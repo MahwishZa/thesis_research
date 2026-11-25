@@ -19,7 +19,7 @@ Everything here is real data: no synthetic images and no AI-generated text. Mark
 | Splits | train 1,797 · validation 160 (20 per class) · test 240 (30 per class); no lesion in two splits ✔ |
 | Views | image only · text only (age, sex, body site) · image + text; one 8-option multiple-choice question per case |
 | Knowledge corpus | 3,426 passages from 992 documents, four libraries, and 85 picture-and-caption records (for the RAG systems) |
-| Used by | `src/pipelines/` (LLM-only and standard-RAG runs), `src/evaluation/` (all metrics), `src/utils/status.py` and `src/data/quality.py` (pipeline and feature checks); one entry point, `python -m src.main <command>` |
+| Used by | `src/pipelines/` (the runs of every system), `src/evaluation/` (all metrics), `src/main.py` (pipeline status) and `src/data/preprocessing.py` (feature check); one entry point, `python -m src.main <command>` |
 
 ## 2. Motivation and intended use
 
@@ -104,7 +104,7 @@ Train class counts behind them: MEL 402, NV 244, BCC 342, AK 81, BKL 428, DF 61,
 
 **Why the files remain.** The research may train a model: a trained retriever (the RAG² reproduction, not decided) or a fine-tuned component. A model trained on this natural mix would favour the common classes, so a balanced training list or the class weights are needed at that point. Preparing them now, from the final train split and the fixed seed, keeps the training data reproducible and avoids a later change to the data folder. Today nothing reads them: the four LLMs are used as they are, and LLM-only and standard RAG train nothing. `python -m src.main features` uses scikit-learn's own class weighting, not these files.
 
-**What to say in the thesis.** If a model is trained, state which technique was used (weights, oversampling or undersampling), that it was applied to the train split only, and the seed. Oversampling repeats cases (a model may memorise them) and undersampling discards most of the common classes (428 down to 61); class weights avoid both and are the simplest choice. If nothing is trained in the end, these files can be removed (with the tests in `tests/system/test_system.py` that expect them) and this section reduced to the balanced evaluation splits.
+**What to say in the thesis.** If a model is trained, state which technique was used (weights, oversampling or undersampling), that it was applied to the train split only, and the seed. Oversampling repeats cases (a model may memorise them) and undersampling discards most of the common classes (428 down to 61); class weights avoid both and are the simplest choice. If nothing is trained in the end, these files can be removed (with the tests in `tests/system.py` that expect them) and this section reduced to the balanced evaluation splits.
 
 ## 7. The three views and the questions
 
@@ -124,7 +124,7 @@ Each question has the 8 classes as options in an order fixed per case (seed 42, 
 ## 8. Folders and files
 
 ```
-data/raw/  +  data/annotations/official_labels/    inputs: the Kaggle download (laptop only), the official label files
+data/raw/  +  data/annotations/                    inputs: the Kaggle download (laptop only), the official label files
    │  step 1: python -m src.main preprocess       cleans, removes duplicates, corrects labels, splits
    ▼
 data/processed/images/  +  data/processed/cases/    the cleaned images (laptop only); the cleaned, split cases
@@ -139,7 +139,7 @@ data/annotations/reference_texts.json               the reference texts of the s
 | Path | What it holds | In Git |
 |---|---|---|
 | `raw/` | the Kaggle download (2,357 files in `Train/` and `Test/`), untouched | no |
-| `annotations/official_labels/` | ISIC 2019 ground truth and metadata, HAM10000 metadata, an ISIC Archive extract | yes |
+| `annotations/` (4 csv files) | ISIC 2019 ground truth and metadata, HAM10000 metadata, an ISIC Archive extract | yes |
 | `processed/images/` | the 2,197 cleaned, standardised images | no |
 | `processed/cases/all_cases.csv` | every kept case: label and provenance, patient facts, quality flags, split, fold, model features | yes |
 | `processed/cases/raw_files_audit.csv` | every original Kaggle file → its final label and split | yes |
@@ -152,7 +152,7 @@ data/annotations/reference_texts.json               the reference texts of the s
 | `corpus/` | `manifest.csv`, `corpus_card.json` (no text); `passages.jsonl`, the download cache, the indexes and the image library stay on the laptop | partly |
 | `annotations/reference_texts.json` | the reference texts of the semantic-similarity score | yes |
 
-**The 2026-11-25 move (researcher's approval).** The folders were renamed to the structure above: `processed_images/` → `processed/images/`, `processed_cases/` → `processed/cases/`, `official_labels/` → `annotations/official_labels/`, `knowledge_corpus/` → `corpus/` (for a few hours `knowledge/corpus/`, simplified at the researcher's request; with `reference_texts.json` → `annotations/`), and `val.jsonl` → `validation.jsonl`. No case, question, answer or option changed: only the `image_path` field (`processed_images/` → `processed/images/`). `views/provenance.json` records, for each of the 10 changed files, its SHA-256 before and after; a test (`tests/acceptance/test_acceptance.py`) checks that writing the paths the old way gives back exactly the earlier file ✔, and the pipeline status accepts the approved runs, which recorded the earlier SHA-256, through this record ✔. The rebuilt views match the committed files byte for byte ✔ (`tests/system/test_system.py`).
+**The 2026-11-25 move (researcher's approval).** The folders were renamed to the structure above: `processed_images/` → `processed/images/`, `processed_cases/` → `processed/cases/`, `official_labels/` → `annotations/` (first `annotations/official_labels/`, flattened the same day), `knowledge_corpus/` → `corpus/` (for a few hours `knowledge/corpus/`, simplified at the researcher's request; with `reference_texts.json` → `annotations/`), and `val.jsonl` → `validation.jsonl`. No case, question, answer or option changed: only the `image_path` field (`processed_images/` → `processed/images/`). `views/provenance.json` records, for each of the 10 changed files, its SHA-256 before and after; a test (`tests/acceptance.py`) checks that writing the paths the old way gives back exactly the earlier file ✔, and the pipeline status accepts the approved runs, which recorded the earlier SHA-256, through this record ✔. The rebuilt views match the committed files byte for byte ✔ (`tests/system.py`).
 
 ## 9. The knowledge corpus (for the RAG systems)
 
@@ -189,7 +189,7 @@ Each passage is embedded once as [title, text] with the MedCPT article encoder (
 | **Textbook passages from the pages that also supply the reference texts** | **44 of 190** | a RAG answer that quotes such a passage resembles the reference text of its disease almost word for word, which inflates the semantic similarity. The laptop index was built with `--exclude-reference-pages`, so they are not retrievable (status: 3,374 of 3,426 passages indexed) |
 | Passages per disease (tags) | MEL 1,159 · NV 628 · BCC 603 · SCC 607 · AK 470 · BKL 369 · VASC 319 · DF 256 | retrieval may lean to melanoma |
 | Gaps | guidelines: DF 0, BKL 12; pubmed: VASC 74; textbook: AK 6, DF 10, VASC 3, SCC 4 | thin evidence for the rarer diseases |
-| Image-associated text | PMC figure captions of 30 words or more are kept as passages (the corpus rules, `src/knowledge/extract.py`); the image library (9.3) adds picture-and-caption records | still little text about what a lesion looks like for the rarer diseases |
+| Image-associated text | PMC figure captions of 30 words or more are kept as passages (the corpus rules, `src/retrieval/corpus.py`); the image library (9.3) adds picture-and-caption records | still little text about what a lesion looks like for the rarer diseases |
 
 ### 9.3 The image library (`visual`, `visual-images`, `visual-index`; ✔ from `corpus/visual_card.json`, snapshot 2026-11-24)
 
@@ -225,7 +225,7 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 
 1. **Source confound.** All MEL and NV come from the older ISIC archive; the other classes come mostly from HAM10000. Even after standardisation the source is detectable (AUC 0.953), and the original file size alone predicts the class with 31.7% accuracy (chance 12.5%). Only the Kaggle dataset is used, so no images are added: state this as a limitation of the image results.
 2. **Missing patient facts are not random.** Missing age, sex or site occurs mostly in NV and MEL, so "not recorded" hints at the class (15 of the 28 test cases with a missing fact are NV). State this as a limitation of the text-only results.
-3. **Small test set.** 240 cases (30 per class, 190 lesions). Always report 95% bootstrap intervals (`src/evaluation/` draws whole lesions).
+3. **Small test set.** 240 cases (30 per class, 190 lesions). Always report 95% bootstrap intervals (`src/evaluation/metrics.py` draws whole lesions).
 4. **Balanced evaluation splits.** Accuracy and recall are comparable across classes; precision is not a clinic's precision.
 5. **Corpus imbalance, weak labels and overlap with the reference texts.** The corpus holds 4 times more melanoma-tagged passages than dermatofibroma-tagged ones, 11.2% of the passages have no tag, and the tags come partly from class names, so retrieval metrics measure topical relevance, not proof (`results/evaluation_guide.md`). 46 textbook passages come from the pages that supply the reference texts of the semantic similarity (section 9.2).
 6. **Licence.** ISIC images are mostly CC BY-NC: non-commercial research only.
@@ -235,7 +235,7 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 | Part | What it is | Terms | In Git |
 |---|---|---|---|
 | `raw/`, `processed/images/` | dermoscopic images (Kaggle copy of the ISIC Archive) | each image carries its own ISIC licence (mostly CC BY-NC, some CC0): non-commercial research, attribution | **no** (laptop only) |
-| `annotations/official_labels/` | ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records | the ISIC and HAM10000 data licences (non-commercial, attribution) ◻ | yes, with attribution (below) |
+| `annotations/*.csv` | ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records | the ISIC and HAM10000 data licences (non-commercial, attribution) ◻ | yes, with attribution (below) |
 | `processed/cases/`, `views/` | derived from the two rows above: ISIC ids, labels, age, sex, body site | the same terms as their sources | yes, with attribution |
 | `corpus/passages.jsonl`, `cache/` | full texts of PubMed abstracts, PMC papers, guidelines and Dermoscopedia pages | each passage's own licence | **no** (laptop only) |
 | `corpus/manifest.csv`, `corpus_card.json` | lists and counts, no text | – | yes |
@@ -255,7 +255,7 @@ python -m src.main corpus         # step 3 (internet; downloads are cached)
 python -m src.main references --token-check    # step 3b (internet)
 python -m src.main status         # where each step stands: done, not run, or a problem and why
 python -m src.main features       # the shortcut analysis (section 10)
-python -m unittest discover -s tests -t .      # includes tests/system/test_system.py: the committed tables and views, rebuilt byte for byte
+python -m unittest                              # all four test files; tests/system.py: the committed tables and views, rebuilt byte for byte
 ```
 
 ## 14. Corrections made to this document

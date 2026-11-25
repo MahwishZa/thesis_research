@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Document status | Current as of 2026-11-24. Implemented in `src/evaluation/` (run through `python -m src.main`). |
+| Document status | Current as of 2026-11-24. Implemented in `src/evaluation/` (the measures in `metrics.py`, `diagnostic.py` and `retrieval.py`; the commands in `evaluator.py`), run through `python -m src.main`. |
 | Audience | The researcher, the supervisor, and readers of the thesis (plain English; scientific accuracy kept). |
 | Related documents | `results/results.md` (the metrics applied), `data/datasheet.md` (the data) |
 
 Scores are written as percentages here and in the screen output (25.4% = 61 of 240 right). The JSON and CSV files keep fractions (0.2542) so that programs can read them; p-values and the semantic-similarity cosine are not percentages.
 
-What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluation/` (`statistics.py`, `diagnostic.py`, `retrieval.py`, `hallucination.py`, `evaluator.py`).
+What each number means, how it is calculated, and what it can and cannot tell you. Code: `src/evaluation/metrics.py` (statistics; hallucination and evidence), `diagnostic.py` (diagnosis), `retrieval.py` (retrieval) and `evaluator.py` (evaluate, compare, collect, similarity-check). `collect` writes `results/comparisons/summary.csv` (one row per run) and `metrics.csv` (every number of every report, one row each).
 Marks: ✔ = checked in this repository (a test, or a recomputation by hand); ◻ = from the literature, check the paper before citing it.
 "Research question" means the author's reading of the objectives in `README.md` ("Objectives"); the researcher is asked to confirm or correct it.
 

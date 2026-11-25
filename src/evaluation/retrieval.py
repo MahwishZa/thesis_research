@@ -2,10 +2,8 @@
 import math
 from collections import Counter, defaultdict
 
-from src.evaluation.statistics import mean
+from src.evaluation.metrics import mean
 from src.utils.common import CLASSES
-
-MEDCPT = ("ncbi/MedCPT-Query-Encoder", "ncbi/MedCPT-Article-Encoder", "ncbi/MedCPT-Cross-Encoder")
 
 
 def relevant_counts(passages):
@@ -50,33 +48,27 @@ def retrieval_metrics(qa, pred, ks=None, n_relevant=None):
     return res
 
 
-def medcpt_scorers(models=MEDCPT):
-    """Two scorers built on MedCPT: the cosine of the query and passage embeddings, and the cross-encoder score (higher = more
-    relevant; not a probability). Each takes (query, passages) and returns one score per passage."""
-    import torch
-    from transformers import (
-        AutoModel,
-        AutoModelForSequenceClassification,
-        AutoTokenizer,
+def medcpt_scorers():
+    """Two scorers built on MedCPT (the same models as the RAG retrieval, src/models.py): the cosine of the query and passage
+    embeddings, and the cross-encoder score (higher = more relevant; not a probability). Each takes (query, passages) and returns one
+    score per passage."""
+    from src.models import (
+        MEDCPT_ARTICLE,
+        MEDCPT_QUERY,
+        medcpt_cross_encoder,
+        medcpt_encoder,
     )
-    q_tok, q_enc = AutoTokenizer.from_pretrained(models[0]), AutoModel.from_pretrained(models[0]).eval()
-    a_tok, a_enc = AutoTokenizer.from_pretrained(models[1]), AutoModel.from_pretrained(models[1]).eval()
-    c_tok, c_enc = AutoTokenizer.from_pretrained(models[2]), AutoModelForSequenceClassification.from_pretrained(models[2]).eval()
+    query, article, cross_encoder = medcpt_encoder(MEDCPT_QUERY, 64), medcpt_encoder(MEDCPT_ARTICLE, 512), medcpt_cross_encoder()
 
     def articles(passages):
         return [[c.get("title") or "", c["text"]] for c in passages]
 
-    @torch.no_grad()
-    def cosine(query, passages):
-        q = q_enc(**q_tok([query], truncation=True, padding=True, return_tensors="pt", max_length=64)).last_hidden_state[:, 0]
-        a = a_enc(**a_tok(articles(passages), truncation=True, padding=True, return_tensors="pt",
-                          max_length=512)).last_hidden_state[:, 0]
-        return torch.nn.functional.cosine_similarity(q, a).tolist()
+    def cosine(q, passages):
+        qv = query([q])[0]
+        return [sum(a * b for a, b in zip(qv, v)) for v in article(articles(passages))]      # unit vectors: the dot product
 
-    @torch.no_grad()
-    def cross(query, passages):
-        pairs = [[query, f"{c.get('title') or ''} {c['text']}".strip()] for c in passages]
-        return c_enc(**c_tok(pairs, truncation=True, padding=True, return_tensors="pt", max_length=512)).logits.squeeze(-1).tolist()
+    def cross(q, passages):
+        return cross_encoder(q, articles(passages))
 
     return {"medcpt_cosine": cosine, "medcpt_cross_encoder": cross}
 

@@ -2,7 +2,7 @@
 every question its case, no label in an input, the views rebuilt byte for byte), the balanced test split, the fixed
 top-level structure, every command answering --help, and a free dry run of the LLM-only system on the committed questions.
 They skip when the tables are not in data/. Set THESIS_DATA to check another copy of the data folder.
-Run: python -m unittest discover -s tests -t ."""
+Run: python -m unittest"""
 
 import csv
 import filecmp
@@ -18,19 +18,19 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
-from src import main as src_main
-from src.data import dataset as data_dataset
-from src.data import loaders as data_loaders
-from src.data import views as data_views
+import src.data.dataset
+import src.data.loaders
+import src.data.views
+import src.evaluation.diagnostic
+import src.evaluation.evaluator
+import src.main
+import src.utils.common
 from src.data.loaders import question_file, view_table
-from src.evaluation import diagnostic as evaluation_diagnostic
-from src.evaluation import evaluator as evaluation_evaluator
-from src.utils import common as utils_common
-from src.utils import status as utils_status
+from src.main import SYSTEMS
 from src.utils.common import ALL_CASES, PROCESSED_CASES, SPLITS, VIEWS
 from src.utils.io import read_csv
 
@@ -158,27 +158,27 @@ class DataTests(unittest.TestCase):
         self.assertFalse(list(DATA.glob("*.csv")), "a table lies loose in data/: tables belong in processed/cases/ or views/")
 
 
-@unittest.skipUnless((DATA / utils_common.ALL_CASES).is_file(), "data/processed/cases/all_cases.csv is not there")
+@unittest.skipUnless((DATA / src.utils.common.ALL_CASES).is_file(), "data/processed/cases/all_cases.csv is not there")
 class ViewsRebuildTests(unittest.TestCase):
     def test_building_the_views_again_gives_the_committed_files_byte_for_byte(self):
         with tempfile.TemporaryDirectory() as d:
-            Path(d, utils_common.PROCESSED_CASES).mkdir(parents=True)
-            shutil.copy(DATA / utils_common.ALL_CASES, Path(d, utils_common.ALL_CASES))
-            data_views.build_views(d)
-            names = [data_loaders.view_table(v) for v in utils_common.VIEWS]
-            names += [data_loaders.question_file(v, s) for v in utils_common.VIEWS for s in utils_common.SPLITS]
+            Path(d, src.utils.common.PROCESSED_CASES).mkdir(parents=True)
+            shutil.copy(DATA / src.utils.common.ALL_CASES, Path(d, src.utils.common.ALL_CASES))
+            src.data.views.build_views(d)
+            names = [src.data.loaders.view_table(v) for v in src.utils.common.VIEWS]
+            names += [src.data.loaders.question_file(v, s) for v in src.utils.common.VIEWS for s in src.utils.common.SPLITS]
             different = [n for n in names if not filecmp.cmp(Path(d, n), DATA / n, shallow=False)]
-            built = sorted(p.relative_to(d).as_posix() for p in Path(d, utils_common.VIEWS_DIR).rglob("*") if p.is_file())
+            built = sorted(p.relative_to(d).as_posix() for p in Path(d, src.utils.common.VIEWS_DIR).rglob("*") if p.is_file())
         self.assertEqual(different, [])
         self.assertEqual(built, sorted(names))                           # nothing else is written
 
     def test_an_unknown_class_stops_the_build(self):
         with tempfile.TemporaryDirectory() as d:
-            Path(d, utils_common.PROCESSED_CASES).mkdir(parents=True)
-            text = (DATA / utils_common.ALL_CASES).read_text(encoding="utf-8").replace(",MEL,", ",XYZ,", 1)
-            Path(d, utils_common.ALL_CASES).write_text(text, encoding="utf-8")
+            Path(d, src.utils.common.PROCESSED_CASES).mkdir(parents=True)
+            text = (DATA / src.utils.common.ALL_CASES).read_text(encoding="utf-8").replace(",MEL,", ",XYZ,", 1)
+            Path(d, src.utils.common.ALL_CASES).write_text(text, encoding="utf-8")
             with self.assertRaises(ValueError):
-                data_views.build_views(d)
+                src.data.views.build_views(d)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -200,7 +200,7 @@ class BalancedValidationRuleTests(unittest.TestCase):
 
     def test_20_validation_images_of_every_class_are_reachable_and_test_is_untouched(self):
         cs = read_csv(TABLE)
-        new = data_dataset.balanced_splits(cs, data_dataset.VAL_PER_CLASS, split="val")
+        new = src.data.dataset.balanced_splits(cs, src.data.dataset.VAL_PER_CLASS, split="val")
         count = spec_counts(cs, new)
         labels = sorted({x["label"] for x in cs})
         self.assertEqual({lab: count[(lab, "val")] for lab in labels}, {lab: 20 for lab in labels})
@@ -217,7 +217,7 @@ class BalancedValidationRuleTests(unittest.TestCase):
 class BalancedTestSplitTests(unittest.TestCase):
     def test_the_committed_cases_give_30_test_images_of_every_class(self):
         cs = read_csv(TABLE)
-        new = data_dataset.balanced_splits(cs)
+        new = src.data.dataset.balanced_splits(cs)
         c = spec_counts(cs, new)
         labels = sorted({x["label"] for x in cs})
         self.assertEqual({lab: c[(lab, "test")] for lab in labels}, {lab: 30 for lab in labels})
@@ -227,7 +227,7 @@ class BalancedTestSplitTests(unittest.TestCase):
         for x in cs:
             groups.setdefault(x["group_id"], set()).add(new[x["isic_id"]])
         self.assertTrue(all(len(s) == 1 for s in groups.values()))
-        self.assertEqual(data_dataset.balanced_splits(cs), new)                                 # the same again
+        self.assertEqual(src.data.dataset.balanced_splits(cs), new)                                 # the same again
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -240,11 +240,11 @@ class CommittedQuestionMetricTests(unittest.TestCase):
         path = Path(os.environ.get("THESIS_DATA", ROOT / "data")) / "views" / "multimodal" / "test.jsonl"
         if not path.is_file():
             self.skipTest("data/views/ is not there")
-        qa = evaluation_evaluator.load(path)
-        right = evaluation_diagnostic.diagnosis_metrics(qa, {i: {"pred": q["answer"]} for i, q in qa.items()})
+        qa = src.evaluation.evaluator.load(path)
+        right = src.evaluation.diagnostic.diagnosis_metrics(qa, {i: {"pred": q["answer"]} for i, q in qa.items()})
         self.assertEqual(right["accuracy"], 1.0)
         self.assertEqual(sum(r["support"] for r in right["per_class"].values()), len(qa))
-        always_a = evaluation_diagnostic.diagnosis_metrics(qa, {i: {"pred": "A"} for i in qa})
+        always_a = src.evaluation.diagnostic.diagnosis_metrics(qa, {i: {"pred": "A"} for i in qa})
         self.assertLess(always_a["accuracy"], 0.25)  # "A" is a different class in each question
         self.assertGreater(sum(r["recall"] > 0 for r in always_a["per_class"].values()), 1)  # "A" picks several classes
 
@@ -252,6 +252,17 @@ class CommittedQuestionMetricTests(unittest.TestCase):
 # ----------------------------------------------------------------------------------------------------------------------
 # the scripts as a user runs them, and the pipeline status of the committed data
 # ----------------------------------------------------------------------------------------------------------------------
+LAYOUT = {                                         # the researcher's layout of src/ (2026-11-25)
+    ".": ["__init__.py", "main.py"],
+    "data": ["__init__.py", "dataset.py", "loaders.py", "preprocessing.py", "views.py"],
+    "models": ["__init__.py", "embeddings.py", "llm.py"],
+    "retrieval": ["__init__.py", "corpus.py", "images.py", "indexer.py", "reranker.py", "retriever.py"],
+    "pipelines": ["__init__.py", "base.py", "baseline_rag.py", "llm_only.py", "proposed_rag.py", "standard_rag.py"],
+    "evaluation": ["__init__.py", "diagnostic.py", "evaluator.py", "metrics.py", "references.py", "retrieval.py"],
+    "utils": ["__init__.py", "common.py", "io.py", "logging.py", "reproducibility.py"],
+}
+
+
 class CommandLineTests(unittest.TestCase):
     """Every script and command answers --help in a fresh Python process (no import problem, no missing package at the start)."""
 
@@ -261,7 +272,7 @@ class CommandLineTests(unittest.TestCase):
     def test_every_command_answers_help_and_an_unknown_command_is_refused(self):
         needs_images = {"preprocess", "features"}                      # cv2, pandas, scikit-learn
         needs_more = {"visual-calibrate", "visual-index"}               # numpy only, but checked like the others
-        for name in src_main.COMMANDS:
+        for name in src.main.COMMANDS:
             with self.subTest(name):
                 if name in needs_images and not importlib.util.find_spec("cv2"):
                     continue
@@ -273,20 +284,22 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(self.run_main("nonsense").returncode, 2)
         self.assertEqual(self.run_main("--help").returncode, 0)
 
-    def test_the_one_entry_point_and_the_packages_are_the_only_code_and_the_old_scripts_are_gone(self):
-        """The 2026-11-25 restructuring: src/main.py is the only script; the code is in the seven packages (researcher's approval)."""
-        self.assertEqual(sorted(p.name for p in SRC.glob("*.py")), ["__init__.py", "main.py"])
-        self.assertEqual(sorted(p.name for p in SRC.iterdir() if p.is_dir() and not p.name.startswith((".", "__"))),
-                         ["data", "evaluation", "knowledge", "models", "pipelines", "retrieval", "utils"])
+    def test_src_has_the_layout_the_researcher_chose(self):
+        """Researcher's layout (2026-11-25, final): data, models, retrieval, pipelines, evaluation and utils packages and main.py."""
+        folders = sorted(p.name for p in SRC.iterdir() if p.is_dir() and not p.name.startswith((".", "__")))
+        self.assertEqual(folders, sorted(k for k in LAYOUT if k != "."))
+        for folder, files in LAYOUT.items():
+            with self.subTest(folder):
+                self.assertEqual(sorted(p.name for p in (SRC / folder).glob("*.py")), files)
 
 
 @unittest.skipUnless((DATA / ALL_CASES).is_file(), "the dataset tables are not in data/ yet")
 class PipelineStatusTests(unittest.TestCase):
     def test_no_data_step_of_the_committed_folder_has_a_problem(self):
-        for name, status, note in utils_status.check(str(DATA), str(ROOT / "results")):
+        for name, status, note in src.main.check(str(DATA), str(ROOT / "results")):
             if not name.startswith("llm_only"):
                 with self.subTest(name):
-                    self.assertNotEqual(status, utils_status.PROBLEM, note)
+                    self.assertNotEqual(status, src.main.PROBLEM, note)
 
     def test_a_dry_run_shows_the_prompt_without_any_key(self):
         done = subprocess.run([sys.executable, "-m", "src.main", "llm-only", "--model", "gpt-4o", "--view", "text_only",
@@ -318,7 +331,7 @@ NOT_YET = {"configs"}        # approved on 2026-11-25; Git keeps no empty folder
 class LineEndingTests(unittest.TestCase):
     def test_every_text_file_the_code_writes_has_lf_line_endings_on_windows_too(self):
         """Approved 2026-11-25: on Windows, open(..., "w") writes CRLF, so a file's fingerprint differed from the same file in Git.
-        Every open() that writes text must say newline= (the helpers in src/utils/io.py write LF)."""
+        Every open() that writes text must say newline= (the helpers in src/utils/common.py write LF)."""
         import ast
         missing = []
         for path in sorted(SRC.rglob("*.py")):
@@ -346,14 +359,11 @@ class WorkspaceTests(unittest.TestCase):
             present = {p.name for p in ROOT.iterdir() if p.name not in {".git", ".ruff_cache", "__pycache__", ".venv", "venv", ".env"}}
             self.assertEqual(sorted(present - TOP_LEVEL), [])
 
-    def test_the_tests_are_in_the_four_folders_the_researcher_chose(self):
-        """Researcher's correction (2026-11-25): tests/unit, tests/system, tests/integration and tests/acceptance."""
-        folders = sorted(p.name for p in (ROOT / "tests").iterdir() if p.is_dir() and not p.name.startswith((".", "__")))
-        self.assertEqual(folders, ["acceptance", "integration", "system", "unit"])
-        self.assertEqual(sorted(p.name for p in (ROOT / "tests").glob("*.py")), ["__init__.py"])
-        for folder in folders:
-            self.assertTrue((ROOT / "tests" / folder / "__init__.py").is_file(), folder)
-            self.assertTrue(list((ROOT / "tests" / folder).glob("test_*.py")), folder)
+    def test_the_tests_are_four_files_in_one_folder(self):
+        """Researcher's request (2026-11-25, second clean-up): tests/__init__.py and unit, integration, system, acceptance."""
+        self.assertEqual([p.name for p in (ROOT / "tests").iterdir() if p.is_dir() and not p.name.startswith((".", "__"))], [])
+        self.assertEqual(sorted(p.name for p in (ROOT / "tests").glob("*.py")),
+                         ["__init__.py", "acceptance.py", "integration.py", "system.py", "unit.py"])
 
     def test_the_data_folder_holds_the_approved_folders(self):
         """Approved 2026-11-25, with data/corpus/ simplified from data/knowledge/corpus/ the same day (researcher's request)."""
@@ -361,19 +371,26 @@ class WorkspaceTests(unittest.TestCase):
             self.skipTest("git is not available")
         self.assertEqual(sorted({p.split("/")[1] for p in tracked("data")}), ["annotations", "corpus", "datasheet.md", "processed", "views"])
         for constant in ("CORPUS_DIR", "PROCESSED_CASES", "OFFICIAL_LABELS", "VIEWS_DIR"):          # the code points to these folders
-            self.assertTrue((ROOT / "data" / getattr(utils_common, constant)).is_dir(), constant)
-        self.assertTrue((ROOT / "data" / utils_common.REFERENCE_TEXTS).is_file())
+            self.assertTrue((ROOT / "data" / getattr(src.utils.common, constant)).is_dir(), constant)
+        self.assertTrue((ROOT / "data" / src.utils.common.REFERENCE_TEXTS).is_file())
 
-    def test_the_results_folder_is_flat_where_it_can_be(self):
-        """Researcher's request (2026-11-25): no needless nesting. Runs: results/<system>/<view>/<model>_<split>/; a system's own
-        comparisons and retrieval checks beside its views; tables across systems in comparisons/; data checks in data_quality/."""
+    def test_every_approach_has_the_three_view_folders_and_comparisons_have_their_own_folder(self):
+        """Researcher's request (2026-11-25, second clean-up): results/<approach>/<view>/ for the four approaches and the three views
+        only; comparisons and tables across runs in comparisons/, never in an approach folder; data checks in data_quality/."""
         if not (shutil.which("git") and (ROOT / ".git").exists()):
             self.skipTest("git is not available")
         files = tracked("results")
+        approaches = ["baseline_rag", "llm_only", "proposed_rag", "standard_rag"]
         self.assertEqual(sorted({p.split("/")[1] for p in files}),
-                         ["comparisons", "data_quality", "evaluation_guide.md", "llm_only", "results.md", "standard_rag"])
-        for folder in ("comparisons", "data_quality"):
-            self.assertEqual([p for p in files if p.startswith(f"results/{folder}/") and p.count("/") > 2], [], folder)
+                         sorted(["comparisons", "data_quality", "evaluation_guide.md", "results.md"] + approaches))
+        for a in approaches:
+            with self.subTest(a):
+                self.assertEqual(sorted({p.split("/")[2] for p in files if p.startswith(f"results/{a}/")}), sorted(VIEWS))
+        self.assertEqual([p for p in files if "compare" in p.split("/")[-1] and not p.startswith("results/comparisons/")], [])
+        self.assertEqual(sorted({p.split("/")[2] for p in files if p.startswith("results/comparisons/")}),
+                         ["figures", "metrics.csv", "summary.csv", "tables"])
+        self.assertEqual(sorted(SYSTEMS), approaches)
+        self.assertEqual([p for p in files if p.startswith("results/data_quality/") and p.count("/") > 2], [])
         self.assertEqual([p for p in files if p.count("/") > 4], [])                             # nothing below a run folder
 
     def test_the_readme_holds_only_the_overview_and_the_objectives(self):

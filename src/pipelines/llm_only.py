@@ -3,8 +3,11 @@ import argparse
 import os
 
 from src.models.llm import MODELS, make_client
-from src.pipelines.base import run, run_folder
-from src.pipelines.prompts import INSTRUCTIONS
+from src.pipelines.base import (
+    INSTRUCTIONS,
+    run,
+    run_folder,
+)
 from src.utils.common import SPLITS, VIEWS, load_env
 from src.utils.logging import get_logger
 
@@ -26,7 +29,7 @@ def parse_args(argv=None):
 
 def llm_only_main(argv=None):
     args = parse_args(argv)
-    final, partial = run_folder(args.results, args.model, args.view, args.split)
+    final, _ = run_folder(args.results, args.model, args.view, args.split)
     name = f"llm_only.{args.model}.{args.view}.{args.split}"
     log, client = get_logger(name), None
     if not args.dry_run and not os.path.isdir(final):
@@ -34,5 +37,4 @@ def llm_only_main(argv=None):
         if unusable:
             log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
         client = make_client(args.model, log)                       # stops here when the key is missing
-        log = get_logger(name, os.path.join(partial, "run.log"))
     return run(args, client, log)

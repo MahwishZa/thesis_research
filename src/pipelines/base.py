@@ -1,74 +1,112 @@
-"""Baseline 1, LLM only (no retrieval), and baseline 2, standard RAG: asks one of the research models every question of one view and
-split, and saves its answers.
-The models are used as they are (pre-trained, no fine-tuning), as in RAG^2 (Sohn et al. 2025, section 4: "as-is, without further
-fine-tuning").
-
-The research models and their fixed settings are in MODELS below; a setting is never changed for one run (a changed setting is a
-new entry with a new name). Fairness: every model gets the same system text, question, options and instruction; no model uses
-hidden reasoning (Claude: thinking "between_tools" = off for a request without tools; Gemini: reasoning "minimal"; GPT-4o and
-Llama have none), and every model writes the same short visible rationale before its answer.
-  claude-sonnet-5-5   Anthropic API, official `anthropic` package     key: CLAUDE_API_KEY (or ANTHROPIC_API_KEY)
-  gpt-4o              OpenRouter, pinned to OpenAI's own host           key: OPENROUTER_API_KEY
-  gemini-3.8-flash    OpenRouter, pinned to Google AI Studio            key: OPENROUTER_API_KEY
-  llama-4-maverick    OpenRouter, pinned to Parasail (fp8)              key: OPENROUTER_API_KEY
-The keys are read from the .env file in the repository folder (git-ignored) or from the environment, and never written anywhere.
-
-Each reply has two lines (prompt llm_only, set 2026-11-23): "Reasoning and evidence: <at most three sentences naming the findings of
-the case that support the choice>" and "Answer: <the letter of the most likely option> (<its name>)", e.g. in the form "Answer: C (Melanoma)"
-for the options of that question. The letter decides: the name is there for the reader and is kept in raw_output. The answer is the first option letter on
-the last "Answer:" line; the reasoning is the text before it (the label is removed). There is no top-3 list (top-k accuracy is
-not reported) and no yes/no evidence flag: the model states the evidence itself, and the evaluation (src/evaluation/) scores that text. A reply without a letter, or a question the host's content
-moderation refuses, is saved as an invalid answer (wrong in the evaluation (src/evaluation/)) and kept so it can be checked.
-
-Output: results/llm_only/<view>/<model>_<split>/
-  predictions.jsonl   one line per question: id, pred (letter or null), valid, rationale (the reasoning and evidence),
-                      raw_output, finish_reason, served_by,
-                      tokens_in, tokens_out, seconds, time
-  run.json            the model's settings, the prompt, the SHA-256 of the question file, counts, status
-  run.log             progress and errors
-While a run is unfinished its folder ends in ".partial" (never committed); it loses that ending when every question has an answer.
-Checkpointing: each answer is written as soon as it arrives; running the same command again continues where it stopped.
-Order: the questions are asked in a fixed shuffled order (asking_order), so a --limit trial or an interrupted run covers all
-classes; the scores do not depend on the order.
-An API error that retrying cannot fix (wrong key, no credit, ...) stops the run; nothing already answered is lost.
-
-Standard RAG (python -m src.main standard-rag, added 2026-11-24): the same models, prompt wording and answer rule, plus retrieval:
-  1. query      the patient facts of the question (an image-only question has none, so its query is a fixed sentence and every
-                image-only question gets the same passages). Nothing is written by a model: the query is made of the question's own
-                words. The true class, the options and the corpus tags are never in the query.
-  2. retrieval  the MedCPT query encoder and the index built by `python -m src.main index`; the k = 3 passages with the highest cosine
-                similarity of the whole corpus (no filter by disease).
-  3. prompt     the question, the options, the numbered passages (title and text; tags are not shown) and the instruction: the two lines
-                above and a third line, "Evidence: [<number>] "<one sentence copied word for word from that passage>"" or
-                "Evidence: none". The sentence is checked against the passage by the evaluation (src/evaluation/) (a quote is never trusted).
-  Output: results/standard_rag/<view>/<model>_<split>/ with the same files as above and, in every line, query, contexts (rank, score,
-  chunk_id, title, text, tags: the tags are for the evaluation only) and evidence.
-  evidence is null for an explicit "Evidence: none"; a missing or unreadable line gives {"chunk_id": null, "quote": "", "unparsed": true}.
-
-Usage (on the laptop):
-  python -m src.main llm-only --model gpt-4o --view text_only --split val --dry-run --limit 2     # see the prompt; free
-  python -m src.main llm-only --model gpt-4o --view text_only --split val --limit 5              # a small paid trial
-  python -m src.main llm-only --model gpt-4o --view text_only --split test                       # a full run
-  python -m src.main standard-rag --model gpt-4o --view text_only --split val --dry-run --limit 2 # prompts with passages; no API call"""
+"""What every system shares: the prompts and the answer format, and the run of one system on one view and split (resumable,
+checkpointed)."""
 import datetime
 import hashlib
 import json
 import os
+import re
 import time
 
 from src.data.loaders import question_file
 from src.models.llm import MODELS, ApiError, Refused, image_b64
-from src.pipelines.prompts import (
-    PROMPT_NAME,
-    RAG_PROMPT_NAME,
-    SYSTEM,
-    instruction,
-    parse_answer,
-    parse_evidence,
-    user_text,
-)
 from src.utils.io import read_jsonl, write_json
 from src.utils.reproducibility import SEED, text_sha256
+
+PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
+SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
+          "This is a research benchmark: no decision about a patient depends on your answer.")
+# What the model may name as findings depends on the view: it must never be told to cite an image it was not given (2026-11-24).
+FINDINGS_IN = {"text_only": "in the patient facts", "image_only": "in the image",
+               "multimodal": "in the image and/or in the patient facts"}
+INSTRUCTIONS = {
+    "rationale": ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
+                  "this case, {findings}, that support your choice>\". Second line: "
+                  "\"Answer: <the letter of the most likely option> (<the name of that option>)\"."),
+    "answer_only": "Reply only with one line: \"Answer: <the letter of the most likely option> (<the name of that option>)\".",
+}
+ANSWER = re.compile(r"(?i:answer)\**\s*[:\uff1a]\**\s*([^\n]*)")
+LETTER = re.compile(r"(?<![A-Za-z])([A-H])(?![A-Za-z])")
+REASONING_LABEL = re.compile(r"(?i)^[\s*_#>]*reasoning\s+and\s+evidence\s*\**\s*[:\-]\s*\**\s*")
+LONE_LETTER = re.compile(r"^\W*\(?([A-H])\)?[.)]?\W*$")
+
+
+# ---- prompt and answer (no internet) ------------------------------------------------------------------------------------
+def instruction(style, view):
+    """The instruction of a style for one view (the words about where the findings may come from change with the view)."""
+    return INSTRUCTIONS[style].replace("{findings}", FINDINGS_IN[view])
+
+
+def user_text(q, style="rationale", view="multimodal"):
+    options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
+    return f"{q['question']}\n\nOptions:\n{options}\n\n{instruction(style, view)}"
+
+
+def tidy_reasoning(text):
+    """The reasoning without the label "Reasoning and evidence:" and without markdown marks around it."""
+    return REASONING_LABEL.sub("", text.strip("*_# \n"))
+
+
+def parse_answer(text, letters="ABCDEFGH"):
+    """The answer of a reply, read with one fixed rule:
+      pred       the first option letter on the last "Answer:" line (a reply that is only a letter also counts)
+      rationale  the reasoning and evidence: the text before that "Answer:" line, without the label "Reasoning and evidence:";
+                 when nothing comes before the answer line, the text after it"""
+    text = text or ""
+    pred, cut, end = None, None, None
+    for m in ANSWER.finditer(text):
+        found = [x for x in LETTER.findall(m.group(1)) if x in letters]
+        if found:
+            pred, cut, end = found[0], m.start(), m.end()
+    if pred is None:
+        lone = LONE_LETTER.match(text.strip())
+        if lone and lone.group(1) in letters:
+            pred, cut, end = lone.group(1), 0, len(text)
+    if cut is None:
+        return {"pred": None, "rationale": REASONING_LABEL.sub("", text.strip())}
+    return {"pred": pred, "rationale": tidy_reasoning(text[:cut]) or tidy_reasoning(text[end:])}
+
+
+# ---- standard RAG: query, retrieval, prompt and evidence (no internet; the encoder needs torch) ---------------------------
+RAG_PROMPT_NAME = "standard_rag"
+RAG_INSTRUCTION = ("Reply in exactly this form. First line: \"Reasoning and evidence: <at most three sentences that name the findings of "
+                   "this case, {findings}, that support your choice; mention a passage as {numbers} only if it supports your "
+                   "choice>\". Second line: \"Answer: <the letter of the most likely option> (<the name of that option>)\". Third line: "
+                   "\"Evidence: [<the number of one passage>] <one sentence copied word for word from that passage that supports your "
+                   "answer, between quotation marks>\" or \"Evidence: none\" if no passage supports your answer.")
+PASSAGES_HEADER = "Retrieved passages (from medical sources; they may not be about this case):"
+EVIDENCE_LINE = re.compile(r"(?im)^\W*evidence\s*\**\s*[:\-]\**\s*(.*)$")
+EVIDENCE_CITATION = re.compile(r"\[\s*(\d+)\s*\]\s*[\"\u201c\u2018']?(.*?)[\"\u201d\u2019']?\s*$", re.S)
+UNPARSED = {"chunk_id": None, "quote": "", "unparsed": True}
+
+
+def rag_instruction(view, k=3):
+    """The instruction of the RAG prompt for one view and k passages."""
+    numbers = "[1]" if k == 1 else ", ".join(f"[{i}]" for i in range(1, k)) + f" or [{k}]"
+    return RAG_INSTRUCTION.replace("{findings}", FINDINGS_IN[view]).replace("{numbers}", numbers)
+
+
+def rag_text(q, view, contexts):
+    options = "\n".join(f"{letter}. {text}" for letter, text in q["options"].items())
+    passages = "\n\n".join(f"[{n}] {c['title']}\n{c['text']}" if c.get("title") else f"[{n}]\n{c['text']}"
+                            for n, c in enumerate(contexts, 1))
+    return f"{q['question']}\n\nOptions:\n{options}\n\n{PASSAGES_HEADER}\n{passages}\n\n{rag_instruction(view, len(contexts))}"
+
+
+def parse_evidence(text, contexts):
+    """The evidence line of a reply: None for an explicit "Evidence: none"; {"chunk_id", "quote"} for "Evidence: [2] "...""
+    (chunk_id is the id of passage 2, or None when the number is outside the list, so the quote is not found); UNPARSED when
+    there is no usable line. Whether the quote is really in the passage is checked by the evaluation (src/metrics.py), never here."""
+    lines = EVIDENCE_LINE.findall(text or "")
+    if not lines:
+        return dict(UNPARSED)
+    last = lines[-1].strip().strip("*_ ")
+    if re.match(r"(?i)none\b", last):
+        return None
+    m = EVIDENCE_CITATION.match(last)
+    if not m or not m.group(2).strip():
+        return dict(UNPARSED)
+    n = int(m.group(1))
+    return {"chunk_id": contexts[n - 1]["chunk_id"] if 1 <= n <= len(contexts) else None, "quote": m.group(2).strip()}
 
 
 def add_tokens(a, b):
@@ -189,17 +227,9 @@ def run(args, client, log, rag=None):
         final_status = "complete" if complete else "stopped" if status == "stopped" else "unfinished"
         write_json(info_path, {"settings": settings, "status": final_status, "answered": len(done), "of": len(questions), "question_order": ORDER})
     if complete:
-        close_log_files(log)
         os.replace(partial, final)
         log.info(f"complete: {final}")
         return final
     log.info(f"unfinished ({len(done)}/{len(questions)}); run the same command again to continue")
     return partial
 
-
-def close_log_files(log):
-    """Closes the run's log file, so its folder can be renamed (Windows does not rename a folder with an open file)."""
-    for h in list(log.handlers):
-        if getattr(h, "baseFilename", None):
-            h.close()
-            log.removeHandler(h)

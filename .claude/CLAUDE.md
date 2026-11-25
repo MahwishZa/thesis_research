@@ -14,17 +14,23 @@ third party is credited anywhere in the repository.
   result, and remind her to re-sync her laptop with `git fetch` and `git reset --hard origin/main`.
 - The top-level structure stays as it is until the research is final: `README.md`, `requirements.txt`, `.claude/`, `configs/`, `data/`,
   `src/`, `results/` and `tests/` (plus the dot files; `configs/` approved 2026-11-25, it appears with its first settings file). Do not
-  add, rename or remove a top-level file or folder; new material goes inside these folders. A test in `tests/system/test_system.py`
+  add, rename or remove a top-level file or folder; new material goes inside these folders. A test in `tests/system.py`
   checks this. `README.md` holds only "Overview" and "Objectives" (also tested).
-- Layout inside (approved 2026-11-25): `data/{raw, processed/{cases,images}, annotations/{official_labels, reference_texts.json},
-  corpus, views/<view>/{train,validation,test}.jsonl}` (`data/corpus/` was `data/knowledge/corpus/` for a few hours: simple, flat names
-  are preferred); `src/main.py` is the one entry point (`python -m src.main <command>`),
-  code in `src/{utils, data, knowledge, models, retrieval, pipelines, evaluation}` (`pipelines/base.py` holds what all systems share;
-  `evaluation/statistics.py` the tests and intervals; `knowledge/lookalike.py` the Kaggle look-alike check);
-  `results/<system>/<view>/<model>_<split>/` (a system's own comparisons and retrieval checks beside its views), `results/comparisons/`
-  (tables across systems), `results/data_quality/` (flat); tests in `tests/{unit, system, integration,
-  acceptance}` (run `python -m unittest discover -s tests -t .`). No stub for the RAG² baseline or the proposed RAG before its design.
-  The move changed only image paths and the validation file names: `data/views/provenance.json` records the SHA-256 before and after.
+- Layout inside (researcher's final choice, 2026-11-25): `data/{raw, processed/{cases,images}, annotations (4 label files +
+  reference_texts.json), corpus, views/<view>/{train,validation,test}.jsonl}`. `src/`: `main.py` (the one entry point,
+  `python -m src.main <command>`, and the pipeline status); `data/{loaders, dataset, views, preprocessing (also the feature check)}`;
+  `models/{llm, embeddings}`; `retrieval/{corpus (text library), images (image library, Kaggle look-alike check), indexer (text and
+  image indexes), retriever (BM25, rank fusion, the query of each view), reranker}`; `pipelines/{base (prompts and the run shared by
+  every system), llm_only, standard_rag, baseline_rag, proposed_rag}` (the last two hold only a docstring until designed);
+  `evaluation/{metrics (statistics, hallucination and evidence), diagnostic, retrieval, evaluator, references (reference texts)}`;
+  `utils/{common, io, logging, reproducibility}`. `results/<approach>/<view>/<model>_<split>/` for llm_only, standard_rag,
+  baseline_rag and proposed_rag, three view folders each (retrieval checks beside the runs of their view); `results/comparisons/`
+  holds `summary.csv` (one row per run), `metrics.csv` (every number of every report), `tables/` (model and view comparisons, the
+  similarity check) and `figures/`; `results/data_quality/`. `tests/` holds `__init__.py` and `unit.py`, `integration.py`, `system.py`,
+  `acceptance.py` (run `python -m unittest`). Runs write no `run.log` (researcher, 2026-11-25: repetitive; predictions.jsonl and
+  run.json hold everything). `data/processed/` keeps its two folders: the image paths are inside every question file and the approved
+  runs. The move changed only image paths and the validation file names: `data/views/provenance.json` records the SHA-256 before and
+  after.
 - One environment (`.venv`, 2026-11-25): `.venv-visual` was removed; the laptop's `.venv` holds torch 2.15.0, transformers 5.24.0,
   sentence-transformers 6.3.0 and open_clip_torch 4.2.2 (pip freeze, matches `requirements.txt`); run commands with
   `.venv\Scripts\python.exe` (the global Python is not the project environment). Confirmed:
@@ -94,7 +100,9 @@ third party is credited anywhere in the repository.
   different-lesion images, so it is a strict copy filter, not a calibrated test (kept unchanged: researcher's approval, 2026-11-25; report it as such).
   Caption records in the text index (built 2026-11-25, researcher's approval; laptop index rebuilt the same day: 3,416 records,
   42 captions added, 43 already in the corpus; validation Hit@3: text hybrid-rerank 48.8% (random 38.5%), image 40.0% (39.4%),
-  fused 55.0% (38.7%)): `index` adds the picture-and-caption records to the MedCPT/BM25 text index, except captions already in the corpus;
+  fused 55.0% (38.7%); BM25 alone added to `retrieval-eval` on 2026-11-25, researcher's approval, to complete the comparison; laptop result, text only,
+  Hit@3: BM25 alone 55.6% (45.4 to 65.2), above the approved hybrid-rerank 48.8% with overlapping intervals; whether to revisit the
+  approved choice is the researcher's decision, open): `index` adds the picture-and-caption records to the MedCPT/BM25 text index, except captions already in the corpus;
   repeated texts are removed before the model sees them. The text index is built with --exclude-reference-pages and
   --exclude-reference-overlap (as on the laptop since 2026-11-24; `index` refuses other settings unless --replace). The model gets captions only, never the library picture (researcher,
   2026-11-25). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the

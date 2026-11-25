@@ -1,12 +1,8 @@
-# Python leftovers, virtual environments, lint cache and test-coverage data
+# Python leftovers, the virtual environment and the lint cache
 __pycache__/
 *.py[cod]
 .ruff_cache/
 .venv/
-.venv-*/
-venv/
-.coverage
-htmlcov/
 
 # The dataset in data/: the tables, question files, label files and data card are committed; the Kaggle download
 # (data/raw/) and the cleaned images (data/processed/images/) stay on the researcher's laptop.
@@ -15,13 +11,12 @@ htmlcov/
 /data/processed/images/
 *.zip
 
-# The knowledge corpus: its passages (published text under the sources' licences) and the download cache stay on the laptop;
-# data/corpus/manifest.csv and corpus_card.json (no text) are committed.
+# The knowledge library: its passages (published text under the sources' licences), the download cache, the indexes and the
+# image library stay on the laptop; manifest.csv, corpus_card.json, audit.json and visual_card.json (no text) are committed.
 /data/corpus/passages.jsonl
 /data/corpus/cache/
 /data/corpus/index/
 /data/corpus/visual/
-/data/corpus_trial/
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes), half-written files and run logs
 *.partial/

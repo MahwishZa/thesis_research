@@ -8,9 +8,17 @@ import os
 import re
 from html.parser import HTMLParser
 
-from src.knowledge.chunking import chunk, sentences
-from src.knowledge.collect import TEXTBOOK_LICENCE, Fetcher, dermoscopedia_api, page_url
-from src.knowledge.extract import BIBLIOGRAPHY, TEMPLATE, html_paragraphs
+from src.retrieval.corpus import (
+    BIBLIOGRAPHY,
+    TEMPLATE,
+    TEXTBOOK_LICENCE,
+    Fetcher,
+    chunk,
+    dermoscopedia_api,
+    html_paragraphs,
+    page_url,
+    sentences,
+)
 from src.utils.common import CLASSES, CORPUS_DIR, REFERENCE_TEXTS
 from src.utils.io import write_json
 from src.utils.logging import get_logger
@@ -21,7 +29,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 # ----------------------------------------------------------------------------------------------------------------------
 # references: the reference texts (python -m src.main references)
 # ----------------------------------------------------------------------------------------------------------------------
-# Builds the reference text of each of the 8 diseases for the semantic-similarity score (src/evaluation/hallucination.py): a paragraph quoted from
+# Builds the reference text of each of the 8 diseases for the semantic-similarity score (src/metrics.py): a paragraph quoted from
 # Dermoscopedia (the dermoscopy wiki of the International Dermoscopy Society, CC BY-NC-SA 4.0), never written by us or by an AI.
 #
 # The fixed rule (applied the same way to every disease; steps 1-3 set on 2026-11-22 from the site's page layout, seen with
@@ -40,7 +48,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #                leftovers of removed figure numbers ("(Figure )", ". ."), and without a reference list written as plain text at the end of a
 #                section (cut from its first entry; see BIBLIOGRAPHY). A text under --min-words words is left out and listed under
 #                "skipped". So a disease has one reference text per criterion section, not only the first 200 words of its page.
-# The semantic-similarity score (src/evaluation/hallucination.py) compares an explanation with every reference text of its true class and keeps the
+# The semantic-similarity score (src/metrics.py) compares an explanation with every reference text of its true class and keeps the
 # highest cosine (the best-matching reference).
 # The search term of melanocytic nevus is the site's general page on nevus patterns: the page titled "Nevus" is about nail nevi.
 #
@@ -301,12 +309,10 @@ def show_tables(fetch, api, log):
 def token_check(refs, log, model=None):
     """Counts every text's tokens with the similarity model's tokenizer; the model reads at most max_seq_length tokens and ignores
     the rest. Returns (the largest count, the model's limit)."""
-    from sentence_transformers import SentenceTransformer
-
-    from src.evaluation.hallucination import SIMILARITY_MODEL
-    enc = SentenceTransformer(model or SIMILARITY_MODEL)
-    counts = {(c, k): len(enc.tokenizer(t["text"])["input_ids"]) for c, r in refs.items() for k, t in enumerate(r["texts"])}
-    limit = enc.max_seq_length
+    from src.evaluation.metrics import SIMILARITY_MODEL, sentence_encoder
+    enc = sentence_encoder(model or SIMILARITY_MODEL)
+    counts = {(c, k): enc.n_tokens(t["text"]) for c, r in refs.items() for k, t in enumerate(r["texts"])}
+    limit = enc.max_tokens
     for (c, k), n in counts.items():
         log.info(f"  {c} text {k + 1}: {n} tokens" + ("  <- longer than the model reads" if n > limit else ""))
     log.info(f"token check: the longest text has {max(counts.values())} tokens; the model reads at most {limit}; "
@@ -376,31 +382,3 @@ def references_main(argv=None):
     if a.token_check:
         token_check(refs, log)
     return refs
-
-
-SHINGLE_WORDS = 8          # a passage and a reference text "share a stretch" when they have the same 8 words in a row
-OVERLAP_LIMIT = 0.5        # a passage is a copy of a reference text when half or more of its 8-word stretches are in that text
-
-
-def shingles(text, n=SHINGLE_WORDS):
-    words = re.findall(r"[a-z0-9]+", (text or "").lower())
-    return {" ".join(words[i:i + n]) for i in range(max(0, len(words) - n + 1))}
-
-
-def reference_shingles(path):
-    """The 8-word stretches of every reference text of every class."""
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"{path} is needed for the reference-text checks")
-    with open(path, encoding="utf-8") as f:
-        refs = json.load(f)
-    out = set()
-    for r in refs.values():
-        for t in r["texts"]:
-            out |= shingles(t["text"])
-    return out
-
-
-def overlap_share(text, ref_shingles):
-    """Share of the passage's 8-word stretches that also occur in the reference texts (0 for a passage shorter than 8 words)."""
-    sh = shingles(text)
-    return len(sh & ref_shingles) / len(sh) if sh else 0.0
