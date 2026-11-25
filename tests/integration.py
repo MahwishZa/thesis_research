@@ -949,7 +949,8 @@ class BuildTests(unittest.TestCase):
                 os.environ.pop("NCBI_API_KEY", None)
                 src.retrieval.corpus.corpus_main(argv)
                 os.environ.pop("HF_TOKEN", None)
-            log_text = out.getvalue() + Path(d, "corpus", "build_corpus.log").read_text(encoding="utf-8")
+            log_text = out.getvalue()
+            self.assertFalse(Path(d, "corpus", "build_corpus.log").exists())        # no log file (researcher, 2026-11-25)
             card = Path(d, "corpus", "corpus_card.json").read_text(encoding="utf-8")
         self.assertEqual(seen["token"], "hf_SECRET_VALUE")
         self.assertNotIn("hf_SECRET_VALUE", log_text + card)
@@ -1911,7 +1912,7 @@ def fake_visual():
 
 
 def make_rag(k=3, visual=True):
-    """The approved retrieval (hybrid-rerank; the fake re-ranker keeps the fused order) with a fake text index and image index."""
+    """The standard RAG's retrieval (BM25, researcher's choice of 2026-11-25) with a fake text index and image index."""
     from array import array
 
     from src.retrieval.indexer import DenseIndex
@@ -1919,7 +1920,7 @@ def make_rag(k=3, visual=True):
     for p in RAG_CORPUS:
         flat.extend(rag_vec(p["title"] + " " + p["text"]))
     return src.pipelines.standard_rag.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
-                          rag_enc, k, "hybrid-rerank", rerank=lambda q, t: [float(-i) for i in range(len(t))],
+                          rag_enc, k, "bm25",
                           visual=fake_visual() if visual else None)
 
 
@@ -2151,15 +2152,19 @@ class StandardRagRunTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 res = src.pipelines.standard_rag.retrieval_eval_main(["--view", view, "--data", self.data, "--out", out], rag_for=rag_for,
                                              visual=(vindex, vectors))
-            expected = ["image"] if view == "image_only" else ["hybrid-rerank", "image", "fused"]
+            modes = list(src.pipelines.standard_rag.RETRIEVAL_MODES)
+            expected = ["image"] if view == "image_only" else modes + ["image"] + [f"fused:{m}" for m in modes]
             self.assertEqual(list(res), expected)
             saved = json.loads(Path(out).read_text(encoding="utf-8"))
             self.assertEqual(set(saved["random_from_the_same_pool"]), set(expected))
             if view == "multimodal":                                    # the fused list holds text passages too, so it scores differently
                 share = saved["share_of_top3_from_the_image_library"]
                 self.assertEqual((share["image"], share["hybrid-rerank"]), (1.0, 0.0))
-                self.assertTrue(0.0 < share["fused"] < 1.0)                 # both sources reach the top 3
-                self.assertEqual(len(saved["random_from_the_same_pool"]), 3)
+                self.assertTrue(0.0 < share["fused:bm25"] < 1.0)            # both sources reach the top 3
+                self.assertEqual(len(saved["random_from_the_same_pool"]), len(expected))
+                paired = saved["paired_hit3_vs_approved"]                # every search against the approved one, same questions
+                self.assertEqual(set(paired), set(expected) - {"fused:bm25"})
+                self.assertTrue(all(r["against"] == "fused:bm25" and 0 <= r["p_value"] <= r["p_holm"] <= 1 for r in paired.values()))
         with self.assertRaises(KeyError):
             src.retrieval.retriever.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
 

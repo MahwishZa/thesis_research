@@ -114,9 +114,9 @@ def add_tokens(a, b):
 
 
 def rag_system(mode):
-    """The results folder of a standard-RAG run: the approved retrieval (hybrid-rerank, researcher's decision 2026-11-24) is the
+    """The results folder of a standard-RAG run: the chosen retrieval (BM25, researcher's decision 2026-11-25) is the
     standard RAG; any other mode is a trial with its own folder, so it never skips or overwrites a standard-RAG run."""
-    return "standard_rag" if mode == "hybrid-rerank" else "standard_rag_" + mode.replace("-", "_")
+    return "standard_rag" if mode == "bm25" else "standard_rag_" + mode.replace("-", "_")
 
 
 # ---- the run (checkpointed) ---------------------------------------------------------------------------------------------

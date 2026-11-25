@@ -61,7 +61,7 @@ def visual_index_args(argv=None):
 
 def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     a = visual_index_args(argv)
-    log = get_logger("visual-index", os.path.join(a.corpus, "build_visual.log"))
+    log = get_logger("visual-index")
     folder = os.path.join(a.corpus, "visual")
     items = read_jsonl(os.path.join(folder, "items_with_images.jsonl"))
     if a.limit:

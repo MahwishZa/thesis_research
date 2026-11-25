@@ -605,7 +605,6 @@ def corpus_args(argv=None):
 
 def corpus_main(argv=None):
     args = corpus_args(argv)
-    get_logger("corpus", os.path.join(args.out, "build_corpus.log"))
     unusable = load_env(args.env_file)                       # a variable already set in the terminal keeps its value
     if unusable:
         log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")

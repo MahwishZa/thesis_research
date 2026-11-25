@@ -6,7 +6,7 @@ import os
 import random
 
 from src.data.loaders import question_file
-from src.evaluation.metrics import percentile
+from src.evaluation.metrics import holm, mcnemar_exact, percentile
 from src.evaluation.retrieval import relevant_counts, retrieval_metrics
 from src.models.embeddings import MEDCPT_QUERY, medcpt_encoder
 from src.models.llm import MODELS, make_client
@@ -25,7 +25,8 @@ from src.utils.io import read_jsonl, write_json
 from src.utils.logging import get_logger
 from src.utils.reproducibility import SEED
 
-RETRIEVAL_MODES = ("bm25", "dense", "hybrid", "hybrid-rerank")     # bm25 and dense alone: comparisons and trials
+RETRIEVAL_MODES = ("bm25", "bm25-rerank", "dense", "hybrid", "hybrid-rerank")     # all but bm25: comparisons and trials
+APPROVED = "bm25"     # the standard RAG's text search (researcher, 2026-11-25: best on validation in both text views; hybrid-rerank before)
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
 
@@ -53,24 +54,27 @@ class StandardRag:
     def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL, visual=None):
         if mode not in RETRIEVAL_MODES:
             raise ValueError(f"unknown retrieval mode {mode!r}")
-        if mode == "hybrid-rerank" and rerank is None:
-            raise ValueError("hybrid-rerank needs a re-ranker")
+        if mode.endswith("-rerank") and rerank is None:
+            raise ValueError(f"{mode} needs a re-ranker")
         self.index, self.encode_query, self.k, self.mode, self.rerank, self.pool = index, encode_query, k, mode, rerank, pool
         self.bm25 = bm25 if bm25 is not None else (BM25Index(index.passages) if mode != "dense" else None)
         self.visual = visual          # (the image index, {Kaggle image file: its saved vector}) for the image views; see load_visual
 
     def retrieve(self, query, k):
         """[(passage, score), ...], best first, for one query text."""
-        if self.mode == "bm25":
-            return self.bm25.search(query, k)
-        vector = self.encode_query([query])[0]
-        if self.mode == "dense":
-            return self.index.search(vector, k)
         pool = max(self.pool, k)
-        fused = reciprocal_rank_fusion([[p for p, _ in self.index.search(vector, pool)], [p for p, _ in self.bm25.search(query, pool)]],
-                                       top=pool)
-        if self.mode == "hybrid":
-            return fused[:k]
+        if self.mode in ("bm25", "bm25-rerank"):
+            fused = self.bm25.search(query, k if self.mode == "bm25" else pool)
+            if self.mode == "bm25":
+                return fused
+        else:
+            vector = self.encode_query([query])[0]
+            if self.mode == "dense":
+                return self.index.search(vector, k)
+            fused = reciprocal_rank_fusion([[p for p, _ in self.index.search(vector, pool)], [p for p, _ in self.bm25.search(query, pool)]],
+                                           top=pool)
+            if self.mode == "hybrid":
+                return fused[:k]
         scores = self.rerank(query, [[p.get("title") or "", p["text"]] for p, _ in fused])
         order = sorted(range(len(fused)), key=lambda i: (-scores[i], i))
         return [(fused[i][0], round(scores[i], 6)) for i in order[:k]]
@@ -101,7 +105,7 @@ class StandardRag:
 
     def settings(self, view="text_only"):
         meta = self.index.meta
-        s = {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode in ("bm25", "dense") else self.pool,
+        s = {"query_encoder": None if self.mode.startswith("bm25") else MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode in ("bm25", "dense") else self.pool,
              "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
              "exclude_reference_pages": meta.get("exclude_reference_pages")}
         if view != "text_only":
@@ -134,8 +138,8 @@ def rag_parse_args(argv=None):
     ap.add_argument("--view", required=True, choices=VIEWS)
     ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
-    ap.add_argument("--retrieval", default="hybrid-rerank", choices=RETRIEVAL_MODES,
-                    help="hybrid-rerank (approved 2026-11-24: dense + BM25, rank fusion, MedCPT cross-encoder); dense or hybrid: trials")
+    ap.add_argument("--retrieval", default=APPROVED, choices=RETRIEVAL_MODES,
+                    help="bm25 (the standard RAG, researcher's choice of 2026-11-25); the other modes are trials in their own folders")
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
@@ -151,9 +155,10 @@ def make_rag(args):
     """The StandardRag of the command line: loads the index and the encoders (laptop: torch and transformers)."""
     folder = args.index or os.path.join(args.data, INDEX_DIR)
     index = read_index(folder, os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))      # stops with a clear message
-    rerank = medcpt_cross_encoder() if args.retrieval == "hybrid-rerank" else None
+    rerank = medcpt_cross_encoder() if args.retrieval.endswith("-rerank") else None
     visual = load_visual(args.data, args.image_encoder) if args.view != "text_only" else None     # the image views search by the image
-    return StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.retrieval, rerank=rerank, visual=visual)
+    encode = None if args.retrieval.startswith("bm25") else medcpt_encoder(MEDCPT_QUERY, 64)      # BM25 needs no query encoder
+    return StandardRag(index, encode, args.k, args.retrieval, rerank=rerank, visual=visual)
 
 
 def standard_rag_main(argv=None, rag=None):
@@ -194,6 +199,21 @@ def retrieval_eval_args(argv=None):
 
 
 INTERVAL_KEYS = ("hit@3", "precision@3", "ndcg@3", "mrr")
+
+
+def paired_hit3(qa, preds, approved):
+    """Each search against the approved one on the same questions: McNemar's exact test on Hit@3 (did a passage of the true class
+    reach the top 3?), with Holm's correction over the comparisons. Empty when the approved search is not among them."""
+    if approved not in preds:
+        return {}
+
+    def hits(pred):
+        return [int(any(qa[i]["gold_label"] in c.get("tags", []) for c in pred[i]["contexts"][:3])) for i in qa]
+    base, others = hits(preds[approved]), [m for m in preds if m != approved]
+    tests = {m: mcnemar_exact([1] * len(qa), hits(preds[m]), base) for m in others}
+    adjusted = holm([t["p_value"] for t in tests.values()])
+    return {m: {"against": approved, "a_hit_b_miss": t["a_right_b_wrong"], "a_miss_b_hit": t["a_wrong_b_right"],
+                "p_value": t["p_value"], "p_holm": round(p, 6)} for (m, t), p in zip(tests.items(), adjusted)}
 
 
 def retrieval_intervals(qa, pred, n_boot=1000, seed=42):
@@ -243,12 +263,12 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
     log = get_logger("retrieval-eval")
     questions = read_jsonl(os.path.join(args.data, question_file(args.view, args.split)))
     qa = {q["id"]: q for q in questions}
-    text_modes = list(args.modes) if args.view == "text_only" else (["hybrid-rerank"] if args.view == "multimodal" else [])
+    text_modes = list(args.modes) if args.view != "image_only" else []          # image only has no text query: the image search alone
     if rag_for is None and text_modes:
         index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))
         encode = medcpt_encoder(MEDCPT_QUERY, 64)
         bm25 = BM25Index(index.passages)
-        rerank = medcpt_cross_encoder() if "hybrid-rerank" in text_modes else None
+        rerank = medcpt_cross_encoder() if any(m.endswith("-rerank") for m in text_modes) else None
 
         def rag_for(mode):
             return StandardRag(index, encode, 10, mode, bm25=bm25, rerank=rerank)
@@ -262,15 +282,17 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
         rankers["image"] = lambda q: [p for p, _ in distinct(vindex.search(image_query_vector(q, vectors), 10))]
         pools["image"] = vindex.passages
         if args.view == "multimodal":
-            fused = rag_for("hybrid-rerank")
-            fused.visual = (vindex, vectors)
-            rankers["fused"] = lambda q: [p for p, _ in fused.ranked(q, "multimodal", 10)]      # the same code as the RAG run
-            pools["fused"] = pools["hybrid-rerank"] + vindex.passages
+            for mode in text_modes:                          # the image search fused with each text search, as in the RAG run
+                fused = rag_for(mode)
+                fused.visual = (vindex, vectors)
+                rankers[f"fused:{mode}"] = (lambda q, fused=fused: [p for p, _ in fused.ranked(q, "multimodal", 10)])
+                pools[f"fused:{mode}"] = pools[mode] + vindex.passages
     visual_ids = ({p["passage_id"] for p in pools.get("image", [])}                     # the image library: image records, and
                   | {p["passage_id"] for pool in pools.values() for p in pool if p.get("library") == "visual"})   # captions as text
-    result, intervals, chance, image_share = {}, {}, {}, {}
+    result, intervals, chance, image_share, preds = {}, {}, {}, {}, {}
     for mode, rank in rankers.items():
-        pred = {q["id"]: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p in rank(q)]} for q in questions}
+        pred = preds[mode] = {q["id"]: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p in rank(q)]}
+                              for q in questions}
         top3 = [c["chunk_id"] for v in pred.values() for c in v["contexts"][:3]]
         image_share[mode] = round(sum(c in visual_ids for c in top3) / len(top3), 4) if top3 else 0.0
         result[mode] = retrieval_metrics(qa, pred, n_relevant=relevant_counts(pools[mode]))
@@ -280,8 +302,13 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
                                           for k, (lo, hi) in intervals[mode].items()))
         log.info(f"  random from the same pool ({len(pools[mode])} items): "
                  + ", ".join(f"{k} {100 * v:.1f}%" for k, v in chance[mode].items()))
+    paired = paired_hit3(qa, preds, f"fused:{APPROVED}" if args.view == "multimodal" else APPROVED)
+    for mode, r in paired.items():
+        log.info(f"  {mode} vs {r['against']}: Hit@3 differs on {r['a_hit_b_miss'] + r['a_miss_b_hit']} questions "
+                 f"({r['a_hit_b_miss']} only {mode}, {r['a_miss_b_hit']} only {r['against']}); McNemar p = {r['p_value']}, "
+                 f"Holm p = {r['p_holm']}")
     out = args.out or os.path.join(args.results, "standard_rag", args.view, f"retrieval_{SPLIT_FILES[args.split]}.json")
     write_json(out, {"view": args.view, "split": args.split, "n_questions": len(questions), "modes": result,
                      "intervals_95": intervals, "random_from_the_same_pool": chance,
-                     "share_of_top3_from_the_image_library": image_share})
+                     "share_of_top3_from_the_image_library": image_share, "paired_hit3_vs_approved": paired})
     return result

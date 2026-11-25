@@ -201,7 +201,7 @@ def visual_calibrate_main(argv=None):
     ap.add_argument("--threshold", type=float, default=0.95)
     ap.add_argument("--hash-threshold", type=int, default=4)
     a = ap.parse_args(argv)
-    log = get_logger("visual-calibrate", os.path.join(a.corpus, "build_visual.log"))
+    log = get_logger("visual-calibrate")
     folder = os.path.join(a.corpus, "visual")
     paths = (os.path.join(folder, f"kaggle_vectors_{a.encoder}.json"), os.path.join(folder, "kaggle_hashes.json"))
     if not all(os.path.isfile(p) for p in paths):
@@ -391,7 +391,6 @@ def visual_args(argv=None):
 
 def visual_main(argv=None, fetch_xml=None, fetch=None):
     a = visual_args(argv)
-    get_logger("corpus", os.path.join(a.corpus, "build_visual.log"))       # the module logger "corpus" writes this command's log
     passages = read_jsonl(os.path.join(a.corpus, "passages.jsonl"))
     papers = corpus_papers(passages)
     if a.limit:
@@ -544,7 +543,7 @@ def visual_images_args(argv=None):
 
 def visual_images_main(argv=None, get=download_bytes):
     a = visual_images_args(argv)
-    log = get_logger("visual-images", os.path.join(a.corpus, "build_visual.log"))
+    log = get_logger("visual-images")
     folder = os.path.join(a.corpus, "visual")
     items = read_jsonl(os.path.join(folder, "items.jsonl"))
     trace = []

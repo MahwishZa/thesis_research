@@ -64,7 +64,7 @@ third party is credited anywhere in the repository.
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
 - Systems: LLM-only (done, approved), standard RAG (built and tested; indexes built on the laptop; image search connected to the run on
   2026-11-25: image only = image search, image + text = text and image fused by rank, text only = text search; `standard-rag` defaults to
-  the approved hybrid-rerank and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
+  BM25 (researcher, 2026-11-25; hybrid-rerank before) and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
@@ -102,7 +102,16 @@ third party is credited anywhere in the repository.
   42 captions added, 43 already in the corpus; validation Hit@3: text hybrid-rerank 48.8% (random 38.5%), image 40.0% (39.4%),
   fused 55.0% (38.7%); BM25 alone added to `retrieval-eval` on 2026-11-25, researcher's approval, to complete the comparison; laptop result, text only,
   Hit@3: BM25 alone 55.6% (45.4 to 65.2), above the approved hybrid-rerank 48.8% with overlapping intervals; whether to revisit the
-  approved choice is the researcher's decision, open): `index` adds the picture-and-caption records to the MedCPT/BM25 text index, except captions already in the corpus;
+  approved choice is the researcher's decision, open; `retrieval-eval` now also scores bm25-rerank (the MedCPT cross-encoder over the
+  BM25 top 20), fuses the image search with every text search in the image + text view, and compares each search with the approved
+  one by McNemar's exact test on Hit@3 with Holm's correction, so the choice rests on a paired test, not on overlapping intervals.
+  Laptop result (2026-11-25, 160 validation questions, Hit@3): text only: bm25 55.6%, bm25-rerank 54.4%, hybrid 48.8%,
+  hybrid-rerank 48.8%, dense 43.1%; image + text: fused:bm25 61.9%, fused:hybrid 61.3%, fused:bm25-rerank 57.5%, fused:dense 56.9%,
+  fused:hybrid-rerank 55.0%, image alone 40.0%. Against hybrid-rerank no search differs significantly (McNemar, Holm p >= 0.25).
+  Researcher's decision (2026-11-25): BM25 is the standard RAG's text search (best on validation in both text views, simplest; the
+  difference is not significant and must be reported so); no re-ranker in the standard RAG.
+  Re-ranking needs a text query, so the image-only view has none. Build logs (build_corpus.log, build_visual.log) are no longer
+  written: corpus_card.json and visual_card.json hold every result): `index` adds the picture-and-caption records to the MedCPT/BM25 text index, except captions already in the corpus;
   repeated texts are removed before the model sees them. The text index is built with --exclude-reference-pages and
   --exclude-reference-overlap (as on the laptop since 2026-11-24; `index` refuses other settings unless --replace). The model gets captions only, never the library picture (researcher,
   2026-11-25). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the

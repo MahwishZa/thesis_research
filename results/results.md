@@ -256,7 +256,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | Item | Status |
 |---|---|
-| Standard RAG (hybrid-rerank text search, image search for the image views, top 3) | built and tested; indexes built on the laptop; retrieval validated (free); no model run yet |
+| Standard RAG (BM25 text search, image search for the image views, top 3) | built and tested; indexes built on the laptop; retrieval validated (free, `results/standard_rag/<view>/retrieval_validation.json`); no model run yet |
 | Proposed RAG and RAG² scope | not decided |
 | Reference texts for melanoma and BCC (semantic similarity) | not decided |
 | GPT-4o refusals per class | not done |
