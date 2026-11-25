@@ -49,7 +49,7 @@ Every report records its input files with their SHA-256, so two reports can be c
 
 Usage: python -m src.main evaluate --questions data/views/multimodal/test.jsonl --predictions predictions.jsonl
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json]
-       [--passages data/knowledge/corpus/passages.jsonl]
+       [--passages data/corpus/passages.jsonl]
        [--skip-text]
        python -m src.main similarity-check             (is the semantic similarity informative? finished runs + reference texts)
        python -m src.main collect                      (a report.json for every finished run and the table results/comparisons/summary.csv)
@@ -175,7 +175,7 @@ def report_main(argv=None):
     ap.add_argument("--answered-only", action="store_true",
                     help="trial runs: score only the questions that have a prediction (without it, an unasked question counts as wrong)")
     ap.add_argument("--passages", default=None,
-                    help="the corpus (data/knowledge/corpus/passages.jsonl): with it Recall@k is reported, as the share of all the "
+                    help="the corpus (data/corpus/passages.jsonl): with it Recall@k is reported, as the share of all the "
                          "corpus passages tagged with the true class that are found in the top k")
     a = ap.parse_args(argv)
     rep = evaluate(a.questions, a.predictions, a.predictions_b, a.relevance_models, a.reference_texts,
@@ -190,7 +190,8 @@ def report_main(argv=None):
         log.info(f"text-only reasonings that describe an image: {c['n_claiming_an_image']} of {c['n_text_only_with_reasoning']} "
                  f"(approximate; ids in the report)")
     if rep["retrieval"]:
-        log.info(f"retrieval: { {k: rep['retrieval'][k] for k in ('hit@5', 'ndcg@5', 'mrr')} }")
+        top = max(int(k.split("@")[1]) for k in rep["retrieval"] if k.startswith("hit@"))
+        log.info(f"retrieval: { {k: rep['retrieval'][k] for k in (f'hit@{top}', f'ndcg@{top}', 'mrr')} }")
         if "relevance" in rep:
             log.info(f"relevance: {rep['relevance']}")
     return rep

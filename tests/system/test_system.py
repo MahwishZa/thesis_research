@@ -355,6 +355,15 @@ class WorkspaceTests(unittest.TestCase):
             self.assertTrue((ROOT / "tests" / folder / "__init__.py").is_file(), folder)
             self.assertTrue(list((ROOT / "tests" / folder).glob("test_*.py")), folder)
 
+    def test_the_data_folder_holds_the_approved_folders(self):
+        """Approved 2026-11-25, with data/corpus/ simplified from data/knowledge/corpus/ the same day (researcher's request)."""
+        if not (shutil.which("git") and (ROOT / ".git").exists()):
+            self.skipTest("git is not available")
+        self.assertEqual(sorted({p.split("/")[1] for p in tracked("data")}), ["annotations", "corpus", "datasheet.md", "processed", "views"])
+        for constant in ("CORPUS_DIR", "PROCESSED_CASES", "OFFICIAL_LABELS", "VIEWS_DIR"):          # the code points to these folders
+            self.assertTrue((ROOT / "data" / getattr(utils_common, constant)).is_dir(), constant)
+        self.assertTrue((ROOT / "data" / utils_common.REFERENCE_TEXTS).is_file())
+
     def test_the_readme_holds_only_the_overview_and_the_objectives(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"^#{2,3} (.+)$", readme, re.M), ["Overview", "Objectives"])

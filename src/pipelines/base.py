@@ -76,8 +76,9 @@ def add_tokens(a, b):
 
 
 def rag_system(mode):
-    """The results folder of a standard-RAG run: one per retrieval mode, so a run of one mode never skips or overwrites another."""
-    return "standard_rag" if mode == "dense" else "standard_rag_" + mode.replace("-", "_")
+    """The results folder of a standard-RAG run: the approved retrieval (hybrid-rerank, researcher's decision 2026-11-24) is the
+    standard RAG; any other mode is a trial with its own folder, so it never skips or overwrites a standard-RAG run."""
+    return "standard_rag" if mode == "hybrid-rerank" else "standard_rag_" + mode.replace("-", "_")
 
 
 # ---- the run (checkpointed) ---------------------------------------------------------------------------------------------
@@ -109,6 +110,8 @@ def run(args, client, log, rag=None):
         missing = [q["image_path"] for q in questions if not os.path.isfile(os.path.join(args.data, q["image_path"]))]
         if missing:
             raise SystemExit(f"{len(missing)} images are missing, e.g. {os.path.join(args.data, missing[0])}")
+    if rag:
+        rag.ready(args.view)
 
     def build(q, image):
         if rag is None:
@@ -130,7 +133,7 @@ def run(args, client, log, rag=None):
                 "prompt": RAG_PROMPT_NAME if rag else PROMPT_NAME, "style": style, "system": SYSTEM,
                 "instruction": rag.instruction(args.view) if rag else instruction(style, args.view)}
     if rag:
-        settings["retrieval"] = rag.settings()
+        settings["retrieval"] = rag.settings(args.view)
     info_path = os.path.join(partial, "run.json")
     if os.path.exists(info_path):
         with open(info_path, encoding="utf-8") as f:

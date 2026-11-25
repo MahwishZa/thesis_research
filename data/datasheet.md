@@ -132,7 +132,7 @@ data/processed/images/  +  data/processed/cases/    the cleaned images (laptop o
    ▼
 data/views/image_only/  text_only/  multimodal/     the same cases in three views, with their questions
 
-data/knowledge/corpus/                              the medical library for RAG: python -m src.main corpus (text), visual (images)
+data/corpus/                                        the medical library for RAG: python -m src.main corpus (text), visual (images)
 data/annotations/reference_texts.json               the reference texts of the semantic-similarity score (evaluation only)
 ```
 
@@ -149,10 +149,10 @@ data/annotations/reference_texts.json               the reference texts of the s
 | `views/<view>/cases.csv` | one row per case: id, split, fold, lesion group, label, and only the inputs of that view | yes |
 | `views/<view>/{train,validation,test}.jsonl` | one 8-option multiple-choice question per case, for every system | yes |
 | `views/provenance.json` | the record of the 2026-11-25 move: for each changed file its earlier path and SHA-256 before and after (below) | yes |
-| `knowledge/corpus/` | `manifest.csv`, `corpus_card.json` (no text); `passages.jsonl`, the download cache, the indexes and the image library stay on the laptop | partly |
+| `corpus/` | `manifest.csv`, `corpus_card.json` (no text); `passages.jsonl`, the download cache, the indexes and the image library stay on the laptop | partly |
 | `annotations/reference_texts.json` | the reference texts of the semantic-similarity score | yes |
 
-**The 2026-11-25 move (researcher's approval).** The folders were renamed to the structure above: `processed_images/` → `processed/images/`, `processed_cases/` → `processed/cases/`, `official_labels/` → `annotations/official_labels/`, `knowledge_corpus/` → `knowledge/corpus/` (with `reference_texts.json` → `annotations/`), and `val.jsonl` → `validation.jsonl`. No case, question, answer or option changed: only the `image_path` field (`processed_images/` → `processed/images/`). `views/provenance.json` records, for each of the 10 changed files, its SHA-256 before and after; a test (`tests/acceptance/test_acceptance.py`) checks that writing the paths the old way gives back exactly the earlier file ✔, and the pipeline status accepts the approved runs, which recorded the earlier SHA-256, through this record ✔. The rebuilt views match the committed files byte for byte ✔ (`tests/system/test_system.py`).
+**The 2026-11-25 move (researcher's approval).** The folders were renamed to the structure above: `processed_images/` → `processed/images/`, `processed_cases/` → `processed/cases/`, `official_labels/` → `annotations/official_labels/`, `knowledge_corpus/` → `corpus/` (for a few hours `knowledge/corpus/`, simplified at the researcher's request; with `reference_texts.json` → `annotations/`), and `val.jsonl` → `validation.jsonl`. No case, question, answer or option changed: only the `image_path` field (`processed_images/` → `processed/images/`). `views/provenance.json` records, for each of the 10 changed files, its SHA-256 before and after; a test (`tests/acceptance/test_acceptance.py`) checks that writing the paths the old way gives back exactly the earlier file ✔, and the pipeline status accepts the approved runs, which recorded the earlier SHA-256, through this record ✔. The rebuilt views match the committed files byte for byte ✔ (`tests/system/test_system.py`).
 
 ## 9. The knowledge corpus (for the RAG systems)
 
@@ -175,7 +175,7 @@ Built by `python -m src.main corpus`; snapshot 2026-11-23; numbers ✔ from `cor
 
 ### 9.1 The retrieval index (`python -m src.main index`)
 
-Each passage is embedded once as [title, text] with the MedCPT article encoder (Jin et al. 2023), and the unit-length vectors are saved in `data/knowledge/corpus/index/` (`embeddings.f32`, `index.json`; laptop only, because they are derived from licensed text). A question is embedded with the MedCPT query encoder and the passages with the highest cosine similarity are retrieved from the whole corpus, with no filter by disease. Passages are not cut again: the corpus builder already cut them (whole sentences, at most 200 words, one sentence shared with the next). Tags and query classes are never embedded and never used in retrieval; `index.json` records the encoder, the SHA-256 of `passages.jsonl` (a changed corpus is noticed) and whether the reference pages were left out.
+Each passage is embedded once as [title, text] with the MedCPT article encoder (Jin et al. 2023), and the unit-length vectors are saved in `data/corpus/index/` (`embeddings.f32`, `index.json`; laptop only, because they are derived from licensed text). A question is embedded with the MedCPT query encoder and the passages with the highest cosine similarity are retrieved from the whole corpus, with no filter by disease. Passages are not cut again: the corpus builder already cut them (whole sentences, at most 200 words, one sentence shared with the next). Tags and query classes are never embedded and never used in retrieval; `index.json` records the encoder, the SHA-256 of `passages.jsonl` (a changed corpus is noticed) and whether the reference pages were left out.
 
 ### 9.2 Corpus audit (✔ from `manifest.csv`, 2026-11-24)
 
@@ -190,6 +190,22 @@ Each passage is embedded once as [title, text] with the MedCPT article encoder (
 | Passages per disease (tags) | MEL 1,123 · NV 631 · BCC 576 · SCC 583 · AK 476 · BKL 368 · VASC 279 · DF 257 | retrieval may lean to melanoma |
 | Gaps | guidelines: DF 0, BKL 12; pubmed: VASC 74; textbook: AK 11, DF 10, VASC 4, SCC 4 | thin evidence for the rarer diseases |
 | Image-associated text (figure captions, dermoscopy criteria) | not in the corpus apart from the Dermoscopedia pages | the retriever has little text about what a lesion looks like |
+
+### 9.3 The image library (`visual`, `visual-images`, `visual-index`; ✔ from `corpus/visual_card.json`, snapshot 2026-11-24)
+
+Picture-and-caption records from the open-access PMC papers of the text corpus. Captions are the papers' own words; nothing is written by a model.
+
+| Step | Result |
+|---|---|
+| Papers read | 90; 46 with at least one skin-image figure |
+| Figures kept by the caption rules | 88 (MEL 22, SCC 19, BKL 16, NV 15, AK 12, VASC 11, BCC 10, DF 7); left out: 80 not a clinical or dermoscopic image, 38 charts, diagrams or another imaging method, 16 captions too short, 7 histology only, 4 with no diagnosis named |
+| Images downloaded | 88 of 88, from the PMC open-data bucket |
+| Kaggle look-alike check (BiomedCLIP similarity ≥ 0.95, or a picture hash with at most 4 different bits) | 3 dropped (2 by similarity, 1 by hash); 0 duplicates inside the library (similarity ≥ 0.98) |
+| Indexed (BiomedCLIP image vectors) | 85 records |
+
+**The look-alike check is a strict safety step, not a calibrated test** (`visual-calibrate`, on the Kaggle set itself): it flags 64.5% of the 448 same-lesion photo pairs, but also, for 74.7% of the 2,197 images, the most similar image of a different lesion. Dermoscopic pictures look alike to the image model, so the check cannot tell same-lesion from different-lesion photos; it can only remove close copies, at the cost of some images that are not copies (3 of 88). The thresholds were not changed after this measurement.
+
+**Use in the standard RAG (2026-11-25):** an image-only question searches this library with its own image; an image + text question fuses that image search with the text search of its patient facts (reciprocal rank fusion of the top 10 of each). Validation (160 questions, Hit@3, `results/standard_rag/<view>/retrieval_validation.json`): image search 40.0% (random 39.4%); text and image fused 55.0% (random 37.9%).
 
 ## 10. Data quality checks and what they show
 
@@ -221,8 +237,8 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 | `raw/`, `processed/images/` | dermoscopic images (Kaggle copy of the ISIC Archive) | each image carries its own ISIC licence (mostly CC BY-NC, some CC0): non-commercial research, attribution | **no** (laptop only) |
 | `annotations/official_labels/` | ISIC 2019 ground truth and metadata, HAM10000 metadata, ISIC Archive records | the ISIC and HAM10000 data licences (non-commercial, attribution) ◻ | yes, with attribution (below) |
 | `processed/cases/`, `views/` | derived from the two rows above: ISIC ids, labels, age, sex, body site | the same terms as their sources | yes, with attribution |
-| `knowledge/corpus/passages.jsonl`, `cache/` | full texts of PubMed abstracts, PMC papers, guidelines and Dermoscopedia pages | each passage's own licence | **no** (laptop only) |
-| `knowledge/corpus/manifest.csv`, `corpus_card.json` | lists and counts, no text | – | yes |
+| `corpus/passages.jsonl`, `cache/` | full texts of PubMed abstracts, PMC papers, guidelines and Dermoscopedia pages | each passage's own licence | **no** (laptop only) |
+| `corpus/manifest.csv`, `corpus_card.json` | lists and counts, no text | – | yes |
 | `annotations/reference_texts.json` | quoted Dermoscopedia texts, each with its source | CC BY-NC-SA 4.0: attribution, non-commercial, shared under the same licence | yes |
 | `.env` | API keys | secret | **never** |
 
@@ -246,6 +262,7 @@ python -m unittest discover -s tests -t .      # includes tests/system/test_syst
 
 | Date | Correction |
 |---|---|
+| 2026-11-25 | Section 9.3, the image library, from `visual_card.json` and the validation results. |
 | 2026-11-25 | New folder structure (section 8): paths, commands (`python -m src.main`) and the move record `views/provenance.json`. No data changed. |
 | 2026-11-24 | Added the retrieval index and the corpus audit (sections 9.1 and 9.2). Restructured under the data-sheet headings. Corrected stale figures: the source-detection AUC (0.935 → 0.953), the shortcut score (33% "balanced accuracy" → 31.7% accuracy), the test-set size ("16 to 68 per class" → 30 per class, 240 cases). Added sections 3.2 to 3.4, 9 and 10 with figures read from the committed files. Added the class-balance record (section 6). |
 | 2026-11-23 | Split sizes updated after the balanced validation split (160 cases, 20 per class). |

@@ -11,7 +11,7 @@ from html.parser import HTMLParser
 from src.knowledge.chunking import chunk, sentences
 from src.knowledge.collect import TEXTBOOK_LICENCE, Fetcher, dermoscopedia_api, page_url
 from src.knowledge.extract import BIBLIOGRAPHY, TEMPLATE, html_paragraphs
-from src.utils.common import CLASSES, KNOWLEDGE_CORPUS, REFERENCE_TEXTS
+from src.utils.common import CLASSES, CORPUS_DIR, REFERENCE_TEXTS
 from src.utils.io import write_json
 from src.utils.logging import get_logger
 
@@ -50,7 +50,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #            "bibliography_removed": [{"section": ..., "n_words": ...}]}}
 # Check the texts once before any run (the script prints them): the page and sections must be about the disease named.
 # --token-check counts each text's tokens with the similarity model's own tokenizer and compares them with the most the model reads
-# (needs sentence-transformers; the model is downloaded once). Downloads are cached (data/knowledge/corpus/cache), so a rerun gives
+# (needs sentence-transformers; the model is downloaded once). Downloads are cached (data/corpus/cache), so a rerun gives
 # the same texts.
 #
 # Usage (on the laptop, with internet): python -m src.main references [--token-check]
@@ -345,7 +345,7 @@ def inspect(fetch, api, log):
 def references_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main references", description="Reference texts of the 8 diseases, quoted from Dermoscopedia by a fixed rule.")
     ap.add_argument("--out", default=os.path.join("data", REFERENCE_TEXTS))
-    ap.add_argument("--cache", default=os.path.join("data", KNOWLEDGE_CORPUS, "cache"))
+    ap.add_argument("--cache", default=os.path.join("data", CORPUS_DIR, "cache"))
     ap.add_argument("--max-words", type=int, default=200, help="the longest reference text, in words")
     ap.add_argument("--min-words", type=int, default=20, help="shorter texts are left out (listed under 'skipped')")
     ap.add_argument("--token-check", action="store_true", help="count each text's tokens with the similarity model's tokenizer")

@@ -1,0 +1,217 @@
+{
+  "snapshot": "2026-11-24",
+  "n_papers_read": 90,
+  "n_figures_kept": 88,
+  "n_papers_with_a_figure": 46,
+  "figures_per_tag": {
+    "MEL": 22,
+    "NV": 15,
+    "BCC": 10,
+    "AK": 12,
+    "BKL": 16,
+    "DF": 7,
+    "VASC": 11,
+    "SCC": 19
+  },
+  "left_out": {
+    "caption too short": 16,
+    "chart, diagram or other imaging method": 38,
+    "histology only": 7,
+    "no diagnosis named": 4,
+    "not a clinical or dermoscopic image": 80
+  },
+  "images_downloaded": true,
+  "rule": "see the comment above visual_items in src/build.py",
+  "n_images": 88,
+  "images_left_out": {},
+  "image_addresses_that_worked": {
+    "PMC bucket": 88
+  },
+  "image_encoder": "biomedclip",
+  "kaggle_check": {
+    "threshold": 0.95,
+    "n_kaggle_images": 2197,
+    "n_library_images": 88,
+    "n_dropped": 3,
+    "hash_threshold_bits": 4,
+    "n_dropped_by_embedding": 2,
+    "n_dropped_by_hash": 1,
+    "closest_hashes_bits": [
+      4,
+      5,
+      6,
+      6,
+      7,
+      7,
+      8,
+      8,
+      8,
+      8
+    ],
+    "library_threshold": 0.98,
+    "n_dropped_as_library_duplicates": 0,
+    "similarity_quantiles": {
+      "q50": 0.6725,
+      "q90": 0.8949,
+      "q99": 0.9636,
+      "max": 0.9636
+    },
+    "highest_20": [
+      {
+        "item_id": "PMC6106659#fig1",
+        "similarity": 0.9636,
+        "kaggle_image": "ISIC_0000346.jpg"
+      },
+      {
+        "item_id": "PMC4516104#fig1",
+        "similarity": 0.9551,
+        "kaggle_image": "ISIC_0010401.jpg"
+      },
+      {
+        "item_id": "PMC7058877#fig1",
+        "similarity": 0.9463,
+        "kaggle_image": "ISIC_0024845.jpg"
+      },
+      {
+        "item_id": "PMC6939186#fig3",
+        "similarity": 0.9456,
+        "kaggle_image": "ISIC_0027967.jpg"
+      },
+      {
+        "item_id": "PMC6939186#fig2",
+        "similarity": 0.9281,
+        "kaggle_image": "ISIC_0027802.jpg"
+      },
+      {
+        "item_id": "PMC6939186#fig4",
+        "similarity": 0.9104,
+        "kaggle_image": "ISIC_0031506.jpg"
+      },
+      {
+        "item_id": "PMC5312185#fig1",
+        "similarity": 0.9073,
+        "kaggle_image": "ISIC_0000360.jpg"
+      },
+      {
+        "item_id": "PMC10426806#fig1",
+        "similarity": 0.8975,
+        "kaggle_image": "ISIC_0000356.jpg"
+      },
+      {
+        "item_id": "PMC3750880#fig0",
+        "similarity": 0.8949,
+        "kaggle_image": "ISIC_0000493.jpg"
+      },
+      {
+        "item_id": "PMC5429111#fig0",
+        "similarity": 0.892,
+        "kaggle_image": "ISIC_0026291.jpg"
+      },
+      {
+        "item_id": "PMC6106659#fig2",
+        "similarity": 0.8817,
+        "kaggle_image": "ISIC_0010714.jpg"
+      },
+      {
+        "item_id": "PMC4938282#fig1",
+        "similarity": 0.8495,
+        "kaggle_image": "ISIC_0010414.jpg"
+      },
+      {
+        "item_id": "PMC4938282#fig0",
+        "similarity": 0.8286,
+        "kaggle_image": "ISIC_0033005.jpg"
+      },
+      {
+        "item_id": "PMC13420791#fig0",
+        "similarity": 0.8249,
+        "kaggle_image": "ISIC_0027451.jpg"
+      },
+      {
+        "item_id": "PMC10878740#fig1",
+        "similarity": 0.8175,
+        "kaggle_image": "ISIC_0026343.jpg"
+      },
+      {
+        "item_id": "PMC11278531#fig0",
+        "similarity": 0.8131,
+        "kaggle_image": "ISIC_0009989.jpg"
+      },
+      {
+        "item_id": "PMC7478516#fig0",
+        "similarity": 0.8105,
+        "kaggle_image": "ISIC_0026845.jpg"
+      },
+      {
+        "item_id": "PMC12333637#fig6",
+        "similarity": 0.8009,
+        "kaggle_image": "ISIC_0032468.jpg"
+      },
+      {
+        "item_id": "PMC10175672#fig1",
+        "similarity": 0.8,
+        "kaggle_image": "ISIC_0029193.jpg"
+      },
+      {
+        "item_id": "PMC9137359#fig0",
+        "similarity": 0.7931,
+        "kaggle_image": "ISIC_0010917.jpg"
+      }
+    ]
+  },
+  "n_indexed_images": 85,
+  "guard_calibration": {
+    "thresholds": {
+      "embedding": 0.95,
+      "hash_bits": 4
+    },
+    "same_lesion_pairs": {
+      "n": 448,
+      "embedding_similarity": {
+        "min": 0.7202,
+        "q1": 0.8057,
+        "q5": 0.882,
+        "q50": 0.9588,
+        "q95": 0.9863,
+        "q99": 0.9908,
+        "max": 0.9922,
+        "n": 448
+      },
+      "hash_bits_different": {
+        "min": 0,
+        "q1": 5,
+        "q5": 9,
+        "q50": 23,
+        "q95": 39,
+        "q99": 46,
+        "max": 53,
+        "n": 448
+      },
+      "caught": 0.6451
+    },
+    "most_similar_different_lesion": {
+      "n": 2197,
+      "embedding_similarity": {
+        "min": 0.7269,
+        "q1": 0.8654,
+        "q5": 0.9079,
+        "q50": 0.9637,
+        "q95": 0.9821,
+        "q99": 0.9858,
+        "max": 0.9912,
+        "n": 2197
+      },
+      "hash_bits_different": {
+        "min": 0,
+        "q1": 2,
+        "q5": 4,
+        "q50": 11,
+        "q95": 17,
+        "q99": 19,
+        "max": 20,
+        "n": 2197
+      },
+      "false_alarm": 0.7465
+    }
+  }
+}

@@ -17,8 +17,8 @@ from src.retrieval.query import image_query_vector, retrieval_query
 from src.retrieval.reranker import medcpt_cross_encoder
 from src.retrieval.retriever import BM25Index, reciprocal_rank_fusion
 from src.utils.common import (
+    CORPUS_DIR,
     INDEX_DIR,
-    KNOWLEDGE_CORPUS,
     SPLIT_FILES,
     SPLITS,
     VIEWS,
@@ -30,6 +30,7 @@ from src.utils.reproducibility import SEED
 
 RETRIEVAL_MODES = ("dense", "hybrid", "hybrid-rerank")
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
+FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
 
 
 class StandardRag:
@@ -37,13 +38,14 @@ class StandardRag:
     dense: the k passages of highest MedCPT cosine similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank
     fusion.  hybrid-rerank: the hybrid pool, re-ordered by the MedCPT cross-encoder."""
 
-    def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL):
+    def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL, visual=None):
         if mode not in RETRIEVAL_MODES:
             raise ValueError(f"unknown retrieval mode {mode!r}")
         if mode == "hybrid-rerank" and rerank is None:
             raise ValueError("hybrid-rerank needs a re-ranker")
         self.index, self.encode_query, self.k, self.mode, self.rerank, self.pool = index, encode_query, k, mode, rerank, pool
         self.bm25 = bm25 if bm25 is not None else (BM25Index(index.passages) if mode != "dense" else None)
+        self.visual = visual          # (the image index, {Kaggle image file: its saved vector}) for the image views; see load_visual
 
     def retrieve(self, query, k):
         """[(passage, score), ...], best first, for one query text."""
@@ -59,22 +61,56 @@ class StandardRag:
         order = sorted(range(len(fused)), key=lambda i: (-scores[i], i))
         return [(fused[i][0], round(scores[i], 6)) for i in order[:k]]
 
-    def settings(self):
+    def ready(self, view):
+        """Stops before any question is asked when a view needs what is not loaded."""
+        if view != "text_only" and self.visual is None:
+            raise ValueError("the image views search by the image: the image index is needed (python -m src.main visual-index)")
+
+    def image_search(self, q, n):
+        """The n library images (picture-and-caption records) closest to the question's own image (its saved BiomedCLIP vector)."""
+        self.ready("image_only")
+        vindex, vectors = self.visual
+        return vindex.search(image_query_vector(q, vectors), n)
+
+    def ranked(self, q, view, n):
+        """The n best records for a question, best first, as validated with retrieval-eval (researcher's decisions, 2026-11-24/25):
+        text only: the text search of the patient facts; image only: the image search by the question's image; image + text: the
+        text search and the image search, fused by rank (reciprocal rank fusion of the top FUSION_LIST of each)."""
+        if view == "image_only":
+            return self.image_search(q, n)
+        query = retrieval_query(q, view)
+        if view == "multimodal":
+            return reciprocal_rank_fusion([[p for p, _ in self.retrieve(query, FUSION_LIST)],
+                                           [p for p, _ in self.image_search(q, FUSION_LIST)]], top=n)
+        return self.retrieve(query, n)
+
+    def settings(self, view="text_only"):
         meta = self.index.meta
-        return {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode == "dense" else self.pool,
-                "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
-                "exclude_reference_pages": meta.get("exclude_reference_pages")}
+        s = {"query_encoder": MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode == "dense" else self.pool,
+             "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
+             "exclude_reference_pages": meta.get("exclude_reference_pages")}
+        if view != "text_only":
+            vmeta = self.visual[0].meta if self.visual else {}
+            s["image_search"] = {"encoder": vmeta.get("encoder"), "items_sha256": vmeta.get("passages_sha256"),
+                                 "n_items": len(self.visual[0].passages) if self.visual else 0}
+            s["query"] = "image" if view == "image_only" else "question and image, fused by rank"
+            if view == "multimodal":
+                s["fusion"] = {"method": "reciprocal rank fusion", "k": 60, "list": FUSION_LIST}
+        return s
 
     def instruction(self, view):
         return rag_instruction(view, self.k)
 
     def prepare(self, q, view, client, image):
         """(the text to send, the fields to add to the record, no extra tokens): one retrieval, no extra model call."""
-        query = retrieval_query(q, view)
-        hits = self.retrieve(query, self.k)
+        hits = self.ranked(q, view, self.k)
         contexts = [{"rank": r, "chunk_id": p["passage_id"], "title": p.get("title"), "text": p["text"], "tags": p.get("tags", []),
-                     "score": score} for r, (p, score) in enumerate(hits, 1)]
-        return rag_text(q, view, contexts), {"query": query, "contexts": contexts}, None, None
+                     "score": score} | ({"image_file": p["image_file"]} if p.get("image_file") else {})
+                    for r, (p, score) in enumerate(hits, 1)]
+        extra = {"query": None if view == "image_only" else retrieval_query(q, view), "contexts": contexts}
+        if view != "text_only":
+            extra["query_image"] = os.path.basename(q["image_path"])
+        return rag_text(q, view, contexts), extra, None, None
 
 
 def rag_parse_args(argv=None):
@@ -83,8 +119,8 @@ def rag_parse_args(argv=None):
     ap.add_argument("--view", required=True, choices=VIEWS)
     ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
-    ap.add_argument("--retrieval", default="dense", choices=RETRIEVAL_MODES,
-                    help="dense (approved); hybrid (dense + BM25, rank fusion); hybrid-rerank (+ MedCPT cross-encoder)")
+    ap.add_argument("--retrieval", default="hybrid-rerank", choices=RETRIEVAL_MODES,
+                    help="hybrid-rerank (approved 2026-11-24: dense + BM25, rank fusion, MedCPT cross-encoder); dense or hybrid: trials")
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
@@ -92,15 +128,17 @@ def rag_parse_args(argv=None):
     ap.add_argument("--data", default="data")
     ap.add_argument("--results", default="results")
     ap.add_argument("--index", default=None, help=f"the index folder (default: data/{INDEX_DIR})")
+    ap.add_argument("--image-encoder", default="biomedclip", help="the image index of the image views (made by visual-index)")
     return ap.parse_args(argv)
 
 
 def make_rag(args):
     """The StandardRag of the command line: loads the index and the encoders (laptop: torch and transformers)."""
     folder = args.index or os.path.join(args.data, INDEX_DIR)
-    index = read_index(folder, os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))      # stops with a clear message
+    index = read_index(folder, os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))      # stops with a clear message
     rerank = medcpt_cross_encoder() if args.retrieval == "hybrid-rerank" else None
-    return StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.retrieval, rerank=rerank)
+    visual = load_visual(args.data, args.image_encoder) if args.view != "text_only" else None     # the image views search by the image
+    return StandardRag(index, medcpt_encoder(MEDCPT_QUERY, 64), args.k, args.retrieval, rerank=rerank, visual=visual)
 
 
 def standard_rag_main(argv=None, rag=None):
@@ -176,7 +214,7 @@ def random_retrieval(qa, passages, rounds=20, seed=SEED):
 def load_visual(data, encoder):
     """The image index and the saved image vectors of the Kaggle images ({file name: vector}), both made by the visual-index command.
     The query vector of a question is the saved vector of its own image, so no image model is needed here."""
-    folder = os.path.join(data, KNOWLEDGE_CORPUS, "visual")
+    folder = os.path.join(data, CORPUS_DIR, "visual")
     index = read_index(os.path.join(folder, f"index_{encoder}"), os.path.join(folder, "items_final.jsonl"))
     path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
     if not os.path.isfile(path):
@@ -193,7 +231,7 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
     qa = {q["id"]: q for q in questions}
     text_modes = list(args.modes) if args.view == "text_only" else (["hybrid-rerank"] if args.view == "multimodal" else [])
     if rag_for is None and text_modes:
-        index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, KNOWLEDGE_CORPUS, "passages.jsonl"))
+        index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))
         encode = medcpt_encoder(MEDCPT_QUERY, 64)
         bm25 = BM25Index(index.passages)
         rerank = medcpt_cross_encoder() if "hybrid-rerank" in text_modes else None
@@ -210,8 +248,9 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
         rankers["image"] = lambda q: [p for p, _ in vindex.search(image_query_vector(q, vectors), 10)]
         pools["image"] = vindex.passages
         if args.view == "multimodal":
-            text = rankers["hybrid-rerank"]
-            rankers["fused"] = lambda q: [p for p, _ in reciprocal_rank_fusion([text(q), rankers["image"](q)], top=10)]
+            fused = rag_for("hybrid-rerank")
+            fused.visual = (vindex, vectors)
+            rankers["fused"] = lambda q: [p for p, _ in fused.ranked(q, "multimodal", 10)]      # the same code as the RAG run
             pools["fused"] = pools["hybrid-rerank"] + vindex.passages
     visual_ids = set() if args.view == "text_only" else {p["passage_id"] for p in pools["image"]}
     result, intervals, chance, image_share = {}, {}, {}, {}

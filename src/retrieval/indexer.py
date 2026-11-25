@@ -18,8 +18,8 @@ from src.knowledge.lookalike import (
 from src.knowledge.references import OVERLAP_LIMIT, overlap_share, reference_shingles
 from src.models.embeddings import MEDCPT_ARTICLE, image_encoder, medcpt_encoder
 from src.utils.common import (
+    CORPUS_DIR,
     INDEX_DIR,
-    KNOWLEDGE_CORPUS,
     PROCESSED_IMAGES,
     REFERENCE_TEXTS,
 )
@@ -83,8 +83,8 @@ def read_index(folder, passages_path):
 # ----------------------------------------------------------------------------------------------------------------------
 # index: the dense index of the corpus for the RAG systems (python -m src.main index)
 # ----------------------------------------------------------------------------------------------------------------------
-# Each passage of data/knowledge/corpus/passages.jsonl is embedded once, as [title, text], with the MedCPT article encoder (Jin et al.
-# 2023), and the unit-length vectors are saved in data/knowledge/corpus/index/ (laptop only: they are derived from licensed text). The
+# Each passage of data/corpus/passages.jsonl is embedded once, as [title, text], with the MedCPT article encoder (Jin et al.
+# 2023), and the unit-length vectors are saved in data/corpus/index/ (laptop only: they are derived from licensed text). The
 # corpus is already cut into passages by the corpus command (whole sentences, at most 200 words, one sentence shared with the next
 # passage), so nothing is cut again here. Tags and query classes are not embedded and never used for retrieval.
 #
@@ -96,7 +96,7 @@ ARTICLE_MAX_TOKENS = 512
 
 def index_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main index", description="Embeds the corpus passages for the RAG systems (MedCPT).")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS), help="the folder with passages.jsonl")
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR), help="the folder with passages.jsonl")
     ap.add_argument("--out", default=os.path.join("data", INDEX_DIR), help="where the index is written")
     ap.add_argument("--encoder", default=MEDCPT_ARTICLE)
     ap.add_argument("--reference-texts", default=os.path.join("data", REFERENCE_TEXTS))
@@ -160,7 +160,7 @@ def index_main(argv=None, encode=None):
 # only; they are never part of the index or of any answer.
 def visual_index_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-index", description="Embeds the library images and removes Kaggle look-alikes.")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--data", default="data")
     ap.add_argument("--encoder", default="biomedclip", choices=("biomedclip",))
     ap.add_argument("--threshold", type=float, default=0.95, help="a library image this similar to a Kaggle image is left out")

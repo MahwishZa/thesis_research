@@ -62,6 +62,7 @@ Weak label: a passage is "relevant" for a question when its tags contain the tru
 Sources: BEIR, Thakur et al. (2021) NeurIPS Datasets and Benchmarks ◻; nDCG: Järvelin & Kekäläinen (2002) ACM TOIS 20:422-446; MedCPT: Jin et al. (2023) Bioinformatics 39(11):btad651; "context relevance" as a name: RAGAS, Es et al. (EACL 2024) and ARES, Saad-Falcon et al. (NAACL 2024) ◻.
 Checked ✔: nDCG@3, MRR, Precision@3, Hit@3, Recall@3 and context precision were recomputed by hand and match. The nDCG assumption (at least k relevant passages exist per class) holds ✔ because every class has 257 or more tagged passages.
 "Context precision" was dropped on 2026-11-24 (it partly repeated Precision@k and MRR).
+**Cut-offs (researcher's decision, 2026-11-25):** k is 1, 3, 5 or 10, but never more than the number of passages the system keeps for an answer. The standard RAG keeps 3, so it is scored at k = 1 and 3 only: Precision@5 would divide 3 passages by 5, and Hit@5 would repeat Hit@3.
 
 ### C. Faithfulness and hallucination: does the answer rest on the evidence? (RAG systems)
 

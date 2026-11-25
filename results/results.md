@@ -256,7 +256,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | Item | Status |
 |---|---|
-| Standard RAG (MedCPT encoders, top 3 passages) | built and tested; needs `python -m src.main index`, then a validation trial |
+| Standard RAG (hybrid-rerank text search, image search for the image views, top 3) | built and tested; indexes built on the laptop; retrieval validated (free); no model run yet |
 | Proposed RAG and RAG² scope | not decided |
 | Reference texts for melanoma and BCC (semantic similarity) | not decided |
 | GPT-4o refusals per class | not done |

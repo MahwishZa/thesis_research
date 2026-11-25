@@ -1,0 +1,58 @@
+{
+  "view": "image_only",
+  "split": "val",
+  "n_questions": 160,
+  "modes": {
+    "image": {
+      "hit@1": 0.3,
+      "precision@1": 0.3,
+      "ndcg@1": 0.3,
+      "recall@1": 0.0247,
+      "hit@3": 0.4,
+      "precision@3": 0.1938,
+      "ndcg@3": 0.2164,
+      "recall@3": 0.0491,
+      "hit@5": 0.5,
+      "precision@5": 0.1638,
+      "ndcg@5": 0.1887,
+      "recall@5": 0.0756,
+      "hit@10": 0.8125,
+      "precision@10": 0.1831,
+      "ndcg@10": 0.1931,
+      "recall@10": 0.154,
+      "mrr": 0.4064,
+      "n_questions_with_contexts": 160
+    }
+  },
+  "intervals_95": {
+    "image": {
+      "hit@3": [
+        0.3114,
+        0.4968
+      ],
+      "precision@3": [
+        0.1481,
+        0.2437
+      ],
+      "ndcg@3": [
+        0.1651,
+        0.2719
+      ],
+      "mrr": [
+        0.3323,
+        0.4861
+      ]
+    }
+  },
+  "random_from_the_same_pool": {
+    "image": {
+      "hit@3": 0.3944,
+      "precision@3": 0.157,
+      "ndcg@3": 0.1582,
+      "mrr": 0.3318
+    }
+  },
+  "share_of_top3_from_the_image_library": {
+    "image": 1.0
+  }
+}

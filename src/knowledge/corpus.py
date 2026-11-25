@@ -25,7 +25,7 @@ from src.knowledge.references import (
     reference_shingles,
     shingles,
 )
-from src.utils.common import CLASSES, KNOWLEDGE_CORPUS, REFERENCE_TEXTS, load_env
+from src.utils.common import CLASSES, CORPUS_DIR, REFERENCE_TEXTS, load_env
 from src.utils.io import read_jsonl, write_csv, write_json, write_jsonl
 from src.utils.logging import get_logger
 
@@ -51,7 +51,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #   - at most --per-class passages per library and diagnosis, so no diagnosis or library dominates the corpus;
 #   - a passage is tagged with every diagnosis whose name or synonym appears in it or in its title (weak relevance labels).
 #
-# Output (in --out, default data/knowledge/corpus/):
+# Output (in --out, default data/corpus/):
 #   passages.jsonl       the passages with their source, link and licence (stays on the laptop; see .gitignore)
 #   manifest.csv         one row per passage without the text: id, library, document, link, licence, tags, MD5 (committed)
 #   corpus_card.json     counts per library and diagnosis, what was removed and why, the topic coverage check, settings, date
@@ -60,8 +60,8 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 # is set (optional; it allows more requests per second). Downloads are cached in --cache, so a rerun does not download again.
 #
 # Usage (on the laptop, with internet):
-#   python -m src.main corpus --out data/knowledge/corpus
-#   python -m src.main corpus --out data/knowledge/corpus --libraries pubmed pmc   # some libraries only
+#   python -m src.main corpus --out data/corpus
+#   python -m src.main corpus --out data/corpus --libraries pubmed pmc   # some libraries only
 
 
 def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
@@ -145,7 +145,7 @@ def build_corpus(args, fetch, meditron_rows=None):
 
 def corpus_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main corpus", description="Builds the knowledge corpus for RAG: real, published, citable text about the 8 diagnoses. Nothing is written by an LLM or by us.")
-    ap.add_argument("--out", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--out", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--cache", default=None, help="download cache (default: <out>/cache)")
     ap.add_argument("--libraries", nargs="+", default=list(LIBRARIES), choices=LIBRARIES)
     ap.add_argument("--per-class", type=int, default=150, help="most passages per library and diagnosis")
@@ -210,7 +210,7 @@ def audit_corpus(passages, ref_shingles=frozenset(), near_duplicate=0.8):
 
 def audit_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main audit", description="Checks the corpus text (no internet, nothing is changed).")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--reference-texts", default=os.path.join("data", REFERENCE_TEXTS))
     a = ap.parse_args(argv)
     get_logger("audit")

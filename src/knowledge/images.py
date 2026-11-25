@@ -21,7 +21,7 @@ from src.knowledge.extract import (
     parse_pmc_licence,
 )
 from src.knowledge.metadata import tag
-from src.utils.common import CLASSES, KNOWLEDGE_CORPUS
+from src.utils.common import CLASSES, CORPUS_DIR
 from src.utils.io import read_jsonl, write_json, write_jsonl
 from src.utils.logging import get_logger
 
@@ -41,8 +41,8 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #      confocal, X-ray, endoscopy),
 #   4. its caption names a dermoscopic image, a clinical photograph or a lesion image, and is not only about histology,
 #   5. its caption or the paper's title names one of the 8 diagnoses (the same word lists as the text corpus).
-# The list is written to data/knowledge/corpus/visual/items.jsonl (licensed text: not committed) and a card with the counts to
-# data/knowledge/corpus/visual_card.json (committed). Downloading the images and the check against the Kaggle images are separate
+# The list is written to data/corpus/visual/items.jsonl (licensed text: not committed) and a card with the counts to
+# data/corpus/visual_card.json (committed). Downloading the images and the check against the Kaggle images are separate
 # steps, run only after this list has been looked at.
 FIG_NOT_A_SKIN_IMAGE = re.compile(
     r"flow ?chart|flow diagram|forest plot|kaplan|prisma|algorithm|schematic|workflow|bar (?:chart|graph)|histogram|roc curve|"
@@ -177,7 +177,7 @@ def extra_papers(fetch, per_class, known, removed):
 
 def visual_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual", description="Lists the skin-image figures of the corpus papers.")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--cache", default=None, help="download cache (default: <corpus>/cache)")
     ap.add_argument("--limit", type=int, default=0, help="read only the first N papers (a trial)")
     ap.add_argument("--extra-papers", type=int, default=0,
@@ -223,7 +223,7 @@ def visual_main(argv=None, fetch_xml=None, fetch=None):
 # An answer counts as an image only when its first bytes are those of a JPEG, PNG or GIF file. A file under 3,000 bytes (an icon) is
 # left out, and so is an image that is byte-for-byte the same as one already kept. --probe N tries only N figures, saves nothing and
 # prints what each address answered, so that a wrong address pattern can be seen at once. The images are licensed material: they
-# stay in data/knowledge/corpus/visual/images/ (git-ignored); the card records the counts.
+# stay in data/corpus/visual/images/ (git-ignored); the card records the counts.
 S3_BUCKET = "https://pmc-oa-opendata.s3.amazonaws.com/"
 EUROPE_PMC_IMAGE = "https://europepmc.org/articles/{doc}/bin/{href}{ext}"
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif")
@@ -333,7 +333,7 @@ def download_images(items, folder, get=download_bytes, pause=0.4, probe=0, trace
 
 def visual_images_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-images", description="Downloads the images of the listed figures.")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--probe", type=int, default=0, help="try only the first N figures and save nothing: which addresses work?")
     return ap.parse_args(argv)
 

@@ -22,8 +22,8 @@ from src.pipelines.base import run_folder
 from src.utils.common import (
     ALL_CASES,
     CLASSES,
+    CORPUS_DIR,
     INDEX_DIR,
-    KNOWLEDGE_CORPUS,
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     RAW,
@@ -112,7 +112,7 @@ def step_feature_check(results):
 
 
 def step_corpus(data):
-    folder = os.path.join(data, KNOWLEDGE_CORPUS)
+    folder = os.path.join(data, CORPUS_DIR)
     files = {f: os.path.join(folder, f) for f in ("passages.jsonl", "manifest.csv", "corpus_card.json")}
     present = [f for f, p in files.items() if os.path.isfile(p)]
     if not present:
@@ -157,7 +157,7 @@ def step_index(data):
         return PROBLEM, "index.json without embeddings.f32: build the index again"
     if os.path.getsize(os.path.join(folder, "embeddings.f32")) != 4 * meta["n_passages"] * meta["dim"]:
         return PROBLEM, "embeddings.f32 has the wrong size: build the index again"
-    passages = os.path.join(data, KNOWLEDGE_CORPUS, "passages.jsonl")
+    passages = os.path.join(data, CORPUS_DIR, "passages.jsonl")
     if os.path.isfile(passages) and sha256(passages) != meta.get("passages_sha256"):
         return PROBLEM, "passages.jsonl changed after the index was built: run the index command again"
     note = f"{meta['n_passages']} passages, {meta['dim']} numbers each ({meta['encoder']})"

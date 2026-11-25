@@ -855,14 +855,24 @@ class RetrievalTests(unittest.TestCase):
         r = evaluation_retrieval.retrieval_metrics(self.qa, self.contexts([["MEL"], ["BCC"], [], ["BCC", "SCC"], ["NV"]]))
         self.assertEqual((r["hit@1"], r["hit@3"]), (0.0, 1.0))
         self.assertAlmostEqual(r["precision@5"], 0.4)
+        self.assertNotIn("hit@10", r)                              # 5 passages kept: no cut-off above 5
         self.assertEqual(r["mrr"], 0.5)
         self.assertNotIn("context_precision", r)                  # dropped 2026-11-24: it repeats Precision@k and MRR in part
         self.assertNotIn("hit_recall@1", r)
 
     def test_ndcg_does_not_reward_returning_fewer_passages(self):
-        r = evaluation_retrieval.retrieval_metrics(self.qa, self.contexts([["BCC"]]))  # one passage only, and it is relevant
+        r = evaluation_retrieval.retrieval_metrics(self.qa, self.contexts([["BCC"]]), ks=(1, 5))  # one passage only, and it is relevant
         self.assertEqual(r["ndcg@1"], 1.0)
         self.assertAlmostEqual(r["ndcg@5"], round(1 / sum(1 / math.log2(j + 2) for j in range(5)), 4))
+
+    def test_a_system_that_keeps_3_passages_is_scored_at_1_and_3_only(self):
+        """Researcher's decision (2026-11-25): no score above the number of passages kept (the standard RAG keeps 3)."""
+        qa = as_dict([question("ISIC_0000001", "BCC"), question("ISIC_0000002", "MEL")])
+        pred = {"ISIC_0000001": {"contexts": [{"tags": ["MEL"]}, {"tags": ["BCC"]}, {"tags": []}]},
+                "ISIC_0000002": {"contexts": [{"tags": ["MEL"]}, {"tags": []}]}}                  # one answer kept fewer
+        r = evaluation_retrieval.retrieval_metrics(qa, pred)
+        self.assertEqual(sorted(k for k in r if "@" in k), ["hit@1", "hit@3", "ndcg@1", "ndcg@3", "precision@1", "precision@3"])
+        self.assertAlmostEqual(r["precision@3"], round((1 / 3 + 1 / 3) / 2, 4))                   # the shorter answer still counts over 3
 
     def test_no_contexts_means_no_retrieval_report(self):
         self.assertIsNone(evaluation_retrieval.retrieval_metrics(self.qa, {"ISIC_0000001": {"pred": "A"}}))
@@ -1284,7 +1294,9 @@ class HybridRetrievalTests(unittest.TestCase):
         s = self.rag("hybrid").settings()
         self.assertEqual((s["retrieval"], s["pool"]), ("hybrid", pipelines_standard_rag.POOL))
         self.assertEqual(self.rag("dense").settings()["pool"], None)
-        self.assertEqual([pipelines_base.rag_system(m) for m in pipelines_standard_rag.RETRIEVAL_MODES], ["standard_rag", "standard_rag_hybrid", "standard_rag_hybrid_rerank"])
+        # the approved retrieval (hybrid-rerank, 2026-11-24) is the standard RAG; the other modes are trials in their own folders
+        self.assertEqual([pipelines_base.rag_system(m) for m in pipelines_standard_rag.RETRIEVAL_MODES], ["standard_rag_dense", "standard_rag_hybrid", "standard_rag"])
+        self.assertEqual(pipelines_standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"]).retrieval, "hybrid-rerank")
 
 
 class RagQueryAndPromptTests(unittest.TestCase):
@@ -1421,11 +1433,21 @@ class StandardRagTests(unittest.TestCase):
         self.assertEqual(a[0], b[0])                                                     # and the prompt is the same
         self.assertEqual((a[1]["contexts"][1]["tags"], b[1]["contexts"][1]["tags"]), (["NV"], ["MEL"]))   # the tags travel with the passage
 
-    def test_an_image_only_question_gets_the_same_passages_whatever_the_case(self):
-        other = data_views.question(run_cases(2, True)[1], "image_only")
-        a = self.rag().prepare(self.q["image_only"], "image_only", None, None)[1]
-        b = self.rag().prepare(other, "image_only", None, None)[1]
-        self.assertEqual((a["query"], [c["chunk_id"] for c in a["contexts"]]), (b["query"], [c["chunk_id"] for c in b["contexts"]]))
+    def test_an_image_question_is_searched_by_its_own_image_and_never_by_its_class(self):
+        from array import array
+        items = [{"passage_id": f"v{i}", "image_file": f"v{i}.jpg", "title": "Figure", "text": "Caption.", "tags": [t]}
+                 for i, t in enumerate(["MEL", "NV"])]
+        q, other = self.q["image_only"], data_views.question(run_cases(2, True)[1], "image_only")
+        vectors = {os.path.basename(q["image_path"]): [1.0, 0.0], os.path.basename(other["image_path"]): [0.0, 1.0]}
+        visual = (retrieval_indexer.DenseIndex(items, array("f", [1, 0, 0, 1]), 2, {}), vectors)
+        rag = pipelines_standard_rag.StandardRag(rag_index(RAG_PASSAGES), rag_encode, 2, visual=visual)
+        a, b = rag.prepare(q, "image_only", None, None)[1], rag.prepare(other, "image_only", None, None)[1]
+        self.assertEqual(([c["chunk_id"] for c in a["contexts"]], [c["chunk_id"] for c in b["contexts"]]), (["v0", "v1"], ["v1", "v0"]))
+        self.assertEqual((a["query"], a["query_image"]), (None, os.path.basename(q["image_path"])))
+        relabelled = {**q, "gold_label": "NV", "answer": "B"}                                     # the class never changes the search
+        self.assertEqual(rag.prepare(relabelled, "image_only", None, None)[1]["contexts"], a["contexts"])
+        with self.assertRaises(ValueError):
+            pipelines_standard_rag.StandardRag(rag_index(RAG_PASSAGES), rag_encode, 2).prepare(q, "image_only", None, None)
 
     def test_the_run_settings_name_what_was_used_and_no_model_text_is_in_the_query(self):
         s = self.rag().settings()

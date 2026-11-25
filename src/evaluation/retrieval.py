@@ -14,10 +14,19 @@ def relevant_counts(passages):
     return {c: counts[c] for c in CLASSES}
 
 
-def retrieval_metrics(qa, pred, ks=(1, 3, 5, 10), n_relevant=None):
+CUTOFFS = (1, 3, 5, 10)
+
+
+def retrieval_metrics(qa, pred, ks=None, n_relevant=None):
+    """Hit@k, Precision@k, nDCG@k (and Recall@k with the corpus counts) and MRR. Without ks, k is each of 1, 3, 5 and 10 that is not
+    larger than the number of passages the system kept for an answer (researcher's decision, 2026-11-25): a system that keeps 3
+    passages has no Precision@5 (it would be divided by 5 with 3 passages) and no Hit@5 (it would repeat Hit@3)."""
     rows = [(qa[i]["gold_label"], pred[i]["contexts"]) for i in qa if i in pred and pred[i].get("contexts")]
     if not rows:
         return None
+    if ks is None:
+        kept = max(len(ctx) for _, ctx in rows)
+        ks = tuple(k for k in CUTOFFS if k <= kept)
     res = {}
     ideal = [1 / math.log2(j + 2) for j in range(max(ks))]
     for k in ks:

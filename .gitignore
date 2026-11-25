@@ -16,12 +16,12 @@ htmlcov/
 *.zip
 
 # The knowledge corpus: its passages (published text under the sources' licences) and the download cache stay on the laptop;
-# data/knowledge/corpus/manifest.csv and corpus_card.json (no text) are committed.
-/data/knowledge/corpus/passages.jsonl
-/data/knowledge/corpus/cache/
-/data/knowledge/corpus/index/
-/data/knowledge/corpus/visual/
-/data/knowledge/corpus_trial/
+# data/corpus/manifest.csv and corpus_card.json (no text) are committed.
+/data/corpus/passages.jsonl
+/data/corpus/cache/
+/data/corpus/index/
+/data/corpus/visual/
+/data/corpus_trial/
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes), half-written files and run logs
 *.partial/

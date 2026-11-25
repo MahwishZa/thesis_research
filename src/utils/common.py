@@ -28,7 +28,7 @@ OFFICIAL_LABELS = "annotations/official_labels"   # the official ISIC 2019, HAM1
 PROCESSED_IMAGES = "processed/images"            # the cleaned, standardised images (laptop only)
 PROCESSED_CASES = "processed/cases"              # the cleaned, de-duplicated and split cases, and the tables made with them
 VIEWS_DIR = "views"                              # one folder per view: cases.csv and the question files
-KNOWLEDGE_CORPUS = "knowledge/corpus"            # the knowledge library for the RAG systems (text and images)
+CORPUS_DIR = "corpus"            # the knowledge library for the RAG systems (text and images)
 REFERENCE_TEXTS = "annotations/reference_texts.json"  # the reference texts of the evaluation (never retrieved)
 ALL_CASES = f"{PROCESSED_CASES}/all_cases.csv"
 
@@ -56,4 +56,4 @@ def load_env(path=".env"):
     return unusable
 
 
-INDEX_DIR = f"{KNOWLEDGE_CORPUS}/index"           # the text index (embeddings.f32, index.json), laptop only
+INDEX_DIR = f"{CORPUS_DIR}/index"           # the text index (embeddings.f32, index.json), laptop only

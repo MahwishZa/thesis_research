@@ -17,7 +17,8 @@ third party is credited anywhere in the repository.
   add, rename or remove a top-level file or folder; new material goes inside these folders. A test in `tests/system/test_system.py`
   checks this. `README.md` holds only "Overview" and "Objectives" (also tested).
 - Layout inside (approved 2026-11-25): `data/{raw, processed/{cases,images}, annotations/{official_labels, reference_texts.json},
-  knowledge/corpus, views/<view>/{train,validation,test}.jsonl}`; `src/main.py` is the one entry point (`python -m src.main <command>`),
+  corpus, views/<view>/{train,validation,test}.jsonl}` (`data/corpus/` was `data/knowledge/corpus/` for a few hours: simple, flat names
+  are preferred); `src/main.py` is the one entry point (`python -m src.main <command>`),
   code in `src/{utils, data, knowledge, models, retrieval, pipelines, evaluation}` (`pipelines/base.py` holds what all systems share;
   `evaluation/statistics.py` the tests and intervals; `knowledge/lookalike.py` the Kaggle look-alike check);
   `results/<system>/<view>/<model>_<split>/`, `results/comparisons/`, `results/data_quality/`; tests in `tests/{unit, system, integration,
@@ -53,7 +54,9 @@ third party is credited anywhere in the repository.
 ## Research state (update when it changes)
 - Data: the Kaggle "Skin Cancer ISIC 9 classes" dataset only, 8 classes, 2,197 cases; balanced validation (20 per class) and test (30
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
-- Systems: LLM-only (done, approved), standard RAG (built and tested 2026-11-24, not yet run: `python -m src.main index`, then `standard-rag`), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
+- Systems: LLM-only (done, approved), standard RAG (built and tested; indexes built on the laptop; image search connected to the run on
+  2026-11-25: image only = image search, image + text = text and image fused by rank, text only = text search; `standard-rag` defaults to
+  the approved hybrid-rerank and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
@@ -83,7 +86,11 @@ third party is credited anywhere in the repository.
   Full visual index (laptop, 2026-11-24): 85 of 88 images indexed, 3 dropped as Kaggle look-alikes (2 by embedding, 1 by hash); the
   closest hash distances were 4 to 8 bits, so both thresholds are near the data: `visual-calibrate` measures them on the 448
   same-lesion photo pairs of the Kaggle set (known look-alikes) before they are accepted. `retrieval-eval --view image_only` and
-  `--view multimodal` score the image search (and text + image fused) on validation, free. RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
+  `--view multimodal` score the image search (and text + image fused) on validation, free.
+  Laptop validation (2026-11-25, 160 questions, Hit@3): text hybrid-rerank 48.1% (random 38.6%), image search 40.0% (random 39.4%),
+  fused 55.0% (random 37.9%). visual-calibrate: the look-alike check flags 64.5% of same-lesion pairs and 74.7% of nearest
+  different-lesion images, so it is a strict copy filter, not a calibrated test (kept unchanged; recommended to report as such).
+  Still open: the text-only view does not yet search the 85 caption records (needs a caption-aware text index, validated first). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
 - Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.

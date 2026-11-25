@@ -46,6 +46,7 @@ from src.pipelines import standard_rag as pipelines_standard_rag
 from src.retrieval import indexer as retrieval_indexer
 from src.retrieval import query as retrieval_query
 from src.retrieval.indexer import read_index as common_read_index
+from src.retrieval.retriever import reciprocal_rank_fusion
 from src.utils import common as utils_common
 from src.utils import io as utils_io
 from src.utils import logging as utils_logging
@@ -54,7 +55,7 @@ from src.utils import status as utils_status
 from src.utils.common import (
     ALL_CASES,
     CLASSES,
-    KNOWLEDGE_CORPUS,
+    CORPUS_DIR,
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     REFERENCE_TEXTS,
@@ -1888,7 +1889,30 @@ def rag_enc(items):
     return [rag_vec(" ".join(x) if isinstance(x, list) else x) for x in items]
 
 
-def make_rag(k=3):
+RAG_IMAGES = [{"passage_id": f"v{i}", "item_id": f"v{i}", "image_file": f"v{i}.jpg", "title": "Figure", "text": f"Dermoscopy of {name}. More.",
+               "tags": [tag]} for i, (name, tag) in enumerate([("a melanoma", "MEL"), ("a nevus", "NV"), ("a carcinoma", "BCC")])]
+
+
+class FakeImageVectors(dict):
+    """The saved vector of every question image: [1, 0] for an even case number, [0, 1] for an odd one."""
+
+    def __contains__(self, name):
+        return True
+
+    def __getitem__(self, name):
+        return [1.0, 0.0] if int(name.split("_")[-1].split(".")[0]) % 2 == 0 else [0.0, 1.0]
+
+
+def fake_visual():
+    from array import array
+
+    from src.retrieval.indexer import DenseIndex
+    return (DenseIndex(list(RAG_IMAGES), array("f", [1, 0, 0, 1, 0.6, 0.8]), 2, {"encoder": "fake-image", "passages_sha256": "img"}),
+            FakeImageVectors())
+
+
+def make_rag(k=3, visual=True):
+    """The approved retrieval (hybrid-rerank; the fake re-ranker keeps the fused order) with a fake text index and image index."""
     from array import array
 
     from src.retrieval.indexer import DenseIndex
@@ -1896,7 +1920,8 @@ def make_rag(k=3):
     for p in RAG_CORPUS:
         flat.extend(rag_vec(p["title"] + " " + p["text"]))
     return pipelines_standard_rag.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
-                          rag_enc, k)
+                          rag_enc, k, "hybrid-rerank", rerank=lambda q, t: [float(-i) for i in range(len(t))],
+                          visual=fake_visual() if visual else None)
 
 
 class FakeRagClient:
@@ -2000,12 +2025,39 @@ class StandardRagRunTests(unittest.TestCase):
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
         self.assertIn("in the image and/or in the patient facts", info["settings"]["instruction"])
 
-    def test_an_image_only_run_retrieves_the_same_passages_for_every_question(self):
+    def test_an_image_only_run_searches_the_image_library_by_the_question_image(self):
+        """Researcher's decision (2026-11-24, connected 2026-11-25): the image views search by the image itself."""
         self.make("image_only", 4)
         out = self.go(self.args(view="image_only"), FakeRagClient(self.questions), make_rag())
-        rows = self.lines(out)
-        self.assertEqual({r["query"] for r in rows}, {retrieval_query.GENERIC_QUERY})
-        self.assertEqual(len({tuple(c["chunk_id"] for c in r["contexts"]) for r in rows}), 1)
+        rows = {r["id"]: r for r in self.lines(out)}
+        self.assertTrue(all(r["query"] is None and r["query_image"] == f"{i}.jpg" for i, r in rows.items()))
+        self.assertTrue(all(c["chunk_id"].startswith("v") and c["image_file"] for r in rows.values() for c in r["contexts"]))
+        self.assertEqual([c["chunk_id"] for c in rows["ISIC_0000000"]["contexts"]], ["v0", "v2", "v1"])     # vector [1, 0]
+        self.assertEqual([c["chunk_id"] for c in rows["ISIC_0000001"]["contexts"]], ["v1", "v2", "v0"])     # vector [0, 1]
+        s = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))["settings"]["retrieval"]
+        self.assertEqual((s["query"], s["image_search"]), ("image", {"encoder": "fake-image", "items_sha256": "img", "n_items": 3}))
+
+    def test_an_image_and_text_run_fuses_the_text_and_the_image_search_as_validated(self):
+        self.make("multimodal", 4)
+        rag = make_rag()
+        out = self.go(self.args(view="multimodal"), FakeRagClient(self.questions), rag)
+        for r in self.lines(out):
+            q = next(x for x in self.questions if x["id"] == r["id"])
+            text = [p for p, _ in rag.retrieve(r["query"], pipelines_standard_rag.FUSION_LIST)]
+            image = [p for p, _ in rag.image_search(q, pipelines_standard_rag.FUSION_LIST)]
+            expected = [p["passage_id"] for p, _ in reciprocal_rank_fusion([text, image], top=3)]
+            self.assertEqual([c["chunk_id"] for c in r["contexts"]], expected)
+            self.assertEqual({c["chunk_id"][0] for c in r["contexts"]}, {"p", "v"})                # both libraries reach the top 3
+        s = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))["settings"]["retrieval"]
+        self.assertEqual(s["fusion"], {"method": "reciprocal rank fusion", "k": 60, "list": 10})
+
+    def test_an_image_view_without_the_image_index_stops_before_any_question_is_asked(self):
+        self.make("image_only", 2)
+        client = FakeRagClient(self.questions)
+        with self.assertRaises(ValueError):
+            self.go(self.args(view="image_only"), client, make_rag(visual=False))
+        self.assertEqual(client.texts, [])
+        self.assertFalse(os.path.exists(self.results))                                           # no run folder is made
 
     def test_an_interrupted_run_continues_with_the_same_settings_and_refuses_other_ones(self):
         self.make("text_only")
@@ -2191,10 +2243,10 @@ class IndexStatusTests(unittest.TestCase):
         from src.utils.reproducibility import file_sha256
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(utils_status.step_index(d)[0], utils_status.NOT_RUN)
-            corpus = os.path.join(d, KNOWLEDGE_CORPUS)
+            corpus = os.path.join(d, CORPUS_DIR)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
             sha = file_sha256(os.path.join(corpus, "passages.jsonl"))
-            write_index(os.path.join(d, KNOWLEDGE_CORPUS, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
+            write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
                         {"encoder": "fake", "passages_sha256": sha, "exclude_reference_pages": True})
             status, note = utils_status.step_index(d)
             self.assertEqual(status, utils_status.DONE)

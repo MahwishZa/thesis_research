@@ -120,10 +120,29 @@
       ]
     }
   },
-  "random_passages": {
-    "hit@3": 0.3862,
-    "precision@3": 0.1574,
-    "ndcg@3": 0.157,
-    "mrr": 0.3229
+  "random_from_the_same_pool": {
+    "dense": {
+      "hit@3": 0.3862,
+      "precision@3": 0.1574,
+      "ndcg@3": 0.157,
+      "mrr": 0.3229
+    },
+    "hybrid": {
+      "hit@3": 0.3862,
+      "precision@3": 0.1574,
+      "ndcg@3": 0.157,
+      "mrr": 0.3229
+    },
+    "hybrid-rerank": {
+      "hit@3": 0.3862,
+      "precision@3": 0.1574,
+      "ndcg@3": 0.157,
+      "mrr": 0.3229
+    }
+  },
+  "share_of_top3_from_the_image_library": {
+    "dense": 0.0,
+    "hybrid": 0.0,
+    "hybrid-rerank": 0.0
   }
 }

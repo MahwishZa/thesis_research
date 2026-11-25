@@ -5,7 +5,7 @@ import json
 import operator
 import os
 
-from src.utils.common import ALL_CASES, KNOWLEDGE_CORPUS, PROCESSED_IMAGES
+from src.utils.common import ALL_CASES, CORPUS_DIR, PROCESSED_IMAGES
 from src.utils.io import read_csv, write_json
 from src.utils.logging import get_logger
 
@@ -178,7 +178,7 @@ def guard_calibration(vectors, hashes, groups, threshold, hash_threshold):
 
 def visual_calibrate_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-calibrate", description="Measures the look-alike tests on known Kaggle cases.")
-    ap.add_argument("--corpus", default=os.path.join("data", KNOWLEDGE_CORPUS))
+    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
     ap.add_argument("--data", default="data")
     ap.add_argument("--encoder", default="biomedclip")
     ap.add_argument("--threshold", type=float, default=0.95)
