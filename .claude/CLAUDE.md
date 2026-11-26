@@ -70,7 +70,7 @@ third party is credited anywhere in the repository.
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
 - Systems: LLM-only (done, approved), standard RAG (built and tested; indexes built on the laptop; image search connected to the run on
   2026-11-25: image only = image search, image + text = text and image fused by rank, text only = text search; `standard-rag` defaults to
-  BM25 (researcher, 2026-11-25; hybrid-rerank before) and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
+  BM25 candidates re-ordered by the MedCPT cross-encoder (`bm25-rerank`, researcher asked for one re-ranking technique, 2026-11-26; plain BM25 before) and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
 - Libraries (researcher, 2026-11-26): the knowledge library is divided into one folder per view; every view searches the same records (the
   text search covers passages and figure captions, the image search the picture-and-caption records, multimodal merges both by rank).
@@ -88,10 +88,12 @@ third party is credited anywhere in the repository.
   significantly better than bm25 alone (p = 0.11) or the image search alone (p = 0.30): the BM25 choice stands.
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`); the LLM-only runs are done.
   **The researcher has no budget left (2026-11-26): no paid call.** `llm-only` and `standard-rag` refuse a model that costs credit unless `--allow-paid` is
-  given (a `MODELS` entry with `"free": True` needs no flag; none exists now). Gemma 4 31B (free, OpenRouter) was tried and removed on 2026-11-26: the shared free
-  pool answered HTTP 429 on every probe. The RAG backbone is to be chosen (researcher is looking for a free model); it needs its own LLM-only baseline and a
-  free validation pilot first (>= 90% readable answer letters; image-only accuracy clearly above 12.5%; then a RAG format check: >= 80% readable Evidence line,
-  >= 50% quotes word for word).
+  given (a `MODELS` entry with `"free": True` needs no flag). Gemma 4 31B (free, OpenRouter) was tried and removed on 2026-11-26: the shared free pool answered HTTP 429 on every probe.
+  Qwen2.5-3B-Instruct was built (text only, whole model on the GPU) and removed on 2026-11-26 (researcher): it cannot see pictures and 6 GB does not fit a 4 GB card.
+  **The RAG backbone is not yet approved.** Hardware ✔ (`nvidia-smi` and RAM check, laptop, 2026-11-26): NVIDIA RTX 2050 with 4096 MiB, 15.2 GB RAM; `accelerate` 1.16.0 installed (researcher, 2026-11-26).
+  Recommended, awaiting approval: `google/medgemma-4b-it` (reads images and text, so one backbone for all three views; ran on this laptop in the earlier version of the project with 16-bit weights split GPU 3 GiB / CPU 10 GiB, about 6 s per image; gated:
+  Health AI Developer Foundations terms; revision to pin `290cda5eeccbee130f987c4ad74a59ae6f196408` ✔ printed by `model_info`, 2026-11-26), alternatives Qwen3-VL-4B-Instruct and Ministral-3-3B-Instruct-2512 (both Apache 2.0). One local backbone would run
+  all four approaches. It needs its own LLM-only baseline and a free validation pilot first (>= 90% readable answer letters; image-only accuracy clearly above 12.5%; then a RAG format check: >= 80% readable Evidence line, >= 50% quotes word for word).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
   The query is made only of the question's own words (patient facts; a fixed sentence for image-only). No model writes or rewrites a
@@ -100,21 +102,29 @@ third party is credited anywhere in the repository.
   Facts that are "not recorded" are left out of the query; with no fact left, the query is a fixed sentence that fits the view ("skin
   lesion" for text-only and image + text, "dermoscopic image of a skin lesion" for image-only).
 - Standard RAG scope (researcher, 2026-11-24 and 2026-11-25): one library shared by all RAG systems (text and picture-and-caption records, real and relevant
-  only, no duplicates, no near-duplicate of any Kaggle image); only techniques that need no model-written text. Text search: BM25 (best on validation in both text
-  views; not significantly better than the others by McNemar's exact test with Holm's correction, and it must be reported so); no re-ranker (the MedCPT
-  cross-encoder, dense and hybrid searches stay in `retrieval-eval` as the validation comparison and for the RAG² baseline). Retrieval from the patient facts is only a
+  only, no duplicates, no near-duplicate of any Kaggle image); only techniques that need no model-written text. Text search: `bm25-rerank` = the 20 best BM25 passages re-ordered by the
+  MedCPT cross-encoder (Jin et al. 2023), the one re-ranking technique (2026-11-26; `hybrid-rerank` was removed). Why this one, ✔ from the laptop `retrieval-eval` runs of 2026-11-26
+  (validation, 160 questions): it beat `hybrid-rerank` on Hit@3 in all 6 comparisons made so far on 3 library versions (e.g. text only 56.2% vs 43.8% on the library of that day; fused 66.2% vs 62.5%; not tested for significance),
+  it is the best text search on that library (MRR 44.0% vs 39.7% for BM25) and needs no query encoder. It is NOT shown to be better than plain BM25: the difference is not significant
+  (text only 56.2% vs 51.9%, McNemar p = 0.42; fused 66.2% vs 62.5%, p = 0.45) and its sign was the other way on the library before (46.9% vs 52.5%): report it so. `bm25`, `dense` and `hybrid`
+  stay in `retrieval-eval` as the validation comparison and for the RAG² baseline. Retrieval from the patient facts is only a
   little better than random, because the query holds little diagnostic information. The image views search by the image itself in the library of picture-and-caption
   records (MONET vectors); the model gets the caption and paper title, never the library picture. The text index holds the passages and the caption records (3,414 records;
   reference pages and reference copies left out; `index` refuses other settings unless `--replace`); repeated texts are removed before the model sees them.
   The image library: the figure list of the 90 PMC papers of the text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all
   downloaded from the PMC open-data bucket; 84 are indexed after the Kaggle look-alike check (embedding similarity 0.95, or a 64-bit picture hash within 4 bits, also
   mirrored and turned; copies inside the library at 0.98). The thresholds were fixed before any result and are not calibrated: a strict copy filter, not a test
-  (kept unchanged: researcher, 2026-11-25; report it as such). `visual --extra-papers N` can add papers from the same PMC search and `visual --dermoscopedia N` adds captioned Dermoscopedia pictures (CC BY-NC-SA 4.0;
-  same figure rules, diagnosis only from caption or page title; built and tested offline, not yet run live) (researcher approved 2026-11-26: more papers, more
-  text, Dermoscopedia figures; rule fixed before any result: validation only, adopt a larger library unless a paired McNemar test (Holm) shows it
-  significantly worse, p < 0.05; report Hit@3 and the random line; no labelled image dataset such as ISIC, HAM10000 or PAD-UFES-20 as a library, because it leaks
-  labels). The corpus builder now takes `--per-doc` (default 8, spread over the document) and larger defaults (`--pmc-docs` 60, `--textbook-pages` 30);
-  the corpus, indexes and retrieval results must be rebuilt on the laptop before any number is quoted (◻ not yet run). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the RAG²
+  (kept unchanged: researcher, 2026-11-25; report it as such). Library growth (researcher approved 2026-11-26; rule fixed before any result: validation only, adopt a
+  larger library unless a paired McNemar test (Holm) shows it significantly worse, p < 0.05; report Hit@3 and the random line; no labelled image dataset such as ISIC,
+  HAM10000 or PAD-UFES-20 as a library, because it leaks labels): the library was rebuilt with `library --extra-papers 40 --dermoscopedia 10` ✔ (laptop, 2026-11-26): 343 figures kept from 173 of 305 papers (7 from Dermoscopedia: 27 of its captions were "not a clinical or dermoscopic image", 9 too short),
+  312 pictures downloaded (31 not found; 8 in an earlier run of the same list, so a rerun may recover some), 307 indexed after the look-alike check (2 dropped as Kaggle look-alikes, 3 as duplicates inside the library; highest similarity 0.955).
+  Text library: 3,447 passages from 1,100 documents (guidelines 912, pmc 1,200, pubmed 1,124, textbook 211; the `--per-doc` cap, default 8, applies to PMC papers only: a first trial that capped every library shrank guidelines and textbook),
+  text index 3,639 records (244 captions added, 62 already in the corpus). Validation Hit@3 (160 questions; 84 records before in brackets): image search 56.2% (47.0 to 65.0; random 37.9%) [55.6%]; text only: bm25-rerank 58.1% (48.0 to 67.1),
+  bm25 52.5% [54.4%], dense 45.0%, hybrid 43.8% (random 39.6%); image + text: fused:bm25-rerank 68.1% (59.8 to 75.8), fused:bm25 63.1% [60.6%], fused:dense 60.6%, fused:hybrid 60.6% (random 41.8%). Paired tests (McNemar, Holm): bm25-rerank is not
+  significantly better than bm25 (p = 0.28; fused p = 0.29) and better than hybrid (Holm p = 0.026); fused:bm25-rerank beats the image search alone (Holm p = 0.040) and the text bm25 alone (Holm p = 0.039), so the fusion adds something. No loss against the
+  smaller libraries: the larger libraries are adopted. The paired test between the old and the new library could not be run (the old per-question hits were not saved); `retrieval-eval` now saves them (`hit3_by_question`), records which library a result belongs to,
+  and `status` checks it. `audit` ✔ (laptop, 2026-11-26): 1,096 documents asked at NCBI and Dermoscopedia, 0 not found, 4 with another title (to look at); 59 passage records without an https address on the source's own site (cause to look at, the audit now names them);
+  145 of 1,100 documents have no passage that names a disease (weak relevance, not removed); the image library has 0 records with a problem. `library` runs every build step in one command; `audit` checks that every record is a real, published, unchanged source (`--online` asks NCBI and Dermoscopedia). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the RAG²
   baseline only; its scope is for the supervisor to decide. No paid run: there is no budget (2026-11-26).
 - Metrics: defined in the docstrings of `src/evaluation/metrics.py`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.

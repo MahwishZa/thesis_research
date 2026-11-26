@@ -267,6 +267,8 @@ Source detectable from the **standardised** image features: AUC 0.953 (0.5 = not
 python -m src.main preprocess     # step 1 (minutes; needs data/raw/ on the laptop)
 python -m src.main views          # step 2 (seconds)
 python -m src.main corpus         # step 3 (internet; downloads are cached)
+python -m src.main library --extra-papers 40 --dermoscopedia 10   # steps 3 and 4 in one command: corpus, audit, visual, visual-images, visual-index, index (laptop; --from STEP resumes)
+python -m src.main audit --online # every record is a real, published, unchanged source (asks NCBI and Dermoscopedia whether each document exists)
 python -m src.main references --token-check    # step 3b (internet)
 python -m src.main status         # where each step stands: done, not run, or a problem and why
 python -m src.main features       # the shortcut analysis (section 10)
@@ -280,6 +282,7 @@ python -m unittest                              # all four test files; tests/sys
 | 2026-11-25 | Sections 1, 9 and 9.2 brought up to the committed corpus of 2026-11-24 (3,426 passages; they still described the 2026-11-23 build of 3,444). Captions in the text index (9.3). |
 | 2026-11-25 | Section 9.3, the image library, from `visual_card.json` and the validation results. |
 | 2026-11-26 | Section 9.3: MONET replaces BiomedCLIP after the validation comparison (result added); the library is rebuilt with MONET (84 records) and the look-alike numbers are MONET's. |
+| 2026-11-26 | Section 13: the `library` command and `audit --online` (provenance check). The numbers of sections 9 to 9.3 still describe the committed files of 2026-11-24 and 2026-11-26 (84 image records); they are brought up to date from the committed cards after the rebuild. |
 | 2026-11-26 | The library is split into one folder per view (`data/corpus/text_only/`, `image_only/`, `multimodal/`; section 9). The files did not change; the index of the text library must be rebuilt because it records where the captions are. |
 | 2026-11-25 | New folder structure (section 8): paths, commands (`python -m src.main`) and the move record `views/provenance.json`. No data changed. |
 | 2026-11-24 | Added the retrieval index and the corpus audit (sections 9.1 and 9.2). Restructured under the data-sheet headings. Corrected stale figures: the source-detection AUC (0.935 → 0.953), the shortcut score (33% "balanced accuracy" → 31.7% accuracy), the test-set size ("16 to 68 per class" → 30 per class, 240 cases). Added sections 3.2 to 3.4, 9 and 10 with figures read from the committed files. Added the class-balance record (section 6). |

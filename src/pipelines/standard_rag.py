@@ -7,24 +7,24 @@ import random
 
 from src.data.views import question_file
 from src.evaluation.metrics import holm, mcnemar_exact, percentile, relevant_counts, retrieval_metrics
-from src.models.embeddings import MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
+from src.models.embeddings import MEDCPT_CROSS, MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
 from src.models.llm import make_client, require_free_or_allowed
-from src.pipelines.base import add_run_arguments, rag_instruction, rag_system, rag_text, run, run_folder
+from src.pipelines.base import APPROVED_RETRIEVAL, add_run_arguments, rag_instruction, rag_system, rag_text, run, run_folder
 from src.retrieval.indexer import read_index
 from src.retrieval.retriever import BM25Index, distinct, image_query_vector, reciprocal_rank_fusion, retrieval_query
 from src.utils import IMAGE_LIBRARY, INDEX_DIR, SEED, SPLIT_FILES, TEXT_LIBRARY, VIEWS, get_logger, load_env, read_jsonl, write_json
 
-RETRIEVAL_MODES = ("bm25", "bm25-rerank", "dense", "hybrid", "hybrid-rerank")     # all but bm25: comparisons and trials
-APPROVED = "bm25"     # the standard RAG's text search (researcher, 2026-11-25: best on validation in both text views; hybrid-rerank before)
+RETRIEVAL_MODES = ("bm25", "bm25-rerank", "dense", "hybrid")     # all but the approved one: comparisons and trials
+APPROVED = APPROVED_RETRIEVAL     # the standard RAG's text search (defined in src/pipelines/base.py with the folder rule)
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
 
 
 class StandardRag:
     """The retrieval of one run: the index, the query encoder, k, and the retrieval mode.
-    bm25: the k passages of highest BM25 keyword score (Robertson & Zaragoza 2009).  dense: the k passages of highest MedCPT cosine
-    similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank
-    fusion.  hybrid-rerank: the hybrid pool, re-ordered by the MedCPT cross-encoder."""
+    bm25: the k passages of highest BM25 keyword score (Robertson & Zaragoza 2009).  bm25-rerank: the POOL best BM25 passages,
+    re-ordered by the MedCPT cross-encoder (Jin et al. 2023), the one re-ranking technique of the research.  dense: the k passages of
+    highest MedCPT cosine similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank fusion."""
 
     def __init__(self, index, encode_query, k=3, mode="dense", bm25=None, rerank=None, pool=POOL, visual=None):
         if mode not in RETRIEVAL_MODES:
@@ -38,21 +38,18 @@ class StandardRag:
     def retrieve(self, query, k):
         """[(passage, score), ...], best first, for one query text."""
         pool = max(self.pool, k)
-        if self.mode in ("bm25", "bm25-rerank"):
-            fused = self.bm25.search(query, k if self.mode == "bm25" else pool)
-            if self.mode == "bm25":
-                return fused
-        else:
-            vector = self.encode_query([query])[0]
-            if self.mode == "dense":
-                return self.index.search(vector, k)
-            fused = reciprocal_rank_fusion([[p for p, _ in self.index.search(vector, pool)], [p for p, _ in self.bm25.search(query, pool)]],
-                                           top=pool)
-            if self.mode == "hybrid":
-                return fused[:k]
-        scores = self.rerank(query, [[p.get("title") or "", p["text"]] for p, _ in fused])
-        order = sorted(range(len(fused)), key=lambda i: (-scores[i], i))
-        return [(fused[i][0], round(scores[i], 6)) for i in order[:k]]
+        if self.mode == "bm25":
+            return self.bm25.search(query, k)
+        if self.mode == "bm25-rerank":
+            candidates = self.bm25.search(query, pool)
+            scores = self.rerank(query, [[p.get("title") or "", p["text"]] for p, _ in candidates])
+            order = sorted(range(len(candidates)), key=lambda i: (-scores[i], i))
+            return [(candidates[i][0], round(scores[i], 6)) for i in order[:k]]
+        vector = self.encode_query([query])[0]
+        if self.mode == "dense":
+            return self.index.search(vector, k)
+        return reciprocal_rank_fusion([[p for p, _ in self.index.search(vector, pool)], [p for p, _ in self.bm25.search(query, pool)]],
+                                      top=pool)[:k]
 
     def ready(self, view):
         """Stops before any question is asked when a view needs what is not loaded."""
@@ -80,7 +77,9 @@ class StandardRag:
 
     def settings(self, view="text_only"):
         meta = self.index.meta
-        s = {"query_encoder": None if self.mode.startswith("bm25") else MEDCPT_QUERY, "article_encoder": meta.get("encoder"), "k": self.k, "query": "question", "retrieval": self.mode, "pool": None if self.mode in ("bm25", "dense") else self.pool,
+        s = {"query_encoder": None if self.mode.startswith("bm25") else MEDCPT_QUERY, "article_encoder": meta.get("encoder"),
+             "reranker": MEDCPT_CROSS if self.mode == "bm25-rerank" else None, "k": self.k, "query": "question", "retrieval": self.mode,
+             "pool": None if self.mode in ("bm25", "dense") else self.pool,
              "index_passages_sha256": meta.get("passages_sha256"), "index_n_passages": len(self.index.passages),
              "exclude_reference_pages": meta.get("exclude_reference_pages")}
         if view != "text_only":
@@ -112,7 +111,7 @@ def rag_parse_args(argv=None):
     add_run_arguments(ap)
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
     ap.add_argument("--retrieval", default=APPROVED, choices=RETRIEVAL_MODES,
-                    help="bm25 (the standard RAG, researcher's choice of 2026-11-25); the other modes are trials in their own folders")
+                    help=f"{APPROVED} (the standard RAG); the other modes are trials in their own folders")
     ap.add_argument("--index", default=None, help=f"the index folder (default: data/{INDEX_DIR})")
     return ap.parse_args(argv)
 
@@ -168,6 +167,11 @@ def retrieval_eval_args(argv=None):
 INTERVAL_KEYS = ("hit@3", "precision@3", "ndcg@3", "mrr")
 
 
+def hit3_by_question(qa, pred):
+    """{question id: 1 if a passage of the true class reached the top 3, else 0} (the tags score the search, they never steer it)."""
+    return {i: int(any(qa[i]["gold_label"] in c.get("tags", []) for c in pred[i]["contexts"][:3])) for i in qa}
+
+
 def paired_hit3(qa, preds, approved):
     """Each search against the approved one on the same questions: McNemar's exact test on Hit@3 (did a passage of the true class
     reach the top 3?), with Holm's correction over the comparisons. Empty when the approved search is not among them."""
@@ -175,7 +179,8 @@ def paired_hit3(qa, preds, approved):
         return {}
 
     def hits(pred):
-        return [int(any(qa[i]["gold_label"] in c.get("tags", []) for c in pred[i]["contexts"][:3])) for i in qa]
+        by_question = hit3_by_question(qa, pred)
+        return [by_question[i] for i in qa]
     base, others = hits(preds[approved]), [m for m in preds if m != approved]
     tests = {m: mcnemar_exact([1] * len(qa), hits(preds[m]), base) for m in others}
     adjusted = holm([t["p_value"] for t in tests.values()])
@@ -239,13 +244,15 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
 
         def rag_for(mode):
             return StandardRag(index, encode, 10, mode, bm25=bm25, rerank=rerank)
-    rankers, pools = {}, {}
+    rankers, pools, text_sha, image_sha = {}, {}, None, None
     for mode in text_modes:
         rag = rag_for(mode)
+        text_sha = rag.index.meta.get("passages_sha256")
         rankers[mode] = (lambda q, rag=rag: [p for p, _ in rag.ranked(q, "text_only", 10)])     # the text search (same query in every view)
         pools[mode] = rag.index.passages
     if args.view != "text_only":
         vindex, vectors = visual if visual is not None else load_visual(args.data)
+        image_sha = vindex.meta.get("passages_sha256")
         rankers["image"] = lambda q: [p for p, _ in distinct(vindex.search(image_query_vector(q, vectors), 10))]
         pools["image"] = vindex.passages
         if args.view == "multimodal":
@@ -275,7 +282,11 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
                  f"({r['a_hit_b_miss']} only {mode}, {r['a_miss_b_hit']} only {r['against']}); McNemar p = {r['p_value']}, "
                  f"Holm p = {r['p_holm']}")
     out = args.out or os.path.join(args.results, "standard_rag", args.view, f"retrieval_{SPLIT_FILES[args.split]}.json")
-    write_json(out, {"view": args.view, "split": args.split, "n_questions": len(questions), "modes": result,
-                     "intervals_95": intervals, "random_from_the_same_pool": chance,
-                     "share_of_top3_from_the_image_library": image_share, "paired_hit3_vs_approved": paired})
+    # which libraries these numbers belong to (status compares them with the current indexes), and each question's Hit@3, so that
+    # a later library can be compared with this one by a paired test
+    libraries = {"text_index_passages_sha256": text_sha, "image_items_sha256": image_sha}
+    write_json(out, {"view": args.view, "split": args.split, "n_questions": len(questions), "approved": APPROVED, "libraries": libraries,
+                     "modes": result, "intervals_95": intervals, "random_from_the_same_pool": chance,
+                     "share_of_top3_from_the_image_library": image_share, "paired_hit3_vs_approved": paired,
+                     "hit3_by_question": {mode: hit3_by_question(qa, pred) for mode, pred in preds.items()}})
     return result

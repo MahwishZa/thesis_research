@@ -484,6 +484,49 @@ def dermoscopedia_items(fetch, per_class, seen, removed):
     return out
 
 
+# ---- provenance of the image library ----------------------------------------------------------------------------------------------
+# Every record is a picture that a paper (open access, Creative Commons) or Dermoscopedia published, with the caption its authors wrote.
+# The checks (python -m src.main audit): the id is that of a real source, the address is on the source's own site, the licence and the
+# caption are there and name a diagnosis, the picture file exists, is a real image file and still has the fingerprint recorded when it was
+# downloaded, and no picture is in the library twice. With --online, the papers are also asked for at NCBI (corpus.provenance_online).
+LIBRARY_SOURCES = (("PMC", re.compile(r"PMC\d+$"), "pmc.ncbi.nlm.nih.gov"), ("dermoscopedia", re.compile(r"dermoscopedia:.+$"), "dermoscopedia.org"))
+
+
+def image_provenance(items, folder):
+    """{"n_records", "problem_counts", "problems": {kind: [item ids]}} for the records of the image library (`folder` holds images/)."""
+    problems, seen = {}, set()
+
+    def add(kind, item):
+        problems.setdefault(kind, []).append(item["item_id"])
+    for it in items:
+        source = next((s for s in LIBRARY_SOURCES if s[1].match(it["doc_id"])), None)
+        if source is None:
+            add("the document id is not that of a real source", it)
+        elif not (it.get("url") or "").startswith("https://") or urllib.parse.urlparse(it["url"]).netloc != source[2]:
+            add("no web address on the source's own site", it)
+        if not (it.get("licence") or "").strip():
+            add("no licence", it)
+        if not (it.get("caption") or "").strip():
+            add("no caption", it)
+        if not it.get("tags"):
+            add("the caption names no diagnosis", it)
+        path = os.path.join(folder, "images", it.get("image_file") or "")
+        if not it.get("image_file") or not os.path.isfile(path):
+            add("the picture file is missing", it)
+            continue
+        with open(path, "rb") as fh:
+            data = fh.read()
+        if not image_extension(data):
+            add("the file is not an image", it)
+        if hashlib.sha256(data).hexdigest() != it.get("image_sha256"):
+            add("the picture no longer matches its fingerprint", it)
+        if it.get("image_sha256") in seen:
+            add("the same picture twice", it)
+        seen.add(it.get("image_sha256"))
+    return {"n_records": len(items), "records_with_a_problem": len({i for ids in problems.values() for i in ids}),
+            "problem_counts": {k: len(v) for k, v in problems.items()}, "problems": {k: v[:20] for k, v in problems.items()}}
+
+
 def visual_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual", description="Lists the skin-image figures of the corpus papers.")
     ap.add_argument("--corpus", default=os.path.join("data", TEXT_LIBRARY), help="the text library folder (passages.jsonl, download cache)")

@@ -1,5 +1,5 @@
 {
- "n_passages": 3426,
+ "n_passages": 3447,
  "by_library": {
   "guidelines": {
    "passages": 912,
@@ -8,8 +8,8 @@
   },
   "pmc": {
    "passages": 1200,
-   "untagged": 16,
-   "short_under_40_words": 113
+   "untagged": 22,
+   "short_under_40_words": 120
   },
   "pubmed": {
    "passages": 1124,
@@ -17,19 +17,39 @@
    "short_under_40_words": 25
   },
   "textbook": {
-   "passages": 190,
+   "passages": 211,
    "untagged": 0,
-   "short_under_40_words": 39
+   "short_under_40_words": 45
   }
  },
  "near_duplicate_pairs": [
+  [
+   "PMC8850209#0",
+   "PMID:33772339#0"
+  ],
+  [
+   "PMC12856975#0",
+   "PMID:41614452#0"
+  ],
   [
    "PMC7058877#0",
    "PMID:31899063#0"
   ],
   [
-   "PMC12517799#1",
-   "PMID:41088711#0"
+   "dermoscopedia:04-Melanoma#10",
+   "dermoscopedia:Melanoma on sun damaged skin#0"
+  ],
+  [
+   "dermoscopedia:04-Melanoma#11",
+   "dermoscopedia:Melanoma on sun damaged skin#1"
+  ],
+  [
+   "dermoscopedia:04-Melanoma#12",
+   "dermoscopedia:Melanoma on sun damaged skin#2"
+  ],
+  [
+   "dermoscopedia:04-Melanoma#14",
+   "dermoscopedia:Melanoma on sun damaged skin#3"
   ],
   [
    "dermoscopedia:03-Seborrheic Keratosis / Lentigos#5",
@@ -92,21 +112,71 @@
    "passages": 102
   },
   {
-   "doc_id": "PMC11940417",
-   "passages": 83
+   "doc_id": "dermoscopedia:04-Melanoma",
+   "passages": 51
   },
   {
-   "doc_id": "PMC12026269",
-   "passages": 65
+   "doc_id": "PMC12270780",
+   "passages": 46
   },
   {
-   "doc_id": "PMC6704206",
-   "passages": 63
+   "doc_id": "PMC11026649",
+   "passages": 41
   },
   {
-   "doc_id": "PMC13114341",
-   "passages": 61
+   "doc_id": "meditron:70b97abad68805443af28746c6871cf26b7c9cd4",
+   "passages": 41
   }
  ],
- "tags_that_would_change": []
+ "tags_that_would_change": [],
+ "provenance": {
+  "n_passages": 3447,
+  "n_documents": 1100,
+  "documents_per_source": {
+   "PMC": 193,
+   "PMID": 870,
+   "dermoscopedia": 33,
+   "meditron": 4
+  },
+  "documents_with_no_tagged_passage": 145,
+  "records_with_a_problem": 59,
+  "problems": {
+   "no web address on the source's own site": [
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#0",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#1",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#2",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#3",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#4",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#5",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#6",
+    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#7",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#0",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#1",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#2",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#3",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#4",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#5",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#6",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#7",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#8",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#9",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#10",
+    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#11"
+   ]
+  },
+  "problem_counts": {
+   "no web address on the source's own site": 59
+  },
+  "online": {
+   "checked": 1096,
+   "not_found": [],
+   "other_title": [
+    "PMC12527410",
+    "PMC12313763",
+    "PMC6859055",
+    "PMC10589476"
+   ],
+   "unreachable": []
+  }
+ }
 }

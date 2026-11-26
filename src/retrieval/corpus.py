@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from html.parser import HTMLParser
 
-from src.utils import CLASSES, REFERENCE_TEXTS, TEXT_LIBRARY, get_logger, load_env, read_jsonl, write_csv, write_json, write_jsonl
+from src.utils import CLASSES, IMAGE_LIBRARY, REFERENCE_TEXTS, TEXT_LIBRARY, get_logger, load_env, read_jsonl, write_csv, write_json, write_jsonl
 
 AI_PAPER = re.compile(r"\b(deep learning|machine learning|artificial intelligence|neural networks?|convolutional|"
                       r"computer[- ]aided|ISIC|HAM10000)\b", re.I)
@@ -490,7 +490,7 @@ def textbook_docs(fetch, cls, n):
 #   - texts are split at sentence ends into passages of at most --max-words words, with one sentence of overlap;
 #   - exact duplicates and passages under --min-words words are dropped;
 #   - at most --per-class passages per library and diagnosis, so no diagnosis or library dominates the corpus, and at most --per-doc
-#     passages from one document (spread over it), so that more documents share the quota;
+#     passages from one PMC paper (spread over it), so that more papers share the quota;
 #   - a passage is tagged with every diagnosis whose name or synonym appears in it or in its title (weak relevance labels).
 #
 # Output (in --out, default data/corpus/text_only/, the library of the text-only view):
@@ -506,6 +506,10 @@ def textbook_docs(fetch, cls, n):
 #   python -m src.main corpus --out data/corpus --libraries pubmed pmc   # some libraries only
 
 
+PER_DOC_LIBRARIES = ("pmc",)     # full papers only: an abstract is one or two passages, and guideline and textbook pages are kept whole
+                                 # (a first trial that capped them as well made those two libraries smaller: 912 to 684 and 190 to 158)
+
+
 def spread(pieces, n):
     """At most n of the pieces, evenly spread over the document in their order (the first and the last included), so that a long paper
     gives its introduction, its results and its discussion, not only its first pages. All of them when there are n or fewer."""
@@ -517,8 +521,8 @@ def spread(pieces, n):
 
 
 def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
-    """Turns documents into passages, applying the rules, until the library has args.per_class passages for this class. A document gives at
-    most args.per_doc passages (0: no limit), spread over the whole document, so that more documents share the quota of a class."""
+    """Turns documents into passages, applying the rules, until the library has args.per_class passages for this class. A full paper (the
+    pmc library) gives at most args.per_doc passages (0: no limit), spread over the whole paper, so that more papers share the quota."""
     out = []
     for d in docs:
         if len(out) >= args.per_class:
@@ -547,7 +551,7 @@ def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
                     continue
                 local.add(h)
                 pieces.append((piece, h))
-        per_doc = getattr(args, "per_doc", 0)
+        per_doc = getattr(args, "per_doc", 0) if library in PER_DOC_LIBRARIES else 0
         kept = spread(pieces, per_doc)
         if len(kept) < len(pieces):
             removed[f"{library}: beyond the {per_doc} passages kept per document"] += len(pieces) - len(kept)
@@ -608,7 +612,7 @@ def corpus_args(argv=None):
     ap.add_argument("--cache", default=None, help="download cache (default: <out>/cache)")
     ap.add_argument("--libraries", nargs="+", default=list(LIBRARIES), choices=LIBRARIES)
     ap.add_argument("--per-class", type=int, default=150, help="most passages per library and diagnosis")
-    ap.add_argument("--per-doc", type=int, default=8, help="most passages from one document, spread over it (0: no limit), so that more documents share the quota")
+    ap.add_argument("--per-doc", type=int, default=8, help="most passages from one PMC paper, spread over it (0: no limit), so that more papers share the quota of a diagnosis")
     ap.add_argument("--max-words", type=int, default=200)
     ap.add_argument("--min-words", type=int, default=30)
     ap.add_argument("--pubmed-docs", type=int, default=300, help="abstracts searched per diagnosis")
@@ -667,22 +671,164 @@ def audit_corpus(passages, ref_shingles=frozenset(), near_duplicate=0.8):
             "largest_documents": [{"doc_id": d, "passages": n} for d, n in top], "tags_that_would_change": retag}
 
 
-def audit_main(argv=None):
+# ---- provenance: is every passage a real, published text? ---------------------------------------------------------------------
+# The library is made of text and pictures that other people published; nothing is written by a model or by us. The checks:
+#   offline  every passage has the id of a real source for its library (PubMed id, PMC id, Dermoscopedia page, Meditron guideline id),
+#            a web address on that source's own site, a licence, text that still hashes to the recorded fingerprint (nobody edited it
+#            after the build); and, as relevance, documents none of whose passages names one of the 8 diseases are counted;
+#   online   (--online) every PubMed and PMC id exists at NCBI and its title is the title we recorded; every Dermoscopedia page
+#            exists. A passage whose id does not exist, or belongs to another paper, would be invented or mixed up.
+# Whether a text is "about" the disease is judged only by the automatic tags, as everywhere in this research; nobody reads the cases.
+SOURCES = {"pubmed": (re.compile(r"PMID:(\d+)$"), "pubmed.ncbi.nlm.nih.gov"),
+           "pmc": (re.compile(r"PMC(\d+)$"), "pmc.ncbi.nlm.nih.gov"),
+           "textbook": (re.compile(r"dermoscopedia:(.+)$"), "dermoscopedia.org")}
+GUIDELINE_ID = re.compile(r"(?:PMC(\d+)|meditron:(.+))$")
+
+
+def source_problems(p):
+    """What is wrong with one passage's record (an empty list when it is a complete, real-looking record)."""
+    bad = []
+    pattern, host = SOURCES.get(p["library"], (GUIDELINE_ID, None))
+    if not pattern.match(p["doc_id"]):
+        bad.append("the document id is not that of a real source of this library")
+    url = p.get("url") or ""
+    if p["doc_id"].startswith("meditron:"):
+        host = None                                              # the guideline's own site (it differs from guideline to guideline)
+    elif p["doc_id"].startswith("PMC"):
+        host = "pmc.ncbi.nlm.nih.gov"
+    if not url.startswith("https://") or (host and urllib.parse.urlparse(url).netloc != host):
+        bad.append("no web address on the source's own site")
+    if not (p.get("licence") or "").strip():
+        bad.append("no licence")
+    text = p.get("text") or ""
+    if not text.strip() or hashlib.md5(text.lower().encode()).hexdigest() != p.get("md5"):
+        bad.append("the text is empty or no longer matches its fingerprint")
+    return bad
+
+
+def provenance_offline(passages):
+    """{"n_passages", "n_documents", "documents_per_source", "problems": {kind: [passage ids]}, "records_with_a_problem"} (nothing is changed)."""
+    problems, with_problem = {}, set()
+    for p in passages:
+        for kind in source_problems(p):
+            problems.setdefault(kind, []).append(p["passage_id"])
+            with_problem.add(p["passage_id"])
+    docs = {}
+    for p in passages:
+        docs[p["doc_id"]] = docs.get(p["doc_id"], False) or bool(p.get("tags"))
+    per_source = Counter(re.match(r"[A-Za-z]+", d).group() for d in docs)
+    return {"n_passages": len(passages), "n_documents": len(docs), "documents_per_source": dict(sorted(per_source.items())),
+            "documents_with_no_tagged_passage": sum(not tagged for tagged in docs.values()),
+            "records_with_a_problem": len(with_problem), "problems": {k: v[:20] for k, v in problems.items()},
+            "problem_counts": {k: len(v) for k, v in problems.items()}}
+
+
+def norm_title(title):
+    return re.sub(r"[^a-z0-9]+", " ", (title or "").lower()).strip()
+
+
+def titles_agree(ours, theirs):
+    """The recorded title and NCBI's title are the same paper's title (equal after removing punctuation, or one starts the other:
+    a title can be cut or carry a subtitle)."""
+    a, b = norm_title(ours), norm_title(theirs)
+    return bool(a) and bool(b) and (a == b or a.startswith(b) or b.startswith(a))
+
+
+def ncbi_titles(fetch, db, uids, batch=200):
+    """{uid: title} from NCBI's summary service for the ids that exist (an id that does not exist is not in the answer)."""
+    out = {}
+    for i in range(0, len(uids), batch):
+        answer = json.loads(fetch.get(NCBI + "esummary.fcgi", {"db": db, "id": ",".join(uids[i:i + batch]), "retmode": "json"}, ncbi=True))
+        for uid, row in (answer.get("result") or {}).items():
+            if uid != "uids" and isinstance(row, dict) and not row.get("error") and row.get("title"):
+                out[uid] = row["title"]
+    return out
+
+
+def provenance_online(passages, fetch):
+    """Asks NCBI and Dermoscopedia whether the documents exist. Returns {"checked", "not_found", "other_title", "unreachable"} with
+    the document ids. Meditron guidelines are a downloaded public collection and are not asked about here."""
+    docs = {p["doc_id"]: p["title"] for p in passages}
+    result = {"checked": 0, "not_found": [], "other_title": [], "unreachable": []}
+    for db, prefix in (("pubmed", "PMID:"), ("pmc", "PMC")):
+        ids = {d[len(prefix):]: title for d, title in docs.items() if d.startswith(prefix) and d[len(prefix):].isdigit()}
+        try:
+            found = ncbi_titles(fetch, db, sorted(ids))
+        except Exception as e:                                       # a failed request must not look like a missing document
+            log.warning(f"{db}: NCBI did not answer ({type(e).__name__}: {e})")
+            result["unreachable"] += [prefix + i for i in ids]
+            continue
+        result["checked"] += len(ids)
+        result["not_found"] += [prefix + i for i in ids if i not in found]
+        result["other_title"] += [prefix + i for i, title in ids.items() if i in found and not titles_agree(title, found[i])]
+    pages = {d[len("dermoscopedia:"):]: d for d in docs if d.startswith("dermoscopedia:")}
+    if pages:
+        try:
+            api = dermoscopedia_api(fetch)
+            names = sorted(pages)
+            for i in range(0, len(names), 40):
+                answer = json.loads(fetch.get(api, {"action": "query", "titles": "|".join(names[i:i + 40]), "format": "json"}))
+                missing = {row.get("title") for row in answer["query"]["pages"].values() if "missing" in row}
+                result["not_found"] += [pages[n] for n in names[i:i + 40] if n in missing]
+            result["checked"] += len(names)
+        except Exception as e:
+            log.warning(f"Dermoscopedia did not answer ({type(e).__name__}: {e})")
+            result["unreachable"] += sorted(pages.values())
+    return result
+
+
+def audit_main(argv=None, fetch=None):
     ap = argparse.ArgumentParser(prog="python -m src.main audit", description="Checks the corpus text (no internet, nothing is changed).")
     ap.add_argument("--corpus", default=os.path.join("data", TEXT_LIBRARY), help="the text library folder")
     ap.add_argument("--reference-texts", default=os.path.join("data", REFERENCE_TEXTS))
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder (checked when items_final.jsonl is there)")
+    ap.add_argument("--online", action="store_true",
+                    help="also ask NCBI and Dermoscopedia whether every document exists and has the recorded title (internet; cached)")
     a = ap.parse_args(argv)
     get_logger("audit")
     passages = read_jsonl(os.path.join(a.corpus, "passages.jsonl"))
     result = audit_corpus(passages, reference_shingles(a.reference_texts))
+    result["provenance"] = provenance_offline(passages)
+    fetch = fetch or (Fetcher(os.path.join(a.corpus, "cache")) if a.online else None)
+    if a.online:
+        result["provenance"]["online"] = provenance_online(passages, fetch)
     out = os.path.join(a.corpus, "audit.json")
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(result, f, indent=1)
+    records = os.path.join(a.images, "items_final.jsonl")
+    if os.path.isfile(records):
+        from src.retrieval.images import image_provenance
+        items = read_jsonl(records)
+        images = image_provenance(items, a.images)
+        if a.online:
+            images["online"] = provenance_online([{"doc_id": i["doc_id"], "title": i["doc_title"]} for i in items], fetch)
+        write_json(os.path.join(a.images, "audit.json"), images)
+        log.info(f"image library: {images['n_records']} records, {images['records_with_a_problem']} with a problem {images['problem_counts']}"
+                 + (f"; online: not found {len(images['online']['not_found'])}, another title {len(images['online']['other_title'])}, "
+                    f"no answer {len(images['online']['unreachable'])}" if a.online else ""))
+        if a.online:
+            for kind in ("not_found", "other_title", "unreachable"):
+                if images["online"][kind]:
+                    log.info(f"  image library {kind}: {', '.join(images['online'][kind][:10])}")
+        result["image_library"] = images
     log.info(f"{result['n_passages']} passages: {len(result['near_duplicate_pairs'])} near-duplicate pairs, "
              f"{len(result['reference_copies'])} copies of reference texts, {len(result['tags_that_would_change'])} tags that the "
              f"current rule would change; details in {out}")
     for name, row in sorted(result["by_library"].items()):
         log.info(f"  {name}: {row}")
+    prov = result["provenance"]
+    log.info(f"provenance: {prov['n_documents']} documents ({prov['documents_per_source']}); "
+             f"{prov['records_with_a_problem']} passage records with a problem {prov['problem_counts']}; "
+             f"{prov['documents_with_no_tagged_passage']} documents with no passage that names a disease")
+    for kind, ids in prov["problems"].items():                      # which records, so that the cause can be seen (the file has up to 20 per kind)
+        log.info(f"  problem '{kind}': {', '.join(ids[:5])}{' ...' if len(ids) > 5 else ''}")
+    if "online" in prov:
+        o = prov["online"]
+        log.info(f"online: {o['checked']} documents asked about; not found {len(o['not_found'])}, another title {len(o['other_title'])}, "
+                 f"no answer {len(o['unreachable'])}")
+        for kind in ("not_found", "other_title", "unreachable"):
+            if o[kind]:
+                log.info(f"  {kind}: {', '.join(o[kind][:10])}{' ...' if len(o[kind]) > 10 else ''}")
     return result
 
 

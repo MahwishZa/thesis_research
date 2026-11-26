@@ -1367,12 +1367,14 @@ class HybridRetrievalTests(unittest.TestCase):
 
         def pred(hit):
             return {f"q{i}": {"contexts": [{"tags": ["MEL"] if hit(i) else ["NV"]}]} for i in range(12)}
-        preds = {"hybrid-rerank": pred(lambda i: i < 2), "bm25": pred(lambda i: i < 10), "dense": pred(lambda i: i < 3)}
-        r = src.pipelines.standard_rag.paired_hit3(qa, preds, "hybrid-rerank")
+        preds = {"bm25-rerank": pred(lambda i: i < 2), "bm25": pred(lambda i: i < 10), "dense": pred(lambda i: i < 3)}
+        r = src.pipelines.standard_rag.paired_hit3(qa, preds, "bm25-rerank")
         self.assertEqual((r["bm25"]["a_hit_b_miss"], r["bm25"]["a_miss_b_hit"], r["dense"]["a_hit_b_miss"]), (8, 0, 1))
         self.assertEqual(r["bm25"]["p_value"], round(2 / 2 ** 8, 6))                     # 8 discordant questions, all one way
         self.assertAlmostEqual(r["bm25"]["p_holm"], 2 * 2 / 2 ** 8, places=5)             # the smaller of 2 p-values, times 2
-        self.assertEqual(src.pipelines.standard_rag.paired_hit3(qa, {"bm25": preds["bm25"]}, "hybrid-rerank"), {})
+        self.assertEqual(src.pipelines.standard_rag.paired_hit3(qa, {"bm25": preds["bm25"]}, "bm25-rerank"), {})
+        by_question = src.pipelines.standard_rag.hit3_by_question(qa, preds["dense"])
+        self.assertEqual((sum(by_question.values()), by_question["q0"], by_question["q5"]), (3, 1, 0))
 
     def test_bm25_ties_keep_the_corpus_order(self):
         same = [{"passage_id": f"s{i}", "title": "", "text": "trunk"} for i in range(3)]
@@ -1398,26 +1400,28 @@ class HybridRetrievalTests(unittest.TestCase):
         def rerank(query, texts):
             calls.append((query, len(texts)))
             return [10.0 if "Trunk nevus" in t[0] else 0.0 for t in texts]
-        hits = self.rag("hybrid-rerank", k=1, rerank=rerank).retrieve("vessels", 1)
+        hits = self.rag("bm25-rerank", k=1, rerank=rerank).retrieve("trunk arborizing", 1)
         self.assertEqual(hits[0][0]["passage_id"], "p3")
-        self.assertEqual(calls[0][0], "vessels")
+        self.assertEqual(calls[0][0], "trunk arborizing")
         self.assertLessEqual(calls[0][1], src.pipelines.standard_rag.POOL)
 
     def test_a_wrong_mode_or_a_missing_reranker_stops_and_the_settings_name_the_mode(self):
         with self.assertRaises(ValueError):
             self.rag("sparse")
         with self.assertRaises(ValueError):
-            self.rag("hybrid-rerank")
+            self.rag("hybrid-rerank")                                                 # removed: one re-ranking technique only
         s = self.rag("hybrid").settings()
         self.assertEqual((s["retrieval"], s["pool"]), ("hybrid", src.pipelines.standard_rag.POOL))
         self.assertEqual(self.rag("dense").settings()["pool"], None)
-        # the chosen retrieval (BM25, 2026-11-25) is the standard RAG; the other modes are trials in their own folders
-        self.assertEqual([src.pipelines.base.rag_system(m) for m in src.pipelines.standard_rag.RETRIEVAL_MODES], ["standard_rag", "standard_rag_bm25_rerank", "standard_rag_dense", "standard_rag_hybrid", "standard_rag_hybrid_rerank"])
+        # the chosen retrieval (BM25 + MedCPT cross-encoder re-ranking, 2026-11-26) is the standard RAG; the other modes are trials in their own folders
+        self.assertEqual([src.pipelines.base.rag_system(m) for m in src.pipelines.standard_rag.RETRIEVAL_MODES], ["standard_rag_bm25", "standard_rag", "standard_rag_dense", "standard_rag_hybrid"])
         self.assertEqual(self.rag("bm25-rerank", rerank=lambda q, t: [0.0] * len(t)).settings()["pool"], src.pipelines.standard_rag.POOL)
         with self.assertRaises(ValueError):
             self.rag("bm25-rerank")                                                   # a re-ranking mode needs the re-ranker
         self.assertEqual(self.rag("bm25").settings()["pool"], None)
-        self.assertEqual(src.pipelines.standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"]).retrieval, "bm25")
+        self.assertEqual((self.rag("bm25").settings()["reranker"], self.rag("bm25-rerank", rerank=lambda q, t: [0.0] * len(t)).settings()["reranker"]),
+                         (None, src.models.embeddings.MEDCPT_CROSS))
+        self.assertEqual(src.pipelines.standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"]).retrieval, "bm25-rerank")
 
 
 class RagQueryAndPromptTests(unittest.TestCase):

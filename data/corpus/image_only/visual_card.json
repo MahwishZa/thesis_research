@@ -1,71 +1,111 @@
 {
-  "snapshot": "2026-11-24",
-  "n_papers_read": 90,
-  "n_figures_kept": 88,
-  "n_papers_with_a_figure": 46,
+  "snapshot": "2026-11-26",
+  "n_papers_read": 305,
+  "n_figures_kept": 343,
+  "n_papers_with_a_figure": 173,
+  "n_dermoscopedia_figures": 7,
   "figures_per_tag": {
-    "MEL": 22,
-    "NV": 15,
-    "BCC": 10,
-    "AK": 12,
-    "BKL": 16,
-    "DF": 7,
-    "VASC": 11,
-    "SCC": 19
+    "MEL": 59,
+    "NV": 41,
+    "BCC": 77,
+    "AK": 45,
+    "BKL": 56,
+    "DF": 34,
+    "VASC": 44,
+    "SCC": 49
   },
   "left_out": {
-    "caption too short": 16,
-    "chart, diagram or other imaging method": 38,
-    "histology only": 7,
-    "no diagnosis named": 4,
-    "not a clinical or dermoscopic image": 80
+    "caption too short": 67,
+    "chart, diagram or other imaging method": 183,
+    "dermoscopedia: caption too short": 9,
+    "dermoscopedia: not a clinical or dermoscopic image": 27,
+    "extra paper: AI or image-dataset paper": 23,
+    "extra paper: no open licence": 8,
+    "extra paper: retracted": 1,
+    "histology only": 42,
+    "no diagnosis named": 8,
+    "no image file": 1,
+    "not a clinical or dermoscopic image": 298
   },
   "images_downloaded": true,
   "rule": "see the comment above visual_items in src/retrieval/images.py",
-  "n_images": 88,
-  "images_left_out": {},
+  "n_images": 312,
+  "images_left_out": {
+    "no image at any address": 31
+  },
   "image_addresses_that_worked": {
-    "PMC bucket": 88
+    "PMC bucket": 305,
+    "Dermoscopedia": 7
   },
   "image_encoder": "chanwkim/monet",
   "kaggle_check": {
     "threshold": 0.95,
     "n_kaggle_images": 2197,
-    "n_library_images": 88,
-    "n_dropped": 1,
+    "n_library_images": 312,
+    "n_dropped": 2,
     "hash_threshold_bits": 4,
-    "n_dropped_by_embedding": 0,
-    "n_dropped_by_hash": 1,
+    "n_dropped_by_embedding": 1,
+    "n_dropped_by_hash": 2,
     "closest_hashes_bits": [
+      1,
       4,
+      5,
       5,
       6,
       6,
+      6,
       7,
       7,
-      8,
-      8,
-      8,
-      8
+      7
     ],
     "library_threshold": 0.98,
     "n_dropped_as_library_duplicates": 3,
     "similarity_quantiles": {
-      "q50": 0.7148,
-      "q90": 0.8279,
+      "q50": 0.7231,
+      "q90": 0.8211,
       "q99": 0.8873,
-      "max": 0.8873
+      "max": 0.9551
     },
     "highest_20": [
+      {
+        "item_id": "dermoscopedia:Superficial Basal cell carcinoma#fig0",
+        "similarity": 0.9551,
+        "kaggle_image": "ISIC_0029857.jpg"
+      },
+      {
+        "item_id": "dermoscopedia:Basal cell carcinoma#fig0",
+        "similarity": 0.9009,
+        "kaggle_image": "ISIC_0027531.jpg"
+      },
+      {
+        "item_id": "dermoscopedia:Benign lesions - seborrheic keratosis#fig5",
+        "similarity": 0.8966,
+        "kaggle_image": "ISIC_0028587.jpg"
+      },
       {
         "item_id": "PMC6939186#fig4",
         "similarity": 0.8873,
         "kaggle_image": "ISIC_0000318.jpg"
       },
       {
+        "item_id": "dermoscopedia:Benign lesions - seborrheic keratosis#fig7",
+        "similarity": 0.8857,
+        "kaggle_image": "ISIC_0024411.jpg"
+      },
+      {
+        "item_id": "PMC12034090#fig1",
+        "similarity": 0.8854,
+        "kaggle_image": "ISIC_0025594.jpg"
+      },
+      {
         "item_id": "PMC3750880#fig0",
         "similarity": 0.8832,
         "kaggle_image": "ISIC_0000003.jpg"
+      },
+      {
+        "item_id": "PMC11135141#fig1",
+        "similarity": 0.882,
+        "kaggle_image": "ISIC_0030036.jpg"
       },
       {
         "item_id": "PMC6939186#fig3",
@@ -78,9 +118,39 @@
         "kaggle_image": "ISIC_0000296.jpg"
       },
       {
+        "item_id": "dermoscopedia:Benign lesions - seborrheic keratosis#fig3",
+        "similarity": 0.874,
+        "kaggle_image": "ISIC_0031918.jpg"
+      },
+      {
+        "item_id": "PMC3875981#fig2",
+        "similarity": 0.8652,
+        "kaggle_image": "ISIC_0011126.jpg"
+      },
+      {
+        "item_id": "PMC7672491#fig1",
+        "similarity": 0.8652,
+        "kaggle_image": "ISIC_0010288.jpg"
+      },
+      {
         "item_id": "PMC7058877#fig1",
         "similarity": 0.8637,
         "kaggle_image": "ISIC_0026417.jpg"
+      },
+      {
+        "item_id": "PMC7654483#fig1",
+        "similarity": 0.8582,
+        "kaggle_image": "ISIC_0025244.jpg"
+      },
+      {
+        "item_id": "dermoscopedia:Malignant lesions - Melanoma#fig3",
+        "similarity": 0.8559,
+        "kaggle_image": "ISIC_0000156.jpg"
+      },
+      {
+        "item_id": "PMC12659207#fig3",
+        "similarity": 0.8521,
+        "kaggle_image": "ISIC_0009934.jpg"
       },
       {
         "item_id": "PMC4938282#fig1",
@@ -88,74 +158,14 @@
         "kaggle_image": "ISIC_0028370.jpg"
       },
       {
-        "item_id": "PMC4516104#fig1",
-        "similarity": 0.8402,
-        "kaggle_image": "ISIC_0000552.jpg"
+        "item_id": "PMC6063116#fig1",
+        "similarity": 0.8427,
+        "kaggle_image": "ISIC_0010288.jpg"
       },
       {
-        "item_id": "PMC6106659#fig1",
-        "similarity": 0.8397,
-        "kaggle_image": "ISIC_0027053.jpg"
-      },
-      {
-        "item_id": "PMC13420791#fig0",
-        "similarity": 0.8279,
-        "kaggle_image": "ISIC_0000049.jpg"
-      },
-      {
-        "item_id": "PMC6106659#fig2",
-        "similarity": 0.8154,
-        "kaggle_image": "ISIC_0010863.jpg"
-      },
-      {
-        "item_id": "PMC11278531#fig0",
-        "similarity": 0.7943,
-        "kaggle_image": "ISIC_0030427.jpg"
-      },
-      {
-        "item_id": "PMC12333637#fig4",
-        "similarity": 0.7892,
-        "kaggle_image": "ISIC_0026042.jpg"
-      },
-      {
-        "item_id": "PMC4516104#fig7",
-        "similarity": 0.7858,
-        "kaggle_image": "ISIC_0026042.jpg"
-      },
-      {
-        "item_id": "PMC7478516#fig0",
-        "similarity": 0.7828,
-        "kaggle_image": "ISIC_0027915.jpg"
-      },
-      {
-        "item_id": "PMC12333637#fig6",
-        "similarity": 0.7732,
-        "kaggle_image": "ISIC_0000169.jpg"
-      },
-      {
-        "item_id": "PMC12517799#fig0",
-        "similarity": 0.7727,
-        "kaggle_image": "ISIC_0026042.jpg"
-      },
-      {
-        "item_id": "PMC12527410#fig2",
-        "similarity": 0.7718,
-        "kaggle_image": "ISIC_0000000.jpg"
-      },
-      {
-        "item_id": "PMC10175672#fig3",
-        "similarity": 0.7714,
-        "kaggle_image": "ISIC_0010536.jpg"
-      },
-      {
-        "item_id": "PMC12026269#fig1",
-        "similarity": 0.7713,
+        "item_id": "PMC11132197#fig2",
+        "similarity": 0.8411,
         "kaggle_image": "ISIC_0029647.jpg"
-      },
-      {
-        "item_id": "PMC10426806#fig1",
-        "similarity": 0.7673,
-        "kaggle_image": "ISIC_0029035.jpg"
       }
     ],
     "dropped": [
@@ -164,62 +174,14 @@
         "similarity": 0.7012,
         "kaggle_image": "ISIC_0000083.jpg",
         "hash_bits_different": 4
+      },
+      {
+        "item_id": "dermoscopedia:Superficial Basal cell carcinoma#fig0",
+        "similarity": 0.9551,
+        "kaggle_image": "ISIC_0029857.jpg",
+        "hash_bits_different": 1
       }
     ]
   },
-  "n_indexed_images": 84,
-  "guard_calibration": {
-    "thresholds": {
-      "embedding": 0.95,
-      "hash_bits": 4
-    },
-    "same_lesion_pairs": {
-      "n": 448,
-      "embedding_similarity": {
-        "min": 0.7577,
-        "q1": 0.7718,
-        "q5": 0.8392,
-        "q50": 0.9297,
-        "q95": 0.9759,
-        "q99": 0.9858,
-        "max": 0.9902,
-        "n": 448
-      },
-      "hash_bits_different": {
-        "min": 0,
-        "q1": 5,
-        "q5": 9,
-        "q50": 23,
-        "q95": 39,
-        "q99": 46,
-        "max": 53,
-        "n": 448
-      },
-      "caught": 0.2746
-    },
-    "most_similar_different_lesion": {
-      "n": 2197,
-      "embedding_similarity": {
-        "min": 0.7943,
-        "q1": 0.8555,
-        "q5": 0.885,
-        "q50": 0.9309,
-        "q95": 0.9572,
-        "q99": 0.9672,
-        "max": 0.9782,
-        "n": 2197
-      },
-      "hash_bits_different": {
-        "min": 0,
-        "q1": 2,
-        "q5": 4,
-        "q50": 11,
-        "q95": 17,
-        "q99": 19,
-        "max": 20,
-        "n": 2197
-      },
-      "false_alarm": 0.1884
-    }
-  }
+  "n_indexed_images": 307
 }

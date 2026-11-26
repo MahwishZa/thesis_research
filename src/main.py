@@ -9,8 +9,9 @@ Every command has --help. The commands, in the order of the research pipeline:
     status              where the pipeline stands: done / not run / problem for every step (reads only; the default command)
 
   The knowledge library (for the RAG systems)
+    library             every step below in order, from corpus to index, in one command (internet and laptop; --from STEP to resume)
     corpus              the text library: PubMed, PMC, clinical guidelines and Dermoscopedia (internet; laptop)
-    audit               checks of the corpus text: near-duplicates, copies of the reference texts, tags
+    audit               checks of both libraries: real sources and unchanged text (--online asks NCBI), near-duplicates, reference copies, tags
     visual              the figure list of the image library: skin-image figures and captions of open-access PMC papers
     visual-images       the images of those figures (internet; laptop; --probe N first)
     visual-calibrate    how well the look-alike tests separate same-lesion from different-lesion Kaggle photos
@@ -226,23 +227,41 @@ def step_libraries(data):
 SYSTEMS = ("llm_only", "standard_rag", "baseline_rag", "proposed_rag")     # the four approaches, each with three view folders
 
 
-def step_runs(data, results, models, systems=SYSTEMS):
-    """One line per system, model, view and split that has a run folder; the test split is listed even when missing."""
+def runs_on_disk(results, system, view):
+    """[(model, split, finished)] of the runs in results/<system>/<view>/ (a folder <model>_<split>, or <model>_<split>.partial)."""
+    folder = os.path.join(results, system, view)
+    if not os.path.isdir(folder):
+        return []
+    runs = []
+    for name in sorted(os.listdir(folder)):
+        base = name[:-len(".partial")] if name.endswith(".partial") else name
+        model, _, split = base.rpartition("_")
+        if os.path.isdir(os.path.join(folder, name)) and model and split in SPLITS:
+            runs.append((model, split, name == base))
+    return runs
+
+
+def step_runs(data, results, systems=SYSTEMS):
+    """One line per run found on disk (finished or not). A system and view without any run get one 'not run' line: which models run
+    in which system is not decided in advance (the researcher has no budget, and the RAG backbone is still to be chosen), so no
+    line asks for a run of a particular model. The trial folders of the standard RAG (standard_rag_<mode>) are listed too."""
+    trials = sorted(d for d in os.listdir(results) if d.startswith("standard_rag_") and os.path.isdir(os.path.join(results, d))) if os.path.isdir(results) else []
     rows = []
-    for system, model in [(sy, m) for sy in systems for m in models]:
+    for system in [*systems, *trials]:
         for view in VIEWS:
-            for split in ("val", "test"):
-                final, _ = run_folder(results, model, view, split, system)
+            found = runs_on_disk(results, system, view)
+            if not found:
+                rows.append((f"{system} {view}", NOT_RUN, "no run yet"))
+            for model, split, finished in found:
                 name = f"{system} {model} {view} {split}"
-                if os.path.isdir(final + ".partial"):
+                final, _ = run_folder(results, model, view, split, system)
+                if not finished:
                     with open(os.path.join(final + ".partial", "run.json"), encoding="utf-8") as f:
                         info = json.load(f)
                     rows.append((name, PROBLEM, f"unfinished: {info['answered']}/{info['of']} ({info['status']}); run the same "
                                                 "command again to continue"))
-                elif os.path.isdir(final):
+                else:
                     rows.append((name, *check_run(data, final, view, split)))
-                elif split == "test":
-                    rows.append((name, NOT_RUN, ""))
     return rows
 
 
@@ -251,6 +270,8 @@ def check_run(data, folder, view, split):
         info = json.load(f)
     qfile = os.path.join(data, question_file(view, split))
     recorded = info["settings"].get("questions_sha256")
+    if not os.path.isfile(qfile):
+        return PROBLEM, f"the question file {question_file(view, split)} is not there, so the run cannot be matched to its questions"
     if not text_matches(qfile, recorded):
         moved = moved_files(data).get(question_file(view, split).replace("\\", "/"), {})
         if not (moved.get("previous_sha256") == recorded and text_matches(qfile, moved.get("sha256"))):
@@ -261,15 +282,50 @@ def check_run(data, folder, view, split):
     return DONE, "complete and evaluated"
 
 
+def step_retrieval_checks(data, results):
+    """The retrieval-eval result of each view (results/standard_rag/<view>/retrieval_validation.json) must belong to the libraries
+    that exist now: a result made with an older text or image library says nothing about the current one."""
+    from src.pipelines.base import APPROVED_RETRIEVAL
+    current = {"text_index_passages_sha256": None, "image_items_sha256": None}
+    for key, path in (("text_index_passages_sha256", os.path.join(data, INDEX_DIR, "index.json")),
+                      ("image_items_sha256", os.path.join(data, IMAGE_LIBRARY, "index", "index.json"))):
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as f:
+                current[key] = json.load(f).get("passages_sha256")
+    notes, missing, old = [], [], []
+    for view in VIEWS:
+        path = os.path.join(results, "standard_rag", view, "retrieval_validation.json")
+        if not os.path.isfile(path):
+            missing.append(view)
+            continue
+        with open(path, encoding="utf-8") as f:
+            saved = json.load(f)
+        if "libraries" not in saved:
+            old.append(view)
+            continue
+        if saved.get("approved") != APPROVED_RETRIEVAL:
+            return PROBLEM, f"{view}: made when {saved.get('approved')} was the approved search, now it is {APPROVED_RETRIEVAL}: run retrieval-eval again"
+        for key, value in saved["libraries"].items():
+            if value is not None and current[key] is not None and value != current[key]:
+                return PROBLEM, f"{view}: made with another {'text' if key.startswith('text') else 'image'} library: run retrieval-eval --view {view} again"
+        notes.append(view)
+    if len(missing) == len(VIEWS):
+        return NOT_RUN, "no result yet (retrieval-eval, validation split, no cost)"
+    if missing or old:
+        return NOT_RUN, "; ".join(([f"no result for {', '.join(missing)}"] if missing else [])
+                                  + ([f"{', '.join(old)}: made before the libraries were recorded, run retrieval-eval again"] if old else []))
+    return DONE, f"{', '.join(notes)}: made with the current libraries"
+
+
 def check(data="data", results="results"):
-    from src.models.llm import MODELS
     steps = [("1 raw Kaggle download", step_raw(data)), ("1 cleaning (preprocess)", step_clean(data)),
              ("2 views (views)", step_views(data)), ("- feature check (features)", step_feature_check(results)),
              ("3 knowledge corpus (corpus)", step_corpus(data)),
              ("3b reference texts (references)", step_references(data)),
              ("4 retrieval index (index)", step_index(data)),
-             ("4b libraries per view (text_only, image_only, multimodal)", step_libraries(data))]
-    return [(name, *r) for name, r in steps] + step_runs(data, results, sorted(MODELS))
+             ("4b libraries per view (text_only, image_only, multimodal)", step_libraries(data)),
+             ("5 retrieval checks (retrieval-eval)", step_retrieval_checks(data, results))]
+    return [(name, *r) for name, r in steps] + step_runs(data, results)
 
 
 def status_main(argv=None):
@@ -287,6 +343,42 @@ def status_main(argv=None):
     return 1 if problems else 0
 
 
+# ---- the whole library in one command -----------------------------------------------------------------------------------------------
+LIBRARY_STEPS = ("corpus", "audit", "visual", "visual-images", "visual-index", "index")   # the order the libraries and their indexes are built in
+
+
+def library_steps(extra_papers=0, dermoscopedia=0, online=False):
+    """[(command, its options)] of the whole library build. The text index is built with the approved settings (reference pages and
+    reference copies left out); visual-calibrate is a report about the look-alike filter, not a step of the build, so it is not here."""
+    visual = (["--extra-papers", str(extra_papers)] if extra_papers else []) + (["--dermoscopedia", str(dermoscopedia)] if dermoscopedia else [])
+    options = {"corpus": [], "audit": ["--online"] if online else [], "visual": visual, "visual-images": [], "visual-index": [],
+               "index": ["--exclude-reference-pages", "--exclude-reference-overlap"]}
+    return [(step, options[step]) for step in LIBRARY_STEPS]
+
+
+def library_main(argv=None):
+    ap = argparse.ArgumentParser(prog="python -m src.main library", description="Builds both libraries and their indexes, step by step, "
+                                 "stopping at the first step that fails. Default folders only (data/corpus/...).")
+    ap.add_argument("--extra-papers", type=int, default=0, help="visual: up to N more PMC papers per diagnosis")
+    ap.add_argument("--dermoscopedia", type=int, default=0, help="visual: up to N Dermoscopedia pages per diagnosis")
+    ap.add_argument("--online", action="store_true", help="audit: also ask NCBI and Dermoscopedia whether every document exists")
+    ap.add_argument("--from", dest="first", default=LIBRARY_STEPS[0], choices=LIBRARY_STEPS, help="start at this step (to resume after a failure)")
+    a = ap.parse_args(argv)
+    steps = library_steps(a.extra_papers, a.dermoscopedia, a.online)
+    for step, options in steps[LIBRARY_STEPS.index(a.first):]:
+        print(f"== {step} {' '.join(options)}".rstrip(), flush=True)
+        try:
+            result = command(step)(options)
+        except (Exception, SystemExit) as e:                           # a failed step must say which one, and how to continue from it
+            print(f"stopped at {step}: {e}\nfix the cause and run: python -m src.main library --from {step} <the same options>", file=sys.stderr)
+            return 1
+        if isinstance(result, int) and result:
+            print(f"stopped at {step} (exit code {result})", file=sys.stderr)
+            return result
+    print("done; now run: python -m src.main status")
+    return 0
+
+
 # ---- the entry point ------------------------------------------------------------------------------------------------
 # command -> (module, function); a module is imported only when its command runs, so a command never needs another one's packages
 COMMANDS = {
@@ -294,6 +386,7 @@ COMMANDS = {
     "views": ("src.data.views", "views_main"),
     "features": ("src.data.preprocessing", "features_main"),
     "status": ("src.main", "status_main"),
+    "library": ("src.main", "library_main"),
     "corpus": ("src.retrieval.corpus", "corpus_main"),
     "audit": ("src.retrieval.corpus", "audit_main"),
     "visual": ("src.retrieval.images", "visual_main"),

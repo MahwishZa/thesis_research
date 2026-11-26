@@ -126,10 +126,13 @@ def add_tokens(a, b):
     return None if a is None and b is None else (a or 0) + (b or 0)
 
 
+APPROVED_RETRIEVAL = "bm25-rerank"     # the standard RAG's text search: BM25 candidates, re-ordered by the MedCPT cross-encoder (2026-11-26)
+
+
 def rag_system(mode):
-    """The results folder of a standard-RAG run: the chosen retrieval (BM25, researcher's decision 2026-11-25) is the
-    standard RAG; any other mode is a trial with its own folder, so it never skips or overwrites a standard-RAG run."""
-    return "standard_rag" if mode == "bm25" else "standard_rag_" + mode.replace("-", "_")
+    """The results folder of a standard-RAG run: the chosen retrieval is the standard RAG; any other mode is a trial with its own
+    folder, so it never skips or overwrites a standard-RAG run."""
+    return "standard_rag" if mode == APPROVED_RETRIEVAL else "standard_rag_" + mode.replace("-", "_")
 
 
 # ---- the run (checkpointed) ---------------------------------------------------------------------------------------------

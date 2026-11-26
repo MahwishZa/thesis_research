@@ -68,6 +68,45 @@ DATA = ROOT / "data"
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class LibraryCommandTests(unittest.TestCase):
+    """The library command runs the build steps in order (here with fake steps) and stops at the first one that fails."""
+
+    def run_with(self, argv, fail_at=None, code=None):
+        calls = []
+
+        def fake_command(name):
+            def step(options):
+                calls.append((name, options))
+                if name == fail_at:
+                    raise RuntimeError("boom")
+                return code if name == fail_at else None
+            return step
+        with mock.patch.object(src.main, "command", fake_command), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return src.main.library_main(argv), calls
+
+    def test_every_step_runs_in_order_with_the_approved_options(self):
+        status, calls = self.run_with(["--extra-papers", "40", "--dermoscopedia", "10"])
+        self.assertEqual(status, 0)
+        self.assertEqual([c[0] for c in calls], ["corpus", "audit", "visual", "visual-images", "visual-index", "index"])
+        self.assertEqual(dict(calls)["visual"], ["--extra-papers", "40", "--dermoscopedia", "10"])
+        self.assertEqual(dict(calls)["index"], ["--exclude-reference-pages", "--exclude-reference-overlap"])
+        self.assertEqual(dict(calls)["audit"], [])
+        self.assertNotIn("visual-calibrate", [c[0] for c in calls])               # a report about the filter, not a build step
+        self.assertEqual(dict(self.run_with(["--online"])[1])["audit"], ["--online"])
+
+    def test_a_failing_step_stops_the_build_and_from_resumes_at_a_step(self):
+        status, calls = self.run_with([], fail_at="visual")
+        self.assertEqual((status, [c[0] for c in calls]), (1, ["corpus", "audit", "visual"]))
+        status, calls = self.run_with(["--from", "visual-images"])
+        self.assertEqual((status, [c[0] for c in calls]), (0, ["visual-images", "visual-index", "index"]))
+        status, calls = self.run_with([], fail_at="audit", code=2)                  # a step that returns an error exit code (it also raised here)
+        self.assertEqual((status, [c[0] for c in calls]), (1, ["corpus", "audit"]))
+
+    def test_the_command_is_listed_and_every_step_of_it_is_a_command(self):
+        self.assertIn("library", src.main.COMMANDS)
+        self.assertTrue(set(src.main.LIBRARY_STEPS) <= set(src.main.COMMANDS))
+
+
 class CheckTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -169,13 +208,63 @@ class CheckTests(unittest.TestCase):
         return folder
 
     def runs(self):
-        return {n: (s, note) for n, s, note in src.main.step_runs(str(self.data), str(self.results), ["gpt-4o"])}
+        return {n: (s, note) for n, s, note in src.main.step_runs(str(self.data), str(self.results))}
 
     def write_questions(self):
         q = self.data / question_file("text_only", "test")
         q.parent.mkdir(parents=True, exist_ok=True)
         q.write_bytes(b'{"id": "a"}\n')                          # bytes: the same file on Windows and Linux
         return src.utils.text_sha256(q)
+
+    def test_no_run_asks_for_a_model_that_was_never_run_and_every_run_found_is_listed(self):
+        rows = self.runs()
+        self.assertEqual(len(rows), 12)                                          # 4 systems x 3 views, each "no run yet"
+        self.assertEqual(set(rows.values()), {(src.main.NOT_RUN, "no run yet")})
+        self.assertIn("standard_rag text_only", rows)
+        sha = self.write_questions()
+        self.run_folder(sha=sha, report=True)                                    # one finished llm_only run (gpt-4o, test)
+        other = self.results / "llm_only" / "text_only" / "some-model_val"       # another model and split: listed although unasked
+        other.mkdir()
+        (other / "run.json").write_text(json.dumps({"settings": {"questions_sha256": "x"}}), encoding="utf-8")
+        trial = self.results / "standard_rag_dense" / "image_only" / "gpt-4o_val.partial"
+        trial.mkdir(parents=True)
+        (trial / "run.json").write_text(json.dumps({"status": "stopped", "answered": 1, "of": 20}), encoding="utf-8")
+        rows = self.runs()
+        self.assertEqual(rows["llm_only gpt-4o text_only test"][0], src.main.DONE)
+        self.assertIn("llm_only some-model text_only val", rows)
+        self.assertEqual(rows["llm_only some-model text_only val"][0], src.main.PROBLEM)    # its question file is not there
+        self.assertNotIn("llm_only text_only", rows)                             # a view with a run needs no "no run yet" line
+        self.assertEqual(rows["standard_rag_dense gpt-4o image_only val"][0], src.main.PROBLEM)
+        self.assertNotIn("llm_only claude-sonnet-5-5 text_only test", rows)
+
+    def write_retrieval_result(self, view, **kw):
+        path = self.results / "standard_rag" / view / "retrieval_validation.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"approved": "bm25-rerank", "libraries": {"text_index_passages_sha256": "T", "image_items_sha256": None}, **kw}),
+                        encoding="utf-8")
+
+    def test_a_retrieval_result_must_belong_to_the_libraries_that_exist_now(self):
+        check = lambda: src.main.step_retrieval_checks(str(self.data), str(self.results))             # noqa: E731
+        self.assertEqual(check()[0], src.main.NOT_RUN)                                                 # nothing yet
+        index = self.data / src.utils.INDEX_DIR / "index.json"
+        index.parent.mkdir(parents=True)
+        index.write_text(json.dumps({"passages_sha256": "T"}), encoding="utf-8")
+        for view in src.utils.VIEWS:
+            self.write_retrieval_result(view)
+        self.assertEqual(check()[0], src.main.DONE)
+        index.write_text(json.dumps({"passages_sha256": "another"}), encoding="utf-8")                 # the text library changed since
+        status, note = check()
+        self.assertEqual(status, src.main.PROBLEM)
+        self.assertIn("another text library", note)
+        index.write_text(json.dumps({"passages_sha256": "T"}), encoding="utf-8")
+        self.write_retrieval_result("multimodal", approved="bm25")                                      # made for another approved search
+        self.assertEqual(check()[0], src.main.PROBLEM)
+        self.write_retrieval_result("multimodal")
+        path = self.results / "standard_rag" / "text_only" / "retrieval_validation.json"
+        path.write_text("{}", encoding="utf-8")                                                         # made before libraries were recorded
+        status, note = check()
+        self.assertEqual(status, src.main.NOT_RUN)
+        self.assertIn("run retrieval-eval again", note)
 
     def test_an_unfinished_run_is_a_problem_with_its_progress(self):
         self.run_folder(partial=True)
@@ -389,6 +478,14 @@ class TextTests(unittest.TestCase):
         self.assertEqual(removed["pmc: beyond the 3 passages kept per document"], 6)
         ns.per_doc = 0
         self.assertEqual(len(src.retrieval.corpus.passages_from(docs, "pmc", "MEL", ns, set(), set(), collections.Counter())), 9)
+
+    def test_only_full_papers_are_capped_per_document_guideline_and_textbook_pages_are_kept_whole(self):
+        ns = argparse.Namespace(per_class=100, max_words=200, min_words=3, per_doc=3)
+        docs = [{"doc_id": "d1", "title": "T", "url": "u", "licence": "x",
+                 "paragraphs": [f"Melanoma paragraph number {i} shows an atypical network." for i in range(9)]}]
+        counts = {lib: len(src.retrieval.corpus.passages_from(docs, lib, "MEL", ns, set(), set(), collections.Counter()))
+                  for lib in ("pmc", "pubmed", "guidelines", "textbook")}
+        self.assertEqual(counts, {"pmc": 3, "pubmed": 9, "guidelines": 9, "textbook": 9})
 
     def test_the_per_doc_cap_lets_more_documents_share_the_class_quota(self):
         import collections
@@ -989,6 +1086,68 @@ class BuildTests(unittest.TestCase):
             self.assertTrue(p["url"] and p["licence"] and p["doc_id"] and p["text"], p["passage_id"])
         self.assertEqual(len({p["passage_id"] for p in passages}), len(passages))
         self.assertEqual(len({p["md5"] for p in passages}), len(passages))      # no duplicate text
+
+    # ---- provenance: real sources, unchanged text ----
+    def test_a_corpus_made_by_the_builder_passes_the_provenance_check_and_each_tampering_is_found(self):
+        passages, _, _ = self.build()
+        report = src.retrieval.corpus.provenance_offline(passages)
+        self.assertEqual((report["records_with_a_problem"], report["problems"]), (0, {}))
+        self.assertEqual(report["n_documents"], sum(report["documents_per_source"].values()))
+        self.assertTrue({"PMID", "PMC", "dermoscopedia", "meditron"} <= set(report["documents_per_source"]))
+        victim = next(p for p in passages if p["library"] == "pubmed")
+        wrong_host = next(p for p in passages if p["library"] == "pmc")
+        tampered = [{**victim, "text": victim["text"] + " An invented sentence."},                       # edited after the build
+                    {**wrong_host, "url": "https://example.org/x"},                                        # not the source's own site
+                    {**victim, "passage_id": "x1", "doc_id": "made-up-7"},                                 # not an id of a real source
+                    {**victim, "passage_id": "x2", "licence": " "},
+                    {**victim, "passage_id": "x3", "library": "pmc"}]                                      # a PubMed id in the PMC library
+        found = src.retrieval.corpus.provenance_offline(tampered)["problem_counts"]
+        self.assertEqual(found, {"the text is empty or no longer matches its fingerprint": 1,
+                                 "no web address on the source's own site": 2, "the document id is not that of a real source of this library": 2,
+                                 "no licence": 1})
+
+    def test_the_audit_command_writes_the_provenance_and_names_the_records_with_a_problem(self):
+        passages, _, _ = self.build()
+        bad = {**next(p for p in passages if p["library"] == "guidelines"), "passage_id": "meditron:zz#0", "url": "http://old.example.org/g"}
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "passages.jsonl"), [*passages, bad])
+            refs = os.path.join(d, "refs.json")
+            Path(refs).write_text(json.dumps({"MEL": {"texts": [{"text": "one two three four five six seven eight nine"}]}}), encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                result = src.retrieval.corpus.audit_main(["--corpus", d, "--reference-texts", refs, "--images", os.path.join(d, "none")])
+            saved = json.loads(Path(d, "audit.json").read_text(encoding="utf-8"))
+            self.assertEqual(saved["provenance"]["problems"], {"no web address on the source's own site": ["meditron:zz#0"]})
+            self.assertEqual(result["provenance"]["records_with_a_problem"], 1)
+            self.assertIn("problem 'no web address on the source's own site': meditron:zz#0", out.getvalue())     # the ids are shown, not only counts
+
+    def test_the_online_check_finds_a_document_that_does_not_exist_and_one_that_has_another_title(self):
+        passages, _, _ = self.build()
+        titles = {p["doc_id"]: p["title"] for p in passages}
+        real = sorted(d for d in titles if d.startswith(("PMID:", "PMC")))
+        gone, other = real[0], real[-1]
+
+        class Ncbi:
+            def get(self, url, params=None, ncbi=False):
+                if params.get("meta") == "siteinfo":
+                    return "{}"
+                if "titles" in params:
+                    return json.dumps({"query": {"pages": {"1": {"title": t, **({"missing": ""} if t == "gone page" else {})}
+                                                           for t in params["titles"].split("|") + ["gone page"]}}})
+                prefix = "PMID:" if params["db"] == "pubmed" else "PMC"      # (the same fake answers for both databases)
+                rows = {i: {"uid": i, "title": "Something else entirely" if prefix + i == other else titles[prefix + i].upper() + "."}
+                        for i in params["id"].split(",") if prefix + i in titles and prefix + i != gone}
+                return json.dumps({"result": {"uids": list(rows), **rows}})
+        r = src.retrieval.corpus.provenance_online(passages, Ncbi())
+        self.assertEqual((r["not_found"], r["other_title"], r["unreachable"]), ([gone], [other], []))      # a case and full-stop change is no change
+        self.assertGreater(r["checked"], 3)
+
+        class Down:
+            def get(self, url, params=None, ncbi=False):
+                raise OSError("no internet")
+        down = src.retrieval.corpus.provenance_online(passages, Down())
+        self.assertEqual((down["not_found"], down["other_title"]), ([], []))          # no answer is never reported as "does not exist"
+        self.assertTrue(down["unreachable"])
 
     def test_the_rules_remove_ai_papers_retracted_papers_closed_papers_and_repeats(self):
         passages, removed, _ = self.build()
@@ -2021,7 +2180,7 @@ def fake_visual():
 
 
 def make_rag(k=3, visual=True):
-    """The standard RAG's retrieval (BM25, researcher's choice of 2026-11-25) with a fake text index and image index."""
+    """The standard RAG's retrieval (BM25 candidates, re-ordered by a fake re-ranker that keeps their order) with a fake text index and image index."""
     from array import array
 
     from src.retrieval.indexer import DenseIndex
@@ -2029,7 +2188,7 @@ def make_rag(k=3, visual=True):
     for p in RAG_CORPUS:
         flat.extend(rag_vec(p["title"] + " " + p["text"]))
     return src.pipelines.standard_rag.StandardRag(DenseIndex(list(RAG_CORPUS), flat, len(RAG_WORDS), {"encoder": "fake", "passages_sha256": "abc"}),
-                          rag_enc, k, "bm25",
+                          rag_enc, k, src.pipelines.base.APPROVED_RETRIEVAL, rerank=lambda q, t: [float(-i) for i in range(len(t))],
                           visual=fake_visual() if visual else None)
 
 
@@ -2237,6 +2396,9 @@ class StandardRagRunTests(unittest.TestCase):
             self.assertLessEqual(lo, saved["modes"][m]["hit@3"] + 1e-9)
             self.assertGreaterEqual(hi, saved["modes"][m]["hit@3"] - 1e-9)
         self.assertEqual(set(saved["random_from_the_same_pool"]["dense"]), set(src.pipelines.standard_rag.INTERVAL_KEYS))
+        self.assertEqual((saved["approved"], saved["libraries"]), ("bm25-rerank", {"text_index_passages_sha256": "abc", "image_items_sha256": None}))
+        self.assertEqual(set(saved["hit3_by_question"]), set(saved["modes"]))          # each question's Hit@3, for a later paired comparison
+        self.assertEqual(len(saved["hit3_by_question"]["bm25"]), 6)
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             src.pipelines.standard_rag.retrieval_eval_args(["--split", "test"])
 
@@ -2268,12 +2430,12 @@ class StandardRagRunTests(unittest.TestCase):
             self.assertEqual(set(saved["random_from_the_same_pool"]), set(expected))
             if view == "multimodal":                                    # the fused list holds text passages too, so it scores differently
                 share = saved["share_of_top3_from_the_image_library"]
-                self.assertEqual((share["image"], share["hybrid-rerank"]), (1.0, 0.0))
+                self.assertEqual((share["image"], share["bm25-rerank"]), (1.0, 0.0))
                 self.assertTrue(0.0 < share["fused:bm25"] < 1.0)            # both sources reach the top 3
                 self.assertEqual(len(saved["random_from_the_same_pool"]), len(expected))
                 paired = saved["paired_hit3_vs_approved"]                # every search against the approved one, same questions
-                self.assertEqual(set(paired), set(expected) - {"fused:bm25"})
-                self.assertTrue(all(r["against"] == "fused:bm25" and 0 <= r["p_value"] <= r["p_holm"] <= 1 for r in paired.values()))
+                self.assertEqual(set(paired), set(expected) - {"fused:bm25-rerank"})
+                self.assertTrue(all(r["against"] == "fused:bm25-rerank" and 0 <= r["p_value"] <= r["p_holm"] <= 1 for r in paired.values()))
         with self.assertRaises(KeyError):
             src.retrieval.retriever.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
 
@@ -2398,6 +2560,32 @@ class IndexCommandTests(unittest.TestCase):
         self.assertEqual(r["reference_copies"], ["c"])
         self.assertEqual(r["tags_that_would_change"], ["a"])
         self.assertEqual(r["by_library"]["pmc"]["untagged"], 2)
+
+    def test_the_image_library_check_finds_a_missing_changed_or_repeated_picture_and_a_record_without_a_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "images"))
+            files = {"a.jpg": b"\xff\xd8\xff" + b"a" * 5000, "b.jpg": b"\xff\xd8\xff" + b"b" * 5000, "c.txt": b"<html>not an image</html>"}
+            for name, data in files.items():
+                Path(d, "images", name).write_bytes(data)
+
+            def item(i, **kw):
+                name = kw.pop("image_file", f"{i}.jpg")
+                return {"item_id": i, "doc_id": "PMC1", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC1/", "licence": "CC BY 4.0",
+                        "caption": "Dermoscopy of a melanoma.", "tags": ["MEL"], "image_file": name,
+                        "image_sha256": hashlib.sha256(files.get(name, b"")).hexdigest(), **kw}
+            good = [item("g1", image_file="a.jpg"), item("g2", image_file="b.jpg", doc_id="dermoscopedia:Melanoma",
+                                                         url="https://dermoscopedia.org/Melanoma")]
+            report = src.retrieval.images.image_provenance(good, d)
+            self.assertEqual((report["records_with_a_problem"], report["problem_counts"]), (0, {}))
+            bad = [item("m", image_file="gone.jpg"), item("h", image_file="c.txt"), item("w", image_file="a.jpg", image_sha256="0" * 64),
+                   item("t", image_file="a.jpg"), item("t2", image_file="a.jpg"), item("s", image_file="b.jpg", doc_id="made-up"),
+                   item("u", image_file="b.jpg", url="https://example.org/x"), item("l", image_file="b.jpg", licence=""),
+                   item("c", image_file="b.jpg", caption=" "), item("n", image_file="b.jpg", tags=[])]
+            found = src.retrieval.images.image_provenance(bad, d)["problem_counts"]
+            self.assertEqual(found, {"the picture file is missing": 1, "the file is not an image": 1,
+                                     "the picture no longer matches its fingerprint": 1, "the same picture twice": 5,
+                                     "the document id is not that of a real source": 1, "no web address on the source's own site": 1,
+                                     "no licence": 1, "no caption": 1, "the caption names no diagnosis": 1})
 
     def test_the_tags_and_classes_are_never_embedded(self):
         seen = self.build()

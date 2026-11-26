@@ -126,6 +126,21 @@ class DatasetRequirements(unittest.TestCase):
         self.assertTrue(re.search(r"/data/processed/images/", (ROOT / ".gitignore").read_text(encoding="utf-8")))
 
 
+class LibraryIsNotSyntheticRequirements(unittest.TestCase):
+    def test_no_module_that_builds_the_libraries_can_call_a_model(self):
+        """The knowledge libraries hold only text and pictures that others published (researcher's rule, 2026-11-24: nothing
+        synthetic). The builders (text library, image library, indexes, retrieval) import no language-model client."""
+        import ast
+        forbidden = ("anthropic", "openai", "src.models.llm", "src.pipelines")
+        for name in ("corpus.py", "images.py", "indexer.py", "retriever.py"):
+            tree = ast.parse(Path(SRC / "retrieval" / name).read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                modules = ([a.name for a in node.names] if isinstance(node, ast.Import) else [node.module or ""] if isinstance(node, ast.ImportFrom) else [])
+                for module in modules:
+                    with self.subTest(f"{name}: {module}"):
+                        self.assertFalse(module.startswith(forbidden), f"{name} imports {module}")
+
+
 class ModelAndPromptRequirements(unittest.TestCase):
     def test_the_four_research_models_are_used_as_they_are_through_pinned_providers(self):
         """Claude Sonnet 5.5, Llama 4 Maverick, Gemini 3.8 Flash and GPT-4o; pre-trained, no fine-tuning; the provider is pinned and
