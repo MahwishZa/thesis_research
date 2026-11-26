@@ -27,14 +27,14 @@
   "image_addresses_that_worked": {
     "PMC bucket": 88
   },
-  "image_encoder": "biomedclip",
+  "image_encoder": "chanwkim/monet",
   "kaggle_check": {
     "threshold": 0.95,
     "n_kaggle_images": 2197,
     "n_library_images": 88,
-    "n_dropped": 3,
+    "n_dropped": 1,
     "hash_threshold_bits": 4,
-    "n_dropped_by_embedding": 2,
+    "n_dropped_by_embedding": 0,
     "n_dropped_by_hash": 1,
     "closest_hashes_bits": [
       4,
@@ -49,117 +49,125 @@
       8
     ],
     "library_threshold": 0.98,
-    "n_dropped_as_library_duplicates": 0,
+    "n_dropped_as_library_duplicates": 3,
     "similarity_quantiles": {
-      "q50": 0.6725,
-      "q90": 0.8949,
-      "q99": 0.9636,
-      "max": 0.9636
+      "q50": 0.7148,
+      "q90": 0.8279,
+      "q99": 0.8873,
+      "max": 0.8873
     },
     "highest_20": [
       {
-        "item_id": "PMC6106659#fig1",
-        "similarity": 0.9636,
-        "kaggle_image": "ISIC_0000346.jpg"
-      },
-      {
-        "item_id": "PMC4516104#fig1",
-        "similarity": 0.9551,
-        "kaggle_image": "ISIC_0010401.jpg"
-      },
-      {
-        "item_id": "PMC7058877#fig1",
-        "similarity": 0.9463,
-        "kaggle_image": "ISIC_0024845.jpg"
-      },
-      {
-        "item_id": "PMC6939186#fig3",
-        "similarity": 0.9456,
-        "kaggle_image": "ISIC_0027967.jpg"
-      },
-      {
-        "item_id": "PMC6939186#fig2",
-        "similarity": 0.9281,
-        "kaggle_image": "ISIC_0027802.jpg"
-      },
-      {
         "item_id": "PMC6939186#fig4",
-        "similarity": 0.9104,
-        "kaggle_image": "ISIC_0031506.jpg"
-      },
-      {
-        "item_id": "PMC5312185#fig1",
-        "similarity": 0.9073,
-        "kaggle_image": "ISIC_0000360.jpg"
-      },
-      {
-        "item_id": "PMC10426806#fig1",
-        "similarity": 0.8975,
-        "kaggle_image": "ISIC_0000356.jpg"
+        "similarity": 0.8873,
+        "kaggle_image": "ISIC_0000318.jpg"
       },
       {
         "item_id": "PMC3750880#fig0",
-        "similarity": 0.8949,
-        "kaggle_image": "ISIC_0000493.jpg"
+        "similarity": 0.8832,
+        "kaggle_image": "ISIC_0000003.jpg"
       },
       {
-        "item_id": "PMC5429111#fig0",
-        "similarity": 0.892,
-        "kaggle_image": "ISIC_0026291.jpg"
+        "item_id": "PMC6939186#fig3",
+        "similarity": 0.8771,
+        "kaggle_image": "ISIC_0000344.jpg"
       },
       {
-        "item_id": "PMC6106659#fig2",
-        "similarity": 0.8817,
-        "kaggle_image": "ISIC_0010714.jpg"
+        "item_id": "PMC6939186#fig2",
+        "similarity": 0.8742,
+        "kaggle_image": "ISIC_0000296.jpg"
+      },
+      {
+        "item_id": "PMC7058877#fig1",
+        "similarity": 0.8637,
+        "kaggle_image": "ISIC_0026417.jpg"
       },
       {
         "item_id": "PMC4938282#fig1",
-        "similarity": 0.8495,
-        "kaggle_image": "ISIC_0010414.jpg"
+        "similarity": 0.8508,
+        "kaggle_image": "ISIC_0028370.jpg"
       },
       {
-        "item_id": "PMC4938282#fig0",
-        "similarity": 0.8286,
-        "kaggle_image": "ISIC_0033005.jpg"
+        "item_id": "PMC4516104#fig1",
+        "similarity": 0.8402,
+        "kaggle_image": "ISIC_0000552.jpg"
+      },
+      {
+        "item_id": "PMC6106659#fig1",
+        "similarity": 0.8397,
+        "kaggle_image": "ISIC_0027053.jpg"
       },
       {
         "item_id": "PMC13420791#fig0",
-        "similarity": 0.8249,
-        "kaggle_image": "ISIC_0027451.jpg"
+        "similarity": 0.8279,
+        "kaggle_image": "ISIC_0000049.jpg"
       },
       {
-        "item_id": "PMC10878740#fig1",
-        "similarity": 0.8175,
-        "kaggle_image": "ISIC_0026343.jpg"
+        "item_id": "PMC6106659#fig2",
+        "similarity": 0.8154,
+        "kaggle_image": "ISIC_0010863.jpg"
       },
       {
         "item_id": "PMC11278531#fig0",
-        "similarity": 0.8131,
-        "kaggle_image": "ISIC_0009989.jpg"
+        "similarity": 0.7943,
+        "kaggle_image": "ISIC_0030427.jpg"
+      },
+      {
+        "item_id": "PMC12333637#fig4",
+        "similarity": 0.7892,
+        "kaggle_image": "ISIC_0026042.jpg"
+      },
+      {
+        "item_id": "PMC4516104#fig7",
+        "similarity": 0.7858,
+        "kaggle_image": "ISIC_0026042.jpg"
       },
       {
         "item_id": "PMC7478516#fig0",
-        "similarity": 0.8105,
-        "kaggle_image": "ISIC_0026845.jpg"
+        "similarity": 0.7828,
+        "kaggle_image": "ISIC_0027915.jpg"
       },
       {
         "item_id": "PMC12333637#fig6",
-        "similarity": 0.8009,
-        "kaggle_image": "ISIC_0032468.jpg"
+        "similarity": 0.7732,
+        "kaggle_image": "ISIC_0000169.jpg"
       },
       {
-        "item_id": "PMC10175672#fig1",
-        "similarity": 0.8,
-        "kaggle_image": "ISIC_0029193.jpg"
+        "item_id": "PMC12517799#fig0",
+        "similarity": 0.7727,
+        "kaggle_image": "ISIC_0026042.jpg"
       },
       {
-        "item_id": "PMC9137359#fig0",
-        "similarity": 0.7931,
-        "kaggle_image": "ISIC_0010917.jpg"
+        "item_id": "PMC12527410#fig2",
+        "similarity": 0.7718,
+        "kaggle_image": "ISIC_0000000.jpg"
+      },
+      {
+        "item_id": "PMC10175672#fig3",
+        "similarity": 0.7714,
+        "kaggle_image": "ISIC_0010536.jpg"
+      },
+      {
+        "item_id": "PMC12026269#fig1",
+        "similarity": 0.7713,
+        "kaggle_image": "ISIC_0029647.jpg"
+      },
+      {
+        "item_id": "PMC10426806#fig1",
+        "similarity": 0.7673,
+        "kaggle_image": "ISIC_0029035.jpg"
+      }
+    ],
+    "dropped": [
+      {
+        "item_id": "PMC4938282#fig0",
+        "similarity": 0.7012,
+        "kaggle_image": "ISIC_0000083.jpg",
+        "hash_bits_different": 4
       }
     ]
   },
-  "n_indexed_images": 85,
+  "n_indexed_images": 84,
   "guard_calibration": {
     "thresholds": {
       "embedding": 0.95,
@@ -168,13 +176,13 @@
     "same_lesion_pairs": {
       "n": 448,
       "embedding_similarity": {
-        "min": 0.7202,
-        "q1": 0.8057,
-        "q5": 0.882,
-        "q50": 0.9588,
-        "q95": 0.9863,
-        "q99": 0.9908,
-        "max": 0.9922,
+        "min": 0.7577,
+        "q1": 0.7718,
+        "q5": 0.8392,
+        "q50": 0.9297,
+        "q95": 0.9759,
+        "q99": 0.9858,
+        "max": 0.9902,
         "n": 448
       },
       "hash_bits_different": {
@@ -187,18 +195,18 @@
         "max": 53,
         "n": 448
       },
-      "caught": 0.6451
+      "caught": 0.2746
     },
     "most_similar_different_lesion": {
       "n": 2197,
       "embedding_similarity": {
-        "min": 0.7269,
-        "q1": 0.8654,
-        "q5": 0.9079,
-        "q50": 0.9637,
-        "q95": 0.9821,
-        "q99": 0.9858,
-        "max": 0.9912,
+        "min": 0.7943,
+        "q1": 0.8555,
+        "q5": 0.885,
+        "q50": 0.9309,
+        "q95": 0.9572,
+        "q99": 0.9672,
+        "max": 0.9782,
         "n": 2197
       },
       "hash_bits_different": {
@@ -211,7 +219,7 @@
         "max": 20,
         "n": 2197
       },
-      "false_alarm": 0.7465
+      "false_alarm": 0.1884
     }
   }
 }

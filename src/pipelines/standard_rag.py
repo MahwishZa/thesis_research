@@ -8,11 +8,11 @@ import random
 from src.data.views import question_file
 from src.evaluation.metrics import holm, mcnemar_exact, percentile, relevant_counts, retrieval_metrics
 from src.models.embeddings import MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
-from src.models.llm import MODELS, make_client, require_free_or_allowed
-from src.pipelines.base import rag_instruction, rag_system, rag_text, run, run_folder
+from src.models.llm import make_client, require_free_or_allowed
+from src.pipelines.base import add_run_arguments, rag_instruction, rag_system, rag_text, run, run_folder
 from src.retrieval.indexer import read_index
 from src.retrieval.retriever import BM25Index, distinct, image_query_vector, reciprocal_rank_fusion, retrieval_query
-from src.utils import IMAGE_LIBRARY, INDEX_DIR, SEED, SPLIT_FILES, SPLITS, TEXT_LIBRARY, VIEWS, get_logger, load_env, read_jsonl, write_json
+from src.utils import IMAGE_LIBRARY, INDEX_DIR, SEED, SPLIT_FILES, TEXT_LIBRARY, VIEWS, get_logger, load_env, read_jsonl, write_json
 
 RETRIEVAL_MODES = ("bm25", "bm25-rerank", "dense", "hybrid", "hybrid-rerank")     # all but bm25: comparisons and trials
 APPROVED = "bm25"     # the standard RAG's text search (researcher, 2026-11-25: best on validation in both text views; hybrid-rerank before)
@@ -109,19 +109,10 @@ class StandardRag:
 
 def rag_parse_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main standard-rag", description="Standard RAG: one model, one view, one split.")
-    ap.add_argument("--model", required=True, choices=sorted(MODELS))
-    ap.add_argument("--view", required=True, choices=VIEWS)
-    ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
+    add_run_arguments(ap)
     ap.add_argument("--k", type=int, default=3, help="passages given to the model (approved: 3)")
     ap.add_argument("--retrieval", default=APPROVED, choices=RETRIEVAL_MODES,
                     help="bm25 (the standard RAG, researcher's choice of 2026-11-25); the other modes are trials in their own folders")
-    ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
-    ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
-    ap.add_argument("--allow-paid", action="store_true", help="allow a model that costs credit (the free model needs no flag)")
-    ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
-    ap.add_argument("--env-file", default=".env", help="the file with the API keys")
-    ap.add_argument("--data", default="data")
-    ap.add_argument("--results", default="results")
     ap.add_argument("--index", default=None, help=f"the index folder (default: data/{INDEX_DIR})")
     return ap.parse_args(argv)
 
@@ -189,7 +180,7 @@ def paired_hit3(qa, preds, approved):
     tests = {m: mcnemar_exact([1] * len(qa), hits(preds[m]), base) for m in others}
     adjusted = holm([t["p_value"] for t in tests.values()])
     return {m: {"against": approved, "a_hit_b_miss": t["a_right_b_wrong"], "a_miss_b_hit": t["a_wrong_b_right"],
-                "p_value": t["p_value"], "p_holm": round(p, 6)} for (m, t), p in zip(tests.items(), adjusted)}
+                "p_value": t["p_value"], "p_holm": round(p, 6)} for (m, t), p in zip(tests.items(), adjusted, strict=True)}
 
 
 def retrieval_intervals(qa, pred, n_boot=1000, seed=42):
@@ -231,7 +222,7 @@ def load_visual(data):
         raise FileNotFoundError(f"{path} is not there: run python -m src.main visual-index")
     with open(path, encoding="utf-8") as f:
         saved = json.load(f)
-    return index, dict(zip(saved["names"], saved["vectors"]))
+    return index, dict(zip(saved["names"], saved["vectors"], strict=True))
 
 
 def retrieval_eval_main(argv=None, rag_for=None, visual=None):

@@ -9,7 +9,7 @@ import time
 
 from src.data.views import question_file
 from src.models.llm import MODELS, ApiError, image_b64, Refused
-from src.utils import SEED, read_jsonl, text_sha256, write_json
+from src.utils import SEED, SPLITS, VIEWS, read_jsonl, text_sha256, write_json
 
 PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -27,6 +27,20 @@ ANSWER = re.compile(r"(?i:answer)\**\s*[:\uff1a]\**\s*([^\n]*)")
 LETTER = re.compile(r"(?<![A-Za-z])([A-H])(?![A-Za-z])")
 REASONING_LABEL = re.compile(r"(?i)^[\s*_#>]*reasoning\s+and\s+evidence\s*\**\s*[:\-]\s*\**\s*")
 LONE_LETTER = re.compile(r"^\W*\(?([A-H])\)?[.)]?\W*$")
+
+
+def add_run_arguments(ap):
+    """The options every system's run command has (llm-only, standard-rag, and the RAG systems still to be built)."""
+    ap.add_argument("--model", required=True, choices=sorted(MODELS))
+    ap.add_argument("--view", required=True, choices=VIEWS)
+    ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
+    ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
+    ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
+    ap.add_argument("--allow-paid", action="store_true", help="allow a model that costs credit (the free model needs no flag)")
+    ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
+    ap.add_argument("--env-file", default=".env", help="the file with the API keys")
+    ap.add_argument("--data", default="data")
+    ap.add_argument("--results", default="results")
 
 
 # ---- prompt and answer (no internet) ------------------------------------------------------------------------------------

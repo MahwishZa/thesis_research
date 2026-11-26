@@ -2,24 +2,15 @@
 import argparse
 import os
 
-from src.models.llm import MODELS, make_client, require_free_or_allowed
-from src.pipelines.base import INSTRUCTIONS, run, run_folder
-from src.utils import SPLITS, VIEWS, get_logger, load_env
+from src.models.llm import make_client, require_free_or_allowed
+from src.pipelines.base import INSTRUCTIONS, add_run_arguments, run, run_folder
+from src.utils import get_logger, load_env
 
 
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main llm-only", description="LLM-only baseline: one model, one view, one split.")
-    ap.add_argument("--model", required=True, choices=sorted(MODELS))
-    ap.add_argument("--view", required=True, choices=VIEWS)
-    ap.add_argument("--split", default="val", choices=SPLITS, help="val to try things out; test only for the final runs")
+    add_run_arguments(ap)
     ap.add_argument("--style", default="rationale", choices=sorted(INSTRUCTIONS))
-    ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
-    ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
-    ap.add_argument("--allow-paid", action="store_true", help="allow a model that costs credit (the free model needs no flag)")
-    ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
-    ap.add_argument("--env-file", default=".env", help="the file with the API keys")
-    ap.add_argument("--data", default="data")
-    ap.add_argument("--results", default="results")
     return ap.parse_args(argv)
 
 

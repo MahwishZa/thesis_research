@@ -2341,6 +2341,10 @@ class ImageLibraryLoadTests(unittest.TestCase):
             index, vectors = src.pipelines.standard_rag.load_visual(d)
             self.assertEqual(len(index.passages), 3)
             self.assertEqual(vectors, {"ISIC_1.jpg": [1.0, 0.0], "ISIC_2.jpg": [0.0, 1.0]})
+            Path(folder, "kaggle_vectors.json").write_text(json.dumps({"names": ["ISIC_1.jpg", "ISIC_2.jpg", "ISIC_3.jpg"], "vectors": [[1.0, 0.0]]}),
+                                                           encoding="utf-8")
+            with self.assertRaises(ValueError):                                                  # a damaged file must not be read half way
+                src.pipelines.standard_rag.load_visual(d)
 
 
 class LibraryStatusTests(unittest.TestCase):

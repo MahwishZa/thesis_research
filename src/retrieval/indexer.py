@@ -80,7 +80,7 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     keep_idx, twins = drop_near_duplicates([vectors[i] for i in not_kaggle], a.library_threshold)
     kept = [(items[not_kaggle[i]], vectors[not_kaggle[i]]) for i in keep_idx]
     dropped = [{"item_id": it["item_id"], "similarity": round(sim, 4), "kaggle_image": kaggle[j], "hash_bits_different": hb[0]}
-               for it, (sim, j), hb in zip(items, best, by_hash) if sim >= a.threshold or hb[0] <= a.hash_threshold]
+               for it, (sim, j), hb in zip(items, best, by_hash, strict=True) if sim >= a.threshold or hb[0] <= a.hash_threshold]
     sims = sorted(sim for sim, _ in best)
     quantiles = {f"q{q}": round(sims[min(len(sims) - 1, int(len(sims) * q / 100))], 4) for q in (50, 90, 99)} | {"max": round(sims[-1], 4)}
     top = [{"item_id": items[i]["item_id"], "similarity": round(best[i][0], 4), "kaggle_image": kaggle[best[i][1]]}

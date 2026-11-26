@@ -30,6 +30,7 @@ import src.main
 import src.models.embeddings
 import src.models.llm
 import src.pipelines.base
+import src.pipelines.llm_only
 import src.pipelines.standard_rag
 import src.retrieval.indexer
 import src.retrieval.retriever
@@ -1075,22 +1076,15 @@ class PromptAndAnswerTests(unittest.TestCase):
 
 
 class FreeModelTests(unittest.TestCase):
-    """The researcher has no budget left (2026-11-26): only the free model runs without --allow-paid."""
+    """The researcher has no budget left (2026-11-26): a model that costs credit runs only with --allow-paid."""
 
-    def test_gemma_is_the_only_free_model_and_is_pinned_to_its_one_provider(self):
-        m = src.models.llm.MODELS
-        self.assertEqual([n for n, c in m.items() if c.get("free")], ["gemma-4-31b"])
-        g = m["gemma-4-31b"]
-        self.assertEqual((g["id"], g["route"], g["temperature"], g["seed"]), ("google/gemma-4-31b-it:free", ["google-ai-studio"], 0.0, 0))
-        self.assertTrue(g["id"].endswith(":free"))                          # a paid variant must never be reached by a typo
-        self.assertGreaterEqual(g["max_tokens"], 4096)                      # hidden thinking counts toward it
-        _, body = src.models.llm.openrouter_request(g, "sys", "txt", "IMG")
-        self.assertEqual(body["provider"], {"order": ["google-ai-studio"], "allow_fallbacks": False})   # no other (paid) host may answer
-        self.assertNotIn("reasoning", body)                                 # the endpoint default until the probe shows what it returns
+    def test_a_model_marked_free_runs_without_the_flag_and_no_model_is_free_now(self):
+        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], [])      # no free model is configured
+        with mock.patch.dict(src.models.llm.MODELS, {"free-one": {"api": "openrouter", "id": "x:free", "free": True}}):
+            src.models.llm.require_free_or_allowed("free-one", False)                               # no error
 
     def test_a_paid_model_is_refused_without_allow_paid_and_nothing_is_sent_or_written(self):
         guard = src.models.llm.require_free_or_allowed
-        guard("gemma-4-31b", False)
         guard("gpt-4o", True)
         for name in ("gpt-4o", "claude-sonnet-5-5", "gemini-3.8-flash", "llama-4-maverick"):
             with self.subTest(name), self.assertRaises(SystemExit) as caught:
@@ -1106,9 +1100,18 @@ class FreeModelTests(unittest.TestCase):
             self.assertIn("costs credit", str(caught.exception))
 
 
+class RunOptionsTests(unittest.TestCase):
+    """llm-only and standard-rag share their options (src/pipelines/base.py); a changed default would change every run."""
+
+    def test_both_commands_have_the_same_safe_defaults(self):
+        for parse, extra in ((src.pipelines.llm_only.parse_args, []), (src.pipelines.standard_rag.rag_parse_args, [])):
+            a = parse(["--model", "gpt-4o", "--view", "text_only", *extra])
+            self.assertEqual((a.split, a.limit, a.sleep, a.allow_paid, a.dry_run, a.data, a.results, a.env_file),
+                             ("val", 0, 0.0, False, False, "data", "results", ".env"))       # validation, every question, no paid model
+
 class RequestTests(unittest.TestCase):
     def test_the_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gemma-4-31b", "gpt-4o", "llama-4-maverick"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 if cfg["api"] == "anthropic":
