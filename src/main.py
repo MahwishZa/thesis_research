@@ -40,24 +40,26 @@ import shutil
 import sys
 import tempfile
 
-from src.data.dataset import TEST_PER_CLASS, VAL_PER_CLASS
-from src.data.loaders import images_not_in_table, moved_files, question_file, view_table
-from src.data.views import build_views
+from src.data.views import TEST_PER_CLASS, VAL_PER_CLASS, build_views, images_not_in_table, moved_files, question_file, view_table
 from src.pipelines.base import run_folder
-from src.utils.common import (
+from src.utils import (
     ALL_CASES,
     CLASSES,
-    CORPUS_DIR,
+    CORPUS_FOLDERS,
+    IMAGE_LIBRARY,
     INDEX_DIR,
+    MULTIMODAL_LIBRARY,
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     RAW,
     REFERENCE_TEXTS,
     SPLITS,
+    TEXT_LIBRARY,
     VIEWS,
+    file_sha256,
+    read_csv,
+    text_matches,
 )
-from src.utils.io import read_csv
-from src.utils.reproducibility import file_sha256, text_matches
 
 
 def count_lines(path):
@@ -128,7 +130,7 @@ def step_feature_check(results):
 
 
 def step_corpus(data):
-    folder = os.path.join(data, CORPUS_DIR)
+    folder = os.path.join(data, TEXT_LIBRARY)
     files = {f: os.path.join(folder, f) for f in ("passages.jsonl", "manifest.csv", "corpus_card.json")}
     present = [f for f, p in files.items() if os.path.isfile(p)]
     if not present:
@@ -173,11 +175,11 @@ def step_index(data):
         return PROBLEM, "index.json without embeddings.f32: build the index again"
     if os.path.getsize(os.path.join(folder, "embeddings.f32")) != 4 * meta["n_passages"] * meta["dim"]:
         return PROBLEM, "embeddings.f32 has the wrong size: build the index again"
-    passages = os.path.join(data, CORPUS_DIR, "passages.jsonl")
+    passages = os.path.join(data, TEXT_LIBRARY, "passages.jsonl")
     if os.path.isfile(passages) and file_sha256(passages) != meta.get("passages_sha256"):
         return PROBLEM, "passages.jsonl changed after the index was built: run the index command again"
     if meta.get("captions_file"):
-        captions = os.path.join(data, CORPUS_DIR, meta["captions_file"])
+        captions = os.path.normpath(os.path.join(data, TEXT_LIBRARY, meta["captions_file"]))
         if not os.path.isfile(captions) or file_sha256(captions) != meta.get("captions_sha256"):
             return PROBLEM, "the image library changed after the index was built: run the index command again"
     note = f"{meta['n_passages']} passages, {meta['dim']} numbers each ({meta['encoder']})"
@@ -185,6 +187,30 @@ def step_index(data):
         note += f"; with {meta.get('n_captions_indexed', 0)} caption records"
     note += "; reference pages left out" if meta.get("exclude_reference_pages") else "; all passages"
     return DONE, note + ("; reference copies left out" if meta.get("exclude_reference_overlap") else "")
+
+
+def step_libraries(data):
+    """The library of each view (data/corpus/<view>/): text_only and image_only hold the records, multimodal names the two it combines
+    and how their searches are merged (it must say what the standard RAG does)."""
+    from src.pipelines.standard_rag import FUSION_LIST
+    path = os.path.join(data, MULTIMODAL_LIBRARY, "library.json")
+    if not os.path.isfile(path):
+        return NOT_RUN, f"no {MULTIMODAL_LIBRARY}/library.json"
+    with open(path, encoding="utf-8") as f:
+        library = json.load(f)
+    if sorted(library.get("sources", [])) != ["image_only", "text_only"]:
+        return PROBLEM, f"the multimodal library must combine text_only and image_only, not {library.get('sources')}"
+    if library.get("fusion") != {"method": "reciprocal rank fusion", "k": 60, "list": FUSION_LIST}:
+        return PROBLEM, f"library.json says {library.get('fusion')}, the standard RAG fuses with k = 60 and the top {FUSION_LIST}"
+    missing = [v for v in ("text_only", "image_only") if not os.path.isdir(os.path.join(data, CORPUS_FOLDERS[v]))]
+    if missing:
+        return PROBLEM, "no library folder for " + ", ".join(missing)
+    card_path = os.path.join(data, IMAGE_LIBRARY, "visual_card.json")
+    images = ""
+    if os.path.isfile(card_path):
+        with open(card_path, encoding="utf-8") as f:
+            images = f"; image_only: {json.load(f).get('n_indexed_images', 0)} indexed images"
+    return DONE, f"text_only and image_only hold the records, multimodal combines them (rank fusion, k = 60, top {FUSION_LIST}){images}"
 
 
 SYSTEMS = ("llm_only", "standard_rag", "baseline_rag", "proposed_rag")     # the four approaches, each with three view folders
@@ -231,7 +257,8 @@ def check(data="data", results="results"):
              ("2 views (views)", step_views(data)), ("- feature check (features)", step_feature_check(results)),
              ("3 knowledge corpus (corpus)", step_corpus(data)),
              ("3b reference texts (references)", step_references(data)),
-             ("4 retrieval index (index)", step_index(data))]
+             ("4 retrieval index (index)", step_index(data)),
+             ("4b libraries per view (text_only, image_only, multimodal)", step_libraries(data))]
     return [(name, *r) for name, r in steps] + step_runs(data, results, sorted(MODELS))
 
 

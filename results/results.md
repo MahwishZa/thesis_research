@@ -1,6 +1,6 @@
 # Results: LLM-only baseline (test split)
 
-Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/comparisons/summary.csv`, `results/comparisons/tables/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: `results/evaluation_guide.md`.
+Updated 2026-11-24. All numbers come from the committed run files (`results/llm_only/`, `results/comparisons/summary.csv`, `results/comparisons/tables/similarity_check.json`). Scores are percentages (25.4% = 61 of 240 right); p-values and cosine similarities are not. Metric definitions: the docstrings of `src/evaluation/metrics.py` until the final evaluation guide is written.
 
 ## 1. Setup and status
 

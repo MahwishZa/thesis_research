@@ -23,13 +23,9 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
-import src.data.dataset
-import src.data.loaders
 import src.data.views
-import src.evaluation.diagnostic
 import src.evaluation.evaluator
 import src.evaluation.metrics
-import src.evaluation.retrieval
 import src.main
 import src.models.embeddings
 import src.models.llm
@@ -37,15 +33,11 @@ import src.pipelines.base
 import src.pipelines.standard_rag
 import src.retrieval.indexer
 import src.retrieval.retriever
-import src.utils.common
-import src.utils.io
-import src.utils.reproducibility
+import src.utils
 from src.data.views import options_for
-from src.utils.common import ALL_CASES, CLASSES, OPTION_TEXT, VIEWS
-from src.utils.io import write_jsonl
+from src.utils import ALL_CASES, CLASSES, OPTION_TEXT, VIEWS, write_jsonl
 
-EVALUATION_MODULES = (src.evaluation.metrics, src.evaluation.diagnostic, src.evaluation.retrieval,
-                      src.evaluation.evaluator)   # what evaluate.py held before the 2026-11-25 move
+EVALUATION_MODULES = (src.evaluation.metrics, src.evaluation.evaluator)   # what evaluate.py held before the 2026-11-25 move
 
 HAVE = all(importlib.util.find_spec(p) for p in ("pandas", "numpy", "cv2", "PIL", "sklearn"))
 SENTENCE = " A dermoscopic image of the lesion is available."
@@ -97,17 +89,16 @@ class LogFileTests(unittest.TestCase):
     """Windows cannot delete a file or rename a folder while a file in it is open (seen on the laptop, 2026-11-25)."""
 
     def test_a_log_file_is_never_held_open_and_a_new_file_replaces_the_old_one(self):
-        from src.utils import logging as utils_logging
         with tempfile.TemporaryDirectory() as d:
             first, second = os.path.join(d, "a", "one.log"), os.path.join(d, "b", "two.log")
-            log = utils_logging.get_logger(f"test.logfile.{id(self)}", first)
+            log = src.utils.get_logger(f"test.logfile.{id(self)}", first)
             with contextlib.redirect_stdout(io.StringIO()):
                 log.info("first message")
                 if os.path.isdir("/proc/self/fd"):
                     held = {os.path.realpath(os.path.join("/proc/self/fd", n)) for n in os.listdir("/proc/self/fd")}
                     self.assertNotIn(os.path.realpath(first), held)
                 os.remove(first)                                                      # fails on Windows if it is open
-                utils_logging.get_logger(f"test.logfile.{id(self)}", second).info("second message")
+                src.utils.get_logger(f"test.logfile.{id(self)}", second).info("second message")
                 log.info("third message")
             self.assertFalse(os.path.exists(first))                                   # the old file is not written again
             self.assertEqual([x.split(" INFO ")[1] for x in Path(second).read_text(encoding="utf-8").splitlines()],
@@ -124,27 +115,27 @@ class CommonTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d, "table.csv")
             path.write_text("old", encoding="utf-8")
-            with self.assertRaises(RuntimeError), src.utils.io.atomic_path(path) as tmp:
+            with self.assertRaises(RuntimeError), src.utils.atomic_path(path) as tmp:
                 Path(tmp).write_text("half", encoding="utf-8")
                 raise RuntimeError("interrupted")
             self.assertEqual(path.read_text(encoding="utf-8"), "old")
             self.assertEqual(os.listdir(d), ["table.csv"])
-            src.utils.io.write_csv(path, [{"a": "1", "b": "x, y"}], ["a", "b"])
+            src.utils.write_csv(path, [{"a": "1", "b": "x, y"}], ["a", "b"])
             self.assertEqual(path.read_bytes(), b'a,b\n1,"x, y"\n')     # LF endings, quoting as pandas writes
 
     def test_json_and_jsonl_round_trip(self):
         with tempfile.TemporaryDirectory() as d:
-            src.utils.io.write_jsonl(Path(d, "x.jsonl"), [{"id": "a"}, {"id": "b"}])
-            self.assertEqual(src.utils.io.read_jsonl(Path(d, "x.jsonl")), [{"id": "a"}, {"id": "b"}])
-            src.utils.io.write_json(Path(d, "x.json"), {"a": 1})
+            src.utils.write_jsonl(Path(d, "x.jsonl"), [{"id": "a"}, {"id": "b"}])
+            self.assertEqual(src.utils.read_jsonl(Path(d, "x.jsonl")), [{"id": "a"}, {"id": "b"}])
+            src.utils.write_json(Path(d, "x.json"), {"a": 1})
             self.assertEqual(Path(d, "x.json").read_text(encoding="utf-8"), '{\n  "a": 1\n}')
 
     def test_the_layout_names(self):
-        self.assertEqual(src.data.loaders.view_table("text_only"), "views/text_only/cases.csv")
-        self.assertEqual(src.data.loaders.question_file("multimodal", "test"), "views/multimodal/test.jsonl")
-        self.assertEqual(len(src.utils.common.CLASSES), len(src.utils.common.LETTERS))
-        self.assertEqual(set(src.utils.common.CLASS_NAMES), set(src.utils.common.CLASSES))
-        self.assertEqual(set(src.utils.common.OPTION_TEXT), set(src.utils.common.CLASSES))
+        self.assertEqual(src.data.views.view_table("text_only"), "views/text_only/cases.csv")
+        self.assertEqual(src.data.views.question_file("multimodal", "test"), "views/multimodal/test.jsonl")
+        self.assertEqual(len(src.utils.CLASSES), len(src.utils.LETTERS))
+        self.assertEqual(set(src.utils.CLASS_NAMES), set(src.utils.CLASSES))
+        self.assertEqual(set(src.utils.OPTION_TEXT), set(src.utils.CLASSES))
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -173,23 +164,23 @@ class FingerprintTests(unittest.TestCase):
             Path(lf).write_bytes(b'{"id": 1}\n{"id": 2}\n')
             Path(crlf).write_bytes(b'{"id": 1}\r\n{"id": 2}\r\n')
             Path(other).write_bytes(b'{"id": 1}\n{"id": 3}\n')
-            sha = src.utils.reproducibility.text_sha256
+            sha = src.utils.text_sha256
             self.assertEqual(sha(lf), sha(crlf))
-            self.assertEqual(sha(lf), src.utils.reproducibility.file_sha256(lf))                  # an LF file: the plain SHA-256
+            self.assertEqual(sha(lf), src.utils.file_sha256(lf))                  # an LF file: the plain SHA-256
             self.assertNotEqual(sha(lf), sha(other))
-            windows = src.utils.reproducibility.file_sha256(crlf)                                  # what a report recorded before
+            windows = src.utils.file_sha256(crlf)                                  # what a report recorded before
             for path in (lf, crlf):
-                self.assertTrue(src.utils.reproducibility.text_matches(path, windows))
-                self.assertTrue(src.utils.reproducibility.text_matches(path, sha(lf)))
-            self.assertFalse(src.utils.reproducibility.text_matches(other, windows))
-            self.assertFalse(src.utils.reproducibility.text_matches(other, sha(lf)))
+                self.assertTrue(src.utils.text_matches(path, windows))
+                self.assertTrue(src.utils.text_matches(path, sha(lf)))
+            self.assertFalse(src.utils.text_matches(other, windows))
+            self.assertFalse(src.utils.text_matches(other, sha(lf)))
 
 
 class BalanceRuleTests(unittest.TestCase):
     def test_every_class_gets_exactly_the_target_and_validation_is_untouched(self):
         cs = spec_cases([("MEL", "test", 1)] * 6 + [("MEL", "train", 1)] * 4 + [("MEL", "val", 1)] * 2 +
                    [("DF", "test", 1)] * 1 + [("DF", "train", 2)] * 3 + [("DF", "train", 1)] * 2 + [("DF", "val", 1)] * 2)
-        new = src.data.dataset.balanced_splits(cs, per_class=3, seed=42)
+        new = src.data.views.balanced_splits(cs, per_class=3, seed=42)
         c = spec_counts(cs, new)
         self.assertEqual((c[("MEL", "test")], c[("DF", "test")]), (3, 3))
         self.assertEqual((c[("MEL", "val")], c[("DF", "val")]), (2, 2))
@@ -198,7 +189,7 @@ class BalanceRuleTests(unittest.TestCase):
 
     def test_whole_lesion_groups_move_and_a_group_that_would_go_over_is_skipped(self):
         cs = spec_cases([("AK", "test", 1), ("AK", "train", 3), ("AK", "train", 2), ("AK", "train", 1)])
-        new = src.data.dataset.balanced_splits(cs, per_class=3, seed=42)
+        new = src.data.views.balanced_splits(cs, per_class=3, seed=42)
         by_group = {}
         for x in cs:
             by_group.setdefault(x["group_id"], set()).add(new[x["isic_id"]])
@@ -208,46 +199,46 @@ class BalanceRuleTests(unittest.TestCase):
 
     def test_test_cases_are_kept_first_and_only_what_is_needed_moves(self):
         cs = spec_cases([("NV", "test", 1)] * 2 + [("NV", "train", 1)] * 5)
-        new = src.data.dataset.balanced_splits(cs, per_class=3, seed=42)
+        new = src.data.views.balanced_splits(cs, per_class=3, seed=42)
         self.assertTrue(all(new[x["isic_id"]] == "test" for x in cs if x["split"] == "test"))
         self.assertEqual(sum(x["split"] == "train" and new[x["isic_id"]] == "test" for x in cs), 1)
 
     def test_the_choice_is_fixed_by_the_seed_and_not_by_the_order_of_the_table(self):
         cs = spec_cases([("BCC", "test", 1)] * 8 + [("BCC", "train", 1)] * 8)
-        a = src.data.dataset.balanced_splits(cs, per_class=4, seed=42)
-        self.assertEqual(a, src.data.dataset.balanced_splits(list(reversed(cs)), per_class=4, seed=42))
-        self.assertNotEqual(a, src.data.dataset.balanced_splits(cs, per_class=4, seed=7))
-        self.assertEqual(a, src.data.dataset.balanced_splits(cs, per_class=4))                                  # the default seed is 42
+        a = src.data.views.balanced_splits(cs, per_class=4, seed=42)
+        self.assertEqual(a, src.data.views.balanced_splits(list(reversed(cs)), per_class=4, seed=42))
+        self.assertNotEqual(a, src.data.views.balanced_splits(cs, per_class=4, seed=7))
+        self.assertEqual(a, src.data.views.balanced_splits(cs, per_class=4))                                  # the default seed is 42
         kept = sorted(x["group_id"] for x in cs if a[x["isic_id"]] == "test")
         self.assertEqual(kept, sorted(sorted({x["group_id"] for x in cs if x["split"] == "test"},
-                                             key=lambda g: src.data.dataset.group_order(42, g))[:4]))
+                                             key=lambda g: src.data.views.group_order(42, g))[:4]))
 
     def test_the_validation_pass_balances_val_from_train_and_never_touches_test(self):
         cs = (spec_cases([("MEL", "test", 1)] * 5 + [("MEL", "val", 1)] * 6 + [("MEL", "train", 1)] * 6 +
                          [("DF", "test", 1)] * 3 + [("DF", "val", 1)] * 1 + [("DF", "train", 1)] * 4))
-        after_test = src.data.dataset.balanced_splits(cs, per_class=3, split="test")
+        after_test = src.data.views.balanced_splits(cs, per_class=3, split="test")
         cs2 = [{**c, "split": after_test[c["isic_id"]]} for c in cs]
-        new = src.data.dataset.balanced_splits(cs2, per_class=4, split="val")
+        new = src.data.views.balanced_splits(cs2, per_class=4, split="val")
         c = spec_counts(cs2, new)
         self.assertEqual((c[("MEL", "val")], c[("DF", "val")]), (4, 4))
         self.assertEqual((c[("MEL", "test")], c[("DF", "test")]), (3, 3))
         self.assertTrue(all(new[x["isic_id"]] == "test" for x in cs2 if x["split"] == "test"))      # the second pass leaves test alone
         self.assertEqual(sum(v == "train" for v in new.values()), len(cs) - 3 * 2 - 4 * 2)           # nothing lost
-        again = src.data.dataset.balanced_splits([{**x, "split": new[x["isic_id"]]} for x in cs2], per_class=4, split="val")
+        again = src.data.views.balanced_splits([{**x, "split": new[x["isic_id"]]} for x in cs2], per_class=4, split="val")
         self.assertEqual(again, new)                                                                # a second run changes nothing
         with self.assertRaisesRegex(ValueError, "DF: only 4 val images|VASC|only .* val images"):
-            src.data.dataset.balanced_splits(spec_cases([("DF", "val", 3), ("DF", "train", 3)]), per_class=4, split="val")
-        self.assertEqual(src.data.dataset.VAL_PER_CLASS, 20)
+            src.data.views.balanced_splits(spec_cases([("DF", "val", 3), ("DF", "train", 3)]), per_class=4, split="val")
+        self.assertEqual(src.data.views.VAL_PER_CLASS, 20)
 
     def test_it_stops_when_a_class_cannot_reach_the_target_or_a_group_is_mixed(self):
         with self.assertRaisesRegex(ValueError, "VASC: only 2 test images"):
-            src.data.dataset.balanced_splits(spec_cases([("VASC", "test", 1), ("VASC", "train", 1), ("VASC", "val", 5)]), per_class=3)
+            src.data.views.balanced_splits(spec_cases([("VASC", "test", 1), ("VASC", "train", 1), ("VASC", "val", 5)]), per_class=3)
         with self.assertRaisesRegex(ValueError, "only 2 test images"):
-            src.data.dataset.balanced_splits(spec_cases([("SCC", "test", 2), ("SCC", "train", 2)]), per_class=3)    # 2 + 2 > 3, cannot be 3
+            src.data.views.balanced_splits(spec_cases([("SCC", "test", 2), ("SCC", "train", 2)]), per_class=3)    # 2 + 2 > 3, cannot be 3
         mixed = spec_cases([("MEL", "test", 2)])
         mixed[1]["label"] = "NV"
         with self.assertRaisesRegex(ValueError, "more than one class or split"):
-            src.data.dataset.balanced_splits(mixed, per_class=1)
+            src.data.views.balanced_splits(mixed, per_class=1)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -354,7 +345,7 @@ class DiagnosisTests(unittest.TestCase):
         qa = as_dict(question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES))
         self.assertGreater(len({q["answer"] for q in qa.values()}), 1)  # the right letter differs between the questions
         pred = {i: {"id": i, "pred": q["answer"]} for i, q in qa.items()}  # every answer right
-        d = src.evaluation.diagnostic.diagnosis_metrics(qa, pred)
+        d = src.evaluation.metrics.diagnosis_metrics(qa, pred)
         self.assertEqual(d["accuracy"], 1.0)
         self.assertEqual(d["macro_f1"], 1.0)
         self.assertTrue(all(r["recall"] == 1.0 and r["specificity"] == 1.0 for r in d["per_class"].values()))
@@ -363,13 +354,13 @@ class DiagnosisTests(unittest.TestCase):
     def test_per_class_counts_match_a_hand_count(self):
         # true: MEL MEL NV NV BCC; predicted: MEL NV NV MEL invalid
         y, p = ["MEL", "MEL", "NV", "NV", "BCC"], ["MEL", "NV", "NV", "MEL", src.evaluation.metrics.INVALID]
-        r = src.evaluation.diagnostic.per_class(y, p)
+        r = src.evaluation.metrics.per_class(y, p)
         self.assertEqual((r["MEL"]["precision"], r["MEL"]["recall"]), (0.5, 0.5))
         self.assertAlmostEqual(r["MEL"]["specificity"], 2 / 3)  # of NV, NV, BCC only one called MEL
         self.assertEqual((r["BCC"]["recall"], r["BCC"]["specificity"], r["BCC"]["support"]), (0.0, 1.0, 1))
         self.assertEqual(r["DF"]["support"], 0)
-        self.assertAlmostEqual(src.evaluation.diagnostic.macro_f1(y, p), (0.5 + 0.5) / 8)  # every class weighs the same, also those without cases
-        self.assertEqual(src.evaluation.diagnostic.accuracy(y, p), 0.4)
+        self.assertAlmostEqual(src.evaluation.metrics.macro_f1(y, p), (0.5 + 0.5) / 8)  # every class weighs the same, also those without cases
+        self.assertEqual(src.evaluation.metrics.accuracy(y, p), 0.4)
 
     def test_invalid_answers_are_split_into_refusals_and_other_invalid_answers(self):
         qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(7)]
@@ -382,7 +373,7 @@ class DiagnosisTests(unittest.TestCase):
                 "ISIC_0000003": {"pred": None, "finish_reason": "stop", "raw_output": "I cannot provide a diagnosis."},
                 "ISIC_0000004": {"pred": None, "finish_reason": "length", "raw_output": "The lesion shows a network and"},
                 "ISIC_0000005": {"pred": "Z", "raw_output": "Answer: Z"}}
-        d = src.evaluation.diagnostic.diagnosis_metrics(qa, pred)
+        d = src.evaluation.metrics.diagnosis_metrics(qa, pred)
         self.assertEqual((d["invalid_answers"], d["missing_predictions"]), (5, 1))
         self.assertEqual(d["invalid_answers_by_cause"],
                          {"refusals": 3, "other_invalid": 2, "refusal_ids": ["ISIC_0000001", "ISIC_0000002", "ISIC_0000003"],
@@ -390,15 +381,15 @@ class DiagnosisTests(unittest.TestCase):
         self.assertEqual(d["accuracy"], round(1 / 7, 4))                         # refusals count as wrong, as before
         for text in ("I am sorry, but I cannot assist.", "I’m sorry, that is outside what I do here.", "I’m unable to analyze this image.", "I won't diagnose this.",
                      "I am not able to evaluate medical images."):
-            self.assertTrue(src.evaluation.diagnostic.REFUSAL.search(text), text)
+            self.assertTrue(src.evaluation.metrics.REFUSAL.search(text), text)
         for text in ("Sorry state of the skin.", "I can see a pigment network.", "It cannot be excluded."):
-            self.assertFalse(src.evaluation.diagnostic.REFUSAL.search(text), text)
+            self.assertFalse(src.evaluation.metrics.REFUSAL.search(text), text)
 
     def test_a_missing_or_unusable_answer_counts_as_wrong(self):
         qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(4)]
         qa = as_dict(qs)
         pred = {qs[0]["id"]: {"pred": qs[0]["answer"]}, qs[1]["id"]: {"pred": "Z"}, qs[2]["id"]: {"pred": None}}
-        d = src.evaluation.diagnostic.diagnosis_metrics(qa, pred)
+        d = src.evaluation.metrics.diagnosis_metrics(qa, pred)
         self.assertEqual((d["n_questions"], d["missing_predictions"], d["invalid_answers"]), (4, 1, 2))
         self.assertEqual(d["accuracy"], 0.25)
         self.assertEqual(d["confusion_matrix"]["matrix"][0][-1], 3)  # three melanomas in the "invalid" column
@@ -410,7 +401,7 @@ class DiagnosisTests(unittest.TestCase):
     def test_a_prediction_for_a_question_that_is_not_in_the_file_stops_the_evaluation(self):
         qa = as_dict([question("ISIC_0000001", "MEL")])
         with self.assertRaises(ValueError):
-            src.evaluation.diagnostic.diagnosis_metrics(qa, {"ISIC_0000001": {"pred": "A"}, "ISIC_9999999": {"pred": "A"}})
+            src.evaluation.metrics.diagnosis_metrics(qa, {"ISIC_0000001": {"pred": "A"}, "ISIC_9999999": {"pred": "A"}})
 
     def test_a_broken_question_file_stops_the_evaluation(self):
         q = question("ISIC_0000001", "MEL")
@@ -420,7 +411,7 @@ class DiagnosisTests(unittest.TestCase):
 
     def test_the_report_has_accuracy_as_the_main_score_and_no_balanced_accuracy(self):
         qa = as_dict(question(f"ISIC_{i:07d}", c) for i, c in enumerate(CLASSES))
-        d = src.evaluation.diagnostic.diagnosis_metrics(qa, {})
+        d = src.evaluation.metrics.diagnosis_metrics(qa, {})
         self.assertIn("accuracy_95ci", d)
         self.assertFalse([k for k in d if "balanced" in k])
 
@@ -433,10 +424,10 @@ class DiagnosisTests(unittest.TestCase):
         y = ["MEL"] * 30 + ["NV"] * 30
         p = ["MEL"] * 20 + ["NV"] * 10 + ["NV"] * 25 + ["MEL"] * 5
         groups = [f"G{i}" for i in range(60)]
-        lo, hi = src.evaluation.metrics.bootstrap_ci(y, p, groups, src.evaluation.diagnostic.accuracy)
-        self.assertLess(lo, src.evaluation.diagnostic.accuracy(y, p))
-        self.assertGreater(hi, src.evaluation.diagnostic.accuracy(y, p))
-        self.assertEqual(src.evaluation.metrics.bootstrap_ci(y, p, groups, src.evaluation.diagnostic.accuracy), [lo, hi])
+        lo, hi = src.evaluation.metrics.bootstrap_ci(y, p, groups, src.evaluation.metrics.accuracy)
+        self.assertLess(lo, src.evaluation.metrics.accuracy(y, p))
+        self.assertGreater(hi, src.evaluation.metrics.accuracy(y, p))
+        self.assertEqual(src.evaluation.metrics.bootstrap_ci(y, p, groups, src.evaluation.metrics.accuracy), [lo, hi])
 
     def test_the_percentile_matches_linear_interpolation(self):
         self.assertEqual(src.evaluation.metrics.percentile([0, 10, 20, 30, 40], 50), 20)
@@ -455,7 +446,7 @@ class DiagnosisTests(unittest.TestCase):
     def test_a_second_system_is_compared_on_the_same_questions(self):
         qs = [question(f"ISIC_{i:07d}", "BCC") for i in range(3)]
         a = {q["id"]: {"pred": q["answer"]} for q in qs}
-        d = src.evaluation.diagnostic.diagnosis_metrics(as_dict(qs), a, pred_b={})
+        d = src.evaluation.metrics.diagnosis_metrics(as_dict(qs), a, pred_b={})
         self.assertEqual(d["mcnemar_vs_system_b"]["a_right_b_wrong"], 3)
 
 
@@ -464,15 +455,15 @@ class ReportTests(unittest.TestCase):
         qs = [question(f"ISIC_{i:07d}", "MEL") for i in range(5)]
         pred = {q["id"]: {"pred": "a"} for q in qs[:3]}
         pred[qs[3]["id"]] = {"pred": "maybe"}
-        d = src.evaluation.diagnostic.diagnosis_metrics(as_dict(qs), pred)
+        d = src.evaluation.metrics.diagnosis_metrics(as_dict(qs), pred)
         self.assertEqual(d["chosen_letters"], {"A": 3, "invalid": 2})
 
     def test_usage_is_summed_only_over_predictions_that_report_it(self):
         qa = as_dict([question("ISIC_0000001", "MEL"), question("ISIC_0000002", "NV")])
         pred = {"ISIC_0000001": {"pred": "A", "tokens_in": 100, "seconds": 1.5}, "ISIC_0000002": {"pred": "B"}}
-        u = src.evaluation.diagnostic.usage_summary(qa, pred)
+        u = src.evaluation.metrics.usage_summary(qa, pred)
         self.assertEqual(u, {"tokens_in": {"total": 100.0, "mean": 100.0, "n": 1}, "seconds": {"total": 1.5, "mean": 1.5, "n": 1}})
-        self.assertIsNone(src.evaluation.diagnostic.usage_summary(qa, {}))
+        self.assertIsNone(src.evaluation.metrics.usage_summary(qa, {}))
 
     def test_accuracy_by_subgroup_is_not_offered(self):
         """Removed on the researcher's decision (2026-11-24): it repeats the accuracy and the per-class scores."""
@@ -579,16 +570,16 @@ class RecallTests(unittest.TestCase):
         q = question("ISIC_0000001", "MEL")
         ctx = [{"chunk_id": f"c{j}", "text": "t", "tags": tags} for j, tags in enumerate([["MEL"], ["NV"], ["MEL"], ["MEL"]])]
         passages = [{"tags": ["MEL"]}] * 10 + [{"tags": ["NV", "MEL"]}] + [{"tags": ["NV"]}] * 4 + [{"tags": []}]
-        counts = src.evaluation.retrieval.relevant_counts(passages)
+        counts = src.evaluation.metrics.relevant_counts(passages)
         self.assertEqual((counts["MEL"], counts["NV"], counts["SCC"]), (11, 5, 0))   # a passage with two tags counts for both
-        res = src.evaluation.retrieval.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": ctx}}, ks=(1, 3, 4), n_relevant=counts)
+        res = src.evaluation.metrics.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": ctx}}, ks=(1, 3, 4), n_relevant=counts)
         self.assertEqual((res["recall@1"], res["recall@3"], res["recall@4"]), (round(1 / 11, 4), round(2 / 11, 4), round(3 / 11, 4)))
         self.assertEqual((res["hit@1"], res["precision@4"]), (1.0, 0.75))
-        self.assertNotIn("recall@1", src.evaluation.retrieval.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": ctx}}, ks=(1,)))   # needs the corpus
+        self.assertNotIn("recall@1", src.evaluation.metrics.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": ctx}}, ks=(1,)))   # needs the corpus
 
     def test_a_class_with_no_corpus_passage_has_recall_zero_not_an_error(self):
         q = question("ISIC_0000002", "SCC")
-        res = src.evaluation.retrieval.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": [{"chunk_id": "c", "text": "t", "tags": ["SCC"]}]}},
+        res = src.evaluation.metrics.retrieval_metrics({q["id"]: q}, {q["id"]: {"contexts": [{"chunk_id": "c", "text": "t", "tags": ["SCC"]}]}},
                                    ks=(1,), n_relevant={c: 0 for c in CLASSES})
         self.assertEqual(res["recall@1"], 0.0)
 
@@ -643,7 +634,7 @@ class SelectiveTests(unittest.TestCase):
 
     def test_the_diagnosis_report_has_no_flag_based_selective_scores_and_no_top_k_accuracy(self):
         """The yes/no "evidence_sufficient" flag was removed (2026-11-24): a prediction that still carries it is not scored on it."""
-        d = src.evaluation.diagnostic.diagnosis_metrics(self.qa, {i: {"pred": q["answer"], "top3": [q["answer"], "A", "B"], "evidence_sufficient": "yes"}
+        d = src.evaluation.metrics.diagnosis_metrics(self.qa, {i: {"pred": q["answer"], "top3": [q["answer"], "A", "B"], "evidence_sufficient": "yes"}
                                            for i, q in self.qa.items()})
         self.assertFalse({"coverage", "selective_risk", "n_covered", "evidence_flag_missing"} & set(d))
         self.assertFalse([k for k in d if "top" in k])                         # the extra letters of a reply are not scored
@@ -841,6 +832,29 @@ class SemanticSimilarityTests(unittest.TestCase):
         self.assertEqual(out["semantic_similarity_cosine"]["mean"], 1.0)
 
 
+class RetrievalModelTests(unittest.TestCase):
+    def test_the_medcpt_models_are_the_published_ones(self):
+        """Jin et al. 2023 (Bioinformatics 39:btad651): the query encoder, the article encoder and the cross-encoder on Hugging Face."""
+        e = src.models.embeddings
+        self.assertEqual((e.MEDCPT_QUERY, e.MEDCPT_ARTICLE, e.MEDCPT_CROSS),
+                         ("ncbi/MedCPT-Query-Encoder", "ncbi/MedCPT-Article-Encoder", "ncbi/MedCPT-Cross-Encoder"))
+
+    def test_the_relevance_scorers_load_the_medcpt_models(self):
+        """evaluate --relevance-models: the scorers find the model loaders (no download here: the loaders are replaced)."""
+        made = []
+        def encoder(name, max_length):
+            made.append(name)
+            return lambda items: [[1.0, 0.0] for _ in items]
+        def cross():
+            made.append("cross")
+            return lambda query, passages: [0.5 for _ in passages]
+        with mock.patch.object(src.models.embeddings, "medcpt_encoder", encoder), \
+                mock.patch.object(src.models.embeddings, "medcpt_cross_encoder", cross):
+            scorers = src.evaluation.metrics.medcpt_scorers()
+        self.assertEqual(made, [src.models.embeddings.MEDCPT_QUERY, src.models.embeddings.MEDCPT_ARTICLE, "cross"])
+        self.assertTrue(scorers)
+
+
 class RetrievalTests(unittest.TestCase):
     def setUp(self):
         self.qa = as_dict([question("ISIC_0000001", "BCC")])
@@ -849,7 +863,7 @@ class RetrievalTests(unittest.TestCase):
         return {"ISIC_0000001": {"pred": "A", "contexts": [{"text": f"passage {j}", "tags": t} for j, t in enumerate(tags)]}}
 
     def test_hit_precision_and_mrr(self):
-        r = src.evaluation.retrieval.retrieval_metrics(self.qa, self.contexts([["MEL"], ["BCC"], [], ["BCC", "SCC"], ["NV"]]))
+        r = src.evaluation.metrics.retrieval_metrics(self.qa, self.contexts([["MEL"], ["BCC"], [], ["BCC", "SCC"], ["NV"]]))
         self.assertEqual((r["hit@1"], r["hit@3"]), (0.0, 1.0))
         self.assertAlmostEqual(r["precision@5"], 0.4)
         self.assertNotIn("hit@10", r)                              # 5 passages kept: no cut-off above 5
@@ -858,7 +872,7 @@ class RetrievalTests(unittest.TestCase):
         self.assertNotIn("hit_recall@1", r)
 
     def test_ndcg_does_not_reward_returning_fewer_passages(self):
-        r = src.evaluation.retrieval.retrieval_metrics(self.qa, self.contexts([["BCC"]]), ks=(1, 5))  # one passage only, and it is relevant
+        r = src.evaluation.metrics.retrieval_metrics(self.qa, self.contexts([["BCC"]]), ks=(1, 5))  # one passage only, and it is relevant
         self.assertEqual(r["ndcg@1"], 1.0)
         self.assertAlmostEqual(r["ndcg@5"], round(1 / sum(1 / math.log2(j + 2) for j in range(5)), 4))
 
@@ -867,7 +881,7 @@ class RetrievalTests(unittest.TestCase):
         qa = as_dict([question("ISIC_0000001", "BCC"), question("ISIC_0000002", "MEL")])
         pred = {"ISIC_0000001": {"contexts": [{"tags": ["MEL"]}, {"tags": ["BCC"]}, {"tags": []}]},
                 "ISIC_0000002": {"contexts": [{"tags": ["MEL"]}, {"tags": []}]}}                  # one answer kept fewer
-        r = src.evaluation.retrieval.retrieval_metrics(qa, pred)
+        r = src.evaluation.metrics.retrieval_metrics(qa, pred)
         self.assertEqual(sorted(k for k in r if "@" in k), ["hit@1", "hit@3", "ndcg@1", "ndcg@3", "precision@1", "precision@3"])
         self.assertAlmostEqual(r["precision@3"], round((1 / 3 + 1 / 3) / 2, 4))                   # the shorter answer still counts over 3
 
@@ -876,12 +890,12 @@ class RetrievalTests(unittest.TestCase):
         a = {"passage_id": "PMC1#4", "text": "Dermoscopy shows a blue white veil and an atypical network in this melanoma of the back."}
         b = {"passage_id": "PMC1#fig1", "text": a["text"].upper() + " (x20)"}                    # the same caption, other spacing and case
         c = {"passage_id": "PMC2#0", "text": "A different passage about a nevus with a regular network on the arm of a child."}
-        self.assertEqual([p["passage_id"] for p, _ in src.pipelines.standard_rag.distinct([(a, 3), (b, 2), (c, 1)])], ["PMC1#4", "PMC2#0"])
+        self.assertEqual([p["passage_id"] for p, _ in src.retrieval.retriever.distinct([(a, 3), (b, 2), (c, 1)])], ["PMC1#4", "PMC2#0"])
         short = {"passage_id": "x", "text": "Short."}
-        self.assertEqual(len(src.pipelines.standard_rag.distinct([(short, 2), ({**short, "passage_id": "y"}, 1)])), 1)
+        self.assertEqual(len(src.retrieval.retriever.distinct([(short, 2), ({**short, "passage_id": "y"}, 1)])), 1)
 
     def test_no_contexts_means_no_retrieval_report(self):
-        self.assertIsNone(src.evaluation.retrieval.retrieval_metrics(self.qa, {"ISIC_0000001": {"pred": "A"}}))
+        self.assertIsNone(src.evaluation.metrics.retrieval_metrics(self.qa, {"ISIC_0000001": {"pred": "A"}}))
 
 
 class RelevanceTests(unittest.TestCase):
@@ -891,7 +905,7 @@ class RelevanceTests(unittest.TestCase):
         pred = {"ISIC_0000001": {"query": "arborizing vessels", "contexts": ctx},
                 "ISIC_0000002": {"contexts": ctx}}
         seen = []
-        r = src.evaluation.retrieval.relevance_metrics(qa, pred, scorers={"fake": lambda q, ps: seen.append(q) or [1.0, 0.0]})
+        r = src.evaluation.metrics.relevance_metrics(qa, pred, scorers={"fake": lambda q, ps: seen.append(q) or [1.0, 0.0]})
         self.assertEqual(seen, ["arborizing vessels", "Question ISIC_0000002"])
         self.assertEqual(r["query_used"], {"query": 1, "question": 1})
         self.assertEqual(r["fake"], 0.5)
@@ -1117,12 +1131,12 @@ class RequestTests(unittest.TestCase):
             path = Path(d, ".env")
             path.write_text("# comment\nA_KEY=\"one\"\nB_KEY = two\nbroken line\nEMPTY=\n=novalue\nC_KEY='x=y'\n", encoding="utf-8")
             with mock.patch.dict(os.environ, {"B_KEY": "terminal"}, clear=True):
-                unusable = src.utils.common.load_env(path)
+                unusable = src.utils.load_env(path)
                 self.assertEqual((os.environ["A_KEY"], os.environ["B_KEY"], os.environ["C_KEY"]), ("one", "terminal", "x=y"))
                 self.assertNotIn("EMPTY", os.environ)
                 self.assertEqual(unusable, [4, 5, 6])                    # line numbers only, never the lines themselves
-            self.assertEqual(src.utils.common.load_env(Path(d, "missing.env")), [])   # a missing file is fine
-            self.assertIs(src.utils.common.load_env, src.utils.common.load_env)
+            self.assertEqual(src.utils.load_env(Path(d, "missing.env")), [])   # a missing file is fine
+            self.assertIs(src.utils.load_env, src.utils.load_env)
 
     def test_an_empty_variable_in_the_terminal_does_not_hide_the_env_file_and_a_secret_is_never_reported(self):
         with tempfile.TemporaryDirectory() as d:
@@ -1130,7 +1144,7 @@ class RequestTests(unittest.TestCase):
             path.write_text("HF_TOKEN=hf_secret\nOPENROUTER_API_KEY=sk-or-secret-without-name-part\nsk-or-just-a-value\n",
                             encoding="utf-8")
             with mock.patch.dict(os.environ, {"HF_TOKEN": "  "}, clear=True):
-                unusable = src.utils.common.load_env(path)
+                unusable = src.utils.load_env(path)
                 self.assertEqual(os.environ["HF_TOKEN"], "hf_secret")
             self.assertEqual(unusable, [3])
             self.assertNotIn("sk-or-just-a-value", repr(unusable))
@@ -1219,7 +1233,7 @@ class DenseIndexTests(unittest.TestCase):
             path = os.path.join(d, "passages.jsonl")
             write_jsonl(path, RAG_PASSAGES)
             vectors = [rag_vector(p["title"] + " " + p["text"]) for p in RAG_PASSAGES]
-            src.retrieval.indexer.write_index(os.path.join(d, "index"), RAG_PASSAGES, vectors, {"passages_sha256": src.utils.reproducibility.file_sha256(path)})
+            src.retrieval.indexer.write_index(os.path.join(d, "index"), RAG_PASSAGES, vectors, {"passages_sha256": src.utils.file_sha256(path)})
             idx = src.retrieval.indexer.read_index(os.path.join(d, "index"), path)
             self.assertEqual([p["passage_id"] for p, _ in idx.search(rag_vector("trunk male nevus"), 2)], ["p3", "p0"])
             self.assertEqual((idx.dim, len(idx.passages)), (len(RAG_VOCAB), 4))

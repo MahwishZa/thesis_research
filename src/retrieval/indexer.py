@@ -8,12 +8,7 @@ import os
 from array import array
 
 from src.models.embeddings import MEDCPT_ARTICLE, image_encoder, medcpt_encoder
-from src.retrieval.corpus import (
-    OVERLAP_LIMIT,
-    overlap_share,
-    reference_shingles,
-    shingles,
-)
+from src.retrieval.corpus import OVERLAP_LIMIT, overlap_share, reference_shingles, shingles
 from src.retrieval.images import (
     dhash_variants,
     drop_near_duplicates,
@@ -22,15 +17,19 @@ from src.retrieval.images import (
     max_similarities,
     nearest_by_hash,
 )
-from src.utils.common import (
-    CORPUS_DIR,
+from src.utils import (
+    IMAGE_LIBRARY,
     INDEX_DIR,
     PROCESSED_IMAGES,
     REFERENCE_TEXTS,
+    TEXT_LIBRARY,
+    atomic_path,
+    file_sha256,
+    get_logger,
+    read_jsonl,
+    write_json,
+    write_jsonl,
 )
-from src.utils.io import atomic_path, read_jsonl, write_json, write_jsonl
-from src.utils.logging import get_logger
-from src.utils.reproducibility import file_sha256
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -44,7 +43,7 @@ from src.utils.reproducibility import file_sha256
 # only; they are never part of the index or of any answer.
 def visual_index_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-index", description="Embeds the library images and removes Kaggle look-alikes.")
-    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
     ap.add_argument("--data", default="data")
     ap.add_argument("--encoder", default="biomedclip", choices=("biomedclip",))
     ap.add_argument("--threshold", type=float, default=0.95, help="a library image this similar to a Kaggle image is left out")
@@ -62,7 +61,7 @@ def visual_index_args(argv=None):
 def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     a = visual_index_args(argv)
     log = get_logger("visual-index")
-    folder = os.path.join(a.corpus, "visual")
+    folder = a.images
     items = read_jsonl(os.path.join(folder, "items_with_images.jsonl"))
     if a.limit:
         items = items[:a.limit]
@@ -95,7 +94,7 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
                 {"encoder": a.encoder, "passages_file": "items_final.jsonl",
                  "passages_sha256": file_sha256(os.path.join(folder, "items_final.jsonl")), "threshold": a.threshold,
                  "n_dropped_as_kaggle_lookalikes": len(dropped), "n_kaggle_images_compared": len(kaggle)})
-    card_path = os.path.join(a.corpus, "visual_card.json")
+    card_path = os.path.join(folder, "visual_card.json")
     card = {}
     if os.path.isfile(card_path):
         with open(card_path, encoding="utf-8") as f:
@@ -165,7 +164,7 @@ def read_index(folder, passages_path):
         raise ValueError(f"{passages_path} has changed since the index was built: run python -m src.main index again")
     by_id = {p["passage_id"]: p for p in read_jsonl(passages_path)}
     if meta.get("captions_file"):                     # the picture-and-caption records searched as text (see caption_records)
-        captions = os.path.join(os.path.dirname(passages_path), meta["captions_file"])
+        captions = os.path.normpath(os.path.join(os.path.dirname(passages_path), meta["captions_file"]))      # relative to the text library
         if not os.path.isfile(captions) or meta.get("captions_sha256") != file_sha256(captions):
             raise ValueError(f"{captions} has changed since the index was built: run python -m src.main index again")
         by_id |= {r["passage_id"]: r for r in caption_records(read_jsonl(captions))}
@@ -178,22 +177,22 @@ def read_index(folder, passages_path):
 # ----------------------------------------------------------------------------------------------------------------------
 # index: the dense index of the corpus for the RAG systems (python -m src.main index)
 # ----------------------------------------------------------------------------------------------------------------------
-# Each passage of data/corpus/passages.jsonl is embedded once, as [title, text], with the MedCPT article encoder (Jin et al.
-# 2023), and the unit-length vectors are saved in data/corpus/index/ (laptop only: they are derived from licensed text). The
+# Each passage of data/corpus/text_only/passages.jsonl is embedded once, as [title, text], with the MedCPT article encoder (Jin et al.
+# 2023), and the unit-length vectors are saved in data/corpus/text_only/index/ (laptop only: they are derived from licensed text). The
 # corpus is already cut into passages by the corpus command (whole sentences, at most 200 words, one sentence shared with the next
 # passage), so nothing is cut again here. Tags and query classes are not embedded and never used for retrieval.
 #
 # --exclude-reference-pages leaves out the passages of the Dermoscopedia pages that also supply the reference texts of the
-# semantic-similarity score (src/metrics.py). Without it, a RAG answer that quotes such a passage resembles the reference text of its
+# semantic-similarity score (src/evaluation/metrics.py). Without it, a RAG answer that quotes such a passage resembles the reference text of its
 # own disease almost word for word, which inflates that score. The choice is the researcher's; it is recorded in index.json.
 #
-# The picture-and-caption records of the image library (visual/items_final.jsonl, made by visual-index) are searched as text too
+# The picture-and-caption records of the image library (image_only/items_final.jsonl, made by visual-index) are searched as text too
 # (researcher's decision, 2026-11-24: the text-only view searches the text and caption records), so they are embedded the same way,
 # [title, caption]. A caption that is already a passage of the corpus (the PMC papers keep their figure captions as text when they
 # are long enough) is not added again: it is left out when half or more of its 8-word stretches are in a passage of the same paper,
 # or its text is the same. --no-captions builds the index of the text corpus alone.
 ARTICLE_MAX_TOKENS = 512
-CAPTIONS_FILE = "visual/items_final.jsonl"
+CAPTIONS_NAME = "items_final.jsonl"      # in the image library folder
 
 
 def caption_records(items):
@@ -217,7 +216,8 @@ def new_captions(records, passages):
 
 def index_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main index", description="Embeds the corpus passages for the RAG systems (MedCPT).")
-    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR), help="the folder with passages.jsonl")
+    ap.add_argument("--corpus", default=os.path.join("data", TEXT_LIBRARY), help="the text library folder, with passages.jsonl")
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder, with items_final.jsonl")
     ap.add_argument("--out", default=os.path.join("data", INDEX_DIR), help="where the index is written")
     ap.add_argument("--encoder", default=MEDCPT_ARTICLE)
     ap.add_argument("--reference-texts", default=os.path.join("data", REFERENCE_TEXTS))
@@ -226,7 +226,7 @@ def index_args(argv=None):
     ap.add_argument("--exclude-reference-overlap", action="store_true",
                     help="also leave out any passage that copies a reference text (half or more of its 8-word stretches)")
     ap.add_argument("--limit", type=int, default=0, help="embed only the first N passages (a trial of the command)")
-    ap.add_argument("--no-captions", action="store_true", help=f"leave out the caption records ({CAPTIONS_FILE}); default: added")
+    ap.add_argument("--no-captions", action="store_true", help=f"leave out the caption records ({IMAGE_LIBRARY}/{CAPTIONS_NAME}); default: added")
     ap.add_argument("--replace", action="store_true",
                     help="allow replacing an index that was built with other exclusion or caption settings")
     return ap.parse_args(argv)
@@ -283,13 +283,13 @@ def index_main(argv=None, encode=None):
     encode = encode or medcpt_encoder(a.encoder, ARTICLE_MAX_TOKENS)
     refs = reference_shingles(a.reference_texts) if a.exclude_reference_overlap else None
     caption_meta, dup = {}, []
-    captions_path = os.path.join(a.corpus, CAPTIONS_FILE)
+    captions_path = os.path.join(a.images, CAPTIONS_NAME)
     if not a.no_captions:
         if not os.path.isfile(captions_path):
             raise SystemExit(f"{captions_path} is not there: run python -m src.main visual-index first, or use --no-captions")
         add, dup = new_captions(caption_records(read_jsonl(captions_path)), passages)
         passages = passages + add
-        caption_meta = {"captions_file": CAPTIONS_FILE, "captions_sha256": file_sha256(captions_path),
+        caption_meta = {"captions_file": os.path.relpath(captions_path, a.corpus).replace("\\", "/"), "captions_sha256": file_sha256(captions_path),
                         "n_caption_records": len(add) + len(dup), "n_captions_already_in_the_corpus": len(dup)}
     kept, vectors, left_out = build_index(passages, encode, urls, refs)
     write_index(a.out, kept, vectors, {"encoder": a.encoder, "max_tokens": ARTICLE_MAX_TOKENS, "normalised": True,

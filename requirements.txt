@@ -18,7 +18,7 @@ datasets==5.2.0
 # OpenRouter need only Python. API keys go in .env (CLAUDE_API_KEY, OPENROUTER_API_KEY), never here.
 anthropic==2.6.0
 
-# Retrieval and evaluation: MedCPT encoders and cross-encoder (src/models/embeddings.py, src/retrieval/reranker.py), semantic similarity
+# Retrieval and evaluation: MedCPT encoders and cross-encoder (src/models/embeddings.py), semantic similarity
 # (src/evaluation/metrics.py). The diagnosis and retrieval metrics need only Python.
 sentence-transformers==6.3.0  # semantic similarity (rationale vs a cited reference text)
 transformers==5.24.0          # MedCPT

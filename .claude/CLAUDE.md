@@ -17,13 +17,16 @@ third party is credited anywhere in the repository.
   add, rename or remove a top-level file or folder; new material goes inside these folders. A test in `tests/system.py`
   checks this. `README.md` holds only "Overview" and "Objectives" (also tested).
 - Layout inside (researcher's final choice, 2026-11-25): `data/{raw, processed/{cases,images}, annotations (4 label files +
-  reference_texts.json), corpus, views/<view>/{train,validation,test}.jsonl}`. `src/`: `main.py` (the one entry point,
-  `python -m src.main <command>`, and the pipeline status); `data/{loaders, dataset, views, preprocessing (also the feature check)}`;
-  `models/{llm, embeddings}`; `retrieval/{corpus (text library), images (image library, Kaggle look-alike check), indexer (text and
-  image indexes), retriever (BM25, rank fusion, the query of each view), reranker}`; `pipelines/{base (prompts and the run shared by
+  reference_texts.json), corpus/{text_only, image_only, multimodal} (one library folder per view, 2026-11-26: text_only = passages, manifest,
+  cards, cache and the text index; image_only = picture-and-caption records, images, image index; multimodal = library.json only, it names the
+  other two), views/<view>/{train,validation,test}.jsonl}`. `src/`: `main.py` (the one entry point,
+  `python -m src.main <command>`, and the pipeline status) and `utils.py` (constants and paths, files, logging, seed and
+  fingerprints); `data/{preprocessing (step 1 and the feature check), views (file paths, the balanced split rule, the three views)}`;
+  `models/{llm, embeddings (MedCPT encoders and cross-encoder, BiomedCLIP)}`; `retrieval/{corpus (text library), images (image library, Kaggle look-alike check), indexer (text and
+  image indexes), retriever (BM25, rank fusion, the query of each view)}`; `pipelines/{base (prompts and the run shared by
   every system), llm_only, standard_rag, baseline_rag, proposed_rag}` (the last two hold only a docstring until designed);
-  `evaluation/{metrics (statistics, hallucination and evidence), diagnostic, retrieval, evaluator, references (reference texts)}`;
-  `utils/{common, io, logging, reproducibility}`. `results/<approach>/<view>/<model>_<split>/` for llm_only, standard_rag,
+  `evaluation/{metrics (every metric: statistics, diagnosis, hallucination and evidence, retrieval), evaluator, references
+  (reference texts)}`. Small modules merged on 2026-11-25 (researcher's approval). `results/<approach>/<view>/<model>_<split>/` for llm_only, standard_rag,
   baseline_rag and proposed_rag, three view folders each (retrieval checks beside the runs of their view); `results/comparisons/`
   holds `summary.csv` (one row per run), `metrics.csv` (every number of every report), `tables/` (model and view comparisons, the
   similarity check) and `figures/`; `results/data_quality/`. `tests/` holds `__init__.py` and `unit.py`, `integration.py`, `system.py`,
@@ -56,16 +59,23 @@ third party is credited anywhere in the repository.
 - Before every commit run the tests and the lint. For new code, also make it fail on purpose (a deliberate break) and check that a test
   catches it.
 - Tell the researcher exactly what was changed, kept or left unchecked.
-- Documentation: `data/datasheet.md` (the data), `results/evaluation_guide.md` (the metrics), `results/results.md` (the results). Do not
-  write documentation for a component that is not built and tested.
+- Documentation: `data/datasheet.md` (the data) and `results/results.md` (the results). `results/evaluation_guide.md` was deleted on
+  2026-11-25 (researcher's decision); she writes the final evaluation guide when the research is complete (the old text is in Git history).
+  Do not write documentation for a component that is not built and tested.
 
 ## Research state (update when it changes)
+- Training files (`class_weights.json`, `normalization.json`, `train_oversampled.csv`, `train_undersampled.csv`) are kept: the
+  baseline RAG and the proposed RAG involve model training (researcher, 2026-11-25).
 - Data: the Kaggle "Skin Cancer ISIC 9 classes" dataset only, 8 classes, 2,197 cases; balanced validation (20 per class) and test (30
   per class) splits; three views (image only, text only, image + text). Trials use the validation split; final runs use the test split once.
 - Systems: LLM-only (done, approved), standard RAG (built and tested; indexes built on the laptop; image search connected to the run on
   2026-11-25: image only = image search, image + text = text and image fused by rank, text only = text search; `standard-rag` defaults to
   BM25 (researcher, 2026-11-25; hybrid-rerank before) and writes to results/standard_rag/; no model run yet), the RAG² baseline (Sohn et al., NAACL 2025; scope not decided), the proposed
   RAG (not designed).
+- Libraries (researcher, 2026-11-26): the knowledge library is divided into one folder per view; every view searches the same records (the
+  text search covers passages and figure captions, the image search the picture-and-caption records, multimodal merges both by rank).
+- Image encoder: BiomedCLIP is the only one built (open_clip, MIT per its model card); MONET (Kim et al., Nature Medicine 2024) was never
+  loaded, so the two were not compared. The researcher wants them compared on validation data before the choice is final (2026-11-25).
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
@@ -116,7 +126,7 @@ third party is credited anywhere in the repository.
   --exclude-reference-overlap (as on the laptop since 2026-11-24; `index` refuses other settings unless --replace). The model gets captions only, never the library picture (researcher,
   2026-11-25). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the
   RAG² baseline only; its scope is for the supervisor to decide. No paid run before every view can be validated.
-- Metrics: see `results/evaluation_guide.md`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
+- Metrics: defined in the docstrings of `src/evaluation/metrics.py`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.
 
 ## Done: the archived material is out of the Git history

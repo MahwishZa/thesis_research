@@ -7,10 +7,9 @@ import os
 import re
 import time
 
-from src.data.loaders import question_file
-from src.models.llm import MODELS, ApiError, Refused, image_b64
-from src.utils.io import read_jsonl, write_json
-from src.utils.reproducibility import SEED, text_sha256
+from src.data.views import question_file
+from src.models.llm import MODELS, ApiError, image_b64, Refused
+from src.utils import SEED, read_jsonl, text_sha256, write_json
 
 PROMPT_NAME = "llm_only"      # the exact text of the prompt is saved in every run.json ("system", "instruction"), so a changed prompt is never mistaken for it
 SYSTEM = ("You are an expert dermatologist. Answer a multiple-choice question about a skin lesion. "
@@ -95,7 +94,7 @@ def rag_text(q, view, contexts):
 def parse_evidence(text, contexts):
     """The evidence line of a reply: None for an explicit "Evidence: none"; {"chunk_id", "quote"} for "Evidence: [2] "...""
     (chunk_id is the id of passage 2, or None when the number is outside the list, so the quote is not found); UNPARSED when
-    there is no usable line. Whether the quote is really in the passage is checked by the evaluation (src/metrics.py), never here."""
+    there is no usable line. Whether the quote is really in the passage is checked by the evaluation (src/evaluation/metrics.py), never here."""
     lines = EVIDENCE_LINE.findall(text or "")
     if not lines:
         return dict(UNPARSED)

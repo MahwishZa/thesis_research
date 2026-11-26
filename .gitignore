@@ -11,12 +11,15 @@ __pycache__/
 /data/processed/images/
 *.zip
 
-# The knowledge library: its passages (published text under the sources' licences), the download cache, the indexes and the
-# image library stay on the laptop; manifest.csv, corpus_card.json, audit.json and visual_card.json (no text) are committed.
-/data/corpus/passages.jsonl
-/data/corpus/cache/
-/data/corpus/index/
-/data/corpus/visual/
+# The knowledge library, one folder per view. Text-only: the passages (published text under the sources' licences), the download cache
+# and the text index stay on the laptop; manifest.csv, corpus_card.json and audit.json (no text) are committed. Image-only: the images,
+# the records with captions, the Kaggle vectors and the image index stay on the laptop; visual_card.json (no text) is committed.
+# Multimodal: library.json only (it names the two libraries it combines).
+/data/corpus/text_only/passages.jsonl
+/data/corpus/text_only/cache/
+/data/corpus/text_only/index/
+/data/corpus/image_only/*
+!/data/corpus/image_only/visual_card.json
 
 # Unfinished runs (a run's folder loses the .partial ending when it finishes), half-written files and run logs
 *.partial/

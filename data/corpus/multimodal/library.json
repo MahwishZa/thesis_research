@@ -1,0 +1,6 @@
+{
+  "view": "multimodal",
+  "sources": ["text_only", "image_only"],
+  "fusion": {"method": "reciprocal rank fusion", "k": 60, "list": 10},
+  "note": "No records of its own. The patient facts of a question search text_only, the question's image searches image_only, and the top 10 of each search are merged by rank. Every view searches the same records."
+}

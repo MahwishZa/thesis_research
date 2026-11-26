@@ -24,7 +24,6 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
-import src.evaluation.diagnostic
 import src.evaluation.evaluator
 import src.evaluation.metrics
 import src.evaluation.references
@@ -37,23 +36,22 @@ import src.retrieval.corpus
 import src.retrieval.images
 import src.retrieval.indexer
 import src.retrieval.retriever
-import src.utils.common
-import src.utils.io
-import src.utils.logging
-import src.utils.reproducibility
-from src.data.loaders import question_file
-from src.data.views import options_for, question
+import src.utils
+from src.data.views import options_for, question, question_file
 from src.retrieval.indexer import read_index as common_read_index
 from src.retrieval.retriever import reciprocal_rank_fusion
-from src.utils.common import (
+from src.utils import (
     ALL_CASES,
     CLASSES,
-    CORPUS_DIR,
+    IMAGE_LIBRARY,
+    INDEX_DIR,
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     REFERENCE_TEXTS,
+    TEXT_LIBRARY,
+    read_jsonl,
+    write_jsonl,
 )
-from src.utils.io import read_jsonl, write_jsonl
 
 
 def fake_hash(path):
@@ -177,7 +175,7 @@ class CheckTests(unittest.TestCase):
         q = self.data / question_file("text_only", "test")
         q.parent.mkdir(parents=True, exist_ok=True)
         q.write_bytes(b'{"id": "a"}\n')                          # bytes: the same file on Windows and Linux
-        return src.utils.reproducibility.text_sha256(q)
+        return src.utils.text_sha256(q)
 
     def test_an_unfinished_run_is_a_problem_with_its_progress(self):
         self.run_folder(partial=True)
@@ -501,9 +499,10 @@ class TextTests(unittest.TestCase):
                 return json.dumps({"esearchresult": {"idlist": ["7"]}}) if url.endswith("esearch.fcgi") else xml
         with tempfile.TemporaryDirectory() as d:
             write_jsonl(os.path.join(d, "passages.jsonl"), [])
+            lib = ["--corpus", d, "--images", os.path.join(d, "image_only")]
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(src.retrieval.images.visual_main(["--corpus", d], fetch_xml=lambda x: xml), [])
-                items = src.retrieval.images.visual_main(["--corpus", d, "--extra-papers", "5"], fetch=Fake())
+                self.assertEqual(src.retrieval.images.visual_main(lib, fetch_xml=lambda x: xml), [])
+                items = src.retrieval.images.visual_main([*lib, "--extra-papers", "5"], fetch=Fake())
             self.assertEqual({it["doc_id"] for it in items}, {"PMC7"})
 
     def test_the_visual_list_command_writes_the_items_and_a_card_with_counts(self):
@@ -513,12 +512,12 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(d, "passages.jsonl"), [passage, {**passage, "passage_id": "PMC1#1"},
                                                             {**passage, "passage_id": "m#0", "doc_id": "meditron:abc"}])
             with contextlib.redirect_stdout(io.StringIO()):
-                items = src.retrieval.images.visual_main(["--corpus", d], fetch_xml=lambda doc_id: self.JATS)
+                items = src.retrieval.images.visual_main(["--corpus", d, "--images", os.path.join(d, "image_only")], fetch_xml=lambda doc_id: self.JATS)
             self.assertEqual(len(items), 2)                                  # one paper (the Meditron one is not a PMC paper)
-            card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
+            card = json.loads(Path(d, "image_only", "visual_card.json").read_text(encoding="utf-8"))
             self.assertEqual((card["n_papers_read"], card["n_figures_kept"], card["figures_per_tag"]["BCC"]), (1, 2, 2))
             self.assertFalse(card["images_downloaded"])
-            self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(d, "visual", "items.jsonl"))), 2)
+            self.assertEqual(len(src.utils.read_jsonl(os.path.join(d, "image_only", "items.jsonl"))), 2)
 
     JPEG = b"\xff\xd8\xff" + b"x" * 5000
 
@@ -588,15 +587,15 @@ class TextTests(unittest.TestCase):
 
     def test_the_image_command_writes_the_list_with_images_and_updates_the_card(self):
         with tempfile.TemporaryDirectory() as d:
-            folder = os.path.join(d, "visual")
+            folder = os.path.join(d, "image_only")
             write_jsonl(os.path.join(folder, "items.jsonl"), [{"item_id": "PMC1#fig0", "doc_id": "PMC1", "href": "h0"}])
-            Path(d, "visual_card.json").write_text(json.dumps({"n_figures_kept": 1, "images_downloaded": False}), encoding="utf-8")
+            Path(folder, "visual_card.json").write_text(json.dumps({"n_figures_kept": 1, "images_downloaded": False}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = src.retrieval.images.visual_images_main(["--corpus", d], get=lambda url: self.JPEG)
+                kept = src.retrieval.images.visual_images_main(["--images", folder], get=lambda url: self.JPEG)
             self.assertEqual(len(kept), 1)
-            card = json.loads(Path(d, "visual_card.json").read_text(encoding="utf-8"))
+            card = json.loads(Path(folder, "visual_card.json").read_text(encoding="utf-8"))
             self.assertEqual((card["images_downloaded"], card["n_images"], card["n_figures_kept"]), (True, 1, 1))
-            self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
+            self.assertEqual(len(src.utils.read_jsonl(os.path.join(folder, "items_with_images.jsonl"))), 1)
 
     def test_a_picture_that_is_the_same_by_its_hash_is_left_out_even_when_the_embedding_differs(self):
         def encode(paths):                                 # all vectors far apart: only the hash can catch the copy
@@ -606,20 +605,20 @@ class TextTests(unittest.TestCase):
             h = int(Path(path).read_text())
             return [h, h ^ 0b1, h ^ 0b11, h ^ 0b111]
         with tempfile.TemporaryDirectory() as d:
-            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
-            os.makedirs(os.path.join(corpus, "visual", "images"))
+            images, data = os.path.join(d, "image_only"), os.path.join(d, "data")
+            os.makedirs(os.path.join(images, "images"))
             os.makedirs(os.path.join(data, PROCESSED_IMAGES))
             items = []
             for name, h in (("lib_copy", "1000"), ("lib_other", "7")):
-                Path(corpus, "visual", "images", name + ".jpg").write_text(h)
+                Path(images, "images", name + ".jpg").write_text(h)
                 items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
                               "text": "x", "tags": ["MEL"]})
-            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            write_jsonl(os.path.join(images, "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text(str(1000 ^ 0b1))      # one bit away from a variant
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=hash_fn)
+                kept = src.retrieval.indexer.visual_index_main(["--images", images, "--data", data], encode=encode, hash_fn=hash_fn)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#lib_other"])
-            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            card = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual((card["n_dropped_by_hash"], card["n_dropped_by_embedding"]), (1, 0))
 
     def test_the_hash_bits_follow_the_neighbour_rule_and_hamming_counts_the_different_bits(self):
@@ -671,20 +670,20 @@ class TextTests(unittest.TestCase):
 
     def test_the_calibration_command_reads_the_saved_kaggle_numbers_and_writes_the_card(self):
         with tempfile.TemporaryDirectory() as d:
-            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
-            os.makedirs(os.path.join(corpus, "visual"))
+            images, data = os.path.join(d, "image_only"), os.path.join(d, "data")
+            os.makedirs(images)
             os.makedirs(os.path.join(data, PROCESSED_CASES))
             names = ["ISIC_1.jpg", "ISIC_2.jpg", "ISIC_3.jpg"]
-            Path(corpus, "visual", "kaggle_vectors_biomedclip.json").write_text(
+            Path(images, "kaggle_vectors_biomedclip.json").write_text(
                 json.dumps({"names": names, "vectors": [[1, 0], [1, 0], [0, 1]]}), encoding="utf-8")
-            Path(corpus, "visual", "kaggle_hashes.json").write_text(json.dumps({"names": names, "hashes": [0, 0, 255]}), encoding="utf-8")
+            Path(images, "kaggle_hashes.json").write_text(json.dumps({"names": names, "hashes": [0, 0, 255]}), encoding="utf-8")
             with open(os.path.join(data, ALL_CASES), "w", encoding="utf-8", newline="") as f:
                 f.write("isic_id,group_id\nISIC_1,a\nISIC_2,a\nISIC_3,b\n")
             with contextlib.redirect_stdout(io.StringIO()):
-                r = src.retrieval.images.visual_calibrate_main(["--corpus", corpus, "--data", data])
+                r = src.retrieval.images.visual_calibrate_main(["--images", images, "--data", data])
             self.assertEqual(r["same_lesion_pairs"]["caught"], 1.0)
             self.assertEqual(r["most_similar_different_lesion"]["false_alarm"], 0.0)
-            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))
+            card = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))
             self.assertIn("guard_calibration", card)
 
     def test_the_kaggle_vectors_are_saved_and_reused_only_for_the_same_images(self):
@@ -704,51 +703,51 @@ class TextTests(unittest.TestCase):
         def encode(paths):
             return [[float(x) for x in Path(p).read_text().split(",")] for p in paths]
         with tempfile.TemporaryDirectory() as d:
-            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
-            os.makedirs(os.path.join(corpus, "visual", "images"))
+            images, data = os.path.join(d, "image_only"), os.path.join(d, "data")
+            os.makedirs(os.path.join(images, "images"))
             os.makedirs(os.path.join(data, PROCESSED_IMAGES))
             items = []
             for name, vec in (("a", "0.6,0.8"), ("b", "0.6,0.8"), ("c", "0.8,0.6")):
-                Path(corpus, "visual", "images", name + ".jpg").write_text(vec)
+                Path(images, "images", name + ".jpg").write_text(vec)
                 items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
                               "text": "x", "tags": ["MEL"]})
-            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            write_jsonl(os.path.join(images, "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text("0,1")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data], encode=encode, hash_fn=fake_hash)
+                kept = src.retrieval.indexer.visual_index_main(["--images", images, "--data", data], encode=encode, hash_fn=fake_hash)
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#a", "PMC1#c"])      # b is the same picture as a (cosine 1.0)
-            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            card = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual(card["n_dropped_as_library_duplicates"], 1)
 
     def test_a_library_image_that_looks_like_a_kaggle_image_is_left_out_and_the_card_shows_the_numbers(self):
         def encode(paths):                                 # a fake encoder: the vector is written in the file
             return [[float(x) for x in Path(p).read_text().split(",")] for p in paths]
         with tempfile.TemporaryDirectory() as d:
-            corpus, data = os.path.join(d, "corpus"), os.path.join(d, "data")
-            os.makedirs(os.path.join(corpus, "visual", "images"))
+            images, data = os.path.join(d, "image_only"), os.path.join(d, "data")
+            os.makedirs(os.path.join(images, "images"))
             os.makedirs(os.path.join(data, PROCESSED_IMAGES))
             items = []
             for name, vec in (("near", "1,0"), ("far", "0,1"), ("mid", "0.6,0.8")):
-                Path(corpus, "visual", "images", name + ".jpg").write_text(vec)
+                Path(images, "images", name + ".jpg").write_text(vec)
                 items.append({"item_id": f"PMC1#{name}", "passage_id": f"PMC1#{name}", "image_file": name + ".jpg", "title": "t",
                               "text": "x", "tags": ["MEL"]})
-            write_jsonl(os.path.join(corpus, "visual", "items_with_images.jsonl"), items)
+            write_jsonl(os.path.join(images, "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text("1,0")
             Path(data, PROCESSED_IMAGES, "ISIC_0000002.jpg").write_text("0,1")
-            Path(corpus, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
+            Path(images, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                kept = src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
+                kept = src.retrieval.indexer.visual_index_main(["--images", images, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
             # near and far each equal a Kaggle image (cosine 1.0); mid (0.6, 0.8) has cosine 0.8 at most with both
             self.assertEqual([k["item_id"] for k in kept], ["PMC1#mid"])
-            card = json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            card = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual((card["n_dropped"], card["n_kaggle_images"], card["threshold"]), (2, 2, 0.95))
             self.assertEqual(card["highest_20"][0]["similarity"], 1.0)
-            idx = common_read_index(os.path.join(corpus, "visual", "index_biomedclip"), os.path.join(corpus, "visual", "items_final.jsonl"))
+            idx = common_read_index(os.path.join(images, "index_biomedclip"), os.path.join(images, "items_final.jsonl"))
             self.assertEqual([p["passage_id"] for p, _ in idx.search([0.6, 0.8], 1)], ["PMC1#mid"])
-            self.assertEqual(json.loads(Path(corpus, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
+            self.assertEqual(json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
                              ["n_dropped_as_library_duplicates"], 0)
             with self.assertRaises(SystemExit):                 # when every image is a look-alike nothing is indexed
-                src.retrieval.indexer.visual_index_main(["--corpus", corpus, "--data", data, "--threshold", "0.5"], encode=encode, hash_fn=fake_hash)
+                src.retrieval.indexer.visual_index_main(["--images", images, "--data", data, "--threshold", "0.5"], encode=encode, hash_fn=fake_hash)
 
     def test_plural_forms_are_tagged_too(self):
         self.assertEqual(src.retrieval.corpus.tag("Melanomas show asymmetry."), ["MEL"])
@@ -926,7 +925,7 @@ class BuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             fetch = FakeFetcher()
             fetch.cache = d
-            src.utils.io.write_json(os.path.join(d, "meditron_skin_cancer.json"),
+            src.utils.write_json(os.path.join(d, "meditron_skin_cancer.json"),
                           {"docs": src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), MEDITRON), "removed": {}})
             with contextlib.redirect_stdout(io.StringIO()):
                 passages, _ = src.retrieval.corpus.build_corpus(args(libraries=["guidelines"]), fetch)       # no rows given: the cache answers
@@ -1359,7 +1358,7 @@ class ReferenceBuildTests(unittest.TestCase):
         self.assertTrue(len(vasc) > 1 and set(vasc) == {"(introduction)"})          # a long introduction: several texts
 
     def test_the_file_is_what_the_semantic_similarity_reads(self):
-        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g", "options": {"A": src.utils.common.OPTION_TEXT["BCC"]}}
+        q = {"id": "ISIC_0000001", "gold_label": "BCC", "group_id": "g", "options": {"A": src.utils.OPTION_TEXT["BCC"]}}
         second = self.refs["BCC"]["texts"][1]["text"]
         r = src.evaluation.metrics.semantic_similarity({"ISIC_0000001": q}, {"ISIC_0000001": {"pred": "A", "rationale": second}}, self.refs,
                                    lambda texts: [[len(t), t.count("Arborizing")] for t in texts])
@@ -1376,12 +1375,12 @@ class ReferenceBuildTests(unittest.TestCase):
         fake.SentenceTransformer = Model
         with mock.patch.dict(sys.modules, {"sentence_transformers": fake}), contextlib.redirect_stdout(io.StringIO()) as out:
             longest, limit = src.evaluation.references.token_check({"MEL": {"texts": [{"text": "a b c"}, {"text": " ".join("x" * 13)}]}},
-                                            src.utils.logging.get_logger("reference_texts"))
+                                            src.utils.get_logger("reference_texts"))
         self.assertEqual((longest, limit), (13, 12))
         self.assertIn("1 texts are longer", out.getvalue())
         self.assertIn("rebuild with a lower --max-words", out.getvalue())
         with mock.patch.dict(sys.modules, {"sentence_transformers": fake}), contextlib.redirect_stdout(io.StringIO()) as out:
-            src.evaluation.references.token_check({"MEL": {"texts": [{"text": "a b c"}]}}, src.utils.logging.get_logger("reference_texts"))
+            src.evaluation.references.token_check({"MEL": {"texts": [{"text": "a b c"}]}}, src.utils.get_logger("reference_texts"))
         self.assertNotIn("rebuild", out.getvalue())
 
 
@@ -1444,7 +1443,7 @@ class RunTests(unittest.TestCase):
         return argparse.Namespace(**base)
 
     def go(self, args, client):
-        log = src.utils.logging.get_logger(f"test.{id(self)}.{args.view}")
+        log = src.utils.get_logger(f"test.{id(self)}.{args.view}")
         with contextlib.redirect_stdout(io.StringIO()):               # keep the test output quiet
             return src.pipelines.base.run(args, client, log)
 
@@ -1456,7 +1455,7 @@ class RunTests(unittest.TestCase):
         out = self.go(self.args(), FakeClient(self.questions))
         self.assertEqual(out, self.folder())
         self.assertFalse(os.path.exists(self.folder(partial=True)))
-        preds = src.utils.io.read_jsonl(os.path.join(out, "predictions.jsonl"))
+        preds = src.utils.read_jsonl(os.path.join(out, "predictions.jsonl"))
         self.assertEqual([p["id"] for p in preds], [q["id"] for q in src.pipelines.base.asking_order(self.questions)])
         self.assertEqual(sorted(p["id"] for p in preds), sorted(q["id"] for q in self.questions))
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
@@ -1475,7 +1474,7 @@ class RunTests(unittest.TestCase):
         out = self.go(self.args(), FakeClient(self.questions))
         qa = {q["id"]: q for q in self.questions}
         pred = src.evaluation.evaluator.load(os.path.join(out, "predictions.jsonl"))
-        d = src.evaluation.diagnostic.diagnosis_metrics(qa, pred)
+        d = src.evaluation.metrics.diagnosis_metrics(qa, pred)
         self.assertEqual((d["accuracy"], d["invalid_answers"]), (0.3333, 1))    # ids 0 and 4 right; 2 has no letter
         self.assertFalse({"coverage", "selective_risk", "n_covered"} & set(d))      # no yes/no flag any more, so no such score
         rationale = [p["rationale"] for p in pred.values() if p["valid"]]
@@ -1493,7 +1492,7 @@ class RunTests(unittest.TestCase):
 
     def test_a_limited_run_asks_the_first_questions_of_the_asking_order(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
-        preds = src.utils.io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
+        preds = src.utils.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
         self.assertEqual([p["id"] for p in preds], [q["id"] for q in src.pipelines.base.asking_order(self.questions)[:2]])
         info = json.loads(Path(self.folder(partial=True), "run.json").read_text(encoding="utf-8"))
         self.assertEqual(info["question_order"], src.pipelines.base.ORDER)
@@ -1506,19 +1505,19 @@ class RunTests(unittest.TestCase):
         client = FakeClient(self.questions)
         self.go(self.args(), client)
         self.assertEqual(client.calls, 4)                                       # only the 4 left
-        preds = src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
+        preds = src.utils.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
         self.assertEqual(len(preds), 6)
         self.assertEqual(len({p["id"] for p in preds}), 6)
 
     def test_an_api_error_stops_the_run_and_keeps_what_was_answered(self):
         with self.assertRaises(SystemExit):
             self.go(self.args(), FakeClient(self.questions, fail_at=4))
-        preds = src.utils.io.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
+        preds = src.utils.read_jsonl(os.path.join(self.folder(partial=True), "predictions.jsonl"))
         self.assertEqual(len(preds), 3)
         info = json.loads(Path(self.folder(partial=True), "run.json").read_text(encoding="utf-8"))
         self.assertEqual(info["status"], "stopped")
         self.go(self.args(), FakeClient(self.questions))
-        self.assertEqual(len(src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))), 6)
+        self.assertEqual(len(src.utils.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))), 6)
 
     def test_an_unfinished_run_is_not_continued_with_other_settings(self):
         self.go(self.args(limit=2), FakeClient(self.questions))
@@ -1527,7 +1526,7 @@ class RunTests(unittest.TestCase):
 
     def test_a_question_refused_by_the_host_is_saved_as_invalid_and_the_run_goes_on(self):
         self.go(self.args(), FakeClient(self.questions, refuse_at=2))
-        preds = src.utils.io.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
+        preds = src.utils.read_jsonl(os.path.join(self.folder(), "predictions.jsonl"))
         self.assertEqual(len(preds), 6)
         refused = [p for p in preds if str(p["finish_reason"]).startswith("refused by host")]
         self.assertEqual(len(refused), 1)
@@ -1621,7 +1620,7 @@ class EvidenceCommandTests(unittest.TestCase):
 
     def files(self, d):
         qs = [make_question(f"ISIC_{i:07d}", c) for i, c in enumerate(["MEL", "NV", "BCC", "AK"])]
-        letter = {q["id"]: next(k for k, v in q["options"].items() if v == src.utils.common.OPTION_TEXT[q["gold_label"]]) for q in qs}
+        letter = {q["id"]: next(k for k, v in q["options"].items() if v == src.utils.OPTION_TEXT[q["gold_label"]]) for q in qs}
         text = "Melanomas show asymmetry and irregular borders here. Nevi are usually symmetric and evenly coloured overall."
         preds = []
         for k, q in enumerate(qs):
@@ -1697,9 +1696,9 @@ class CollectTests(unittest.TestCase):
         Path(ppath).write_bytes(Path(ppath).read_bytes().replace(b"\n", b"\r\n"))             # as Windows saved it
         self.collect()
         report = Path(folder, "report.json")
-        crlf_sha = src.utils.reproducibility.file_sha256(ppath)
+        crlf_sha = src.utils.file_sha256(ppath)
         self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["inputs"]["predictions"]["sha256"],
-                         src.utils.reproducibility.text_sha256(ppath))                              # recorded with LF endings now
+                         src.utils.text_sha256(ppath))                              # recorded with LF endings now
         saved = json.loads(report.read_text(encoding="utf-8"))
         saved["inputs"]["predictions"]["sha256"] = crlf_sha                                     # a report from before 2026-11-25
         saved["marker"] = "kept"
@@ -1738,7 +1737,7 @@ class CollectTests(unittest.TestCase):
         write_jsonl(os.path.join(refused, "predictions.jsonl"), lines)
         by_model = {x["model"]: x for x in self.collect(force=True)[0]}
         self.assertEqual((by_model["claude-sonnet-5-5"]["refusals"], by_model["claude-sonnet-5-5"]["invalid"]), (1, 2))
-        long = src.utils.io.read_csv(os.path.join(os.path.dirname(out), "metrics.csv"))       # every number of the report, one row each
+        long = src.utils.read_csv(os.path.join(os.path.dirname(out), "metrics.csv"))       # every number of the report, one row each
         acc = [r for r in long if r["metric"] == "diagnosis.accuracy"]
         self.assertEqual([(r["model"], r["view"], r["split"], float(r["value"])) for r in acc], [("claude-sonnet-5-5", "text_only", "val", 0.75), ("gpt-4o", "text_only", "val", 0.5)])
         self.assertTrue(any(r["metric"] == "diagnosis.accuracy_ci_low" for r in long))
@@ -1825,7 +1824,7 @@ class CommandTests(unittest.TestCase):
                 src.evaluation.evaluator.report_main(["--questions", paths["qa"], "--predictions", paths["pred"], "--out", out, "--skip-text"])
             with open(out, encoding="utf-8") as f:
                 rep = json.load(f)
-            sha = src.utils.reproducibility.text_sha256(paths["qa"])          # LF endings, also on Windows
+            sha = src.utils.text_sha256(paths["qa"])          # LF endings, also on Windows
         self.assertEqual((rep["diagnosis"]["accuracy"], rep["diagnosis"]["missing_predictions"]), (0.5, 4))
         self.assertIsNone(rep["retrieval"])
         self.assertEqual(rep["inputs"]["questions"]["sha256"], sha)  # the report says which question file it used
@@ -1973,7 +1972,7 @@ class StandardRagRunTests(unittest.TestCase):
         return argparse.Namespace(**base)
 
     def go(self, args, client, rag):
-        log = src.utils.logging.get_logger(f"test.rag.{id(self)}.{args.view}")
+        log = src.utils.get_logger(f"test.rag.{id(self)}.{args.view}")
         with contextlib.redirect_stdout(io.StringIO()):
             return src.pipelines.base.run(args, client, log, rag)
 
@@ -2088,7 +2087,7 @@ class StandardRagRunTests(unittest.TestCase):
         self.make("text_only", 4)
         client = FakeRagClient(self.questions)
         buf = io.StringIO()
-        log = src.utils.logging.get_logger("test.rag.dry")
+        log = src.utils.get_logger("test.rag.dry")
         with contextlib.redirect_stdout(buf):
             self.assertIsNone(src.pipelines.base.run(self.args(dry_run=True, limit=2), client, log, make_rag()))
         shown = buf.getvalue()
@@ -2178,7 +2177,8 @@ class StandardRagRunTests(unittest.TestCase):
 class IndexCommandTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.corpus = os.path.join(self.tmp.name, "corpus")
+        self.corpus = os.path.join(self.tmp.name, "corpus", "text_only")
+        self.images = os.path.join(self.tmp.name, "corpus", "image_only")
         write_jsonl(os.path.join(self.corpus, "passages.jsonl"), RAG_CORPUS)
         self.out = os.path.join(self.tmp.name, "index")
 
@@ -2192,7 +2192,7 @@ class IndexCommandTests(unittest.TestCase):
             seen.extend(items)
             return rag_enc(items)
         with contextlib.redirect_stdout(io.StringIO()):
-            src.retrieval.indexer.index_main(["--corpus", self.corpus, "--out", self.out, *(extra or ["--no-captions"])], encode=encode)
+            src.retrieval.indexer.index_main(["--corpus", self.corpus, "--images", self.images, "--out", self.out, *(extra or ["--no-captions"])], encode=encode)
         return seen
 
     def test_every_passage_is_embedded_as_its_title_and_text_and_the_index_can_be_read(self):
@@ -2204,6 +2204,15 @@ class IndexCommandTests(unittest.TestCase):
         self.assertEqual([p["passage_id"] for p, _ in idx.search(rag_vec("trunk male"), 2)], ["p0", "p3"])
         meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
         self.assertEqual((meta["n_passages"], meta["exclude_reference_pages"], meta["n_excluded_passages"]), (5, False, 0))
+
+    def test_the_caption_file_is_recorded_with_forward_slashes_also_when_windows_gives_backslashes(self):
+        """The index records where the captions are relative to the text library ("../image_only/items_final.jsonl"); Windows writes
+        that path with backslashes, and the same index must be read on any system."""
+        write_jsonl(os.path.join(self.images, "items_final.jsonl"), [])
+        with mock.patch.object(os.path, "relpath", return_value="..\\image_only\\items_final.jsonl"):
+            self.build("--reference-texts", os.path.join(self.tmp.name, "none.json"))
+        meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["captions_file"], "../image_only/items_final.jsonl")
 
     def test_the_reference_pages_are_left_out_only_when_asked(self):
         refs = os.path.join(self.tmp.name, "reference_texts.json")
@@ -2225,21 +2234,21 @@ class IndexCommandTests(unittest.TestCase):
                   "text": long_caption, "tags": ["MEL"], "image_file": "d0_fig1.jpg", "url": "https://x/a", "licence": "CC BY 4.0"},
                  {"item_id": "d9#fig2", "passage_id": "d9#fig2", "doc_id": "d9", "title": "Nevus (Figure 2)",
                   "text": "Dermoscopy of a brown nevus on the trunk of a female.", "tags": ["NV"], "image_file": "d9_fig2.jpg"}]
-        write_jsonl(os.path.join(self.corpus, "visual", "items_final.jsonl"), items)
+        write_jsonl(os.path.join(self.images, "items_final.jsonl"), items)
         seen = self.build("--reference-texts", os.path.join(self.tmp.name, "none.json"))
         self.assertEqual(len(seen), 6)                                                     # 5 passages + 1 new caption
         self.assertIn(["Nevus (Figure 2)", "Dermoscopy of a brown nevus on the trunk of a female."], seen)
         meta = json.loads(Path(self.out, "index.json").read_text(encoding="utf-8"))
         self.assertEqual((meta["n_captions_indexed"], meta["captions_already_in_the_corpus"], meta["captions_file"]),
-                         (1, ["d0#fig1"], "visual/items_final.jsonl"))
+                         (1, ["d0#fig1"], "../image_only/items_final.jsonl"))
         from src.retrieval.indexer import read_index
         idx = read_index(self.out, os.path.join(self.corpus, "passages.jsonl"))
         record = next(p for p in idx.passages if p["passage_id"] == "d9#fig2")
         self.assertEqual((record["library"], record["image_file"]), ("visual", "d9_fig2.jpg"))
-        write_jsonl(os.path.join(self.corpus, "visual", "items_final.jsonl"), items[1:])     # the library changed
+        write_jsonl(os.path.join(self.images, "items_final.jsonl"), items[1:])     # the library changed
         with self.assertRaises(ValueError):
             read_index(self.out, os.path.join(self.corpus, "passages.jsonl"))
-        os.remove(os.path.join(self.corpus, "visual", "items_final.jsonl"))
+        os.remove(os.path.join(self.images, "items_final.jsonl"))
         with self.assertRaises(SystemExit):                                                   # asked for, but not there
             self.build("--reference-texts", os.path.join(self.tmp.name, "none.json"))
 
@@ -2293,16 +2302,48 @@ class IndexCommandTests(unittest.TestCase):
         self.assertIn("python -m src.main corpus", str(caught.exception))
 
 
+class LibraryStatusTests(unittest.TestCase):
+    """The multimodal library is only a file that names the two libraries it combines; the status check must notice a wrong one."""
+
+    GOOD = {"view": "multimodal", "sources": ["text_only", "image_only"],
+            "fusion": {"method": "reciprocal rank fusion", "k": 60, "list": 10}}
+
+    def check(self, library):
+        with tempfile.TemporaryDirectory() as d:
+            for folder in ("text_only", "image_only"):
+                os.makedirs(os.path.join(d, "corpus", folder))
+            if library is not None:
+                Path(d, "corpus", "multimodal").mkdir()
+                Path(d, "corpus", "multimodal", "library.json").write_text(json.dumps(library), encoding="utf-8")
+            return src.main.step_libraries(d)[0]
+
+    def test_a_missing_file_is_not_run_a_right_one_is_done_and_a_wrong_one_is_a_problem(self):
+        self.assertEqual(self.check(None), src.main.NOT_RUN)
+        self.assertEqual(self.check(self.GOOD), src.main.DONE)
+        self.assertEqual(self.check({**self.GOOD, "sources": ["text_only"]}), src.main.PROBLEM)                  # a source is missing
+        self.assertEqual(self.check({**self.GOOD, "sources": ["text_only", "multimodal"]}), src.main.PROBLEM)    # not a record library
+        self.assertEqual(self.check({**self.GOOD, "fusion": {**self.GOOD["fusion"], "list": 5}}), src.main.PROBLEM)   # not what the RAG does
+        self.assertEqual(self.check({**self.GOOD, "fusion": {**self.GOOD["fusion"], "k": 30}}), src.main.PROBLEM)
+
+    def test_a_library_folder_that_is_not_there_is_a_problem(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "corpus", "multimodal"))
+            Path(d, "corpus", "multimodal", "library.json").write_text(json.dumps(self.GOOD), encoding="utf-8")
+            status, note = src.main.step_libraries(d)
+        self.assertEqual(status, src.main.PROBLEM)
+        self.assertIn("text_only", note)
+
+
 class IndexStatusTests(unittest.TestCase):
     def test_check_py_reports_the_index_and_notices_a_changed_corpus(self):
         from src.retrieval.indexer import write_index
-        from src.utils.reproducibility import file_sha256
+        from src.utils import file_sha256
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(src.main.step_index(d)[0], src.main.NOT_RUN)
-            corpus = os.path.join(d, CORPUS_DIR)
+            corpus = os.path.join(d, TEXT_LIBRARY)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
             sha = file_sha256(os.path.join(corpus, "passages.jsonl"))
-            write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
+            write_index(os.path.join(d, INDEX_DIR), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
                         {"encoder": "fake", "passages_sha256": sha, "exclude_reference_pages": True})
             status, note = src.main.step_index(d)
             self.assertEqual(status, src.main.DONE)
@@ -2311,13 +2352,13 @@ class IndexStatusTests(unittest.TestCase):
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS[:3])               # the corpus changed after the index
             self.assertEqual(src.main.step_index(d)[0], src.main.PROBLEM)
             write_jsonl(os.path.join(corpus, "passages.jsonl"), RAG_CORPUS)
-            with open(os.path.join(corpus, "index", "embeddings.f32"), "ab") as f:
+            with open(os.path.join(d, INDEX_DIR, "embeddings.f32"), "ab") as f:
                 f.write(b"\0\0\0\0")                                                           # a damaged file
             self.assertEqual(src.main.step_index(d)[0], src.main.PROBLEM)
-            captions = os.path.join(corpus, "visual", "items_final.jsonl")
+            captions = os.path.join(d, IMAGE_LIBRARY, "items_final.jsonl")
             write_jsonl(captions, RAG_IMAGES)
-            write_index(os.path.join(d, CORPUS_DIR, "index"), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
-                        {"encoder": "fake", "passages_sha256": sha, "captions_file": "visual/items_final.jsonl",
+            write_index(os.path.join(d, INDEX_DIR), RAG_CORPUS, [rag_vec(p["text"]) for p in RAG_CORPUS],
+                        {"encoder": "fake", "passages_sha256": sha, "captions_file": "../image_only/items_final.jsonl",
                          "captions_sha256": file_sha256(captions), "n_captions_indexed": 3})
             self.assertEqual(src.main.step_index(d), (src.main.DONE, "5 passages, 8 numbers each (fake); with 3 caption records; all passages"))
             write_jsonl(captions, RAG_IMAGES[:1])                                                # the image library changed

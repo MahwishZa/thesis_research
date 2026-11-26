@@ -1,9 +1,12 @@
-"""Keyword search (BM25), reciprocal rank fusion, and the retrieval query of each view (only the question's own words)."""
+"""Keyword search (BM25), reciprocal rank fusion, the removal of repeated texts, and the retrieval query of each view (only the
+question's own words)."""
 import heapq
 import math
 import os
 import re
 from collections import Counter, defaultdict
+
+from src.retrieval.corpus import OVERLAP_LIMIT, overlap_share, shingles
 
 # ---- keyword search and rank fusion (standard library only) ---------------------------------------------------------------
 WORD = re.compile(r"[a-z0-9]+")
@@ -52,6 +55,21 @@ def reciprocal_rank_fusion(rankings, k=60, top=10):
             item.setdefault(p["passage_id"], p)
     order = sorted(score, key=lambda pid: -score[pid])
     return [(item[pid], round(score[pid], 6)) for pid in order[:top]]
+
+
+def distinct(hits):
+    """The hits without a record whose text repeats a better-ranked one (the same text, or half or more of its 8-word stretches):
+    a figure caption can be both a corpus passage and a picture-and-caption record, and the model must not get it twice."""
+    out, seen, seen_sh = [], set(), set()
+    for p, score in hits:
+        text = " ".join(p["text"].lower().split())
+        if text in seen or overlap_share(p["text"], seen_sh) >= OVERLAP_LIMIT:
+            continue
+        out.append((p, score))
+        seen.add(text)
+        seen_sh |= shingles(p["text"])
+    return out
+
 
 
 GENERIC_QUERY = "dermoscopic image of a skin lesion"      # the query of an image-only question: it has no patient facts

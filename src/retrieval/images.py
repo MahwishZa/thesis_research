@@ -18,17 +18,27 @@ from src.retrieval.corpus import (
     PMC_QUERIES,
     TOOL,
     XLINK_HREF,
-    Fetcher,
     clean,
     esearch,
+    Fetcher,
     is_ai_paper,
     open_licence,
     parse_pmc_licence,
     tag,
 )
-from src.utils.common import ALL_CASES, CLASSES, CORPUS_DIR, PROCESSED_IMAGES, hamming
-from src.utils.io import read_csv, read_jsonl, write_json, write_jsonl
-from src.utils.logging import get_logger
+from src.utils import (
+    ALL_CASES,
+    CLASSES,
+    IMAGE_LIBRARY,
+    PROCESSED_IMAGES,
+    TEXT_LIBRARY,
+    get_logger,
+    hamming,
+    read_csv,
+    read_jsonl,
+    write_json,
+    write_jsonl,
+)
 
 log = get_logger("corpus")      # the corpus, reference, index and visual commands share this logger
 
@@ -195,14 +205,14 @@ def guard_calibration(vectors, hashes, groups, threshold, hash_threshold):
 
 def visual_calibrate_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-calibrate", description="Measures the look-alike tests on known Kaggle cases.")
-    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
     ap.add_argument("--data", default="data")
     ap.add_argument("--encoder", default="biomedclip")
     ap.add_argument("--threshold", type=float, default=0.95)
     ap.add_argument("--hash-threshold", type=int, default=4)
     a = ap.parse_args(argv)
     log = get_logger("visual-calibrate")
-    folder = os.path.join(a.corpus, "visual")
+    folder = a.images
     paths = (os.path.join(folder, f"kaggle_vectors_{a.encoder}.json"), os.path.join(folder, "kaggle_hashes.json"))
     if not all(os.path.isfile(p) for p in paths):
         raise SystemExit("run the visual-index command first (it saves the Kaggle vectors and hashes)")
@@ -217,7 +227,7 @@ def visual_calibrate_main(argv=None):
     keep = [i for i, n in enumerate(vec["names"]) if n[:-4] in group_of]
     result = guard_calibration([vec["vectors"][i] for i in keep], [hsh["hashes"][i] for i in keep],
                                [group_of[n[:-4]] for n in names], a.threshold, a.hash_threshold)
-    card_path = os.path.join(a.corpus, "visual_card.json")
+    card_path = os.path.join(a.images, "visual_card.json")
     card = {}
     if os.path.isfile(card_path):
         with open(card_path, encoding="utf-8") as f:
@@ -245,8 +255,8 @@ def visual_calibrate_main(argv=None):
 #      confocal, X-ray, endoscopy),
 #   4. its caption names a dermoscopic image, a clinical photograph or a lesion image, and is not only about histology,
 #   5. its caption or the paper's title names one of the 8 diagnoses (the same word lists as the text corpus).
-# The list is written to data/corpus/visual/items.jsonl (licensed text: not committed) and a card with the counts to
-# data/corpus/visual_card.json (committed). Downloading the images and the check against the Kaggle images are separate
+# The list is written to data/corpus/image_only/items.jsonl (licensed text: not committed) and a card with the counts to
+# data/corpus/image_only/visual_card.json (committed). Downloading the images and the check against the Kaggle images are separate
 # steps, run only after this list has been looked at.
 FIG_NOT_A_SKIN_IMAGE = re.compile(
     r"flow ?chart|flow diagram|forest plot|kaplan|prisma|algorithm|schematic|workflow|bar (?:chart|graph)|histogram|roc curve|"
@@ -381,7 +391,8 @@ def extra_papers(fetch, per_class, known, removed):
 
 def visual_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual", description="Lists the skin-image figures of the corpus papers.")
-    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
+    ap.add_argument("--corpus", default=os.path.join("data", TEXT_LIBRARY), help="the text library folder (passages.jsonl, download cache)")
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder (written)")
     ap.add_argument("--cache", default=None, help="download cache (default: <corpus>/cache)")
     ap.add_argument("--limit", type=int, default=0, help="read only the first N papers (a trial)")
     ap.add_argument("--extra-papers", type=int, default=0,
@@ -404,14 +415,14 @@ def visual_main(argv=None, fetch_xml=None, fetch=None):
         def fetch_xml(doc_id):
             return fetch.get(NCBI + "efetch.fcgi", {"db": "pmc", "id": doc_id[3:], "retmode": "xml"}, ncbi=True)
     items = visual_items(papers, fetch_xml, removed)
-    out_dir = os.path.join(a.corpus, "visual")
+    out_dir = a.images
     write_jsonl(os.path.join(out_dir, "items.jsonl"), items)
     per_class = Counter(t for it in items for t in it["tags"])
     card = {"snapshot": datetime.date.today().isoformat(), "n_papers_read": len(papers), "n_figures_kept": len(items),
             "n_papers_with_a_figure": len({it["doc_id"] for it in items}), "figures_per_tag": {c: per_class.get(c, 0) for c in CLASSES},
             "left_out": dict(sorted(removed.items())), "images_downloaded": False,
-            "rule": "see the comment above visual_items in src/images.py"}
-    write_json(os.path.join(a.corpus, "visual_card.json"), card)
+            "rule": "see the comment above visual_items in src/retrieval/images.py"}
+    write_json(os.path.join(out_dir, "visual_card.json"), card)
     log.info(f"{len(items)} figures kept from {card['n_papers_with_a_figure']} of {len(papers)} papers; left out: {dict(removed)}")
     return items
 
@@ -426,7 +437,7 @@ def visual_main(argv=None, fetch_xml=None, fetch=None):
 # An answer counts as an image only when its first bytes are those of a JPEG, PNG or GIF file. A file under 3,000 bytes (an icon) is
 # left out, and so is an image that is byte-for-byte the same as one already kept. --probe N tries only N figures, saves nothing and
 # prints what each address answered, so that a wrong address pattern can be seen at once. The images are licensed material: they
-# stay in data/corpus/visual/images/ (git-ignored); the card records the counts.
+# stay in data/corpus/image_only/images/ (git-ignored); the card records the counts.
 S3_BUCKET = "https://pmc-oa-opendata.s3.amazonaws.com/"
 EUROPE_PMC_IMAGE = "https://europepmc.org/articles/{doc}/bin/{href}{ext}"
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif")
@@ -536,7 +547,7 @@ def download_images(items, folder, get=download_bytes, pause=0.4, probe=0, trace
 
 def visual_images_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-images", description="Downloads the images of the listed figures.")
-    ap.add_argument("--corpus", default=os.path.join("data", CORPUS_DIR))
+    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
     ap.add_argument("--probe", type=int, default=0, help="try only the first N figures and save nothing: which addresses work?")
     return ap.parse_args(argv)
 
@@ -544,7 +555,7 @@ def visual_images_args(argv=None):
 def visual_images_main(argv=None, get=download_bytes):
     a = visual_images_args(argv)
     log = get_logger("visual-images")
-    folder = os.path.join(a.corpus, "visual")
+    folder = a.images
     items = read_jsonl(os.path.join(folder, "items.jsonl"))
     trace = []
     kept, counts, worked = download_images(items, os.path.join(folder, "images"), get, pause=0.4 if get is download_bytes else 0,
@@ -556,7 +567,7 @@ def visual_images_main(argv=None, get=download_bytes):
              f"left out: {dict(counts)}")
     if not a.probe:
         write_jsonl(os.path.join(folder, "items_with_images.jsonl"), kept)
-        card_path = os.path.join(a.corpus, "visual_card.json")
+        card_path = os.path.join(folder, "visual_card.json")
         with open(card_path, encoding="utf-8") as f:
             card = json.load(f)
         card.update({"images_downloaded": True, "n_images": len(kept), "images_left_out": dict(sorted(counts.items())),

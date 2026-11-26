@@ -49,7 +49,7 @@ Every report records its input files with their SHA-256, so two reports can be c
 
 Usage: python -m src.main evaluate --questions data/views/multimodal/test.jsonl --predictions predictions.jsonl
        --out report.json [--predictions-b other.jsonl] [--relevance-models] [--reference-texts class_reference.json]
-       [--passages data/corpus/passages.jsonl]
+       [--passages data/corpus/text_only/passages.jsonl]
        [--skip-text]
        python -m src.main similarity-check             (is the semantic similarity informative? finished runs + reference texts)
        python -m src.main collect                      (a report.json for every finished run and the table results/comparisons/summary.csv)
@@ -60,32 +60,28 @@ import itertools
 import json
 import os
 
-from src.data.loaders import recorded_question_path
-from src.evaluation.diagnostic import diagnosis_metrics, usage_summary
+from src.data.views import recorded_question_path
 from src.evaluation.metrics import (
     SIMILARITY_MODEL,
     SIMILARITY_PASS,
+    diagnosis_metrics,
     evidence_metrics,
     gold_class,
     holm,
     image_claim_metrics,
     mcnemar_exact,
+    medcpt_scorers,
     pct,
     predicted_class,
-    semantic_similarity,
-    sentence_encoder,
-    similarity_check,
-)
-from src.evaluation.retrieval import (
-    medcpt_scorers,
     relevance_metrics,
     relevant_counts,
     retrieval_metrics,
+    semantic_similarity,
+    sentence_encoder,
+    similarity_check,
+    usage_summary,
 )
-from src.utils.common import REFERENCE_TEXTS
-from src.utils.io import read_jsonl, write_csv, write_json
-from src.utils.logging import get_logger
-from src.utils.reproducibility import text_matches, text_sha256
+from src.utils import REFERENCE_TEXTS, get_logger, read_jsonl, text_matches, text_sha256, write_csv, write_json
 
 
 def load(path):
@@ -174,7 +170,7 @@ def report_main(argv=None):
     ap.add_argument("--answered-only", action="store_true",
                     help="trial runs: score only the questions that have a prediction (without it, an unasked question counts as wrong)")
     ap.add_argument("--passages", default=None,
-                    help="the corpus (data/corpus/passages.jsonl): with it Recall@k is reported, as the share of all the "
+                    help="the corpus (data/corpus/text_only/passages.jsonl): with it Recall@k is reported, as the share of all the "
                          "corpus passages tagged with the true class that are found in the top k")
     a = ap.parse_args(argv)
     rep = evaluate(a.questions, a.predictions, a.predictions_b, a.relevance_models, a.reference_texts,

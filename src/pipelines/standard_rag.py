@@ -5,44 +5,19 @@ import json
 import os
 import random
 
-from src.data.loaders import question_file
-from src.evaluation.metrics import holm, mcnemar_exact, percentile
-from src.evaluation.retrieval import relevant_counts, retrieval_metrics
-from src.models.embeddings import MEDCPT_QUERY, medcpt_encoder
+from src.data.views import question_file
+from src.evaluation.metrics import holm, mcnemar_exact, percentile, relevant_counts, retrieval_metrics
+from src.models.embeddings import MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
 from src.models.llm import MODELS, make_client
 from src.pipelines.base import rag_instruction, rag_system, rag_text, run, run_folder
-from src.retrieval.corpus import OVERLAP_LIMIT, overlap_share, shingles
 from src.retrieval.indexer import read_index
-from src.retrieval.reranker import medcpt_cross_encoder
-from src.retrieval.retriever import (
-    BM25Index,
-    image_query_vector,
-    reciprocal_rank_fusion,
-    retrieval_query,
-)
-from src.utils.common import CORPUS_DIR, INDEX_DIR, SPLIT_FILES, SPLITS, VIEWS, load_env
-from src.utils.io import read_jsonl, write_json
-from src.utils.logging import get_logger
-from src.utils.reproducibility import SEED
+from src.retrieval.retriever import BM25Index, distinct, image_query_vector, reciprocal_rank_fusion, retrieval_query
+from src.utils import IMAGE_LIBRARY, INDEX_DIR, SEED, SPLIT_FILES, SPLITS, TEXT_LIBRARY, VIEWS, get_logger, load_env, read_jsonl, write_json
 
 RETRIEVAL_MODES = ("bm25", "bm25-rerank", "dense", "hybrid", "hybrid-rerank")     # all but bm25: comparisons and trials
 APPROVED = "bm25"     # the standard RAG's text search (researcher, 2026-11-25: best on validation in both text views; hybrid-rerank before)
 POOL = 20      # passages each searcher gives to the fusion and the re-ranker (a fixed, common value; not tuned)
 FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the image search are fused by rank (as validated; not tuned)
-
-
-def distinct(hits):
-    """The hits without a record whose text repeats a better-ranked one (the same text, or half or more of its 8-word stretches):
-    a figure caption can be both a corpus passage and a picture-and-caption record, and the model must not get it twice."""
-    out, seen, seen_sh = [], set(), set()
-    for p, score in hits:
-        text = " ".join(p["text"].lower().split())
-        if text in seen or overlap_share(p["text"], seen_sh) >= OVERLAP_LIMIT:
-            continue
-        out.append((p, score))
-        seen.add(text)
-        seen_sh |= shingles(p["text"])
-    return out
 
 
 class StandardRag:
@@ -154,7 +129,7 @@ def rag_parse_args(argv=None):
 def make_rag(args):
     """The StandardRag of the command line: loads the index and the encoders (laptop: torch and transformers)."""
     folder = args.index or os.path.join(args.data, INDEX_DIR)
-    index = read_index(folder, os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))      # stops with a clear message
+    index = read_index(folder, os.path.join(args.data, TEXT_LIBRARY, "passages.jsonl"))      # stops with a clear message
     rerank = medcpt_cross_encoder() if args.retrieval.endswith("-rerank") else None
     visual = load_visual(args.data, args.image_encoder) if args.view != "text_only" else None     # the image views search by the image
     encode = None if args.retrieval.startswith("bm25") else medcpt_encoder(MEDCPT_QUERY, 64)      # BM25 needs no query encoder
@@ -181,7 +156,7 @@ def standard_rag_main(argv=None, rag=None):
 
 # ---- retrieval-only comparison (no model call, no cost) ---------------------------------------------------------------------
 # For the validation questions of a text view, retrieves 10 passages with each retrieval mode and scores them with the retrieval
-# metrics of src/metrics.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
+# metrics of src/evaluation/metrics.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
 # class: the tags are used for this score only, never to retrieve). The choice of the retrieval mode is made on this validation
 # score, before any paid run; the test split is refused. Image-only questions are not scored: their text query is the same for all.
 def retrieval_eval_args(argv=None):
@@ -218,7 +193,7 @@ def paired_hit3(qa, preds, approved):
 
 def retrieval_intervals(qa, pred, n_boot=1000, seed=42):
     """95% percentile intervals of the main retrieval scores. Whole lesions are drawn with replacement (photos of one lesion stay
-    together), as in src/metrics.py."""
+    together), as in src/evaluation/metrics.py."""
     members = {}
     for i, q in qa.items():
         members.setdefault(q.get("group_id", i), []).append(i)
@@ -248,7 +223,7 @@ def random_retrieval(qa, passages, rounds=20, seed=SEED):
 def load_visual(data, encoder):
     """The image index and the saved image vectors of the Kaggle images ({file name: vector}), both made by the visual-index command.
     The query vector of a question is the saved vector of its own image, so no image model is needed here."""
-    folder = os.path.join(data, CORPUS_DIR, "visual")
+    folder = os.path.join(data, IMAGE_LIBRARY)
     index = read_index(os.path.join(folder, f"index_{encoder}"), os.path.join(folder, "items_final.jsonl"))
     path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
     if not os.path.isfile(path):
@@ -265,7 +240,7 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
     qa = {q["id"]: q for q in questions}
     text_modes = list(args.modes) if args.view != "image_only" else []          # image only has no text query: the image search alone
     if rag_for is None and text_modes:
-        index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, CORPUS_DIR, "passages.jsonl"))
+        index = read_index(args.index or os.path.join(args.data, INDEX_DIR), os.path.join(args.data, TEXT_LIBRARY, "passages.jsonl"))
         encode = medcpt_encoder(MEDCPT_QUERY, 64)
         bm25 = BM25Index(index.passages)
         rerank = medcpt_cross_encoder() if any(m.endswith("-rerank") for m in text_modes) else None

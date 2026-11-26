@@ -21,7 +21,7 @@
     "not a clinical or dermoscopic image": 80
   },
   "images_downloaded": true,
-  "rule": "see the comment above visual_items in src/build.py",
+  "rule": "see the comment above visual_items in src/retrieval/images.py",
   "n_images": 88,
   "images_left_out": {},
   "image_addresses_that_worked": {

@@ -12,16 +12,14 @@ from src.retrieval.corpus import (
     BIBLIOGRAPHY,
     TEMPLATE,
     TEXTBOOK_LICENCE,
-    Fetcher,
     chunk,
     dermoscopedia_api,
+    Fetcher,
     html_paragraphs,
     page_url,
     sentences,
 )
-from src.utils.common import CLASSES, CORPUS_DIR, REFERENCE_TEXTS
-from src.utils.io import write_json
-from src.utils.logging import get_logger
+from src.utils import CLASSES, REFERENCE_TEXTS, TEXT_LIBRARY, get_logger, write_json
 
 log = get_logger("corpus")      # the corpus, reference, index and visual commands share this logger
 
@@ -29,7 +27,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 # ----------------------------------------------------------------------------------------------------------------------
 # references: the reference texts (python -m src.main references)
 # ----------------------------------------------------------------------------------------------------------------------
-# Builds the reference text of each of the 8 diseases for the semantic-similarity score (src/metrics.py): a paragraph quoted from
+# Builds the reference text of each of the 8 diseases for the semantic-similarity score (src/evaluation/metrics.py): a paragraph quoted from
 # Dermoscopedia (the dermoscopy wiki of the International Dermoscopy Society, CC BY-NC-SA 4.0), never written by us or by an AI.
 #
 # The fixed rule (applied the same way to every disease; steps 1-3 set on 2026-11-22 from the site's page layout, seen with
@@ -48,7 +46,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #                leftovers of removed figure numbers ("(Figure )", ". ."), and without a reference list written as plain text at the end of a
 #                section (cut from its first entry; see BIBLIOGRAPHY). A text under --min-words words is left out and listed under
 #                "skipped". So a disease has one reference text per criterion section, not only the first 200 words of its page.
-# The semantic-similarity score (src/metrics.py) compares an explanation with every reference text of its true class and keeps the
+# The semantic-similarity score (src/evaluation/metrics.py) compares an explanation with every reference text of its true class and keeps the
 # highest cosine (the best-matching reference).
 # The search term of melanocytic nevus is the site's general page on nevus patterns: the page titled "Nevus" is about nail nevi.
 #
@@ -58,7 +56,7 @@ log = get_logger("corpus")      # the corpus, reference, index and visual comman
 #            "bibliography_removed": [{"section": ..., "n_words": ...}]}}
 # Check the texts once before any run (the script prints them): the page and sections must be about the disease named.
 # --token-check counts each text's tokens with the similarity model's own tokenizer and compares them with the most the model reads
-# (needs sentence-transformers; the model is downloaded once). Downloads are cached (data/corpus/cache), so a rerun gives
+# (needs sentence-transformers; the model is downloaded once). Downloads are cached (data/corpus/text_only/cache), so a rerun gives
 # the same texts.
 #
 # Usage (on the laptop, with internet): python -m src.main references [--token-check]
@@ -351,7 +349,7 @@ def inspect(fetch, api, log):
 def references_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main references", description="Reference texts of the 8 diseases, quoted from Dermoscopedia by a fixed rule.")
     ap.add_argument("--out", default=os.path.join("data", REFERENCE_TEXTS))
-    ap.add_argument("--cache", default=os.path.join("data", CORPUS_DIR, "cache"))
+    ap.add_argument("--cache", default=os.path.join("data", TEXT_LIBRARY, "cache"))
     ap.add_argument("--max-words", type=int, default=200, help="the longest reference text, in words")
     ap.add_argument("--min-words", type=int, default=20, help="shorter texts are left out (listed under 'skipped')")
     ap.add_argument("--token-check", action="store_true", help="count each text's tokens with the similarity model's tokenizer")

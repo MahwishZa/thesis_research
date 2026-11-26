@@ -20,25 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(ROOT))
 # ruff: noqa: E402  (the imports below need the line above)
-import src.evaluation.diagnostic
 import src.evaluation.evaluator
 import src.evaluation.metrics
-import src.evaluation.retrieval
 import src.models.llm
 import src.pipelines.base
-from src.data.dataset import TEST_PER_CLASS, VAL_PER_CLASS
-from src.data.loaders import question_file
-from src.utils.common import (
-    ALL_CASES,
-    CLASSES,
-    PROCESSED_CASES,
-    REFERENCE_TEXTS,
-    SPLITS,
-    VIEWS,
-)
+from src.data.views import TEST_PER_CLASS, VAL_PER_CLASS, question_file
+from src.utils import ALL_CASES, CLASSES, PROCESSED_CASES, REFERENCE_TEXTS, SPLITS, VIEWS
 
-EVALUATION_MODULES = (src.evaluation.metrics, src.evaluation.diagnostic, src.evaluation.retrieval,
-                      src.evaluation.evaluator)   # what evaluate.py held before the 2026-11-25 move
+EVALUATION_MODULES = (src.evaluation.metrics, src.evaluation.evaluator)   # what evaluate.py held before the 2026-11-25 move
 
 DATA = Path(os.environ.get("THESIS_DATA", ROOT / "data"))
 HAVE_GIT = bool(shutil.which("git")) and (ROOT / ".git").exists()
@@ -171,7 +160,7 @@ class MetricRequirements(unittest.TestCase):
     def test_the_approved_diagnosis_metrics_are_reported(self):
         """Approved: accuracy (top-1) with an interval, macro-F1, per-class precision / recall / specificity / F1, the confusion
         matrix; refusals apart from other invalid answers."""
-        d = src.evaluation.diagnostic.diagnosis_metrics(self.qa, self.pred)
+        d = src.evaluation.metrics.diagnosis_metrics(self.qa, self.pred)
         for key in ("accuracy", "accuracy_95ci", "macro_f1", "macro_f1_95ci", "confusion_matrix",
                     "invalid_answers", "invalid_answers_by_cause", "missing_predictions"):
             self.assertIn(key, d)
@@ -182,7 +171,7 @@ class MetricRequirements(unittest.TestCase):
     def test_the_metrics_the_researcher_did_not_approve_are_not_reported(self):
         """Not approved: top-k accuracy (removed 2026-11-22: standard top-1 accuracy only), balanced accuracy and macro-recall (the
         same number on a balanced test split), BERTScore, a separate melanoma sensitivity, a score on seen questions."""
-        text = json.dumps(src.evaluation.diagnostic.diagnosis_metrics(self.qa, self.pred)).lower()
+        text = json.dumps(src.evaluation.metrics.diagnosis_metrics(self.qa, self.pred)).lower()
         for banned in ("top3", "top_k", "topk", "balanced_accuracy", "macro_recall", "bertscore", "melanoma_sensitivity", "melanoma_recall"):
             self.assertNotIn(banned, text)
 

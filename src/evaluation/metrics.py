@@ -4,9 +4,9 @@ import math
 import random
 import re
 import unicodedata
-from collections import defaultdict
+from collections import Counter, defaultdict
 
-from src.utils.common import CLASSES, OPTION_TEXT
+from src.utils import CLASSES, OPTION_TEXT
 
 
 def percentile(sorted_values, q):
@@ -325,3 +325,169 @@ def image_claim_metrics(qa, pred):
             "ids_claiming_an_image": [i for i, f in zip(ids, flags) if f],
             "flagged_sentences": {i: image_claim_sentence(pred[i]["rationale"]) for i, f in zip(ids, flags) if f},   # to check by eye
             "method": "word list; approximate lower bound"}
+
+
+# =============================================================================================================================
+# Diagnosis: accuracy, macro-F1, per-class results, invalid answers and refusals, tokens and time
+# =============================================================================================================================
+
+# A refusal: the host flagged it (finish_reason "refusal...") or the reply says so in one of these fixed phrases (set on 2026-11-22
+# from a real reply: "I'm sorry, I can't help with identifying or diagnosing images of skin lesions."). Only an invalid answer
+# (no usable letter) is checked, so a valid answer that apologises is never counted.
+REFUSAL = re.compile(r"\bI(?:['’]m| am) sorry\b|\bI(?: can['’]?t| cannot| can not| won['’]t| am unable to|['’]m unable to"
+                     r"| am not able to|['’]m not able to) (?:help|assist|provide|identify|diagnose|answer|comply|interpret"
+                     r"|analy[sz]e|evaluate)", re.I)
+
+
+def invalid_causes(ids, classes, pred):
+    """Splits the invalid answers into refusals (REFUSAL) and other invalid answers (a reply without a usable letter)."""
+    out = {"refusals": [], "other": []}
+    for i, c in zip(ids, classes):
+        r = pred.get(i)
+        if r is None or c != INVALID:
+            continue
+        refused = str(r.get("finish_reason") or "").startswith("refusal") or REFUSAL.search(str(r.get("raw_output") or ""))
+        out["refusals" if refused else "other"].append(i)
+    return {"refusals": len(out["refusals"]), "other_invalid": len(out["other"]), "refusal_ids": out["refusals"],
+            "other_invalid_ids": out["other"]}
+
+
+def per_class(y, p):
+    """Precision, recall (= sensitivity), specificity and F1 of each class; an invalid answer is wrong for every class."""
+    pairs, n, rows = Counter(zip(y, p)), len(y), {}
+    for c in CLASSES:
+        tp = pairs[(c, c)]
+        fn = sum(v for (t, q), v in pairs.items() if t == c and q != c)
+        fp = sum(v for (t, q), v in pairs.items() if t != c and q == c)
+        tn = n - tp - fn - fp
+        prec, rec = (tp / (tp + fp) if tp + fp else 0.0), (tp / (tp + fn) if tp + fn else 0.0)
+        rows[c] = {"precision": prec, "recall": rec, "specificity": tn / (tn + fp) if tn + fp else 0.0,
+                   "f1": 2 * prec * rec / (prec + rec) if prec + rec else 0.0, "support": tp + fn}
+    return rows
+
+
+def accuracy(y, p):
+    return sum(t == q for t, q in zip(y, p)) / len(y)
+
+
+def macro_f1(y, p):
+    """The mean F1 over the eight classes (every class weighs the same)."""
+    return sum(r["f1"] for r in per_class(y, p).values()) / len(CLASSES)
+
+
+def diagnosis_metrics(qa, pred, pred_b=None):
+    unknown = sorted(set(pred) - set(qa))
+    if unknown:
+        raise ValueError(f"{len(unknown)} predictions are not in the question file, e.g. {unknown[:3]}")
+    ids = list(qa)
+    y = [gold_class(qa[i]) for i in ids]
+    p = [predicted_class(qa[i], pred.get(i)) for i in ids]
+    groups = [qa[i].get("group_id", i) for i in ids]
+    rows = per_class(y, p)
+    columns = [*CLASSES, INVALID]
+    out = {"n_questions": len(ids),
+           "missing_predictions": sum(i not in pred for i in ids),
+           "invalid_answers": sum(i in pred and c == INVALID for i, c in zip(ids, p)),
+           "invalid_answers_by_cause": invalid_causes(ids, p, pred),
+           "accuracy": round(accuracy(y, p), 4), "accuracy_95ci": bootstrap_ci(y, p, groups, accuracy),
+           "macro_f1": round(macro_f1(y, p), 4), "macro_f1_95ci": bootstrap_ci(y, p, groups, macro_f1),
+           "per_class": {c: {k: (v if k == "support" else round(v, 3)) for k, v in r.items()} for c, r in rows.items()},
+           "confusion_matrix": {"rows_true": CLASSES, "columns_predicted": columns,
+                                "matrix": [[sum(t == r and q == c for t, q in zip(y, p)) for c in columns] for r in CLASSES]}}
+    out["chosen_letters"] = {k: v for k, v in sorted(Counter(
+        (str((pred.get(i) or {}).get("pred") or "").strip().upper() or "none") if c != INVALID else "invalid"
+        for i, c in zip(ids, p)).items())}
+    if pred_b is not None:
+        out["mcnemar_vs_system_b"] = mcnemar_exact(y, p, [predicted_class(qa[i], pred_b.get(i)) for i in ids])
+    return out
+
+
+def usage_summary(qa, pred):
+    """Totals and means of tokens and seconds, for the predictions that report them (None when none does)."""
+    out = {}
+    for key in ("tokens_in", "tokens_out", "seconds"):
+        values = [float(pred[i][key]) for i in qa if i in pred and pred[i].get(key) is not None]
+        if values:
+            out[key] = {"total": round(sum(values), 2), "mean": round(mean(values), 2), "n": len(values)}
+    return out or None
+
+
+# =============================================================================================================================
+# Retrieval (RAG systems): Hit@k, Precision@k, Recall@k, nDCG@k, MRR and the MedCPT relevance scores
+# =============================================================================================================================
+
+def relevant_counts(passages):
+    """How many corpus passages carry each class tag (the weak labels): the denominator of Recall@k."""
+    counts = Counter(t for p in passages for t in set(p.get("tags") or []))
+    return {c: counts[c] for c in CLASSES}
+
+
+CUTOFFS = (1, 3, 5, 10)
+
+
+def retrieval_metrics(qa, pred, ks=None, n_relevant=None):
+    """Hit@k, Precision@k, nDCG@k (and Recall@k with the corpus counts) and MRR. Without ks, k is each of 1, 3, 5 and 10 that is not
+    larger than the number of passages the system kept for an answer (researcher's decision, 2026-11-25): a system that keeps 3
+    passages has no Precision@5 (it would be divided by 5 with 3 passages) and no Hit@5 (it would repeat Hit@3)."""
+    rows = [(qa[i]["gold_label"], pred[i]["contexts"]) for i in qa if i in pred and pred[i].get("contexts")]
+    if not rows:
+        return None
+    if ks is None:
+        kept = max(len(ctx) for _, ctx in rows)
+        ks = tuple(k for k in CUTOFFS if k <= kept)
+    res = {}
+    ideal = [1 / math.log2(j + 2) for j in range(max(ks))]
+    for k in ks:
+        hit, prec, nd, rec = [], [], [], []
+        for g, ctx in rows:
+            rel = [1 if g in c.get("tags", []) else 0 for c in ctx[:k]]
+            hit.append(1.0 if any(rel) else 0.0)
+            prec.append(sum(rel) / k)
+            if n_relevant:
+                rec.append(sum(rel) / n_relevant[g] if n_relevant.get(g) else 0.0)
+            nd.append(sum(r / math.log2(j + 2) for j, r in enumerate(rel)) / sum(ideal[:k]))
+        res[f"hit@{k}"], res[f"precision@{k}"], res[f"ndcg@{k}"] = (round(mean(v), 4) for v in (hit, prec, nd))
+        if n_relevant:
+            res[f"recall@{k}"] = round(mean(rec), 4)
+    mrr = []
+    for g, ctx in rows:
+        rel = [1 if g in c.get("tags", []) else 0 for c in ctx]
+        mrr.append(next((1 / (j + 1) for j, r in enumerate(rel) if r), 0.0))
+    res["mrr"] = round(mean(mrr), 4)
+    res["n_questions_with_contexts"] = len(rows)
+    return res
+
+
+def medcpt_scorers():
+    """Two scorers built on MedCPT (the same models as the RAG retrieval, src/models/embeddings.py): the cosine of the query and
+    passage embeddings, and the cross-encoder score (higher = more relevant; not a probability). Each takes (query, passages) and
+    returns one score per passage."""
+    from src.models.embeddings import MEDCPT_ARTICLE, MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
+    query, article, cross_encoder = medcpt_encoder(MEDCPT_QUERY, 64), medcpt_encoder(MEDCPT_ARTICLE, 512), medcpt_cross_encoder()
+
+    def articles(passages):
+        return [[c.get("title") or "", c["text"]] for c in passages]
+
+    def cosine(q, passages):
+        qv = query([q])[0]
+        return [sum(a * b for a, b in zip(qv, v)) for v in article(articles(passages))]      # unit vectors: the dot product
+
+    def cross(q, passages):
+        return cross_encoder(q, articles(passages))
+
+    return {"medcpt_cosine": cosine, "medcpt_cross_encoder": cross}
+
+
+def relevance_metrics(qa, pred, scorers):
+    """Mean relevance of the retrieved passages to the query the system searched with (its 'query', else the question):
+    first averaged over the passages of a question, then over the questions."""
+    ids = [i for i in qa if i in pred and pred[i].get("contexts")]
+    if not ids:
+        return None
+    scores, source = defaultdict(list), Counter()
+    for i in ids:
+        query, passages = pred[i].get("query") or qa[i]["question"], pred[i]["contexts"]
+        source["query" if pred[i].get("query") else "question"] += 1
+        for name, fn in scorers.items():
+            scores[name].append(mean(fn(query, passages)))
+    return {**{k: round(mean(v), 4) for k, v in scores.items()}, "n_questions": len(ids), "query_used": dict(source)}

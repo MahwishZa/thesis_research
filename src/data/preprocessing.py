@@ -14,7 +14,7 @@ What it does (in order):
   7. Metadata clean - harmonised anatomical site, age, sex; missing indicators.
   8. Splits         - lesion-grouped, stratified 70/15/15; then the test split is balanced to 30 images per class by
                       whole lesion groups, then the validation split to 20 images per class the same way (balanced_splits in
-                      src/data/dataset.py; train keeps the natural class mix); then 5 CV folds over train+val.
+                      src/data/views.py; train keeps the natural class mix); then 5 CV folds over train+val.
   9. Normalisation  - per-channel mean/std and age mean/std from TRAIN only.
  10. Outputs        - OUT_DIR/processed/images/ (the cleaned images) and OUT_DIR/processed/cases/: all_cases.csv (every kept case),
                       raw_files_audit.csv, near_duplicates.csv, classes.json, normalization.json,
@@ -38,9 +38,8 @@ import pandas as pd
 from PIL import Image
 from sklearn.model_selection import StratifiedGroupKFold
 
-from src.data.dataset import TEST_PER_CLASS, VAL_PER_CLASS, balanced_splits
-from src.data.loaders import image_path, images_not_in_table
-from src.utils.common import (
+from src.data.views import TEST_PER_CLASS, VAL_PER_CLASS, balanced_splits, image_path, images_not_in_table
+from src.utils import (
     ALL_CASES,
     CLASS_NAMES,
     CLASSES,
@@ -48,11 +47,12 @@ from src.utils.common import (
     PROCESSED_CASES,
     PROCESSED_IMAGES,
     RAW,
+    SEED,
+    atomic_path,
+    get_logger,
     hamming,
+    write_json,
 )
-from src.utils.io import atomic_path, write_json
-from src.utils.logging import get_logger
-from src.utils.reproducibility import SEED
 
 META_FILES = ("ISIC_2019_Training_GroundTruth.csv", "ISIC_2019_Training_Metadata.csv", "HAM10000_metadata.csv",
               "isic_archive_api_441.csv")
