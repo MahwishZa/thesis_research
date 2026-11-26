@@ -990,7 +990,7 @@ class BuildTests(unittest.TestCase):
             write_jsonl(questions, [])
             with mock.patch.object(src.pipelines.llm_only, "make_client", lambda model, log: object()), mock.patch.object(src.pipelines.llm_only, "run", lambda *a: "done"), \
                     contextlib.redirect_stdout(io.StringIO()) as out:
-                src.pipelines.llm_only.llm_only_main(["--model", "gpt-4o", "--view", "text_only", "--split", "val", "--env-file", env,
+                src.pipelines.llm_only.llm_only_main(["--model", "gpt-4o", "--allow-paid", "--view", "text_only", "--split", "val", "--env-file", env,
                                   "--data", os.path.join(d, "data"), "--results", os.path.join(d, "results")])
             self.assertIn("lines [3] are not NAME=value", out.getvalue())
             self.assertNotIn("sk-or-a-value-without-a-name", out.getvalue())
@@ -1593,7 +1593,7 @@ class RunTests(unittest.TestCase):
         self.assertFalse(os.path.exists(self.results))
 
     def test_the_api_key_is_needed_and_never_written(self):
-        argv = ["--model", "gpt-4o", "--view", "text_only", "--data", self.data, "--results", self.results,
+        argv = ["--model", "gpt-4o", "--allow-paid", "--view", "text_only", "--data", self.data, "--results", self.results,
                 "--env-file", os.path.join(self.tmp.name, ".env")]
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit), \
                 contextlib.redirect_stdout(io.StringIO()):

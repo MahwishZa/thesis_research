@@ -2,7 +2,7 @@
 import argparse
 import os
 
-from src.models.llm import MODELS, make_client
+from src.models.llm import MODELS, make_client, require_free_or_allowed
 from src.pipelines.base import INSTRUCTIONS, run, run_folder
 from src.utils import SPLITS, VIEWS, get_logger, load_env
 
@@ -15,6 +15,7 @@ def parse_args(argv=None):
     ap.add_argument("--style", default="rationale", choices=sorted(INSTRUCTIONS))
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
+    ap.add_argument("--allow-paid", action="store_true", help="allow a model that costs credit (the free model needs no flag)")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
     ap.add_argument("--env-file", default=".env", help="the file with the API keys")
     ap.add_argument("--data", default="data")
@@ -31,5 +32,6 @@ def llm_only_main(argv=None):
         unusable = load_env(args.env_file)
         if unusable:
             log.warning(f"{args.env_file}: lines {unusable} are not NAME=value (or have no value) and were skipped")
+        require_free_or_allowed(args.model, args.allow_paid)
         client = make_client(args.model, log)                       # stops here when the key is missing
     return run(args, client, log)

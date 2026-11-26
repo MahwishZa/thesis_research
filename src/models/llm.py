@@ -22,6 +22,11 @@ MODELS = {
                          "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 8192},
     "llama-4-maverick": {"api": "openrouter", "id": "meta-llama/llama-4-maverick", "route": ["parasail/fp8"],
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
+    # The free backbone of the RAG systems (researcher, 2026-11-26; the budget is spent). Open weights (Apache 2.0), takes images, one provider
+    # (Google AI Studio; OpenRouter page, 2026-11-26). Thinking is left at the endpoint's default until the probe shows what it returns; hidden
+    # reasoning counts toward max_tokens, hence the large limit. "free": no credit is used, so it needs no --allow-paid.
+    "gemma-4-31b": {"api": "openrouter", "id": "google/gemma-4-31b-it:free", "route": ["google-ai-studio"], "temperature": 0.0, "seed": 0,
+                    "max_tokens": 8192, "free": True},
 }
 KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "openrouter": ("OPENROUTER_API_KEY",)}
 RETRY_CODES = {408, 409, 429, 500, 502, 503, 504, 529}
@@ -148,6 +153,12 @@ class OpenRouterClient:
         url, body = openrouter_request(self.cfg, system, text, image)
         head = {"Content-Type": "application/json", "Authorization": f"Bearer {self.key}"}
         return openrouter_reply(post_json(url, head, body, log=self.log))
+
+
+def require_free_or_allowed(name, allow_paid):
+    """A model that costs credit runs only when --allow-paid is given (the researcher has no budget left, 2026-11-26)."""
+    if not MODELS[name].get("free") and not allow_paid:
+        raise SystemExit(f"{name} costs credit. Nothing was sent. Use the free model (gemma-4-31b), or add --allow-paid if you mean to pay.")
 
 
 def make_client(name, log=None):

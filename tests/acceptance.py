@@ -127,10 +127,10 @@ class DatasetRequirements(unittest.TestCase):
 
 
 class ModelAndPromptRequirements(unittest.TestCase):
-    def test_the_four_research_models_are_used_as_they_are_through_pinned_providers(self):
-        """Claude Sonnet 5.5, Llama 4 Maverick, Gemini 3.8 Flash and GPT-4o; pre-trained, no fine-tuning; the provider is pinned and
+    def test_the_research_models_are_used_as_they_are_through_pinned_providers(self):
+        """Claude Sonnet 5.5, Llama 4 Maverick, Gemini 3.8 Flash and GPT-4o (the LLM-only runs) and the free Gemma 4 31B; pre-trained, no fine-tuning; the provider is pinned and
         never replaced by another one (a changed provider would be a different model)."""
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gemma-4-31b", "gpt-4o", "llama-4-maverick"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 self.assertNotIn("fine_tuned", json.dumps(cfg).lower())

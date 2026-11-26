@@ -8,7 +8,7 @@ import random
 from src.data.views import question_file
 from src.evaluation.metrics import holm, mcnemar_exact, percentile, relevant_counts, retrieval_metrics
 from src.models.embeddings import MEDCPT_QUERY, medcpt_cross_encoder, medcpt_encoder
-from src.models.llm import MODELS, make_client
+from src.models.llm import MODELS, make_client, require_free_or_allowed
 from src.pipelines.base import rag_instruction, rag_system, rag_text, run, run_folder
 from src.retrieval.indexer import read_index
 from src.retrieval.retriever import BM25Index, distinct, image_query_vector, reciprocal_rank_fusion, retrieval_query
@@ -117,6 +117,7 @@ def rag_parse_args(argv=None):
                     help="bm25 (the standard RAG, researcher's choice of 2026-11-25); the other modes are trials in their own folders")
     ap.add_argument("--limit", type=int, default=0, help="ask at most this many questions now (a trial)")
     ap.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
+    ap.add_argument("--allow-paid", action="store_true", help="allow a model that costs credit (the free model needs no flag)")
     ap.add_argument("--dry-run", action="store_true", help="show the prompts of the first questions; no API call, no key needed")
     ap.add_argument("--env-file", default=".env", help="the file with the API keys")
     ap.add_argument("--data", default="data")
@@ -143,6 +144,8 @@ def standard_rag_main(argv=None, rag=None):
     if os.path.isdir(final) and not args.dry_run:
         log.info(f"already complete: {final}")
         return final
+    if not args.dry_run:
+        require_free_or_allowed(args.model, args.allow_paid)     # before anything is loaded
     if rag is None:
         rag = make_rag(args)
     if not args.dry_run:

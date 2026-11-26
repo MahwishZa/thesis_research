@@ -1074,9 +1074,41 @@ class PromptAndAnswerTests(unittest.TestCase):
         self.assertEqual(src.pipelines.base.PROMPT_NAME, "llm_only")
 
 
+class FreeModelTests(unittest.TestCase):
+    """The researcher has no budget left (2026-11-26): only the free model runs without --allow-paid."""
+
+    def test_gemma_is_the_only_free_model_and_is_pinned_to_its_one_provider(self):
+        m = src.models.llm.MODELS
+        self.assertEqual([n for n, c in m.items() if c.get("free")], ["gemma-4-31b"])
+        g = m["gemma-4-31b"]
+        self.assertEqual((g["id"], g["route"], g["temperature"], g["seed"]), ("google/gemma-4-31b-it:free", ["google-ai-studio"], 0.0, 0))
+        self.assertTrue(g["id"].endswith(":free"))                          # a paid variant must never be reached by a typo
+        self.assertGreaterEqual(g["max_tokens"], 4096)                      # hidden thinking counts toward it
+        _, body = src.models.llm.openrouter_request(g, "sys", "txt", "IMG")
+        self.assertEqual(body["provider"], {"order": ["google-ai-studio"], "allow_fallbacks": False})   # no other (paid) host may answer
+        self.assertNotIn("reasoning", body)                                 # the endpoint default until the probe shows what it returns
+
+    def test_a_paid_model_is_refused_without_allow_paid_and_nothing_is_sent_or_written(self):
+        guard = src.models.llm.require_free_or_allowed
+        guard("gemma-4-31b", False)
+        guard("gpt-4o", True)
+        for name in ("gpt-4o", "claude-sonnet-5-5", "gemini-3.8-flash", "llama-4-maverick"):
+            with self.subTest(name), self.assertRaises(SystemExit) as caught:
+                guard(name, False)
+            self.assertIn("costs credit", str(caught.exception))
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(src.pipelines.llm_only, "make_client", side_effect=AssertionError("a client was made")):
+            with self.assertRaises(SystemExit):
+                src.pipelines.llm_only.llm_only_main(["--model", "gpt-4o", "--view", "text_only", "--results", d, "--data", d])
+            self.assertEqual(os.listdir(d), [])
+        with mock.patch.object(src.pipelines.standard_rag, "make_client", side_effect=AssertionError("a client was made")):
+            with self.assertRaises(SystemExit) as caught:
+                src.pipelines.standard_rag.standard_rag_main(["--model", "claude-sonnet-5-5", "--view", "text_only"])
+            self.assertIn("costs credit", str(caught.exception))
+
+
 class RequestTests(unittest.TestCase):
-    def test_the_four_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
+    def test_the_research_models_and_their_fixed_settings(self):
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gemma-4-31b", "gpt-4o", "llama-4-maverick"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 if cfg["api"] == "anthropic":

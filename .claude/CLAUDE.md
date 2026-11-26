@@ -79,10 +79,20 @@ third party is credited anywhere in the repository.
   same 85 library records, a rule fixed before any MONET number): library search Hit@3 51.9% vs 40.0% (random 39.9%), MRR 43.6% vs 40.6%; nearest-neighbour
   test (train + validation images, 5 lesion-grouped folds, k = 5) macro-F1 55.7% vs 47.6%, difference +8.1 points (95% interval +5.5 to +10.9),
   McNemar p = 0.0009. Result: `results/standard_rag/image_only/encoder_comparison.json`; the code of the comparison is in Git commit `ab4bd4a`
-  (removed afterwards: it needed the old encoder). Open: the licence of the weights (the GitHub repo's LICENSE is CC BY-NC-SA 4.0) ◻; the image index,
-  the Kaggle look-alike check and `visual-calibrate` must be rerun with MONET on the laptop, and `retrieval-eval --view image_only` and `--view multimodal`
-  again. Until then every image-search and fused number below was made with BiomedCLIP and is superseded (text-only numbers are unaffected).
-- Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
+  (removed afterwards: it needed the old encoder). Open: the licence of the weights (the GitHub repo's LICENSE is CC BY-NC-SA 4.0) ◻.
+  Rebuilt with MONET (laptop, 2026-11-26): 84 library records (1 dropped as a Kaggle look-alike, 3 as duplicates inside the library; highest library-to-Kaggle
+  similarity 0.887); `visual-calibrate` with MONET: flags 27.5% of same-lesion pairs and 18.8% of nearest different-lesion images (BiomedCLIP: 64.5%, 74.7%);
+  text index 3,414 records (40 captions added, 44 already in the corpus). Validation Hit@3 (160 questions), MONET: image search 55.6% (46.3 to 64.6; random 39.3%),
+  MRR 44.4%; text only: bm25 54.4%, bm25-rerank 54.4%, hybrid 48.8%, hybrid-rerank 48.8%, dense 43.1%; image + text: fused:bm25 60.6% (51.3 to 68.5), fused:bm25-rerank 55.6%,
+  fused:hybrid-rerank 53.8%, fused:hybrid 53.1%, fused:dense 51.2%. No search is significantly better than fused:bm25 (McNemar, Holm p >= 0.078), and fused:bm25 is not
+  significantly better than bm25 alone (p = 0.11) or the image search alone (p = 0.30): the BM25 choice stands. Every number further below that mentions the image
+  search or a fused search was made with BiomedCLIP and is superseded by these.
+- Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (the LLM-only runs, done) and gemma-4-31b (`google/gemma-4-31b-it:free`
+  through OpenRouter, Google AI Studio the only provider, Apache 2.0, free; added 2026-11-26; settings in `MODELS` in `src/models/llm.py`). **The researcher has no
+  budget left (2026-11-26): no paid call.** `llm-only` and `standard-rag` refuse a model that costs credit unless `--allow-paid` is given. Gemma is the intended
+  backbone of every RAG system; it needs its own LLM-only baseline (free). Its pilot (validation only): LLM-only, 3 x 160 questions (>= 90% readable letters;
+  image-only accuracy clearly above 12.5%), then a RAG format check on 20 questions per view (>= 80% readable Evidence line, >= 50% quotes word for word);
+  the thinking setting is chosen after a 3-question probe. Free-tier limits (20 requests a minute; 50 a day, or 1,000 after any purchase of $10 of credits) ◻.
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
   The query is made only of the question's own words (patient facts; a fixed sentence for image-only). No model writes or rewrites a
