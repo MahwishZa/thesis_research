@@ -7,7 +7,7 @@ import operator
 import os
 from array import array
 
-from src.models.embeddings import MEDCPT_ARTICLE, image_encoder, medcpt_encoder
+from src.models.embeddings import MEDCPT_ARTICLE, MONET, image_encoder, medcpt_encoder
 from src.retrieval.corpus import OVERLAP_LIMIT, overlap_share, reference_shingles, shingles
 from src.retrieval.images import (
     dhash_variants,
@@ -35,7 +35,7 @@ from src.utils import (
 # ----------------------------------------------------------------------------------------------------------------------
 # visual-index: the image index and the check against the Kaggle images (python -m src.main visual-index)
 # ----------------------------------------------------------------------------------------------------------------------
-# Every library image is embedded with an image encoder (laptop: open_clip_torch, Pillow). So that no test image can be "looked up",
+# Every library image is embedded with an image encoder (laptop: transformers, Pillow). So that no test image can be "looked up",
 # every Kaggle image of the study (all splits, data/processed/images/) is embedded too, and a library image whose largest cosine
 # similarity with any Kaggle image is at least --threshold is left out. The threshold is a safety choice made before any result was
 # seen (default 0.95: images that are almost the same picture); it is NOT tuned. So that it can be judged, the card records the
@@ -45,7 +45,6 @@ def visual_index_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-index", description="Embeds the library images and removes Kaggle look-alikes.")
     ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
     ap.add_argument("--data", default="data")
-    ap.add_argument("--encoder", default="biomedclip", choices=("biomedclip",))
     ap.add_argument("--threshold", type=float, default=0.95, help="a library image this similar to a Kaggle image is left out")
     ap.add_argument("--hash-threshold", type=int, default=4,
                     help="a library image whose 64-bit picture hash (also mirrored or turned) differs from a Kaggle image's in at most "
@@ -68,12 +67,12 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     kaggle = sorted(f for f in os.listdir(os.path.join(a.data, PROCESSED_IMAGES)) if f.lower().endswith(".jpg"))
     if not items or not kaggle:
         raise SystemExit("no library images or no Kaggle images: run visual-images first, and check data/processed/images/")
-    encode = encode or image_encoder(a.encoder)
+    encode = encode or image_encoder()
     vectors = encode([os.path.join(folder, "images", it["image_file"]) for it in items])
     if a.kaggle_limit:
         kaggle = kaggle[:a.kaggle_limit]
         log.warning("--kaggle-limit: only part of the Kaggle images is compared; this index must not be used for results")
-    reference = kaggle_vectors(encode, kaggle, a.data, folder, a.encoder)
+    reference = kaggle_vectors(encode, kaggle, a.data, folder)
     best = max_similarities(vectors, reference)
     ref_hashes = kaggle_hashes(kaggle, a.data, folder, hash_fn)
     by_hash = [nearest_by_hash(hash_fn(os.path.join(folder, "images", it["image_file"])), ref_hashes) for it in items]
@@ -88,10 +87,10 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
            for i in sorted(range(len(items)), key=lambda i: -best[i][0])[:20]]
     if not kept:
         raise SystemExit("every library image was dropped by the Kaggle check: nothing to index")
-    out = os.path.join(folder, f"index_{a.encoder}")
+    out = os.path.join(folder, "index")
     write_jsonl(os.path.join(folder, "items_final.jsonl"), [it for it, _ in kept])
     write_index(out, [it for it, _ in kept], [v for _, v in kept],
-                {"encoder": a.encoder, "passages_file": "items_final.jsonl",
+                {"encoder": MONET, "passages_file": "items_final.jsonl",
                  "passages_sha256": file_sha256(os.path.join(folder, "items_final.jsonl")), "threshold": a.threshold,
                  "n_dropped_as_kaggle_lookalikes": len(dropped), "n_kaggle_images_compared": len(kaggle)})
     card_path = os.path.join(folder, "visual_card.json")
@@ -99,7 +98,8 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
     if os.path.isfile(card_path):
         with open(card_path, encoding="utf-8") as f:
             card = json.load(f)
-    card.update({"image_encoder": a.encoder, "kaggle_check": {"threshold": a.threshold, "n_kaggle_images": len(kaggle),
+    card.pop("guard_calibration", None)         # it belongs to the encoder that made the earlier check: run visual-calibrate again
+    card.update({"image_encoder": MONET, "kaggle_check": {"threshold": a.threshold, "n_kaggle_images": len(kaggle),
                                                               "n_library_images": len(items), "n_dropped": len(dropped),
                                                               "hash_threshold_bits": a.hash_threshold,
                                                               "n_dropped_by_embedding": sum(sim >= a.threshold for sim, _ in best),
@@ -107,7 +107,7 @@ def visual_index_main(argv=None, encode=None, hash_fn=dhash_variants):
                                                               "closest_hashes_bits": sorted(hb[0] for hb in by_hash)[:10],
                                                               "library_threshold": a.library_threshold,
                                                               "n_dropped_as_library_duplicates": len(twins),
-                                                              "similarity_quantiles": quantiles, "highest_20": top},
+                                                              "similarity_quantiles": quantiles, "highest_20": top, "dropped": dropped},
                  "n_indexed_images": len(kept)})
     write_json(card_path, card)
     log.info(f"{len(kept)} images indexed, {len(dropped)} dropped as Kaggle look-alikes (threshold {a.threshold}) and "

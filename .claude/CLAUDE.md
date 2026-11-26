@@ -22,7 +22,7 @@ third party is credited anywhere in the repository.
   other two), views/<view>/{train,validation,test}.jsonl}`. `src/`: `main.py` (the one entry point,
   `python -m src.main <command>`, and the pipeline status) and `utils.py` (constants and paths, files, logging, seed and
   fingerprints); `data/{preprocessing (step 1 and the feature check), views (file paths, the balanced split rule, the three views)}`;
-  `models/{llm, embeddings (MedCPT encoders and cross-encoder, BiomedCLIP)}`; `retrieval/{corpus (text library), images (image library, Kaggle look-alike check), indexer (text and
+  `models/{llm, embeddings (MedCPT encoders and cross-encoder, the MONET image encoder)}`; `retrieval/{corpus (text library), images (image library, Kaggle look-alike check), indexer (text and
   image indexes), retriever (BM25, rank fusion, the query of each view)}`; `pipelines/{base (prompts and the run shared by
   every system), llm_only, standard_rag, baseline_rag, proposed_rag}` (the last two hold only a docstring until designed);
   `evaluation/{metrics (every metric: statistics, diagnosis, hallucination and evidence, retrieval), evaluator, references
@@ -34,10 +34,10 @@ third party is credited anywhere in the repository.
   run.json hold everything). `data/processed/` keeps its two folders: the image paths are inside every question file and the approved
   runs. The move changed only image paths and the validation file names: `data/views/provenance.json` records the SHA-256 before and
   after.
-- One environment (`.venv`, 2026-11-25): `.venv-visual` was removed; the laptop's `.venv` holds torch 2.15.0, transformers 5.24.0,
-  sentence-transformers 6.3.0 and open_clip_torch 4.2.2 (pip freeze, matches `requirements.txt`); run commands with
-  `.venv\Scripts\python.exe` (the global Python is not the project environment). Confirmed:
-  MedCPT, the cross-encoder and BiomedCLIP all run in it ✔ (laptop, 2026-11-25: tests and `retrieval-eval` of each view in `.venv`).
+- One environment (`.venv`, 2026-11-25): `.venv-visual` was removed; the laptop's `.venv` holds torch 2.15.0, transformers 5.24.0 and
+  sentence-transformers 6.3.0 (pip freeze, 2026-11-25; `open_clip_torch` left `requirements.txt` on 2026-11-26 with BiomedCLIP and can be uninstalled); run
+  commands with `.venv\Scripts\python.exe` (the global Python is not the project environment). Confirmed: MedCPT and the cross-encoder run in it ✔
+  (laptop, 2026-11-25: tests and `retrieval-eval` of each view), and MONET too ✔ (laptop, 2026-11-26: 1.71 GB weights, 768 numbers per image).
 - File fingerprints (2026-11-25, approved): text files are hashed with LF line endings (`text_sha256`); reports from before, which
   recorded the Windows (CRLF) form, still match (`text_matches`); every text write in `src/` sets `newline=` (tested).
 
@@ -74,13 +74,14 @@ third party is credited anywhere in the repository.
   RAG (not designed).
 - Libraries (researcher, 2026-11-26): the knowledge library is divided into one folder per view; every view searches the same records (the
   text search covers passages and figure captions, the image search the picture-and-caption records, multimodal merges both by rank).
-- Image encoder: BiomedCLIP is the incumbent (open_clip, MIT per its model card), chosen by availability, not by a comparison. MONET (Kim et al.,
-  Nature Medicine 2024; weights `chanwkim/monet` through transformers, no new install; the GitHub repo's LICENSE is CC BY-NC-SA 4.0, the licence of the
-  weights is unchecked ◻) is loaded by `image-encoder-check`. Comparison approved by the researcher (2026-11-26), built and tested offline, not yet run on
-  real data: validation data only (no test image scored), free, the same 85 library records for both. A = the library search (Hit@3, MRR, McNemar's
-  exact test); B = a nearest-neighbour test on the train + validation Kaggle images (5 lesion-grouped folds, k = 5, macro-F1 with a paired lesion
-  bootstrap). The rule was fixed before any MONET number: B decides (the challenger needs a macro-F1 difference whose 95% interval is wholly above 0);
-  A can veto (McNemar p < 0.05 for the other encoder); otherwise BiomedCLIP stays. Result: `results/standard_rag/image_only/encoder_comparison.json`.
+- Image encoder (researcher, 2026-11-26): MONET (Kim et al., Nature Medicine 2024; CLIP ViT-L/14; weights `chanwkim/monet` through transformers) is the only
+  image encoder. It replaced BiomedCLIP, which was removed with its `open_clip` loader, after a free comparison on validation data (no test image scored, the
+  same 85 library records, a rule fixed before any MONET number): library search Hit@3 51.9% vs 40.0% (random 39.9%), MRR 43.6% vs 40.6%; nearest-neighbour
+  test (train + validation images, 5 lesion-grouped folds, k = 5) macro-F1 55.7% vs 47.6%, difference +8.1 points (95% interval +5.5 to +10.9),
+  McNemar p = 0.0009. Result: `results/standard_rag/image_only/encoder_comparison.json`; the code of the comparison is in Git commit `ab4bd4a`
+  (removed afterwards: it needed the old encoder). Open: the licence of the weights (the GitHub repo's LICENSE is CC BY-NC-SA 4.0) ◻; the image index,
+  the Kaggle look-alike check and `visual-calibrate` must be rerun with MONET on the laptop, and `retrieval-eval --view image_only` and `--view multimodal`
+  again. Until then every image-search and fused number below was made with BiomedCLIP and is superseded (text-only numbers are unaffected).
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.
@@ -99,11 +100,11 @@ third party is credited anywhere in the repository.
   image views search by the image itself (the library holds picture-and-caption records, real captions only) and the text-only view
   searches the text and caption records with the patient facts; both must first be validated on the validation split, with no paid
   call. Built, tested offline, not yet run on real data: `visual`, `visual-images` (the download address pattern is unverified:
-  use --probe), `visual-index` (BiomedCLIP; needs open_clip_torch and Pillow; the Kaggle look-alike check, threshold 0.95, and a check for the same
+  use --probe), `visual-index` (MONET; needs transformers and Pillow; the Kaggle look-alike check, threshold 0.95, and a check for the same
   picture twice in the library, threshold 0.98; neither tuned). Real data (laptop, 2026-11-24): the figure list from the 90 PMC papers of the
   text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all 88 downloaded from the PMC
   open-data bucket; `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead).
-  The image index was tried on the laptop (BiomedCLIP, open_clip_torch 4.2.2, torch 2.15.0; then in `.venv-visual`, now in `.venv`): it runs. A second Kaggle look-alike test, by a 64-bit picture hash (also mirrored and turned, at most 4 different bits),
+  The image index was first built on the laptop with BiomedCLIP (2026-11-24) and is rebuilt with MONET. A second Kaggle look-alike test, by a 64-bit picture hash (also mirrored and turned, at most 4 different bits),
   was added because the embedding alone is not calibrated. NCBI's PMC search was down on 2026-11-24 (SOLR error 500): the extra papers
   are to be fetched later.
   Full visual index (laptop, 2026-11-24): 85 of 88 images indexed, 3 dropped as Kaggle look-alikes (2 by embedding, 1 by hash); the

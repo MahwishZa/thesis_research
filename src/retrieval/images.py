@@ -4,7 +4,6 @@ import argparse
 import datetime
 import hashlib
 import json
-import math
 import operator
 import os
 import re
@@ -14,19 +13,6 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
 
-from src.data.views import question_file
-from src.evaluation.metrics import (
-    accuracy,
-    bootstrap_ci,
-    macro_f1,
-    mcnemar_exact,
-    mean,
-    paired_bootstrap_diff,
-    per_class,
-    relevant_counts,
-    retrieval_metrics,
-)
-from src.models.embeddings import IMAGE_ENCODERS, image_encoder
 from src.retrieval.corpus import (
     NCBI,
     PMC_QUERIES,
@@ -40,14 +26,12 @@ from src.retrieval.corpus import (
     parse_pmc_licence,
     tag,
 )
-from src.retrieval.retriever import distinct
 from src.utils import (
     ALL_CASES,
     CLASSES,
     IMAGE_LIBRARY,
     PROCESSED_IMAGES,
     TEXT_LIBRARY,
-    file_sha256,
     get_logger,
     hamming,
     read_csv,
@@ -126,11 +110,10 @@ def drop_near_duplicates(vectors, threshold):
     return kept, dropped
 
 
-def kaggle_vectors(encode, names, data, folder, encoder):
-    """The vectors of the Kaggle images, from a saved file when the encoder, what was loaded (encode.info: model, commit, preprocessing;
-    none for BiomedCLIP, as in the files saved before 2026-11-26) and the list of images are the same as when it was made (embedding
-    2,000 images takes minutes, and the check is repeated whenever the library changes)."""
-    path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
+def kaggle_vectors(encode, names, data, folder):
+    """The vectors of the Kaggle images, from a saved file when what was loaded (encode.info: model, commit, preprocessing) and the list of
+    images are the same as when it was made (embedding 2,000 images takes minutes, and the check is repeated whenever the library changes)."""
+    path = os.path.join(folder, "kaggle_vectors.json")
     info = getattr(encode, "info", None)
     if os.path.isfile(path):
         with open(path, encoding="utf-8") as f:
@@ -138,7 +121,7 @@ def kaggle_vectors(encode, names, data, folder, encoder):
         if saved.get("names") == names and saved.get("info") == info:
             return saved["vectors"]
     vectors = encode([os.path.join(data, PROCESSED_IMAGES, f) for f in names])
-    write_json(path, {"encoder": encoder, "info": info, "names": names, "vectors": vectors})
+    write_json(path, {"info": info, "names": names, "vectors": vectors})
     return vectors
 
 
@@ -225,13 +208,12 @@ def visual_calibrate_main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual-calibrate", description="Measures the look-alike tests on known Kaggle cases.")
     ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
     ap.add_argument("--data", default="data")
-    ap.add_argument("--encoder", default="biomedclip")
     ap.add_argument("--threshold", type=float, default=0.95)
     ap.add_argument("--hash-threshold", type=int, default=4)
     a = ap.parse_args(argv)
     log = get_logger("visual-calibrate")
     folder = a.images
-    paths = (os.path.join(folder, f"kaggle_vectors_{a.encoder}.json"), os.path.join(folder, "kaggle_hashes.json"))
+    paths = (os.path.join(folder, "kaggle_vectors.json"), os.path.join(folder, "kaggle_hashes.json"))
     if not all(os.path.isfile(p) for p in paths):
         raise SystemExit("run the visual-index command first (it saves the Kaggle vectors and hashes)")
     with open(paths[0], encoding="utf-8") as f:
@@ -258,171 +240,6 @@ def visual_calibrate_main(argv=None):
     log.info(f"most similar different lesion ({diff['n']} images): false alarm {diff['false_alarm']}; similarity "
              f"{diff['embedding_similarity']}; hash bits {diff['hash_bits_different']}")
     return result
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# image-encoder-check: BiomedCLIP or MONET? (python -m src.main image-encoder-check)
-# ----------------------------------------------------------------------------------------------------------------------
-# BiomedCLIP became the image encoder because it was available, not because it was compared with MONET (Kim et al., Nature Medicine
-# 2024). The researcher asked for the comparison (2026-11-26). It runs on validation data only, costs nothing, and gives both encoders the
-# SAME library records (items_final.jsonl, kept by the Kaggle look-alike check made with BiomedCLIP), so that only the encoder differs.
-#   A. The library search the RAG uses. Each of the 160 validation questions searches the library with its own image; a record is
-#      relevant when its tags contain the true class (the weak label of retrieval-eval, for scoring only). Hit@k, MRR and the other scores
-#      come from the same function as retrieval-eval, so the BiomedCLIP numbers must equal that file's image line. With 85 records the
-#      random Hit@3 is about 39%, so this check has little power.
-#   B. A nearest-neighbour test on the Kaggle images of the train and validation splits (never the test split; its vectors are not
-#      scored): each image is classified by its k most similar images in the other folds of the lesion-grouped 5-fold split of preprocess, each
-#      neighbour voting with its cosine similarity. It measures how well the encoder separates the 8 classes on this kind of image. The
-#      labels only score the encoder; they never enter the RAG.
-# The rule below was fixed before any MONET number existed.
-KNN_K = 5
-ENCODER_RULE = ("B decides: the challenger replaces the incumbent only when the 95% interval of the paired macro-F1 difference (lesions resampled "
-                "1,000 times) lies wholly above 0. A can veto: if McNemar's exact test on the library Hit@3 (p < 0.05) favours the other encoder, "
-                "nothing changes and the conflict is reported. In every other case the incumbent, the first encoder listed (BiomedCLIP), stays: "
-                "it is built and tested and needs nothing new.")
-
-
-def nearest(queries, references, k, exclude=None):
-    """For each query vector, its k most similar reference vectors as [(index, cosine), ...], best first, a tie going to the lower index
-    (all vectors have unit length). exclude = (keys of the queries, keys of the references): a reference with the key of the query is
-    skipped (the other fold; the image itself)."""
-    try:
-        import numpy as np
-        sims = np.asarray(queries, dtype="float32") @ np.asarray(references, dtype="float32").T
-        if exclude is not None:
-            sims = np.where(np.asarray(exclude[0])[:, None] == np.asarray(exclude[1])[None, :], -np.inf, sims)
-        order = np.argsort(-sims, axis=1, kind="stable")[:, :k]
-        return [[(int(j), float(sims[i, j])) for j in row] for i, row in enumerate(order)]
-    except ImportError:                                                         # small inputs only (the tests); the laptop has numpy
-        out = []
-        for i, v in enumerate(queries):
-            scored = sorted((-sum(map(operator.mul, v, r)), j) for j, r in enumerate(references)
-                            if exclude is None or exclude[0][i] != exclude[1][j])
-            out.append([(j, -s) for s, j in scored[:k]])
-        return out
-
-
-def vote(neighbours, labels):
-    """The class each neighbour list points to: every neighbour votes for its class with its similarity, the highest total wins, a tie
-    goes to the class listed first in CLASSES."""
-    out = []
-    for hits in neighbours:
-        score = {}
-        for j, sim in hits:
-            score[labels[j]] = score.get(labels[j], 0.0) + sim
-        out.append(max(score, key=lambda c: (score[c], -CLASSES.index(c))))
-    return out
-
-
-def random_hit3(golds, items):
-    """The Hit@3 of three records drawn at random from the library, exactly: 1 - C(n - m, 3) / C(n, 3) for a class with m tagged records
-    among n, averaged over the questions."""
-    counts, n = relevant_counts(items), len(items)
-    return mean([1 - math.comb(n - counts[g], 3) / math.comb(n, 3) for g in golds])
-
-
-def choose_encoder(incumbent, challenger, probe_diff, library_test):
-    """The rule above. probe_diff: paired_bootstrap_diff of the macro-F1 (challenger minus incumbent). library_test: McNemar's exact test
-    on the library Hit@3 with the incumbent as system a."""
-    low, high = probe_diff["interval_95"]
-    leader = challenger if low > 0 else incumbent if high < 0 else None
-    p, only_incumbent, only_challenger = library_test["p_value"], library_test["a_right_b_wrong"], library_test["a_wrong_b_right"]
-    favoured = None if p >= 0.05 else incumbent if only_incumbent > only_challenger else challenger if only_challenger > only_incumbent else None
-    if leader is None:
-        return {"encoder": incumbent, "decision": "tie", "reason": f"the macro-F1 interval {probe_diff['interval_95']} includes 0: "
-                f"the encoders cannot be told apart, so {incumbent} stays"}
-    if favoured not in (None, leader):
-        return {"encoder": incumbent, "decision": "conflict", "reason": f"{leader} leads in B, but the library search significantly favours "
-                f"{favoured} (McNemar p = {p}): nothing changes; discuss with the supervisor"}
-    return {"encoder": leader, "decision": "clear", "reason": f"{leader} leads in B (macro-F1 difference {probe_diff['difference']}, interval "
-            f"{probe_diff['interval_95']}) and the library search does not contradict it (McNemar p = {p})"}
-
-
-def image_encoder_check_args(argv=None):
-    ap = argparse.ArgumentParser(prog="python -m src.main image-encoder-check",
-                                 description="Compares image encoders on validation data (no cost, no test image scored).")
-    ap.add_argument("--encoders", nargs="+", default=["biomedclip", "monet"], choices=IMAGE_ENCODERS,
-                    help="the first is the incumbent; with two, the paired comparison and the decision rule are applied")
-    ap.add_argument("--k", type=int, default=KNN_K, help="neighbours in check B (not tuned)")
-    ap.add_argument("--bootstrap", type=int, default=1000, help="lesion resamples for the intervals")
-    ap.add_argument("--data", default="data")
-    ap.add_argument("--images", default=os.path.join("data", IMAGE_LIBRARY), help="the image library folder")
-    ap.add_argument("--results", default="results")
-    ap.add_argument("--out", default=None, help="default: results/standard_rag/image_only/encoder_comparison.json")
-    return ap.parse_args(argv)
-
-
-def image_encoder_check_main(argv=None, encoders=None):
-    a = image_encoder_check_args(argv)
-    log = get_logger("image-encoder-check")
-    questions = read_jsonl(os.path.join(a.data, question_file("image_only", "val")))
-    qa = {q["id"]: q for q in questions}
-    items_path = os.path.join(a.images, "items_final.jsonl")
-    items = read_jsonl(items_path)
-    names = sorted(f for f in os.listdir(os.path.join(a.data, PROCESSED_IMAGES)) if f.lower().endswith(".jpg"))
-    cases = [r for r in read_csv(os.path.join(a.data, ALL_CASES)) if r["split"] in ("train", "val") and r["cv_fold"] not in ("", "-1")]
-    labels, folds, lesions = ([r[c] for r in cases] for c in ("label", "cv_fold", "group_id"))
-    golds, groups = [q["gold_label"] for q in questions], [q["group_id"] for q in questions]
-    results, hits, predicted = {}, {}, {}
-    for kind in a.encoders:
-        encode = (encoders or {}).get(kind) or image_encoder(kind)
-        library = encode([os.path.join(a.images, "images", it["image_file"]) for it in items])
-        kaggle = dict(zip(names, kaggle_vectors(encode, names, a.data, a.images, kind)))
-        missing = [q["image_path"] for q in questions if os.path.basename(q["image_path"]) not in kaggle]
-        if missing or any(f"{r['isic_id']}.jpg" not in kaggle for r in cases):
-            raise SystemExit(f"{kind}: some Kaggle images have no vector; check data/processed/images/")
-        # A. the library search of the RAG
-        queries = [kaggle[os.path.basename(q["image_path"])] for q in questions]
-        ranked = [distinct([(items[j], s) for j, s in row]) for row in nearest(queries, library, 10)]
-        pred = {q["id"]: {"contexts": [{"chunk_id": p["passage_id"], "tags": p.get("tags", [])} for p, _ in row]}
-                for q, row in zip(questions, ranked)}
-        scores = retrieval_metrics(qa, pred, n_relevant=relevant_counts(items))
-        hit3 = [int(any(g in c["tags"] for c in pred[q["id"]]["contexts"][:3])) for q, g in zip(questions, golds)]
-        rr = [next((1 / (j + 1) for j, c in enumerate(pred[q["id"]]["contexts"]) if g in c["tags"]), 0.0) for q, g in zip(questions, golds)]
-        hits[kind] = hit3
-        # B. the nearest-neighbour test on the train and validation images
-        vectors = [kaggle[f"{r['isic_id']}.jpg"] for r in cases]
-        predicted[kind] = vote(nearest(vectors, vectors, a.k, exclude=(folds, folds)), labels)
-        norms = [math.sqrt(sum(x * x for x in v)) for v in library[:20]]
-        results[kind] = {
-            "info": getattr(encode, "info", None), "dim": len(library[0]), "mean_norm_of_library_vectors": round(mean(norms), 4),
-            "library_search": {**scores, "intervals_95": {"hit@3": bootstrap_ci(hit3, rr, groups, lambda y, p: mean(y), a.bootstrap),
-                                                            "mrr": bootstrap_ci(hit3, rr, groups, lambda y, p: mean(p), a.bootstrap)},
-                               "random_hit@3": round(random_hit3(golds, items), 4)},
-            "knn_probe": {"n_images": len(cases), "k": a.k, "accuracy": round(accuracy(labels, predicted[kind]), 4),
-                          "accuracy_95": bootstrap_ci(labels, predicted[kind], lesions, accuracy, a.bootstrap),
-                          "macro_f1": round(macro_f1(labels, predicted[kind]), 4),
-                          "macro_f1_95": bootstrap_ci(labels, predicted[kind], lesions, macro_f1, a.bootstrap),
-                          "recall_per_class": {c: round(r["recall"], 4) for c, r in per_class(labels, predicted[kind]).items()}}}
-        r = results[kind]
-        log.info(f"{kind} ({r['dim']} numbers): library search Hit@3 {100 * scores['hit@3']:.1f}% "
-                 f"({100 * r['library_search']['intervals_95']['hit@3'][0]:.1f} to {100 * r['library_search']['intervals_95']['hit@3'][1]:.1f}; "
-                 f"random {100 * r['library_search']['random_hit@3']:.1f}%), MRR {100 * scores['mrr']:.1f}%; nearest-neighbour test "
-                 f"macro-F1 {100 * r['knn_probe']['macro_f1']:.1f}% ({100 * r['knn_probe']['macro_f1_95'][0]:.1f} to "
-                 f"{100 * r['knn_probe']['macro_f1_95'][1]:.1f}), accuracy {100 * r['knn_probe']['accuracy']:.1f}%")
-    out = {"split": "val", "test_split_scored": False, "n_questions": len(questions), "library": {"n_items": len(items), "items_sha256": file_sha256(items_path)},
-           "encoders": results, "rule": ENCODER_RULE}
-    known = os.path.join(a.results, "standard_rag", "image_only", "retrieval_validation.json")
-    if "biomedclip" in results and os.path.isfile(known):               # the same function must give the same numbers as retrieval-eval
-        with open(known, encoding="utf-8") as f:
-            before = json.load(f)["modes"].get("image", {})
-        now = results["biomedclip"]["library_search"]
-        out["matches_retrieval_eval"] = all(before.get(k) == now.get(k) for k in ("hit@1", "hit@3", "precision@3", "mrr"))
-        log.info("the BiomedCLIP library numbers " + ("equal" if out["matches_retrieval_eval"] else "DIFFER FROM") + " the image line of retrieval-eval")
-    if len(a.encoders) == 2:
-        incumbent, challenger = a.encoders
-        n = len(questions)
-        library_test = mcnemar_exact([1] * n, hits[incumbent], hits[challenger])
-        diff = paired_bootstrap_diff(labels, predicted[challenger], predicted[incumbent], lesions, macro_f1, a.bootstrap)
-        out["paired"] = {"incumbent": incumbent, "challenger": challenger, "library_hit@3_mcnemar": library_test,
-                         "probe_macro_f1_difference_challenger_minus_incumbent": diff,
-                         "probe_accuracy_mcnemar": mcnemar_exact(labels, predicted[incumbent], predicted[challenger])}
-        out["decision"] = choose_encoder(incumbent, challenger, diff, library_test)
-        log.info(f"macro-F1 {challenger} minus {incumbent}: {100 * diff['difference']:+.1f} points (95% interval "
-                 f"{100 * diff['interval_95'][0]:+.1f} to {100 * diff['interval_95'][1]:+.1f}); library Hit@3 McNemar p = {library_test['p_value']}")
-        log.info(f"decision by the rule: {out['decision']['encoder']} ({out['decision']['decision']}): {out['decision']['reason']}")
-    write_json(a.out or os.path.join(a.results, "standard_rag", "image_only", "encoder_comparison.json"), out)
-    return out
 
 
 # ----------------------------------------------------------------------------------------------------------------------

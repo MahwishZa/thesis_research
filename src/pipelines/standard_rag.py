@@ -60,7 +60,7 @@ class StandardRag:
             raise ValueError("the image views search by the image: the image index is needed (python -m src.main visual-index)")
 
     def image_search(self, q, n):
-        """The n library images (picture-and-caption records) closest to the question's own image (its saved BiomedCLIP vector)."""
+        """The n library images (picture-and-caption records) closest to the question's own image (its saved MONET vector)."""
         self.ready("image_only")
         vindex, vectors = self.visual
         return vindex.search(image_query_vector(q, vectors), n)
@@ -122,7 +122,6 @@ def rag_parse_args(argv=None):
     ap.add_argument("--data", default="data")
     ap.add_argument("--results", default="results")
     ap.add_argument("--index", default=None, help=f"the index folder (default: data/{INDEX_DIR})")
-    ap.add_argument("--image-encoder", default="biomedclip", help="the image index of the image views (made by visual-index)")
     return ap.parse_args(argv)
 
 
@@ -131,7 +130,7 @@ def make_rag(args):
     folder = args.index or os.path.join(args.data, INDEX_DIR)
     index = read_index(folder, os.path.join(args.data, TEXT_LIBRARY, "passages.jsonl"))      # stops with a clear message
     rerank = medcpt_cross_encoder() if args.retrieval.endswith("-rerank") else None
-    visual = load_visual(args.data, args.image_encoder) if args.view != "text_only" else None     # the image views search by the image
+    visual = load_visual(args.data) if args.view != "text_only" else None     # the image views search by the image
     encode = None if args.retrieval.startswith("bm25") else medcpt_encoder(MEDCPT_QUERY, 64)      # BM25 needs no query encoder
     return StandardRag(index, encode, args.k, args.retrieval, rerank=rerank, visual=visual)
 
@@ -168,7 +167,6 @@ def retrieval_eval_args(argv=None):
     ap.add_argument("--data", default="data")
     ap.add_argument("--results", default="results")
     ap.add_argument("--index", default=None)
-    ap.add_argument("--image-encoder", default="biomedclip")
     ap.add_argument("--out", default=None, help="default: results/standard_rag/<view>/retrieval_validation.json")
     return ap.parse_args(argv)
 
@@ -220,12 +218,12 @@ def random_retrieval(qa, passages, rounds=20, seed=SEED):
     return {k: round(sum(s[k] for s in scores) / rounds, 4) for k in INTERVAL_KEYS}
 
 
-def load_visual(data, encoder):
+def load_visual(data):
     """The image index and the saved image vectors of the Kaggle images ({file name: vector}), both made by the visual-index command.
     The query vector of a question is the saved vector of its own image, so no image model is needed here."""
     folder = os.path.join(data, IMAGE_LIBRARY)
-    index = read_index(os.path.join(folder, f"index_{encoder}"), os.path.join(folder, "items_final.jsonl"))
-    path = os.path.join(folder, f"kaggle_vectors_{encoder}.json")
+    index = read_index(os.path.join(folder, "index"), os.path.join(folder, "items_final.jsonl"))
+    path = os.path.join(folder, "kaggle_vectors.json")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"{path} is not there: run python -m src.main visual-index")
     with open(path, encoding="utf-8") as f:
@@ -253,7 +251,7 @@ def retrieval_eval_main(argv=None, rag_for=None, visual=None):
         rankers[mode] = (lambda q, rag=rag: [p for p, _ in rag.ranked(q, "text_only", 10)])     # the text search (same query in every view)
         pools[mode] = rag.index.passages
     if args.view != "text_only":
-        vindex, vectors = visual if visual is not None else load_visual(args.data, args.image_encoder)
+        vindex, vectors = visual if visual is not None else load_visual(args.data)
         rankers["image"] = lambda q: [p for p, _ in distinct(vindex.search(image_query_vector(q, vectors), 10))]
         pools["image"] = vindex.passages
         if args.view == "multimodal":

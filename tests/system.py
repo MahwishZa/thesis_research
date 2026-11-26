@@ -388,6 +388,14 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(library["fusion"], {"method": "reciprocal rank fusion", "k": 60, "list": FUSION_LIST})   # what the standard RAG does
         self.assertEqual(src.main.step_libraries(str(ROOT / "data"))[0], src.main.DONE)
 
+    def test_the_replaced_image_encoder_is_gone_from_the_code_and_the_requirements(self):
+        """Researcher's decision (2026-11-26): MONET is the only image encoder. BiomedCLIP and its open_clip loader are removed; the
+        documents may still tell the history, the code and the requirements may not name them."""
+        for path in [*SRC.rglob("*.py"), ROOT / "requirements.txt"]:
+            text = path.read_text(encoding="utf-8").lower()
+            for word in ("biomedclip", "open_clip", "open-clip"):
+                self.assertNotIn(word, text, f"{path.relative_to(ROOT)} still names {word}")
+
     def test_the_licensed_text_images_vectors_and_indexes_of_the_library_stay_out_of_git(self):
         """The passages, the images, the vectors and the indexes are derived from licensed material and stay on the laptop; the cards
         and the manifest (no text) are committed."""
@@ -395,7 +403,7 @@ class WorkspaceTests(unittest.TestCase):
             self.skipTest("git is not available")
         laptop_only = ["text_only/passages.jsonl", "text_only/cache/x.json", "text_only/index/embeddings.f32", "text_only/index/index.json",
                        "image_only/items.jsonl", "image_only/items_final.jsonl", "image_only/images/a.jpg",
-                       "image_only/kaggle_vectors_biomedclip.json", "image_only/index_biomedclip/index.json"]
+                       "image_only/kaggle_vectors.json", "image_only/index/index.json"]
         committed = ["text_only/manifest.csv", "text_only/corpus_card.json", "text_only/audit.json", "image_only/visual_card.json",
                      "multimodal/library.json"]
         for name in laptop_only:

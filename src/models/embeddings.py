@@ -1,4 +1,5 @@
-"""The retrieval models: the MedCPT encoders and cross-encoder (text) and BiomedCLIP (images). Each is downloaded on first use."""
+"""The retrieval models: the MedCPT encoders and cross-encoder (text) and MONET (images). Each is downloaded on first use."""
+import os
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
@@ -49,14 +50,13 @@ def medcpt_cross_encoder(model_name=MEDCPT_CROSS, max_length=512):
     return score
 
 
-# ---- images: encoder and the check against the Kaggle images --------------------------------------------------------------
-IMAGE_ENCODERS = ("biomedclip", "monet")
-BIOMEDCLIP = "hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
-# MONET (Kim et al., Nature Medicine 2024): a CLIP ViT-L/14 trained on 105,550 dermatology image-text pairs. Loaded the way its README gives for the
-# Hugging Face route ("Using huggingface CLIP implementation": the id below), with the README's own preprocessing written out here, so that no
-# processor file decides it: the shorter side to 224 pixels (bicubic), a centre crop of 224, ImageNet mean and standard deviation. The README's
-# GitHub repository is licensed CC BY-NC-SA 4.0 (non-commercial; read from its LICENSE file, 2026-11-26); check the licence of the weights on the
-# model card before sharing anything made with them.
+# ---- images: the MONET image encoder -------------------------------------------------------------------------------------
+# MONET (Kim et al., Nature Medicine 2024) is a CLIP ViT-L/14 trained on 105,550 dermatology image-text pairs. It was chosen on 2026-11-26 by the
+# validation comparison in results/standard_rag/image_only/encoder_comparison.json (the code of that comparison is in Git commit ab4bd4a); the
+# image encoder that it replaced has been removed. The weights are loaded the way the MONET README gives for the Hugging Face route ("Using
+# huggingface CLIP implementation": the id below), with the README's own preprocessing written out here, so that no processor file decides it:
+# the shorter side to 224 pixels (bicubic), a centre crop of 224, ImageNet mean and standard deviation. The README's GitHub repository is
+# licensed CC BY-NC-SA 4.0 (non-commercial; read from its LICENSE file, 2026-11-26); the licence of the weights is still to be read on the model card.
 MONET = "chanwkim/monet"
 MONET_SIZE = 224
 MONET_MEAN, MONET_STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
@@ -71,34 +71,20 @@ def monet_crop_box(width, height, size=MONET_SIZE):
     return new_width, new_height, int(round((new_width - size) / 2.0)), int(round((new_height - size) / 2.0))
 
 
-def image_encoder(kind):
-    """A function that turns a list of image file paths into unit-length vectors. BiomedCLIP (Zhang et al. 2023) is loaded the way its
-    model card does (open_clip, `create_model_from_pretrained`); it needs the `open_clip_torch` and `Pillow` packages and downloads
-    the model on first use."""
-    if kind not in IMAGE_ENCODERS:
-        raise ValueError(f"unknown image encoder {kind!r}; choose one of {IMAGE_ENCODERS}")
-    if kind == "monet":
-        return monet_encoder()
-    import open_clip
-    import torch
-    from PIL import Image
-    model, preprocess = open_clip.create_model_from_pretrained(BIOMEDCLIP)
-    model.eval()
-
-    @torch.no_grad()
-    def encode(paths, batch=16):
-        out = []
-        for start in range(0, len(paths), batch):
-            images = [preprocess(Image.open(p).convert("RGB")) for p in paths[start:start + batch]]
-            out += torch.nn.functional.normalize(model.encode_image(torch.stack(images)), dim=-1).tolist()
-        return out
-    return encode
+def weights_revision(model_id=MONET):
+    """The revision (commit hash) of the downloaded weights: the snapshot folder of the Hugging Face cache is named by it. None when it cannot
+    be found; it is only a record, so a failure must not stop the encoder."""
+    try:
+        from huggingface_hub import snapshot_download
+        return os.path.basename(os.path.normpath(snapshot_download(model_id)))
+    except Exception:  # noqa: BLE001
+        return None
 
 
-def monet_encoder():
-    """The MONET image tower as a function that turns a list of image file paths into unit-length vectors (the same contract as the
-    BiomedCLIP one). Needs torch, transformers (already installed), Pillow and numpy; downloads the weights on first use. The text tower is
-    never used: an image is compared with images. `encode.info` records what was loaded."""
+def image_encoder():
+    """The MONET image tower as a function that turns a list of image file paths into unit-length vectors. Needs torch, transformers,
+    Pillow and numpy; downloads the weights on first use (1.7 GB). The text tower is never used: an image is compared with images.
+    `encode.info` records what was loaded (it is saved with the Kaggle vectors, so a changed setup is noticed)."""
     import numpy as np
     import torch
     from PIL import Image
@@ -123,6 +109,6 @@ def monet_encoder():
             pooled = model.vision_model(pixel_values=x).pooler_output          # the image tower and its projection, as get_image_features does
             out += torch.nn.functional.normalize(model.visual_projection(pooled), dim=-1).cpu().tolist()
         return out
-    encode.info = {"model": MONET, "commit": getattr(model.config, "_commit_hash", None),        # saved with the vectors: a change is noticed
+    encode.info = {"model": MONET, "commit": weights_revision(),                                 # saved with the vectors: a change is noticed
                    "preprocess": "shorter side 224 (bicubic), centre crop 224, ImageNet mean and std (MONET README)"}
     return encode

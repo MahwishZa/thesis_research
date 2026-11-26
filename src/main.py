@@ -14,12 +14,11 @@ Every command has --help. The commands, in the order of the research pipeline:
     visual              the figure list of the image library: skin-image figures and captions of open-access PMC papers
     visual-images       the images of those figures (internet; laptop; --probe N first)
     visual-calibrate    how well the look-alike tests separate same-lesion from different-lesion Kaggle photos
-    image-encoder-check BiomedCLIP or MONET? a free comparison on validation data (no test image is scored)
     references          the reference texts of the 8 diseases for the semantic-similarity score (evaluation material)
 
   The indexes
     index               the text index (MedCPT article encoder; laptop)
-    visual-index        the image index, without any image that looks like a Kaggle image (laptop; BiomedCLIP)
+    visual-index        the image index, without any image that looks like a Kaggle image (laptop; MONET)
 
   The systems
     llm-only            the LLM-only system: the question alone
@@ -211,6 +210,16 @@ def step_libraries(data):
     if os.path.isfile(card_path):
         with open(card_path, encoding="utf-8") as f:
             images = f"; image_only: {json.load(f).get('n_indexed_images', 0)} indexed images"
+    records = os.path.join(data, IMAGE_LIBRARY, "items_final.jsonl")                  # laptop only: the records the image index was made from
+    meta_path = os.path.join(data, IMAGE_LIBRARY, "index", "index.json")
+    if os.path.isfile(records):
+        if not os.path.isfile(meta_path):
+            return PROBLEM, "no image index in image_only/index/: run the visual-index command"
+        with open(meta_path, encoding="utf-8") as f:
+            meta = json.load(f)
+        if meta.get("passages_sha256") != file_sha256(records):
+            return PROBLEM, "the image records changed after the image index was built: run the visual-index command again"
+        images += f" ({meta['n_passages']} records in the index, {meta['encoder']})"
     return DONE, f"text_only and image_only hold the records, multimodal combines them (rank fusion, k = 60, top {FUSION_LIST}){images}"
 
 
@@ -290,7 +299,6 @@ COMMANDS = {
     "visual": ("src.retrieval.images", "visual_main"),
     "visual-images": ("src.retrieval.images", "visual_images_main"),
     "visual-calibrate": ("src.retrieval.images", "visual_calibrate_main"),
-    "image-encoder-check": ("src.retrieval.images", "image_encoder_check_main"),
     "references": ("src.evaluation.references", "references_main"),
     "index": ("src.retrieval.indexer", "index_main"),
     "visual-index": ("src.retrieval.indexer", "visual_index_main"),

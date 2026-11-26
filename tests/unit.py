@@ -31,7 +31,6 @@ import src.models.embeddings
 import src.models.llm
 import src.pipelines.base
 import src.pipelines.standard_rag
-import src.retrieval.images
 import src.retrieval.indexer
 import src.retrieval.retriever
 import src.utils
@@ -856,16 +855,13 @@ class RetrievalModelTests(unittest.TestCase):
         self.assertTrue(scorers)
 
 
-class ImageEncoderUnitTests(unittest.TestCase):
-    """The pieces of image-encoder-check (researcher's request, 2026-11-26): MONET's loading rules, the search, the vote and the decision rule."""
+class ImageEncoderTests(unittest.TestCase):
+    """MONET, the image encoder (chosen on 2026-11-26): its Hugging Face id and its preprocessing, as the README gives them."""
 
     def test_monet_is_loaded_from_the_readme_id_with_the_readmes_preprocessing(self):
         e = src.models.embeddings
-        self.assertEqual(e.IMAGE_ENCODERS, ("biomedclip", "monet"))
         self.assertEqual((e.MONET, e.MONET_SIZE), ("chanwkim/monet", 224))
         self.assertEqual((e.MONET_MEAN, e.MONET_STD), ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)))      # ImageNet values, as in the README
-        with self.assertRaises(ValueError):
-            e.image_encoder("not-an-encoder")
 
     def test_the_crop_follows_torchvisions_resize_of_the_shorter_side_and_centre_crop(self):
         box = src.models.embeddings.monet_crop_box
@@ -876,53 +872,22 @@ class ImageEncoderUnitTests(unittest.TestCase):
         self.assertEqual(box(601, 450), (299, 224, 38, 0))          # 75 / 2 = 37.5 rounds to the even 38, as torchvision's CenterCrop does
         self.assertEqual(box(605, 450), (301, 224, 38, 0))          # 77 / 2 = 38.5 also rounds to the even 38 (not 39)
 
-    def test_the_search_gives_the_best_first_a_tie_to_the_lower_index_and_skips_excluded_references(self):
-        refs = [[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.6, 0.8]]
-        for numpy_installed in (True, False):                       # the numpy path and the plain Python path must agree
-            with self.subTest(numpy=numpy_installed), mock.patch.dict(sys.modules, {} if numpy_installed else {"numpy": None}):
-                hits = src.retrieval.images.nearest([[1.0, 0.0]], refs, 3)
-                self.assertEqual([j for j, _ in hits[0]], [0, 2, 3])                 # 0 and 2 tie: the lower index first
-                self.assertAlmostEqual(hits[0][2][1], 0.6, places=5)
-                skipped = src.retrieval.images.nearest([[1.0, 0.0], [0.0, 1.0]], refs, 2, exclude=(["a", "b"], ["a", "b", "a", "b"]))
-                self.assertEqual([[j for j, _ in row] for row in skipped], [[3, 1], [0, 2]])     # a query never meets references of its own key
+    def test_the_weights_revision_is_the_name_of_the_snapshot_folder_and_a_failure_gives_none(self):
+        """encode.info records the revision of the downloaded weights; the Kaggle vectors saved with it are not reused for other weights."""
+        fake = types.SimpleNamespace(snapshot_download=lambda model_id: f"/cache/models--x--{model_id.split('/')[1]}/snapshots/0a1b2c3d/")
+        with mock.patch.dict(sys.modules, {"huggingface_hub": fake}):
+            self.assertEqual(src.models.embeddings.weights_revision(), "0a1b2c3d")
+        broken = types.SimpleNamespace(snapshot_download=mock.Mock(side_effect=OSError("offline")))
+        with mock.patch.dict(sys.modules, {"huggingface_hub": broken}):
+            self.assertIsNone(src.models.embeddings.weights_revision())
+        with mock.patch.dict(sys.modules, {"huggingface_hub": None}):                  # the package is not there
+            self.assertIsNone(src.models.embeddings.weights_revision())
 
-    def test_the_vote_weights_neighbours_by_similarity_and_a_tie_goes_to_the_first_class(self):
-        labels = ["MEL", "NV", "NV"]
-        self.assertEqual(src.retrieval.images.vote([[(0, 0.95), (1, 0.3), (2, 0.3)]], labels), ["MEL"])     # one close beats two far
-        self.assertEqual(src.retrieval.images.vote([[(1, 0.5), (0, 0.5)]], labels), ["MEL"])                 # tie: MEL is listed before NV
-        self.assertEqual(src.retrieval.images.vote([[(1, 0.4), (2, 0.4)]], labels), ["NV"])
-
-    def test_the_random_hit3_is_exact(self):
-        items = [{"tags": ["MEL"]}, {"tags": ["MEL"]}, {"tags": ["NV"]}, {"tags": ["NV"]}, {"tags": ["NV"]}]
-        # MEL: 1 - C(3,3)/C(5,3) = 0.9; NV: 1 - C(2,3)/C(5,3) = 1.0
-        self.assertAlmostEqual(src.retrieval.images.random_hit3(["MEL", "NV"], items), 0.95)
-
-    def test_a_paired_bootstrap_interval_of_a_zero_difference_is_zero_and_of_a_real_one_leaves_zero_out(self):
-        y = ["MEL", "NV"] * 20
-        groups = [f"g{i}" for i in range(40)]
-        same = src.evaluation.metrics.paired_bootstrap_diff(y, y, y, groups, src.evaluation.metrics.accuracy, n=100)
-        self.assertEqual(same, {"difference": 0.0, "interval_95": [0.0, 0.0]})
-        worse = ["NV", "MEL"] * 10 + ["MEL", "NV"] * 10                  # right on half the images
-        diff = src.evaluation.metrics.paired_bootstrap_diff(y, y, worse, groups, src.evaluation.metrics.accuracy, n=200)
-        self.assertEqual(diff["difference"], 0.5)
-        self.assertGreater(diff["interval_95"][0], 0.0)
-        self.assertEqual(diff, src.evaluation.metrics.paired_bootstrap_diff(y, y, worse, groups, src.evaluation.metrics.accuracy, n=200))
-
-    def test_the_decision_rule_keeps_the_incumbent_unless_the_nearest_neighbour_test_is_clear_and_the_library_search_does_not_object(self):
-        choose = src.retrieval.images.choose_encoder
-        library = {"a_right_b_wrong": 5, "a_wrong_b_right": 5, "p_value": 1.0}
-        above, around, below = ({"difference": d, "interval_95": i} for d, i in ((0.1, [0.02, 0.18]), (0.01, [-0.05, 0.07]), (-0.1, [-0.2, -0.02])))
-        self.assertEqual(choose("old", "new", above, library)["encoder"], "new")                   # clear lead
-        self.assertEqual(choose("old", "new", around, library)["decision"], "tie")                  # the interval includes 0
-        self.assertEqual(choose("old", "new", around, library)["encoder"], "old")
-        self.assertEqual(choose("old", "new", below, library), {**choose("old", "new", below, library), "encoder": "old", "decision": "clear"})
-        # the library search significantly favours the incumbent: a veto, nothing changes
-        veto = {"a_right_b_wrong": 20, "a_wrong_b_right": 3, "p_value": 0.001}
-        self.assertEqual(choose("old", "new", above, veto)["decision"], "conflict")
-        self.assertEqual(choose("old", "new", above, veto)["encoder"], "old")
-        # the library search favours the leader, or differs without significance: no veto
-        self.assertEqual(choose("old", "new", above, {"a_right_b_wrong": 3, "a_wrong_b_right": 20, "p_value": 0.001})["encoder"], "new")
-        self.assertEqual(choose("old", "new", above, {"a_right_b_wrong": 9, "a_wrong_b_right": 3, "p_value": 0.14})["encoder"], "new")
+    def test_nothing_of_the_replaced_encoder_is_left_in_the_code(self):
+        e = src.models.embeddings
+        self.assertFalse(hasattr(e, "BIOMEDCLIP"))
+        self.assertFalse(hasattr(e, "IMAGE_ENCODERS"))
+        self.assertEqual(e.image_encoder.__code__.co_argcount, 0)    # one encoder: no name to choose
 
 
 class RetrievalTests(unittest.TestCase):

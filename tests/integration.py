@@ -12,11 +12,9 @@ import importlib.util
 import io
 import json
 import os
-import random
 import shutil
 import sys
 import tempfile
-import types
 import unittest
 import urllib.error
 import urllib.parse
@@ -676,7 +674,7 @@ class TextTests(unittest.TestCase):
             os.makedirs(images)
             os.makedirs(os.path.join(data, PROCESSED_CASES))
             names = ["ISIC_1.jpg", "ISIC_2.jpg", "ISIC_3.jpg"]
-            Path(images, "kaggle_vectors_biomedclip.json").write_text(
+            Path(images, "kaggle_vectors.json").write_text(
                 json.dumps({"names": names, "vectors": [[1, 0], [1, 0], [0, 1]]}), encoding="utf-8")
             Path(images, "kaggle_hashes.json").write_text(json.dumps({"names": names, "hashes": [0, 0, 255]}), encoding="utf-8")
             with open(os.path.join(data, ALL_CASES), "w", encoding="utf-8", newline="") as f:
@@ -695,11 +693,25 @@ class TextTests(unittest.TestCase):
             calls.append(len(paths))
             return [[1.0, 0.0] for _ in paths]
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
-            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d, "biomedclip"), [[1.0, 0.0]] * 2)
+            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d), [[1.0, 0.0]] * 2)
+            self.assertEqual(src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg"], d, d), [[1.0, 0.0]] * 2)
             self.assertEqual(calls, [2])                                                   # the second time nothing was embedded
-            src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg", "c.jpg"], d, d, "biomedclip")       # another list of images: embedded again
+            src.retrieval.images.kaggle_vectors(encode, ["a.jpg", "b.jpg", "c.jpg"], d, d)       # another list of images: embedded again
             self.assertEqual(calls, [2, 3])
+
+    def test_saved_kaggle_vectors_are_not_reused_when_what_was_loaded_has_changed(self):
+        """encode.info (model, commit, preprocessing) is saved with the vectors: a changed setup must not reuse the old vectors."""
+        def encoder(label):
+            def encode(paths):
+                return [[1.0, 0.0] if label == "a" else [0.0, 1.0] for _ in paths]
+            encode.info = {"setup": label}
+            return encode
+        with tempfile.TemporaryDirectory() as d:
+            first = src.retrieval.images.kaggle_vectors(encoder("a"), ["x.jpg"], d, d)
+            self.assertEqual(src.retrieval.images.kaggle_vectors(encoder("a"), ["x.jpg"], d, d), first)               # same setup: reused
+            second = src.retrieval.images.kaggle_vectors(encoder("b"), ["x.jpg"], d, d)                                # other setup: made again
+            self.assertNotEqual(second, first)
+            self.assertEqual(json.loads(Path(d, "kaggle_vectors.json").read_text(encoding="utf-8"))["info"], {"setup": "b"})
 
     def test_the_same_picture_in_two_papers_is_kept_once(self):
         def encode(paths):
@@ -736,7 +748,7 @@ class TextTests(unittest.TestCase):
             write_jsonl(os.path.join(images, "items_with_images.jsonl"), items)
             Path(data, PROCESSED_IMAGES, "ISIC_0000001.jpg").write_text("1,0")
             Path(data, PROCESSED_IMAGES, "ISIC_0000002.jpg").write_text("0,1")
-            Path(images, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3}), encoding="utf-8")
+            Path(images, "visual_card.json").write_text(json.dumps({"n_figures_kept": 3, "guard_calibration": {"old": True}}), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 kept = src.retrieval.indexer.visual_index_main(["--images", images, "--data", data, "--threshold", "0.95"], encode=encode, hash_fn=fake_hash)
             # near and far each equal a Kaggle image (cosine 1.0); mid (0.6, 0.8) has cosine 0.8 at most with both
@@ -744,7 +756,11 @@ class TextTests(unittest.TestCase):
             card = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
             self.assertEqual((card["n_dropped"], card["n_kaggle_images"], card["threshold"]), (2, 2, 0.95))
             self.assertEqual(card["highest_20"][0]["similarity"], 1.0)
-            idx = common_read_index(os.path.join(images, "index_biomedclip"), os.path.join(images, "items_final.jsonl"))
+            self.assertEqual(sorted(d_["item_id"] for d_ in card["dropped"]), ["PMC1#far", "PMC1#near"])           # the card names what was left out
+            whole = json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))
+            self.assertNotIn("guard_calibration", whole)                   # it measured the earlier check: visual-calibrate must be run again
+            self.assertEqual(whole["image_encoder"], "chanwkim/monet")
+            idx = common_read_index(os.path.join(images, "index"), os.path.join(images, "items_final.jsonl"))
             self.assertEqual([p["passage_id"] for p, _ in idx.search([0.6, 0.8], 1)], ["PMC1#mid"])
             self.assertEqual(json.loads(Path(images, "visual_card.json").read_text(encoding="utf-8"))["kaggle_check"]
                              ["n_dropped_as_library_duplicates"], 0)
@@ -2304,166 +2320,27 @@ class IndexCommandTests(unittest.TestCase):
         self.assertIn("python -m src.main corpus", str(caught.exception))
 
 
-class ImageEncoderCheckTests(unittest.TestCase):
-    """image-encoder-check on a toy dataset (researcher's request, 2026-11-26): 8 classes with 6 train or validation images each, a library
-    of 2 images per class, and one test-split image that must never be scored. A "good" fake encoder sees the class, a "bad" one does not."""
+class ImageLibraryLoadTests(unittest.TestCase):
+    """The image views of the standard RAG read the image index and the saved Kaggle vectors from data/corpus/image_only/ (made by visual-index)."""
 
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        d = self.tmp.name
-        self.data, self.images, self.results = os.path.join(d, "data"), os.path.join(d, "image_only"), os.path.join(d, "results")
-        for folder in (os.path.join(self.data, PROCESSED_IMAGES), os.path.join(self.data, "views", "image_only"),
-                       os.path.join(self.data, PROCESSED_CASES), os.path.join(self.images, "images")):
-            os.makedirs(folder)
-        self.seen_class, cases, questions, items = {}, [], [], []
-        for c, cls in enumerate(CLASSES):
-            for k in range(6):
-                isic = f"ISIC_{c}{k}"
-                val = k == 5
-                cases.append({"isic_id": isic, "split": "val" if val else "train", "cv_fold": str(k % 5), "group_id": f"G_{isic}", "label": cls})
-                self.seen_class[isic + ".jpg"] = cls
-                if val:
-                    questions.append({"id": isic, "gold_label": cls, "group_id": f"G_{isic}", "image_path": f"processed/images/{isic}.jpg"})
-            for k in range(2):
-                name = f"lib_{cls}_{k}.jpg"
-                self.seen_class[name] = cls
-                items.append({"item_id": f"d{c}#fig{k}", "passage_id": f"d{c}#fig{k}", "doc_id": f"d{c}", "image_file": name, "tags": [cls],
-                              "title": f"t{c}{k}", "text": f"A distinct caption number {c} {k} about {cls}."})
-        cases.append({"isic_id": "ISIC_TEST", "split": "test", "cv_fold": "-1", "group_id": "G_TEST", "label": "MEL"})
-        self.seen_class["ISIC_TEST.jpg"] = "NV"                                  # a test image that looks like another class: it must not be scored
-        for name in self.seen_class:
-            if not name.startswith("lib_"):
-                Path(self.data, PROCESSED_IMAGES, name).write_bytes(b"x")
-        src.utils.write_csv(os.path.join(self.data, ALL_CASES), cases, ["isic_id", "split", "cv_fold", "group_id", "label"])
-        write_jsonl(os.path.join(self.data, "views", "image_only", "validation.jsonl"), questions)
-        write_jsonl(os.path.join(self.images, "items_final.jsonl"), items)
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
-    def encoder(self, good):
-        def encode(paths):
-            out = []
-            for path in paths:
-                name = os.path.basename(path)
-                v = [0.0] * 9
-                if good:
-                    v[CLASSES.index(self.seen_class[name])] = 1.0
-                    v[8] = 0.01 * (sum(map(ord, name)) % 7)
-                else:
-                    v = [random.Random(name + str(i)).random() for i in range(9)]       # the same file always gives the same vector
-                norm = sum(x * x for x in v) ** 0.5
-                out.append([x / norm for x in v])
-            return out
-        encode.info = {"fake": "good" if good else "bad"}
-        return encode
-
-    def run_check(self, first, second=None, extra=()):
-        names, encoders = ["biomedclip"], {"biomedclip": first}
-        if second is not None:
-            names, encoders = ["biomedclip", "monet"], {"biomedclip": first, "monet": second}
-        argv = ["--encoders", *names, "--data", self.data, "--images", self.images, "--results", self.results, "--k", "3", "--bootstrap", "100", *extra]
-        with contextlib.redirect_stdout(io.StringIO()):
-            return src.retrieval.images.image_encoder_check_main(argv, encoders=encoders)
-
-    def test_a_better_challenger_is_chosen_and_the_numbers_are_the_ones_the_toy_data_gives(self):
-        out = self.run_check(self.encoder(False), self.encoder(True))
-        good, bad = out["encoders"]["monet"], out["encoders"]["biomedclip"]
-        self.assertEqual((good["knn_probe"]["macro_f1"], good["knn_probe"]["accuracy"], good["library_search"]["hit@3"]), (1.0, 1.0, 1.0))
-        self.assertLess(bad["knn_probe"]["macro_f1"], 0.6)
-        self.assertEqual(good["knn_probe"]["n_images"], 48)                       # the test-split image is not scored
-        self.assertFalse(out["test_split_scored"])
-        self.assertEqual(out["n_questions"], 8)
-        self.assertEqual(out["decision"]["encoder"], "monet")
-        self.assertEqual(out["decision"]["decision"], "clear")
-        self.assertGreater(out["paired"]["probe_macro_f1_difference_challenger_minus_incumbent"]["interval_95"][0], 0)
-        self.assertEqual(out["library"]["n_items"], 16)
-        written = json.loads(Path(self.results, "standard_rag", "image_only", "encoder_comparison.json").read_text(encoding="utf-8"))
-        self.assertEqual(written["decision"], out["decision"])
-        self.assertEqual(written["rule"], src.retrieval.images.ENCODER_RULE)
-        self.assertTrue(Path(self.images, "kaggle_vectors_monet.json").is_file())                # the vectors are saved beside the library
-
-    def test_a_worse_challenger_changes_nothing_and_two_equal_encoders_are_a_tie(self):
-        worse = self.run_check(self.encoder(True), self.encoder(False))
-        self.assertEqual((worse["decision"]["encoder"], worse["decision"]["decision"]), ("biomedclip", "clear"))      # the incumbent leads
-        tie = self.run_check(self.encoder(True), self.encoder(True))
-        self.assertEqual((tie["decision"]["encoder"], tie["decision"]["decision"]), ("biomedclip", "tie"))
-        self.assertEqual(tie["paired"]["probe_macro_f1_difference_challenger_minus_incumbent"]["difference"], 0.0)
-
-    def test_one_encoder_alone_is_scored_without_a_decision_and_is_compared_with_retrieval_eval(self):
-        out = self.run_check(self.encoder(True))
-        self.assertNotIn("decision", out)
-        self.assertNotIn("paired", out)
-        self.assertNotIn("matches_retrieval_eval", out)                            # no retrieval-eval file yet
-        line = {k: out["encoders"]["biomedclip"]["library_search"][k] for k in ("hit@1", "hit@3", "precision@3", "mrr")}
-        known = Path(self.results, "standard_rag", "image_only", "retrieval_validation.json")
-        known.parent.mkdir(parents=True, exist_ok=True)
-        known.write_text(json.dumps({"modes": {"image": line}}), encoding="utf-8")
-        self.assertTrue(self.run_check(self.encoder(True))["matches_retrieval_eval"])
-        known.write_text(json.dumps({"modes": {"image": {**line, "hit@3": 0.5}}}), encoding="utf-8")
-        self.assertFalse(self.run_check(self.encoder(True))["matches_retrieval_eval"])
-
-    def test_the_test_split_vector_cannot_change_any_score(self):
-        before = self.run_check(self.encoder(True))
-        self.seen_class["ISIC_TEST.jpg"] = "SCC"                                  # a different look for the test image
-        os.remove(os.path.join(self.images, "kaggle_vectors_biomedclip.json"))
-        after = self.run_check(self.encoder(True))
-        self.assertEqual(before["encoders"]["biomedclip"]["knn_probe"], after["encoders"]["biomedclip"]["knn_probe"])
-        self.assertEqual(before["encoders"]["biomedclip"]["library_search"], after["encoders"]["biomedclip"]["library_search"])
-
-    def test_saved_kaggle_vectors_are_not_reused_when_what_was_loaded_has_changed_and_old_files_without_info_still_count(self):
-        names = sorted(n for n in self.seen_class if not n.startswith("lib_"))
-        first, second = self.encoder(True), self.encoder(False)
-        folder = self.images
-        v1 = src.retrieval.images.kaggle_vectors(first, names, self.data, folder, "monet")
-        self.assertEqual(src.retrieval.images.kaggle_vectors(first, names, self.data, folder, "monet"), v1)       # same setup: reused
-        v2 = src.retrieval.images.kaggle_vectors(second, names, self.data, folder, "monet")                        # other setup: made again
-        self.assertNotEqual(v2, v1)
-        self.assertEqual(json.loads(Path(folder, "kaggle_vectors_monet.json").read_text(encoding="utf-8"))["info"], {"fake": "bad"})
-        old = types.SimpleNamespace(calls=0)
-        saved = {"encoder": "biomedclip", "names": names, "vectors": v1}                                          # a file from before: no "info"
-        Path(folder, "kaggle_vectors_biomedclip.json").write_text(json.dumps(saved), encoding="utf-8")
-
-        def plain(paths):                                                                                           # an encoder without .info
-            old.calls += 1
-            return second(paths)
-        self.assertEqual(src.retrieval.images.kaggle_vectors(plain, names, self.data, folder, "biomedclip"), v1)
-        self.assertEqual(old.calls, 0)
-
-    def test_the_library_search_removes_repeated_captions_as_retrieval_eval_does(self):
-        calls = []
-
-        def spy(hits):
-            calls.append(len(hits))
-            return src.retrieval.retriever.distinct(hits)
-        with mock.patch.object(src.retrieval.images, "distinct", spy):
-            self.run_check(self.encoder(True))
-        self.assertEqual(calls, [10] * 8)                                          # once per validation question, over its top 10
-
-    def test_the_neighbours_come_from_the_other_folds_only(self):
-        """Images of one class in one fold share a direction here: an image's most similar image is its fold-mate. The test is built so that
-        only excluding the whole fold (not just the image itself) leaves the probe without that help."""
-        def fold_pairs(paths):
-            out = []
-            for path in paths:
-                name = os.path.basename(path)
-                if name.startswith("ISIC_") and name != "ISIC_TEST.jpg":
-                    slot = CLASSES.index(self.seen_class[name]) * 5 + int(name[-5]) % 5         # one direction per class and fold
-                else:
-                    slot = 40 + len(out) % 4                                                     # the library and the test image: elsewhere
-                v = [0.0] * 44
-                v[slot] = 1.0
-                out.append(v)
-            return out
-        fold_pairs.info = {"fake": "fold pairs"}
-        accuracy = self.run_check(fold_pairs)["encoders"]["biomedclip"]["knn_probe"]["accuracy"]
-        self.assertEqual(accuracy, 0.125)          # no neighbour of the right class is allowed: every vote falls to the first class, MEL (6 of 48)
-
-    def test_the_random_line_and_the_command_registration(self):
-        out = self.run_check(self.encoder(True))
-        # 16 records, 2 per class: 1 - C(14,3)/C(16,3) = 1 - 364/560 = 0.35
-        self.assertEqual(out["encoders"]["biomedclip"]["library_search"]["random_hit@3"], 0.35)
-        self.assertIn("image-encoder-check", src.main.COMMANDS)
+    def test_load_visual_reads_the_index_and_the_vectors_from_the_image_library(self):
+        from src.retrieval.indexer import write_index
+        with tempfile.TemporaryDirectory() as d:
+            folder = os.path.join(d, IMAGE_LIBRARY)
+            records = os.path.join(folder, "items_final.jsonl")
+            write_jsonl(records, RAG_IMAGES)
+            with self.assertRaises(FileNotFoundError):                                          # no index yet
+                src.pipelines.standard_rag.load_visual(d)
+            write_index(os.path.join(folder, "index"), RAG_IMAGES, [rag_vec(p["text"]) for p in RAG_IMAGES],
+                        {"encoder": "chanwkim/monet", "passages_sha256": src.utils.file_sha256(records)})
+            with self.assertRaises(FileNotFoundError) as caught:                                # an index, but no Kaggle vectors yet
+                src.pipelines.standard_rag.load_visual(d)
+            self.assertIn("visual-index", str(caught.exception))
+            Path(folder, "kaggle_vectors.json").write_text(json.dumps({"names": ["ISIC_1.jpg", "ISIC_2.jpg"], "vectors": [[1.0, 0.0], [0.0, 1.0]]}),
+                                                           encoding="utf-8")
+            index, vectors = src.pipelines.standard_rag.load_visual(d)
+            self.assertEqual(len(index.passages), 3)
+            self.assertEqual(vectors, {"ISIC_1.jpg": [1.0, 0.0], "ISIC_2.jpg": [0.0, 1.0]})
 
 
 class LibraryStatusTests(unittest.TestCase):
@@ -2488,6 +2365,27 @@ class LibraryStatusTests(unittest.TestCase):
         self.assertEqual(self.check({**self.GOOD, "sources": ["text_only", "multimodal"]}), src.main.PROBLEM)    # not a record library
         self.assertEqual(self.check({**self.GOOD, "fusion": {**self.GOOD["fusion"], "list": 5}}), src.main.PROBLEM)   # not what the RAG does
         self.assertEqual(self.check({**self.GOOD, "fusion": {**self.GOOD["fusion"], "k": 30}}), src.main.PROBLEM)
+
+    def test_the_image_index_must_belong_to_the_image_records(self):
+        """On the laptop the image records (items_final.jsonl) and the image index must match; the index is made by visual-index."""
+        from src.retrieval.indexer import write_index
+        with tempfile.TemporaryDirectory() as d:
+            for folder in ("text_only", "image_only", "multimodal"):
+                os.makedirs(os.path.join(d, "corpus", folder))
+            Path(d, "corpus", "multimodal", "library.json").write_text(json.dumps(self.GOOD), encoding="utf-8")
+            self.assertEqual(src.main.step_libraries(d)[0], src.main.DONE)                    # no records on this computer: nothing to compare
+            records = os.path.join(d, "corpus", "image_only", "items_final.jsonl")
+            write_jsonl(records, RAG_IMAGES)
+            status, note = src.main.step_libraries(d)
+            self.assertEqual(status, src.main.PROBLEM)                                         # records, but no index (the layout of an older version)
+            self.assertIn("visual-index", note)
+            write_index(os.path.join(d, "corpus", "image_only", "index"), RAG_IMAGES, [rag_vec(p["text"]) for p in RAG_IMAGES],
+                        {"encoder": "chanwkim/monet", "passages_sha256": src.utils.file_sha256(records)})
+            status, note = src.main.step_libraries(d)
+            self.assertEqual(status, src.main.DONE)
+            self.assertIn("3 records in the index, chanwkim/monet", note)
+            write_jsonl(records, RAG_IMAGES[:1])                                               # the records changed after the index was made
+            self.assertEqual(src.main.step_libraries(d)[0], src.main.PROBLEM)
 
     def test_a_library_folder_that_is_not_there_is_a_problem(self):
         with tempfile.TemporaryDirectory() as d:
