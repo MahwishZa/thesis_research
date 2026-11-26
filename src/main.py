@@ -14,6 +14,7 @@ Every command has --help. The commands, in the order of the research pipeline:
     visual              the figure list of the image library: skin-image figures and captions of open-access PMC papers
     visual-images       the images of those figures (internet; laptop; --probe N first)
     visual-calibrate    how well the look-alike tests separate same-lesion from different-lesion Kaggle photos
+    image-encoder-check BiomedCLIP or MONET? a free comparison on validation data (no test image is scored)
     references          the reference texts of the 8 diseases for the semantic-similarity score (evaluation material)
 
   The indexes
@@ -289,6 +290,7 @@ COMMANDS = {
     "visual": ("src.retrieval.images", "visual_main"),
     "visual-images": ("src.retrieval.images", "visual_images_main"),
     "visual-calibrate": ("src.retrieval.images", "visual_calibrate_main"),
+    "image-encoder-check": ("src.retrieval.images", "image_encoder_check_main"),
     "references": ("src.evaluation.references", "references_main"),
     "index": ("src.retrieval.indexer", "index_main"),
     "visual-index": ("src.retrieval.indexer", "visual_index_main"),

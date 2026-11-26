@@ -29,6 +29,22 @@ def bootstrap_ci(y, p, groups, fn, n=1000, seed=42):
     return [round(percentile(values, 2.5), 4), round(percentile(values, 97.5), 4)]
 
 
+def paired_bootstrap_diff(y, pa, pb, groups, fn, n=1000, seed=42):
+    """fn(y, pa) - fn(y, pb) and its 95% percentile interval. Whole lesions are drawn with replacement, the same draw for both systems,
+    so the interval belongs to the paired difference (an interval that leaves out 0 means the systems really differ on these lesions)."""
+    members = defaultdict(list)
+    for i, g in enumerate(groups):
+        members[g].append(i)
+    keys, rng, values = list(members), random.Random(seed), []
+    for _ in range(n):
+        idx = [i for g in rng.choices(keys, k=len(keys)) for i in members[g]]
+        ys = [y[i] for i in idx]
+        values.append(fn(ys, [pa[i] for i in idx]) - fn(ys, [pb[i] for i in idx]))
+    values.sort()
+    return {"difference": round(fn(y, pa) - fn(y, pb), 4),
+            "interval_95": [round(percentile(values, 2.5), 4), round(percentile(values, 97.5), 4)]}
+
+
 def holm(p_values):
     """Holm's step-down correction: the i-th smallest of m p-values is multiplied by (m - i + 1), the results are made
     non-decreasing in that order and capped at 1. Returns the adjusted p-values in the input order."""

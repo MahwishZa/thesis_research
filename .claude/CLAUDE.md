@@ -74,8 +74,13 @@ third party is credited anywhere in the repository.
   RAG (not designed).
 - Libraries (researcher, 2026-11-26): the knowledge library is divided into one folder per view; every view searches the same records (the
   text search covers passages and figure captions, the image search the picture-and-caption records, multimodal merges both by rank).
-- Image encoder: BiomedCLIP is the only one built (open_clip, MIT per its model card); MONET (Kim et al., Nature Medicine 2024) was never
-  loaded, so the two were not compared. The researcher wants them compared on validation data before the choice is final (2026-11-25).
+- Image encoder: BiomedCLIP is the incumbent (open_clip, MIT per its model card), chosen by availability, not by a comparison. MONET (Kim et al.,
+  Nature Medicine 2024; weights `chanwkim/monet` through transformers, no new install; the GitHub repo's LICENSE is CC BY-NC-SA 4.0, the licence of the
+  weights is unchecked ◻) is loaded by `image-encoder-check`. Comparison approved by the researcher (2026-11-26), built and tested offline, not yet run on
+  real data: validation data only (no test image scored), free, the same 85 library records for both. A = the library search (Hit@3, MRR, McNemar's
+  exact test); B = a nearest-neighbour test on the train + validation Kaggle images (5 lesion-grouped folds, k = 5, macro-F1 with a paired lesion
+  bootstrap). The rule was fixed before any MONET number: B decides (the challenger needs a macro-F1 difference whose 95% interval is wholly above 0);
+  A can veto (McNemar p < 0.05 for the other encoder); otherwise BiomedCLIP stays. Result: `results/standard_rag/image_only/encoder_comparison.json`.
 - Models, used as they are: claude-sonnet-5-5, gpt-4o, gemini-3.8-flash, llama-4-maverick (settings in `MODELS` in `src/models/llm.py`).
 - Standard RAG design approved so far: MedCPT query and article encoders, top 3 passages, answers end with "Evidence: [n] "quote"" or
   "Evidence: none". Retrieval must never use the true class or the corpus tags.

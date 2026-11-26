@@ -1,0 +1,163 @@
+{
+  "split": "val",
+  "test_split_scored": false,
+  "n_questions": 160,
+  "library": {
+    "n_items": 85,
+    "items_sha256": "ddbc17c5ca18960aeb29954dc0daf9d369ff08100560167515216a511d9f7346"
+  },
+  "encoders": {
+    "biomedclip": {
+      "info": null,
+      "dim": 512,
+      "mean_norm_of_library_vectors": 1.0,
+      "library_search": {
+        "hit@1": 0.3,
+        "precision@1": 0.3,
+        "ndcg@1": 0.3,
+        "recall@1": 0.0247,
+        "hit@3": 0.4,
+        "precision@3": 0.1938,
+        "ndcg@3": 0.2164,
+        "recall@3": 0.0491,
+        "hit@5": 0.5,
+        "precision@5": 0.1638,
+        "ndcg@5": 0.1887,
+        "recall@5": 0.0756,
+        "hit@10": 0.8125,
+        "precision@10": 0.1831,
+        "ndcg@10": 0.1931,
+        "recall@10": 0.154,
+        "mrr": 0.4064,
+        "n_questions_with_contexts": 160,
+        "intervals_95": {
+          "hit@3": [
+            0.3114,
+            0.4968
+          ],
+          "mrr": [
+            0.3323,
+            0.4861
+          ]
+        },
+        "random_hit@3": 0.3987
+      },
+      "knn_probe": {
+        "n_images": 1957,
+        "k": 5,
+        "accuracy": 0.513,
+        "accuracy_95": [
+          0.4886,
+          0.536
+        ],
+        "macro_f1": 0.4759,
+        "macro_f1_95": [
+          0.4458,
+          0.4999
+        ],
+        "recall_per_class": {
+          "MEL": 0.5142,
+          "NV": 0.5985,
+          "BCC": 0.6575,
+          "AK": 0.1485,
+          "BKL": 0.5223,
+          "DF": 0.2593,
+          "VASC": 0.7946,
+          "SCC": 0.1916
+        }
+      }
+    },
+    "monet": {
+      "info": {
+        "model": "chanwkim/monet",
+        "commit": null,
+        "preprocess": "shorter side 224 (bicubic), centre crop 224, ImageNet mean and std (MONET README)"
+      },
+      "dim": 768,
+      "mean_norm_of_library_vectors": 1.0,
+      "library_search": {
+        "hit@1": 0.2562,
+        "precision@1": 0.2562,
+        "ndcg@1": 0.2562,
+        "recall@1": 0.023,
+        "hit@3": 0.5188,
+        "precision@3": 0.2437,
+        "ndcg@3": 0.2451,
+        "recall@3": 0.0591,
+        "hit@5": 0.6937,
+        "precision@5": 0.2275,
+        "ndcg@5": 0.2331,
+        "recall@5": 0.092,
+        "hit@10": 0.9062,
+        "precision@10": 0.2188,
+        "ndcg@10": 0.2248,
+        "recall@10": 0.1736,
+        "mrr": 0.4361,
+        "n_questions_with_contexts": 160,
+        "intervals_95": {
+          "hit@3": [
+            0.4331,
+            0.6115
+          ],
+          "mrr": [
+            0.3687,
+            0.5051
+          ]
+        },
+        "random_hit@3": 0.3987
+      },
+      "knn_probe": {
+        "n_images": 1957,
+        "k": 5,
+        "accuracy": 0.5984,
+        "accuracy_95": [
+          0.575,
+          0.6214
+        ],
+        "macro_f1": 0.557,
+        "macro_f1_95": [
+          0.5304,
+          0.5825
+        ],
+        "recall_per_class": {
+          "MEL": 0.6943,
+          "NV": 0.678,
+          "BCC": 0.6685,
+          "AK": 0.2376,
+          "BKL": 0.5848,
+          "DF": 0.3457,
+          "VASC": 0.9107,
+          "SCC": 0.2455
+        }
+      }
+    }
+  },
+  "rule": "B decides: the challenger replaces the incumbent only when the 95% interval of the paired macro-F1 difference (lesions resampled 1,000 times) lies wholly above 0. A can veto: if McNemar's exact test on the library Hit@3 (p < 0.05) favours the other encoder, nothing changes and the conflict is reported. In every other case the incumbent, the first encoder listed (BiomedCLIP), stays: it is built and tested and needs nothing new.",
+  "matches_retrieval_eval": true,
+  "paired": {
+    "incumbent": "biomedclip",
+    "challenger": "monet",
+    "library_hit@3_mcnemar": {
+      "a_right_b_wrong": 6,
+      "a_wrong_b_right": 25,
+      "p_value": 0.000878
+    },
+    "probe_macro_f1_difference_challenger_minus_incumbent": {
+      "difference": 0.0811,
+      "interval_95": [
+        0.055,
+        0.1088
+      ]
+    },
+    "probe_accuracy_mcnemar": {
+      "a_right_b_wrong": 234,
+      "a_wrong_b_right": 401,
+      "p_value": 0.0
+    }
+  },
+  "decision": {
+    "encoder": "monet",
+    "decision": "clear",
+    "reason": "monet leads in B (macro-F1 difference 0.0811, interval [0.055, 0.1088]) and the library search does not contradict it (McNemar p = 0.000878)"
+  }
+}
