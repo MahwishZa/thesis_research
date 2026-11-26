@@ -489,7 +489,8 @@ def textbook_docs(fetch, cls, n):
 #   - PMC papers need an open licence (CC0 or CC BY*) and must not be retracted;
 #   - texts are split at sentence ends into passages of at most --max-words words, with one sentence of overlap;
 #   - exact duplicates and passages under --min-words words are dropped;
-#   - at most --per-class passages per library and diagnosis, so no diagnosis or library dominates the corpus;
+#   - at most --per-class passages per library and diagnosis, so no diagnosis or library dominates the corpus, and at most --per-doc
+#     passages from one document (spread over it), so that more documents share the quota;
 #   - a passage is tagged with every diagnosis whose name or synonym appears in it or in its title (weak relevance labels).
 #
 # Output (in --out, default data/corpus/text_only/, the library of the text-only view):
@@ -505,8 +506,19 @@ def textbook_docs(fetch, cls, n):
 #   python -m src.main corpus --out data/corpus --libraries pubmed pmc   # some libraries only
 
 
+def spread(pieces, n):
+    """At most n of the pieces, evenly spread over the document in their order (the first and the last included), so that a long paper
+    gives its introduction, its results and its discussion, not only its first pages. All of them when there are n or fewer."""
+    if n <= 0 or len(pieces) <= n:
+        return pieces
+    if n == 1:
+        return pieces[:1]
+    return [pieces[round(i * (len(pieces) - 1) / (n - 1))] for i in range(n)]
+
+
 def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
-    """Turns documents into passages, applying the rules, until the library has args.per_class passages for this class."""
+    """Turns documents into passages, applying the rules, until the library has args.per_class passages for this class. A document gives at
+    most args.per_doc passages (0: no limit), spread over the whole document, so that more documents share the quota of a class."""
     out = []
     for d in docs:
         if len(out) >= args.per_class:
@@ -518,11 +530,9 @@ def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
             removed[f"{library}: {reason}"] += 1
             continue
         seen_docs.add(d["doc_id"])
-        k = 0
+        pieces, local = [], set()
         for para in d["paragraphs"]:
             for piece in chunk(para, args.max_words):
-                if len(out) >= args.per_class:
-                    break
                 piece = strip_markup(piece)
                 junk = junk_reason(piece)
                 if junk:
@@ -532,15 +542,23 @@ def passages_from(docs, library, cls, args, seen_text, seen_docs, removed):
                     removed[f"{library}: passage too short"] += 1
                     continue
                 h = hashlib.md5(piece.lower().encode()).hexdigest()
-                if h in seen_text:
+                if h in seen_text or h in local:
                     removed[f"{library}: duplicate passage"] += 1
                     continue
-                seen_text.add(h)
-                out.append({"passage_id": f"{d['doc_id']}#{k}", "library": library, "doc_id": d["doc_id"], "title": d["title"],
-                            "text": piece, "n_words": len(piece.split()), "url": d["url"], "year": d.get("year", ""),
-                            "licence": d["licence"], "query_class": cls, "tags": tag(piece, d["title"]),
-                            "topics": topics(piece), "md5": h})
-                k += 1
+                local.add(h)
+                pieces.append((piece, h))
+        per_doc = getattr(args, "per_doc", 0)
+        kept = spread(pieces, per_doc)
+        if len(kept) < len(pieces):
+            removed[f"{library}: beyond the {per_doc} passages kept per document"] += len(pieces) - len(kept)
+        for k, (piece, h) in enumerate(kept):
+            if len(out) >= args.per_class:
+                break
+            seen_text.add(h)
+            out.append({"passage_id": f"{d['doc_id']}#{k}", "library": library, "doc_id": d["doc_id"], "title": d["title"],
+                        "text": piece, "n_words": len(piece.split()), "url": d["url"], "year": d.get("year", ""),
+                        "licence": d["licence"], "query_class": cls, "tags": tag(piece, d["title"]),
+                        "topics": topics(piece), "md5": h})
     return out
 
 
@@ -590,12 +608,13 @@ def corpus_args(argv=None):
     ap.add_argument("--cache", default=None, help="download cache (default: <out>/cache)")
     ap.add_argument("--libraries", nargs="+", default=list(LIBRARIES), choices=LIBRARIES)
     ap.add_argument("--per-class", type=int, default=150, help="most passages per library and diagnosis")
+    ap.add_argument("--per-doc", type=int, default=8, help="most passages from one document, spread over it (0: no limit), so that more documents share the quota")
     ap.add_argument("--max-words", type=int, default=200)
     ap.add_argument("--min-words", type=int, default=30)
     ap.add_argument("--pubmed-docs", type=int, default=300, help="abstracts searched per diagnosis")
-    ap.add_argument("--pmc-docs", type=int, default=40, help="open-access papers searched per diagnosis")
+    ap.add_argument("--pmc-docs", type=int, default=60, help="open-access papers searched per diagnosis")
     ap.add_argument("--guideline-docs", type=int, default=20, help="open-access guideline papers searched per diagnosis")
-    ap.add_argument("--textbook-pages", type=int, default=15, help="Dermoscopedia pages per diagnosis")
+    ap.add_argument("--textbook-pages", type=int, default=30, help="Dermoscopedia pages per diagnosis")
     ap.add_argument("--no-meditron", action="store_true", help="skip the large Meditron download (PMC guideline papers only)")
     ap.add_argument("--env-file", default=".env", help="keys: NCBI_API_KEY and HF_TOKEN are read from it if present (both optional)")
     return ap.parse_args(argv)

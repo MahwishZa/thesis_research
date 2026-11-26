@@ -370,6 +370,35 @@ class TextTests(unittest.TestCase):
         self.assertEqual([p["text"] for p in out], ["Melanomas show an atypical network on dermoscopy."])
         self.assertEqual(removed["textbook: placeholder text"], 1)
 
+    def test_spread_keeps_the_first_and_the_last_and_even_steps_between(self):
+        s = src.retrieval.corpus.spread
+        self.assertEqual(s(list(range(10)), 4), [0, 3, 6, 9])
+        self.assertEqual(s(list(range(10)), 1), [0])
+        self.assertEqual(s(list(range(3)), 8), [0, 1, 2])          # fewer than the cap: all
+        self.assertEqual(s(list(range(10)), 0), list(range(10)))   # 0: no cap
+
+    def test_a_document_gives_at_most_per_doc_passages_spread_over_it_and_the_rest_is_counted(self):
+        import collections
+        ns = argparse.Namespace(per_class=100, max_words=200, min_words=3, per_doc=3)
+        paras = [f"Melanoma paragraph number {i} shows an atypical network." for i in range(9)]
+        docs = [{"doc_id": "d1", "title": "T", "url": "u", "licence": "x", "paragraphs": paras}]
+        removed = collections.Counter()
+        out = src.retrieval.corpus.passages_from(docs, "pmc", "MEL", ns, set(), set(), removed)
+        self.assertEqual([p["text"] for p in out], [paras[0], paras[4], paras[8]])
+        self.assertEqual([p["passage_id"] for p in out], ["d1#0", "d1#1", "d1#2"])
+        self.assertEqual(removed["pmc: beyond the 3 passages kept per document"], 6)
+        ns.per_doc = 0
+        self.assertEqual(len(src.retrieval.corpus.passages_from(docs, "pmc", "MEL", ns, set(), set(), collections.Counter())), 9)
+
+    def test_the_per_doc_cap_lets_more_documents_share_the_class_quota(self):
+        import collections
+        docs = [{"doc_id": f"d{j}", "title": "T", "url": "u", "licence": "x",
+                 "paragraphs": [f"Document {j} melanoma paragraph {i} shows an atypical network." for i in range(6)]} for j in range(4)]
+        ns = argparse.Namespace(per_class=6, max_words=200, min_words=3, per_doc=2)
+        out = src.retrieval.corpus.passages_from(docs, "pmc", "MEL", ns, set(), set(), collections.Counter())
+        self.assertEqual(sorted({p["doc_id"] for p in out}), ["d0", "d1", "d2"])
+        self.assertEqual(len(out), 6)
+
     JATS = ('''<article xmlns:xlink="http://www.w3.org/1999/xlink"><front><article-meta><title-group>
       <article-title>Dermoscopy of basal cell carcinoma</article-title></title-group></article-meta></front><body>
       <fig id="f1"><label>Figure 1</label><caption><title>Dermoscopy of a basal cell carcinoma.</title><p>Arborizing vessels and
@@ -504,6 +533,69 @@ class TextTests(unittest.TestCase):
                 self.assertEqual(src.retrieval.images.visual_main(lib, fetch_xml=lambda x: xml), [])
                 items = src.retrieval.images.visual_main([*lib, "--extra-papers", "5"], fetch=Fake())
             self.assertEqual({it["doc_id"] for it in items}, {"PMC7"})
+
+    DERMO_PAGE = (
+        '<div class="thumb tright"><div class="thumbinner"><a class="image"><img src="/images/thumb/a/ab/Bcc_1.jpg/220px-Bcc_1.jpg"></a>'
+        '<div class="thumbcaption"><div class="magnify"></div>Dermoscopy of a basal cell carcinoma with arborizing vessels and '
+        'blue-gray ovoid nests.</div></div></div>'
+        '<figure><a><img src="/images/c/cd/Bcc_2.png"></a><figcaption>Dermoscopic image of a pigmented basal cell carcinoma with '
+        'leaf-like areas on the cheek.</figcaption></figure>'
+        '<div class="thumb"><img src="/images/thumb/e/ef/Chart.jpg/220px-Chart.jpg"><div class="thumbcaption">Flow chart of the study '
+        'groups for the basal cell carcinoma analysis.</div></div>'
+        '<div class="thumb"><img src="/images/thumb/1/12/Bcc_1.jpg/220px-Bcc_1.jpg"><div class="thumbcaption">Dermoscopy of a basal cell '
+        'carcinoma with arborizing vessels and blue-gray ovoid nests.</div></div>')
+
+    def test_dermoscopedia_pictures_are_paired_with_captions_and_given_the_full_size_address(self):
+        figs = src.retrieval.images.dermoscopedia_figures(self.DERMO_PAGE)
+        self.assertEqual([f["href"] for f in figs], ["https://dermoscopedia.org/images/a/ab/Bcc_1.jpg", "https://dermoscopedia.org/images/c/cd/Bcc_2.png",
+                                                     "https://dermoscopedia.org/images/e/ef/Chart.jpg", "https://dermoscopedia.org/images/1/12/Bcc_1.jpg"])
+        self.assertTrue(figs[0]["caption"].startswith("Dermoscopy of a basal cell carcinoma"))
+        self.assertEqual(src.retrieval.images.dermoscopedia_figures(""), [])
+        # a caption with no picture before it is not a figure (and a picture belongs to one caption only)
+        self.assertEqual(src.retrieval.images.dermoscopedia_figures('<div class="thumbcaption">Dermoscopy of a basal cell carcinoma.</div>'), [])
+        two = '<img src="/images/a/ab/X.jpg"><div class="thumbcaption">First caption.</div><div class="thumbcaption">Second caption.</div>'
+        self.assertEqual(len(src.retrieval.images.dermoscopedia_figures(two)), 1)
+
+    def test_dermoscopedia_items_follow_the_same_rules_as_pmc_figures_and_the_visual_command_adds_them_when_asked(self):
+        page_html = self.DERMO_PAGE
+
+        class Fake:
+            def get(self, url, params=None, ncbi=False):
+                if params.get("meta") == "siteinfo":
+                    return "{}"
+                if params.get("list") == "search":
+                    return json.dumps({"query": {"search": [{"title": "Basal cell carcinoma"}]}})
+                return json.dumps({"parse": {"text": page_html}})
+        removed = collections.Counter()
+        items = src.retrieval.images.dermoscopedia_items(Fake(), 3, set(), removed)
+        self.assertEqual([it["item_id"] for it in items], ["dermoscopedia:Basal cell carcinoma#fig0", "dermoscopedia:Basal cell carcinoma#fig1"])
+        self.assertEqual(items[0]["file_url"], "https://dermoscopedia.org/images/a/ab/Bcc_1.jpg")
+        self.assertEqual((items[0]["licence"], items[0]["tags"], items[0]["library"]), ("CC BY-NC-SA 4.0", ["BCC"], "visual"))
+        self.assertEqual(removed["dermoscopedia: chart, diagram or other imaging method"], 1)
+        self.assertEqual(removed["dermoscopedia: duplicate caption"], 1)           # one page is read once, however many diagnoses find it
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, "passages.jsonl"), [])
+            lib = ["--corpus", d, "--images", os.path.join(d, "image_only")]
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(src.retrieval.images.visual_main(lib, fetch_xml=lambda x: ""), [])
+                self.assertEqual(len(src.retrieval.images.visual_main([*lib, "--dermoscopedia", "3"], fetch=Fake())), 2)
+            card = json.loads(Path(d, "image_only", "visual_card.json").read_text(encoding="utf-8"))
+            self.assertEqual(card["n_dermoscopedia_figures"], 2)
+
+    def test_a_dermoscopedia_picture_is_downloaded_from_its_own_address(self):
+        item = {"item_id": "dermoscopedia:Basal cell carcinoma#fig0", "doc_id": "dermoscopedia:Basal cell carcinoma", "href": "https://d/x.jpg",
+                "file_url": "https://d/x.jpg"}
+        asked = []
+
+        def get(url):
+            asked.append(url)
+            return self.JPEG
+        with tempfile.TemporaryDirectory() as d:
+            kept, counts, worked = src.retrieval.images.download_images([item], os.path.join(d, "images"), get, pause=0)
+            self.assertEqual((asked, dict(worked), kept[0]["image_url"]), (["https://d/x.jpg"], {"Dermoscopedia": 1}, "https://d/x.jpg"))
+            self.assertTrue(os.path.exists(os.path.join(d, "images", kept[0]["image_file"])))
+            kept, counts, _ = src.retrieval.images.download_images([item], os.path.join(d, "images2"), lambda u: b"<html>", pause=0)
+            self.assertEqual((kept, dict(counts)), ([], {"no image at any address": 1}))
 
     def test_the_visual_list_command_writes_the_items_and_a_card_with_counts(self):
         with tempfile.TemporaryDirectory() as d:

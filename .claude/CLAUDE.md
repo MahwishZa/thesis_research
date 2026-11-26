@@ -109,8 +109,12 @@ third party is credited anywhere in the repository.
   The image library: the figure list of the 90 PMC papers of the text corpus gave 88 skin-image figures (DF 7, BCC 10, VASC 11, AK 12, NV 15, BKL 16, SCC 19, MEL 22), all
   downloaded from the PMC open-data bucket; 84 are indexed after the Kaggle look-alike check (embedding similarity 0.95, or a 64-bit picture hash within 4 bits, also
   mirrored and turned; copies inside the library at 0.98). The thresholds were fixed before any result and are not calibrated: a strict copy filter, not a test
-  (kept unchanged: researcher, 2026-11-25; report it as such). `visual --extra-papers N` can add papers from the same PMC search (needs the researcher's go-ahead;
-  NCBI's PMC search was down on 2026-11-24). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the RAG²
+  (kept unchanged: researcher, 2026-11-25; report it as such). `visual --extra-papers N` can add papers from the same PMC search and `visual --dermoscopedia N` adds captioned Dermoscopedia pictures (CC BY-NC-SA 4.0;
+  same figure rules, diagnosis only from caption or page title; built and tested offline, not yet run live) (researcher approved 2026-11-26: more papers, more
+  text, Dermoscopedia figures; rule fixed before any result: validation only, adopt a larger library unless a paired McNemar test (Holm) shows it
+  significantly worse, p < 0.05; report Hit@3 and the random line; no labelled image dataset such as ISIC, HAM10000 or PAD-UFES-20 as a library, because it leaks
+  labels). The corpus builder now takes `--per-doc` (default 8, spread over the document) and larger defaults (`--pmc-docs` 60, `--textbook-pages` 30);
+  the corpus, indexes and retrieval results must be rebuilt on the laptop before any number is quoted (◻ not yet run). RAG² features (equal-amount retrieval per library, model-written rationale queries, trained filter) belong to the RAG²
   baseline only; its scope is for the supervisor to decide. No paid run: there is no budget (2026-11-26).
 - Metrics: defined in the docstrings of `src/evaluation/metrics.py`. Removed on the researcher's decision: top-k accuracy, balanced accuracy, Exact Match,
   Jaccard, RAGAS, context precision, the NLI support check, quote accuracy, supported accuracy, accuracy by subgroup.

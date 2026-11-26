@@ -9,6 +9,7 @@ import os
 import re
 import time
 import urllib.parse
+from html.parser import HTMLParser
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -16,13 +17,17 @@ from collections import Counter
 from src.retrieval.corpus import (
     NCBI,
     PMC_QUERIES,
+    TEXTBOOK_LICENCE,
+    TEXTBOOK_SEARCH,
     TOOL,
     XLINK_HREF,
     clean,
+    dermoscopedia_api,
     esearch,
     Fetcher,
     is_ai_paper,
     open_licence,
+    page_url,
     parse_pmc_licence,
     tag,
 )
@@ -290,6 +295,10 @@ def parse_pmc_figures(xml_text):
     return out
 
 
+def caption_key(caption):
+    return hashlib.md5(re.sub(r"\W+", " ", caption.lower()).strip().encode()).hexdigest()
+
+
 def figure_reject_reason(fig, title, seen_captions, min_words=8):
     """Why a figure is left out of the visual library, or None to keep it (and then remember its caption in `seen_captions`)."""
     caption = fig["caption"]
@@ -305,7 +314,7 @@ def figure_reject_reason(fig, title, seen_captions, min_words=8):
         return "histology only"
     if not tag(caption, title):
         return "no diagnosis named"
-    key = hashlib.md5(re.sub(r"\W+", " ", caption.lower()).strip().encode()).hexdigest()
+    key = caption_key(caption)
     if key in seen_captions:
         return "duplicate caption"
     seen_captions.add(key)
@@ -389,6 +398,92 @@ def extra_papers(fetch, per_class, known, removed):
     return out
 
 
+# ---- Dermoscopedia figures (a second source of dermoscopic images with captions) ----------------------------------------------------
+# Dermoscopedia (the dermoscopy wiki of the International Dermoscopy Society, CC BY-NC-SA 4.0) is already a source of the text corpus
+# (the "textbook" library). Its pages hold dermoscopic pictures with expert captions. The pages are found by the same search words as
+# the text corpus (TEXTBOOK_SEARCH), each page is read through the wiki API, and every captioned picture goes through the same
+# rules as a PMC figure (figure_reject_reason). Nothing is labelled by us and no labelled image dataset is used: the diagnosis comes
+# only from the words of the caption or the page title. The picture's address is kept in "file_url"; visual-images downloads it from there.
+class _Thumbs(HTMLParser):
+    """Pairs each picture of a wiki page with its caption: old markup (div.thumbcaption), new markup (figcaption) or a gallery text."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out, self.src, self.depth, self.tag, self.buf = [], None, 0, None, []
+
+    def handle_starttag(self, tag_name, attrs):
+        a = dict(attrs)
+        if self.tag:
+            self.depth += tag_name == self.tag
+            return
+        if tag_name == "img" and a.get("src"):
+            self.src = a["src"]
+        elif tag_name == "figcaption" or (tag_name in ("div", "p") and {"thumbcaption", "gallerytext"} & set((a.get("class") or "").split())):
+            self.tag, self.depth, self.buf = tag_name, 1, []
+
+    def handle_endtag(self, tag_name):
+        if self.tag and tag_name == self.tag:
+            self.depth -= 1
+            if self.depth == 0:
+                caption = clean(" ".join(self.buf))
+                if self.src and caption:
+                    self.out.append((self.src, caption))
+                self.src, self.tag = None, None
+
+    def handle_data(self, data):
+        if self.tag:
+            self.buf.append(data)
+
+
+def original_image_url(src, base="https://dermoscopedia.org/"):
+    """The full-size address of a wiki thumbnail ('/images/thumb/a/ab/File.jpg/220px-File.jpg' becomes '/images/a/ab/File.jpg')."""
+    url = urllib.parse.urljoin(base, src)
+    m = re.match(r"^(.*?)/thumb/(.+?\.\w+)/[^/]+$", url)
+    return f"{m.group(1)}/{m.group(2)}" if m else url
+
+
+def dermoscopedia_figures(page_html):
+    """[{"label", "caption", "href"}] of a page's captioned pictures (href is the full-size picture address)."""
+    parser = _Thumbs()
+    parser.feed(page_html or "")
+    return [{"label": "", "caption": caption, "href": original_image_url(src)} for src, caption in parser.out]
+
+
+def dermoscopedia_items(fetch, per_class, seen, removed):
+    """The kept figures of the Dermoscopedia pages found for each diagnosis (up to `per_class` pages each); `seen` holds the caption
+    keys already kept (so a caption of a PMC figure is not added twice) and grows."""
+    api = dermoscopedia_api(fetch)
+    out, pages = [], set()
+    for cls in CLASSES:
+        hits = json.loads(fetch.get(api, {"action": "query", "list": "search", "srsearch": TEXTBOOK_SEARCH[cls], "srlimit": per_class,
+                                          "format": "json"}))["query"]["search"]
+        for h in hits:
+            if h["title"] in pages:
+                continue
+            pages.add(h["title"])
+            try:
+                page = json.loads(fetch.get(api, {"action": "parse", "page": h["title"], "prop": "text", "format": "json",
+                                                  "formatversion": 2}))
+                figs = dermoscopedia_figures(page["parse"]["text"])
+            except Exception as e:                                   # one page must not stop the build; the card counts them
+                log.warning(f"{h['title']}: not read ({type(e).__name__}: {e})")
+                removed["dermoscopedia page: not read"] += 1
+                continue
+            doc_id = f"dermoscopedia:{h['title']}"
+            for k, fig in enumerate(figs):
+                reason = figure_reject_reason(fig, h["title"], seen)
+                if reason:
+                    removed[f"dermoscopedia: {reason}"] += 1
+                    continue
+                item_id = f"{doc_id}#fig{k}"
+                out.append({"item_id": item_id, "passage_id": item_id, "doc_id": doc_id, "doc_title": h["title"],
+                            "title": f"{h['title']} (Figure {k + 1})", "text": fig["caption"], "label": "", "caption": fig["caption"],
+                            "href": fig["href"], "file_url": fig["href"], "library": "visual", "licence": TEXTBOOK_LICENCE,
+                            "url": page_url(h["title"]), "query_class": cls, "tags": tag(fig["caption"], h["title"]),
+                            "n_words": len(fig["caption"].split())})
+    return out
+
+
 def visual_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main visual", description="Lists the skin-image figures of the corpus papers.")
     ap.add_argument("--corpus", default=os.path.join("data", TEXT_LIBRARY), help="the text library folder (passages.jsonl, download cache)")
@@ -397,6 +492,8 @@ def visual_args(argv=None):
     ap.add_argument("--limit", type=int, default=0, help="read only the first N papers (a trial)")
     ap.add_argument("--extra-papers", type=int, default=0,
                     help="also search PMC for up to N more open-access papers per diagnosis (internet), beyond the text corpus papers")
+    ap.add_argument("--dermoscopedia", type=int, default=0,
+                    help="also read up to N Dermoscopedia pages per diagnosis for captioned dermoscopic pictures (internet)")
     return ap.parse_args(argv)
 
 
@@ -407,7 +504,7 @@ def visual_main(argv=None, fetch_xml=None, fetch=None):
     if a.limit:
         papers = papers[:a.limit]
     removed = Counter()
-    if fetch is None and (fetch_xml is None or a.extra_papers):
+    if fetch is None and (fetch_xml is None or a.extra_papers or a.dermoscopedia):
         fetch = Fetcher(a.cache or os.path.join(a.corpus, "cache"))
     if a.extra_papers:
         papers += extra_papers(fetch, a.extra_papers, {p["doc_id"] for p in papers}, removed)
@@ -415,11 +512,14 @@ def visual_main(argv=None, fetch_xml=None, fetch=None):
         def fetch_xml(doc_id):
             return fetch.get(NCBI + "efetch.fcgi", {"db": "pmc", "id": doc_id[3:], "retmode": "xml"}, ncbi=True)
     items = visual_items(papers, fetch_xml, removed)
+    if a.dermoscopedia:
+        items += dermoscopedia_items(fetch, a.dermoscopedia, {caption_key(it["caption"]) for it in items}, removed)
     out_dir = a.images
     write_jsonl(os.path.join(out_dir, "items.jsonl"), items)
     per_class = Counter(t for it in items for t in it["tags"])
     card = {"snapshot": datetime.date.today().isoformat(), "n_papers_read": len(papers), "n_figures_kept": len(items),
-            "n_papers_with_a_figure": len({it["doc_id"] for it in items}), "figures_per_tag": {c: per_class.get(c, 0) for c in CLASSES},
+            "n_papers_with_a_figure": len({it["doc_id"] for it in items}),
+            "n_dermoscopedia_figures": sum("file_url" in it for it in items), "figures_per_tag": {c: per_class.get(c, 0) for c in CLASSES},
             "left_out": dict(sorted(removed.items())), "images_downloaded": False,
             "rule": "see the comment above visual_items in src/retrieval/images.py"}
     write_json(os.path.join(out_dir, "visual_card.json"), card)
@@ -491,6 +591,20 @@ def article_image_keys(doc_id, get, cache):
     return cache[doc_id]
 
 
+def fetch_file(url, get=download_bytes, trace=None):
+    """(bytes, url) when the address gives a real image file, else (None, None)."""
+    note = trace.append if trace is not None else (lambda _: None)
+    try:
+        data = get(url)
+    except Exception as e:
+        note(f"{url}: {type(e).__name__}: {e}")
+        return None, None
+    if data and len(data) <= MAX_IMAGE_BYTES and image_extension(data):
+        return data, url
+    note(f"{url}: answered, but not an image file (starts {data[:12]!r})")
+    return None, None
+
+
 def fetch_image(doc_id, href, get=download_bytes, cache=None, trace=None):
     """(bytes, url) of the first address that gives a real image, or (None, None). `trace` collects what each address answered."""
     cache = {} if cache is None else cache
@@ -522,7 +636,10 @@ def download_images(items, folder, get=download_bytes, pause=0.4, probe=0, trace
     os.makedirs(folder, exist_ok=True)
     kept, counts, worked, seen, cache = [], Counter(), Counter(), set(), {}
     for it in items[:probe] if probe else items:
-        data, url = fetch_image(it["doc_id"], it["href"], get, cache, trace)
+        if it.get("file_url"):                                       # a Dermoscopedia picture: one known address
+            data, url = fetch_file(it["file_url"], get, trace)
+        else:
+            data, url = fetch_image(it["doc_id"], it["href"], get, cache, trace)
         if pause:
             time.sleep(pause)
         if data is None:
@@ -540,7 +657,7 @@ def download_images(items, folder, get=download_bytes, pause=0.4, probe=0, trace
         if not probe:
             with open(os.path.join(folder, name), "wb") as f:
                 f.write(data)
-        worked["PMC bucket" if url.startswith(S3_BUCKET) else "Europe PMC"] += 1
+        worked["Dermoscopedia" if it.get("file_url") else "PMC bucket" if url.startswith(S3_BUCKET) else "Europe PMC"] += 1
         kept.append({**it, "image_file": name, "image_sha256": digest, "image_url": url, "image_bytes": len(data)})
     return kept, counts, worked
 
