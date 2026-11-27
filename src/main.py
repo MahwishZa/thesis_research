@@ -24,6 +24,7 @@ Every command has --help. The commands, in the order of the research pipeline:
   The systems
     llm-only            the LLM-only system: the question alone
     standard-rag        the standard RAG system
+    model-probe         times the steps of one question of a local model (load, reading the picture, each new token): where the time goes
     retrieval-eval      the retrieval-only comparison on the validation split (no model call, no cost)
 
   The evaluation
@@ -396,6 +397,7 @@ COMMANDS = {
     "index": ("src.retrieval.indexer", "index_main"),
     "visual-index": ("src.retrieval.indexer", "visual_index_main"),
     "llm-only": ("src.pipelines.llm_only", "llm_only_main"),
+    "model-probe": ("src.pipelines.llm_only", "probe_main"),
     "standard-rag": ("src.pipelines.standard_rag", "standard_rag_main"),
     "retrieval-eval": ("src.pipelines.standard_rag", "retrieval_eval_main"),
     "evaluate": ("src.evaluation.evaluator", "report_main"),

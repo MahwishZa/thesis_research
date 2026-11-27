@@ -1080,8 +1080,9 @@ class FreeModelTests(unittest.TestCase):
     """The researcher has no budget left (2026-11-26): a model that costs credit runs only with --allow-paid."""
 
     def test_a_model_marked_free_runs_without_the_flag_and_only_the_local_model_is_free(self):
-        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-1.5-4b-it"])   # it runs on this laptop
-        src.models.llm.require_free_or_allowed("medgemma-1.5-4b-it", False)                                       # no error, no flag
+        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-1.5-4b-it", "qwen3.5-2b"])   # they run on this laptop
+        for name in ("medgemma-1.5-4b-it", "qwen3.5-2b"):
+            src.models.llm.require_free_or_allowed(name, False)                                                   # no error, no flag
         with mock.patch.dict(src.models.llm.MODELS, {"free-one": {"api": "openrouter", "id": "x:free", "free": True}}):
             src.models.llm.require_free_or_allowed("free-one", False)                               # no error
 
@@ -1177,6 +1178,15 @@ class LocalModelTests(unittest.TestCase):
                          {"text": "t7 t8 t9", "finish_reason": "stop", "tokens_in": 7, "tokens_out": 3})        # the 7 prompt tokens are not part of the answer
         self.assertTrue(reply["served_by"].startswith("google/medgemma-1.5-4b-it@91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b (transformers "))
 
+    def test_the_chat_template_options_of_a_model_are_passed_on_and_a_model_without_any_gets_none(self):
+        self.client([1]).ask("s", "t", None)
+        self.assertNotIn("enable_thinking", self.processor.options)                                 # MedGemma: the template as it is
+        self.processor, self.model = FakeProcessor(), FakeCausalModel([1])
+        qwen = src.models.llm.LocalClient(src.models.llm.MODELS["qwen3.5-2b"], load=lambda cfg: (self.processor, self.model))
+        qwen.ask("s", "t", None)
+        self.assertIs(self.processor.options["enable_thinking"], False)                              # Qwen3.5: no thinking, as its card says for the 2B model
+        self.assertEqual(self.model.kwargs["max_new_tokens"], 512)
+
     def test_a_question_without_a_picture_has_a_text_part_only(self):
         self.client([1]).ask("s", "t", None)
         self.assertEqual(self.processor.messages[1]["content"], [{"type": "text", "text": "t"}])
@@ -1192,7 +1202,7 @@ class LocalModelTests(unittest.TestCase):
             self.client(error=RuntimeError("something else")).ask("s", "t", None)
         self.assertNotIsInstance(other.exception, src.models.llm.ApiError)
 
-    def test_the_loader_splits_the_model_between_card_and_memory_at_the_pinned_revision_and_without_a_card_uses_the_processor(self):
+    def test_the_loader_splits_the_model_between_card_and_memory_at_the_pinned_revision_and_stops_when_torch_has_no_graphics_card(self):
         calls = {}
 
         class Model:
@@ -1210,15 +1220,20 @@ class LocalModelTests(unittest.TestCase):
             def from_pretrained(model_id, **kwargs):
                 calls["processor"] = (model_id, kwargs)
                 return "processor"
-        for cuda in (True, False):
-            torch = types.SimpleNamespace(bfloat16="BF16", cuda=types.SimpleNamespace(is_available=lambda cuda=cuda: cuda))
-            transformers = types.SimpleNamespace(AutoModelForImageTextToText=Auto, AutoProcessor=Processor)
-            with mock.patch.dict(sys.modules, {"torch": torch, "transformers": transformers}):
-                processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
-            revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
-            self.assertEqual(calls["processor"], ("google/medgemma-1.5-4b-it", {"revision": revision}))
-            expected = ({"device_map": "auto", "max_memory": {0: "3GiB", "cpu": "10GiB"}} if cuda else {"device_map": "cpu"})
-            self.assertEqual(calls["model"], ("google/medgemma-1.5-4b-it", {"revision": revision, "dtype": "BF16", **expected}))
+        torch = types.SimpleNamespace(bfloat16="BF16", __version__="2.15.0+cu130", cuda=types.SimpleNamespace(is_available=lambda: True))
+        transformers = types.SimpleNamespace(AutoModelForImageTextToText=Auto, AutoProcessor=Processor)
+        with mock.patch.dict(sys.modules, {"torch": torch, "transformers": transformers}):
+            processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
+        revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
+        self.assertEqual(calls["processor"], ("google/medgemma-1.5-4b-it", {"revision": revision}))
+        self.assertEqual(calls["model"], ("google/medgemma-1.5-4b-it", {"revision": revision, "dtype": "BF16", "device_map": "auto",
+                                                                      "max_memory": {0: "3GiB", "cpu": "10GiB"}}))
+        calls.clear()
+        cpu_only = types.SimpleNamespace(bfloat16="BF16", __version__="2.15.0+cpu", cuda=types.SimpleNamespace(is_available=lambda: False))
+        with mock.patch.dict(sys.modules, {"torch": cpu_only, "transformers": transformers}), self.assertRaises(SystemExit) as caught:
+            src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
+        self.assertIn("2.15.0+cpu", str(caught.exception))                                   # it names the build, so the fix is clear
+        self.assertEqual(calls, {})                                                          # and nothing was downloaded or loaded
 
     def test_a_local_model_needs_no_key_and_is_made_by_make_client(self):
         with mock.patch.object(src.models.llm, "LocalClient", return_value="client") as made, \
@@ -1233,6 +1248,44 @@ class LocalModelTests(unittest.TestCase):
         self.assertIsNone(ran.call_args.args[1])                                                           # the run got no client
 
 
+class ModelProbeTests(unittest.TestCase):
+    """model-probe: the steps of one local-model question, timed one by one (here with a fake model and a fake clock)."""
+
+    def test_the_probe_reports_the_devices_the_timings_and_the_per_token_time(self):
+        class Split(FakeCausalModel):
+            hf_device_map = {"vision_tower": 0, "layers.0": 0, "layers.1": "cpu", "layers.2": "cpu"}
+        processor, model = FakeProcessor(), Split(list(range(40)))
+        client = src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-1.5-4b-it"], load=lambda cfg: (processor, model))
+        clock = iter(x * 1.0 for x in range(0, 1000, 2))          # every timed step takes 2 "seconds" ...
+        steps = []
+        real_generate = client.generate
+
+        def generate(inputs, n):
+            steps.append(n)
+            return real_generate(inputs, n)[:n]
+        client.generate = generate
+        with tempfile.TemporaryDirectory() as d:
+            write_jsonl(os.path.join(d, src.data.views.question_file("text_only", "val")),
+                        [{"id": "q1", "question": "Patient: 40 years.", "options": {"A": "Melanoma", "B": "Nevus"}}])
+            out = io.StringIO()
+            with mock.patch.object(src.pipelines.llm_only, "make_client", return_value=client), mock.patch("time.time", lambda: next(clock)), \
+                    contextlib.redirect_stdout(out):
+                report = src.pipelines.llm_only.probe_main(["--model", "medgemma-1.5-4b-it", "--view", "text_only", "--data", d])
+        self.assertEqual(steps, [1, 17])                                                    # the first token, then 17 tokens
+        sent = processor.messages[1]["content"][-1]["text"]                                  # the probe asks the question a run asks, not a stand-in
+        self.assertEqual(sent, src.pipelines.base.user_text({"id": "q1", "question": "Patient: 40 years.", "options": {"A": "Melanoma", "B": "Nevus"}}, "rationale", "text_only"))
+        self.assertEqual(processor.messages[0]["content"][0]["text"], src.pipelines.base.SYSTEM)
+        self.assertEqual(report["devices"], {"0": 2, "cpu": 2})                              # two blocks on the card, two on the processor
+        self.assertEqual((report["question"], report["view"], report["prompt_tokens"]), ("q1", "text_only", 7))
+        self.assertEqual((report["first_token_seconds"], report["seconds_per_further_token"]), (2.0, 0.0))   # the fake clock: equal steps
+        self.assertIn("seconds_per_further_token", out.getvalue())
+
+    def test_the_probe_refuses_a_model_that_costs_credit_and_a_model_without_a_split_has_no_device_summary(self):
+        with self.assertRaises(SystemExit):
+            src.pipelines.llm_only.probe_main(["--model", "gpt-4o"])
+        self.assertIsNone(src.pipelines.llm_only.device_summary(FakeCausalModel()))
+
+
 class RunOptionsTests(unittest.TestCase):
     """llm-only and standard-rag share their options (src/pipelines/base.py); a changed default would change every run."""
 
@@ -1244,12 +1297,13 @@ class RunOptionsTests(unittest.TestCase):
 
 class RequestTests(unittest.TestCase):
     def test_the_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-1.5-4b-it"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-1.5-4b-it", "qwen3.5-2b"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 if cfg["api"] == "local":
                     self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")            # pinned: a moved model would be another model
-                    self.assertEqual((cfg["do_sample"], cfg["dtype"], cfg["max_memory"]), (False, "bfloat16", {"gpu": "3GiB", "cpu": "10GiB"}))
+                    self.assertEqual((cfg["do_sample"], cfg["dtype"]), (False, "bfloat16"))
+                    self.assertEqual(set(cfg["max_memory"]), {"gpu", "cpu"})
                 elif cfg["api"] == "anthropic":
                     self.assertNotIn("temperature", cfg)                 # Claude rejects a temperature
                     self.assertEqual(cfg["thinking"], {"type": "between_tools"})  # no hidden reasoning

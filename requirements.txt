@@ -27,4 +27,5 @@ accelerate==1.16.0
 # Face chanwkim/monet, downloaded on first use); its images are read with Pillow, listed above.
 sentence-transformers==6.3.0  # semantic similarity (rationale vs a cited reference text)
 transformers==5.24.0          # MedCPT, MONET
-torch==2.15.0                 # MedCPT, MONET
+torch==2.15.0                 # MedCPT, MONET, MedGemma. On Windows the plain PyPI wheel is the CPU-only build (version ends in +cpu): with a graphics card install the CUDA build first,
+                              # pip install torch==2.15.0+cu130 torchvision==0.29.2+cu130 --index-url https://download.pytorch.org/whl/cu130   (◻ to be confirmed on the laptop)

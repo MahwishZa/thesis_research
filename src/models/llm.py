@@ -33,6 +33,12 @@ MODELS = {
     "medgemma-1.5-4b-it": {"api": "local", "id": "google/medgemma-1.5-4b-it", "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
                        "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3GiB", "cpu": "10GiB"}, "do_sample": False,
                        "max_tokens": 512},
+    # A TRIAL, not a choice (researcher, 2026-11-27: "first check Qwen3.5-2B"): a 2B model with a vision encoder, Apache 2.0, 4.55 GB in 16 bits, so
+    # most of it fits the card. Gated Delta Net layers: without the packages flash-linear-attention and causal-conv1d, transformers uses a slow
+    # plain-PyTorch path (◻ not known whether they build on Windows). Non-thinking mode is its default for 2B; kept greedy like the other model.
+    "qwen3.5-2b": {"api": "local", "id": "Qwen/Qwen3.5-2B", "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+                   "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3.4GiB", "cpu": "10GiB"}, "do_sample": False,
+                   "max_tokens": 512, "chat_template_kwargs": {"enable_thinking": False}},
 }
 KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "openrouter": ("OPENROUTER_API_KEY",)}
 RETRY_CODES = {408, 409, 429, 500, 502, 503, 504, 529}
@@ -169,17 +175,19 @@ def require_free_or_allowed(name, allow_paid):
 
 # ---- a model on this computer (transformers) --------------------------------------------------------------------------------------
 def load_local(cfg):
-    """(processor, model) of a local model at its pinned revision. With a graphics card, accelerate keeps cfg["max_memory"]["gpu"] on the
-    card and puts the rest in the computer's memory (up to cfg["max_memory"]["cpu"]); without one, everything runs on the processor (slow).
-    The weights (about 8.6 GB) are downloaded from Hugging Face on first use."""
+    """(processor, model) of a local model at its pinned revision. accelerate keeps cfg["max_memory"]["gpu"] on the graphics card and puts the
+    rest in the computer's memory (up to cfg["max_memory"]["cpu"]), from where each block is moved to the card when it is needed.
+    The weights (about 8.6 GB) are downloaded from Hugging Face on first use. Stops, before loading anything, when torch has no graphics card."""
     import torch
     from transformers import AutoModelForImageTextToText, AutoProcessor
+    if not torch.cuda.is_available():
+        # on the processor alone these models take minutes per question (found on 2026-11-27: torch 2.15.0+cpu, 16-bit maths at 1 GFLOPS), so nothing is loaded
+        raise SystemExit(f"torch {torch.__version__} cannot use a graphics card (a '+cpu' version is the CPU-only build), and {cfg['id']} on the processor alone takes "
+                         "minutes per question. Install the CUDA build first (see requirements.txt), check with: "
+                         "python -c \"import torch; print(torch.__version__, torch.cuda.is_available())\". Nothing was loaded.")
     processor = AutoProcessor.from_pretrained(cfg["id"], revision=cfg["revision"])
-    kwargs = {"revision": cfg["revision"], "dtype": getattr(torch, cfg["dtype"])}
-    if torch.cuda.is_available():
-        kwargs.update(device_map="auto", max_memory={0: cfg["max_memory"]["gpu"], "cpu": cfg["max_memory"]["cpu"]})
-    else:
-        kwargs["device_map"] = "cpu"
+    kwargs = {"revision": cfg["revision"], "dtype": getattr(torch, cfg["dtype"]), "device_map": "auto",
+              "max_memory": {0: cfg["max_memory"]["gpu"], "cpu": cfg["max_memory"]["cpu"]}}
     return processor, AutoModelForImageTextToText.from_pretrained(cfg["id"], **kwargs).eval()
 
 
@@ -206,24 +214,32 @@ class LocalClient:
         # the revision and the two libraries are written into every answer record: a rerun can be compared with it
         self.served_by = (f"{cfg['id']}@{cfg['revision']} (transformers {package_version('transformers')}, torch {package_version('torch')})")
 
-    def ask(self, system, text, image):
+    def build_inputs(self, system, text, image):
+        """The model's input tensors for one question: the chat turns (picture first), tokenized, on the model's device."""
         content = ([{"type": "image", "image": decode_image(image)}] if image else []) + [{"type": "text", "text": text}]
         messages = [{"role": "system", "content": [{"type": "text", "text": system}]}, {"role": "user", "content": content}]
-        inputs = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_dict=True,
-                                                    return_tensors="pt").to(self.model.device, dtype=self.model.dtype)
+        return self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt",
+                                                  **self.cfg.get("chat_template_kwargs", {})).to(self.model.device, dtype=self.model.dtype)
+
+    def generate(self, inputs, max_new_tokens):
+        """The new tokens (a list) for prepared inputs; greedy."""
         n_in = inputs["input_ids"].shape[-1]
         try:
             # temperature, top_p and top_k are cleared so that the model's own sampling defaults raise no warning: the decoding is greedy
-            out = self.model.generate(**inputs, max_new_tokens=self.cfg["max_tokens"], do_sample=self.cfg["do_sample"],
+            out = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=self.cfg["do_sample"],
                                       temperature=None, top_p=None, top_k=None)
         except RuntimeError as e:
             if "out of memory" in str(e).lower():                    # the run stops and can be resumed; lowering max_memory gpu is the fix
                 raise ApiError(f"the graphics card ran out of memory ({e}); lower max_memory gpu of {self.cfg['id']} in MODELS and run the same command again") from None
             raise
-        new = out[0][n_in:]
+        return out[0][n_in:]
+
+    def ask(self, system, text, image):
+        inputs = self.build_inputs(system, text, image)
+        new = self.generate(inputs, self.cfg["max_tokens"])
         return {"text": self.processor.decode(new, skip_special_tokens=True).strip(),
                 "finish_reason": "length" if len(new) >= self.cfg["max_tokens"] else "stop", "served_by": self.served_by,
-                "tokens_in": int(n_in), "tokens_out": len(new)}
+                "tokens_in": int(inputs["input_ids"].shape[-1]), "tokens_out": len(new)}
 
 
 def make_client(name, log=None):
