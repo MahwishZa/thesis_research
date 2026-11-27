@@ -2487,7 +2487,8 @@ class StandardRagRunTests(unittest.TestCase):
         self.go(self.args(split="test"), FakeRagClient(self.questions), make_rag())              # a test run: never part of the pilot
         rows = src.evaluation.evaluator.pilot_rows(self.results, root=".")
         self.assertEqual([(r["system"], r["model"], r["view"]) for r in rows], [("standard_rag", "gpt-4o", "text_only")])
-        self.assertEqual(set(rows[0]["gates"]), set(src.evaluation.evaluator.PILOT_GATES))          # a RAG run has all four gates
+        self.assertEqual(set(rows[0]["gates"]), set(src.evaluation.evaluator.PILOT_GATES) - {"accuracy_ci_low"})   # a RAG run on a text-only view: three gates (no accuracy gate)
+        self.assertFalse(rows[0]["accuracy_gated"])
         self.assertEqual(src.evaluation.evaluator.pilot_rows(self.results, root=".", model="another"), [])
         with contextlib.redirect_stdout(io.StringIO()) as out:
             src.evaluation.evaluator.pilot_main(["--results", self.results])
@@ -2520,6 +2521,25 @@ class PilotGateTests(unittest.TestCase):
         self.assertFalse(row(self.report(ci_low=0.125))["gates"]["accuracy_ci_low"])                  # the lower end must be above chance, not on it
         self.assertTrue(row(self.report(ci_low=0.126))["gates"]["accuracy_ci_low"])
         self.assertEqual(set(row(self.report())["gates"]), {"readable_answers", "accuracy_ci_low"})   # an LLM-only run has no evidence gates
+
+    def test_the_accuracy_gate_is_for_the_image_only_view_the_others_only_report_the_accuracy(self):
+        row = src.evaluation.evaluator.pilot_row
+        at_chance = self.report(ci_low=0.044)                                                        # accuracy interval below chance
+        self.assertFalse(row(at_chance, "image_only")["passed"])
+        for view in ("text_only", "multimodal"):
+            r = row(at_chance, view)
+            self.assertEqual((set(r["gates"]), r["passed"], r["accuracy_gated"], r["accuracy_ci_low"]), ({"readable_answers"}, True, False, 0.044))
+        self.assertFalse(row(self.report(invalid=17), "text_only")["passed"])                        # readable answers still count in every view
+        self.assertEqual(src.evaluation.evaluator.PILOT_ACCURACY_VIEWS, ("image_only",))
+
+    def test_the_detail_counts_the_answered_classes_and_gives_the_recall_of_each(self):
+        report = self.report()
+        report["diagnosis"]["confusion_matrix"] = {"rows_true": ["MEL", "NV"], "columns_predicted": ["MEL", "NV", "invalid"],
+                                                   "matrix": [[3, 7, 0], [1, 9, 0]]}
+        report["diagnosis"]["per_class"] = {"MEL": {"recall": 0.3}, "NV": {"recall": 0.9}}
+        r = src.evaluation.evaluator.pilot_row(report)
+        self.assertEqual((r["predicted"], r["recall"]), ({"MEL": 4, "NV": 16, "invalid": 0}, {"MEL": 0.3, "NV": 0.9}))
+        self.assertEqual(src.evaluation.evaluator.pilot_row(self.report())["recall"], {})            # a report without them still works
 
     def test_a_rag_run_is_also_judged_on_its_evidence_line_and_its_quotes(self):
         row = src.evaluation.evaluator.pilot_row

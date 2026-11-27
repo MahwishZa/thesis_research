@@ -373,23 +373,33 @@ def collect_main(argv=None):
 # ---------------------------------------------------------------------------------------------------------------------------
 # A local model must pass these gates on VALIDATION runs before any test run (researcher, 2026-11-26; fixed before any pilot result):
 #   readable answers   at least 90% of the answers have a usable option letter
-#   above chance       the 95% interval of the accuracy lies above chance, 12.5% (1 in 8 options): the researcher's "clearly above 12.5%", read as
-#                      "the lower end of the interval is above 12.5%" (this reading is the assistant's; it can be made stricter, never looser after a result)
+#   above chance       IMAGE-ONLY runs only: the 95% interval of the accuracy lies above chance, 12.5% (1 in 8 options): the rule's words are "image-only
+#                      accuracy clearly above 12.5%" (CLAUDE.md, Git commit ea0f1fd, 2026-11-26, before any result of the local model), read as "the lower
+#                      end of the interval is above 12.5%" (the assistant's reading; it can be made stricter, never looser after a result). The other views are
+#                      not gated on accuracy: with the patient facts alone the information is small (the four commercial models: 20% to 25% on test), and the
+#                      accuracy of every view is still printed.
 #   RAG runs only:
 #   evidence line      at least 80% of the answers have a readable "Evidence:" line (a quote, or an explicit "Evidence: none")
 #   quotes             at least 50% of the quotes given are word for word in the passage they cite
 # The check evaluates the validation runs that are complete (no text model, nothing written) and says PASS or FAIL for every gate.
 PILOT_GATES = {"readable_answers": 0.90, "accuracy_ci_low": 0.125, "evidence_line": 0.80, "quotes_word_for_word": 0.50}
+PILOT_ACCURACY_VIEWS = ("image_only",)
 
 
-def pilot_row(report):
-    """The pilot numbers of one report and whether each gate is passed (a gate that does not apply to the run is left out)."""
+def pilot_row(report, view="image_only"):
+    """The pilot numbers of one report and whether each gate is passed (a gate that does not apply to the run is left out). `predicted` and
+    `recall` say which classes were answered and found: they explain a low accuracy, they are not gates."""
     d = report["diagnosis"]
     n = d["n_questions"]
     row = {"questions": n, "readable_answers": 1 - (d["invalid_answers"] + d["missing_predictions"]) / n, "accuracy": d["accuracy"],
-           "accuracy_ci_low": d["accuracy_95ci"][0]}
-    gates = {"readable_answers": row["readable_answers"] >= PILOT_GATES["readable_answers"],
-             "accuracy_ci_low": row["accuracy_ci_low"] > PILOT_GATES["accuracy_ci_low"]}
+           "accuracy_ci_low": d["accuracy_95ci"][0], "accuracy_gated": view in PILOT_ACCURACY_VIEWS}
+    matrix = (d.get("confusion_matrix") or {})
+    if matrix.get("matrix"):
+        row["predicted"] = {name: sum(line[k] for line in matrix["matrix"]) for k, name in enumerate(matrix["columns_predicted"])}
+    row["recall"] = {name: v["recall"] for name, v in (d.get("per_class") or {}).items()}
+    gates = {"readable_answers": row["readable_answers"] >= PILOT_GATES["readable_answers"]}
+    if row["accuracy_gated"]:
+        gates["accuracy_ci_low"] = row["accuracy_ci_low"] > PILOT_GATES["accuracy_ci_low"]
     e = report.get("evidence")
     if e:
         row["evidence_line"] = 1 - e["evidence_unparsed"] / e["n_questions"]
@@ -410,7 +420,7 @@ def pilot_rows(results_dir="results", root=".", model=None):
         qpath = recorded_question_path(root, settings["questions"])
         report = evaluate(qpath, os.path.join(folder, "predictions.jsonl"), skip_text=True)
         rows.append({"system": settings.get("baseline", system), "model": settings.get("model", name), "view": settings.get("view"),
-                     **pilot_row(report)})
+                     **pilot_row(report, settings.get("view"))})
     return rows
 
 
@@ -419,16 +429,21 @@ def pilot_main(argv=None):
     ap.add_argument("--results", default="results")
     ap.add_argument("--root", default=".", help="the folder the question paths in run.json are relative to")
     ap.add_argument("--model", default=None, help="only this model")
+    ap.add_argument("--detail", action="store_true", help="also print how often each class was answered and the recall of each class")
     a = ap.parse_args(argv)
     log = get_logger("pilot-check")
     rows = pilot_rows(a.results, a.root, a.model)
     if not rows:
         log.info("no complete validation run found (a run is complete when all its questions are answered)")
     for r in rows:
-        parts = [f"readable answers {pct(r['readable_answers'])}", f"accuracy {pct(r['accuracy'])} (lower end {pct(r['accuracy_ci_low'])}, chance 12.5%)"]
+        parts = [f"readable answers {pct(r['readable_answers'])}", f"accuracy {pct(r['accuracy'])} (lower end {pct(r['accuracy_ci_low'])}, chance 12.5%"
+                 + ("" if r["accuracy_gated"] else "; not a gate for this view") + ")"]
         if "evidence_line" in r:
             parts += [f"evidence line {pct(r['evidence_line'])}", f"quotes word for word {pct(r['quotes_word_for_word'])}"]
         failed = [g for g, ok in r["gates"].items() if not ok]
         log.info(f"{'PASS' if r['passed'] else 'FAIL'} {r['system']} {r['model']} {r['view']}: " + ", ".join(parts)
                  + (f" | failed: {', '.join(failed)}" if failed else ""))
+        if a.detail:
+            log.info("  answered: " + ", ".join(f"{k} {v}" for k, v in (r.get("predicted") or {}).items()))
+            log.info("  recall:   " + ", ".join(f"{k} {pct(v)}" for k, v in r["recall"].items()))
     return rows
