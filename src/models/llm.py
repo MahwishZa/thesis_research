@@ -1,4 +1,4 @@
-"""The research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter, and MedGemma 1.5 4B-it on this
+"""The research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter, and Qwen3.5-2B on this
 computer (transformers; no Ollama, no server, no key, no cost). The same settings serve every system (LLM-only, standard RAG, ...)."""
 import base64
 import io
@@ -23,19 +23,13 @@ MODELS = {
                          "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 8192},
     "llama-4-maverick": {"api": "openrouter", "id": "meta-llama/llama-4-maverick", "route": ["parasail/fp8"],
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
-    # MedGemma 1.5 4B-it, the successor of MedGemma 1 (its card: better medical text reasoning, a modest gain on 2D images, same 4B size). The
-    # same model and the same revision ran on this laptop in the earlier version of the project (2026-11-07; 16-bit weights split GPU 3 GiB / CPU 10 GiB).
-    # Runs on the researcher's laptop (researcher, 2026-11-26: no budget, no Ollama; RTX 2050 with 4 GB). It reads text and pictures, so one
-    # backbone serves all three views. The 16-bit weights (about 8.6 GB) do not fit the card: accelerate keeps 3 GiB on the card and the rest
-    # in the computer's memory (the setting that ran this model on this laptop in the earlier version of the project). No quantization.
-    # Greedy decoding, so a rerun gives the same answers on the same hardware. The revision is pinned: a changed model would be another
-    # model. The weights are gated: accept the terms on Hugging Face and have HF_TOKEN in .env. 512 tokens hold reasoning, answer and evidence.
-    "medgemma-1.5-4b-it": {"api": "local", "id": "google/medgemma-1.5-4b-it", "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
-                       "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3GiB", "cpu": "10GiB"}, "do_sample": False,
-                       "max_tokens": 512},
-    # A TRIAL, not a choice (researcher, 2026-11-27: "first check Qwen3.5-2B"): a 2B model with a vision encoder, Apache 2.0, 4.55 GB in 16 bits, so
-    # most of it fits the card. Gated Delta Net layers: without the packages flash-linear-attention and causal-conv1d, transformers uses a slow
-    # plain-PyTorch path (◻ not known whether they build on Windows). Non-thinking mode is its default for 2B; kept greedy like the other model.
+    # Qwen3.5-2B, the RAG backbone (researcher, 2026-11-27: MedGemma 1.5 removed, Qwen3.5-2B chosen; the validation pilot comes first). It runs on the
+    # researcher's laptop (no budget, no Ollama; RTX 2050 with 4 GB), reads text and pictures, so one backbone serves all three views, and is Apache 2.0.
+    # Its 16-bit weights are 4.55 GB: accelerate keeps 3.4 GiB on the card and the rest in the computer's memory, from where each block is moved to the
+    # card when needed (needs the CUDA build of torch). Gated Delta Net layers: without the packages flash-linear-attention and causal-conv1d, transformers
+    # uses a slow plain-PyTorch path (not installed here; ◻ whether they build on Windows). Non-thinking mode is the default of the 2B model and is set
+    # explicitly. Greedy decoding, so a rerun gives the same answers on the same hardware (the card recommends sampling: a deviation, to be reported). The
+    # revision is pinned: a changed model would be another model. 512 tokens hold the reasoning, the answer and the evidence line.
     "qwen3.5-2b": {"api": "local", "id": "Qwen/Qwen3.5-2B", "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
                    "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3.4GiB", "cpu": "10GiB"}, "do_sample": False,
                    "max_tokens": 512, "chat_template_kwargs": {"enable_thinking": False}},

@@ -2480,11 +2480,56 @@ class StandardRagRunTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             src.retrieval.retriever.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
 
+    def test_pilot_check_judges_the_complete_validation_runs_only_and_by_model(self):
+        self.make("text_only")
+        self.go(self.args(split="val"), FakeRagClient(self.questions), make_rag())
+        write_jsonl(os.path.join(self.data, question_file("text_only", "test")), self.questions)
+        self.go(self.args(split="test"), FakeRagClient(self.questions), make_rag())              # a test run: never part of the pilot
+        rows = src.evaluation.evaluator.pilot_rows(self.results, root=".")
+        self.assertEqual([(r["system"], r["model"], r["view"]) for r in rows], [("standard_rag", "gpt-4o", "text_only")])
+        self.assertEqual(set(rows[0]["gates"]), set(src.evaluation.evaluator.PILOT_GATES))          # a RAG run has all four gates
+        self.assertEqual(src.evaluation.evaluator.pilot_rows(self.results, root=".", model="another"), [])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            src.evaluation.evaluator.pilot_main(["--results", self.results])
+        self.assertRegex(out.getvalue(), r"(PASS|FAIL) standard_rag gpt-4o text_only: readable answers")
+
     def test_collect_reports_a_standard_rag_run_beside_an_llm_only_run(self):
         self.make("text_only")
         self.go(self.args(split="val"), FakeRagClient(self.questions), make_rag())
         rows = src.evaluation.evaluator.collect(self.results, os.path.join(self.results, "summary.csv"), root=".", skip_text=True)
         self.assertEqual([(r["system"], r["model"], r["view"]) for r in rows], [("standard_rag", "gpt-4o", "text_only")])
+
+
+class PilotGateTests(unittest.TestCase):
+    """The gates of the validation pilot (src/evaluation/evaluator.py): fixed before any pilot result, so a test pins them."""
+
+    @staticmethod
+    def report(invalid=0, missing=0, ci_low=0.30, n=160, evidence=None):
+        r = {"diagnosis": {"n_questions": n, "invalid_answers": invalid, "missing_predictions": missing, "accuracy": 0.4, "accuracy_95ci": [ci_low, 0.5]}}
+        if evidence:
+            r["evidence"] = {"n_questions": n, **evidence}
+        return r
+
+    def test_the_gates_are_the_researchers_and_a_value_exactly_on_a_limit_is_judged_as_written(self):
+        gates = src.evaluation.evaluator.PILOT_GATES
+        self.assertEqual(gates, {"readable_answers": 0.90, "accuracy_ci_low": 0.125, "evidence_line": 0.80, "quotes_word_for_word": 0.50})
+        row = src.evaluation.evaluator.pilot_row
+        self.assertTrue(row(self.report(invalid=16))["gates"]["readable_answers"])                    # 144 of 160 = exactly 90%: at least 90% passes
+        self.assertFalse(row(self.report(invalid=17))["gates"]["readable_answers"])
+        self.assertFalse(row(self.report(invalid=8, missing=9))["gates"]["readable_answers"])         # an unanswered question is not a readable answer
+        self.assertFalse(row(self.report(ci_low=0.125))["gates"]["accuracy_ci_low"])                  # the lower end must be above chance, not on it
+        self.assertTrue(row(self.report(ci_low=0.126))["gates"]["accuracy_ci_low"])
+        self.assertEqual(set(row(self.report())["gates"]), {"readable_answers", "accuracy_ci_low"})   # an LLM-only run has no evidence gates
+
+    def test_a_rag_run_is_also_judged_on_its_evidence_line_and_its_quotes(self):
+        row = src.evaluation.evaluator.pilot_row
+        good = row(self.report(evidence={"evidence_unparsed": 32, "evidence_given": 100, "n_covered": 50}))        # 80% line, 50% quotes: both on the limit
+        self.assertEqual((good["evidence_line"], good["quotes_word_for_word"], good["passed"]), (0.8, 0.5, True))
+        self.assertFalse(row(self.report(evidence={"evidence_unparsed": 33, "evidence_given": 100, "n_covered": 50}))["passed"])
+        self.assertFalse(row(self.report(evidence={"evidence_unparsed": 0, "evidence_given": 100, "n_covered": 49}))["passed"])
+        none_given = row(self.report(evidence={"evidence_unparsed": 0, "evidence_given": 0, "n_covered": 0}))
+        self.assertEqual((none_given["quotes_word_for_word"], none_given["passed"]), (0.0, False))                 # no quote given counts as failing, not as dividing by 0
+        self.assertFalse(row(self.report(invalid=100, evidence={"evidence_unparsed": 0, "evidence_given": 10, "n_covered": 10}))["passed"])   # one failed gate fails the run
 
 
 class IndexCommandTests(unittest.TestCase):

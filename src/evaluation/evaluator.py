@@ -366,3 +366,69 @@ def collect_main(argv=None):
         log.info(f"{r['system']} {r['model']} {r['view']} {r['split']}: accuracy {pct(r['accuracy'])} ({pct(r['accuracy_ci_low'])} to {pct(r['accuracy_ci_high'])}), "
                  f"macro-F1 {pct(r['macro_f1'])}, invalid {r['invalid']}, refusals {r['refusals']}")
     return rows
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# pilot-check: the gates of the validation pilot (python -m src.main pilot-check)
+# ---------------------------------------------------------------------------------------------------------------------------
+# A local model must pass these gates on VALIDATION runs before any test run (researcher, 2026-11-26; fixed before any pilot result):
+#   readable answers   at least 90% of the answers have a usable option letter
+#   above chance       the 95% interval of the accuracy lies above chance, 12.5% (1 in 8 options): the researcher's "clearly above 12.5%", read as
+#                      "the lower end of the interval is above 12.5%" (this reading is the assistant's; it can be made stricter, never looser after a result)
+#   RAG runs only:
+#   evidence line      at least 80% of the answers have a readable "Evidence:" line (a quote, or an explicit "Evidence: none")
+#   quotes             at least 50% of the quotes given are word for word in the passage they cite
+# The check evaluates the validation runs that are complete (no text model, nothing written) and says PASS or FAIL for every gate.
+PILOT_GATES = {"readable_answers": 0.90, "accuracy_ci_low": 0.125, "evidence_line": 0.80, "quotes_word_for_word": 0.50}
+
+
+def pilot_row(report):
+    """The pilot numbers of one report and whether each gate is passed (a gate that does not apply to the run is left out)."""
+    d = report["diagnosis"]
+    n = d["n_questions"]
+    row = {"questions": n, "readable_answers": 1 - (d["invalid_answers"] + d["missing_predictions"]) / n, "accuracy": d["accuracy"],
+           "accuracy_ci_low": d["accuracy_95ci"][0]}
+    gates = {"readable_answers": row["readable_answers"] >= PILOT_GATES["readable_answers"],
+             "accuracy_ci_low": row["accuracy_ci_low"] > PILOT_GATES["accuracy_ci_low"]}
+    e = report.get("evidence")
+    if e:
+        row["evidence_line"] = 1 - e["evidence_unparsed"] / e["n_questions"]
+        row["quotes_word_for_word"] = e["n_covered"] / e["evidence_given"] if e["evidence_given"] else 0.0       # no quote given: none is word for word
+        gates["evidence_line"] = row["evidence_line"] >= PILOT_GATES["evidence_line"]
+        gates["quotes_word_for_word"] = row["quotes_word_for_word"] >= PILOT_GATES["quotes_word_for_word"]
+    row["gates"] = gates
+    row["passed"] = all(gates.values())
+    return row
+
+
+def pilot_rows(results_dir="results", root=".", model=None):
+    rows = []
+    for system, name, run, folder, info in finished_runs(results_dir):
+        settings = info["settings"]
+        if settings.get("split") != "val" or (model and settings.get("model", name) != model):
+            continue
+        qpath = recorded_question_path(root, settings["questions"])
+        report = evaluate(qpath, os.path.join(folder, "predictions.jsonl"), skip_text=True)
+        rows.append({"system": settings.get("baseline", system), "model": settings.get("model", name), "view": settings.get("view"),
+                     **pilot_row(report)})
+    return rows
+
+
+def pilot_main(argv=None):
+    ap = argparse.ArgumentParser(prog="python -m src.main pilot-check", description="The gates of the validation pilot for every complete validation run.")
+    ap.add_argument("--results", default="results")
+    ap.add_argument("--root", default=".", help="the folder the question paths in run.json are relative to")
+    ap.add_argument("--model", default=None, help="only this model")
+    a = ap.parse_args(argv)
+    log = get_logger("pilot-check")
+    rows = pilot_rows(a.results, a.root, a.model)
+    if not rows:
+        log.info("no complete validation run found (a run is complete when all its questions are answered)")
+    for r in rows:
+        parts = [f"readable answers {pct(r['readable_answers'])}", f"accuracy {pct(r['accuracy'])} (lower end {pct(r['accuracy_ci_low'])}, chance 12.5%)"]
+        if "evidence_line" in r:
+            parts += [f"evidence line {pct(r['evidence_line'])}", f"quotes word for word {pct(r['quotes_word_for_word'])}"]
+        failed = [g for g, ok in r["gates"].items() if not ok]
+        log.info(f"{'PASS' if r['passed'] else 'FAIL'} {r['system']} {r['model']} {r['view']}: " + ", ".join(parts)
+                 + (f" | failed: {', '.join(failed)}" if failed else ""))
+    return rows

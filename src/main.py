@@ -31,6 +31,7 @@ Every command has --help. The commands, in the order of the research pipeline:
     evaluate            the report of one system's predictions on one question file
     compare             several runs on the same cases (McNemar's exact test, Holm's correction)
     collect             a report for every finished run and the table results/comparisons/summary.csv
+    pilot-check         the gates of the validation pilot (readable answers, above chance, evidence line, quotes) for every complete validation run
     similarity-check    is the semantic similarity informative? (finished runs and the reference texts)
 """
 import argparse
@@ -403,6 +404,7 @@ COMMANDS = {
     "evaluate": ("src.evaluation.evaluator", "report_main"),
     "compare": ("src.evaluation.evaluator", "compare_main"),
     "collect": ("src.evaluation.evaluator", "collect_main"),
+    "pilot-check": ("src.evaluation.evaluator", "pilot_main"),
     "similarity-check": ("src.evaluation.evaluator", "similarity_check_main"),
 }
 

@@ -1080,9 +1080,8 @@ class FreeModelTests(unittest.TestCase):
     """The researcher has no budget left (2026-11-26): a model that costs credit runs only with --allow-paid."""
 
     def test_a_model_marked_free_runs_without_the_flag_and_only_the_local_model_is_free(self):
-        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-1.5-4b-it", "qwen3.5-2b"])   # they run on this laptop
-        for name in ("medgemma-1.5-4b-it", "qwen3.5-2b"):
-            src.models.llm.require_free_or_allowed(name, False)                                                   # no error, no flag
+        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["qwen3.5-2b"])        # it runs on this laptop
+        src.models.llm.require_free_or_allowed("qwen3.5-2b", False)                                            # no error, no flag
         with mock.patch.dict(src.models.llm.MODELS, {"free-one": {"api": "openrouter", "id": "x:free", "free": True}}):
             src.models.llm.require_free_or_allowed("free-one", False)                               # no error
 
@@ -1144,11 +1143,11 @@ class FakeCausalModel:
 
 
 class LocalModelTests(unittest.TestCase):
-    """MedGemma 1.5 4B-it on this laptop through transformers (no Ollama); here with a fake processor and model, and a fake picture library."""
+    """Qwen3.5-2B on this laptop through transformers (no Ollama); here with a fake processor and model, and a fake picture library."""
 
     def client(self, new_tokens=(), error=None):
         self.processor, self.model = FakeProcessor(), FakeCausalModel(new_tokens, error)
-        return src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-1.5-4b-it"], load=lambda cfg: (self.processor, self.model))
+        return src.models.llm.LocalClient(src.models.llm.MODELS["qwen3.5-2b"], load=lambda cfg: (self.processor, self.model))
 
     PICTURE = base64.b64encode(b"jpeg bytes").decode()
 
@@ -1176,14 +1175,10 @@ class LocalModelTests(unittest.TestCase):
         self.assertEqual((self.model.kwargs["do_sample"], self.model.kwargs["max_new_tokens"], self.model.kwargs["temperature"]), (False, 512, None))
         self.assertEqual({k: reply[k] for k in ("text", "finish_reason", "tokens_in", "tokens_out")},
                          {"text": "t7 t8 t9", "finish_reason": "stop", "tokens_in": 7, "tokens_out": 3})        # the 7 prompt tokens are not part of the answer
-        self.assertTrue(reply["served_by"].startswith("google/medgemma-1.5-4b-it@91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b (transformers "))
+        self.assertTrue(reply["served_by"].startswith("Qwen/Qwen3.5-2B@15852e8c16360a2fea060d615a32b45270f8a8fc (transformers "))
 
-    def test_the_chat_template_options_of_a_model_are_passed_on_and_a_model_without_any_gets_none(self):
+    def test_the_chat_template_options_of_the_model_are_passed_on_thinking_is_off(self):
         self.client([1]).ask("s", "t", None)
-        self.assertNotIn("enable_thinking", self.processor.options)                                 # MedGemma: the template as it is
-        self.processor, self.model = FakeProcessor(), FakeCausalModel([1])
-        qwen = src.models.llm.LocalClient(src.models.llm.MODELS["qwen3.5-2b"], load=lambda cfg: (self.processor, self.model))
-        qwen.ask("s", "t", None)
         self.assertIs(self.processor.options["enable_thinking"], False)                              # Qwen3.5: no thinking, as its card says for the 2B model
         self.assertEqual(self.model.kwargs["max_new_tokens"], 512)
 
@@ -1223,28 +1218,28 @@ class LocalModelTests(unittest.TestCase):
         torch = types.SimpleNamespace(bfloat16="BF16", __version__="2.15.0+cu130", cuda=types.SimpleNamespace(is_available=lambda: True))
         transformers = types.SimpleNamespace(AutoModelForImageTextToText=Auto, AutoProcessor=Processor)
         with mock.patch.dict(sys.modules, {"torch": torch, "transformers": transformers}):
-            processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
-        revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
-        self.assertEqual(calls["processor"], ("google/medgemma-1.5-4b-it", {"revision": revision}))
-        self.assertEqual(calls["model"], ("google/medgemma-1.5-4b-it", {"revision": revision, "dtype": "BF16", "device_map": "auto",
-                                                                      "max_memory": {0: "3GiB", "cpu": "10GiB"}}))
+            processor, model = src.models.llm.load_local(src.models.llm.MODELS["qwen3.5-2b"])
+        revision = "15852e8c16360a2fea060d615a32b45270f8a8fc"
+        self.assertEqual(calls["processor"], ("Qwen/Qwen3.5-2B", {"revision": revision}))
+        self.assertEqual(calls["model"], ("Qwen/Qwen3.5-2B", {"revision": revision, "dtype": "BF16", "device_map": "auto",
+                                                                      "max_memory": {0: "3.4GiB", "cpu": "10GiB"}}))
         calls.clear()
         cpu_only = types.SimpleNamespace(bfloat16="BF16", __version__="2.15.0+cpu", cuda=types.SimpleNamespace(is_available=lambda: False))
         with mock.patch.dict(sys.modules, {"torch": cpu_only, "transformers": transformers}), self.assertRaises(SystemExit) as caught:
-            src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
+            src.models.llm.load_local(src.models.llm.MODELS["qwen3.5-2b"])
         self.assertIn("2.15.0+cpu", str(caught.exception))                                   # it names the build, so the fix is clear
         self.assertEqual(calls, {})                                                          # and nothing was downloaded or loaded
 
     def test_a_local_model_needs_no_key_and_is_made_by_make_client(self):
         with mock.patch.object(src.models.llm, "LocalClient", return_value="client") as made, \
                 mock.patch.object(src.models.llm, "api_key", side_effect=AssertionError("a key was asked for")):
-            self.assertEqual(src.models.llm.make_client("medgemma-1.5-4b-it"), "client")
-        made.assert_called_once_with(src.models.llm.MODELS["medgemma-1.5-4b-it"])
+            self.assertEqual(src.models.llm.make_client("qwen3.5-2b"), "client")
+        made.assert_called_once_with(src.models.llm.MODELS["qwen3.5-2b"])
 
     def test_a_dry_run_makes_no_client_so_loads_no_model(self):
         with mock.patch.object(src.pipelines.llm_only, "make_client", side_effect=AssertionError("a client was made")), \
                 mock.patch.object(src.pipelines.llm_only, "run", return_value=None) as ran:
-            src.pipelines.llm_only.llm_only_main(["--model", "medgemma-1.5-4b-it", "--view", "text_only", "--dry-run", "--results", "nowhere"])
+            src.pipelines.llm_only.llm_only_main(["--model", "qwen3.5-2b", "--view", "text_only", "--dry-run", "--results", "nowhere"])
         self.assertIsNone(ran.call_args.args[1])                                                           # the run got no client
 
 
@@ -1255,7 +1250,7 @@ class ModelProbeTests(unittest.TestCase):
         class Split(FakeCausalModel):
             hf_device_map = {"vision_tower": 0, "layers.0": 0, "layers.1": "cpu", "layers.2": "cpu"}
         processor, model = FakeProcessor(), Split(list(range(40)))
-        client = src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-1.5-4b-it"], load=lambda cfg: (processor, model))
+        client = src.models.llm.LocalClient(src.models.llm.MODELS["qwen3.5-2b"], load=lambda cfg: (processor, model))
         clock = iter(x * 1.0 for x in range(0, 1000, 2))          # every timed step takes 2 "seconds" ...
         steps = []
         real_generate = client.generate
@@ -1270,7 +1265,7 @@ class ModelProbeTests(unittest.TestCase):
             out = io.StringIO()
             with mock.patch.object(src.pipelines.llm_only, "make_client", return_value=client), mock.patch("time.time", lambda: next(clock)), \
                     contextlib.redirect_stdout(out):
-                report = src.pipelines.llm_only.probe_main(["--model", "medgemma-1.5-4b-it", "--view", "text_only", "--data", d])
+                report = src.pipelines.llm_only.probe_main(["--model", "qwen3.5-2b", "--view", "text_only", "--data", d])
         self.assertEqual(steps, [1, 17])                                                    # the first token, then 17 tokens
         sent = processor.messages[1]["content"][-1]["text"]                                  # the probe asks the question a run asks, not a stand-in
         self.assertEqual(sent, src.pipelines.base.user_text({"id": "q1", "question": "Patient: 40 years.", "options": {"A": "Melanoma", "B": "Nevus"}}, "rationale", "text_only"))
@@ -1297,7 +1292,7 @@ class RunOptionsTests(unittest.TestCase):
 
 class RequestTests(unittest.TestCase):
     def test_the_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-1.5-4b-it", "qwen3.5-2b"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "qwen3.5-2b"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 if cfg["api"] == "local":
