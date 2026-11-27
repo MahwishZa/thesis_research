@@ -1,4 +1,4 @@
-"""The research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter, and MedGemma-4B-it on this
+"""The research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter, and MedGemma 1.5 4B-it on this
 computer (transformers; no Ollama, no server, no key, no cost). The same settings serve every system (LLM-only, standard RAG, ...)."""
 import base64
 import io
@@ -23,12 +23,14 @@ MODELS = {
                          "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 8192},
     "llama-4-maverick": {"api": "openrouter", "id": "meta-llama/llama-4-maverick", "route": ["parasail/fp8"],
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
+    # MedGemma 1.5 4B-it, the successor of MedGemma 1 (its card: better medical text reasoning, a modest gain on 2D images, same 4B size). The
+    # same model and the same revision ran on this laptop in the earlier version of the project (2026-11-07; 16-bit weights split GPU 3 GiB / CPU 10 GiB).
     # Runs on the researcher's laptop (researcher, 2026-11-26: no budget, no Ollama; RTX 2050 with 4 GB). It reads text and pictures, so one
     # backbone serves all three views. The 16-bit weights (about 8.6 GB) do not fit the card: accelerate keeps 3 GiB on the card and the rest
     # in the computer's memory (the setting that ran this model on this laptop in the earlier version of the project). No quantization.
     # Greedy decoding, so a rerun gives the same answers on the same hardware. The revision is pinned: a changed model would be another
     # model. The weights are gated: accept the terms on Hugging Face and have HF_TOKEN in .env. 512 tokens hold reasoning, answer and evidence.
-    "medgemma-4b-it": {"api": "local", "id": "google/medgemma-4b-it", "revision": "290cda5eeccbee130f987c4ad74a59ae6f196408",
+    "medgemma-1.5-4b-it": {"api": "local", "id": "google/medgemma-1.5-4b-it", "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
                        "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3GiB", "cpu": "10GiB"}, "do_sample": False,
                        "max_tokens": 512},
 }

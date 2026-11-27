@@ -1080,8 +1080,8 @@ class FreeModelTests(unittest.TestCase):
     """The researcher has no budget left (2026-11-26): a model that costs credit runs only with --allow-paid."""
 
     def test_a_model_marked_free_runs_without_the_flag_and_only_the_local_model_is_free(self):
-        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-4b-it"])   # it runs on this laptop
-        src.models.llm.require_free_or_allowed("medgemma-4b-it", False)                                       # no error, no flag
+        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-1.5-4b-it"])   # it runs on this laptop
+        src.models.llm.require_free_or_allowed("medgemma-1.5-4b-it", False)                                       # no error, no flag
         with mock.patch.dict(src.models.llm.MODELS, {"free-one": {"api": "openrouter", "id": "x:free", "free": True}}):
             src.models.llm.require_free_or_allowed("free-one", False)                               # no error
 
@@ -1143,11 +1143,11 @@ class FakeCausalModel:
 
 
 class LocalModelTests(unittest.TestCase):
-    """MedGemma-4B-it on this laptop through transformers (no Ollama); here with a fake processor and model, and a fake picture library."""
+    """MedGemma 1.5 4B-it on this laptop through transformers (no Ollama); here with a fake processor and model, and a fake picture library."""
 
     def client(self, new_tokens=(), error=None):
         self.processor, self.model = FakeProcessor(), FakeCausalModel(new_tokens, error)
-        return src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-4b-it"], load=lambda cfg: (self.processor, self.model))
+        return src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-1.5-4b-it"], load=lambda cfg: (self.processor, self.model))
 
     PICTURE = base64.b64encode(b"jpeg bytes").decode()
 
@@ -1175,7 +1175,7 @@ class LocalModelTests(unittest.TestCase):
         self.assertEqual((self.model.kwargs["do_sample"], self.model.kwargs["max_new_tokens"], self.model.kwargs["temperature"]), (False, 512, None))
         self.assertEqual({k: reply[k] for k in ("text", "finish_reason", "tokens_in", "tokens_out")},
                          {"text": "t7 t8 t9", "finish_reason": "stop", "tokens_in": 7, "tokens_out": 3})        # the 7 prompt tokens are not part of the answer
-        self.assertTrue(reply["served_by"].startswith("google/medgemma-4b-it@290cda5eeccbee130f987c4ad74a59ae6f196408 (transformers "))
+        self.assertTrue(reply["served_by"].startswith("google/medgemma-1.5-4b-it@91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b (transformers "))
 
     def test_a_question_without_a_picture_has_a_text_part_only(self):
         self.client([1]).ask("s", "t", None)
@@ -1214,22 +1214,22 @@ class LocalModelTests(unittest.TestCase):
             torch = types.SimpleNamespace(bfloat16="BF16", cuda=types.SimpleNamespace(is_available=lambda cuda=cuda: cuda))
             transformers = types.SimpleNamespace(AutoModelForImageTextToText=Auto, AutoProcessor=Processor)
             with mock.patch.dict(sys.modules, {"torch": torch, "transformers": transformers}):
-                processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-4b-it"])
-            revision = "290cda5eeccbee130f987c4ad74a59ae6f196408"
-            self.assertEqual(calls["processor"], ("google/medgemma-4b-it", {"revision": revision}))
+                processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-1.5-4b-it"])
+            revision = "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
+            self.assertEqual(calls["processor"], ("google/medgemma-1.5-4b-it", {"revision": revision}))
             expected = ({"device_map": "auto", "max_memory": {0: "3GiB", "cpu": "10GiB"}} if cuda else {"device_map": "cpu"})
-            self.assertEqual(calls["model"], ("google/medgemma-4b-it", {"revision": revision, "dtype": "BF16", **expected}))
+            self.assertEqual(calls["model"], ("google/medgemma-1.5-4b-it", {"revision": revision, "dtype": "BF16", **expected}))
 
     def test_a_local_model_needs_no_key_and_is_made_by_make_client(self):
         with mock.patch.object(src.models.llm, "LocalClient", return_value="client") as made, \
                 mock.patch.object(src.models.llm, "api_key", side_effect=AssertionError("a key was asked for")):
-            self.assertEqual(src.models.llm.make_client("medgemma-4b-it"), "client")
-        made.assert_called_once_with(src.models.llm.MODELS["medgemma-4b-it"])
+            self.assertEqual(src.models.llm.make_client("medgemma-1.5-4b-it"), "client")
+        made.assert_called_once_with(src.models.llm.MODELS["medgemma-1.5-4b-it"])
 
     def test_a_dry_run_makes_no_client_so_loads_no_model(self):
         with mock.patch.object(src.pipelines.llm_only, "make_client", side_effect=AssertionError("a client was made")), \
                 mock.patch.object(src.pipelines.llm_only, "run", return_value=None) as ran:
-            src.pipelines.llm_only.llm_only_main(["--model", "medgemma-4b-it", "--view", "text_only", "--dry-run", "--results", "nowhere"])
+            src.pipelines.llm_only.llm_only_main(["--model", "medgemma-1.5-4b-it", "--view", "text_only", "--dry-run", "--results", "nowhere"])
         self.assertIsNone(ran.call_args.args[1])                                                           # the run got no client
 
 
@@ -1244,7 +1244,7 @@ class RunOptionsTests(unittest.TestCase):
 
 class RequestTests(unittest.TestCase):
     def test_the_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-4b-it"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-1.5-4b-it"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
                 if cfg["api"] == "local":
