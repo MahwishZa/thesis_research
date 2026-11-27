@@ -139,34 +139,9 @@
    "meditron": 4
   },
   "documents_with_no_tagged_passage": 145,
-  "records_with_a_problem": 59,
-  "problems": {
-   "no web address on the source's own site": [
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#0",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#1",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#2",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#3",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#4",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#5",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#6",
-    "meditron:5307e95fdc2d3f5f8c1d826dacd25771d2fbc51e#7",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#0",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#1",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#2",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#3",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#4",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#5",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#6",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#7",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#8",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#9",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#10",
-    "meditron:70b97abad68805443af28746c6871cf26b7c9cd4#11"
-   ]
-  },
-  "problem_counts": {
-   "no web address on the source's own site": 59
-  },
+  "records_with_a_problem": 0,
+  "problems": {},
+  "problem_counts": {},
   "online": {
    "checked": 1096,
    "not_found": [],
@@ -176,6 +151,24 @@
     "PMC6859055",
     "PMC10589476"
    ],
+   "other_title_detail": {
+    "PMC12527410": {
+     "recorded": "Caracter\u00edsticas del melanoma en mexicanos atendidos en el Centro M\u00e9dico Nacional \"La Raza\"",
+     "ncbi": "[Characteristics of melanoma in Mexicans seen at \"La Raza\" National Medical Center]."
+    },
+    "PMC12313763": {
+     "recorded": "Melanom in Assoziation mit einem N\u00e4vus oder \u201enaevus sur naevus\u201c?",
+     "ncbi": "[Nevus-associated melanoma or nevus on nevus?]."
+    },
+    "PMC6859055": {
+     "recorded": "\u00c9tude descriptive dermoscopique d\u2019une s\u00e9rie de 100 carcinome basocellulaires diagnostiqu\u00e9s au Maroc",
+     "ncbi": "[Descriptive dermoscopic study of a series of 100 patients with basal cell carcinoma diagnosed in Morocco]."
+    },
+    "PMC10589476": {
+     "recorded": "Dermoscopy of very small basal cell carcinoma (\u22643 mm)\u2606",
+     "ncbi": "Dermoscopy of very small basal cell carcinoma (\u22643mm)."
+    }
+   },
    "unreachable": []
   }
  }

@@ -5,56 +5,56 @@
   "approved": "bm25-rerank",
   "libraries": {
     "text_index_passages_sha256": null,
-    "image_items_sha256": "55fd3e4d693e00f6a716f0170d3c6e29edc747b95c5ea7381e1de7488836f87f"
+    "image_items_sha256": "93c21d7b2581728608be4015863b6d25f208d3914e36ba7a9294981928e1a1f5"
   },
   "modes": {
     "image": {
-      "hit@1": 0.3375,
-      "precision@1": 0.3375,
-      "ndcg@1": 0.3375,
-      "recall@1": 0.0076,
-      "hit@3": 0.5625,
-      "precision@3": 0.2479,
-      "ndcg@3": 0.2691,
-      "recall@3": 0.0169,
-      "hit@5": 0.6813,
-      "precision@5": 0.2313,
-      "ndcg@5": 0.2516,
-      "recall@5": 0.0263,
+      "hit@1": 0.325,
+      "precision@1": 0.325,
+      "ndcg@1": 0.325,
+      "recall@1": 0.0068,
+      "hit@3": 0.5687,
+      "precision@3": 0.2604,
+      "ndcg@3": 0.2761,
+      "recall@3": 0.0168,
+      "hit@5": 0.6875,
+      "precision@5": 0.2375,
+      "ndcg@5": 0.256,
+      "recall@5": 0.0255,
       "hit@10": 0.85,
-      "precision@10": 0.2006,
-      "ndcg@10": 0.2227,
-      "recall@10": 0.0452,
-      "mrr": 0.4865,
+      "precision@10": 0.205,
+      "ndcg@10": 0.2266,
+      "recall@10": 0.0438,
+      "mrr": 0.4822,
       "n_questions_with_contexts": 160
     }
   },
   "intervals_95": {
     "image": {
       "hit@3": [
-        0.4698,
-        0.6497
+        0.4765,
+        0.6582
       ],
       "precision@3": [
-        0.1988,
-        0.2978
+        0.2094,
+        0.3146
       ],
       "ndcg@3": [
-        0.2148,
-        0.3263
+        0.2217,
+        0.3342
       ],
       "mrr": [
-        0.4145,
-        0.561
+        0.4094,
+        0.5562
       ]
     }
   },
   "random_from_the_same_pool": {
     "image": {
-      "hit@3": 0.3791,
-      "precision@3": 0.1486,
-      "ndcg@3": 0.1494,
-      "mrr": 0.3191
+      "hit@3": 0.3772,
+      "precision@3": 0.1468,
+      "ndcg@3": 0.1464,
+      "mrr": 0.3125
     }
   },
   "share_of_top3_from_the_image_library": {
@@ -144,19 +144,19 @@
       "ISIC_0032247": 0,
       "ISIC_0032613": 1,
       "ISIC_0000145": 0,
-      "ISIC_0000168": 0,
+      "ISIC_0000168": 1,
       "ISIC_0000169": 0,
       "ISIC_0000390": 1,
       "ISIC_0000518": 0,
       "ISIC_0000550": 1,
-      "ISIC_0010016": 1,
+      "ISIC_0010016": 0,
       "ISIC_0010210": 0,
       "ISIC_0010388": 0,
       "ISIC_0010416": 1,
       "ISIC_0010470": 0,
       "ISIC_0010548": 0,
       "ISIC_0010611": 0,
-      "ISIC_0010866": 0,
+      "ISIC_0010866": 1,
       "ISIC_0010890": 0,
       "ISIC_0010978": 0,
       "ISIC_0011094": 0,

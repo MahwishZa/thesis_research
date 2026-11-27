@@ -1,6 +1,7 @@
-"""The four research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter.
-The same settings serve every system (LLM-only, standard RAG, ...)."""
+"""The research models and their clients: Claude through Anthropic, GPT-4o, Gemini and Llama through OpenRouter, and MedGemma-4B-it on this
+computer (transformers; no Ollama, no server, no key, no cost). The same settings serve every system (LLM-only, standard RAG, ...)."""
 import base64
+import io
 import json
 import os
 import re
@@ -22,6 +23,14 @@ MODELS = {
                          "reasoning": {"effort": "minimal"}, "temperature": 0.0, "seed": 0, "max_tokens": 8192},
     "llama-4-maverick": {"api": "openrouter", "id": "meta-llama/llama-4-maverick", "route": ["parasail/fp8"],
                          "temperature": 0.0, "seed": 0, "max_tokens": 1024},
+    # Runs on the researcher's laptop (researcher, 2026-11-26: no budget, no Ollama; RTX 2050 with 4 GB). It reads text and pictures, so one
+    # backbone serves all three views. The 16-bit weights (about 8.6 GB) do not fit the card: accelerate keeps 3 GiB on the card and the rest
+    # in the computer's memory (the setting that ran this model on this laptop in the earlier version of the project). No quantization.
+    # Greedy decoding, so a rerun gives the same answers on the same hardware. The revision is pinned: a changed model would be another
+    # model. The weights are gated: accept the terms on Hugging Face and have HF_TOKEN in .env. 512 tokens hold reasoning, answer and evidence.
+    "medgemma-4b-it": {"api": "local", "id": "google/medgemma-4b-it", "revision": "290cda5eeccbee130f987c4ad74a59ae6f196408",
+                       "free": True, "dtype": "bfloat16", "max_memory": {"gpu": "3GiB", "cpu": "10GiB"}, "do_sample": False,
+                       "max_tokens": 512},
 }
 KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "openrouter": ("OPENROUTER_API_KEY",)}
 RETRY_CODES = {408, 409, 429, 500, 502, 503, 504, 529}
@@ -156,7 +165,68 @@ def require_free_or_allowed(name, allow_paid):
         raise SystemExit(f"{name} costs credit. Nothing was sent. Add --allow-paid only if you mean to pay (a model entry marked free needs no flag).")
 
 
+# ---- a model on this computer (transformers) --------------------------------------------------------------------------------------
+def load_local(cfg):
+    """(processor, model) of a local model at its pinned revision. With a graphics card, accelerate keeps cfg["max_memory"]["gpu"] on the
+    card and puts the rest in the computer's memory (up to cfg["max_memory"]["cpu"]); without one, everything runs on the processor (slow).
+    The weights (about 8.6 GB) are downloaded from Hugging Face on first use."""
+    import torch
+    from transformers import AutoModelForImageTextToText, AutoProcessor
+    processor = AutoProcessor.from_pretrained(cfg["id"], revision=cfg["revision"])
+    kwargs = {"revision": cfg["revision"], "dtype": getattr(torch, cfg["dtype"])}
+    if torch.cuda.is_available():
+        kwargs.update(device_map="auto", max_memory={0: cfg["max_memory"]["gpu"], "cpu": cfg["max_memory"]["cpu"]})
+    else:
+        kwargs["device_map"] = "cpu"
+    return processor, AutoModelForImageTextToText.from_pretrained(cfg["id"], **kwargs).eval()
+
+
+def package_version(name):
+    from importlib import metadata
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def decode_image(data):
+    """The picture of a base64 JPEG string, as the RGB image the processor takes."""
+    from PIL import Image
+    return Image.open(io.BytesIO(base64.b64decode(data))).convert("RGB")
+
+
+class LocalClient:
+    """The same ask(system, text, image) as the other clients, answered by a model on this computer. Greedy decoding."""
+
+    def __init__(self, cfg, load=load_local):
+        self.cfg = cfg
+        self.processor, self.model = load(cfg)
+        # the revision and the two libraries are written into every answer record: a rerun can be compared with it
+        self.served_by = (f"{cfg['id']}@{cfg['revision']} (transformers {package_version('transformers')}, torch {package_version('torch')})")
+
+    def ask(self, system, text, image):
+        content = ([{"type": "image", "image": decode_image(image)}] if image else []) + [{"type": "text", "text": text}]
+        messages = [{"role": "system", "content": [{"type": "text", "text": system}]}, {"role": "user", "content": content}]
+        inputs = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_dict=True,
+                                                    return_tensors="pt").to(self.model.device, dtype=self.model.dtype)
+        n_in = inputs["input_ids"].shape[-1]
+        try:
+            # temperature, top_p and top_k are cleared so that the model's own sampling defaults raise no warning: the decoding is greedy
+            out = self.model.generate(**inputs, max_new_tokens=self.cfg["max_tokens"], do_sample=self.cfg["do_sample"],
+                                      temperature=None, top_p=None, top_k=None)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():                    # the run stops and can be resumed; lowering max_memory gpu is the fix
+                raise ApiError(f"the graphics card ran out of memory ({e}); lower max_memory gpu of {self.cfg['id']} in MODELS and run the same command again") from None
+            raise
+        new = out[0][n_in:]
+        return {"text": self.processor.decode(new, skip_special_tokens=True).strip(),
+                "finish_reason": "length" if len(new) >= self.cfg["max_tokens"] else "stop", "served_by": self.served_by,
+                "tokens_in": int(n_in), "tokens_out": len(new)}
+
+
 def make_client(name, log=None):
     cfg = MODELS[name]
+    if cfg["api"] == "local":
+        return LocalClient(cfg)
     key = api_key(cfg["api"])
     return AnthropicClient(cfg, key) if cfg["api"] == "anthropic" else OpenRouterClient(cfg, key, log)

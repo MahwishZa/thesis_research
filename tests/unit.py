@@ -3,6 +3,7 @@ Common (writing, reading, names), the balanced test rule, the cleaning functions
 src/evaluation (diagnosis, selective, semantic similarity, retrieval, relevance, compare), and the prompt, the answer rule and the
 request formats of the systems. Run: python -m unittest"""
 
+import base64
 import contextlib
 import importlib.util
 import io
@@ -1078,8 +1079,9 @@ class PromptAndAnswerTests(unittest.TestCase):
 class FreeModelTests(unittest.TestCase):
     """The researcher has no budget left (2026-11-26): a model that costs credit runs only with --allow-paid."""
 
-    def test_a_model_marked_free_runs_without_the_flag_and_no_model_is_free_now(self):
-        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], [])      # no free model is configured
+    def test_a_model_marked_free_runs_without_the_flag_and_only_the_local_model_is_free(self):
+        self.assertEqual([n for n, c in src.models.llm.MODELS.items() if c.get("free")], ["medgemma-4b-it"])   # it runs on this laptop
+        src.models.llm.require_free_or_allowed("medgemma-4b-it", False)                                       # no error, no flag
         with mock.patch.dict(src.models.llm.MODELS, {"free-one": {"api": "openrouter", "id": "x:free", "free": True}}):
             src.models.llm.require_free_or_allowed("free-one", False)                               # no error
 
@@ -1100,6 +1102,137 @@ class FreeModelTests(unittest.TestCase):
             self.assertIn("costs credit", str(caught.exception))
 
 
+class FakeInputs(dict):
+    class Ids:
+        shape = (1, 7)                                  # one prompt of 7 tokens
+
+    def __init__(self):
+        super().__init__(input_ids=self.Ids(), attention_mask=None)
+        self.moved = None
+
+    def to(self, device, dtype=None):
+        self.moved = (device, dtype)
+        return self
+
+
+class FakeProcessor:
+    def __init__(self):
+        self.messages = self.options = None
+
+    def apply_chat_template(self, messages, **options):
+        self.messages, self.options = messages, options
+        self.inputs = FakeInputs()
+        return self.inputs
+
+    def decode(self, tokens, skip_special_tokens):
+        assert skip_special_tokens is True
+        return " " + " ".join(f"t{t}" for t in tokens) + " "
+
+
+class FakeCausalModel:
+    device, dtype = "cuda:0", "bf16"
+
+    def __init__(self, new_tokens=(), error=None):
+        self.new_tokens, self.error, self.kwargs = list(new_tokens), error, None
+
+    def generate(self, **kwargs):
+        self.kwargs = kwargs
+        if self.error:
+            raise self.error
+        return [[0] * 7 + self.new_tokens]
+
+
+class LocalModelTests(unittest.TestCase):
+    """MedGemma-4B-it on this laptop through transformers (no Ollama); here with a fake processor and model, and a fake picture library."""
+
+    def client(self, new_tokens=(), error=None):
+        self.processor, self.model = FakeProcessor(), FakeCausalModel(new_tokens, error)
+        return src.models.llm.LocalClient(src.models.llm.MODELS["medgemma-4b-it"], load=lambda cfg: (self.processor, self.model))
+
+    PICTURE = base64.b64encode(b"jpeg bytes").decode()
+
+    def fake_pillow(self):
+        shown = []
+
+        class Image:
+            @staticmethod
+            def open(buffer):
+                shown.append(buffer.read())
+                return types.SimpleNamespace(convert=lambda mode: ("picture", mode))
+        return shown, mock.patch.dict(sys.modules, {"PIL": types.SimpleNamespace(Image=Image), "PIL.Image": Image})
+
+    def test_the_prompt_is_a_system_turn_and_a_user_turn_with_the_picture_first_and_the_answer_is_only_the_new_tokens(self):
+        c = self.client([7, 8, 9])
+        shown, pillow = self.fake_pillow()
+        with pillow:
+            reply = c.ask("be a dermatologist", "Question?", self.PICTURE)
+        self.assertEqual(shown, [b"jpeg bytes"])                                                            # the base64 string was decoded to the picture
+        self.assertEqual(self.processor.messages, [
+            {"role": "system", "content": [{"type": "text", "text": "be a dermatologist"}]},
+            {"role": "user", "content": [{"type": "image", "image": ("picture", "RGB")}, {"type": "text", "text": "Question?"}]}])
+        self.assertEqual((self.processor.options["add_generation_prompt"], self.processor.options["tokenize"], self.processor.options["return_dict"]), (True, True, True))
+        self.assertEqual(self.processor.inputs.moved, ("cuda:0", "bf16"))                                    # on the model's device, in its number type
+        self.assertEqual((self.model.kwargs["do_sample"], self.model.kwargs["max_new_tokens"], self.model.kwargs["temperature"]), (False, 512, None))
+        self.assertEqual({k: reply[k] for k in ("text", "finish_reason", "tokens_in", "tokens_out")},
+                         {"text": "t7 t8 t9", "finish_reason": "stop", "tokens_in": 7, "tokens_out": 3})        # the 7 prompt tokens are not part of the answer
+        self.assertTrue(reply["served_by"].startswith("google/medgemma-4b-it@290cda5eeccbee130f987c4ad74a59ae6f196408 (transformers "))
+
+    def test_a_question_without_a_picture_has_a_text_part_only(self):
+        self.client([1]).ask("s", "t", None)
+        self.assertEqual(self.processor.messages[1]["content"], [{"type": "text", "text": "t"}])
+
+    def test_an_answer_that_fills_the_token_limit_is_marked_as_cut_off(self):
+        self.assertEqual(self.client(list(range(512))).ask("s", "t", None)["finish_reason"], "length")
+
+    def test_a_full_graphics_card_stops_the_run_with_the_fix_and_another_error_passes_through(self):
+        with self.assertRaises(src.models.llm.ApiError) as caught:
+            self.client(error=RuntimeError("CUDA out of memory. Tried to allocate 20.00 MiB")).ask("s", "t", None)
+        self.assertIn("max_memory gpu", str(caught.exception))
+        with self.assertRaises(RuntimeError) as other:
+            self.client(error=RuntimeError("something else")).ask("s", "t", None)
+        self.assertNotIsInstance(other.exception, src.models.llm.ApiError)
+
+    def test_the_loader_splits_the_model_between_card_and_memory_at_the_pinned_revision_and_without_a_card_uses_the_processor(self):
+        calls = {}
+
+        class Model:
+            def eval(self):
+                return self
+
+        class Auto:
+            @staticmethod
+            def from_pretrained(model_id, **kwargs):
+                calls["model"] = (model_id, kwargs)
+                return Model()
+
+        class Processor:
+            @staticmethod
+            def from_pretrained(model_id, **kwargs):
+                calls["processor"] = (model_id, kwargs)
+                return "processor"
+        for cuda in (True, False):
+            torch = types.SimpleNamespace(bfloat16="BF16", cuda=types.SimpleNamespace(is_available=lambda cuda=cuda: cuda))
+            transformers = types.SimpleNamespace(AutoModelForImageTextToText=Auto, AutoProcessor=Processor)
+            with mock.patch.dict(sys.modules, {"torch": torch, "transformers": transformers}):
+                processor, model = src.models.llm.load_local(src.models.llm.MODELS["medgemma-4b-it"])
+            revision = "290cda5eeccbee130f987c4ad74a59ae6f196408"
+            self.assertEqual(calls["processor"], ("google/medgemma-4b-it", {"revision": revision}))
+            expected = ({"device_map": "auto", "max_memory": {0: "3GiB", "cpu": "10GiB"}} if cuda else {"device_map": "cpu"})
+            self.assertEqual(calls["model"], ("google/medgemma-4b-it", {"revision": revision, "dtype": "BF16", **expected}))
+
+    def test_a_local_model_needs_no_key_and_is_made_by_make_client(self):
+        with mock.patch.object(src.models.llm, "LocalClient", return_value="client") as made, \
+                mock.patch.object(src.models.llm, "api_key", side_effect=AssertionError("a key was asked for")):
+            self.assertEqual(src.models.llm.make_client("medgemma-4b-it"), "client")
+        made.assert_called_once_with(src.models.llm.MODELS["medgemma-4b-it"])
+
+    def test_a_dry_run_makes_no_client_so_loads_no_model(self):
+        with mock.patch.object(src.pipelines.llm_only, "make_client", side_effect=AssertionError("a client was made")), \
+                mock.patch.object(src.pipelines.llm_only, "run", return_value=None) as ran:
+            src.pipelines.llm_only.llm_only_main(["--model", "medgemma-4b-it", "--view", "text_only", "--dry-run", "--results", "nowhere"])
+        self.assertIsNone(ran.call_args.args[1])                                                           # the run got no client
+
+
 class RunOptionsTests(unittest.TestCase):
     """llm-only and standard-rag share their options (src/pipelines/base.py); a changed default would change every run."""
 
@@ -1111,10 +1244,13 @@ class RunOptionsTests(unittest.TestCase):
 
 class RequestTests(unittest.TestCase):
     def test_the_research_models_and_their_fixed_settings(self):
-        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick"])
+        self.assertEqual(sorted(src.models.llm.MODELS), ["claude-sonnet-5-5", "gemini-3.8-flash", "gpt-4o", "llama-4-maverick", "medgemma-4b-it"])
         for name, cfg in src.models.llm.MODELS.items():
             with self.subTest(name):
-                if cfg["api"] == "anthropic":
+                if cfg["api"] == "local":
+                    self.assertRegex(cfg["revision"], r"^[0-9a-f]{40}$")            # pinned: a moved model would be another model
+                    self.assertEqual((cfg["do_sample"], cfg["dtype"], cfg["max_memory"]), (False, "bfloat16", {"gpu": "3GiB", "cpu": "10GiB"}))
+                elif cfg["api"] == "anthropic":
                     self.assertNotIn("temperature", cfg)                 # Claude rejects a temperature
                     self.assertEqual(cfg["thinking"], {"type": "between_tools"})  # no hidden reasoning
                 else:

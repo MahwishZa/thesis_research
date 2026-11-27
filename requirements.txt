@@ -18,6 +18,10 @@ datasets==5.2.0
 # OpenRouter need only Python. API keys go in .env (CLAUDE_API_KEY, OPENROUTER_API_KEY), never here.
 anthropic==2.6.0
 
+# A model larger than the graphics card (MedGemma-4B-it, src/models/llm.py) is split between the card and the computer's memory by accelerate
+# (transformers' device_map); psutil comes with it.
+accelerate==1.16.0
+
 # Retrieval and evaluation: the MedCPT encoders and cross-encoder and the MONET image encoder (src/models/embeddings.py), semantic similarity
 # (src/evaluation/metrics.py). The diagnosis and retrieval metrics need only Python. MONET is loaded through transformers (weights: Hugging
 # Face chanwkim/monet, downloaded on first use); its images are read with Pillow, listed above.

@@ -409,6 +409,22 @@ def pmc_docs(fetch, term, n, removed):
                "url": f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/", "retracted": retracted}
 
 
+def real_url(value):
+    """The web address of a record, or "" when it has none: the Meditron collection writes the text "None" for a guideline without one."""
+    value = str(value or "").strip()
+    return "" if value.lower() in ("", "none", "nan", "null") else value
+
+
+MEDITRON_COLLECTION = "https://huggingface.co/datasets/epfl-llm/guidelines"     # where the collection is published (the address of a guideline without its own)
+
+
+def meditron_with_address(docs):
+    """Every guideline gets a web address to cite: its own, or, when the collection has none for it (CCO and CDC guidelines), the
+    collection's page. The guideline stays traceable through its id inside the collection (doc_id meditron:<id>) and its source name
+    (in the licence text). Also applied to a saved download, which was made before this rule and holds the text "None"."""
+    return [{**d, "url": real_url(d.get("url")) or MEDITRON_COLLECTION} for d in docs]
+
+
 def meditron_rows_from_hub():
     """The public Meditron guideline collection, streamed from Hugging Face (one large file; no token is needed, but a token in the
     environment as HF_TOKEN is used by the Hugging Face library and makes the download faster)."""
@@ -426,7 +442,7 @@ def meditron_guideline_docs(removed, rows=None, cache=None, load=meditron_rows_f
         with open(cache, encoding="utf-8") as f:
             saved = json.load(f)
         removed.update(saved["removed"])
-        return saved["docs"]
+        return meditron_with_address(saved["docs"])
     docs, dropped = [], Counter()
     for r in (load() if rows is None else rows):
         source = (r.get("source") or "").lower()
@@ -437,8 +453,9 @@ def meditron_guideline_docs(removed, rows=None, cache=None, load=meditron_rows_f
         if not tag(text[:5000], r.get("title", "")):
             continue                                            # not about the 8 diagnoses
         docs.append({"doc_id": f"meditron:{r.get('id', '')}", "title": clean(r.get("title")), "year": "",
-                     "paragraphs": [p for p in re.split(r"\n\s*\n", text) if p.strip()], "url": r.get("url") or "",
+                     "paragraphs": [p for p in re.split(r"\n\s*\n", text) if p.strip()], "url": real_url(r.get("url")),
                      "licence": f"Meditron guidelines collection (source: {source}); see the source's terms", "retracted": False})
+    docs = meditron_with_address(docs)
     removed.update(dropped)
     if rows is None and cache:
         write_json(cache, {"docs": docs, "removed": dict(dropped)})
@@ -691,13 +708,15 @@ def source_problems(p):
     pattern, host = SOURCES.get(p["library"], (GUIDELINE_ID, None))
     if not pattern.match(p["doc_id"]):
         bad.append("the document id is not that of a real source of this library")
-    url = p.get("url") or ""
+    url = real_url(p.get("url"))
     if p["doc_id"].startswith("meditron:"):
-        host = None                                              # the guideline's own site (it differs from guideline to guideline)
-    elif p["doc_id"].startswith("PMC"):
-        host = "pmc.ncbi.nlm.nih.gov"
-    if not url.startswith("https://") or (host and urllib.parse.urlparse(url).netloc != host):
-        bad.append("no web address on the source's own site")
+        if not url.startswith(("http://", "https://")):          # the guideline's own site (it differs from guideline to guideline; some are http)
+            bad.append("no web address on the source's own site")
+    else:
+        if p["doc_id"].startswith("PMC"):
+            host = "pmc.ncbi.nlm.nih.gov"
+        if not url.startswith("https://") or (host and urllib.parse.urlparse(url).netloc != host):
+            bad.append("no web address on the source's own site")
     if not (p.get("licence") or "").strip():
         bad.append("no licence")
     text = p.get("text") or ""
@@ -724,14 +743,22 @@ def provenance_offline(passages):
 
 
 def norm_title(title):
-    return re.sub(r"[^a-z0-9]+", " ", (title or "").lower()).strip()
+    """Only the letters and digits, in lower case (any alphabet): spaces, punctuation and signs such as a footnote star are ignored."""
+    return re.sub(r"[\W_]+", "", (title or "").casefold())
 
 
 def titles_agree(ours, theirs):
-    """The recorded title and NCBI's title are the same paper's title (equal after removing punctuation, or one starts the other:
+    """The recorded title and NCBI's title are the same paper's title (equal after removing spaces and punctuation, or one starts the other:
     a title can be cut or carry a subtitle)."""
     a, b = norm_title(ours), norm_title(theirs)
     return bool(a) and bool(b) and (a == b or a.startswith(b) or b.startswith(a))
+
+
+def is_translated_title(theirs):
+    """NCBI writes the English translation of a title in square brackets ("[Characteristics of melanoma ...]."), where the paper's own
+    title is in another language: the two cannot be compared, so such a paper is counted apart (it is still checked to exist)."""
+    t = (theirs or "").strip()
+    return t.startswith("[") and "]" in t
 
 
 def ncbi_titles(fetch, db, uids, batch=200):
@@ -749,7 +776,7 @@ def provenance_online(passages, fetch):
     """Asks NCBI and Dermoscopedia whether the documents exist. Returns {"checked", "not_found", "other_title", "unreachable"} with
     the document ids. Meditron guidelines are a downloaded public collection and are not asked about here."""
     docs = {p["doc_id"]: p["title"] for p in passages}
-    result = {"checked": 0, "not_found": [], "other_title": [], "unreachable": []}
+    result = {"checked": 0, "not_found": [], "other_title": [], "other_title_detail": {}, "translated_title": [], "unreachable": []}
     for db, prefix in (("pubmed", "PMID:"), ("pmc", "PMC")):
         ids = {d[len(prefix):]: title for d, title in docs.items() if d.startswith(prefix) and d[len(prefix):].isdigit()}
         try:
@@ -760,7 +787,13 @@ def provenance_online(passages, fetch):
             continue
         result["checked"] += len(ids)
         result["not_found"] += [prefix + i for i in ids if i not in found]
-        result["other_title"] += [prefix + i for i, title in ids.items() if i in found and not titles_agree(title, found[i])]
+        for i, title in ids.items():
+            if i in found and not titles_agree(title, found[i]):
+                if is_translated_title(found[i]):
+                    result["translated_title"].append(prefix + i)
+                else:
+                    result["other_title"].append(prefix + i)
+                    result["other_title_detail"][prefix + i] = {"recorded": title, "ncbi": found[i]}
     pages = {d[len("dermoscopedia:"):]: d for d in docs if d.startswith("dermoscopedia:")}
     if pages:
         try:
@@ -805,11 +838,14 @@ def audit_main(argv=None, fetch=None):
         write_json(os.path.join(a.images, "audit.json"), images)
         log.info(f"image library: {images['n_records']} records, {images['records_with_a_problem']} with a problem {images['problem_counts']}"
                  + (f"; online: not found {len(images['online']['not_found'])}, another title {len(images['online']['other_title'])}, "
+                    f"title in another language {len(images['online']['translated_title'])}, "
                     f"no answer {len(images['online']['unreachable'])}" if a.online else ""))
         if a.online:
-            for kind in ("not_found", "other_title", "unreachable"):
+            for kind in ("not_found", "unreachable"):
                 if images["online"][kind]:
                     log.info(f"  image library {kind}: {', '.join(images['online'][kind][:10])}")
+            for doc, both in images["online"]["other_title_detail"].items():
+                log.info(f"  image library other title {doc}: recorded '{both['recorded'][:90]}' | NCBI '{both['ncbi'][:90]}'")
         result["image_library"] = images
     log.info(f"{result['n_passages']} passages: {len(result['near_duplicate_pairs'])} near-duplicate pairs, "
              f"{len(result['reference_copies'])} copies of reference texts, {len(result['tags_that_would_change'])} tags that the "
@@ -825,10 +861,12 @@ def audit_main(argv=None, fetch=None):
     if "online" in prov:
         o = prov["online"]
         log.info(f"online: {o['checked']} documents asked about; not found {len(o['not_found'])}, another title {len(o['other_title'])}, "
-                 f"no answer {len(o['unreachable'])}")
-        for kind in ("not_found", "other_title", "unreachable"):
+                 f"title in another language (not compared) {len(o['translated_title'])}, no answer {len(o['unreachable'])}")
+        for kind in ("not_found", "unreachable"):
             if o[kind]:
                 log.info(f"  {kind}: {', '.join(o[kind][:10])}{' ...' if len(o[kind]) > 10 else ''}")
+        for doc, both in o["other_title_detail"].items():
+            log.info(f"  other title {doc}: recorded '{both['recorded'][:90]}' | NCBI '{both['ncbi'][:90]}'")
     return result
 
 

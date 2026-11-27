@@ -29,19 +29,19 @@
   },
   "images_downloaded": true,
   "rule": "see the comment above visual_items in src/retrieval/images.py",
-  "n_images": 312,
+  "n_images": 332,
   "images_left_out": {
-    "no image at any address": 31
+    "no image at any address": 11
   },
   "image_addresses_that_worked": {
-    "PMC bucket": 305,
+    "PMC bucket": 325,
     "Dermoscopedia": 7
   },
   "image_encoder": "chanwkim/monet",
   "kaggle_check": {
     "threshold": 0.95,
     "n_kaggle_images": 2197,
-    "n_library_images": 312,
+    "n_library_images": 332,
     "n_dropped": 2,
     "hash_threshold_bits": 4,
     "n_dropped_by_embedding": 1,
@@ -61,8 +61,8 @@
     "library_threshold": 0.98,
     "n_dropped_as_library_duplicates": 3,
     "similarity_quantiles": {
-      "q50": 0.7231,
-      "q90": 0.8211,
+      "q50": 0.7228,
+      "q90": 0.8214,
       "q99": 0.8873,
       "max": 0.9551
     },
@@ -163,9 +163,9 @@
         "kaggle_image": "ISIC_0010288.jpg"
       },
       {
-        "item_id": "PMC11132197#fig2",
-        "similarity": 0.8411,
-        "kaggle_image": "ISIC_0029647.jpg"
+        "item_id": "PMC11415134#fig1",
+        "similarity": 0.8425,
+        "kaggle_image": "ISIC_0010137.jpg"
       }
     ],
     "dropped": [
@@ -183,5 +183,5 @@
       }
     ]
   },
-  "n_indexed_images": 307
+  "n_indexed_images": 327
 }

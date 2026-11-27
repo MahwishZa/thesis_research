@@ -1106,6 +1106,30 @@ class BuildTests(unittest.TestCase):
                                  "no web address on the source's own site": 2, "the document id is not that of a real source of this library": 2,
                                  "no licence": 1})
 
+    def test_a_guideline_without_an_address_is_given_the_collections_page_also_from_a_saved_download(self):
+        rows = [{**MEDITRON[0], "id": "a", "url": "None"}, {**MEDITRON[0], "id": "b", "url": "http://www.scielo.br/x.pdf"},
+                {**MEDITRON[0], "id": "c", "url": None}]
+        docs = src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), rows)
+        collection = src.retrieval.corpus.MEDITRON_COLLECTION
+        self.assertEqual([d["url"] for d in docs], [collection, "http://www.scielo.br/x.pdf", collection])        # its own address is kept
+        with tempfile.TemporaryDirectory() as d:                                                                   # a download saved before this rule
+            cache = os.path.join(d, "saved.json")
+            Path(cache).write_text(json.dumps({"docs": [{**docs[0], "url": "None"}], "removed": {}}), encoding="utf-8")
+            again = src.retrieval.corpus.meditron_guideline_docs(collections.Counter(), cache=cache, load=lambda: [])
+        self.assertEqual(again[0]["url"], collection)
+        passages = src.retrieval.corpus.passages_from(docs[:1], "guidelines", "MEL", args(), set(), set(), collections.Counter())
+        self.assertEqual({src.retrieval.corpus.source_problems(p) == [] for p in passages}, {True})               # and the audit accepts it
+
+    def test_a_guideline_without_an_address_is_a_problem_and_an_http_address_is_not(self):
+        base = next(p for p in self.build()[0] if p["library"] == "guidelines" and p["doc_id"].startswith("meditron:"))
+        problems = lambda **kw: src.retrieval.corpus.source_problems({**base, **kw})                      # noqa: E731
+        self.assertEqual(problems(url="http://www.scielo.br/pdf/x.pdf"), [])                                 # a real guideline site that is not https
+        for none in ("None", "", None, "nan", " null "):
+            self.assertEqual(problems(url=none), ["no web address on the source's own site"], none)
+        self.assertEqual(problems(url="ftp://x"), ["no web address on the source's own site"])
+        self.assertEqual(src.retrieval.corpus.real_url("None"), "")                                         # the Meditron collection's word for "no address"
+        self.assertEqual(src.retrieval.corpus.real_url("https://a.org/x"), "https://a.org/x")
+
     def test_the_audit_command_writes_the_provenance_and_names_the_records_with_a_problem(self):
         passages, _, _ = self.build()
         bad = {**next(p for p in passages if p["library"] == "guidelines"), "passage_id": "meditron:zz#0", "url": "http://old.example.org/g"}
@@ -1121,11 +1145,24 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(result["provenance"]["records_with_a_problem"], 1)
             self.assertIn("problem 'no web address on the source's own site': meditron:zz#0", out.getvalue())     # the ids are shown, not only counts
 
+    def test_titles_agree_across_punctuation_signs_and_alphabets_and_a_bracketed_translation_is_not_another_title(self):
+        agree = src.retrieval.corpus.titles_agree
+        self.assertTrue(agree("Dermoscopy of very small basal cell carcinoma (≤3 mm)☆", "Dermoscopy of very small basal cell carcinoma (≤3mm)."))
+        self.assertTrue(agree("Étude descriptive dermoscopique", "ÉTUDE descriptive dermoscopique."))                   # the audit's real cases
+        self.assertTrue(agree("A long title with a subtitle: more words", "A long title with a subtitle"))              # a title cut at the colon
+        self.assertFalse(agree("Dermoscopy of melanoma", "Surgery of the knee"))
+        self.assertFalse(agree("", "Anything"))
+        translated = src.retrieval.corpus.is_translated_title
+        self.assertTrue(translated('[Characteristics of melanoma in Mexicans seen at "La Raza" National Medical Center].'))
+        self.assertFalse(translated("Surgery of the knee."))
+        self.assertFalse(translated(""))
+
     def test_the_online_check_finds_a_document_that_does_not_exist_and_one_that_has_another_title(self):
         passages, _, _ = self.build()
         titles = {p["doc_id"]: p["title"] for p in passages}
         real = sorted(d for d in titles if d.startswith(("PMID:", "PMC")))
         gone, other = real[0], real[-1]
+        translated = real[1]
 
         class Ncbi:
             def get(self, url, params=None, ncbi=False):
@@ -1135,11 +1172,15 @@ class BuildTests(unittest.TestCase):
                     return json.dumps({"query": {"pages": {"1": {"title": t, **({"missing": ""} if t == "gone page" else {})}
                                                            for t in params["titles"].split("|") + ["gone page"]}}})
                 prefix = "PMID:" if params["db"] == "pubmed" else "PMC"      # (the same fake answers for both databases)
-                rows = {i: {"uid": i, "title": "Something else entirely" if prefix + i == other else titles[prefix + i].upper() + "."}
+                rows = {i: {"uid": i, "title": ("Something else entirely" if prefix + i == other else "[An English translation].")
+                            if prefix + i in (other, translated) else titles[prefix + i].upper() + "."}
                         for i in params["id"].split(",") if prefix + i in titles and prefix + i != gone}
                 return json.dumps({"result": {"uids": list(rows), **rows}})
         r = src.retrieval.corpus.provenance_online(passages, Ncbi())
-        self.assertEqual((r["not_found"], r["other_title"], r["unreachable"]), ([gone], [other], []))      # a case and full-stop change is no change
+        self.assertEqual((r["not_found"], r["other_title"], r["unreachable"]), ([gone], [other], []))
+        self.assertEqual(r["translated_title"], [translated])                          # a bracketed translation is counted apart, not as another title
+        self.assertEqual(r["other_title_detail"][other]["ncbi"], "Something else entirely")                  # both titles are kept, to be compared
+        self.assertEqual(r["other_title_detail"][other]["recorded"], titles[other])      # a case and full-stop change is no change
         self.assertGreater(r["checked"], 3)
 
         class Down:
