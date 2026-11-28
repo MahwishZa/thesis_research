@@ -234,8 +234,34 @@ class CheckTests(unittest.TestCase):
         self.assertIn("llm_only some-model text_only val", rows)
         self.assertEqual(rows["llm_only some-model text_only val"][0], src.main.PROBLEM)    # its question file is not there
         self.assertNotIn("llm_only text_only", rows)                             # a view with a run needs no "no run yet" line
-        self.assertEqual(rows["standard_rag_dense gpt-4o image_only val"][0], src.main.PROBLEM)
+        self.assertEqual(rows["standard_rag_dense gpt-4o image_only val"][0], src.main.NOT_RUN)       # an unfinished validation trial is still to finish
         self.assertNotIn("llm_only claude-sonnet-5-5 text_only test", rows)
+
+    def test_a_validation_run_is_not_a_problem_while_unfinished_or_without_a_report_but_a_test_run_is(self):
+        """Validation runs (folders *_val, git-ignored) take hours and are judged by pilot-check, never by a report: on the laptop they are
+        normally under way or finished without a report.json. A test-split run must still be finished and evaluated."""
+        q = self.data / question_file("text_only", "val")
+        q.parent.mkdir(parents=True, exist_ok=True)
+        q.write_bytes(b'{"id": "a"}\n')
+        sha = src.utils.text_sha256(q)
+        done = self.results / "standard_rag" / "text_only" / "qwen_val"
+        done.mkdir(parents=True)
+        (done / "run.json").write_text(json.dumps({"settings": {"questions_sha256": sha}, "status": "complete", "answered": 160, "of": 160}), encoding="utf-8")
+        running = self.results / "standard_rag" / "image_only" / "qwen_val.partial"
+        running.mkdir(parents=True)
+        (running / "run.json").write_text(json.dumps({"status": "running", "answered": 0, "of": 160}), encoding="utf-8")
+        self.run_folder(partial=True)                                             # an unfinished test run
+        rows = self.runs()
+        self.assertEqual(rows["standard_rag qwen text_only val"], (src.main.DONE, "complete (validation run: judged by pilot-check)"))
+        status, note = rows["standard_rag qwen image_only val"]
+        self.assertEqual((status, note.split(":")[0]), (src.main.NOT_RUN, "validation run unfinished"))
+        self.assertEqual(rows["llm_only gpt-4o text_only test"][0], src.main.PROBLEM)       # unfinished test run
+        done_test = self.results / "standard_rag" / "text_only" / "qwen_test"
+        done_test.mkdir(parents=True)
+        (done_test / "run.json").write_text(json.dumps({"settings": {"questions_sha256": self.write_questions()}, "status": "complete"}), encoding="utf-8")
+        self.assertEqual(self.runs()["standard_rag qwen text_only test"], (src.main.PROBLEM, "complete, but not evaluated yet (no report.json)"))
+        (done / "run.json").write_text(json.dumps({"settings": {"questions_sha256": "changed"}, "status": "complete"}), encoding="utf-8")
+        self.assertEqual(self.runs()["standard_rag qwen text_only val"][0], src.main.PROBLEM)    # a validation run must still match its questions
 
     def write_retrieval_result(self, view, **kw):
         path = self.results / "standard_rag" / view / "retrieval_validation.json"

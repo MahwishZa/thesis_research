@@ -52,7 +52,7 @@ def medcpt_cross_encoder(model_name=MEDCPT_CROSS, max_length=512):
 
 # ---- images: the MONET image encoder -------------------------------------------------------------------------------------
 # MONET (Kim et al., Nature Medicine 2024) is a CLIP ViT-L/14 trained on 105,550 dermatology image-text pairs. It was chosen on 2026-11-26 by the
-# validation comparison in results/standard_rag/image_only/encoder_comparison.json (the code of that comparison is in Git commit ab4bd4a); the
+# validation comparison in results/standard_rag/image_only/encoder_comparison.json (the code of that comparison is in the Git commit "Image encoder comparison: ..." of 2026-11-26); the
 # image encoder that it replaced has been removed. The weights are loaded the way the MONET README gives for the Hugging Face route ("Using
 # huggingface CLIP implementation": the id below), with the README's own preprocessing written out here, so that no processor file decides it:
 # the shorter side to 224 pixels (bicubic), a centre crop of 224, ImageNet mean and standard deviation. The README's GitHub repository is

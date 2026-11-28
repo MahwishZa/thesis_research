@@ -260,8 +260,9 @@ def step_runs(data, results, systems=SYSTEMS):
                 if not finished:
                     with open(os.path.join(final + ".partial", "run.json"), encoding="utf-8") as f:
                         info = json.load(f)
-                    rows.append((name, PROBLEM, f"unfinished: {info['answered']}/{info['of']} ({info['status']}); run the same "
-                                                "command again to continue"))
+                    progress = f"{info['answered']}/{info['of']} ({info['status']}); run the same command again to continue"
+                    # a validation run (git-ignored, a trial) takes hours and is normally under way: it is a step still to finish, not a problem
+                    rows.append((name, NOT_RUN, f"validation run unfinished: {progress}") if split == "val" else (name, PROBLEM, f"unfinished: {progress}"))
                 else:
                     rows.append((name, *check_run(data, final, view, split)))
     return rows
@@ -278,6 +279,8 @@ def check_run(data, folder, view, split):
         moved = moved_files(data).get(question_file(view, split).replace("\\", "/"), {})
         if not (moved.get("previous_sha256") == recorded and text_matches(qfile, moved.get("sha256"))):
             return PROBLEM, "the question file changed after this run: the run does not match the current questions"
+    if split == "val":       # a validation run is judged by pilot-check and never reported (researcher's rule): no report.json is expected
+        return DONE, "complete (validation run: judged by pilot-check)"
     report = os.path.join(folder, "report.json")
     if not os.path.isfile(report):
         return PROBLEM, "complete, but not evaluated yet (no report.json)"

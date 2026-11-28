@@ -374,7 +374,7 @@ def collect_main(argv=None):
 # A local model must pass these gates on VALIDATION runs before any test run (researcher, 2026-11-26; fixed before any pilot result):
 #   readable answers   at least 90% of the answers have a usable option letter
 #   above chance       IMAGE-ONLY runs only: the 95% interval of the accuracy lies above chance, 12.5% (1 in 8 options): the rule's words are "image-only
-#                      accuracy clearly above 12.5%" (CLAUDE.md, Git commit ea0f1fd, 2026-11-26, before any result of the local model), read as "the lower
+#                      accuracy clearly above 12.5%" (CLAUDE.md, 2026-11-26, before any result of the local model), read as "the lower
 #                      end of the interval is above 12.5%" (the assistant's reading; it can be made stricter, never looser after a result). The other views are
 #                      not gated on accuracy: with the patient facts alone the information is small (the four commercial models: 20% to 25% on test), and the
 #                      accuracy of every view is still printed.
