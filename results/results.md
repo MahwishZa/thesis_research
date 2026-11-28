@@ -256,7 +256,7 @@ Minutes are the sum of the calls (some runs ran at the same time). Total over th
 
 | Item | Status |
 |---|---|
-| Standard RAG (BM25 candidates re-ordered by the MedCPT cross-encoder, image search for the image views, top 3) | built and tested; indexes built on the laptop; retrieval validated (free, `results/standard_rag/<view>/retrieval_validation.json`); no model run yet |
+| Standard RAG (Naive RAG: the question's own words, MedCPT dense search, image search for the image views, top 3; researcher's decision 2026-11-28) | built and tested; indexes built on the laptop; retrieval validated (free, `results/standard_rag/<view>/retrieval_validation.json`); no model run yet |
 | RAG backbone | Qwen3.5-2B, local, chosen 2026-11-27; its LLM-only baseline and the validation pilot (`python -m src.main pilot-check`) come first; no run yet |
 | Proposed RAG and RAG² scope | not decided |
 | Reference texts for melanoma and BCC (semantic similarity) | not decided |

@@ -240,7 +240,7 @@ class CheckTests(unittest.TestCase):
     def write_retrieval_result(self, view, **kw):
         path = self.results / "standard_rag" / view / "retrieval_validation.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"approved": "bm25-rerank", "libraries": {"text_index_passages_sha256": "T", "image_items_sha256": None}, **kw}),
+        path.write_text(json.dumps({"approved": "dense", "libraries": {"text_index_passages_sha256": "T", "image_items_sha256": None}, **kw}),
                         encoding="utf-8")
 
     def test_a_retrieval_result_must_belong_to_the_libraries_that_exist_now(self):
@@ -2437,7 +2437,7 @@ class StandardRagRunTests(unittest.TestCase):
             self.assertLessEqual(lo, saved["modes"][m]["hit@3"] + 1e-9)
             self.assertGreaterEqual(hi, saved["modes"][m]["hit@3"] - 1e-9)
         self.assertEqual(set(saved["random_from_the_same_pool"]["dense"]), set(src.pipelines.standard_rag.INTERVAL_KEYS))
-        self.assertEqual((saved["approved"], saved["libraries"]), ("bm25-rerank", {"text_index_passages_sha256": "abc", "image_items_sha256": None}))
+        self.assertEqual((saved["approved"], saved["libraries"]), ("dense", {"text_index_passages_sha256": "abc", "image_items_sha256": None}))
         self.assertEqual(set(saved["hit3_by_question"]), set(saved["modes"]))          # each question's Hit@3, for a later paired comparison
         self.assertEqual(len(saved["hit3_by_question"]["bm25"]), 6)
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
@@ -2475,8 +2475,8 @@ class StandardRagRunTests(unittest.TestCase):
                 self.assertTrue(0.0 < share["fused:bm25"] < 1.0)            # both sources reach the top 3
                 self.assertEqual(len(saved["random_from_the_same_pool"]), len(expected))
                 paired = saved["paired_hit3_vs_approved"]                # every search against the approved one, same questions
-                self.assertEqual(set(paired), set(expected) - {"fused:bm25-rerank"})
-                self.assertTrue(all(r["against"] == "fused:bm25-rerank" and 0 <= r["p_value"] <= r["p_holm"] <= 1 for r in paired.values()))
+                self.assertEqual(set(paired), set(expected) - {"fused:dense"})
+                self.assertTrue(all(r["against"] == "fused:dense" and 0 <= r["p_value"] <= r["p_holm"] <= 1 for r in paired.values()))
         with self.assertRaises(KeyError):
             src.retrieval.retriever.image_query_vector({"image_path": "processed/images/ISIC_9.jpg"}, {})
 

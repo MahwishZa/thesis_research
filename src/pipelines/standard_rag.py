@@ -22,6 +22,8 @@ FUSION_LIST = 10   # image + text view: the top 10 of the text search and of the
 
 class StandardRag:
     """The retrieval of one run: the index, the query encoder, k, and the retrieval mode.
+    The standard RAG is Naive RAG (Gao et al. 2023: index, retrieve, read): mode "dense" with the question's own words as the query. The other
+    modes are comparisons and trials for the later systems, each in its own results folder.
     bm25: the k passages of highest BM25 keyword score (Robertson & Zaragoza 2009).  bm25-rerank: the POOL best BM25 passages,
     re-ordered by the MedCPT cross-encoder (Jin et al. 2023), the one re-ranking technique of the research.  dense: the k passages of
     highest MedCPT cosine similarity.  hybrid: that list and a BM25 keyword list, merged by reciprocal rank fusion."""
@@ -64,7 +66,7 @@ class StandardRag:
 
     def ranked(self, q, view, n):
         """The n best records for a question, best first, as validated with retrieval-eval (researcher's decisions, 2026-11-24/25):
-        text only: the text search of the patient facts; image only: the image search by the question's image; image + text: the
+        text only: the (dense) text search of the patient facts; image only: the image search by the question's image; image + text: the
         text search and the image search, fused by rank (reciprocal rank fusion of the top FUSION_LIST of each)."""
         m = max(n, FUSION_LIST)                     # candidates, so that n remain after a repeated text is removed
         if view == "image_only":
@@ -149,8 +151,8 @@ def standard_rag_main(argv=None, rag=None):
 # ---- retrieval-only comparison (no model call, no cost) ---------------------------------------------------------------------
 # For the validation questions of a text view, retrieves 10 passages with each retrieval mode and scores them with the retrieval
 # metrics of src/evaluation/metrics.py (Hit@k, Precision@k, Recall@k, nDCG@k, MRR; a passage is relevant when its tag names the question's true
-# class: the tags are used for this score only, never to retrieve). The choice of the retrieval mode is made on this validation
-# score, before any paid run; the test split is refused. Image-only questions are not scored: their text query is the same for all.
+# class: the tags are used for this score only, never to retrieve). The standard RAG's mode is "dense" (Naive RAG, researcher's decision, 2026-11-28);
+# the other modes are compared with it on validation for the later systems; the test split is refused. Image-only questions are not scored: their text query is the same for all.
 def retrieval_eval_args(argv=None):
     ap = argparse.ArgumentParser(prog="python -m src.main retrieval-eval", description="Retrieval metrics of the retrieval modes on validation.")
     ap.add_argument("--view", default="text_only", choices=VIEWS,

@@ -2,7 +2,7 @@
   "view": "image_only",
   "split": "val",
   "n_questions": 160,
-  "approved": "bm25-rerank",
+  "approved": "dense",
   "libraries": {
     "text_index_passages_sha256": null,
     "image_items_sha256": "93c21d7b2581728608be4015863b6d25f208d3914e36ba7a9294981928e1a1f5"

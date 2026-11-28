@@ -1598,15 +1598,44 @@ class HybridRetrievalTests(unittest.TestCase):
         s = self.rag("hybrid").settings()
         self.assertEqual((s["retrieval"], s["pool"]), ("hybrid", src.pipelines.standard_rag.POOL))
         self.assertEqual(self.rag("dense").settings()["pool"], None)
-        # the chosen retrieval (BM25 + MedCPT cross-encoder re-ranking, 2026-11-26) is the standard RAG; the other modes are trials in their own folders
-        self.assertEqual([src.pipelines.base.rag_system(m) for m in src.pipelines.standard_rag.RETRIEVAL_MODES], ["standard_rag_bm25", "standard_rag", "standard_rag_dense", "standard_rag_hybrid"])
+        # the chosen retrieval (Naive RAG: the MedCPT dense search, 2026-11-28) is the standard RAG; the other modes are trials in their own folders
+        self.assertEqual([src.pipelines.base.rag_system(m) for m in src.pipelines.standard_rag.RETRIEVAL_MODES],
+                         ["standard_rag_bm25", "standard_rag_bm25_rerank", "standard_rag", "standard_rag_hybrid"])
         self.assertEqual(self.rag("bm25-rerank", rerank=lambda q, t: [0.0] * len(t)).settings()["pool"], src.pipelines.standard_rag.POOL)
         with self.assertRaises(ValueError):
             self.rag("bm25-rerank")                                                   # a re-ranking mode needs the re-ranker
         self.assertEqual(self.rag("bm25").settings()["pool"], None)
         self.assertEqual((self.rag("bm25").settings()["reranker"], self.rag("bm25-rerank", rerank=lambda q, t: [0.0] * len(t)).settings()["reranker"]),
                          (None, src.models.embeddings.MEDCPT_CROSS))
-        self.assertEqual(src.pipelines.standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"]).retrieval, "bm25-rerank")
+        self.assertEqual(src.pipelines.standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"]).retrieval, "dense")
+
+    def test_the_standard_rag_is_naive_rag_one_dense_search_with_no_rewriting_no_reranking_and_no_bm25(self):
+        """Researcher, 2026-11-28: the standard RAG is basic: index, retrieve, read (Gao et al. 2023, "Naive RAG"); the paper's plain baseline
+        (Sohn et al. 2025, "+ MedCPT") also uses the question as it is. Re-ranking, BM25, fusion of text searches and query rewriting belong to
+        the RAG2 baseline and the proposed RAG."""
+        from unittest import mock
+        args = src.pipelines.standard_rag.rag_parse_args(["--model", "gpt-4o", "--view", "text_only"])
+        self.assertEqual((args.retrieval, args.k, src.pipelines.base.APPROVED_RETRIEVAL), ("dense", 3, "dense"))
+        self.assertEqual(src.pipelines.base.rag_system(args.retrieval), "standard_rag")
+        loaded = []
+
+        def no_cross_encoder(*a, **k):
+            raise AssertionError("the standard RAG loaded the re-ranker")
+
+        def fake_encoder(name, length):
+            loaded.append(name)
+            return rag_encode
+        with mock.patch.object(src.pipelines.standard_rag, "read_index", lambda *a, **k: rag_index(RAG_PASSAGES)), \
+                mock.patch.object(src.pipelines.standard_rag, "medcpt_cross_encoder", no_cross_encoder), \
+                mock.patch.object(src.pipelines.standard_rag, "medcpt_encoder", fake_encoder):
+            rag = src.pipelines.standard_rag.make_rag(args)
+        self.assertEqual(loaded, [src.models.embeddings.MEDCPT_QUERY])            # only the MedCPT query encoder
+        self.assertIsNone(rag.bm25)                                                # no keyword index is built
+        s = rag.settings()
+        self.assertEqual((s["retrieval"], s["reranker"], s["pool"], s["query"], s["query_encoder"]),
+                         ("dense", None, None, "question", src.models.embeddings.MEDCPT_QUERY))
+        self.assertEqual([p["passage_id"] for p, _ in rag.retrieve("Patient: 50-year-old male. Skin lesion on the trunk.", 3)],
+                         [p["passage_id"] for p, _ in rag.index.search(rag_encode(["Patient: 50-year-old male. Skin lesion on the trunk."])[0], 3)])
 
 
 class RagQueryAndPromptTests(unittest.TestCase):

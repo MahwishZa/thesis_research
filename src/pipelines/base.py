@@ -131,7 +131,8 @@ def add_tokens(a, b):
     return None if a is None and b is None else (a or 0) + (b or 0)
 
 
-APPROVED_RETRIEVAL = "bm25-rerank"     # the standard RAG's text search: BM25 candidates, re-ordered by the MedCPT cross-encoder (2026-11-26)
+APPROVED_RETRIEVAL = "dense"     # the standard RAG is Naive RAG (researcher, 2026-11-28): the question's own words as the query, the MedCPT dense search, the top k
+#                                  passages; no query rewriting, no re-ranking, no BM25. (bm25-rerank was the standard from 2026-11-26 to 2026-11-28.)
 
 
 def rag_system(mode):
