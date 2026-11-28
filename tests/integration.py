@@ -2297,7 +2297,7 @@ class StandardRagRunTests(unittest.TestCase):
         rows = {r["id"]: r for r in self.lines(out)}
         self.assertEqual(len(rows), 8)
         first = rows["ISIC_0000000"]
-        self.assertEqual((first["prompt"], first["view"], first["valid"]), ("standard_rag", "text_only", True))
+        self.assertEqual((first["prompt"], first["view"], first["valid"]), ("standard_rag_v2", "text_only", True))
         self.assertEqual(first["query"], "Patient: 50-year-old male. Skin lesion on the trunk.")
         self.assertEqual([c["rank"] for c in first["contexts"]], [1, 2, 3])
         self.assertTrue(all({"chunk_id", "title", "text", "tags", "score"} <= set(c) for c in first["contexts"]))
@@ -2306,7 +2306,7 @@ class StandardRagRunTests(unittest.TestCase):
         self.assertEqual(rows["ISIC_0000002"]["evidence"], dict(src.pipelines.base.UNPARSED))               # no evidence line
         self.assertEqual(rows["ISIC_0000006"]["evidence"]["quote"], "A sentence that is not in the passage at all.")
         info = json.loads(Path(out, "run.json").read_text(encoding="utf-8"))
-        self.assertEqual((info["status"], info["settings"]["baseline"], info["settings"]["prompt"]), ("complete", "standard_rag", "standard_rag"))
+        self.assertEqual((info["status"], info["settings"]["baseline"], info["settings"]["prompt"]), ("complete", "standard_rag", "standard_rag_v2"))
         self.assertEqual((info["settings"]["retrieval"]["k"], info["settings"]["retrieval"]["query"]), (3, "question"))
         self.assertIn("Evidence: none", info["settings"]["instruction"])
         self.assertTrue(all(i is None for i in client.images))                              # a text-only run sends no image

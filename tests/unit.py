@@ -1674,9 +1674,24 @@ class RagQueryAndPromptTests(unittest.TestCase):
         for view in VIEWS:
             text = src.pipelines.base.rag_instruction(view)
             self.assertIn('Evidence: [', text)
-            self.assertIn('"Evidence: none"', text)
+            self.assertIn("write exactly: Evidence: none", text)
             self.assertIn("Answer: <the letter of the most likely option> (<the name of that option>)", text)
             self.assertNotIn("{", text)
+
+    def test_prompt_version_2_shows_the_three_lines_and_an_example_of_the_evidence_line(self):
+        """Version 1 got 0 of 10 readable Evidence lines from the 2B model (the passage number was left out): version 2 puts each
+        part on its own line, says the number comes first and is the passage the sentence is copied from, and gives one example."""
+        self.assertEqual(src.pipelines.base.RAG_PROMPT_NAME, "standard_rag_v2")
+        text = src.pipelines.base.rag_instruction("text_only")
+        lines = text.split("\n")
+        self.assertEqual([x.split(":")[0] for x in lines[1:4]], ["Reasoning", "Answer", "Evidence"])
+        self.assertIn("and nothing after the third part", lines[0])
+        self.assertIn('for example: Evidence: [2] "words copied word for word from passage 2".', text)
+        self.assertIn("that number is the passage the sentence is copied from", text)
+        self.assertIn('for example: Evidence: [1] "words copied word for word from passage 1".', src.pipelines.base.rag_instruction("text_only", 1))
+        for view in VIEWS:       # the example is neutral: no disease name, so it cannot point to a class
+            for disease in ("melanoma", "carcinoma", "keratosis", "nevus", "dermatofibroma", "vascular"):
+                self.assertNotIn(disease, src.pipelines.base.rag_instruction(view).lower())
 
 
 class EvidenceLineTests(unittest.TestCase):
@@ -1712,6 +1727,16 @@ class EvidenceLineTests(unittest.TestCase):
         self.assertEqual(src.pipelines.base.parse_answer(text)["pred"], "C")
         self.assertEqual(src.pipelines.base.parse_answer(text)["rationale"], "Flat brown area [1].")
         self.assertEqual(self.parse("Reasoning and evidence: Evidence is thin.\nAnswer: A"), dict(src.pipelines.base.UNPARSED))
+
+    def test_the_label_of_prompt_version_2_is_read_and_the_parser_is_not_loosened(self):
+        text = 'Reasoning: Flat brown area [1].\nAnswer: C (Basal cell carcinoma)\nEvidence: [1] "Flat brown."'
+        self.assertEqual(src.pipelines.base.parse_answer(text)["rationale"], "Flat brown area [1].")
+        self.assertEqual(src.pipelines.base.parse_answer("**Reasoning:** Network.\nAnswer: C")["rationale"], "Network.")
+        self.assertEqual(self.parse(text), {"chunk_id": "p3", "quote": "Flat brown."})
+        # what the model wrote in the version-1 trial (2026-11-28) stays unreadable: a quote without its passage number is not evidence of a passage
+        self.assertEqual(self.parse('Answer: G (Dermatofibroma)\n\nEvidence: "A 44-year-old woman presented."'), dict(src.pipelines.base.UNPARSED))
+        self.assertEqual(self.parse('Evidence: "A 44-year-old woman presented." [1]'), dict(src.pipelines.base.UNPARSED))
+        self.assertEqual(self.parse('Answer: B (Benign) Evidence: [1] "Same line."'), dict(src.pipelines.base.UNPARSED))
 
 
 class StandardRagTests(unittest.TestCase):
