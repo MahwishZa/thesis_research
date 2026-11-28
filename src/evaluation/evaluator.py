@@ -384,15 +384,20 @@ def collect_main(argv=None):
 # The check evaluates the validation runs that are complete (no text model, nothing written) and says PASS or FAIL for every gate.
 PILOT_GATES = {"readable_answers": 0.90, "accuracy_ci_low": 0.125, "evidence_line": 0.80, "quotes_word_for_word": 0.50}
 PILOT_ACCURACY_VIEWS = ("image_only",)
+# Backbone rule (researcher approved it as written on 2026-11-28, before any standard-RAG validation result): keep the model unless a pilot gate fails
+# or the standard RAG's accuracy has a lower interval end at or below chance in the image-only or image + text view. Text only is not gated (floor effect).
+STANDARD_RAG = "standard_rag"
+STANDARD_RAG_ACCURACY_VIEWS = ("image_only", "multimodal")
 
 
-def pilot_row(report, view="image_only"):
-    """The pilot numbers of one report and whether each gate is passed (a gate that does not apply to the run is left out). `predicted` and
+def pilot_row(report, view="image_only", system=None):
+    """The pilot numbers of one report and whether each gate is passed (a gate that does not apply to the run is left out). The accuracy gate
+    applies to the image-only view, and for the standard RAG (system == STANDARD_RAG) to the image + text view too. `predicted` and
     `recall` say which classes were answered and found: they explain a low accuracy, they are not gates."""
     d = report["diagnosis"]
     n = d["n_questions"]
     row = {"questions": n, "readable_answers": 1 - (d["invalid_answers"] + d["missing_predictions"]) / n, "accuracy": d["accuracy"],
-           "accuracy_ci_low": d["accuracy_95ci"][0], "accuracy_gated": view in PILOT_ACCURACY_VIEWS}
+           "accuracy_ci_low": d["accuracy_95ci"][0], "accuracy_gated": view in PILOT_ACCURACY_VIEWS or (system == STANDARD_RAG and view in STANDARD_RAG_ACCURACY_VIEWS)}
     matrix = (d.get("confusion_matrix") or {})
     if matrix.get("matrix"):
         row["predicted"] = {name: sum(line[k] for line in matrix["matrix"]) for k, name in enumerate(matrix["columns_predicted"])}
@@ -419,8 +424,9 @@ def pilot_rows(results_dir="results", root=".", model=None):
             continue
         qpath = recorded_question_path(root, settings["questions"])
         report = evaluate(qpath, os.path.join(folder, "predictions.jsonl"), skip_text=True)
-        rows.append({"system": settings.get("baseline", system), "model": settings.get("model", name), "view": settings.get("view"),
-                     **pilot_row(report, settings.get("view"))})
+        which = settings.get("baseline", system)
+        rows.append({"system": which, "model": settings.get("model", name), "view": settings.get("view"),
+                     **pilot_row(report, settings.get("view"), which)})
     return rows
 
 

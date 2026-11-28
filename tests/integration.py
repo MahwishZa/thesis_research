@@ -2532,6 +2532,30 @@ class PilotGateTests(unittest.TestCase):
         self.assertFalse(row(self.report(invalid=17), "text_only")["passed"])                        # readable answers still count in every view
         self.assertEqual(src.evaluation.evaluator.PILOT_ACCURACY_VIEWS, ("image_only",))
 
+    def test_the_standard_rag_is_also_gated_on_accuracy_in_the_image_plus_text_view_and_nothing_else_is(self):
+        """The backbone rule approved on 2026-11-28: the lower end of the standard RAG's accuracy must be above chance in the image-only
+        and image + text views; text only is a floor effect and is not gated; other systems keep the earlier rule."""
+        row = src.evaluation.evaluator.pilot_row
+        at_chance = self.report(ci_low=0.125)
+        self.assertEqual(src.evaluation.evaluator.STANDARD_RAG_ACCURACY_VIEWS, ("image_only", "multimodal"))
+        for view, system, gated in (("multimodal", "standard_rag", True), ("image_only", "standard_rag", True), ("text_only", "standard_rag", False),
+                                    ("multimodal", "llm_only", False), ("multimodal", "standard_rag_bm25_rerank", False), ("multimodal", None, False)):
+            r = row(at_chance, view, system)
+            self.assertEqual((r["accuracy_gated"], "accuracy_ci_low" in r["gates"]), (gated, gated), (view, system))
+        self.assertFalse(row(at_chance, "multimodal", "standard_rag")["passed"])
+        self.assertTrue(row(self.report(ci_low=0.126), "multimodal", "standard_rag")["passed"])
+
+    def test_pilot_rows_hand_the_system_to_the_gate_so_only_the_standard_rag_is_gated_in_the_image_plus_text_view(self):
+        from unittest import mock
+        runs = [("standard_rag", "m", "multimodal_val", "f1", {"settings": {"split": "val", "model": "m", "view": "multimodal", "baseline": "standard_rag", "questions": "q"}}),
+                ("llm_only", "m", "multimodal_val", "f2", {"settings": {"split": "val", "model": "m", "view": "multimodal", "baseline": "llm_only", "questions": "q"}})]
+        with mock.patch.object(src.evaluation.evaluator, "finished_runs", lambda results: runs), \
+                mock.patch.object(src.evaluation.evaluator, "recorded_question_path", lambda root, path: path), \
+                mock.patch.object(src.evaluation.evaluator, "evaluate", lambda *a, **k: self.report(ci_low=0.10)):
+            rows = {r["system"]: r for r in src.evaluation.evaluator.pilot_rows("results")}
+        self.assertEqual((rows["standard_rag"]["accuracy_gated"], rows["standard_rag"]["passed"]), (True, False))
+        self.assertEqual((rows["llm_only"]["accuracy_gated"], rows["llm_only"]["passed"]), (False, True))
+
     def test_the_detail_counts_the_answered_classes_and_gives_the_recall_of_each(self):
         report = self.report()
         report["diagnosis"]["confusion_matrix"] = {"rows_true": ["MEL", "NV"], "columns_predicted": ["MEL", "NV", "invalid"],
